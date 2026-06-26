@@ -1,5 +1,3 @@
-rm /var/www/layrate/.github/workflows/deploy.yml
-cat > /var/www/layrate/.github/workflows/deploy.yml << 'EOF'
 name: Deploy to Pi
 
 on:
@@ -38,7 +36,3 @@ jobs:
           sudo chown -R layratepi:www-data /var/www/layrate/bootstrap/cache
           sudo chmod -R 775 /var/www/layrate/storage
           sudo chmod -R 775 /var/www/layrate/bootstrap/cache
-EOF
-
-
-
