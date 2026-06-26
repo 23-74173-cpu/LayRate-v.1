@@ -29,9 +29,10 @@ jobs:
           php artisan config:cache
           php artisan route:cache
           php artisan view:cache
-- name: Fix permissions
-        run: |
-          sudo chown -R layratepi:www-data /var/www/layrate/storage
-          sudo chown -R layratepi:www-data /var/www/layrate/bootstrap/cache
-          sudo chmod -R 775 /var/www/layrate/storage
-          sudo chmod -R 775 /var/www/layrate/bootstrap/cache
+
+       - name: Fix permissions
+         run: |
+           sudo chown -R layratepi:www-data /var/www/layrate/storage
+           sudo chown -R layratepi:www-data /var/www/layrate/bootstrap/cache
+           sudo chmod -R 775 /var/www/layrate/storage
+           sudo chmod -R 775 /var/www/layrate/bootstrap/cache
