@@ -28,7 +28,9 @@
                                 data-hens="{{ $cage->capacity }}"
                                 data-hdep="{{ number_format($cage->latestProduction?->hdep ?? 0, 1) }}"
                                 data-age="{{ $cage->hens->first()?->current_age_weeks ?? 0 }} weeks"
-                                data-breed="{{ $cage->hens->first()?->breed ?? '—' }}">
+                                data-breed="{{ $cage->hens->first()?->breed ?? '—' }}"
+                                data-has-sensor="{{ $cage->has_sensor ? 1 : 0 }}"
+                                data-today-egg-count="{{ $cage->today_egg_count }}">
                             {{ $cage->cage_code }} — {{ $cage->hens->first()?->breed ?? '—' }}
                         </option>
                         @endforeach
@@ -47,6 +49,10 @@
                     <input type="number" name="egg_count" id="eggCount" min="0" required
                            oninput="computeHdep()"
                            class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
+                    <button type="button" id="overrideLabel" onclick="openOverrideModal()"
+                            class="hidden mt-1.5 text-xs text-amber-700 flex items-center gap-1">
+                        🔒 Sensor reading — click to override
+                    </button>
                 </div>
 
                 {{-- Hen Count --}}
@@ -99,6 +105,7 @@
                         <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">HDEP</th>
                         <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Logged By</th>
                         <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Notes</th>
+                        <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Override</th>
                         <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Actions</th>
                     </tr>
                 </thead>
@@ -118,6 +125,15 @@
                         <td class="px-6 py-3 text-sm text-[#333333]">Farm Operator</td>
                         <td class="px-6 py-3 text-sm text-[#6B7280] max-w-[200px] truncate">{{ $log->notes ?? '—' }}</td>
                         <td class="px-6 py-3">
+                            @if($log->overriddenBy)
+                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                                Manually overridden by {{ $log->overriddenBy->name }}
+                            </span>
+                            @else
+                            <span class="text-xs text-[#6B7280]">—</span>
+                            @endif
+                        </td>
+                        <td class="px-6 py-3">
                             <form method="POST" action="{{ route('egg-logging.destroy', $log) }}"
                                   onsubmit="return confirm('Delete this log?')">
                                 @csrf @method('DELETE')
@@ -128,10 +144,36 @@
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="8" class="px-6 py-8 text-center text-sm text-[#6B7280]">No logs yet. Save the first record above.</td></tr>
+                    <tr><td colspan="9" class="px-6 py-8 text-center text-sm text-[#6B7280]">No logs yet. Save the first record above.</td></tr>
                     @endforelse
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    {{-- Sensor Override Modal --}}
+    <div id="overrideModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+        <div class="bg-white rounded-xl border border-[#D9D9D9] shadow-xl w-full max-w-sm p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-base font-medium">Override Sensor Reading</h2>
+                <button onclick="closeOverrideModal()" class="text-[#6B7280] hover:text-[#333333]">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div id="overridePinSection">
+                <label class="block text-sm text-[#333333] mb-1.5">Enter your Override PIN</label>
+                <input type="text" id="overridePinInput" inputmode="numeric" maxlength="6"
+                       class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-2 focus:outline-none focus:border-[#002D5E]">
+            </div>
+            <div id="overridePasswordSection" class="hidden">
+                <p class="text-xs text-[#6B7280] mb-2">No override PIN set — verify with your login password instead.</p>
+                <input type="password" id="overridePasswordInput"
+                       class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-2 focus:outline-none focus:border-[#002D5E]">
+            </div>
+            <p id="overrideError" class="hidden text-[11px] text-red-500 mb-3"></p>
+            <button type="button" onclick="submitOverride()" class="w-full bg-[#002D5E] text-white py-2.5 rounded-lg text-sm hover:bg-[#001F42]">
+                Unlock Field
+            </button>
         </div>
     </div>
 
@@ -142,7 +184,8 @@
 <script>
 lucide.createIcons();
 
-// Populate cage info bar on load
+let currentSensorCageId = null;
+
 window.addEventListener('DOMContentLoaded', () => updateCageInfo(document.getElementById('cageSelect')));
 
 function updateCageInfo(sel) {
@@ -151,6 +194,22 @@ function updateCageInfo(sel) {
     document.getElementById('cageHdep').textContent = (opt.dataset.hdep || '—') + '%';
     document.getElementById('cageHens').textContent = opt.dataset.hens || '—';
     document.getElementById('henCount').value = opt.dataset.hens || 120;
+
+    const eggInput      = document.getElementById('eggCount');
+    const overrideLabel = document.getElementById('overrideLabel');
+    const hasSensor      = opt.dataset.hasSensor === '1';
+
+    if (hasSensor) {
+        eggInput.value    = opt.dataset.todayEggCount || 0;
+        eggInput.readOnly = true;
+        overrideLabel.classList.remove('hidden');
+        currentSensorCageId = opt.value;
+    } else {
+        eggInput.readOnly = false;
+        overrideLabel.classList.add('hidden');
+        currentSensorCageId = null;
+    }
+
     computeHdep();
 }
 
@@ -162,6 +221,47 @@ function computeHdep() {
     el.textContent = 'HDEP:  ' + hdep + '%';
     el.className = 'mt-2 inline-block border rounded-lg px-4 py-2 text-sm font-mono '
         + (eggs > hens ? 'bg-red-50 border-red-200 text-red-700' : 'bg-[#F5F6F8] border-[#D9D9D9] text-[#333333]');
+}
+
+function openOverrideModal() {
+    document.getElementById('overrideError').classList.add('hidden');
+    document.getElementById('overridePinInput').value = '';
+    document.getElementById('overrideModal').classList.remove('hidden');
+}
+
+function closeOverrideModal() {
+    document.getElementById('overrideModal').classList.add('hidden');
+}
+
+function submitOverride() {
+    const pin = document.getElementById('overridePinInput').value;
+    const password = document.getElementById('overridePasswordInput').value;
+
+    fetch('{{ route("egg-logging.verify-override") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+        },
+        body: JSON.stringify({ cage_id: currentSensorCageId, pin: pin, password: password }),
+    })
+    .then(r => r.json().then(body => ({ status: r.status, body })))
+    .then(({ status, body }) => {
+        if (status === 200 && body.ok) {
+            document.getElementById('eggCount').readOnly = false;
+            closeOverrideModal();
+            if (body.needs_pin_setup) {
+                alert('No override PIN set yet — please set one in Account Settings.');
+            }
+        } else {
+            const errEl = document.getElementById('overrideError');
+            errEl.textContent = body.error || 'Verification failed.';
+            errEl.classList.remove('hidden');
+            const noPinYet = (body.error || '').includes('password');
+            document.getElementById('overridePinSection').classList.toggle('hidden', noPinYet);
+            document.getElementById('overridePasswordSection').classList.toggle('hidden', !noPinYet);
+        }
+    });
 }
 </script>
 @endpush
