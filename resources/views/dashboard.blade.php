@@ -64,8 +64,6 @@
                 $hen = $cage->hens->first();
                 $hdepBg = $hdep > 70 ? '#D5E8D4' : ($hdep > 40 ? '#FFF3CD' : '#F8D7DA');
                 $hdepTxt = $hdep > 70 ? '#004F9F' : ($hdep > 40 ? '#856404' : '#721C24');
-                $rows = ['A','B','C'];
-                $cols = range(1,10);
             @endphp
             <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
                 <div class="flex items-start justify-between mb-1">
@@ -75,29 +73,12 @@
                     </div>
                     <span class="text-xs px-2 py-0.5 rounded" style="background:{{ $hdepBg }};color:{{ $hdepTxt }}">{{ number_format($hdep,1) }}%</span>
                 </div>
-                <div class="text-[11px] text-[#6B7280] mb-3 flex gap-3">
+                <div class="text-[11px] text-[#6B7280] mb-3 flex items-center gap-3">
                     <span>{{ $cage->capacity }} hens</span>
                     @if($hen)
                     <span>{{ $hen->current_age_weeks }} wks</span>
                     @endif
-                    <span class="px-1.5 py-0.5 rounded text-[10px] {{ $cage->is_active ? 'bg-[#D5E8D4] text-[#2D6A4F]' : 'bg-gray-200 text-gray-500' }}">
-                        {{ $cage->is_active ? '2 sensor' : 'No sensor' }}
-                    </span>
-                </div>
-                {{-- Slot grid --}}
-                <div class="mb-3 overflow-x-auto">
-                    <div class="min-w-[360px] space-y-1">
-                        @foreach($rows as $row)
-                        <div class="flex items-center gap-1">
-                            <div class="w-6 text-[11px] text-[#6B7280] shrink-0">{{ $row }}</div>
-                            @foreach($cols as $col)
-                            <div class="flex-1 text-center text-[10px] py-1.5 rounded bg-[#F5F6F8] text-[#6B7280] hover:bg-[#EAF0F8] cursor-pointer">
-                                {{ $row }}{{ $col }}
-                            </div>
-                            @endforeach
-                        </div>
-                        @endforeach
-                    </div>
+                    @include('partials.cage-sensor-badge', ['cage' => $cage])
                 </div>
                 <div class="flex gap-2">
                     <a href="{{ route('cages.index') }}" class="flex-1 flex items-center justify-center gap-1.5 bg-[#F5F6F8] text-[#6B7280] py-2 rounded text-xs hover:bg-[#EAF0F8] border border-[#D9D9D9]">
