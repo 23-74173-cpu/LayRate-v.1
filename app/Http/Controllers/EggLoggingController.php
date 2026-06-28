@@ -24,7 +24,7 @@ class EggLoggingController extends Controller
               return $cage;
           });
 
-        $logs = ProductionLog::with(['cage', 'overriddenBy'])
+        $logs = ProductionLog::with(['cage', 'overriddenBy', 'recorder'])
             ->orderByDesc('log_date')
             ->orderByDesc('created_at')
             ->limit(50)
@@ -84,7 +84,7 @@ class EggLoggingController extends Controller
             'notes'       => $data['notes'] ?? 'Manual entry',
         ];
 
-        if ($cage->has_sensor) {
+        if ($cage->has_sensor && $data['log_date'] === now()->toDateString()) {
             $valueChanged = ! $existing || (int) $existing->egg_count !== (int) $data['egg_count'];
             $verifiedAt   = session("override_verified.{$data['cage_id']}");
             $stillValid   = $verifiedAt && (now()->timestamp - $verifiedAt) <= 600;

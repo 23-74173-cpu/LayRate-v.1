@@ -122,7 +122,7 @@
                         <td class="px-6 py-3 text-sm text-[#333333] font-mono">{{ $log->egg_count }}</td>
                         <td class="px-6 py-3 text-sm text-[#333333] font-mono">{{ $log->hen_count }}</td>
                         <td class="px-6 py-3 text-sm text-[#333333] font-mono">{{ number_format($log->hdep,1) }}%</td>
-                        <td class="px-6 py-3 text-sm text-[#333333]">Farm Operator</td>
+                        <td class="px-6 py-3 text-sm text-[#333333]">{{ $log->recorder?->name ?? 'Farm Operator' }}</td>
                         <td class="px-6 py-3 text-sm text-[#6B7280] max-w-[200px] truncate">{{ $log->notes ?? '—' }}</td>
                         <td class="px-6 py-3">
                             @if($log->overriddenBy)
