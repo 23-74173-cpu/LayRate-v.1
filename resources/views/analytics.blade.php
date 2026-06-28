@@ -75,7 +75,7 @@
             </div>
             <div>
                 <div class="text-[10px] text-[#6B7280] mb-1">FLOCK AGE</div>
-                <div class="text-sm text-[#333333]">{{ $cage->hens->first() ? $cage->hens->first()->flock_age_weeks . ' wks' : '—' }}</div>
+                <div class="text-sm text-[#333333]">{{ $cage->hens->first() ? $cage->hens->first()->current_age_weeks . ' wks' : '—' }}</div>
             </div>
         </div>
     </div>

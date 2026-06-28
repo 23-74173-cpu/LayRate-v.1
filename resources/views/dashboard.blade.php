@@ -78,7 +78,7 @@
                 <div class="text-[11px] text-[#6B7280] mb-3 flex gap-3">
                     <span>{{ $cage->capacity }} hens</span>
                     @if($hen)
-                    <span>{{ $hen->flock_age_weeks }} wks</span>
+                    <span>{{ $hen->current_age_weeks }} wks</span>
                     @endif
                     <span class="px-1.5 py-0.5 rounded text-[10px] {{ $cage->is_active ? 'bg-[#D5E8D4] text-[#2D6A4F]' : 'bg-gray-200 text-gray-500' }}">
                         {{ $cage->is_active ? '2 sensor' : 'No sensor' }}

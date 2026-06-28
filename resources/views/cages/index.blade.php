@@ -47,7 +47,7 @@
                     <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $hen?->breed ?? '—' }}</td>
                     <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $cage->capacity }}</td>
                     <td class="px-5 py-3.5 text-sm text-[#333333]">
-                        {{ $hen ? $hen->flock_age_weeks . ' weeks' : '—' }}
+                        {{ $hen ? $hen->current_age_weeks . ' weeks' : '—' }}
                     </td>
                     <td class="px-5 py-3.5">
                         <span class="text-xs px-2.5 py-1 rounded-full" style="background:{{ $hdepBg }};color:{{ $hdepTxt }}">

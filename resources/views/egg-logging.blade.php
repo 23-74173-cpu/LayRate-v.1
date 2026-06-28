@@ -27,7 +27,7 @@
                         <option value="{{ $cage->id }}"
                                 data-hens="{{ $cage->capacity }}"
                                 data-hdep="{{ number_format($cage->latestProduction?->hdep ?? 0, 1) }}"
-                                data-age="{{ $cage->hens->first()?->flock_age_weeks ?? 0 }} weeks"
+                                data-age="{{ $cage->hens->first()?->current_age_weeks ?? 0 }} weeks"
                                 data-breed="{{ $cage->hens->first()?->breed ?? '—' }}">
                             {{ $cage->cage_code }} — {{ $cage->hens->first()?->breed ?? '—' }}
                         </option>
