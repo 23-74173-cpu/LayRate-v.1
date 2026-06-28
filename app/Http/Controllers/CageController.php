@@ -22,10 +22,11 @@ class CageController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'cage_code' => 'required|string|max:50|unique:cages',
-            'location'  => 'nullable|string|max:100',
-            'capacity'  => 'nullable|integer|min:1',
-            'breed'     => 'nullable|string',
+            'cage_code'              => 'required|string|max:50|unique:cages',
+            'location'               => 'nullable|string|max:100',
+            'capacity'               => 'nullable|integer|min:1',
+            'breed'                  => 'nullable|string',
+            'age_at_placement_weeks' => 'nullable|integer|min:0',
         ]);
 
         $cage = Cage::create([
@@ -37,9 +38,11 @@ class CageController extends Controller
 
         if (! empty($data['breed'])) {
             Hen::create([
-                'cage_id'         => $cage->id,
-                'flock_age_weeks' => 0,
-                'breed'           => $data['breed'],
+                'cage_id'                 => $cage->id,
+                'placement_date'          => now(),
+                'age_at_placement_weeks'  => $data['age_at_placement_weeks'] ?? 0,
+                'flock_age_weeks'         => 0,
+                'breed'                   => $data['breed'],
             ]);
         }
 
@@ -49,12 +52,28 @@ class CageController extends Controller
     public function update(Request $request, Cage $cage)
     {
         $data = $request->validate([
-            'location' => 'nullable|string|max:100',
-            'capacity' => 'nullable|integer|min:1',
-            'is_active'=> 'nullable|boolean',
+            'location'               => 'nullable|string|max:100',
+            'capacity'               => 'nullable|integer|min:1',
+            'is_active'              => 'nullable|boolean',
+            'has_sensor'             => 'nullable|boolean',
+            'sensor_device_id'       => 'nullable|string|max:100',
+            'breed'                  => 'nullable|string',
+            'age_at_placement_weeks' => 'nullable|integer|min:0',
         ]);
 
-        $cage->update($data);
+        $cage->update(array_intersect_key($data, array_flip(['location', 'capacity', 'is_active', 'has_sensor', 'sensor_device_id'])));
+
+        if ($request->filled('breed')) {
+            $hen = Hen::firstOrNew(['cage_id' => $cage->id, 'is_active' => 1]);
+            if (! $hen->exists) {
+                $hen->placement_date = now();
+            }
+            $hen->cage_id                 = $cage->id;
+            $hen->is_active                = 1;
+            $hen->breed                    = $data['breed'];
+            $hen->age_at_placement_weeks   = $data['age_at_placement_weeks'] ?? 0;
+            $hen->save();
+        }
 
         return redirect()->route('cages.index')->with('success', "Cage {$cage->cage_code} updated.");
     }

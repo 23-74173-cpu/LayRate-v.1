@@ -38,10 +38,12 @@
                     $hdepBg  = $hdep > 70 ? '#D5E8D4' : ($hdep > 40 ? '#FFF3CD' : '#F8D7DA');
                     $hdepTxt = $hdep > 70 ? '#004F9F' : ($hdep > 40 ? '#856404' : '#721C24');
                 @endphp
-                <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8] cursor-pointer"
-                    onclick="toggleCageDetail('cage-detail-{{ $cage->id }}')">
+                <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
                     <td class="px-5 py-3.5">
-                        <span class="text-sm font-medium" style="color:{{ $color }}">{{ $cage->cage_code }}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-medium" style="color:{{ $color }}">{{ $cage->cage_code }}</span>
+                            @include('partials.cage-sensor-badge', ['cage' => $cage])
+                        </div>
                     </td>
                     <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $cage->location ?: '—' }}</td>
                     <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $hen?->breed ?? '—' }}</td>
@@ -60,8 +62,8 @@
                         </span>
                     </td>
                     <td class="px-5 py-3.5">
-                        <div class="flex items-center gap-2" onclick="event.stopPropagation()">
-                            <button onclick="openEditModal({{ $cage->id }}, '{{ $cage->location }}', {{ $cage->capacity }}, {{ $cage->is_active ? 1 : 0 }})"
+                        <div class="flex items-center gap-2">
+                            <button onclick="openEditModal({{ $cage->id }}, '{{ $cage->location }}', {{ $cage->capacity }}, {{ $cage->is_active ? 1 : 0 }}, {{ $cage->has_sensor ? 1 : 0 }}, '{{ $hen?->breed ?? '' }}', {{ $hen?->age_at_placement_weeks ?? 0 }})"
                                     class="flex items-center gap-1 text-xs border border-[#D9D9D9] px-2.5 py-1.5 rounded hover:bg-[#F5F6F8] text-[#6B7280]">
                                 <i data-lucide="pencil" class="w-3 h-3"></i> Edit
                             </button>
@@ -75,30 +77,11 @@
                         </div>
                     </td>
                 </tr>
-                {{-- Expandable cage detail / slot grid --}}
-                <tr id="cage-detail-{{ $cage->id }}" class="hidden bg-[#F9F9F7]">
-                    <td colspan="8" class="px-5 py-4">
-                        <div class="text-[11px] text-[#6B7280] mb-2">Click a row to view its cage layout below.</div>
-                        <div class="space-y-1.5">
-                            @foreach(['A','B','C'] as $row)
-                            <div class="flex items-center gap-1">
-                                <div class="w-6 text-[11px] text-[#6B7280] shrink-0">{{ $row }}</div>
-                                @for($col = 1; $col <= 10; $col++)
-                                <div class="flex-1 text-center text-[10px] py-2 rounded bg-[#F5F6F8] text-[#6B7280] hover:bg-[#EAF0F8] cursor-pointer border border-[#E8E8E4]">
-                                    {{ $row }}{{ $col }}
-                                </div>
-                                @endfor
-                            </div>
-                            @endforeach
-                        </div>
-                    </td>
-                </tr>
                 @empty
                 <tr><td colspan="8" class="px-5 py-8 text-center text-sm text-[#6B7280]">No cages yet. Click "+ Add Cage" to get started.</td></tr>
                 @endforelse
             </tbody>
         </table>
-        <p class="text-[11px] text-[#6B7280] px-5 py-3 border-t border-[#D9D9D9]">Click a row to view its cage layout below.</p>
     </div>
 
 </main>
@@ -163,9 +146,28 @@
             <input id="editCapacity" name="capacity" type="number"
                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white mb-4 focus:outline-none focus:border-[#002D5E]">
 
-            <label class="flex items-center gap-2 mb-5 cursor-pointer">
+            <label class="block text-sm text-[#333333] mb-1.5">Breed</label>
+            <select id="editBreed" name="breed" class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white mb-4 focus:outline-none focus:border-[#002D5E]">
+                <option value="">— Not set —</option>
+                <option>ISA Brown</option>
+                <option>Lohmann Brown-Classic</option>
+                <option>Dekalb White</option>
+                <option>Hy-Line Brown</option>
+                <option>Novogen Brown</option>
+            </select>
+
+            <label class="block text-sm text-[#333333] mb-1.5">Age at Placement (weeks)</label>
+            <input id="editAge" name="age_at_placement_weeks" type="number" min="0"
+                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white mb-4 focus:outline-none focus:border-[#002D5E]">
+
+            <label class="flex items-center gap-2 mb-3 cursor-pointer">
                 <input id="editActive" name="is_active" type="checkbox" value="1" class="w-4 h-4">
                 <span class="text-sm text-[#333333]">Active</span>
+            </label>
+
+            <label class="flex items-center gap-2 mb-5 cursor-pointer">
+                <input id="editHasSensor" name="has_sensor" type="checkbox" value="1" class="w-4 h-4">
+                <span class="text-sm text-[#333333]">Sensor-equipped (IR egg counter installed)</span>
             </label>
 
             <div class="flex gap-3">
@@ -182,16 +184,14 @@
 <script>
 lucide.createIcons();
 
-function toggleCageDetail(id) {
-    const el = document.getElementById(id);
-    el.classList.toggle('hidden');
-}
-
-function openEditModal(id, location, capacity, isActive) {
+function openEditModal(id, location, capacity, isActive, hasSensor, breed, age) {
     document.getElementById('editCageForm').action = '/cages/' + id;
-    document.getElementById('editLocation').value  = location;
-    document.getElementById('editCapacity').value  = capacity;
-    document.getElementById('editActive').checked  = isActive === 1;
+    document.getElementById('editLocation').value   = location;
+    document.getElementById('editCapacity').value   = capacity;
+    document.getElementById('editActive').checked    = isActive === 1;
+    document.getElementById('editHasSensor').checked = hasSensor === 1;
+    document.getElementById('editBreed').value       = breed;
+    document.getElementById('editAge').value         = age;
     document.getElementById('editCageModal').classList.remove('hidden');
 }
 </script>

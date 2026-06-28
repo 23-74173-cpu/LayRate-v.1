@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Cage extends Model
 {
-    protected $fillable = ['cage_code', 'location', 'capacity', 'is_active'];
+    protected $fillable = ['cage_code', 'location', 'capacity', 'is_active', 'has_sensor', 'sensor_device_id'];
 
     protected $casts = ['is_active' => 'boolean'];
 
