@@ -4,6 +4,11 @@
 @section('content')
 <main class="p-5 space-y-5">
 
+    @php
+        $cageColor  = $scope === 'farm' ? '#102A4C' : match($cageCode){'CAGE-A'=>'#2D7D46','CAGE-B'=>'#1D4E8F','CAGE-C'=>'#C2703E','CAGE-D'=>'#6B4C8A',default=>'#2D7D46'};
+        $scopeLabel = $scope === 'farm' ? 'Whole Farm' : $cageCode;
+    @endphp
+
     <h1 class="text-xl font-medium text-[#333333]">Forecast</h1>
 
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
@@ -13,12 +18,31 @@
             <div class="text-[10px] tracking-wider text-[#6B7280] mb-4">FORECAST INPUTS</div>
             <form method="POST" action="{{ route('forecast.generate') }}">
                 @csrf
+                <input type="hidden" name="scope" value="{{ $scope }}">
+
+                <label class="block text-sm text-[#333333] mb-2">Scope</label>
+                <div class="flex gap-2 mb-4">
+                    <a href="{{ route('forecast', ['scope'=>'farm','horizon'=>$horizon]) }}"
+                       class="flex-1 text-center py-2 rounded-lg text-sm border {{ $scope === 'farm' ? 'bg-[#002D5E] text-white border-[#002D5E]' : 'border-[#D9D9D9] text-[#6B7280]' }}">
+                        Whole Farm
+                    </a>
+                    <a href="{{ route('forecast', ['scope'=>'cage','cage'=>$cageCode,'horizon'=>$horizon]) }}"
+                       class="flex-1 text-center py-2 rounded-lg text-sm border {{ $scope === 'cage' ? 'bg-[#002D5E] text-white border-[#002D5E]' : 'border-[#D9D9D9] text-[#6B7280]' }}">
+                        Per Cage
+                    </a>
+                </div>
+
+                @if($scope === 'cage')
                 <label class="block text-sm text-[#333333] mb-2">Select Cage</label>
                 <select name="cage" class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white mb-4 focus:outline-none focus:border-[#002D5E]">
                     @foreach($allCages as $c)
                     <option value="{{ $c->cage_code }}" {{ $c->cage_code === $cageCode ? 'selected' : '' }}>{{ $c->cage_code }}</option>
                     @endforeach
                 </select>
+                @else
+                <input type="hidden" name="cage" value="{{ $cageCode }}">
+                <p class="text-xs text-[#6B7280] mb-4">Forecasting: <span class="font-medium text-[#333333]">{{ $scopeLabel }}</span></p>
+                @endif
 
                 <label class="block text-sm text-[#333333] mb-2">Forecast horizon</label>
                 <div class="flex gap-4 mb-5">
@@ -80,7 +104,7 @@
 <script>
 const historical = @json($historical->map(fn($l) => ['date'=>$l->log_date->format('Y-m-d'),'hdep'=>$l->hdep]));
 const forecasts  = @json($forecasts->map(fn($f) => ['date'=>$f->target_date->format('Y-m-d'),'hdep'=>$f->predicted_hdep]));
-const cageColor  = '{{ match($cageCode){"CAGE-A"=>"#2D7D46","CAGE-B"=>"#1D4E8F","CAGE-C"=>"#C2703E","CAGE-D"=>"#6B4C8A",default=>"#2D7D46"} }}';
+const cageColor  = '{{ $cageColor }}';
 
 const histLabels = historical.map(h => 'H-' + (historical.length - historical.indexOf(h)));
 const fcLabels   = forecasts.map((_, i) => 'F+' + (i+1));
