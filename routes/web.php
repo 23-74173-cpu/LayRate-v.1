@@ -34,7 +34,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/egg-logging',                        [EggLoggingController::class, 'index'])->name('egg-logging');
     Route::post('/egg-logging',                       [EggLoggingController::class, 'store'])->name('egg-logging.store');
-    Route::post('/egg-logging/verify-override',       [EggLoggingController::class, 'verifyOverride'])->name('egg-logging.verify-override');
+    Route::post('/egg-logging/verify-override',       [EggLoggingController::class, 'verifyOverride'])->name('egg-logging.verify-override')->middleware('throttle:6,1');
     Route::delete('/egg-logging/{productionLog}',     [EggLoggingController::class, 'destroy'])->name('egg-logging.destroy')->middleware('admin');
 
     Route::get('/environment',  [EnvironmentController::class, 'index'])->name('environment');
