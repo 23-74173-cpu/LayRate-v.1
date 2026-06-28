@@ -24,6 +24,7 @@
 /storage/framework/views
 /storage/pail
 /vendor
+/.worktrees
 Homestead.json
 Homestead.yaml
 Thumbs.db
