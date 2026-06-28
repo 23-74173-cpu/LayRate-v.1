@@ -1,0 +1,38 @@
+name: Deploy to Pi
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Pull latest code
+        run: |
+          cd /var/www/layrate
+          git pull origin main
+
+      - name: Install dependencies
+        run: |
+          cd /var/www/layrate
+          composer install --no-dev --optimize-autoloader
+
+      - name: Run migrations
+        run: |
+          cd /var/www/layrate
+          php artisan migrate --force
+
+      - name: Clear caches
+        run: |
+          cd /var/www/layrate
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+
+      - name: Fix permissions
+        run: |
+          sudo chown -R layratepi:www-data /var/www/layrate/storage
+          sudo chown -R layratepi:www-data /var/www/layrate/bootstrap/cache
+          sudo chmod -R 775 /var/www/layrate/storage
+          sudo chmod -R 775 /var/www/layrate/bootstrap/cache
