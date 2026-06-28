@@ -23,6 +23,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'override_pin_hash',
     ];
 
     public function isAdmin(): bool
@@ -38,6 +39,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'override_pin_hash',
     ];
 
     /**

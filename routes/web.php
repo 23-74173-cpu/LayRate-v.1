@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AlertController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuthController;
@@ -47,6 +48,10 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/forecast',           [ForecastController::class, 'index'])->name('forecast');
     Route::post('/forecast/generate', [ForecastController::class, 'generate'])->name('forecast.generate');
+
+    Route::get('/account',           [AccountController::class, 'show'])->name('account');
+    Route::post('/account/password', [AccountController::class, 'updatePassword'])->name('account.password');
+    Route::post('/account/pin',      [AccountController::class, 'updatePin'])->name('account.pin');
 
     Route::get('/reports',     [ReportController::class, 'index'])->name('reports');
     Route::get('/reports/csv', [ReportController::class, 'exportCsv'])->name('reports.csv');

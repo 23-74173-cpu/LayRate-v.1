@@ -88,7 +88,7 @@
 
     {{-- Bottom items --}}
     <div class="flex flex-col gap-1 items-center">
-        <a href="#" class="group flex items-center gap-2.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors w-10 h-10 justify-center mx-auto" title="Settings">
+        <a href="{{ route('account') }}" class="group flex items-center gap-2.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors w-10 h-10 justify-center mx-auto" title="Settings">
             <i data-lucide="settings" class="w-[19px] h-[19px] shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"></i>
             <span class="sidebar-label text-sm font-medium whitespace-nowrap overflow-hidden hidden">Settings</span>
         </a>
