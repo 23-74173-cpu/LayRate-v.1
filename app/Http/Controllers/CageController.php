@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cage;
+use App\Models\CageSlot;
 use App\Models\Hen;
 use App\Models\ProductionLog;
 use Illuminate\Http\Request;
@@ -11,10 +12,9 @@ class CageController extends Controller
 {
     public function index()
     {
-        $cages = Cage::with([
-            'latestProduction',
-            'hens' => fn($q) => $q->where('is_active', 1)->orderBy('id'),
-        ])->orderBy('cage_code')->get();
+        $cages = Cage::with(['slots' => fn($q) => $q->orderBy('slot_number')])
+            ->orderBy('cage_code')
+            ->get();
 
         return view('cages.index', compact('cages'));
     }
@@ -22,31 +22,35 @@ class CageController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'cage_code'              => 'required|string|max:50|unique:cages',
-            'location'               => 'nullable|string|max:100',
-            'capacity'               => 'nullable|integer|min:1',
-            'breed'                  => 'nullable|string',
-            'age_at_placement_weeks' => 'nullable|integer|min:0',
+            'cage_code'             => 'required|string|max:50|unique:cages',
+            'location'              => 'nullable|string|max:100',
+            'rows'                  => 'required|integer|min:1|max:26',
+            'slots_per_row'         => 'required|integer|min:1|max:50',
+            'max_chickens_per_slot' => 'required|integer|min:1|max:20',
         ]);
 
         $cage = Cage::create([
-            'cage_code' => strtoupper($data['cage_code']),
-            'location'  => $data['location'] ?? '',
-            'capacity'  => $data['capacity'] ?? 120,
-            'is_active' => 1,
+            'cage_code'             => strtoupper($data['cage_code']),
+            'location'              => $data['location'] ?? '',
+            'rows'                  => $data['rows'],
+            'slots_per_row'         => $data['slots_per_row'],
+            'max_chickens_per_slot' => $data['max_chickens_per_slot'],
+            'is_active'             => 1,
         ]);
 
-        if (! empty($data['breed'])) {
-            Hen::create([
-                'cage_id'                 => $cage->id,
-                'placement_date'          => now(),
-                'age_at_placement_weeks'  => $data['age_at_placement_weeks'] ?? 0,
-                'flock_age_weeks'         => 0,
-                'breed'                   => $data['breed'],
-            ]);
+        $slotNumber = 1;
+        for ($row = 1; $row <= $cage->rows; $row++) {
+            for ($col = 1; $col <= $cage->slots_per_row; $col++) {
+                CageSlot::create([
+                    'cage_id'       => $cage->id,
+                    'row_number'    => $row,
+                    'column_number' => $col,
+                    'slot_number'   => $slotNumber++,
+                ]);
+            }
         }
 
-        return redirect()->route('cages.index')->with('success', "Cage {$cage->cage_code} added.");
+        return redirect()->route('cages.index')->with('success', "Cage {$cage->cage_code} created with {$cage->slots()->count()} slots. Add chickens to it from the cage's \"Bulk Add Chickens\" button below.");
     }
 
     public function update(Request $request, Cage $cage)
