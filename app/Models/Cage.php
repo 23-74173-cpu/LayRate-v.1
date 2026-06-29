@@ -4,21 +4,22 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Cage extends Model
 {
-    protected $fillable = ['cage_code', 'location', 'capacity', 'is_active', 'has_sensor', 'sensor_device_id'];
+    protected $fillable = ['cage_code', 'location', 'rows', 'slots_per_row', 'max_chickens_per_slot', 'is_active'];
 
     protected $casts = ['is_active' => 'boolean'];
 
-    public function hens(): HasMany
+    public function slots(): HasMany
     {
-        return $this->hasMany(Hen::class);
+        return $this->hasMany(CageSlot::class)->orderBy('slot_number');
     }
 
-    public function productionLogs(): HasMany
+    public function hens(): HasManyThrough
     {
-        return $this->hasMany(ProductionLog::class);
+        return $this->hasManyThrough(Hen::class, CageSlot::class);
     }
 
     public function environmentalLogs(): HasMany
@@ -41,30 +42,14 @@ class Cage extends Model
         return $this->hasMany(Forecast::class);
     }
 
-    public function latestProduction()
-    {
-        return $this->hasOne(ProductionLog::class)->latestOfMany('log_date');
-    }
-
     public function latestEnvironment()
     {
         return $this->hasOne(EnvironmentalLog::class)->latestOfMany('recorded_at');
     }
 
-    public function getHdepColorAttribute(): string
+    public function getTotalCapacityAttribute(): int
     {
-        $hdep = $this->latestProduction?->hdep ?? 0;
-        if ($hdep > 70) return '#D5E8D4';
-        if ($hdep > 40) return '#FFF3CD';
-        return '#F8D7DA';
-    }
-
-    public function getHdepTextColorAttribute(): string
-    {
-        $hdep = $this->latestProduction?->hdep ?? 0;
-        if ($hdep > 70) return '#004F9F';
-        if ($hdep > 40) return '#856404';
-        return '#721C24';
+        return $this->rows * $this->slots_per_row * $this->max_chickens_per_slot;
     }
 
     public function getColorAttribute(): string
