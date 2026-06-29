@@ -6,30 +6,14 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'LayRate' }} — LayRate Farm Monitor</title>
 
-    {{-- Tailwind CSS CDN --}}
-    <script src="https://cdn.tailwindcss.com"></script>
+    {{-- Tailwind CSS (locally built — no external CDN) --}}
+    <link rel="stylesheet" href="/css/app.css">
 
-    {{-- Chart.js CDN --}}
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    {{-- Chart.js (local) --}}
+    <script src="/js/chart.umd.min.js"></script>
 
-    {{-- Lucide Icons CDN --}}
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        navy: { DEFAULT: '#102A4C', dark: '#001F42', mid: '#1D4E8F' },
-                        cream: '#F5F5F0',
-                        border: '#D9D9D9',
-                        muted: '#6B7280',
-                        ink:   '#333333',
-                    }
-                }
-            }
-        }
-    </script>
+    {{-- Lucide Icons (local) --}}
+    <script src="/js/lucide.min.js"></script>
 
     <style>
         body { background-color: #F5F5F0; font-family: ui-sans-serif, system-ui, sans-serif; }
