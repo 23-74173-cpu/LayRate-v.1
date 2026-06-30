@@ -6,6 +6,7 @@ use App\Models\Cage;
 use App\Models\CageSlot;
 use App\Models\Hen;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class BulkAddController extends Controller
 {
@@ -19,9 +20,9 @@ class BulkAddController extends Controller
     public function store(Request $request, Cage $cage)
     {
         $data = $request->validate([
-            'slot_ids'                  => 'required|array|min:1',
+            'slot_ids'                  => 'required|array|min:1|max:500',
             'slot_ids.*'                => 'integer|exists:cage_slots,id',
-            'breed'                     => 'required|string',
+            'breed'                     => 'required|string|max:100',
             'age_at_placement_weeks'    => 'required|integer|min:0',
             'chickens_per_slot'         => 'required|integer|min:1',
         ]);
@@ -44,18 +45,20 @@ class BulkAddController extends Controller
 
         $placementDate = now();
 
-        foreach ($slots as $slot) {
-            Hen::create([
-                'cage_slot_id'           => $slot->id,
-                'breed'                  => $data['breed'],
-                'placement_date'         => $placementDate,
-                'age_at_placement_weeks' => $data['age_at_placement_weeks'],
-                'flock_age_weeks'        => $data['age_at_placement_weeks'],
-                'is_active'              => 1,
-            ]);
+        DB::transaction(function () use ($slots, $data, $placementDate, $perSlot) {
+            foreach ($slots as $slot) {
+                Hen::create([
+                    'cage_slot_id'           => $slot->id,
+                    'breed'                  => $data['breed'],
+                    'placement_date'         => $placementDate,
+                    'age_at_placement_weeks' => $data['age_at_placement_weeks'],
+                    'flock_age_weeks'        => $data['age_at_placement_weeks'],
+                    'is_active'              => 1,
+                ]);
 
-            $slot->update(['current_occupancy' => $slot->current_occupancy + $perSlot]);
-        }
+                $slot->increment('current_occupancy', $perSlot);
+            }
+        });
 
         return redirect()->route('cages.index')->with('success', "Added chickens to " . $slots->count() . " slot(s) in {$cage->cage_code}.");
     }

@@ -52,11 +52,11 @@
                 <div>
                     <label class="block text-sm text-[#333333] mb-1.5">Breed</label>
                     <select name="breed" required class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
-                        <option>ISA Brown</option>
-                        <option>Lohmann Brown-Classic</option>
-                        <option>Dekalb White</option>
-                        <option>Hy-Line Brown</option>
-                        <option>Novogen Brown</option>
+                        <option @selected(old('breed', 'ISA Brown') === 'ISA Brown')>ISA Brown</option>
+                        <option @selected(old('breed') === 'Lohmann Brown-Classic')>Lohmann Brown-Classic</option>
+                        <option @selected(old('breed') === 'Dekalb White')>Dekalb White</option>
+                        <option @selected(old('breed') === 'Hy-Line Brown')>Hy-Line Brown</option>
+                        <option @selected(old('breed') === 'Novogen Brown')>Novogen Brown</option>
                     </select>
                 </div>
                 <div>
