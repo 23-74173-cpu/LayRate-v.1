@@ -6,7 +6,12 @@
 
     @php
         $cageColor  = $scope === 'farm' ? '#102A4C' : match($cageCode){'CAGE-A'=>'#2D7D46','CAGE-B'=>'#1D4E8F','CAGE-C'=>'#C2703E','CAGE-D'=>'#6B4C8A',default=>'#2D7D46'};
-        $scopeLabel = $scope === 'farm' ? 'Whole Farm' : $cageCode;
+        $scopeLabel = match($scope) {
+            'farm' => 'Whole Farm',
+            'row'  => $cageCode . ' — Row ' . ($row ? chr(64 + $row) : '?'),
+            default => $cageCode,
+        };
+        $cageRowsCount = isset($cage) && $cage ? $cage->rows : 0;
     @endphp
 
     <h1 class="text-xl font-medium text-[#333333]">Forecast</h1>
@@ -23,26 +28,40 @@
                 <label class="block text-sm text-[#333333] mb-2">Scope</label>
                 <div class="flex gap-2 mb-4">
                     <a href="{{ route('forecast', ['scope'=>'farm','horizon'=>$horizon]) }}"
-                       class="flex-1 text-center py-2 rounded-lg text-sm border {{ $scope === 'farm' ? 'bg-[#002D5E] text-white border-[#002D5E]' : 'border-[#D9D9D9] text-[#6B7280]' }}">
+                       class="flex-1 text-center py-2 rounded-lg text-xs border {{ $scope === 'farm' ? 'bg-[#002D5E] text-white border-[#002D5E]' : 'border-[#D9D9D9] text-[#6B7280]' }}">
                         Whole Farm
                     </a>
                     <a href="{{ route('forecast', ['scope'=>'cage','cage'=>$cageCode,'horizon'=>$horizon]) }}"
-                       class="flex-1 text-center py-2 rounded-lg text-sm border {{ $scope === 'cage' ? 'bg-[#002D5E] text-white border-[#002D5E]' : 'border-[#D9D9D9] text-[#6B7280]' }}">
+                       class="flex-1 text-center py-2 rounded-lg text-xs border {{ $scope === 'cage' ? 'bg-[#002D5E] text-white border-[#002D5E]' : 'border-[#D9D9D9] text-[#6B7280]' }}">
                         Per Cage
+                    </a>
+                    <a href="{{ route('forecast', ['scope'=>'row','cage'=>$cageCode,'row'=>$row ?? 1,'horizon'=>$horizon]) }}"
+                       class="flex-1 text-center py-2 rounded-lg text-xs border {{ $scope === 'row' ? 'bg-[#002D5E] text-white border-[#002D5E]' : 'border-[#D9D9D9] text-[#6B7280]' }}">
+                        Per Row
                     </a>
                 </div>
 
-                @if($scope === 'cage')
+                @if($scope === 'cage' || $scope === 'row')
                 <label class="block text-sm text-[#333333] mb-2">Select Cage</label>
-                <select name="cage" class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white mb-4 focus:outline-none focus:border-[#002D5E]">
+                <select name="cage" onchange="this.form.submit()" class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white mb-4 focus:outline-none focus:border-[#002D5E]">
                     @foreach($allCages as $c)
                     <option value="{{ $c->cage_code }}" {{ $c->cage_code === $cageCode ? 'selected' : '' }}>{{ $c->cage_code }}</option>
                     @endforeach
                 </select>
                 @else
                 <input type="hidden" name="cage" value="{{ $cageCode }}">
-                <p class="text-xs text-[#6B7280] mb-4">Forecasting: <span class="font-medium text-[#333333]">{{ $scopeLabel }}</span></p>
                 @endif
+
+                @if($scope === 'row')
+                <label class="block text-sm text-[#333333] mb-2">Select Row</label>
+                <select name="row" class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white mb-4 focus:outline-none focus:border-[#002D5E]">
+                    @for($r = 1; $r <= $cageRowsCount; $r++)
+                    <option value="{{ $r }}" {{ $row == $r ? 'selected' : '' }}>Row {{ chr(64 + $r) }}</option>
+                    @endfor
+                </select>
+                @endif
+
+                <p class="text-xs text-[#6B7280] mb-4">Forecasting: <span class="font-medium text-[#333333]">{{ $scopeLabel }}</span></p>
 
                 <label class="block text-sm text-[#333333] mb-2">Forecast horizon</label>
                 <div class="flex gap-4 mb-5">
@@ -118,33 +137,13 @@ new Chart(document.getElementById('forecastChart'), {
     data: {
         labels: allLabels,
         datasets: [
-            {
-                label: 'Historical',
-                data: histData,
-                borderColor: '#333333',
-                backgroundColor: 'transparent',
-                tension: 0.3,
-                pointRadius: 3,
-                borderWidth: 2,
-            },
-            {
-                label: 'Forecast',
-                data: fcData,
-                borderColor: '#C2703E',
-                backgroundColor: '#C2703E22',
-                tension: 0.3,
-                borderDash: [5,3],
-                pointRadius: 3,
-                fill: true,
-                borderWidth: 2,
-            },
+            { label: 'Historical', data: histData, borderColor: '#333333', backgroundColor: 'transparent', tension: 0.3, pointRadius: 3, borderWidth: 2 },
+            { label: 'Forecast', data: fcData, borderColor: '#C2703E', backgroundColor: '#C2703E22', tension: 0.3, borderDash: [5,3], pointRadius: 3, fill: true, borderWidth: 2 },
         ]
     },
     options: {
         responsive: true,
-        plugins: {
-            legend: { display: true, labels: { boxWidth: 10, font: { size: 10 } } }
-        },
+        plugins: { legend: { display: true, labels: { boxWidth: 10, font: { size: 10 } } } },
         scales: {
             x: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } } },
             y: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } }, min: 0, max: 100 },
