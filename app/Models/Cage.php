@@ -84,6 +84,17 @@ class Cage extends Model
         };
     }
 
+    public function getColorSoftAttribute(): string
+    {
+        return match($this->cage_code) {
+            'CAGE-A' => '#d6f0e3',
+            'CAGE-B' => '#dcebfa',
+            'CAGE-C' => '#fae3d0',
+            'CAGE-D' => '#e9e0f5',
+            default  => '#f0f0f0',
+        };
+    }
+
     public function getPrimaryHenAttribute(): ?Hen
     {
         return $this->hens()->where('is_active', 1)->first();
