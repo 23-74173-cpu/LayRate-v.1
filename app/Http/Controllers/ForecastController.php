@@ -78,6 +78,7 @@ class ForecastController extends Controller
         $cage = Cage::where('cage_code', $cageCode)->firstOrFail();
 
         if ($scope === 'row' && $row !== null) {
+            abort_if($row < 1 || $row > $cage->rows, 422, 'Invalid row number.');
             $historical = $this->rowHistorical($cage, $row);
             Forecast::where('cage_id', $cage->id)->where('row_number', $row)->where('forecast_date', now()->toDateString())->delete();
             $this->generateForecast($cage, $row, $historical, $horizon, true);

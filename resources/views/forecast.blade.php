@@ -121,11 +121,11 @@
 
 @push('scripts')
 <script>
-const historical = @json($historical->map(fn($l) => ['date'=>$l->log_date->format('Y-m-d'),'hdep'=>$l->hdep]));
+const historical = @json($historical->map(fn($l) => ['date'=>\Carbon\Carbon::parse($l->log_date)->format('Y-m-d'),'hdep'=>$l->hdep]));
 const forecasts  = @json($forecasts->map(fn($f) => ['date'=>$f->target_date->format('Y-m-d'),'hdep'=>$f->predicted_hdep]));
 const cageColor  = '{{ $cageColor }}';
 
-const histLabels = historical.map(h => 'H-' + (historical.length - historical.indexOf(h)));
+const histLabels = historical.map((_, i) => 'H-' + (historical.length - i));
 const fcLabels   = forecasts.map((_, i) => 'F+' + (i+1));
 const allLabels  = [...histLabels, ...fcLabels];
 
