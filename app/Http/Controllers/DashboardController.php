@@ -4,11 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Alert;
 use App\Models\Cage;
+use App\Models\CageSlot;
 use App\Models\EnvironmentalLog;
 use App\Models\FeedConsumptionLog;
 use App\Models\MortalityLog;
 use App\Models\ProductionLog;
-use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -16,32 +16,24 @@ class DashboardController extends Controller
     {
         $today = now()->toDateString();
 
-        $cages = Cage::with([
-            'latestProduction',
-            'latestEnvironment',
-            'hens' => fn($q) => $q->where('is_active', 1),
-        ])->get();
+        $cages = Cage::with(['latestEnvironment', 'slots'])->get();
 
-        // Total active hens
-        $totalHens = $cages->sum(fn($c) => $c->hens->first()?->flock_age_weeks ? $c->capacity : 0)
-            ?: $cages->sum('capacity');
+        // Total hens = sum of real occupancy across every slot, not a per-cage all-or-nothing guess.
+        $totalHens = CageSlot::sum('current_occupancy');
 
-        // Today's average HDEP
+        // Today's average HDEP (joins through cage_slots since production_logs no longer has cage_id directly).
         $todayLogs = ProductionLog::whereDate('log_date', $today)->get();
-        $todayHdep = $todayLogs->count()
-            ? round($todayLogs->avg('hdep'), 1)
-            : round($cages->sum(fn($c) => $c->latestProduction?->hdep ?? 0) / max($cages->count(), 1), 1);
+        $todayHdep = $todayLogs->count() ? round($todayLogs->avg('hdep'), 1) : 0;
 
         // Yesterday comparison
-        $yesterdayLogs  = ProductionLog::whereDate('log_date', now()->subDay()->toDateString())->get();
-        $yesterdayHdep  = $yesterdayLogs->count() ? round($yesterdayLogs->avg('hdep'), 1) : 0;
-        $hdepDelta      = round($todayHdep - $yesterdayHdep, 1);
+        $yesterdayLogs = ProductionLog::whereDate('log_date', now()->subDay()->toDateString())->get();
+        $yesterdayHdep = $yesterdayLogs->count() ? round($yesterdayLogs->avg('hdep'), 1) : 0;
+        $hdepDelta     = round($todayHdep - $yesterdayHdep, 1);
 
         // Eggs collected today
-        $eggsToday = $todayLogs->sum('egg_count')
-            ?: $cages->sum(fn($c) => $c->latestProduction?->egg_count ?? 0);
+        $eggsToday = $todayLogs->sum('egg_count');
 
-        // Coop environment averages
+        // Coop environment averages (environmental_logs is unaffected — still cage_id directly)
         $latestEnv = EnvironmentalLog::whereIn('cage_id', $cages->pluck('id'))
             ->orderByDesc('recorded_at')
             ->limit($cages->count())
@@ -49,7 +41,7 @@ class DashboardController extends Controller
         $avgTemp = $latestEnv->count() ? round($latestEnv->avg('temperature_c'), 1) : null;
         $avgHum  = $latestEnv->count() ? round($latestEnv->avg('humidity_pct'), 1) : null;
 
-        // Feed today
+        // Feed today (unaffected — feed_consumption_logs is still cage_id directly)
         $feedToday = FeedConsumptionLog::with('cage')
             ->whereDate('log_date', $today)
             ->orWhereDate('log_date', now()->subDay()->toDateString())
@@ -58,7 +50,7 @@ class DashboardController extends Controller
             ->groupBy(fn($f) => $f->cage->cage_code)
             ->map(fn($g) => $g->first());
 
-        // Mortality today
+        // Mortality today (unaffected — mortality_logs is still cage_id directly)
         $mortalityToday = MortalityLog::with('cage')
             ->whereDate('log_date', $today)
             ->get()
@@ -66,7 +58,7 @@ class DashboardController extends Controller
             ->map(fn($g) => $g->sum('count'));
         $mortalityTodayTotal = $mortalityToday->sum();
 
-        // Alerts
+        // Alerts (unaffected — alerts is still cage_id directly)
         $alertCount   = Alert::where('is_read', false)->count();
         $recentAlerts = Alert::with('cage')
             ->orderByRaw('is_read ASC')
@@ -74,7 +66,7 @@ class DashboardController extends Controller
             ->limit(4)
             ->get();
 
-        // Live readings per cage
+        // Live readings per cage (unaffected — latestEnvironment/color are still on Cage)
         $liveReadings = $cages->map(function ($cage) {
             $env = $cage->latestEnvironment;
             if (! $env) return null;

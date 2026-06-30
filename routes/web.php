@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AlertController;
+use App\Http\Controllers\BulkAddController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CageController;
@@ -31,6 +32,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/cages',              [CageController::class, 'store'])->name('cages.store');
     Route::put('/cages/{cage}',        [CageController::class, 'update'])->name('cages.update');
     Route::delete('/cages/{cage}',     [CageController::class, 'destroy'])->name('cages.destroy')->middleware('admin');
+
+    Route::get('/cages/{cage}/bulk-add',  [BulkAddController::class, 'show'])->name('bulk-add.show');
+    Route::post('/cages/{cage}/bulk-add', [BulkAddController::class, 'store'])->name('bulk-add.store');
 
     Route::get('/egg-logging',                        [EggLoggingController::class, 'index'])->name('egg-logging');
     Route::post('/egg-logging',                       [EggLoggingController::class, 'store'])->name('egg-logging.store');

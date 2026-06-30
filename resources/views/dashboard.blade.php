@@ -58,27 +58,23 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             @foreach($cages as $cage)
             @php
-                $prod = $cage->latestProduction;
-                $hdep = $prod?->hdep ?? 0;
                 $color = $cage->color;
-                $hen = $cage->hens->first();
-                $hdepBg = $hdep > 70 ? '#D5E8D4' : ($hdep > 40 ? '#FFF3CD' : '#F8D7DA');
-                $hdepTxt = $hdep > 70 ? '#004F9F' : ($hdep > 40 ? '#856404' : '#721C24');
+                $occupiedSlots = $cage->slots->where('current_occupancy', '>', 0)->count();
+                $totalSlots = $cage->slots->count();
+                $sensorSlots = $cage->slots->where('has_sensor', true)->count();
             @endphp
             <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
                 <div class="flex items-start justify-between mb-1">
                     <div>
                         <span class="text-sm font-medium" style="color:{{ $color }}">{{ $cage->cage_code }}</span>
-                        <span class="text-sm text-[#6B7280] ml-2">{{ $hen?->breed ?? '—' }}</span>
+                        <span class="text-sm text-[#6B7280] ml-2">{{ $occupiedSlots }}/{{ $totalSlots }} slots occupied</span>
                     </div>
-                    <span class="text-xs px-2 py-0.5 rounded" style="background:{{ $hdepBg }};color:{{ $hdepTxt }}">{{ number_format($hdep,1) }}%</span>
                 </div>
                 <div class="text-[11px] text-[#6B7280] mb-3 flex items-center gap-3">
-                    <span>{{ $cage->capacity }} hens</span>
-                    @if($hen)
-                    <span>{{ $hen->current_age_weeks }} wks</span>
-                    @endif
-                    @include('partials.cage-sensor-badge', ['cage' => $cage])
+                    <span>{{ $cage->total_capacity }} max capacity</span>
+                    <span class="px-1.5 py-0.5 rounded text-[10px] {{ $sensorSlots > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500' }}">
+                        {{ $sensorSlots }} sensor slot{{ $sensorSlots === 1 ? '' : 's' }}
+                    </span>
                 </div>
                 <div class="flex gap-2">
                     <a href="{{ route('cages.index') }}" class="flex-1 flex items-center justify-center gap-1.5 bg-[#F5F6F8] text-[#6B7280] py-2 rounded text-xs hover:bg-[#EAF0F8] border border-[#D9D9D9]">

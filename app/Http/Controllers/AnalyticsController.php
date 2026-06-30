@@ -14,9 +14,8 @@ class AnalyticsController extends Controller
         $cageCode = $request->get('cage', 'CAGE-A');
         $period   = $request->get('period', 'week');
 
-        $cage = Cage::with([
-            'hens' => fn($q) => $q->where('is_active', 1),
-        ])->where('cage_code', $cageCode)->firstOrFail();
+        $cage = Cage::with(['slots.hens' => fn($q) => $q->where('is_active', 1)])
+            ->where('cage_code', $cageCode)->firstOrFail();
 
         $days = match($period) {
             'month'   => 30,
@@ -24,9 +23,11 @@ class AnalyticsController extends Controller
             default   => 7,
         };
 
-        $logs = ProductionLog::where('cage_id', $cage->id)
-            ->where('log_date', '>=', now()->subDays($days))
-            ->orderBy('log_date')
+        $logs = ProductionLog::join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
+            ->where('cage_slots.cage_id', $cage->id)
+            ->where('production_logs.log_date', '>=', now()->subDays($days))
+            ->orderBy('production_logs.log_date')
+            ->select('production_logs.*')
             ->get();
 
         $feedLogs = FeedConsumptionLog::where('cage_id', $cage->id)

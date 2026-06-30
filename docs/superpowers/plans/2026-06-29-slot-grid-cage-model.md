@@ -1080,6 +1080,46 @@ git commit -m "Add Battery Cage Configuration create flow and slot-grid display 
 
 **Context:** Shrinking a grid or lowering max-per-slot can orphan real chickens/sensors; deleting a cage can silently destroy its entire history. Both get explicit, named-slot safety checks instead of a generic confirm dialog. Given the scope of this plan, the delete confirmation uses a native `prompt()` typed-code check rather than a full custom modal showing itemized counts — this satisfies the "require explicit confirmation" requirement without adding another modal component; it's a deliberate scope-trim, flag it if a fuller counts-display modal turns out to matter later.
 
+**Cross-task interface note (caught before dispatch, not by a prior task's review):** Task 4's `openEditModal(@json($cageEditData))` call only passes 7 scalar keys (`id`, `cage_code`, `location`, `rows`, `slots_per_row`, `max_chickens_per_slot`, `is_active`) — no slot data. This task's `openEditModal()`/`updateEditPreview()` JS (Step 5 below) needs `cage.slots` to render the Layout Preview's real occupancy/sensor state. Step 0 below adds a `slots` key to the existing `$cageEditData` array in `cages/index.blade.php` (the same `@php` block Task 4 already introduced) rather than embedding a second inline array literal — Task 4's implementer discovered that Blade's `@json` directive truncates inline literal arguments after the 3rd top-level comma, so any new data passed through `@json` must go through that same `$cageEditData` PHP-variable pattern, never as a second inline literal.
+
+- [ ] **Step 0: Add a `slots` key to `$cageEditData` in `cages/index.blade.php`**
+
+Find (the `@php` block Task 4 added near the top of the `@forelse($cages as $cage)` loop):
+```blade
+    @php
+        $cageEditData = [
+            'id' => $cage->id,
+            'cage_code' => $cage->cage_code,
+            'location' => $cage->location,
+            'rows' => $cage->rows,
+            'slots_per_row' => $cage->slots_per_row,
+            'max_chickens_per_slot' => $cage->max_chickens_per_slot,
+            'is_active' => $cage->is_active,
+        ];
+    @endphp
+```
+Replace with:
+```blade
+    @php
+        $cageEditData = [
+            'id' => $cage->id,
+            'cage_code' => $cage->cage_code,
+            'location' => $cage->location,
+            'rows' => $cage->rows,
+            'slots_per_row' => $cage->slots_per_row,
+            'max_chickens_per_slot' => $cage->max_chickens_per_slot,
+            'is_active' => $cage->is_active,
+            'slots' => $cage->slots->map(fn($s) => [
+                'row_number' => $s->row_number,
+                'column_number' => $s->column_number,
+                'current_occupancy' => $s->current_occupancy,
+                'has_sensor' => $s->has_sensor,
+            ])->values()->all(),
+        ];
+    @endphp
+```
+This stays inside the existing `@php`/`@endphp` block already present — do not create a second block. The `@json($cageEditData)` call on the Edit button further down the file needs no change, since it already serializes the whole variable.
+
 - [ ] **Step 1: Replace `CageController::update()`**
 
 Find the entire existing `update()` method and replace it with:
