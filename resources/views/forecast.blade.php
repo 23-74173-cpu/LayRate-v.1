@@ -99,7 +99,7 @@
             <tbody>
                 @forelse($forecasts as $f)
                 <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
-                    <td class="px-6 py-3 text-sm text-[#333333] font-mono">{{ $f->target_date->format('Y-m-d') }}</td>
+                    <td class="px-6 py-3 text-sm text-[#333333] font-mono">{{ \Carbon\Carbon::parse($f->target_date)->format('Y-m-d') }}</td>
                     <td class="px-6 py-3 text-sm text-[#333333]">{{ number_format($f->predicted_hdep,1) }}%</td>
                     <td class="px-6 py-3">
                         <span class="text-xs px-2.5 py-1 rounded-full" style="background:{{ $f->confidenceColor }}">
@@ -122,7 +122,7 @@
 @push('scripts')
 <script>
 const historical = @json($historical->map(fn($l) => ['date'=>\Carbon\Carbon::parse($l->log_date)->format('Y-m-d'),'hdep'=>$l->hdep]));
-const forecasts  = @json($forecasts->map(fn($f) => ['date'=>$f->target_date->format('Y-m-d'),'hdep'=>$f->predicted_hdep]));
+const forecasts  = @json($forecasts->map(fn($f) => ['date'=>\Carbon\Carbon::parse($f->target_date)->format('Y-m-d'),'hdep'=>$f->predicted_hdep]));
 const cageColor  = '{{ $cageColor }}';
 
 const histLabels = historical.map((_, i) => 'H-' + (historical.length - i));
