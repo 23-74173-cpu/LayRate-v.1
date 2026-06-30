@@ -2,463 +2,409 @@
 @section('title', 'Cage Management')
 
 @section('content')
-<main class="p-5 space-y-5">
+<main class="p-6 space-y-6" style="background-color: #f6f5f4; min-height: 100vh;">
 
-    {{-- Header --}}
+    {{-- ── Header ── --}}
     <div class="flex items-center justify-between">
-        <h1 class="text-xl font-medium text-[#333333]">Cage Management</h1>
+        <div>
+            <p class="text-xs font-semibold tracking-[0.125px] uppercase mb-1" style="color: #615d59;">Cage Management</p>
+            <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px]" style="color: #1f1f1f;">Cages</h1>
+        </div>
         <button onclick="openAddModal()"
-                class="flex items-center gap-2 bg-[#002D5E] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#001F42] transition-colors">
+                class="flex items-center gap-2 px-6 py-2 text-sm font-medium rounded-full text-white transition-opacity"
+                style="background-color: #0075de;"
+                onmouseover="this.style.opacity='0.85'"
+                onmouseout="this.style.opacity='1'">
             <i data-lucide="plus" class="w-4 h-4"></i> Add Cage
         </button>
     </div>
 
-    {{-- Flash error for resize --}}
-    @if(session('errors') && session('errors')->has('resize'))
-    <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-start gap-2">
-        <i data-lucide="alert-circle" class="w-4 h-4 mt-0.5 shrink-0"></i>
-        {{ session('errors')->first('resize') }}
+    {{-- ── Tab Bar (Notion underline style) ── --}}
+    <div class="flex items-center gap-0 border-b overflow-x-auto" style="border-color: #e6e6e6;">
+        <button type="button" onclick="filterCage('all')" class="cage-tab px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
+                data-tab="all"
+                style="border-bottom-color: #0075de; color: #1f1f1f;">
+            All
+            <span class="ml-1 text-xs" style="color: #a39e98;">({{ $cages->count() }})</span>
+        </button>
+        @foreach($cages as $cage)
+        <button type="button" onclick="filterCage('{{ $cage->cage_code }}')" class="cage-tab px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
+                data-tab="{{ $cage->cage_code }}"
+                style="border-bottom-color: transparent; color: #615d59;">
+            <span class="inline-block w-2 h-2 rounded-full mr-1.5" style="background-color: {{ $cage->color }};"></span>
+            {{ $cage->cage_code }}
+            <span class="ml-1 text-xs" style="color: #a39e98;">({{ $cage->cageSlots->count() }})</span>
+        </button>
+        @endforeach
     </div>
-    @endif
 
-    {{-- Cage Cards --}}
-    <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+    {{-- ── Cage Cards ── --}}
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         @forelse($cages as $cage)
         @php
             $color = $cage->color;
+            $colorSoft = $cage->colorSoft;
             $slotsByRow = $cage->cageSlots->groupBy('row_number');
             $sensorCount = $cage->cageSlots->where('has_sensor', true)->count();
             $occupiedCount = $cage->cageSlots->where('current_occupancy', '>', 0)->count();
             $primaryHen = $cage->hens->first();
-            $shouldOpenEdit = session('edit_cage_id') == $cage->id;
         @endphp
-        <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
+        <div class="cage-card rounded-xl border overflow-hidden transition-all"
+             data-cage-code="{{ $cage->cage_code }}"
+             style="background-color: #ffffff; border-color: #e6e6e6; border-left: 3px solid {{ $color }};">
+
             {{-- Cage Header --}}
-            <div class="flex items-center justify-between px-5 py-3 border-b border-[#D9D9D9]" style="background:{{ $color }}10">
+            <div class="flex items-center justify-between px-4 py-3">
                 <div class="flex items-center gap-3">
-                    <span class="text-sm font-semibold" style="color:{{ $color }}">{{ $cage->cage_code }}</span>
-                    <span class="text-xs text-[#6B7280]">{{ $cage->location ?: 'No location' }}</span>
-                    <span class="text-[10px] px-1.5 py-0.5 rounded-full {{ $cage->is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500' }}">
-                        {{ $cage->is_active ? 'active' : 'inactive' }}
-                    </span>
+                    <span class="text-sm font-semibold" style="color: {{ $color }}">{{ $cage->cage_code }}</span>
+                    <span class="text-xs" style="color: #615d59;">{{ $cage->location ?: 'No location' }}</span>
                 </div>
-                <div class="flex items-center gap-2">
-                    <span class="text-[10px] text-[#6B7280]">{{ $sensorCount }} sensor{{ $sensorCount !== 1 ? 's' : '' }}</span>
-                    <button onclick="openEditModal({{ $cage->id }}, '{{ $cage->cage_code }}', '{{ $cage->location }}', {{ $cage->rows }}, {{ $cage->slots_per_row }}, {{ $cage->max_chickens_per_slot }}, {{ $cage->is_active ? 1 : 0 }})"
-                            class="flex items-center gap-1 text-xs border border-[#D9D9D9] bg-white px-2 py-1 rounded hover:bg-[#F5F6F8] text-[#6B7280]">
-                        <i data-lucide="pencil" class="w-3 h-3"></i> Edit
+                <div class="flex items-center gap-1">
+                    <span class="text-xs px-2 py-0.5 rounded-full" style="background-color: {{ $cage->is_active ? '#e8f5ec' : '#f0f0f0' }}; color: {{ $cage->is_active ? '#1f6b3a' : '#615d59' }};">
+                        {{ $cage->is_active ? 'Active' : 'Inactive' }}
+                    </span>
+                    <button onclick="openEditModal({{ $cage->id }}, '{{ $cage->cage_code }}', '{{ addslashes($cage->location) }}', {{ $cage->rows }}, {{ $cage->slots_per_row }}, {{ $cage->max_chickens_per_slot }}, {{ $cage->is_active ? 1 : 0 }})"
+                            class="p-1.5 rounded hover:bg-black/5 transition-colors" style="color: #615d59;" aria-label="Edit cage">
+                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                     </button>
                     <a href="{{ route('cages.bulk-add') }}?cage_id={{ $cage->id }}"
-                       class="flex items-center gap-1 text-xs border border-[#D9D9D9] bg-white px-2 py-1 rounded hover:bg-[#F5F6F8] text-[#6B7280]">
-                        <i data-lucide="plus-circle" class="w-3 h-3"></i> Bulk Add
+                       class="p-1.5 rounded hover:bg-black/5 transition-colors" style="color: #615d59;" aria-label="Bulk add hens">
+                        <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
                     </a>
                     <a href="{{ route('cages.confirm-delete', $cage) }}"
-                       class="flex items-center justify-center w-7 h-7 border border-red-200 text-red-400 rounded hover:bg-red-50">
+                       class="p-1.5 rounded hover:bg-red-50 transition-colors" style="color: #a39e98;" aria-label="Delete cage">
                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                     </a>
                 </div>
             </div>
 
-            {{-- Cage Meta --}}
-            <div class="px-5 py-2 flex flex-wrap gap-4 text-[11px] text-[#6B7280] border-b border-[#D9D9D9]">
-                <span>{{ $cage->rows }} rows × {{ $cage->slots_per_row }} slots</span>
-                <span>{{ $cage->total_capacity }} total capacity</span>
-                <span>{{ $occupiedCount }} slot{{ $occupiedCount !== 1 ? 's' : '' }} occupied</span>
+            {{-- Meta strip --}}
+            <div class="flex items-center gap-4 px-4 pb-2 text-xs" style="color: #615d59;">
+                <span>{{ $cage->rows }}×{{ $cage->slots_per_row }}</span>
+                <span>{{ $cage->total_capacity }} capacity</span>
+                <span>{{ $occupiedCount }} occupied</span>
+                @if($sensorCount > 0)
+                <span>{{ $sensorCount }} sensor{{ $sensorCount > 1 ? 's' : '' }}</span>
+                @endif
                 @if($primaryHen)
-                <span>{{ $primaryHen->breed }} · {{ $primaryHen->current_age_weeks }} wks</span>
+                <span>{{ $primaryHen->breed }} · {{ $primaryHen->current_age_weeks }}w</span>
                 @endif
             </div>
 
-            {{-- Slot Grid --}}
-            <div class="p-4">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-[10px] text-[#6B7280] uppercase tracking-wider">Slot Layout</span>
-                    <div class="flex items-center gap-3 text-[9px] text-[#9CA3AF]">
-                        <span class="flex items-center gap-1">
-                            <span class="w-2 h-2 rounded-sm bg-emerald-500"></span> sensor
-                        </span>
-                        <span class="flex items-center gap-1">
-                            <span class="w-2 h-2 rounded-sm bg-[#F5F6F8] border border-[#D9D9D9]"></span> empty
-                        </span>
-                        <span class="flex items-center gap-1">
-                            <i data-lucide="maximize-2" class="w-3 h-3"></i> view
-                        </span>
-                    </div>
-                </div>
+            {{-- Mini Slot Grid --}}
+            <div class="px-4 pb-3">
+                <div class="grid gap-1" style="grid-template-columns: repeat({{ $cage->slots_per_row }}, 1fr);">
+                    @foreach($cage->cageSlots as $slot)
+                    @php
+                        $isSensor = $slot->has_sensor;
+                        $occupancy = $slot->current_occupancy;
+                        $slotBg = $isSensor ? '#d6f0e3' : ($occupancy > 0 ? '#f6f5f4' : '#ffffff');
+                        $slotBorder = $isSensor ? '#2a9d6a' : '#e6e6e6';
+                    @endphp
+                    <button type="button"
+                            onclick="expandSlot({{ $slot->id }}, {{ $cage->id }}, '{{ $cage->cage_code }}')"
+                            class="slot-mini aspect-square rounded flex flex-col items-center justify-center text-xs transition-all relative"
+                            style="background-color: {{ $slotBg }}; border: 1px solid {{ $slotBorder }};"
+                            title="Slot {{ $slot->row_number }}-{{ $slot->column_number }}: {{ $occupancy }} hens"
+                            aria-label="Slot {{ $slot->row_number }}-{{ $slot->column_number }}, {{ $occupancy }} hens">
 
-                @php $colHeaders = range(1, $cage->slots_per_row); @endphp
-                <div class="flex justify-center overflow-x-auto">
-                    <div class="inline-block min-w-full">
-                        {{-- Column headers --}}
-                        <div class="flex gap-1 mb-1 pl-8">
-                            @foreach($colHeaders as $col)
-                            <div class="w-9 text-center text-[9px] text-[#9CA3AF]">{{ $col }}</div>
-                            @endforeach
-                        </div>
+                        @if($isSensor)
+                        <span class="absolute top-0 right-0 w-1.5 h-1.5 rounded-bl" style="background-color: #0075de;"></span>
+                        @endif
 
-                        {{-- Rows --}}
-                        @foreach($slotsByRow as $rowNum => $slots)
-                        <div class="flex gap-1 mb-1">
-                            {{-- Row header --}}
-                            <div class="w-7 flex items-center justify-center text-[9px] text-[#9CA3AF]">{{ $rowNum }}</div>
-                            {{-- Slot boxes --}}
-                            @for($col = 1; $col <= $cage->slots_per_row; $col++)
-                                @php
-                                    $slot = $slots->firstWhere('column_number', $col);
-                                @endphp
-                                @if($slot)
-                                    @php
-                                        $isSensor = $slot->has_sensor;
-                                        $occupancy = $slot->current_occupancy;
-                                        $slotPrimaryHen = $slot->primaryHen();
-                                        $bgClass = $isSensor ? 'bg-emerald-50 border-emerald-200' : ($occupancy > 0 ? 'bg-[#F5F6F8] border-[#E5E7EB]' : 'bg-white border-[#E5E7EB]');
-                                    @endphp
-                                    <div class="relative w-9 h-9 rounded border {{ $bgClass }} flex flex-col items-center justify-center hover:ring-1 hover:ring-[#002D5E] transition-all group"
-                                         title="Slot {{ $rowNum }}-{{ $col }}">
-                                        @if($isSensor)
-                                            <div class="absolute top-0 right-0 w-2 h-2 rounded-bl-sm bg-emerald-500"></div>
-                                        @endif
-                                        {{-- Expand button --}}
-                                        <button onclick="event.stopPropagation(); expandSlot({{ $slot->id }}, {{ $cage->id }}, '{{ $cage->cage_code }}')"
-                                                class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                                title="View slot details">
-                                            <i data-lucide="maximize-2" class="w-3.5 h-3.5 text-[#002D5E]"></i>
-                                        </button>
-                                        {{-- Normal view (fades on hover) --}}
-                                        <div class="slot-normal-view transition-opacity group-hover:opacity-0">
-                                            <span class="text-[9px] font-mono text-[#6B7280]">{{ $slot->slot_number }}</span>
-                                            @if($slotPrimaryHen)
-                                                <span class="text-[8px] text-[#333]">{{ $slotPrimaryHen->current_age_weeks }}w</span>
-                                            @endif
-                                            <span class="text-[8px] text-[#9CA3AF]">{{ $occupancy }}/{{ $cage->max_chickens_per_slot }}</span>
-                                        </div>
-                                    </div>
-                                @else
-                                    <div class="w-9 h-9"></div>
-                                @endif
-                            @endfor
-                        </div>
-                        @endforeach
-                    </div>
+                        @if($occupancy > 0)
+                        <span class="text-[10px] font-semibold" style="color: #1f1f1f;">{{ $occupancy }}</span>
+                        @else
+                        <span class="text-[10px]" style="color: #d1d5db;">—</span>
+                        @endif
+                    </button>
+                    @endforeach
                 </div>
             </div>
 
-            {{-- Slot Expand Panel --}}
-            <div id="slotExpandPanel-{{ $cage->id }}" class="hidden border-t border-[#E5E7EB] bg-[#FAFAFA]">
+            {{-- Expanded Detail Panel --}}
+            <div id="slotExpandPanel-{{ $cage->id }}" class="hidden border-t" style="border-color: #e6e6e6; background-color: #f6f5f4;">
                 <div class="p-4">
                     <div class="flex items-center justify-between mb-3">
-                        <div>
-                            <span class="text-xs font-semibold text-[#333]" id="slotPanelTitle-{{ $cage->id }}">Slot details</span>
-                        </div>
-                        <button onclick="closeSlotExpand({{ $cage->id }})"
-                                class="text-[#9CA3AF] hover:text-[#333]">
-                            <i data-lucide="x" class="w-4 h-4"></i>
+                        <span id="slotPanelTitle-{{ $cage->id }}" class="text-sm font-semibold" style="color: #1f1f1f;">Slot details</span>
+                        <button onclick="closeSlotExpand({{ $cage->id }})" class="p-1.5 rounded hover:bg-black/5 transition-colors" aria-label="Close">
+                            <i data-lucide="x" class="w-4 h-4" style="color: #615d59;"></i>
                         </button>
                     </div>
                     <div id="slotPanelContent-{{ $cage->id }}">
-                        <div class="text-xs text-[#9CA3AF] text-center py-4">Loading...</div>
+                        <div class="text-xs text-center py-4" style="color: #a39e98;">Loading...</div>
                     </div>
                 </div>
             </div>
+        </div>
         @empty
-        <div class="col-span-2 bg-white rounded-lg border border-[#D9D9D9] p-10 text-center text-sm text-[#6B7280]">
+        <div class="col-span-2 rounded-xl border p-10 text-center text-sm" style="background-color: #ffffff; border-color: #e6e6e6; color: #a39e98;">
             No cages yet. Click "+ Add Cage" to get started.
         </div>
         @endforelse
-        </div>
     </div>
 
-    @if(session('edit_cage_id'))
-    @php
-        $editCage = $cages->firstWhere('id', session('edit_cage_id'));
-    @endphp
-    @endif
-
-    @if(session('edit_cage_id') && isset($editCage))
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            openEditModal(
-                {{ $editCage->id }},
-                '{{ $editCage->cage_code }}',
-                '{{ $editCage->location }}',
-                {{ $editCage->rows }},
-                {{ $editCage->slots_per_row }},
-                {{ $editCage->max_chickens_per_slot }},
-                {{ $editCage->is_active ? 1 : 0 }}
-            );
-        });
-    </script>
-    @endif
-</main>
-
-{{-- ── Add Cage Modal ── --}}
-<div id="addCageModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-    <div class="bg-white rounded-xl border border-[#D9D9D9] shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-        <div class="flex items-center justify-between mb-5">
-            <h2 class="text-base font-medium">Battery Cage Configuration</h2>
-            <button onclick="closeAddModal()" class="text-[#6B7280] hover:text-[#333333]">
-                <i data-lucide="x" class="w-5 h-5"></i>
-            </button>
-        </div>
-
-        <form method="POST" action="{{ route('cages.store') }}" id="addCageForm">
-            @csrf
-            <div class="grid grid-cols-2 gap-4">
-                <div class="col-span-2">
-                    <label class="block text-sm text-[#333333] mb-1.5">Cage Name</label>
-                    <input name="cage_code" id="addCageCode" placeholder="e.g. CAGE-E" required
-                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
-                </div>
-                <div class="col-span-2">
-                    <label class="block text-sm text-[#333333] mb-1.5">Location</label>
-                    <input name="location" id="addLocation" placeholder="e.g. North Wing"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
-                </div>
-                <div>
-                    <label class="block text-sm text-[#333333] mb-1.5">Rows</label>
-                    <input type="number" name="rows" id="addRows" value="3" min="1" max="10"
-                           oninput="updateAddPreview()"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
-                </div>
-                <div>
-                    <label class="block text-sm text-[#333333] mb-1.5">Slots per Row</label>
-                    <input type="number" name="slots_per_row" id="addSlotsPerRow" value="5" min="1" max="10"
-                           oninput="updateAddPreview()"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
-                </div>
-                <div class="col-span-2">
-                    <label class="block text-sm text-[#333333] mb-1.5">Max Chickens per Slot</label>
-                    <input type="number" name="max_chickens_per_slot" id="addMaxPerSlot" value="4" min="1" max="10"
-                           oninput="updateAddPreview()"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
-                </div>
+    {{-- ── Add Cage Modal (full complexity with live preview) ── --}}
+    <div id="addCageModal" class="hidden fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
+        <div class="absolute inset-0" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeAddModal()"></div>
+        <div class="relative w-full max-w-lg rounded-2xl p-6 max-h-[90vh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+            <div class="flex items-center justify-between mb-5">
+                <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Battery Cage Configuration</h2>
+                <button onclick="closeAddModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                    <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+                </button>
             </div>
 
-            {{-- Configuration Summary --}}
-            <div class="mt-4 p-3 bg-[#F5F6F8] rounded-lg border border-[#D9D9D9]">
-                <div class="text-[10px] text-[#6B7280] uppercase tracking-wider mb-2">Configuration Summary</div>
-                <div class="flex justify-between text-sm">
-                    <span class="text-[#6B7280]">Total slots</span>
-                    <span class="font-medium text-[#333333]" id="addSummarySlots">15</span>
-                </div>
-                <div class="flex justify-between text-sm mt-1">
-                    <span class="text-[#6B7280]">Total capacity</span>
-                    <span class="font-medium text-[#002D5E]" id="addSummaryCapacity">60 hens</span>
-                </div>
-            </div>
-
-            {{-- Layout Preview --}}
-            <div class="mt-4">
-                <div class="text-[10px] text-[#6B7280] uppercase tracking-wider mb-2">Layout Preview</div>
-                <div class="border border-[#E5E7EB] rounded-lg p-3 bg-white overflow-x-auto">
-                    <div class="flex gap-1 mb-1 pl-6" id="addPreviewColHeaders">
-                        @for($c = 1; $c <= 5; $c++)
-                            <div class="w-8 text-center text-[9px] text-[#9CA3AF]">{{ $c }}</div>
-                        @endfor
+            <form method="POST" action="{{ route('cages.store') }}" id="addCageForm">
+                @csrf
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Cage Name</label>
+                        <input name="cage_code" id="addCageCode" placeholder="e.g. CAGE-E" required
+                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                               style="border-color: #e6e6e6; color: #1f1f1f;">
                     </div>
-                    <div id="addPreviewGrid" class="space-y-1">
-                        @for($r = 1; $r <= 3; $r++)
-                            <div class="flex gap-1">
-                                <div class="w-5 flex items-center justify-center text-[9px] text-[#9CA3AF]">{{ $r }}</div>
+                    <div>
+                        <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Location</label>
+                        <input name="location" id="addLocation" placeholder="e.g. North Wing"
+                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                               style="border-color: #e6e6e6; color: #1f1f1f;">
+                    </div>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Rows</label>
+                            <input type="number" name="rows" id="addRows" value="3" min="1" max="10"
+                                   oninput="updateAddPreview()"
+                                   class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                   style="border-color: #e6e6e6; color: #1f1f1f;">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Slots/Row</label>
+                            <input type="number" name="slots_per_row" id="addSlotsPerRow" value="5" min="1" max="10"
+                                   oninput="updateAddPreview()"
+                                   class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                   style="border-color: #e6e6e6; color: #1f1f1f;">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Max/Slot</label>
+                            <input type="number" name="max_chickens_per_slot" id="addMaxPerSlot" value="4" min="1" max="10"
+                                   oninput="updateAddPreview()"
+                                   class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                   style="border-color: #e6e6e6; color: #1f1f1f;">
+                        </div>
+                    </div>
+
+                    {{-- Configuration Summary --}}
+                    <div class="rounded-lg p-3" style="background-color: #f6f5f4;">
+                        <div class="text-xs font-semibold tracking-[0.05em] uppercase mb-2" style="color: #615d59;">Configuration Summary</div>
+                        <div class="flex justify-between text-sm">
+                            <span style="color: #615d59;">Total slots</span>
+                            <span class="font-semibold" style="color: #1f1f1f;" id="addSummarySlots">15</span>
+                        </div>
+                        <div class="flex justify-between text-sm mt-1">
+                            <span style="color: #615d59;">Total capacity</span>
+                            <span class="font-semibold" style="color: #0075de;" id="addSummaryCapacity">60 hens</span>
+                        </div>
+                    </div>
+
+                    {{-- Layout Preview --}}
+                    <div>
+                        <div class="text-xs font-semibold tracking-[0.05em] uppercase mb-2" style="color: #615d59;">Layout Preview</div>
+                        <div class="border rounded-lg p-3 overflow-x-auto" style="border-color: #e6e6e6; background-color: #ffffff;">
+                            <div class="flex gap-1 mb-1 pl-6" id="addPreviewColHeaders">
                                 @for($c = 1; $c <= 5; $c++)
-                                    <div class="w-8 h-8 rounded border border-[#E5E7EB] bg-[#F9F9F7] flex items-center justify-center">
-                                        <span class="text-[9px] font-mono text-[#9CA3AF]">{{ ($r - 1) * 5 + $c }}</span>
+                                    <div class="w-8 text-center text-[9px]" style="color: #a39e98;">{{ $c }}</div>
+                                @endfor
+                            </div>
+                            <div id="addPreviewGrid" class="space-y-1">
+                                @for($r = 1; $r <= 3; $r++)
+                                    <div class="flex gap-1">
+                                        <div class="w-5 flex items-center justify-center text-[9px]" style="color: #a39e98;">{{ $r }}</div>
+                                        @for($c = 1; $c <= 5; $c++)
+                                            <div class="w-8 h-8 rounded border flex items-center justify-center" style="border-color: #e6e6e6; background-color: #f6f5f4;">
+                                                <span class="text-[9px] font-mono" style="color: #a39e98;">{{ ($r - 1) * 5 + $c }}</span>
+                                            </div>
+                                        @endfor
                                     </div>
                                 @endfor
                             </div>
-                        @endfor
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="flex gap-3 mt-5">
-                <button type="button" onclick="closeAddModal()"
-                        class="flex-1 border border-[#D9D9D9] text-[#6B7280] py-2.5 rounded-lg text-sm hover:bg-[#F5F6F8]">Cancel</button>
-                <button type="submit" class="flex-1 bg-[#002D5E] text-white py-2.5 rounded-lg text-sm hover:bg-[#001F42]">Add Cage</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-{{-- ── Edit Cage Modal ── --}}
-<div id="editCageModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-    <div class="bg-white rounded-xl border border-[#D9D9D9] shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-        <div class="flex items-center justify-between mb-5">
-            <h2 class="text-base font-medium">Edit Cage — <span id="editCageCode"></span></h2>
-            <button onclick="closeEditModal()" class="text-[#6B7280] hover:text-[#333333]">
-                <i data-lucide="x" class="w-5 h-5"></i>
-            </button>
+                <div class="flex gap-3 mt-5">
+                    <button type="button" onclick="closeAddModal()"
+                            class="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors"
+                            style="color: #1f1f1f; border: 1px solid #e6e6e6;"
+                            onmouseover="this.style.backgroundColor='#f6f5f4'"
+                            onmouseout="this.style.backgroundColor='transparent'">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity"
+                            style="background-color: #0075de;"
+                            onmouseover="this.style.opacity='0.85'"
+                            onmouseout="this.style.opacity='1'">
+                        Add Cage
+                    </button>
+                </div>
+            </form>
         </div>
-
-        <form method="POST" action="" id="editCageForm">
-            @csrf @method('PUT')
-
-            @if(session('errors') && session('errors')->has('resize'))
-            <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-                <div class="flex items-start gap-2">
-                    <i data-lucide="alert-circle" class="w-4 h-4 mt-0.5 shrink-0"></i>
-                    {{ session('errors')->first('resize') }}
-                </div>
-            </div>
-            @endif
-
-            <div class="grid grid-cols-2 gap-4">
-                <div class="col-span-2">
-                    <label class="block text-sm text-[#333333] mb-1.5">Location</label>
-                    <input name="location" id="editLocation"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
-                </div>
-                <div>
-                    <label class="block text-sm text-[#333333] mb-1.5">Rows</label>
-                    <input type="number" name="rows" id="editRows" value="3" min="1" max="10"
-                           oninput="updateEditPreview()"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
-                </div>
-                <div>
-                    <label class="block text-sm text-[#333333] mb-1.5">Slots per Row</label>
-                    <input type="number" name="slots_per_row" id="editSlotsPerRow" value="5" min="1" max="10"
-                           oninput="updateEditPreview()"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
-                </div>
-                <div class="col-span-2">
-                    <label class="block text-sm text-[#333333] mb-1.5">Max Chickens per Slot</label>
-                    <input type="number" name="max_chickens_per_slot" id="editMaxPerSlot" value="4" min="1" max="10"
-                           oninput="updateEditPreview()"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
-                </div>
-            </div>
-
-            <div class="mt-4 p-3 bg-[#F5F6F8] rounded-lg border border-[#D9D9D9]">
-                <div class="text-[10px] text-[#6B7280] uppercase tracking-wider mb-2">New Configuration</div>
-                <div class="flex justify-between text-sm">
-                    <span class="text-[#6B7280]">Total slots</span>
-                    <span class="font-medium text-[#333333]" id="editSummarySlots">15</span>
-                </div>
-                <div class="flex justify-between text-sm mt-1">
-                    <span class="text-[#6B7280]">Total capacity</span>
-                    <span class="font-medium text-[#002D5E]" id="editSummaryCapacity">60 hens</span>
-                </div>
-            </div>
-
-            <div class="mt-4">
-                <label class="flex items-center gap-2 mb-4 cursor-pointer">
-                    <input id="editActive" name="is_active" type="checkbox" value="1" class="w-4 h-4">
-                    <span class="text-sm text-[#333333]">Active</span>
-                </label>
-            </div>
-
-            <div class="flex gap-3 mt-5">
-                <button type="button" onclick="closeEditModal()"
-                        class="flex-1 border border-[#D9D9D9] text-[#6B7280] py-2.5 rounded-lg text-sm hover:bg-[#F5F6F8]">Cancel</button>
-                <button type="submit" class="flex-1 bg-[#002D5E] text-white py-2.5 rounded-lg text-sm hover:bg-[#001F42]">Save Changes</button>
-            </div>
-        </form>
     </div>
-</div>
 
+    {{-- ── Edit Cage Modal (simplified — no live preview) ── --}}
+    <div id="editCageModal" class="hidden fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
+        <div class="absolute inset-0" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEditModal()"></div>
+        <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+            <div class="flex items-center justify-between mb-5">
+                <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Edit Cage — <span id="editCageCode"></span></h2>
+                <button onclick="closeEditModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                    <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+                </button>
+            </div>
+
+            <form method="POST" action="" id="editCageForm">
+                @csrf @method('PUT')
+
+                <div id="editResizeError" class="hidden mb-4 rounded-lg p-3" style="background-color: #fbe4e6; border: 1px solid #f3cdd0;">
+                    <div class="flex items-start gap-2">
+                        <i data-lucide="alert-circle" class="w-4 h-4 mt-0.5 shrink-0" style="color: #9b1c24;"></i>
+                        <p class="text-sm" style="color: #9b1c24;" id="editResizeErrorText"></p>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Location</label>
+                        <input name="location" id="editLocation"
+                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                               style="border-color: #e6e6e6; color: #1f1f1f;">
+                    </div>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Rows</label>
+                            <input type="number" name="rows" id="editRows" value="3" min="1" max="10"
+                                   class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                   style="border-color: #e6e6e6; color: #1f1f1f;">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Slots/Row</label>
+                            <input type="number" name="slots_per_row" id="editSlotsPerRow" value="5" min="1" max="10"
+                                   class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                   style="border-color: #e6e6e6; color: #1f1f1f;">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Max/Slot</label>
+                            <input type="number" name="max_chickens_per_slot" id="editMaxPerSlot" value="4" min="1" max="10"
+                                   class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                   style="border-color: #e6e6e6; color: #1f1f1f;">
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input id="editActive" name="is_active" type="checkbox" value="1" class="w-4 h-4 rounded" style="accent-color: #0075de;">
+                        <label for="editActive" class="text-sm" style="color: #31302e;">Active</label>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 mt-5">
+                    <button type="button" onclick="closeEditModal()"
+                            class="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors"
+                            style="color: #1f1f1f; border: 1px solid #e6e6e6;"
+                            onmouseover="this.style.backgroundColor='#f6f5f4'"
+                            onmouseout="this.style.backgroundColor='transparent'">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity"
+                            style="background-color: #0075de;"
+                            onmouseover="this.style.opacity='0.85'"
+                            onmouseout="this.style.opacity='1'">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- ── Confirm Modal (for delete) ── --}}
+    <x-confirm-modal />
+
+</main>
 @endsection
 
 @push('scripts')
 <script>
-// ── Slot Expand Panel ────────────────────────────────────────────
+// ── Tab Filter ────────────────────────────────────────────
+function filterCage(code) {
+    const cageColors = { 'CAGE-A': '#2D7D46', 'CAGE-B': '#1D4E8F', 'CAGE-C': '#C2703E', 'CAGE-D': '#6B4C8A' };
+    document.querySelectorAll('.cage-tab').forEach(tab => {
+        if (tab.dataset.tab === code) {
+            tab.style.borderBottomColor = code === 'all' ? '#0075de' : (cageColors[code] || '#0075de');
+            tab.style.color = '#1f1f1f';
+        } else {
+            tab.style.borderBottomColor = 'transparent';
+            tab.style.color = '#615d59';
+        }
+    });
+    document.querySelectorAll('.cage-card').forEach(card => {
+        card.style.display = (code === 'all' || card.dataset.cageCode === code) ? '' : 'none';
+    });
+}
+
+// ── Slot Expand Panel ────────────────────────────────────
 function expandSlot(slotId, cageId, cageCode) {
     const panel = document.getElementById('slotExpandPanel-' + cageId);
     const content = document.getElementById('slotPanelContent-' + cageId);
     const title = document.getElementById('slotPanelTitle-' + cageId);
-
     panel.classList.remove('hidden');
-
     fetch(`/cages/slots/${slotId}/hens-json`)
         .then(r => r.json())
         .then(data => {
-            title.textContent = `${cageCode} — Slot ${data.slot.row_number}-${data.slot.column_number} (#${data.slot.slot_number})`;
-
+            title.textContent = cageCode + ' — Slot ' + data.slot.row_number + '-' + data.slot.column_number + ' (#' + data.slot.slot_number + ')';
             if (data.hens.length === 0) {
-                content.innerHTML = '<p class="text-xs text-[#9CA3AF] text-center py-3">No hens in this slot.</p>';
+                content.innerHTML = '<p class="text-xs text-center py-3" style="color: #a39e98;">No hens in this slot.</p>';
                 return;
             }
-
-            let html = `
-                <div class="space-y-1.5">
-                    ${data.hens.map(hen => `
-                        <div class="flex items-center gap-3 bg-white rounded border border-[#E5E7EB] px-3 py-2 text-xs">
-                            <span class="w-24 font-mono text-[#6B7280]">${hen.tag_code || '—'}</span>
-                            <span class="w-32 text-[#333]">${hen.breed}</span>
-                            <span class="w-12 text-[#6B7280]">${hen.current_age_weeks}w</span>
-                            <span class="flex-1">
-                                <span class="text-[10px] px-1.5 py-0.5 rounded-full ${hen.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}">
-                                    ${hen.is_active ? 'Active' : 'Inactive'}
-                                </span>
-                            </span>
-                            <div class="flex items-center gap-1">
-                                <button type="button"
-                                        onclick="openMoveModal('${hen.id}', 1, '${cageCode} slot ${data.slot.slot_number}', '${hen.breed}')"
-                                        class="px-1.5 py-0.5 text-[10px] border border-[#D9D9D9] rounded hover:bg-[#E5E7EB]">
-                                    Move
-                                </button>
-                                <button type="button"
-                                        onclick="openRemoveModal('${hen.id}', 1, '${cageCode} slot ${data.slot.slot_number}', '${hen.breed}')"
-                                        class="px-1.5 py-0.5 text-[10px] border border-red-200 text-red-400 rounded hover:bg-red-50">
-                                    Remove
-                                </button>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-                <div class="mt-3 flex items-center gap-2">
-                    <button type="button"
-                            onclick="openMoveModal('${data.hens.map(h => h.id).join(',')}', ${data.hens.length}, '${cageCode} slot ${data.slot.slot_number}', '${data.hens[0]?.breed || ''}')"
-                            class="px-3 py-1.5 text-xs border border-[#002D5E] text-[#002D5E] rounded hover:bg-[#002D5E]/5">
-                        Move All (${data.hens.length})
-                    </button>
-                    <button type="button"
-                            onclick="openRemoveModal('${data.hens.map(h => h.id).join(',')}', ${data.hens.length}, '${cageCode} slot ${data.slot.slot_number}', '${data.hens[0]?.breed || ''}')"
-                            class="px-3 py-1.5 text-xs border border-red-400 text-red-500 rounded hover:bg-red-50">
-                        Remove All (${data.hens.length})
-                    </button>
-                </div>
-            `;
+            let html = '<div class="space-y-1.5">';
+            data.hens.forEach(hen => {
+                html += '<div class="flex items-center gap-3 rounded border px-3 py-2 text-xs" style="background-color: #ffffff; border-color: #e6e6e6;">';
+                html += '<span class="w-24 font-mono" style="color: #615d59;">' + (hen.tag_code || '—') + '</span>';
+                html += '<span class="w-32" style="color: #31302e;">' + hen.breed + '</span>';
+                html += '<span class="w-12" style="color: #615d59;">' + hen.current_age_weeks + 'w</span>';
+                html += '<span class="flex-1">';
+                html += '<span class="text-[10px] px-1.5 py-0.5 rounded-full" style="background-color: ' + (hen.is_active ? '#e8f5ec' : '#f0f0f0') + '; color: ' + (hen.is_active ? '#1f6b3a' : '#615d59') + ';">';
+                html += (hen.is_active ? 'Active' : 'Inactive') + '</span></span>';
+                html += '<div class="flex items-center gap-1">';
+                html += '<button type="button" onclick="openMoveModal(\'' + hen.id + '\', 1, \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + hen.breed + '\')" class="px-1.5 py-0.5 text-[10px] border rounded hover:bg-black/5" style="border-color: #e6e6e6; color: #615d59;">Move</button>';
+                html += '<button type="button" onclick="openRemoveModal(\'' + hen.id + '\', 1, \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + hen.breed + '\')" class="px-1.5 py-0.5 text-[10px] border rounded hover:bg-red-50" style="border-color: #f3cdd0; color: #9b1c24;">Remove</button>';
+                html += '</div></div>';
+            });
+            html += '</div>';
+            html += '<div class="mt-3 flex items-center gap-2">';
+            const ids = data.hens.map(h => h.id).join(',');
+            html += '<button type="button" onclick="openMoveModal(\'' + ids + '\', ' + data.hens.length + ', \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + (data.hens[0]?.breed || '') + '\')" class="px-3 py-1.5 text-xs border rounded transition-colors" style="border-color: #0075de; color: #0075de;" onmouseover="this.style.backgroundColor=\'#f0f7ff\'" onmouseout="this.style.backgroundColor=\'transparent\'">Move All (' + data.hens.length + ')</button>';
+            html += '<button type="button" onclick="openRemoveModal(\'' + ids + '\', ' + data.hens.length + ', \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + (data.hens[0]?.breed || '') + '\')" class="px-3 py-1.5 text-xs border rounded hover:bg-red-50" style="border-color: #9b1c24; color: #9b1c24;">Remove All (' + data.hens.length + ')</button>';
+            html += '</div>';
             content.innerHTML = html;
             lucide.createIcons();
         })
         .catch(() => {
-            content.innerHTML = '<p class="text-xs text-red-500 text-center py-3">Failed to load hens.</p>';
+            content.innerHTML = '<p class="text-xs text-center py-3" style="color: #9b1c24;">Failed to load hens.</p>';
         });
 }
 
 function closeSlotExpand(cageId) {
     document.getElementById('slotExpandPanel-' + cageId).classList.add('hidden');
 }
-</script>
-@endpush
 
-@push('scripts')
-<script>
-lucide.createIcons();
-
+// ── Add Modal ────────────────────────────────────────────
 function openAddModal() {
-    document.getElementById('addCageModal').classList.remove('hidden');
+    document.getElementById('addCageModal').style.display = 'flex';
     updateAddPreview();
 }
 
 function closeAddModal() {
-    document.getElementById('addCageModal').classList.add('hidden');
-}
-
-function openEditModal(id, cageCode, location, rows, slotsPerRow, maxPerSlot, isActive) {
-    document.getElementById('editCageForm').action = '/cages/' + id;
-    document.getElementById('editCageCode').textContent = cageCode;
-    document.getElementById('editLocation').value = location || '';
-    document.getElementById('editRows').value = rows;
-    document.getElementById('editSlotsPerRow').value = slotsPerRow;
-    document.getElementById('editMaxPerSlot').value = maxPerSlot;
-    document.getElementById('editActive').checked = isActive === 1;
-    updateEditPreview();
-    document.getElementById('editCageModal').classList.remove('hidden');
-}
-
-function closeEditModal() {
-    document.getElementById('editCageModal').classList.add('hidden');
+    document.getElementById('addCageModal').style.display = 'none';
 }
 
 function updateAddPreview() {
@@ -467,29 +413,26 @@ function updateAddPreview() {
     const maxPerSlot = parseInt(document.getElementById('addMaxPerSlot').value) || 1;
     const totalSlots = rows * slotsPerRow;
     const totalCapacity = totalSlots * maxPerSlot;
-
     document.getElementById('addSummarySlots').textContent = totalSlots;
     document.getElementById('addSummaryCapacity').textContent = totalCapacity + ' hens';
-
     const grid = document.getElementById('addPreviewGrid');
     const colHeaders = document.getElementById('addPreviewColHeaders');
-
     colHeaders.innerHTML = '';
     for (let c = 1; c <= slotsPerRow; c++) {
         const d = document.createElement('div');
-        d.className = 'w-8 text-center text-[9px] text-[#9CA3AF]';
+        d.className = 'w-8 text-center text-[9px]';
+        d.style.color = '#a39e98';
         d.textContent = c;
         colHeaders.appendChild(d);
     }
-
     let html = '';
     for (let r = 1; r <= rows; r++) {
         html += '<div class="flex gap-1 mb-1">';
-        html += '<div class="w-5 flex items-center justify-center text-[9px] text-[#9CA3AF]">' + r + '</div>';
+        html += '<div class="w-5 flex items-center justify-center text-[9px]" style="color: #a39e98;">' + r + '</div>';
         for (let c = 1; c <= slotsPerRow; c++) {
             const num = (r - 1) * slotsPerRow + c;
-            html += '<div class="w-8 h-8 rounded border border-[#E5E7EB] bg-[#F9F9F7] flex items-center justify-center">';
-            html += '<span class="text-[9px] font-mono text-[#9CA3AF]">' + num + '</span>';
+            html += '<div class="w-8 h-8 rounded border flex items-center justify-center" style="border-color: #e6e6e6; background-color: #f6f5f4;">';
+            html += '<span class="text-[9px] font-mono" style="color: #a39e98;">' + num + '</span>';
             html += '</div>';
         }
         html += '</div>';
@@ -497,27 +440,24 @@ function updateAddPreview() {
     grid.innerHTML = html;
 }
 
-function updateEditPreview() {
-    const rows = parseInt(document.getElementById('editRows').value) || 1;
-    const slotsPerRow = parseInt(document.getElementById('editSlotsPerRow').value) || 1;
-    const maxPerSlot = parseInt(document.getElementById('editMaxPerSlot').value) || 1;
-    const totalSlots = rows * slotsPerRow;
-    const totalCapacity = totalSlots * maxPerSlot;
-
-    document.getElementById('editSummarySlots').textContent = totalSlots;
-    document.getElementById('editSummaryCapacity').textContent = totalCapacity + ' hens';
+// ── Edit Modal ───────────────────────────────────────────
+function openEditModal(id, cageCode, location, rows, slotsPerRow, maxPerSlot, isActive) {
+    document.getElementById('editCageForm').action = '/cages/' + id;
+    document.getElementById('editCageCode').textContent = cageCode;
+    document.getElementById('editLocation').value = location || '';
+    document.getElementById('editRows').value = rows;
+    document.getElementById('editSlotsPerRow').value = slotsPerRow;
+    document.getElementById('editMaxPerSlot').value = maxPerSlot;
+    document.getElementById('editActive').checked = isActive === 1;
+    document.getElementById('editResizeError').classList.add('hidden');
+    document.getElementById('editCageModal').style.display = 'flex';
 }
 
-function toggleSlotSensor(cageId, slotId, currentSensor) {
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `/cages/${cageId}/slots/${slotId}/toggle-sensor`;
-    form.innerHTML = `@csrf`;
-    document.body.appendChild(form);
-    form.submit();
+function closeEditModal() {
+    document.getElementById('editCageModal').style.display = 'none';
 }
 
-// ── Move + Remove Modals (for slot expand) ──────────────────────
+// ── Move + Remove Modals ─────────────────────────────────
 function openMoveModal(henIds, count, sourceInfo, breed) {
     document.getElementById('moveCount').textContent = count;
     document.getElementById('moveHenIds').value = henIds;
@@ -531,10 +471,10 @@ function openMoveModal(henIds, count, sourceInfo, breed) {
     document.getElementById('destSlotSelect').disabled = true;
     document.getElementById('moveAvailability').classList.add('hidden');
     document.getElementById('moveSubmitBtn').disabled = true;
-    document.getElementById('moveModal').classList.remove('hidden');
+    document.getElementById('moveModal').style.display = 'flex';
 }
 function closeMoveModal() {
-    document.getElementById('moveModal').classList.add('hidden');
+    document.getElementById('moveModal').style.display = 'none';
 }
 function loadDestSlots() {
     const cageSelect = document.getElementById('destCageSelect');
@@ -544,16 +484,16 @@ function loadDestSlots() {
     slotSelect.innerHTML = '<option value="">Loading...</option>';
     slotSelect.disabled = true;
     if (!cageSelect.value) { slotSelect.innerHTML = '<option value="">Select cage first...</option>'; return; }
-    fetch(`/cages/${cageSelect.value}/slots-json`)
+    fetch('/cages/' + cageSelect.value + '/slots-json')
         .then(r => r.json())
         .then(slots => {
             let html = '<option value="">Select slot...</option>';
             slots.forEach(slot => {
                 const remaining = parseInt(option.dataset.max) - slot.current_occupancy;
                 const canFit = remaining >= toMove;
-                html += `<option value="${slot.id}" data-remaining="${remaining}" class="${canFit ? '' : 'text-red-400'}">
-                    Slot ${slot.row_number}-${slot.column_number} (#${slot.slot_number}) — ${remaining} space${remaining !== 1 ? 's' : ''} ${canFit ? '' : '(insufficient)'}
-                </option>`;
+                html += '<option value="' + slot.id + '" data-remaining="' + remaining + '" class="' + (canFit ? '' : 'text-red-400') + '">';
+                html += 'Slot ' + slot.row_number + '-' + slot.column_number + ' (#' + slot.slot_number + ') — ' + remaining + ' space' + (remaining !== 1 ? 's' : '') + (canFit ? '' : ' (insufficient)');
+                html += '</option>';
             });
             slotSelect.innerHTML = html;
             slotSelect.disabled = false;
@@ -569,12 +509,14 @@ function checkMoveAvailability() {
     const submitBtn = document.getElementById('moveSubmitBtn');
     availEl.classList.remove('hidden');
     if (remaining >= toMove) {
-        availEl.className = 'text-xs font-medium text-green-600';
-        availEl.textContent = `${remaining} space${remaining !== 1 ? 's' : ''} available — ready to move.`;
+        availEl.className = 'text-xs font-medium';
+        availEl.style.color = '#1f6b3a';
+        availEl.textContent = remaining + ' space' + (remaining !== 1 ? 's' : '') + ' available — ready to move.';
         submitBtn.disabled = false;
     } else {
-        availEl.className = 'text-xs font-medium text-red-500';
-        availEl.textContent = `Insufficient capacity. Only ${remaining} space${remaining !== 1 ? 's' : ''} available but ${toMove} needed.`;
+        availEl.className = 'text-xs font-medium';
+        availEl.style.color = '#9b1c24';
+        availEl.textContent = 'Insufficient capacity. Only ' + remaining + ' space' + (remaining !== 1 ? 's' : '') + ' available but ' + toMove + ' needed.';
         submitBtn.disabled = true;
     }
 }
@@ -589,14 +531,48 @@ function openRemoveModal(henIds, count, sourceInfo, breed) {
     document.getElementById('recordMortality').checked = true;
     document.getElementById('mortalityFields').classList.remove('hidden');
     document.getElementById('removeReason').value = '';
-    document.getElementById('removeModal').classList.remove('hidden');
+    document.getElementById('removeModal').style.display = 'flex';
 }
 function closeRemoveModal() {
-    document.getElementById('removeModal').classList.add('hidden');
+    document.getElementById('removeModal').style.display = 'none';
 }
+
+// ── Keyboard: Escape closes modals ───────────────────────
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeAddModal();
+        closeEditModal();
+        closeMoveModal();
+        closeRemoveModal();
+    }
+});
+
+// ── Auto-open edit modal on resize error ─────────────────
+@if(session('edit_cage_id') && isset($editCage))
+document.addEventListener('DOMContentLoaded', function() {
+    openEditModal(
+        {{ $editCage->id }},
+        '{{ $editCage->cage_code }}',
+        '{{ addslashes($editCage->location) }}',
+        {{ $editCage->rows }},
+        {{ $editCage->slots_per_row }},
+        {{ $editCage->max_chickens_per_slot }},
+        {{ $editCage->is_active ? 1 : 0 }}
+    );
+    @if(session('errors') && session('errors')->has('resize'))
+    const errEl = document.getElementById('editResizeError');
+    const errText = document.getElementById('editResizeErrorText');
+    errEl.classList.remove('hidden');
+    errText.textContent = '{{ addslashes(session('errors')->first('resize')) }}';
+    lucide.createIcons();
+    @endif
+});
+@endif
+
+lucide.createIcons();
 </script>
 @endpush
 
-{{-- Move + Remove Modals --}}
+{{-- Move + Remove Modals ──────────────────────────────────── --}}
 @include('chickens.partials.move-modal')
 @include('chickens.partials.remove-modal')
