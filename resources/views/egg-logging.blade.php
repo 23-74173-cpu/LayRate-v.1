@@ -4,91 +4,199 @@
 @section('content')
 <main class="p-5 space-y-5">
 
-    {{-- ── Log Entry Form ── --}}
-    <div class="bg-white rounded-lg border border-[#D9D9D9] p-6">
-        <h2 class="text-base font-medium text-[#333333] mb-5">Log Entry Form</h2>
-        <form method="POST" action="{{ route('egg-logging.store') }}" id="eggForm">
-            @csrf
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-                {{-- Date --}}
-                <div class="mb-4">
-                    <label class="block text-sm text-[#333333] mb-1.5">Date</label>
-                    <input type="date" name="log_date" value="{{ now()->toDateString() }}" required
-                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
-                </div>
-
-                {{-- Cage --}}
-                <div class="mb-4">
-                    <label class="block text-sm text-[#333333] mb-1.5">Cage</label>
-                    <select name="cage_id" id="cageSelect" onchange="updateCageInfo(this)"
-                            class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
-                        @foreach($cages as $cage)
-                        <option value="{{ $cage->id }}"
-                                data-hens="{{ $cage->total_capacity }}"
-                                data-hdep="{{ number_format($cage->latestProductionLog()?->hdep ?? 0, 1) }}"
-                                data-age="{{ $cage->hens->first()?->current_age_weeks ?? 0 }} weeks"
-                                data-breed="{{ $cage->hens->first()?->breed ?? '—' }}"
-                                data-today-egg-count="{{ $cage->today_egg_count }}">
-                            {{ $cage->cage_code }} — {{ $cage->hens->first()?->breed ?? '—' }}
-                        </option>
-                        @endforeach
-                    </select>
-                    {{-- Cage info bar --}}
-                    <div id="cageInfoBar" class="mt-2 flex flex-wrap gap-4 text-xs text-[#6B7280] bg-[#F5F6F8] border border-[#D9D9D9] rounded-lg px-4 py-2">
-                        <span>Flock age: <span id="cageAge" class="text-[#333333]">—</span></span>
-                        <span>Last HDEP: <span id="cageHdep" class="text-[#333333]">—</span></span>
-                        <span>Hens: <span id="cageHens" class="text-[#333333]">—</span></span>
-                    </div>
-                </div>
-
-                {{-- Egg Count --}}
-                <div class="mb-4">
-                    <label class="block text-sm text-[#333333] mb-1.5">Egg Count (IR sensor auto-count or manual entry)</label>
-                    <input type="number" name="egg_count" id="eggCount" min="0" required
-                           oninput="computeHdep()"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
-                    <button type="button" id="overrideLabel" onclick="openOverrideModal()"
-                            class="hidden mt-1.5 text-xs text-amber-700 flex items-center gap-1">
-                        🔒 Sensor reading — click to override
-                    </button>
-                </div>
-
-                {{-- Hen Count --}}
-                <div class="mb-4">
-                    <label class="block text-sm text-[#333333] mb-1.5">Hen Count</label>
-                    <input type="number" name="hen_count" id="henCount" min="1" value="120" required
-                           oninput="computeHdep()"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
-                    <div id="hdepDisplay" class="mt-2 inline-block bg-[#F5F6F8] border border-[#D9D9D9] rounded-lg px-4 py-2 text-sm font-mono text-[#333333]">
-                        HDEP: &nbsp;—
-                    </div>
-                </div>
-
-                {{-- Logged By --}}
-                <div class="mb-4">
-                    <label class="block text-sm text-[#333333] mb-1.5">Logged By</label>
-                    <input type="text" name="logged_by" value="Farm Operator"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
-                </div>
-
-                {{-- Notes --}}
-                <div class="mb-5">
-                    <label class="block text-sm text-[#333333] mb-1.5">Notes
-                        <span class="text-[#6B7280] text-xs">(optional)</span>
-                    </label>
-                    <textarea name="notes" rows="3" placeholder="e.g. 2 broken eggs, 1 hen showing signs of illness in slot B3"
-                              class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E] resize-y"></textarea>
-                </div>
-            </div>
-
-            <button type="submit" class="bg-[#002D5E] text-white px-6 py-2.5 rounded-lg text-sm hover:bg-[#001F42] transition-colors">
-                Save Record
-            </button>
-        </form>
+    {{-- Header --}}
+    <div class="flex items-center justify-between">
+        <h1 class="text-xl font-medium text-[#333333]">Egg Logging</h1>
+        <div class="flex items-center gap-2">
+            <label class="text-xs text-[#6B7280]">Cage filter:</label>
+            <select onchange="window.location.href = this.value ? '?cage_id=' + this.value : '?'"
+                    class="border border-[#D9D9D9] rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
+                <option value="">All Cages</option>
+                @foreach($cages as $c)
+                <option value="{{ $c->id }}" {{ $cageFilter == $c->id ? 'selected' : '' }}>
+                    {{ $c->cage_code }} — {{ $c->location ?: 'No location' }}
+                </option>
+                @endforeach
+            </select>
+        </div>
     </div>
 
-    {{-- ── Recent Logs ── --}}
+    {{-- Today's Summary Cards --}}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4 text-center">
+            <div class="text-2xl font-bold text-[#002D5E]">{{ $todayTotal }}</div>
+            <div class="text-xs text-[#6B7280] mt-1">Eggs Today</div>
+        </div>
+        @foreach($cages as $c)
+        @php $eggs = $todayByCage->get($c->cage_code, 0); @endphp
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4 text-center">
+            <div class="text-2xl font-bold" style="color: {{ $c->color }}">{{ $eggs }}</div>
+            <div class="text-xs text-[#6B7280] mt-1">{{ $c->cage_code }}</div>
+        </div>
+        @endforeach
+    </div>
+
+    {{-- Slot Cards Grid --}}
+    <div>
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-medium text-[#333]">Select a Slot to Log</h2>
+            <span class="text-xs text-[#9CA3AF]">{{ $cageSlots->count() }} slot{{ $cageSlots->count() !== 1 ? 's' : '' }}</span>
+        </div>
+
+        @if($cageSlots->isEmpty())
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-10 text-center text-sm text-[#9CA3AF]">
+            No slots found for the selected filter.
+        </div>
+        @else
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            @foreach($cageSlots as $slot)
+            @php
+                $cage = $slot->cage;
+                $primaryHen = $slot->primaryHen();
+                $isSensor = $slot->has_sensor;
+                $isSelected = false;
+            @endphp
+            <div class="slot-card bg-white rounded-lg border border-[#D9D9D9] p-4 cursor-pointer hover:ring-1 hover:ring-[#002D5E] transition-all relative"
+                 data-slot-id="{{ $slot->id }}"
+                 data-cage-id="{{ $cage->id }}"
+                 data-cage-code="{{ $cage->cage_code }}"
+                 data-slot-number="{{ $slot->slot_number }}"
+                 data-row="{{ $slot->row_number }}"
+                 data-col="{{ $slot->column_number }}"
+                 data-hens="{{ $slot->current_occupancy }}"
+                 data-breed="{{ $primaryHen?->breed ?? '—' }}"
+                 data-age="{{ $primaryHen?->current_age_weeks ?? 0 }}"
+                 data-has-sensor="{{ $isSensor ? 1 : 0 }}"
+                 data-today-eggs="{{ $slot->today_egg_count }}"
+                 onclick="selectSlot(this)">
+
+                {{-- Sensor badge --}}
+                @if($isSensor)
+                <div class="absolute top-2 right-2 flex items-center gap-0.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                </div>
+                @endif
+
+                {{-- Cage + Slot label --}}
+                <div class="text-xs font-semibold mb-1" style="color: {{ $cage->color }}">
+                    {{ $cage->cage_code }} · Slot {{ $slot->row_number }}-{{ $slot->column_number }}
+                </div>
+
+                {{-- Hens --}}
+                <div class="text-[10px] text-[#6B7280] mb-1">
+                    {{ $slot->current_occupancy }}/{{ $cage->max_chickens_per_slot }} hens
+                </div>
+
+                {{-- Breed + Age --}}
+                @if($primaryHen)
+                <div class="text-[10px] text-[#333] mb-1">{{ $primaryHen->breed }}</div>
+                <div class="text-[10px] text-[#9CA3AF] mb-1">{{ $primaryHen->current_age_weeks }}w old</div>
+                @else
+                <div class="text-[10px] text-[#9CA3AF] mb-1">No hens</div>
+                @endif
+
+                {{-- Today's eggs --}}
+                <div class="mt-1.5 pt-1.5 border-t border-[#F0F0F0]">
+                    <div class="text-[10px] text-[#9CA3AF]">Today: <span class="font-medium text-[#333]" id="slot-eggs-{{ $slot->id }}">{{ $slot->today_egg_count }}</span> eggs</div>
+                </div>
+
+                {{-- Selected indicator --}}
+                <div class="selected-indicator hidden absolute inset-0 rounded-lg border-2 border-[#002D5E] pointer-events-none"></div>
+            </div>
+            @endforeach
+        </div>
+        @endif
+    </div>
+
+    {{-- Log Entry Form --}}
+    <div class="bg-white rounded-lg border border-[#D9D9D9] p-6">
+        <h2 class="text-base font-medium text-[#333333] mb-5">Log Entry</h2>
+
+        <div id="slotFormPlaceholder" class="text-center py-8 text-sm text-[#9CA3AF]">
+            Click a slot card above to start logging.
+        </div>
+
+        <div id="slotForm" class="hidden">
+            <form method="POST" action="{{ route('egg-logging.store') }}" id="eggForm">
+                @csrf
+
+                {{-- Selected slot info --}}
+                <div id="selectedSlotBar" class="mb-4 p-3 rounded-lg border border-[#002D5E]/20 bg-[#002D5E]/5 flex items-center gap-4 text-xs">
+                    <div>
+                        <span class="text-[#9CA3AF]">Slot:</span>
+                        <span id="formSlotLabel" class="font-semibold text-[#002D5E]"></span>
+                    </div>
+                    <div>
+                        <span class="text-[#9CA3AF]">Breed:</span>
+                        <span id="formBreed" class="text-[#333]"></span>
+                    </div>
+                    <div>
+                        <span class="text-[#9CA3AF]">Age:</span>
+                        <span id="formAge" class="text-[#333]"></span>
+                    </div>
+                    <div>
+                        <span class="text-[#9CA3AF]"> Hens:</span>
+                        <span id="formHenCount" class="text-[#333]"></span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                    {{-- Date --}}
+                    <div class="mb-4">
+                        <label class="block text-sm text-[#333333] mb-1.5">Date</label>
+                        <input type="date" name="log_date" value="{{ now()->toDateString() }}" required
+                               class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
+                    </div>
+
+                    {{-- Slot (hidden field) --}}
+                    <input type="hidden" name="cage_slot_id" id="cageSlotId" value="">
+
+                    {{-- Egg Count --}}
+                    <div class="mb-4">
+                        <label class="block text-sm text-[#333333] mb-1.5">Egg Count</label>
+                        <input type="number" name="egg_count" id="eggCount" min="0" required
+                               oninput="computeHdep()"
+                               class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
+                        <button type="button" id="overrideLabel" onclick="openOverrideModal()"
+                                class="hidden mt-1.5 text-xs text-amber-700 flex items-center gap-1">
+                            🔒 Sensor reading — click to override
+                        </button>
+                    </div>
+
+                    {{-- Hen Count --}}
+                    <div class="mb-4">
+                        <label class="block text-sm text-[#333333] mb-1.5">Hen Count</label>
+                        <input type="number" name="hen_count" id="henCount" min="1" value="1" required
+                               oninput="computeHdep()"
+                               class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
+                        <div id="hdepDisplay" class="mt-2 inline-block bg-[#F5F6F8] border border-[#D9D9D9] rounded-lg px-4 py-2 text-sm font-mono text-[#333333]">
+                            HDEP: &nbsp;—
+                        </div>
+                    </div>
+
+                    {{-- Notes --}}
+                    <div class="mb-5">
+                        <label class="block text-sm text-[#333333] mb-1.5">Notes <span class="text-[#6B7280] text-xs">(optional)</span></label>
+                        <textarea name="notes" rows="2" placeholder="e.g. 2 broken eggs, irregular lay in slot A2-3"
+                                  class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#002D5E] resize-y"></textarea>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <button type="button" onclick="clearSlotSelection()"
+                            class="px-4 py-2 text-sm border border-[#D9D9D9] rounded-lg hover:bg-[#F5F6F8]">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="px-6 py-2.5 bg-[#002D5E] text-white rounded-lg text-sm hover:bg-[#001F42] transition-colors">
+                        Save Record
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- Recent Logs --}}
     <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
         <div class="px-6 py-4 border-b border-[#D9D9D9]">
             <h2 class="text-base font-medium text-[#333333]">Recent Logs</h2>
@@ -99,25 +207,31 @@
                     <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
                         <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Date</th>
                         <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Cage</th>
+                        <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Slot</th>
                         <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Eggs</th>
                         <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Hens</th>
                         <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">HDEP</th>
                         <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Logged By</th>
                         <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Notes</th>
                         <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Override</th>
-                        <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Actions</th>
+                        @if(auth()->user()->role === 'admin')<th class="px-6 py-3"></th>@endif
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($logs as $log)
                     @php
-                        $cColor = match($log->cageSlot->cage->cage_code) {
+                        $cColor = match($log->cageSlot?->cage?->cage_code) {
                             'CAGE-A'=>'#2D7D46','CAGE-B'=>'#1D4E8F','CAGE-C'=>'#C2703E','CAGE-D'=>'#6B4C8A',default=>'#6B7280'
                         };
                     @endphp
-                    <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
+                    <tr class="border-b border-[#F0F0F0] hover:bg-[#F5F6F8]">
                         <td class="px-6 py-3 text-sm text-[#333333] font-mono">{{ $log->log_date->format('Y-m-d') }}</td>
-                        <td class="px-6 py-3 text-sm font-medium font-mono" style="color:{{ $cColor }}">{{ $log->cageSlot->cage->cage_code }}</td>
+                        <td class="px-6 py-3 text-sm font-medium font-mono" style="color:{{ $cColor }}">{{ $log->cageSlot?->cage?->cage_code ?? '—' }}</td>
+                        <td class="px-6 py-3 text-xs font-mono text-[#6B7280]">
+                            @if($log->cageSlot)
+                            {{ $log->cageSlot->row_number }}-{{ $log->cageSlot->column_number }}
+                            @else — @endif
+                        </td>
                         <td class="px-6 py-3 text-sm text-[#333333] font-mono">{{ $log->egg_count }}</td>
                         <td class="px-6 py-3 text-sm text-[#333333] font-mono">{{ $log->hen_count }}</td>
                         <td class="px-6 py-3 text-sm text-[#333333] font-mono">{{ number_format($log->hdep,1) }}%</td>
@@ -129,9 +243,10 @@
                                 Manually overridden by {{ $log->overriddenBy->name }}
                             </span>
                             @else
-                            <span class="text-xs text-[#6B7280]">—</span>
+                            <span class="text-xs text-[#9CA3AF]">—</span>
                             @endif
                         </td>
+                        @if(auth()->user()->role === 'admin')
                         <td class="px-6 py-3">
                             <form method="POST" action="{{ route('egg-logging.destroy', $log) }}"
                                   onsubmit="return confirm('Delete this log?')">
@@ -141,9 +256,10 @@
                                 </button>
                             </form>
                         </td>
+                        @endif
                     </tr>
                     @empty
-                    <tr><td colspan="9" class="px-6 py-8 text-center text-sm text-[#6B7280]">No logs yet. Save the first record above.</td></tr>
+                    <tr><td colspan="{{ auth()->user()->role === 'admin' ? 10 : 9 }}" class="px-6 py-8 text-center text-sm text-[#6B7280]">No logs yet. Select a slot and save the first record.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -181,48 +297,72 @@
 
 @push('scripts')
 <script>
-lucide.createIcons();
+let currentSlotId = null;
+let currentHasSensor = false;
+let overrideVerified = false;
 
-let currentSensorCageId = null;
+function selectSlot(card) {
+    document.querySelectorAll('.slot-card').forEach(c => {
+        c.classList.remove('ring-2', 'ring-[#002D5E]', 'ring-offset-1');
+        c.querySelector('.selected-indicator')?.classList.add('hidden');
+    });
 
-window.addEventListener('DOMContentLoaded', () => updateCageInfo(document.getElementById('cageSelect')));
+    card.classList.add('ring-2', 'ring-[#002D5E]', 'ring-offset-1');
+    card.querySelector('.selected-indicator')?.classList.remove('hidden');
 
-function updateCageInfo(sel) {
-    const opt = sel.options[sel.selectedIndex];
-    document.getElementById('cageAge').textContent  = opt.dataset.age  || '—';
-    document.getElementById('cageHdep').textContent = (opt.dataset.hdep || '—') + '%';
-    document.getElementById('cageHens').textContent = opt.dataset.hens || '—';
-    document.getElementById('henCount').value = opt.dataset.hens || 120;
+    currentSlotId = parseInt(card.dataset.slotId);
+    currentHasSensor = card.dataset.hasSensor === '1';
 
-    const eggInput      = document.getElementById('eggCount');
+    document.getElementById('cageSlotId').value = currentSlotId;
+    document.getElementById('formSlotLabel').textContent =
+        card.dataset.cageCode + ' · Slot ' + card.dataset.row + '-' + card.dataset.col + ' (#' + card.dataset.slotNumber + ')';
+    document.getElementById('formBreed').textContent = card.dataset.breed || '—';
+    document.getElementById('formAge').textContent = card.dataset.age + 'w';
+    document.getElementById('formHenCount').textContent = card.dataset.hens;
+    document.getElementById('henCount').value = card.dataset.hens;
+    document.getElementById('eggCount').value = currentHasSensor ? (card.dataset.todayEggs || 0) : '';
+
+    const eggInput = document.getElementById('eggCount');
     const overrideLabel = document.getElementById('overrideLabel');
-    const hasSensor      = opt.dataset.hasSensor === '1';
 
-    if (hasSensor) {
-        eggInput.value    = opt.dataset.todayEggCount || 0;
+    if (currentHasSensor) {
         eggInput.readOnly = true;
         overrideLabel.classList.remove('hidden');
-        currentSensorCageId = opt.value;
     } else {
         eggInput.readOnly = false;
         overrideLabel.classList.add('hidden');
-        currentSensorCageId = null;
+        overrideVerified = false;
     }
 
+    overrideVerified = false;
+    document.getElementById('slotFormPlaceholder').classList.add('hidden');
+    document.getElementById('slotForm').classList.remove('hidden');
     computeHdep();
+}
+
+function clearSlotSelection() {
+    document.querySelectorAll('.slot-card').forEach(c => {
+        c.classList.remove('ring-2', 'ring-[#002D5E]', 'ring-offset-1');
+        c.querySelector('.selected-indicator')?.classList.add('hidden');
+    });
+    currentSlotId = null;
+    overrideVerified = false;
+    document.getElementById('slotFormPlaceholder').classList.remove('hidden');
+    document.getElementById('slotForm').classList.add('hidden');
 }
 
 function computeHdep() {
     const eggs = parseInt(document.getElementById('eggCount').value) || 0;
     const hens = parseInt(document.getElementById('henCount').value) || 1;
     const hdep = ((eggs / hens) * 100).toFixed(1);
-    const el   = document.getElementById('hdepDisplay');
+    const el = document.getElementById('hdepDisplay');
     el.textContent = 'HDEP:  ' + hdep + '%';
     el.className = 'mt-2 inline-block border rounded-lg px-4 py-2 text-sm font-mono '
         + (eggs > hens ? 'bg-red-50 border-red-200 text-red-700' : 'bg-[#F5F6F8] border-[#D9D9D9] text-[#333333]');
 }
 
 function openOverrideModal() {
+    if (!currentSlotId) return;
     document.getElementById('overrideError').classList.add('hidden');
     document.getElementById('overridePinInput').value = '';
     document.getElementById('overrideModal').classList.remove('hidden');
@@ -242,12 +382,13 @@ function submitOverride() {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
         },
-        body: JSON.stringify({ cage_id: currentSensorCageId, pin: pin, password: password }),
+        body: JSON.stringify({ cage_slot_id: currentSlotId, pin: pin, password: password }),
     })
     .then(r => r.json().then(body => ({ status: r.status, body })))
     .then(({ status, body }) => {
         if (status === 200 && body.ok) {
             document.getElementById('eggCount').readOnly = false;
+            overrideVerified = true;
             closeOverrideModal();
             if (body.needs_pin_setup) {
                 alert('No override PIN set yet — please set one in Account Settings.');

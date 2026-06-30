@@ -3,42 +3,74 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cage;
+use App\Models\CageSlot;
 use App\Models\ProductionLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
 class EggLoggingController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $today = now()->toDateString();
+        $cageFilter = $request->query('cage_id');
 
-        $cages = Cage::with([
-            'productionLogs',
+        $cages = Cage::where('is_active', 1)->orderBy('cage_code')->get();
+
+        $slotQuery = CageSlot::with([
+            'cage',
             'hens' => fn($q) => $q->where('is_active', 1),
-        ])->where('is_active', 1)->orderBy('cage_code')->get()
-          ->map(function ($cage) use ($today) {
-              $cage->today_egg_count = ProductionLog::whereHas('cageSlot', fn($s) => $s->where('cage_id', $cage->id))
-                  ->where('log_date', $today)
-                  ->sum('egg_count');
-              return $cage;
-          });
+        ])->whereHas('cage', fn($q) => $q->where('is_active', 1))
+          ->orderBy('cage_id')
+          ->orderBy('slot_number');
 
-        $logs = ProductionLog::with(['cageSlot.cage', 'overriddenBy', 'recorder'])
+        if ($cageFilter) {
+            $slotQuery->where('cage_id', $cageFilter);
+        }
+
+        $cageSlots = $slotQuery->get()
+            ->map(function ($slot) use ($today) {
+                $log = ProductionLog::where('cage_slot_id', $slot->id)
+                    ->where('log_date', $today)
+                    ->first();
+                $slot->today_egg_count = $log?->egg_count ?? 0;
+                return $slot;
+            });
+
+        $logsQuery = ProductionLog::with(['cageSlot.cage', 'overriddenBy', 'recorder'])
             ->orderByDesc('log_date')
             ->orderByDesc('created_at')
-            ->limit(50)
-            ->get();
+            ->limit(50);
 
-        return view('egg-logging', compact('cages', 'logs'));
+        if ($cageFilter) {
+            $logsQuery->whereHas('cageSlot', fn($q) => $q->where('cage_id', $cageFilter));
+        }
+
+        $logs = $logsQuery->get();
+
+        $todayTotal = ProductionLog::where('log_date', $today)
+            ->when($cageFilter, fn($q) => $q->whereHas('cageSlot', fn($s) => $s->where('cage_id', $cageFilter)))
+            ->sum('egg_count');
+
+        $todayByCage = ProductionLog::with('cageSlot.cage')
+            ->where('log_date', $today)
+            ->get()
+            ->groupBy(fn($l) => $l->cageSlot?->cage?->cage_code)
+            ->map(fn($g) => $g->sum('egg_count'));
+
+        $selectedCage = $cageFilter ? $cages->firstWhere('id', $cageFilter) : null;
+
+        return view('egg-logging', compact(
+            'cageSlots', 'cages', 'logs', 'cageFilter', 'todayTotal', 'todayByCage', 'selectedCage'
+        ));
     }
 
     public function verifyOverride(Request $request)
     {
         $data = $request->validate([
-            'cage_id'  => 'required|exists:cages,id',
-            'pin'      => 'nullable|string',
-            'password' => 'nullable|string',
+            'cage_slot_id' => 'required|exists:cage_slots,id',
+            'pin'          => 'nullable|string',
+            'password'     => 'nullable|string',
         ]);
 
         $user = auth()->user();
@@ -53,7 +85,7 @@ class EggLoggingController extends Controller
             }
         }
 
-        session()->put("override_verified.{$data['cage_id']}", now()->timestamp);
+        session()->put("override_verified_slot.{$data['cage_slot_id']}", now()->timestamp);
 
         return response()->json([
             'ok'              => true,
@@ -64,18 +96,17 @@ class EggLoggingController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'log_date'  => 'required|date',
-            'cage_id'   => 'required|exists:cages,id',
-            'egg_count' => 'required|integer|min:0',
-            'hen_count' => 'required|integer|min:1',
-            'notes'     => 'nullable|string',
+            'log_date'    => 'required|date',
+            'cage_slot_id' => 'required|exists:cage_slots,id',
+            'egg_count'   => 'required|integer|min:0',
+            'hen_count'   => 'required|integer|min:1',
+            'notes'       => 'nullable|string',
         ]);
 
-        $cage = Cage::find($data['cage_id']);
-        $firstSlot = $cage->cageSlots()->first();
+        $slot = CageSlot::with('cage')->findOrFail($data['cage_slot_id']);
 
         $payload = [
-            'cage_slot_id' => $firstSlot->id,
+            'cage_slot_id' => $slot->id,
             'egg_count'    => $data['egg_count'],
             'hen_count'    => $data['hen_count'],
             'hdep'         => round(($data['egg_count'] / $data['hen_count']) * 100, 2),
@@ -84,7 +115,7 @@ class EggLoggingController extends Controller
         ];
 
         ProductionLog::updateOrCreate(
-            ['cage_slot_id' => $firstSlot->id, 'log_date' => $data['log_date']],
+            ['cage_slot_id' => $slot->id, 'log_date' => $data['log_date']],
             $payload
         );
 
