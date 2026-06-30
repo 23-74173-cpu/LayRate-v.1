@@ -55,7 +55,7 @@ class EggLoggingController extends Controller
 
         $user = auth()->user();
 
-        $slot = CageSlot::whereHas('cage', fn($q) => $q->where('is_active', 1))
+        CageSlot::whereHas('cage', fn($q) => $q->where('is_active', 1))
             ->findOrFail($data['slot_id']);
 
         if ($user->override_pin_hash !== null) {
