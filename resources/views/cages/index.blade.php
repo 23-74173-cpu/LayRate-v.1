@@ -158,11 +158,14 @@
             <form method="POST" action="{{ route('cages.store') }}" id="addCageForm">
                 @csrf
                 <div class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Cage Name</label>
-                        <input name="cage_code" id="addCageCode" placeholder="e.g. CAGE-E" required
-                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
-                               style="border-color: #e6e6e6; color: #1f1f1f;">
+                    <div class="rounded-lg p-3" style="background-color: #f0f7ff; border: 1px solid #b3d4fc;">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="info" class="w-4 h-4" style="color: #0075de;"></i>
+                            <div>
+                                <p class="text-sm font-medium" style="color: #005baa;">Cage code will be auto-generated</p>
+                                <p class="text-xs" style="color: #615d59;" id="addNextCode">Next: CAGE-{{ $nextCageCode }}</p>
+                            </div>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Location</label>
@@ -252,10 +255,10 @@
         </div>
     </div>
 
-    {{-- ── Edit Cage Modal (simplified — no live preview) ── --}}
+    {{-- ── Edit Cage Modal — with per-slot sensor config ── --}}
     <div id="editCageModal" class="hidden fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
         <div class="absolute inset-0" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEditModal()"></div>
-        <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+        <div class="relative w-full max-w-lg rounded-2xl p-6 max-h-[90vh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
             <div class="flex items-center justify-between mb-5">
                 <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Edit Cage — <span id="editCageCode"></span></h2>
                 <button onclick="closeEditModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
@@ -303,6 +306,17 @@
                     <div class="flex items-center gap-2">
                         <input id="editActive" name="is_active" type="checkbox" value="1" class="w-4 h-4 rounded" style="accent-color: #0075de;">
                         <label for="editActive" class="text-sm" style="color: #31302e;">Active</label>
+                    </div>
+
+                    {{-- Per-Slot Sensor Configuration --}}
+                    <div class="border-t pt-4" style="border-color: #e6e6e6;">
+                        <div class="flex items-center gap-2 mb-3">
+                            <i data-lucide="cpu" class="w-4 h-4" style="color: #0075de;"></i>
+                            <span class="text-xs font-semibold tracking-[0.05em] uppercase" style="color: #615d59;">Sensor Configuration</span>
+                        </div>
+                        <div id="editSlotSensors" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                            <p class="text-xs text-center py-3" style="color: #a39e98;">Loading slots...</p>
+                        </div>
                     </div>
                 </div>
 
@@ -450,7 +464,46 @@ function openEditModal(id, cageCode, location, rows, slotsPerRow, maxPerSlot, is
     document.getElementById('editMaxPerSlot').value = maxPerSlot;
     document.getElementById('editActive').checked = isActive === 1;
     document.getElementById('editResizeError').classList.add('hidden');
+
+    const sensorContainer = document.getElementById('editSlotSensors');
+    sensorContainer.innerHTML = '<p class="text-xs text-center py-3" style="color: #a39e98;">Loading slots...</p>';
+
+    fetch('/cages/' + id + '/slots-json')
+        .then(r => r.json())
+        .then(slots => {
+            if (slots.length === 0) {
+                sensorContainer.innerHTML = '<p class="text-xs text-center py-3" style="color: #a39e98;">No slots in this cage.</p>';
+                return;
+            }
+            let html = '';
+            slots.forEach(slot => {
+                const checked = slot.has_sensor ? 'checked' : '';
+                const disabled = slot.has_sensor ? '' : 'disabled';
+                const deviceId = slot.sensor_device_id || '';
+                html += '<div class="flex items-center gap-3 rounded-lg px-3 py-2" style="background-color: #f6f5f4;">';
+                html += '<span class="text-xs font-medium w-16" style="color: #31302e;">Slot ' + slot.row_number + '-' + slot.column_number + '</span>';
+                html += '<label class="flex items-center gap-1.5 cursor-pointer">';
+                html += '<input type="checkbox" name="slots[' + slot.id + '][has_sensor]" value="1" ' + checked + ' onchange="toggleSensorDeviceField(this, \'editDeviceId-' + slot.id + '\')" class="w-4 h-4 rounded" style="accent-color: #0075de;">';
+                html += '<span class="text-xs" style="color: #615d59;">Sensor</span>';
+                html += '</label>';
+                html += '<input type="text" name="slots[' + slot.id + '][sensor_device_id]" id="editDeviceId-' + slot.id + '" value="' + deviceId + '" placeholder="Device ID" ' + disabled + ' class="flex-1 border rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#0075de]" style="border-color: #e6e6e6; color: #1f1f1f;">';
+                html += '</div>';
+            });
+            sensorContainer.innerHTML = html;
+        })
+        .catch(() => {
+            sensorContainer.innerHTML = '<p class="text-xs text-center py-3" style="color: #9b1c24;">Failed to load slots.</p>';
+        });
+
     document.getElementById('editCageModal').style.display = 'flex';
+}
+
+function toggleSensorDeviceField(checkbox, deviceIdInputId) {
+    const input = document.getElementById(deviceIdInputId);
+    input.disabled = !checkbox.checked;
+    if (!checkbox.checked) {
+        input.value = '';
+    }
 }
 
 function closeEditModal() {

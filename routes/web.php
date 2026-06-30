@@ -32,7 +32,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/cages',              [CageController::class, 'store'])->name('cages.store');
     Route::put('/cages/{cage}',        [CageController::class, 'update'])->name('cages.update');
     Route::delete('/cages/{cage}',     [CageController::class, 'destroy'])->name('cages.destroy')->middleware('admin');
-    Route::post('/cages/{cage}/slots/{slot}/toggle-sensor', [CageController::class, 'toggleSensor'])->name('cages.slots.toggle-sensor');
     Route::get('/cages/{cage}/slots-json', [CageController::class, 'slotsJson'])->name('cages.slots-json');
     Route::get('/cages/slots/{slot}/hens-json', [CageController::class, 'hensJson'])->name('cages.slots.hens-json');
     Route::get('/cages/bulk-add',  [CageController::class, 'bulkAdd'])->name('cages.bulk-add');
