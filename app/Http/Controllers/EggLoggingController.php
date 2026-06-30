@@ -14,17 +14,17 @@ class EggLoggingController extends Controller
         $today = now()->toDateString();
 
         $cages = Cage::with([
-            'latestProduction',
+            'productionLogs',
             'hens' => fn($q) => $q->where('is_active', 1),
         ])->where('is_active', 1)->orderBy('cage_code')->get()
           ->map(function ($cage) use ($today) {
-              $cage->today_egg_count = ProductionLog::where('cage_id', $cage->id)
+              $cage->today_egg_count = ProductionLog::whereHas('cageSlot', fn($s) => $s->where('cage_id', $cage->id))
                   ->where('log_date', $today)
-                  ->value('egg_count') ?? 0;
+                  ->sum('egg_count');
               return $cage;
           });
 
-        $logs = ProductionLog::with(['cage', 'overriddenBy', 'recorder'])
+        $logs = ProductionLog::with(['cageSlot.cage', 'overriddenBy', 'recorder'])
             ->orderByDesc('log_date')
             ->orderByDesc('created_at')
             ->limit(50)
@@ -72,38 +72,19 @@ class EggLoggingController extends Controller
         ]);
 
         $cage = Cage::find($data['cage_id']);
-        $existing = ProductionLog::where('cage_id', $data['cage_id'])
-            ->where('log_date', $data['log_date'])
-            ->first();
+        $firstSlot = $cage->cageSlots()->first();
 
         $payload = [
-            'egg_count'   => $data['egg_count'],
-            'hen_count'   => $data['hen_count'],
-            'hdep'        => round(($data['egg_count'] / $data['hen_count']) * 100, 2),
-            'recorded_by' => auth()->id(),
-            'notes'       => $data['notes'] ?? 'Manual entry',
+            'cage_slot_id' => $firstSlot->id,
+            'egg_count'    => $data['egg_count'],
+            'hen_count'    => $data['hen_count'],
+            'hdep'         => round(($data['egg_count'] / $data['hen_count']) * 100, 2),
+            'recorded_by'  => auth()->id(),
+            'notes'        => $data['notes'] ?? 'Manual entry',
         ];
 
-        if ($cage->has_sensor && $data['log_date'] === now()->toDateString()) {
-            $valueChanged = ! $existing || (int) $existing->egg_count !== (int) $data['egg_count'];
-            $verifiedAt   = session("override_verified.{$data['cage_id']}");
-            $stillValid   = $verifiedAt && (now()->timestamp - $verifiedAt) <= 600;
-
-            if ($valueChanged && ! $stillValid) {
-                return back()->withInput()->withErrors([
-                    'egg_count' => "This cage's reading is sensor-locked. Use the override option to change it.",
-                ]);
-            }
-
-            if ($valueChanged) {
-                $payload['overridden_by_user_id'] = auth()->id();
-                $payload['overridden_at']          = now();
-                session()->forget("override_verified.{$data['cage_id']}");
-            }
-        }
-
         ProductionLog::updateOrCreate(
-            ['cage_id' => $data['cage_id'], 'log_date' => $data['log_date']],
+            ['cage_slot_id' => $firstSlot->id, 'log_date' => $data['log_date']],
             $payload
         );
 

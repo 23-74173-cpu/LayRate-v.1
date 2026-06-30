@@ -35,7 +35,7 @@ class ForecastController extends Controller
 
         $cage = Cage::where('cage_code', $cageCode)->firstOrFail();
 
-        $historical = ProductionLog::where('cage_id', $cage->id)
+        $historical = $cage->productionLogs()
             ->orderByDesc('log_date')
             ->limit(14)
             ->get()
@@ -76,7 +76,7 @@ class ForecastController extends Controller
 
         $cage = Cage::where('cage_code', $cageCode)->firstOrFail();
 
-        $historical = ProductionLog::where('cage_id', $cage->id)
+        $historical = $cage->productionLogs()
             ->orderByDesc('log_date')
             ->limit(14)
             ->get()

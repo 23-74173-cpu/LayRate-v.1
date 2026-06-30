@@ -31,6 +31,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/cages',              [CageController::class, 'store'])->name('cages.store');
     Route::put('/cages/{cage}',        [CageController::class, 'update'])->name('cages.update');
     Route::delete('/cages/{cage}',     [CageController::class, 'destroy'])->name('cages.destroy')->middleware('admin');
+    Route::post('/cages/{cage}/slots/{slot}/toggle-sensor', [CageController::class, 'toggleSensor'])->name('cages.slots.toggle-sensor');
+    Route::get('/cages/{cage}/confirm-delete', [CageController::class, 'deleteConfirm'])->name('cages.confirm-delete');
+    Route::delete('/cages/{cage}/force', [CageController::class, 'forceDestroy'])->name('cages.force-destroy')->middleware('admin');
 
     Route::get('/egg-logging',                        [EggLoggingController::class, 'index'])->name('egg-logging');
     Route::post('/egg-logging',                       [EggLoggingController::class, 'store'])->name('egg-logging.store');

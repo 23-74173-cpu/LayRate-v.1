@@ -17,8 +17,8 @@ class DashboardController extends Controller
         $today = now()->toDateString();
 
         $cages = Cage::with([
-            'latestProduction',
-            'latestEnvironment',
+            'productionLogs',
+            'latestEnvironmentLog',
             'hens' => fn($q) => $q->where('is_active', 1),
         ])->get();
 
@@ -29,7 +29,7 @@ class DashboardController extends Controller
         $todayLogs = ProductionLog::whereDate('log_date', $today)->get();
         $todayHdep = $todayLogs->count()
             ? round($todayLogs->avg('hdep'), 1)
-            : round($cages->sum(fn($c) => $c->latestProduction?->hdep ?? 0) / max($cages->count(), 1), 1);
+            : round($cages->sum(fn($c) => $c->latestProductionLog()?->hdep ?? 0) / max($cages->count(), 1), 1);
 
         // Yesterday comparison
         $yesterdayLogs  = ProductionLog::whereDate('log_date', now()->subDay()->toDateString())->get();
@@ -38,7 +38,7 @@ class DashboardController extends Controller
 
         // Eggs collected today
         $eggsToday = $todayLogs->sum('egg_count')
-            ?: $cages->sum(fn($c) => $c->latestProduction?->egg_count ?? 0);
+            ?: $cages->sum(fn($c) => $c->latestProductionLog()?->egg_count ?? 0);
 
         // Coop environment averages
         $latestEnv = EnvironmentalLog::whereIn('cage_id', $cages->pluck('id'))
@@ -75,7 +75,7 @@ class DashboardController extends Controller
 
         // Live readings per cage
         $liveReadings = $cages->map(function ($cage) {
-            $env = $cage->latestEnvironment;
+            $env = $cage->latestEnvironmentLog;
             if (! $env) return null;
             $status = 'Normal';
             if ($env->temperature_c > 30 || $env->humidity_pct > 70) $status = 'Alert';

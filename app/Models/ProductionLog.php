@@ -27,4 +27,9 @@ class ProductionLog extends Model
     {
         return $this->belongsTo(User::class, 'overridden_by_user_id');
     }
+
+    public function getCageAttribute(): ?\App\Models\Cage
+    {
+        return $this->cageSlot?->cage;
+    }
 }

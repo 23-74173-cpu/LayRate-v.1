@@ -53,10 +53,10 @@ class ReportController extends Controller
 
         return match($type) {
             'production' => (object) [
-                'total_eggs'  => ProductionLog::whereIn('cage_id', $cageIds)->whereBetween('log_date', [$from, $to])->sum('egg_count'),
-                'avg_hdep'    => number_format(ProductionLog::whereIn('cage_id', $cageIds)->whereBetween('log_date', [$from, $to])->avg('hdep') ?? 0, 1) . '%',
-                'total_hens'  => ProductionLog::whereIn('cage_id', $cageIds)->whereBetween('log_date', [$from, $to])->max('hen_count') ?? 0,
-                'days'        => ProductionLog::whereIn('cage_id', $cageIds)->whereBetween('log_date', [$from, $to])->distinct('log_date')->count('log_date'),
+                'total_eggs'  => ProductionLog::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->whereBetween('log_date', [$from, $to])->sum('egg_count'),
+                'avg_hdep'    => number_format(ProductionLog::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->whereBetween('log_date', [$from, $to])->avg('hdep') ?? 0, 1) . '%',
+                'total_hens'  => ProductionLog::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->whereBetween('log_date', [$from, $to])->max('hen_count') ?? 0,
+                'days'        => ProductionLog::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->whereBetween('log_date', [$from, $to])->distinct('log_date')->count('log_date'),
             ],
             'feed' => (object) [
                 'total_kg'    => number_format(FeedConsumptionLog::whereIn('cage_id', $cageIds)->whereBetween('log_date', [$from, $to])->sum('feed_consumed_kg'), 1),
@@ -82,27 +82,27 @@ class ReportController extends Controller
 
     private function productionReport($from, $to, $cageIds, $allCages)
     {
-        return ProductionLog::with(['cage.hens'])
-            ->whereIn('cage_id', $cageIds)
+        return ProductionLog::with(['cageSlot.cage', 'cageSlot.hens'])
+            ->whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))
             ->whereBetween('log_date', [$from, $to])
             ->orderByDesc('log_date')
             ->get()
             ->map(function ($log) {
                 $feed = FeedConsumptionLog::with('feedBatch')
-                    ->where('cage_id', $log->cage_id)
+                    ->where('cage_id', $log->cage->id)
                     ->where('log_date', $log->log_date)
                     ->first();
-                $env = EnvironmentalLog::where('cage_id', $log->cage_id)
+                $env = EnvironmentalLog::where('cage_id', $log->cage->id)
                     ->whereDate('recorded_at', $log->log_date)
                     ->avg('temperature_c');
-                $hum = EnvironmentalLog::where('cage_id', $log->cage_id)
+                $hum = EnvironmentalLog::where('cage_id', $log->cage->id)
                     ->whereDate('recorded_at', $log->log_date)
                     ->avg('humidity_pct');
 
                 return (object) [
                     'date'     => $log->log_date->format('Y-m-d'),
-                    'cage'     => $log->cage->cage_code,
-                    'breed'    => $log->cage->hens->first()?->breed ?? '—',
+                    'cage'     => $log->cageSlot->cage->cage_code,
+                    'breed'    => $log->cageSlot->hens->first()?->breed ?? '—',
                     'eggs'     => $log->egg_count,
                     'hens'     => $log->hen_count,
                     'hdep'     => number_format($log->hdep, 1) . '%',

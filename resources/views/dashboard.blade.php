@@ -58,7 +58,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             @foreach($cages as $cage)
             @php
-                $prod = $cage->latestProduction;
+                $prod = $cage->latestProductionLog();
                 $hdep = $prod?->hdep ?? 0;
                 $color = $cage->color;
                 $hen = $cage->hens->first();
@@ -74,7 +74,7 @@
                     <span class="text-xs px-2 py-0.5 rounded" style="background:{{ $hdepBg }};color:{{ $hdepTxt }}">{{ number_format($hdep,1) }}%</span>
                 </div>
                 <div class="text-[11px] text-[#6B7280] mb-3 flex items-center gap-3">
-                    <span>{{ $cage->capacity }} hens</span>
+                    <span>{{ $cage->total_capacity }} hens</span>
                     @if($hen)
                     <span>{{ $hen->current_age_weeks }} wks</span>
                     @endif

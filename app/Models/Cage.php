@@ -47,20 +47,19 @@ class Cage extends Model
         return $this->hasMany(Forecast::class);
     }
 
-    public function latestProduction()
+    public function latestProductionLog()
     {
-        return $this->hasManyThrough(ProductionLog::class, CageSlot::class)
-            ->latestOfMany('log_date', 'cage_slot_id');
+        return $this->productionLogs->sortByDesc('log_date')->first();
     }
 
-    public function latestEnvironment()
+    public function latestEnvironmentLog()
     {
         return $this->hasOne(EnvironmentalLog::class)->latestOfMany('recorded_at');
     }
 
     public function getHdepColorAttribute(): string
     {
-        $hdep = $this->latestProduction?->hdep ?? 0;
+        $hdep = optional($this->latestProductionLog())->hdep ?? 0;
         if ($hdep > 70) return '#D5E8D4';
         if ($hdep > 40) return '#FFF3CD';
         return '#F8D7DA';
@@ -68,7 +67,7 @@ class Cage extends Model
 
     public function getHdepTextColorAttribute(): string
     {
-        $hdep = $this->latestProduction?->hdep ?? 0;
+        $hdep = optional($this->latestProductionLog())->hdep ?? 0;
         if ($hdep > 70) return '#004F9F';
         if ($hdep > 40) return '#856404';
         return '#721C24';

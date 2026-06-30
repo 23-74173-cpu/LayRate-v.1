@@ -25,11 +25,10 @@
                             class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
                         @foreach($cages as $cage)
                         <option value="{{ $cage->id }}"
-                                data-hens="{{ $cage->capacity }}"
-                                data-hdep="{{ number_format($cage->latestProduction?->hdep ?? 0, 1) }}"
+                                data-hens="{{ $cage->total_capacity }}"
+                                data-hdep="{{ number_format($cage->latestProductionLog()?->hdep ?? 0, 1) }}"
                                 data-age="{{ $cage->hens->first()?->current_age_weeks ?? 0 }} weeks"
                                 data-breed="{{ $cage->hens->first()?->breed ?? '—' }}"
-                                data-has-sensor="{{ $cage->has_sensor ? 1 : 0 }}"
                                 data-today-egg-count="{{ $cage->today_egg_count }}">
                             {{ $cage->cage_code }} — {{ $cage->hens->first()?->breed ?? '—' }}
                         </option>
@@ -112,13 +111,13 @@
                 <tbody>
                     @forelse($logs as $log)
                     @php
-                        $cColor = match($log->cage->cage_code) {
+                        $cColor = match($log->cageSlot->cage->cage_code) {
                             'CAGE-A'=>'#2D7D46','CAGE-B'=>'#1D4E8F','CAGE-C'=>'#C2703E','CAGE-D'=>'#6B4C8A',default=>'#6B7280'
                         };
                     @endphp
                     <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
                         <td class="px-6 py-3 text-sm text-[#333333] font-mono">{{ $log->log_date->format('Y-m-d') }}</td>
-                        <td class="px-6 py-3 text-sm font-medium font-mono" style="color:{{ $cColor }}">{{ $log->cage->cage_code }}</td>
+                        <td class="px-6 py-3 text-sm font-medium font-mono" style="color:{{ $cColor }}">{{ $log->cageSlot->cage->cage_code }}</td>
                         <td class="px-6 py-3 text-sm text-[#333333] font-mono">{{ $log->egg_count }}</td>
                         <td class="px-6 py-3 text-sm text-[#333333] font-mono">{{ $log->hen_count }}</td>
                         <td class="px-6 py-3 text-sm text-[#333333] font-mono">{{ number_format($log->hdep,1) }}%</td>

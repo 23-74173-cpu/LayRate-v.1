@@ -24,7 +24,7 @@ class AnalyticsController extends Controller
             default   => 7,
         };
 
-        $logs = ProductionLog::where('cage_id', $cage->id)
+        $logs = $cage->productionLogs()
             ->where('log_date', '>=', now()->subDays($days))
             ->orderBy('log_date')
             ->get();

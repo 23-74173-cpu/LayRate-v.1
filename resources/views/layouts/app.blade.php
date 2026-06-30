@@ -38,22 +38,59 @@
         .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
         .scrollbar-thin::-webkit-scrollbar-thumb { background: #D9D9D9; border-radius: 9999px; }
         [x-cloak] { display: none !important; }
+
+        /* Sidebar collapsed state */
+        #sidebar.collapsed { width: 3.5rem; }
+        #sidebar.collapsed .sidebar-label { display: none; }
+        #sidebar.collapsed a {
+            width: 2.5rem !important;
+            height: 2.5rem !important;
+            justify-content: center !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+        }
+        #sidebar.collapsed .logo-wrap {
+            justify-content: center !important;
+        }
+
+        /* Sidebar expanded state */
+        #sidebar { width: 13rem; }
+        #sidebar a {
+            width: 100%;
+            padding: 0.625rem 0.625rem;
+            height: auto;
+            margin-left: 0;
+            margin-right: 0;
+        }
     </style>
+
+    {{-- Inline script to restore sidebar state before first paint --}}
+    <script>
+        (function() {
+            var stored  = localStorage.getItem('sidebar_expanded');
+            var expanded = stored === null ? true : stored === 'true';
+            if (!expanded) {
+                var sidebar = document.getElementById('sidebar');
+                if (sidebar) sidebar.classList.add('collapsed');
+            }
+        })();
+    </script>
 
     @stack('head')
 </head>
 <body class="flex h-screen overflow-hidden">
 
 {{-- ─── Sidebar ──────────────────────────────────────────────────────────── --}}
-<aside id="sidebar" class="w-14 bg-[#102A4C] flex flex-col py-3 shrink-0 justify-between transition-all duration-200 ease-in-out overflow-hidden">
+{{-- The `collapsed` class drives everything; applied by inline head script before first paint when stored state is false --}}
+<aside id="sidebar" class="bg-[#102A4C] flex flex-col py-3 shrink-0 justify-between transition-all duration-200 ease-in-out overflow-hidden">
 
     {{-- Logo --}}
     <div class="flex flex-col gap-1 items-center">
-        <div class="flex items-center justify-center mb-4 px-2 w-full">
+        <div class="logo-wrap flex items-center justify-center mb-4 px-2 w-full">
             <div class="w-9 h-9 rounded-lg bg-[#1F4B7D] flex items-center justify-center shrink-0 border border-white/25">
                 <i data-lucide="feather" class="w-5 h-5 text-white"></i>
             </div>
-            <div class="sidebar-label ml-2.5 overflow-hidden whitespace-nowrap hidden">
+            <div class="sidebar-label ml-2.5 overflow-hidden whitespace-nowrap">
                 <div class="text-white text-sm font-semibold">LayRate</div>
                 <div class="text-white/75 text-[10px]">Farm Monitor</div>
             </div>
@@ -77,24 +114,24 @@
         @foreach($nav as $item)
         @php $active = request()->routeIs($item['route']); @endphp
         <a href="{{ route($item['route']) }}"
-           class="group flex items-center gap-2.5 rounded-lg transition-colors w-10 h-10 justify-center mx-auto
+           class="group flex items-center gap-2.5 rounded-lg transition-colors
                   {{ $active ? 'nav-active text-white' : 'text-white/85 hover:text-white hover:bg-white/10' }}"
            title="{{ $item['label'] }}">
             <i data-lucide="{{ $item['icon'] }}" class="w-[19px] h-[19px] shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"></i>
-            <span class="sidebar-label text-sm font-medium whitespace-nowrap overflow-hidden hidden">{{ $item['label'] }}</span>
+            <span class="sidebar-label text-sm font-medium whitespace-nowrap overflow-hidden">{{ $item['label'] }}</span>
         </a>
         @endforeach
     </div>
 
     {{-- Bottom items --}}
     <div class="flex flex-col gap-1 items-center">
-        <a href="{{ route('account') }}" class="group flex items-center gap-2.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors w-10 h-10 justify-center mx-auto" title="Settings">
+        <a href="{{ route('account') }}" class="group flex items-center gap-2.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors" title="Settings">
             <i data-lucide="settings" class="w-[19px] h-[19px] shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"></i>
-            <span class="sidebar-label text-sm font-medium whitespace-nowrap overflow-hidden hidden">Settings</span>
+            <span class="sidebar-label text-sm font-medium whitespace-nowrap overflow-hidden">Settings</span>
         </a>
-        <a href="#" class="group flex items-center gap-2.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors w-10 h-10 justify-center mx-auto" title="Profile">
+        <a href="#" class="group flex items-center gap-2.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors" title="Profile">
             <i data-lucide="user" class="w-[19px] h-[19px] shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"></i>
-            <span class="sidebar-label text-sm font-medium whitespace-nowrap overflow-hidden hidden">Profile</span>
+            <span class="sidebar-label text-sm font-medium whitespace-nowrap overflow-hidden">Profile</span>
         </a>
     </div>
 </aside>
@@ -169,34 +206,32 @@
 <script>
 lucide.createIcons();
 
-// Sidebar expand/collapse
-const sidebar       = document.getElementById('sidebar');
-const toggle        = document.getElementById('sidebarToggle');
-const sidebarLabels = document.querySelectorAll('.sidebar-label');
-let expanded        = false;
+// ── Sidebar expand/collapse with localStorage persistence ──────────────────
+(function() {
+    var sidebar = document.getElementById('sidebar');
+    var toggle  = document.getElementById('sidebarToggle');
+    var STORAGE_KEY = 'sidebar_expanded';
 
-toggle.addEventListener('click', () => {
-    expanded = !expanded;
-    if (expanded) {
-        sidebar.classList.replace('w-14','w-52');
-        sidebar.querySelectorAll('a,div').forEach(el => el.classList.remove('justify-center','mx-auto'));
-        sidebar.querySelectorAll('a').forEach(el => {
-            el.classList.remove('w-10','h-10','justify-center','mx-auto');
-            el.classList.add('px-2.5','py-2.5','w-full');
-        });
-        sidebarLabels.forEach(l => l.classList.remove('hidden'));
-        // Fix logo wrapper
-        sidebar.querySelector('.flex.items-center.justify-center').classList.replace('justify-center','justify-start');
-        sidebar.querySelector('.flex.items-center.justify-center')?.classList.add('px-1.5');
-    } else {
-        sidebar.classList.replace('w-52','w-14');
-        sidebarLabels.forEach(l => l.classList.add('hidden'));
-        sidebar.querySelectorAll('a').forEach(el => {
-            el.classList.remove('px-2.5','py-2.5','w-full');
-            el.classList.add('w-10','h-10','justify-center','mx-auto');
-        });
+    function applyState(expanded) {
+        if (expanded) {
+            sidebar.classList.remove('collapsed');
+        } else {
+            sidebar.classList.add('collapsed');
+        }
     }
-});
+
+    // On load: restore from localStorage, defaulting to open (true) on first visit
+    var stored = localStorage.getItem(STORAGE_KEY);
+    applyState(stored === null ? true : stored === 'true');
+
+    // On toggle: flip state, persist, re-apply
+    toggle.addEventListener('click', function() {
+        var isCollapsed = sidebar.classList.contains('collapsed');
+        var newState    = !isCollapsed;
+        localStorage.setItem(STORAGE_KEY, String(newState));
+        applyState(newState);
+    });
+})();
 </script>
 
 @stack('scripts')

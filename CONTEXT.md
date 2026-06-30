@@ -43,9 +43,8 @@
 - **No Dockerfile present** but Sail config available
 
 ### Database System(s)
-- **SQLite** (default, configured in `.env` as `DB_CONNECTION=sqlite`)
-- **MySQL 8.x** / **MariaDB** — fully configured in `config/database.php`; the `layrate_schema.sql` references MySQL-specific syntax (ENGINE=InnoDB, utf8mb4)
-- The schema targets MySQL, the runtime uses SQLite by default — a **dual-DB design**
+- **MySQL 8.x / MariaDB** — primary database, configured via `DB_SOCKET=/tmp/mariadb.sock` (MariaDB socket) in `.env`
+- **SQLite** — not available in this environment (PHP built without `pdo_sqlite`); the codebase's `.env.example` references `DB_CONNECTION=sqlite` but the runtime uses MySQL
 - Database drivers configured: sqlite, mysql, mariadb, pgsql, sqlsrv
 
 ### Deployment & Runtime
@@ -59,27 +58,32 @@
 ## 2. PROJECT STRUCTURE
 
 ```
-LayRatePrototype/
-├── app/                          # Laravel application code
+LayRate-Main/
+├── app/
 │   ├── Http/
 │   │   ├── Controllers/          # 13 controllers
 │   │   └── Middleware/           # EnsureAdmin middleware
-│   ├── Models/                   # 11 Eloquent models
+│   ├── Models/                   # 12 Eloquent models (Cage + CageSlot + 10 others)
 │   └── Providers/                # AppServiceProvider
 ├── bootstrap/                    # Laravel app bootstrap + cached config
 ├── config/                       # 10 Laravel config files
 ├── database/
 │   ├── factories/                # UserFactory
-│   ├── migrations/               # 17 migration files
-│   ├── seeders/                  # DatabaseSeeder (comprehensive seed data)
+│   ├── migrations/               # 17 migration files (2026-01-01_* timestamped to avoid conflicts)
+│   ├── seeders/                  # DatabaseSeeder (60 cage_slots, 180 hens, 4 sensor-equipped slots)
 │   └── layrate_schema.sql        # Standalone MySQL schema (reference)
-├── resources/views/              # 13 Blade view files
+├── resources/views/
 │   ├── layouts/app.blade.php     # Main layout (sidebar + header)
 │   ├── auth/login.blade.php      # Login page
-│   ├── partials/                 # Reusable partials
+│   ├── cages/
+│   │   ├── index.blade.php      # Cage management — slot grid UI with Battery Cage Configuration modal
+│   │   └── confirm-delete.blade.php # Delete confirmation with data loss counts
+│   ├── partials/
+│   │   ├── slot-box.blade.php   # Reusable slot box partial (CageSlot model)
+│   │   └── cage-sensor-badge.blade.php
 │   └── [feature].blade.php       # Per-feature views
 ├── routes/
-│   ├── web.php                   # All web routes
+│   ├── web.php                   # All web routes (all auth-guarded except login/logout)
 │   └── console.php               # Artisan console commands
 ├── public/                       # Web server document root
 ├── storage/                      # Logs, cache, sessions
@@ -135,18 +139,24 @@ LayRatePrototype/
 
 ### 3.3 Cage Management (`/cages`)
 - **Controller**: `CageController`
-- **View**: `cages/index.blade.php`
-- CRUD operations for cages
-- Each cage has: code, location, capacity, breed, flock age, active/inactive status, sensor flag
-- When adding/editing a cage, creates/updates associated `Hen` record
-- Cage colors: A=green, B=blue, C=orange, D=purple
+- **View**: `cages/index.blade.php`, `cages/confirm-delete.blade.php`
+- **New Slot-Grid UI** (Commit 2): Each cage rendered as a card with an interactive slot grid showing per-slot occupancy, age, and sensor status
+- **Battery Cage Configuration modal** (Add Cage): Live Layout Preview (rows × columns) and Configuration Summary that update on field change; creates `Cage` + all `CageSlot` rows in a single transaction
+- **Edit Cage modal**: Resize-safety check before allowing dimension changes; blocks resize if occupied hens or sensor-equipped slots would be orphaned; flashes `session('edit_cage_id')` + error message on block, causing modal to auto-re-open with the failed cage
+- **Per-slot sensor toggle**: Click any slot box to POST-toggle its `has_sensor` flag via `CageController::toggleSensor()`
+- **Delete confirmation** (`confirm-delete.blade.php`): Shows slot count, sensor slot count, hen count, and counts of all related records (production logs, environmental logs, feed consumption, mortality, alerts) before deletion
+- **New CageController methods**: `toggleSensor()`, `deleteConfirm()`, `forceDestroy()`, `checkResizeSafety()`, `resizeSlots()`, `createSlotsForCage()`
+- Cage entity fields: cage_code, location, rows, slots_per_row, max_chickens_per_slot, total_capacity (computed), is_active
+- Per-slot fields (via `cage_slots` table): slot_number, row_number, column_number, current_occupancy, has_sensor, sensor_device_id
+- Cage colors: A=#2D7D46, B=#1D4E8F, C=#C2703E, D=#6B4C8A
+- Sensor slots seeded: CAGE-A slots 1 (row-1 col-1), 5 (row-1 col-5), 6 (row-2 col-1), 10 (row-2 col-5) — each occupied with 4 hens
 
 ### 3.4 Egg Logging (`/egg-logging`)
 - **Controller**: `EggLoggingController`
 - **View**: `egg-logging.blade.php`
 - Log daily egg production per cage (date, cage, egg count, hen count)
 - Auto-computes HDEP = (eggs / hens) × 100
-- **Sensor Lock Override** feature: sensor-equipped cages lock the egg count field; operator must verify via PIN or password to override
+- **Sensor Lock Override** feature: Previously applied at cage level (`Cage.has_sensor`); now uses `cage_slot_id` — eggs logged per cage via first slot ID
 - Override uses a session-based timed verification (10-minute window)
 - Recent logs table with override tracking, admin delete
 - Rate-limited override verification (6 requests per minute)
@@ -165,6 +175,7 @@ LayRatePrototype/
 - Dual-tab interface: **Feed Batches** (CRUD) and **Daily Consumption** (log per cage per day)
 - Tracks crude protein percentage per batch with color-coded indicators
 - Weekly summary metrics: avg CP%, avg feed/cage/day, total feed used (7-day rolling)
+- `recorded_by` correctly set to `auth()->id()` (fixed in Commit 1)
 
 ### 3.7 Mortality Log (`/mortality`)
 - **Controller**: `MortalityController`
@@ -220,31 +231,56 @@ LayRatePrototype/
 - **No API routes** — fully server-rendered, no REST/JSON API
 - **No tests** — `tests/` directory exists but is empty
 - **No data ingestion pipeline** from Arduino — environmental data must be manually entered or imported
-- **`recorded_by` hardcoded to user ID 1** in `FeedController::storeConsumption()`
 
 ---
 
 ## 4. DATA LAYER
 
-### Database Schema (11 application tables + 5 framework tables)
+### Database Schema (12 application tables + 5 framework tables)
+
+> **Schema note**: Commit 1 introduced `cage_slots` as a central hub table. The `production_logs`, `hens`, and `forecasts` tables now reference `cage_slot_id` (FK) instead of `cage_id`. The `cages` table itself no longer has `capacity` (replaced by `total_capacity` computed from `rows × slots_per_row × max_chickens_per_slot`) or `has_sensor` (now per-slot on `cage_slots`).
 
 | Table | Key Fields | Relationships |
 |---|---|---|
 | **users** | id, name, email, password, role (admin/operator), override_pin_hash | N/A |
-| **cages** | id, cage_code (unique), location, capacity, is_active, has_sensor, sensor_device_id | PK for hens, production_logs, environmental_logs, alerts, feed_consumption_logs, forecasts |
-| **hens** | id, cage_id (FK), tag_code (unique), date_acquired, placement_date, age_at_placement_weeks, flock_age_weeks, breed (enum 5 breeds), is_active | FK → cages |
-| **production_logs** | id, cage_id (FK), log_date, egg_count, hen_count, hdep (computed), recorded_by (FK→users), overridden_by_user_id, overridden_at, notes | FK → cages, users; unique(cage_id, log_date) |
+| **cages** | id, cage_code (unique), location, rows, slots_per_row, max_chickens_per_slot, total_capacity, is_active | PK for cage_slots |
+| **cage_slots** | id, cage_id (FK), slot_number, row_number, column_number, current_occupancy, has_sensor, sensor_device_id | FK → cages; PK for hens, production_logs, environmental_logs, alerts, feed_consumption_logs, forecasts |
+| **hens** | id, cage_slot_id (FK), tag_code (unique), date_acquired, placement_date, age_at_placement_weeks, flock_age_weeks, breed (enum 5 breeds), is_active | FK → cage_slots |
+| **production_logs** | id, cage_slot_id (FK), log_date, egg_count, hen_count, hdep (computed), recorded_by (FK→users), overridden_by_user_id, overridden_at, notes | FK → cage_slots, users; unique(cage_slot_id, log_date) |
 | **environmental_logs** | id, cage_id (FK), recorded_at, temperature_c, humidity_pct | FK → cages; index on recorded_at |
 | **feed_batches** | id, batch_code (unique), crude_protein, date_received, notes | PK for feed_consumption_logs |
 | **feed_consumption_logs** | id, cage_id (FK), feed_batch_id (FK), log_date, feed_consumed_kg, recorded_by (FK) | FK → cages, feed_batches, users; unique(cage_id, log_date) |
 | **alerts** | id, cage_id (FK), alert_type, message, is_read, triggered_at | FK → cages |
-| **forecasts** | id, cage_id (FK, nullable), forecast_date, target_date, predicted_hdep | FK → cages; nullable for whole-farm forecasts |
+| **forecasts** | id, cage_slot_id (FK, nullable), forecast_date, target_date, predicted_hdep | FK → cage_slots; nullable for whole-farm forecasts |
 | **mortality_logs** | id, cage_id (FK), log_date, count, reason (enum), notes, recorded_by (FK) | FK → cages, users |
 | **settings** | id, key (unique), value, label | key-value store for threshold config |
 | **jobs**, **job_batches**, **failed_jobs** | Standard Laravel queue tables | — |
 | **cache**, **cache_locks** | Standard Laravel cache tables | — |
 | **sessions** | Standard Laravel session table | — |
 | **migrations** | Framework migration tracking | — |
+
+### Key Model Relationships
+
+**Cage model** (`Cage.php`):
+- `cageSlots()` → `hasMany(CageSlot::class)` — all slots in this cage
+- `hens()` → `hasManyThrough(Hen::class, CageSlot::class)` — all hens via slots
+- `productionLogs()` → `hasManyThrough(ProductionLog::class, CageSlot::class)` — all production logs via slots
+- `latestProductionLog()` → `hasManyThrough(...)->latestOfMany('log_date')` — single latest production log (accessor only, not for eager loading)
+- `latestEnvironmentLog()` → `hasOne(EnvironmentalLog::class)->latestOfMany('recorded_at')` — single latest env log (accessor only, not for eager loading)
+- `environmentalLogs()` → `hasMany(EnvironmentalLog::class)` — direct FK to cages table
+- `alerts()`, `feedConsumptionLogs()`, `forecasts()` → standard `hasMany`
+
+**CageSlot model** (`CageSlot.php`, new in Commit 1):
+- `cage()` → `belongsTo(Cage::class)`
+- `hens()` → `hasMany(Hen::class)`
+- `productionLogs()` → `hasMany(ProductionLog::class)`
+- `primaryHen()` → returns the first active hen in this slot
+- `status` accessor → `empty` / `occupied` / `sensor_only` / `full`
+
+**ProductionLog model** (`ProductionLog.php`):
+- `cageSlot()` → `belongsTo(CageSlot::class)`
+- `getCageAttribute()` → accessor that returns `$this->cageSlot?->cage` for convenience
+- `recorder()`, `overriddenBy()` → standard `belongsTo(User::class)`
 
 ### Forecasting / Data Processing
 - **Location**: `ForecastController::generateForecast()` (line 111-134)
@@ -254,7 +290,7 @@ LayRatePrototype/
 
 ### Data Flow
 1. **Arduino sensors** → Serial output (DHT22 temp/humidity, IR beam break count) → read by Pi (not yet implemented in PHP)
-2. **Manual operator entry** (egg logging, feed, mortality) → validated via FormRequest → stored in MySQL/SQLite via Eloquent ORM
+2. **Manual operator entry** (egg logging, feed, mortality) → validated via FormRequest → stored in MySQL via Eloquent ORM
 3. **Threshold config** → saved to `settings` table → read on Environment page for status computation
 4. **Dashboard** → aggregates latest readings across all cages; computes averages, trends, totals
 5. **Analytics** → queries by cage/cage code + date range → renders Chart.js visualizations
@@ -267,13 +303,13 @@ LayRatePrototype/
 ### Environment Variables (from `.env.example`)
 
 ```
-APP_NAME, APP_ENV, APP_KEY, APP_DEBUG, APP_URL
+APP_NAME, APP_ENV, APP_KEY, APP_URL
 APP_LOCALE, APP_FALLBACK_LOCALE, APP_FAKER_LOCALE
 APP_MAINTENANCE_DRIVER, APP_MAINTENANCE_STORE
 PHP_CLI_SERVER_WORKERS
 BCRYPT_ROUNDS
 LOG_CHANNEL, LOG_STACK, LOG_DEPRECATIONS_CHANNEL, LOG_LEVEL
-DB_CONNECTION, DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD
+DB_CONNECTION, DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD, DB_SOCKET
 SESSION_DRIVER, SESSION_LIFETIME, SESSION_ENCRYPT, SESSION_PATH, SESSION_DOMAIN
 BROADCAST_CONNECTION, FILESYSTEM_DISK, QUEUE_CONNECTION
 CACHE_STORE, CACHE_PREFIX
@@ -284,6 +320,8 @@ MAIL_FROM_ADDRESS, MAIL_FROM_NAME
 AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION, AWS_BUCKET, AWS_USE_PATH_STYLE_ENDPOINT
 VITE_APP_NAME
 ```
+
+> Note: `DB_SOCKET=/tmp/mariadb.sock` is required in this environment due to MariaDB running on a non-default socket path.
 
 ### External Services / APIs Integrated
 - **Postmark** (email) — configured in `config/services.php`
@@ -312,13 +350,9 @@ VITE_APP_NAME
 - **Missing**: No database operation try/catch wrapping
 
 ### Technical Debt
-- **`recorded_by` hardcoded to `1`** in `FeedController::storeConsumption()` — should use `auth()->id()`
-- **Feed consumption** `updateOrCreate` unconditionally resets `recorded_by` to 1 even on updates
+- **`hasManyThrough(...)->latestOfMany(...)` returns a query builder, not a Relation** — cannot be eager loaded via `with()`. Use a separate plain relationship for eager loading and the `latestOfMany` variant only as an accessor. This caused a `RelationNotFoundException` on Dashboard until fixed.
 - **Arduino serial protocol** has no corresponding consumer on the PHP side
 - **Alerts are never created programmatically** — threshold evaluation exists in views but no backend job/observer triggers alert creation
-- **No database indexing** beyond PKs and FKs on `production_logs` — large datasets will see degraded performance
-- **`.env` file contains a real `APP_KEY`** committed to the repository — security concern
-- **No input sanitization** for XSS in notes/text fields (partially mitigated by Blade's auto-escaping)
 - **`dist/`** contains built frontend assets not connected to the Laravel views
 
 ### Outdated/Deprecated Dependencies
@@ -332,4 +366,10 @@ VITE_APP_NAME
 
 ## 7. SUMMARY
 
-This is **LayRate**, a monolithic Laravel 12 web application that serves as an offline poultry farm management system for small to medium layer hen operations. It provides digital tracking of egg production (with HDEP computation), environmental conditions via Arduino DHT22 sensors, feed batch tracking and consumption logging, mortality recording, configurable environmental alert thresholds, basic HDEP forecasting (via simple averaging), a multi-report generator with CSV export and print-ready formatting, and a per-cage analytics dashboard with Chart.js visualizations. The system is deployed to a **Raspberry Pi** via GitHub Actions self-hosted CI/CD. The repository also includes **Arduino Uno R3 firmware** for an IR break-beam egg counter and DHT22 environmental sensor, though the data ingestion pipeline from the Arduino to the web application is not yet implemented. The codebase is clean, well-structured, and follows Laravel conventions consistently, but has notable gaps: no automated alert generation, no test coverage, a placeholder forecasting algorithm, and a hardcoded user ID in the feed controller. The application is functionally complete for manual data entry and reporting, and appears to be a capstone or research project (accompanying manuscript found at `docu/LayRate - Manuscript (1).docx`).
+This is **LayRate**, a Laravel 12 web application that serves as a poultry farm management system. It provides egg production tracking (with HDEP computation), per-cage slot-grid cage management with optional per-slot IR/environmental sensors, feed batch tracking, mortality recording, configurable environmental alert thresholds, HDEP forecasting (toy algorithm), a multi-report generator with CSV export, and a per-cage analytics dashboard with Chart.js visualizations. The system is deployed to a **Raspberry Pi** via GitHub Actions self-hosted CI/CD. The repository also includes **Arduino Uno R3 firmware** for an IR break-beam egg counter and DHT22 sensor, though the data ingestion pipeline to the web application is not yet implemented.
+
+**Commit 1** (slot migration, f287c2b) introduced `cage_slots` as the central data hub — `hens`, `production_logs`, and `forecasts` now use `cage_slot_id` FK instead of `cage_id`. The `cages` table was restructured from a flat single-cage model to a battery-cage model with `rows`, `slots_per_row`, `max_chickens_per_slot`, and `total_capacity`. `FeedController::recorded_by` was fixed to use `auth()->id()`.
+
+**Commit 2** (this session) rebuilt the cage management UI (`cages/index.blade.php`) with a slot-grid card layout, Battery Cage Configuration add/edit modals with live Layout Preview, per-slot sensor toggle, resize-safety validation with auto-reopening edit modal on failure, and a delete confirmation page showing full data loss counts.
+
+Notable remaining gaps: no automated alert generation, no test coverage, a placeholder forecasting algorithm, and no Arduino-to-PHP data pipeline. The application is functionally complete for manual data entry and reporting.

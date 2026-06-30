@@ -13,10 +13,10 @@ class EnvironmentController extends Controller
     public function index()
     {
         $thresholds = Setting::thresholds();
-        $cages = Cage::with(['latestEnvironment'])->orderBy('cage_code')->get();
+        $cages = Cage::with(['latestEnvironmentLog'])->orderBy('cage_code')->get();
 
         $latestPerCage = $cages->map(function ($cage) use ($thresholds) {
-            $env = $cage->latestEnvironment;
+            $env = $cage->latestEnvironmentLog;
             if (! $env) return null;
 
             $tempStatus = $this->tempStatus($env->temperature_c, $thresholds);
