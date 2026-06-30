@@ -99,6 +99,18 @@ class CageController extends Controller
         return redirect()->route('cages.index');
     }
 
+    public function slotsJson(Cage $cage)
+    {
+        return response()->json($cage->cageSlots->map(fn($s) => [
+            'id' => $s->id,
+            'slot_number' => $s->slot_number,
+            'row_number' => $s->row_number,
+            'column_number' => $s->column_number,
+            'current_occupancy' => $s->current_occupancy,
+            'has_sensor' => $s->has_sensor,
+        ]));
+    }
+
     public function toggleSensor(Cage $cage, CageSlot $slot)
     {
         if ($slot->cage_id !== $cage->id) {
@@ -108,6 +120,36 @@ class CageController extends Controller
         $slot->update(['has_sensor' => !$slot->has_sensor]);
 
         return back();
+    }
+
+    public function hensJson(CageSlot $slot)
+    {
+        $hens = $slot->hens()->where('is_active', 1)->get()->map(fn($h) => [
+            'id' => $h->id,
+            'tag_code' => $h->tag_code,
+            'breed' => $h->breed,
+            'current_age_weeks' => $h->current_age_weeks,
+            'flock_age_weeks' => $h->flock_age_weeks,
+            'is_active' => $h->is_active,
+        ]);
+
+        return response()->json([
+            'slot' => [
+                'id' => $slot->id,
+                'slot_number' => $slot->slot_number,
+                'row_number' => $slot->row_number,
+                'column_number' => $slot->column_number,
+                'current_occupancy' => $slot->current_occupancy,
+                'has_sensor' => $slot->has_sensor,
+                'remaining' => $slot->remaining,
+            ],
+            'hens' => $hens,
+            'cage' => [
+                'id' => $slot->cage->id,
+                'cage_code' => $slot->cage->cage_code,
+                'max_chickens_per_slot' => $slot->cage->max_chickens_per_slot,
+            ],
+        ]);
     }
 
     public function deleteConfirm(Cage $cage)
@@ -209,6 +251,76 @@ class CageController extends Controller
                 $slot->update(['current_occupancy' => $newMax]);
             }
         }
+    }
+
+    public function bulkAdd(Request $request)
+    {
+        $cages = Cage::with(['cageSlots', 'hens' => fn($q) => $q->where('is_active', 1)])
+            ->where('is_active', 1)
+            ->orderBy('cage_code')
+            ->get();
+
+        $selectedCage = null;
+        if ($request->has('cage_id')) {
+            $selectedCage = $cages->firstWhere('id', $request->cage_id);
+        }
+
+        return view('cages.bulk-add', compact('cages', 'selectedCage'));
+    }
+
+    public function storeBulkAdd(Request $request)
+    {
+        $data = $request->validate([
+            'cage_id'            => 'required|integer|exists:cages,id',
+            'breed'              => 'required|string|max:50',
+            'age_weeks'          => 'required|integer|min:0|max:200',
+            'chickens_per_slot'  => 'required|integer|min:1|max:10',
+            'slot_ids'           => 'required|string',
+        ]);
+
+        $cage = Cage::with('cageSlots')->findOrFail($data['cage_id']);
+        $slotIds = array_filter(array_map('intval', explode(',', $data['slot_ids'])));
+
+        if (empty($slotIds)) {
+            return back()->withErrors(['slot_ids' => 'Please select at least one slot.']);
+        }
+
+        $now = now();
+        $placementDate = $now->toDateString();
+
+        $created = 0;
+        foreach ($slotIds as $slotId) {
+            $slot = $cage->cageSlots->firstWhere('id', $slotId);
+            if (!$slot) {
+                continue;
+            }
+
+            $remaining = $cage->max_chickens_per_slot - $slot->current_occupancy;
+            if ($remaining <= 0) {
+                continue;
+            }
+
+            $toAdd = min((int) $data['chickens_per_slot'], $remaining);
+
+            for ($i = 0; $i < $toAdd; $i++) {
+                Hen::create([
+                    'cage_slot_id'           => $slot->id,
+                    'tag_code'               => null,
+                    'date_acquired'          => $now->toDateTimeString(),
+                    'flock_age_weeks'        => $data['age_weeks'],
+                    'placement_date'         => $placementDate,
+                    'age_at_placement_weeks' => $data['age_weeks'],
+                    'breed'                  => $data['breed'],
+                    'is_active'              => true,
+                ]);
+                $created++;
+            }
+
+            $slot->update(['current_occupancy' => $slot->current_occupancy + $toAdd]);
+        }
+
+        return redirect()->route('cages.index')
+            ->with('success', "{$created} hen(s) added to {$cage->cage_code}.");
     }
 
     private function createSlotsForCage(Cage $cage): void

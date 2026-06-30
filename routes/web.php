@@ -5,6 +5,7 @@ use App\Http\Controllers\AlertController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CageController;
+use App\Http\Controllers\ChickensController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EggLoggingController;
 use App\Http\Controllers\EnvironmentController;
@@ -32,8 +33,16 @@ Route::middleware('auth')->group(function () {
     Route::put('/cages/{cage}',        [CageController::class, 'update'])->name('cages.update');
     Route::delete('/cages/{cage}',     [CageController::class, 'destroy'])->name('cages.destroy')->middleware('admin');
     Route::post('/cages/{cage}/slots/{slot}/toggle-sensor', [CageController::class, 'toggleSensor'])->name('cages.slots.toggle-sensor');
+    Route::get('/cages/{cage}/slots-json', [CageController::class, 'slotsJson'])->name('cages.slots-json');
+    Route::get('/cages/slots/{slot}/hens-json', [CageController::class, 'hensJson'])->name('cages.slots.hens-json');
+    Route::get('/cages/bulk-add',  [CageController::class, 'bulkAdd'])->name('cages.bulk-add');
+    Route::post('/cages/bulk-add', [CageController::class, 'storeBulkAdd'])->name('cages.bulk-add.store');
     Route::get('/cages/{cage}/confirm-delete', [CageController::class, 'deleteConfirm'])->name('cages.confirm-delete');
     Route::delete('/cages/{cage}/force', [CageController::class, 'forceDestroy'])->name('cages.force-destroy')->middleware('admin');
+
+    Route::get('/chickens',        [ChickensController::class, 'index'])->name('chickens.index');
+    Route::post('/chickens/move',  [ChickensController::class, 'move'])->name('chickens.move');
+    Route::post('/chickens/remove', [ChickensController::class, 'remove'])->name('chickens.remove');
 
     Route::get('/egg-logging',                        [EggLoggingController::class, 'index'])->name('egg-logging');
     Route::post('/egg-logging',                       [EggLoggingController::class, 'store'])->name('egg-logging.store');

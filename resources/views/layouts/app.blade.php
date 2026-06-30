@@ -101,13 +101,13 @@
         $nav = [
             ['icon'=>'home',          'label'=>'Dashboard',       'route'=>'dashboard'],
             ['icon'=>'feather',       'label'=>'Cages',           'route'=>'cages.index'],
+            ['icon'=>'bird',          'label'=>'Chickens',        'route'=>'chickens.index'],
             ['icon'=>'egg',           'label'=>'Egg Logging',     'route'=>'egg-logging'],
             ['icon'=>'thermometer',   'label'=>'Environment',     'route'=>'environment'],
             ['icon'=>'leaf',          'label'=>'Feed & Nutrition','route'=>'feed'],
             ['icon'=>'bar-chart-3',   'label'=>'Analytics',       'route'=>'analytics'],
             ['icon'=>'trending-up',   'label'=>'Forecast',        'route'=>'forecast'],
             ['icon'=>'clipboard-list','label'=>'Reports',         'route'=>'reports'],
-            ['icon'=>'skull',         'label'=>'Mortality Log',   'route'=>'mortality.index'],
         ];
         @endphp
 

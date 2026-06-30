@@ -51,4 +51,9 @@ class CageSlot extends Model
         }
         return 'manual';
     }
+
+    public function getRemainingAttribute(): int
+    {
+        return (int) $this->cage->max_chickens_per_slot - (int) $this->current_occupancy;
+    }
 }

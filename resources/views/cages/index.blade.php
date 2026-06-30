@@ -48,6 +48,10 @@
                             class="flex items-center gap-1 text-xs border border-[#D9D9D9] bg-white px-2 py-1 rounded hover:bg-[#F5F6F8] text-[#6B7280]">
                         <i data-lucide="pencil" class="w-3 h-3"></i> Edit
                     </button>
+                    <a href="{{ route('cages.bulk-add') }}?cage_id={{ $cage->id }}"
+                       class="flex items-center gap-1 text-xs border border-[#D9D9D9] bg-white px-2 py-1 rounded hover:bg-[#F5F6F8] text-[#6B7280]">
+                        <i data-lucide="plus-circle" class="w-3 h-3"></i> Bulk Add
+                    </a>
                     <a href="{{ route('cages.confirm-delete', $cage) }}"
                        class="flex items-center justify-center w-7 h-7 border border-red-200 text-red-400 rounded hover:bg-red-50">
                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -76,11 +80,14 @@
                         <span class="flex items-center gap-1">
                             <span class="w-2 h-2 rounded-sm bg-[#F5F6F8] border border-[#D9D9D9]"></span> empty
                         </span>
+                        <span class="flex items-center gap-1">
+                            <i data-lucide="maximize-2" class="w-3 h-3"></i> view
+                        </span>
                     </div>
                 </div>
 
                 @php $colHeaders = range(1, $cage->slots_per_row); @endphp
-                <div class="overflow-x-auto">
+                <div class="flex justify-center overflow-x-auto">
                     <div class="inline-block min-w-full">
                         {{-- Column headers --}}
                         <div class="flex gap-1 mb-1 pl-8">
@@ -106,17 +113,25 @@
                                         $slotPrimaryHen = $slot->primaryHen();
                                         $bgClass = $isSensor ? 'bg-emerald-50 border-emerald-200' : ($occupancy > 0 ? 'bg-[#F5F6F8] border-[#E5E7EB]' : 'bg-white border-[#E5E7EB]');
                                     @endphp
-                                    <div class="relative w-9 h-9 rounded border {{ $bgClass }} flex flex-col items-center justify-center cursor-pointer hover:ring-1 hover:ring-[#002D5E] transition-all"
-                                         onclick="toggleSlotSensor({{ $cage->id }}, {{ $slot->id }}, {{ $isSensor ? 1 : 0 }})"
-                                         title="Slot {{ $rowNum }}-{{ $col }} ({{ $isSensor ? 'sensor' : 'manual' }})">
+                                    <div class="relative w-9 h-9 rounded border {{ $bgClass }} flex flex-col items-center justify-center hover:ring-1 hover:ring-[#002D5E] transition-all group"
+                                         title="Slot {{ $rowNum }}-{{ $col }}">
                                         @if($isSensor)
                                             <div class="absolute top-0 right-0 w-2 h-2 rounded-bl-sm bg-emerald-500"></div>
                                         @endif
-                                        <span class="text-[9px] font-mono text-[#6B7280]">{{ $slot->slot_number }}</span>
-                                        @if($slotPrimaryHen)
-                                            <span class="text-[8px] text-[#333]">{{ $slotPrimaryHen->current_age_weeks }}w</span>
-                                        @endif
-                                        <span class="text-[8px] text-[#9CA3AF]">{{ $occupancy }}/{{ $cage->max_chickens_per_slot }}</span>
+                                        {{-- Expand button --}}
+                                        <button onclick="event.stopPropagation(); expandSlot({{ $slot->id }}, {{ $cage->id }}, '{{ $cage->cage_code }}')"
+                                                class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                                title="View slot details">
+                                            <i data-lucide="maximize-2" class="w-3.5 h-3.5 text-[#002D5E]"></i>
+                                        </button>
+                                        {{-- Normal view (fades on hover) --}}
+                                        <div class="slot-normal-view transition-opacity group-hover:opacity-0">
+                                            <span class="text-[9px] font-mono text-[#6B7280]">{{ $slot->slot_number }}</span>
+                                            @if($slotPrimaryHen)
+                                                <span class="text-[8px] text-[#333]">{{ $slotPrimaryHen->current_age_weeks }}w</span>
+                                            @endif
+                                            <span class="text-[8px] text-[#9CA3AF]">{{ $occupancy }}/{{ $cage->max_chickens_per_slot }}</span>
+                                        </div>
                                     </div>
                                 @else
                                     <div class="w-9 h-9"></div>
@@ -124,6 +139,24 @@
                             @endfor
                         </div>
                         @endforeach
+                    </div>
+                </div>
+            </div>
+
+            {{-- Slot Expand Panel --}}
+            <div id="slotExpandPanel-{{ $cage->id }}" class="hidden border-t border-[#E5E7EB] bg-[#FAFAFA]">
+                <div class="p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <div>
+                            <span class="text-xs font-semibold text-[#333]" id="slotPanelTitle-{{ $cage->id }}">Slot details</span>
+                        </div>
+                        <button onclick="closeSlotExpand({{ $cage->id }})"
+                                class="text-[#9CA3AF] hover:text-[#333]">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <div id="slotPanelContent-{{ $cage->id }}">
+                        <div class="text-xs text-[#9CA3AF] text-center py-4">Loading...</div>
                     </div>
                 </div>
             </div>
@@ -327,6 +360,80 @@
 
 @push('scripts')
 <script>
+// ── Slot Expand Panel ────────────────────────────────────────────
+function expandSlot(slotId, cageId, cageCode) {
+    const panel = document.getElementById('slotExpandPanel-' + cageId);
+    const content = document.getElementById('slotPanelContent-' + cageId);
+    const title = document.getElementById('slotPanelTitle-' + cageId);
+
+    panel.classList.remove('hidden');
+
+    fetch(`/cages/slots/${slotId}/hens-json`)
+        .then(r => r.json())
+        .then(data => {
+            title.textContent = `${cageCode} — Slot ${data.slot.row_number}-${data.slot.column_number} (#${data.slot.slot_number})`;
+
+            if (data.hens.length === 0) {
+                content.innerHTML = '<p class="text-xs text-[#9CA3AF] text-center py-3">No hens in this slot.</p>';
+                return;
+            }
+
+            let html = `
+                <div class="space-y-1.5">
+                    ${data.hens.map(hen => `
+                        <div class="flex items-center gap-3 bg-white rounded border border-[#E5E7EB] px-3 py-2 text-xs">
+                            <span class="w-24 font-mono text-[#6B7280]">${hen.tag_code || '—'}</span>
+                            <span class="w-32 text-[#333]">${hen.breed}</span>
+                            <span class="w-12 text-[#6B7280]">${hen.current_age_weeks}w</span>
+                            <span class="flex-1">
+                                <span class="text-[10px] px-1.5 py-0.5 rounded-full ${hen.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}">
+                                    ${hen.is_active ? 'Active' : 'Inactive'}
+                                </span>
+                            </span>
+                            <div class="flex items-center gap-1">
+                                <button type="button"
+                                        onclick="openMoveModal('${hen.id}', 1, '${cageCode} slot ${data.slot.slot_number}', '${hen.breed}')"
+                                        class="px-1.5 py-0.5 text-[10px] border border-[#D9D9D9] rounded hover:bg-[#E5E7EB]">
+                                    Move
+                                </button>
+                                <button type="button"
+                                        onclick="openRemoveModal('${hen.id}', 1, '${cageCode} slot ${data.slot.slot_number}', '${hen.breed}')"
+                                        class="px-1.5 py-0.5 text-[10px] border border-red-200 text-red-400 rounded hover:bg-red-50">
+                                    Remove
+                                </button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="mt-3 flex items-center gap-2">
+                    <button type="button"
+                            onclick="openMoveModal('${data.hens.map(h => h.id).join(',')}', ${data.hens.length}, '${cageCode} slot ${data.slot.slot_number}', '${data.hens[0]?.breed || ''}')"
+                            class="px-3 py-1.5 text-xs border border-[#002D5E] text-[#002D5E] rounded hover:bg-[#002D5E]/5">
+                        Move All (${data.hens.length})
+                    </button>
+                    <button type="button"
+                            onclick="openRemoveModal('${data.hens.map(h => h.id).join(',')}', ${data.hens.length}, '${cageCode} slot ${data.slot.slot_number}', '${data.hens[0]?.breed || ''}')"
+                            class="px-3 py-1.5 text-xs border border-red-400 text-red-500 rounded hover:bg-red-50">
+                        Remove All (${data.hens.length})
+                    </button>
+                </div>
+            `;
+            content.innerHTML = html;
+            lucide.createIcons();
+        })
+        .catch(() => {
+            content.innerHTML = '<p class="text-xs text-red-500 text-center py-3">Failed to load hens.</p>';
+        });
+}
+
+function closeSlotExpand(cageId) {
+    document.getElementById('slotExpandPanel-' + cageId).classList.add('hidden');
+}
+</script>
+@endpush
+
+@push('scripts')
+<script>
 lucide.createIcons();
 
 function openAddModal() {
@@ -409,5 +516,87 @@ function toggleSlotSensor(cageId, slotId, currentSensor) {
     document.body.appendChild(form);
     form.submit();
 }
+
+// ── Move + Remove Modals (for slot expand) ──────────────────────
+function openMoveModal(henIds, count, sourceInfo, breed) {
+    document.getElementById('moveCount').textContent = count;
+    document.getElementById('moveHenIds').value = henIds;
+    document.getElementById('moveSourceInfo').classList.toggle('hidden', !sourceInfo);
+    if (sourceInfo) {
+        document.getElementById('moveSourceText').textContent = sourceInfo;
+        document.getElementById('moveSourceBreed').textContent = breed || '';
+    }
+    document.getElementById('destCageSelect').selectedIndex = 0;
+    document.getElementById('destSlotSelect').innerHTML = '<option value="">Select cage first...</option>';
+    document.getElementById('destSlotSelect').disabled = true;
+    document.getElementById('moveAvailability').classList.add('hidden');
+    document.getElementById('moveSubmitBtn').disabled = true;
+    document.getElementById('moveModal').classList.remove('hidden');
+}
+function closeMoveModal() {
+    document.getElementById('moveModal').classList.add('hidden');
+}
+function loadDestSlots() {
+    const cageSelect = document.getElementById('destCageSelect');
+    const slotSelect = document.getElementById('destSlotSelect');
+    const option = cageSelect.options[cageSelect.selectedIndex];
+    const toMove = parseInt(document.getElementById('moveCount').textContent) || 0;
+    slotSelect.innerHTML = '<option value="">Loading...</option>';
+    slotSelect.disabled = true;
+    if (!cageSelect.value) { slotSelect.innerHTML = '<option value="">Select cage first...</option>'; return; }
+    fetch(`/cages/${cageSelect.value}/slots-json`)
+        .then(r => r.json())
+        .then(slots => {
+            let html = '<option value="">Select slot...</option>';
+            slots.forEach(slot => {
+                const remaining = parseInt(option.dataset.max) - slot.current_occupancy;
+                const canFit = remaining >= toMove;
+                html += `<option value="${slot.id}" data-remaining="${remaining}" class="${canFit ? '' : 'text-red-400'}">
+                    Slot ${slot.row_number}-${slot.column_number} (#${slot.slot_number}) — ${remaining} space${remaining !== 1 ? 's' : ''} ${canFit ? '' : '(insufficient)'}
+                </option>`;
+            });
+            slotSelect.innerHTML = html;
+            slotSelect.disabled = false;
+            slotSelect.onchange = checkMoveAvailability;
+        });
+}
+function checkMoveAvailability() {
+    const slotSelect = document.getElementById('destSlotSelect');
+    const option = slotSelect.options[slotSelect.selectedIndex];
+    const remaining = parseInt(option.dataset.remaining) || 0;
+    const toMove = parseInt(document.getElementById('moveCount').textContent) || 0;
+    const availEl = document.getElementById('moveAvailability');
+    const submitBtn = document.getElementById('moveSubmitBtn');
+    availEl.classList.remove('hidden');
+    if (remaining >= toMove) {
+        availEl.className = 'text-xs font-medium text-green-600';
+        availEl.textContent = `${remaining} space${remaining !== 1 ? 's' : ''} available — ready to move.`;
+        submitBtn.disabled = false;
+    } else {
+        availEl.className = 'text-xs font-medium text-red-500';
+        availEl.textContent = `Insufficient capacity. Only ${remaining} space${remaining !== 1 ? 's' : ''} available but ${toMove} needed.`;
+        submitBtn.disabled = true;
+    }
+}
+function openRemoveModal(henIds, count, sourceInfo, breed) {
+    document.getElementById('removeCount').textContent = count;
+    document.getElementById('removeHenIds').value = henIds;
+    document.getElementById('removeSourceInfo').classList.toggle('hidden', !sourceInfo);
+    if (sourceInfo) {
+        document.getElementById('removeSourceText').textContent = sourceInfo;
+        document.getElementById('removeSourceBreed').textContent = breed || '';
+    }
+    document.getElementById('recordMortality').checked = true;
+    document.getElementById('mortalityFields').classList.remove('hidden');
+    document.getElementById('removeReason').value = '';
+    document.getElementById('removeModal').classList.remove('hidden');
+}
+function closeRemoveModal() {
+    document.getElementById('removeModal').classList.add('hidden');
+}
 </script>
 @endpush
+
+{{-- Move + Remove Modals --}}
+@include('chickens.partials.move-modal')
+@include('chickens.partials.remove-modal')
