@@ -72,7 +72,7 @@ class FeedController extends Controller
 
         FeedConsumptionLog::updateOrCreate(
             ['cage_id' => $data['cage_id'], 'log_date' => $data['log_date']],
-            array_merge($data, ['recorded_by' => 1])
+            array_merge($data, ['recorded_by' => auth()->id()])
         );
 
         return redirect()->route('feed')->with('success', 'Feed consumption logged.');

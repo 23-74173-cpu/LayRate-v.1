@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Alert;
 use App\Models\Cage;
+use App\Models\CageSlot;
 use App\Models\EnvironmentalLog;
 use App\Models\FeedBatch;
 use App\Models\FeedConsumptionLog;
@@ -30,10 +31,10 @@ class DatabaseSeeder extends Seeder
         );
 
         $cagesData = [
-            ['cage_code' => 'CAGE-A', 'location' => 'North Wing', 'capacity' => 120, 'is_active' => 1],
-            ['cage_code' => 'CAGE-B', 'location' => 'East Wing',  'capacity' => 120, 'is_active' => 1],
-            ['cage_code' => 'CAGE-C', 'location' => 'South Wing', 'capacity' => 120, 'is_active' => 1],
-            ['cage_code' => 'CAGE-D', 'location' => 'West Wing',  'capacity' => 120, 'is_active' => 0],
+            ['cage_code' => 'CAGE-A', 'location' => 'North Wing', 'rows' => 3, 'slots_per_row' => 5, 'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 1],
+            ['cage_code' => 'CAGE-B', 'location' => 'East Wing',  'rows' => 3, 'slots_per_row' => 5, 'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 1],
+            ['cage_code' => 'CAGE-C', 'location' => 'South Wing', 'rows' => 3, 'slots_per_row' => 5, 'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 1],
+            ['cage_code' => 'CAGE-D', 'location' => 'West Wing',  'rows' => 3, 'slots_per_row' => 5, 'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 0],
         ];
         foreach ($cagesData as $cd) {
             Cage::firstOrCreate(['cage_code' => $cd['cage_code']], $cd);
@@ -41,16 +42,51 @@ class DatabaseSeeder extends Seeder
         $cages = Cage::orderBy('cage_code')->get()->keyBy('cage_code');
 
         $hensData = [
-            'CAGE-A' => ['flock_age_weeks' => 28, 'breed' => 'ISA Brown',             'date_acquired' => '2025-10-18', 'tag_code' => 'FLOCK-A-2025'],
-            'CAGE-B' => ['flock_age_weeks' => 34, 'breed' => 'Lohmann Brown-Classic', 'date_acquired' => '2025-09-06', 'tag_code' => 'FLOCK-B-2025'],
-            'CAGE-C' => ['flock_age_weeks' => 52, 'breed' => 'Dekalb White',          'date_acquired' => '2025-04-19', 'tag_code' => 'FLOCK-C-2025'],
-            'CAGE-D' => ['flock_age_weeks' => 18, 'breed' => 'ISA Brown',             'date_acquired' => '2025-12-13', 'tag_code' => 'FLOCK-D-2026'],
+            'CAGE-A' => ['flock_age_weeks' => 28, 'breed' => 'ISA Brown',             'date_acquired' => '2025-10-18', 'tag_code' => 'FLOCK-A-2025', 'placement_date' => '2025-10-18', 'age_at_placement_weeks' => 0],
+            'CAGE-B' => ['flock_age_weeks' => 34, 'breed' => 'Lohmann Brown-Classic', 'date_acquired' => '2025-09-06', 'tag_code' => 'FLOCK-B-2025', 'placement_date' => '2025-09-06', 'age_at_placement_weeks' => 0],
+            'CAGE-C' => ['flock_age_weeks' => 52, 'breed' => 'Dekalb White',          'date_acquired' => '2025-04-19', 'tag_code' => 'FLOCK-C-2025', 'placement_date' => '2025-04-19', 'age_at_placement_weeks' => 0],
+            'CAGE-D' => ['flock_age_weeks' => 18, 'breed' => 'ISA Brown',             'date_acquired' => '2025-12-13', 'tag_code' => 'FLOCK-D-2026', 'placement_date' => '2025-12-13', 'age_at_placement_weeks' => 0],
         ];
-        foreach ($hensData as $code => $hd) {
-            Hen::firstOrCreate(
-                ['tag_code' => $hd['tag_code']],
-                array_merge($hd, ['cage_id' => $cages[$code]->id, 'is_active' => 1])
-            );
+
+        $sensorSlots = [
+            'CAGE-A' => [1, 5, 6, 10],
+        ];
+
+        foreach ($cages as $cage) {
+            for ($row = 1; $row <= $cage->rows; $row++) {
+                for ($col = 1; $col <= $cage->slots_per_row; $col++) {
+                    $slotNumber = ($row - 1) * $cage->slots_per_row + $col;
+                    $isSensor = isset($sensorSlots[$cage->cage_code]) && in_array($slotNumber, $sensorSlots[$cage->cage_code]);
+                    $slot = CageSlot::firstOrCreate(
+                        ['cage_id' => $cage->id, 'slot_number' => $slotNumber],
+                        [
+                            'row_number' => $row,
+                            'column_number' => $col,
+                            'current_occupancy' => $cage->is_active ? $cage->max_chickens_per_slot : 0,
+                            'has_sensor' => $isSensor,
+                            'sensor_device_id' => $isSensor ? "SN-CAGE{$cage->id}-SLOT{$slotNumber}" : null,
+                        ]
+                    );
+
+                    if ($cage->is_active && isset($hensData[$cage->cage_code])) {
+                        $hd = $hensData[$cage->cage_code];
+                        for ($h = 1; $h <= $cage->max_chickens_per_slot; $h++) {
+                            Hen::firstOrCreate(
+                                ['tag_code' => "{$cage->cage_code}-SLOT{$slotNumber}-HEN{$h}"],
+                                [
+                                    'cage_slot_id' => $slot->id,
+                                    'flock_age_weeks' => $hd['flock_age_weeks'],
+                                    'breed' => $hd['breed'],
+                                    'date_acquired' => $hd['date_acquired'],
+                                    'placement_date' => $hd['placement_date'],
+                                    'age_at_placement_weeks' => $hd['age_at_placement_weeks'],
+                                    'is_active' => 1,
+                                ]
+                            );
+                        }
+                    }
+                }
+            }
         }
 
         $feedBatches = [
@@ -63,26 +99,33 @@ class DatabaseSeeder extends Seeder
         }
         $batches = FeedBatch::orderBy('date_received')->get()->keyBy('batch_code');
 
-        $prodData = [
-            'CAGE-A' => ['egg_count' => 103, 'hdep' => 85.83],
-            'CAGE-B' => ['egg_count' => 87,  'hdep' => 72.50],
-            'CAGE-C' => ['egg_count' => 70,  'hdep' => 58.33],
-            'CAGE-D' => ['egg_count' => 0,   'hdep' => 0.00],
+        $slotEggCounts = [
+            'CAGE-A' => ['egg_count' => 6, 'hdep' => 85.83],
+            'CAGE-B' => ['egg_count' => 5, 'hdep' => 72.50],
+            'CAGE-C' => ['egg_count' => 3, 'hdep' => 58.33],
+            'CAGE-D' => ['egg_count' => 0, 'hdep' => 0.00],
         ];
+
+        $cageSlots = CageSlot::with('cage')->get()->groupBy(fn($s) => $s->cage->cage_code);
         for ($i = 0; $i < 14; $i++) {
             $date = now()->subDays($i)->toDateString();
-            foreach ($prodData as $code => $pd) {
-                $variation = ($i % 3) * 0.5;
-                ProductionLog::firstOrCreate(
-                    ['cage_id' => $cages[$code]->id, 'log_date' => $date],
-                    [
-                        'egg_count'   => max(0, $pd['egg_count'] - ($i % 3)),
-                        'hen_count'   => 120,
-                        'hdep'        => max(0, round($pd['hdep'] - $variation, 2)),
-                        'recorded_by' => $user->id,
-                        'notes'       => $i % 2 === 0 ? 'IR sensor synced' : 'Manual check',
-                    ]
-                );
+            foreach ($cageSlots as $code => $slots) {
+                $base = $slotEggCounts[$code] ?? $slotEggCounts['CAGE-D'];
+                foreach ($slots as $slot) {
+                    if (!$slot->cage->is_active) continue;
+                    $variation = ($i % 3) * 0.3;
+                    $eggsPerSlot = max(0, $base['egg_count'] - (int) ($i % 3));
+                    ProductionLog::firstOrCreate(
+                        ['cage_slot_id' => $slot->id, 'log_date' => $date],
+                        [
+                            'egg_count'   => $eggsPerSlot,
+                            'hen_count'   => $slot->current_occupancy,
+                            'hdep'        => max(0, round($base['hdep'] - $variation, 2)),
+                            'recorded_by' => $user->id,
+                            'notes'       => $i % 2 === 0 ? 'IR sensor synced' : 'Manual check',
+                        ]
+                    );
+                }
             }
         }
 
@@ -130,7 +173,6 @@ class DatabaseSeeder extends Seeder
             ['message' => 'Humidity at 70% — at threshold boundary', 'is_read' => 0, 'triggered_at' => now()->subHours(5)]
         );
 
-        // Mortality sample data (past 14 days)
         $mortalitySamples = [
             ['cage' => 'CAGE-C', 'days_ago' => 0, 'count' => 1, 'reason' => 'Heat Stress', 'notes' => 'Found near water trough, high temp recorded that day'],
             ['cage' => 'CAGE-A', 'days_ago' => 1, 'count' => 1, 'reason' => 'Unknown',     'notes' => null],
@@ -147,6 +189,8 @@ class DatabaseSeeder extends Seeder
             );
         }
 
+        $cageASlots = CageSlot::where('cage_id', $cages['CAGE-A']->id)->orderBy('slot_number')->get();
+        $firstSlot = $cageASlots->first();
         $today = now()->toDateString();
         for ($i = 1; $i <= 7; $i++) {
             $v = (($i % 3) - 1) * 0.3;

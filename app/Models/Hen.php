@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Hen extends Model
 {
     protected $fillable = [
-        'cage_id', 'tag_code', 'date_acquired', 'flock_age_weeks',
+        'cage_slot_id', 'tag_code', 'date_acquired', 'flock_age_weeks',
         'placement_date', 'age_at_placement_weeks', 'breed', 'is_active',
     ];
 
@@ -18,9 +18,9 @@ class Hen extends Model
         'is_active'      => 'boolean',
     ];
 
-    public function cage(): BelongsTo
+    public function cageSlot(): BelongsTo
     {
-        return $this->belongsTo(Cage::class);
+        return $this->belongsTo(CageSlot::class);
     }
 
     public function getCurrentAgeWeeksAttribute(): int

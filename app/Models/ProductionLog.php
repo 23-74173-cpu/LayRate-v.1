@@ -9,13 +9,13 @@ class ProductionLog extends Model
 {
     public $timestamps = false;
 
-    protected $fillable = ['cage_id', 'log_date', 'egg_count', 'hen_count', 'hdep', 'recorded_by', 'notes', 'overridden_by_user_id', 'overridden_at'];
+    protected $fillable = ['cage_slot_id', 'log_date', 'egg_count', 'hen_count', 'hdep', 'recorded_by', 'notes', 'overridden_by_user_id', 'overridden_at'];
 
     protected $casts = ['log_date' => 'date', 'created_at' => 'datetime', 'overridden_at' => 'datetime'];
 
-    public function cage(): BelongsTo
+    public function cageSlot(): BelongsTo
     {
-        return $this->belongsTo(Cage::class);
+        return $this->belongsTo(CageSlot::class);
     }
 
     public function recorder(): BelongsTo

@@ -4,21 +4,27 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Cage extends Model
 {
-    protected $fillable = ['cage_code', 'location', 'capacity', 'is_active', 'has_sensor', 'sensor_device_id'];
+    protected $fillable = ['cage_code', 'location', 'rows', 'slots_per_row', 'max_chickens_per_slot', 'total_capacity', 'is_active'];
 
     protected $casts = ['is_active' => 'boolean'];
 
-    public function hens(): HasMany
+    public function cageSlots(): HasMany
     {
-        return $this->hasMany(Hen::class);
+        return $this->hasMany(CageSlot::class);
     }
 
-    public function productionLogs(): HasMany
+    public function hens(): HasManyThrough
     {
-        return $this->hasMany(ProductionLog::class);
+        return $this->hasManyThrough(Hen::class, CageSlot::class);
+    }
+
+    public function productionLogs(): HasManyThrough
+    {
+        return $this->hasManyThrough(ProductionLog::class, CageSlot::class);
     }
 
     public function environmentalLogs(): HasMany
@@ -43,7 +49,8 @@ class Cage extends Model
 
     public function latestProduction()
     {
-        return $this->hasOne(ProductionLog::class)->latestOfMany('log_date');
+        return $this->hasManyThrough(ProductionLog::class, CageSlot::class)
+            ->latestOfMany('log_date', 'cage_slot_id');
     }
 
     public function latestEnvironment()

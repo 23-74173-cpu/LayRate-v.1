@@ -22,9 +22,8 @@ class DashboardController extends Controller
             'hens' => fn($q) => $q->where('is_active', 1),
         ])->get();
 
-        // Total active hens
-        $totalHens = $cages->sum(fn($c) => $c->hens->first()?->flock_age_weeks ? $c->capacity : 0)
-            ?: $cages->sum('capacity');
+        // Total active hens (sum of total_capacity across all cages)
+        $totalHens = $cages->sum('total_capacity');
 
         // Today's average HDEP
         $todayLogs = ProductionLog::whereDate('log_date', $today)->get();

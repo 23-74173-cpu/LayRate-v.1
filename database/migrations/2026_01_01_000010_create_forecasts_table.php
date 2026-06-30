@@ -9,7 +9,8 @@ return new class extends Migration {
     {
         Schema::create('forecasts', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('cage_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('cage_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->foreignId('cage_slot_id')->nullable()->constrained('cage_slots')->cascadeOnDelete();
             $table->date('forecast_date');
             $table->date('target_date');
             $table->decimal('predicted_hdep', 5, 2);
