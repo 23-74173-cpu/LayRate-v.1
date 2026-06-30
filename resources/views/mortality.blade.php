@@ -172,6 +172,30 @@
                             @endforeach
                         </tbody>
                     </table>
+                    @if($logs->hasPages())
+                    <div class="px-4 py-3 border-t border-[#F0F0F0] flex items-center justify-between text-xs text-[#6B7280]">
+                        <span>Showing {{ $logs->firstItem() }}-{{ $logs->lastItem() }} of {{ $logs->total() }}</span>
+                        <div class="flex items-center gap-1">
+                            @if($logs->onFirstPage())
+                            <span class="px-2 py-1 text-[#9CA3AF]">‹ Prev</span>
+                            @else
+                            <a href="{{ $logs->previousPageUrl() }}" class="px-2 py-1 hover:text-[#002D5E]">‹ Prev</a>
+                            @endif
+                            @foreach($logs->getUrlRange(1, $logs->lastPage()) as $page => $url)
+                                @if($page == $logs->currentPage())
+                                <span class="px-2 py-1 font-medium text-[#002D5E]">{{ $page }}</span>
+                                @elseif($page >= $logs->currentPage() - 1 && $page <= $logs->currentPage() + 1)
+                                <a href="{{ $url }}" class="px-2 py-1 hover:text-[#002D5E]">{{ $page }}</a>
+                                @endif
+                            @endforeach
+                            @if($logs->hasMorePages())
+                            <a href="{{ $logs->nextPageUrl() }}" class="px-2 py-1 hover:text-[#002D5E]">Next ›</a>
+                            @else
+                            <span class="px-2 py-1 text-[#9CA3AF]">Next ›</span>
+                            @endif
+                        </div>
+                    </div>
+                    @endif
                 </div>
                 @endif
             </div>

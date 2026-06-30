@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Cage;
 use App\Models\Forecast;
+use App\Models\Hen;
 use App\Models\ProductionLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -12,25 +13,39 @@ class ForecastController extends Controller
 {
     public function index(Request $request)
     {
-        $scope    = $request->get('scope', 'cage');
-        $cageCode = $request->get('cage', 'CAGE-A');
-        $horizon  = (int) $request->get('horizon', 7);
-        $allCages = Cage::orderBy('cage_code')->get();
+        $scope     = $request->get('scope', 'cage');
+        $cageCode  = $request->get('cage', 'CAGE-A');
+        $breed     = $request->get('breed');
+        $horizon   = (int) $request->get('horizon', 7);
+        $allCages  = Cage::orderBy('cage_code')->get();
+        $allBreeds = Hen::distinct()->pluck('breed')->filter()->sort()->values();
 
         if ($scope === 'farm') {
             $historical = $this->farmHistorical();
-            $forecasts  = Forecast::whereNull('cage_id')
-                ->where('forecast_date', now()->toDateString())
-                ->orderBy('target_date')
-                ->limit($horizon)
-                ->get();
+            $forecasts  = Forecast::where('forecast_date', now()->toDateString())
+                ->whereNull('cage_id')->whereNull('breed')
+                ->orderBy('target_date')->limit($horizon)->get();
 
             if ($forecasts->isEmpty() && $historical->isNotEmpty()) {
-                $forecasts = $this->generateForecast(null, $historical, $horizon);
+                $forecasts = $this->generateForecast(null, null, $historical, $horizon);
             }
 
-            return view('forecast', compact('scope', 'cageCode', 'horizon', 'historical', 'forecasts', 'allCages'))
-                ->with('cage', null);
+            return view('forecast', compact('scope', 'cageCode', 'horizon', 'historical', 'forecasts', 'allCages', 'allBreeds'))
+                ->with('label', 'Whole Farm');
+        }
+
+        if ($scope === 'breed' && $breed) {
+            $historical = $this->breedHistorical($breed);
+            $forecasts  = Forecast::where('forecast_date', now()->toDateString())
+                ->whereNull('cage_id')->where('breed', $breed)
+                ->orderBy('target_date')->limit($horizon)->get();
+
+            if ($forecasts->isEmpty() && $historical->isNotEmpty()) {
+                $forecasts = $this->generateForecast(null, $breed, $historical, $horizon);
+            }
+
+            return view('forecast', compact('scope', 'cageCode', 'breed', 'horizon', 'historical', 'forecasts', 'allCages', 'allBreeds'))
+                ->with('label', $breed);
         }
 
         $cage = Cage::where('cage_code', $cageCode)->firstOrFail();
@@ -42,38 +57,48 @@ class ForecastController extends Controller
             ->reverse()
             ->values();
 
-        $forecasts = Forecast::where('cage_id', $cage->id)
-            ->where('forecast_date', now()->toDateString())
-            ->orderBy('target_date')
-            ->limit($horizon)
-            ->get();
+        $forecasts = Forecast::where('forecast_date', now()->toDateString())
+            ->where('cage_id', $cage->id)->whereNull('breed')
+            ->orderBy('target_date')->limit($horizon)->get();
 
         if ($forecasts->isEmpty() && $historical->isNotEmpty()) {
-            $forecasts = $this->generateForecast($cage, $historical, $horizon);
+            $forecasts = $this->generateForecast($cage, null, $historical, $horizon);
         }
 
-        return view('forecast', compact('scope', 'cage', 'cageCode', 'horizon', 'historical', 'forecasts', 'allCages'));
+        return view('forecast', compact('scope', 'cage', 'cageCode', 'horizon', 'historical', 'forecasts', 'allCages', 'allBreeds'));
     }
 
     public function generate(Request $request)
     {
-        $scope    = $request->get('scope', 'cage');
-        $cageCode = $request->get('cage', 'CAGE-A');
-        $horizon  = (int) $request->get('horizon', 7);
+        $scope     = $request->get('scope', 'cage');
+        $cageCode  = $request->get('cage', 'CAGE-A');
+        $breed     = $request->get('breed');
+        $horizon   = (int) $request->get('horizon', 7);
 
         if ($scope === 'farm') {
             $historical = $this->farmHistorical();
 
-            Forecast::whereNull('cage_id')
-                ->where('forecast_date', now()->toDateString())
-                ->delete();
+            Forecast::whereNull('cage_id')->whereNull('breed')
+                ->where('forecast_date', now()->toDateString())->delete();
 
-            $this->generateForecast(null, $historical, $horizon, true);
+            $this->generateForecast(null, null, $historical, $horizon, true);
 
             return redirect()->route('forecast', ['scope' => 'farm', 'horizon' => $horizon])
                 ->with('success', 'Whole-farm forecast generated.');
         }
 
+        if ($scope === 'breed' && $breed) {
+            $historical = $this->breedHistorical($breed);
+
+            Forecast::whereNull('cage_id')->where('breed', $breed)
+                ->where('forecast_date', now()->toDateString())->delete();
+
+            $this->generateForecast(null, $breed, $historical, $horizon, true);
+
+            return redirect()->route('forecast', ['scope' => 'breed', 'breed' => $breed, 'horizon' => $horizon])
+                ->with('success', "{$breed} forecast generated.");
+        }
+
         $cage = Cage::where('cage_code', $cageCode)->firstOrFail();
 
         $historical = $cage->productionLogs()
@@ -83,11 +108,10 @@ class ForecastController extends Controller
             ->reverse()
             ->values();
 
-        Forecast::where('cage_id', $cage->id)
-            ->where('forecast_date', now()->toDateString())
-            ->delete();
+        Forecast::where('cage_id', $cage->id)->whereNull('breed')
+            ->where('forecast_date', now()->toDateString())->delete();
 
-        $this->generateForecast($cage, $historical, $horizon, true);
+        $this->generateForecast($cage, null, $historical, $horizon, true);
 
         return redirect()->route('forecast', ['scope' => 'cage', 'cage' => $cageCode, 'horizon' => $horizon])
             ->with('success', 'Forecast generated.');
@@ -100,15 +124,28 @@ class ForecastController extends Controller
             ->orderByDesc('log_date')
             ->limit(14)
             ->get()
-            ->map(function ($row) {
-                $row->hdep = $row->hen_count > 0 ? round(($row->egg_count / $row->hen_count) * 100, 2) : 0;
-                return $row;
-            })
+            ->map(fn($row) => tap(clone $row, fn($r) => $r->hdep = $r->hen_count > 0 ? round(($r->egg_count / $r->hen_count) * 100, 2) : 0))
             ->reverse()
             ->values();
     }
 
-    private function generateForecast(?Cage $cage, Collection $historical, int $horizon, bool $save = false): Collection
+    private function breedHistorical(string $breed): Collection
+    {
+        return ProductionLog::selectRaw('production_logs.log_date, SUM(production_logs.egg_count) as egg_count, SUM(production_logs.hen_count) as hen_count')
+            ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
+            ->join('hens', 'hens.cage_slot_id', '=', 'cage_slots.id')
+            ->whereRaw('hens.id = (SELECT id FROM hens h2 WHERE h2.cage_slot_id = cage_slots.id AND h2.is_active = 1 LIMIT 1)')
+            ->where('hens.breed', $breed)
+            ->groupBy('production_logs.log_date')
+            ->orderByDesc('production_logs.log_date')
+            ->limit(14)
+            ->get()
+            ->map(fn($row) => tap(clone $row, fn($r) => $r->hdep = $r->hen_count > 0 ? round(($r->egg_count / $r->hen_count) * 100, 2) : 0))
+            ->reverse()
+            ->values();
+    }
+
+    private function generateForecast(?Cage $cage, ?string $breed, Collection $historical, int $horizon, bool $save = false): Collection
     {
         $avgHdep = $historical->avg('hdep') ?? 85.0;
         $forecasts = collect();
@@ -121,6 +158,7 @@ class ForecastController extends Controller
 
             $forecast = new Forecast([
                 'cage_id'        => $cage?->id,
+                'breed'          => $breed,
                 'forecast_date'  => $today,
                 'target_date'    => $targetDate,
                 'predicted_hdep' => $predicted,

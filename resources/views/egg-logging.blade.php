@@ -48,62 +48,80 @@
             No slots found for the selected filter.
         </div>
         @else
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            @foreach($cageSlots as $slot)
-            @php
-                $cage = $slot->cage;
-                $primaryHen = $slot->primaryHen();
-                $isSensor = $slot->has_sensor;
-                $isSelected = false;
-            @endphp
-            <div class="slot-card bg-white rounded-lg border border-[#D9D9D9] p-4 cursor-pointer hover:ring-1 hover:ring-[#002D5E] transition-all relative"
-                 data-slot-id="{{ $slot->id }}"
-                 data-cage-id="{{ $cage->id }}"
-                 data-cage-code="{{ $cage->cage_code }}"
-                 data-slot-number="{{ $slot->slot_number }}"
-                 data-row="{{ $slot->row_number }}"
-                 data-col="{{ $slot->column_number }}"
-                 data-hens="{{ $slot->current_occupancy }}"
-                 data-breed="{{ $primaryHen?->breed ?? '—' }}"
-                 data-age="{{ $primaryHen?->current_age_weeks ?? 0 }}"
-                 data-has-sensor="{{ $isSensor ? 1 : 0 }}"
-                 data-today-eggs="{{ $slot->today_egg_count }}"
-                 onclick="selectSlot(this)">
-
-                {{-- Sensor badge --}}
-                @if($isSensor)
-                <div class="absolute top-2 right-2 flex items-center gap-0.5">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+        <div class="space-y-2">
+        @foreach($cageSlots->groupBy(fn($s) => $s->cage->cage_code) as $cageCode => $slotsInCage)
+        @php
+            $cage = $slotsInCage->first()->cage;
+        @endphp
+        <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
+            {{-- Cage dropdown header --}}
+            <div class="flex items-center justify-between px-4 py-2.5 cursor-pointer"
+                 style="background: {{ $cage->color }}10; border-bottom: 1px solid {{ $cage->color }}30"
+                 onclick="toggleEggCage(this)">
+                <div class="flex items-center gap-3">
+                    <span class="text-sm font-semibold" style="color: {{ $cage->color }}">{{ $cage->cage_code }}</span>
+                    <span class="text-xs text-[#6B7280]">{{ $cage->location ?: 'No location' }}</span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded-full" style="background: {{ $cage->color }}15; color: {{ $cage->color }}">
+                        {{ $slotsInCage->count() }} slot{{ $slotsInCage->count() !== 1 ? 's' : '' }}
+                    </span>
                 </div>
-                @endif
-
-                {{-- Cage + Slot label --}}
-                <div class="text-xs font-semibold mb-1" style="color: {{ $cage->color }}">
-                    {{ $cage->cage_code }} · Slot {{ $slot->row_number }}-{{ $slot->column_number }}
-                </div>
-
-                {{-- Hens --}}
-                <div class="text-[10px] text-[#6B7280] mb-1">
-                    {{ $slot->current_occupancy }}/{{ $cage->max_chickens_per_slot }} hens
-                </div>
-
-                {{-- Breed + Age --}}
-                @if($primaryHen)
-                <div class="text-[10px] text-[#333] mb-1">{{ $primaryHen->breed }}</div>
-                <div class="text-[10px] text-[#9CA3AF] mb-1">{{ $primaryHen->current_age_weeks }}w old</div>
-                @else
-                <div class="text-[10px] text-[#9CA3AF] mb-1">No hens</div>
-                @endif
-
-                {{-- Today's eggs --}}
-                <div class="mt-1.5 pt-1.5 border-t border-[#F0F0F0]">
-                    <div class="text-[10px] text-[#9CA3AF]">Today: <span class="font-medium text-[#333]" id="slot-eggs-{{ $slot->id }}">{{ $slot->today_egg_count }}</span> eggs</div>
-                </div>
-
-                {{-- Selected indicator --}}
-                <div class="selected-indicator hidden absolute inset-0 rounded-lg border-2 border-[#002D5E] pointer-events-none"></div>
+                <i data-lucide="chevron-down" class="w-4 h-4 text-[#6B7280] egg-cage-chevron transition-transform"></i>
             </div>
-            @endforeach
+
+            {{-- Slots grid (collapsible) --}}
+            <div class="egg-cage-slots hidden p-3">
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                @foreach($slotsInCage as $slot)
+                @php
+                    $primaryHen = $slot->primaryHen();
+                    $isSensor = $slot->has_sensor;
+                @endphp
+                <div class="slot-card bg-white rounded-lg border border-[#D9D9D9] p-4 cursor-pointer hover:ring-1 hover:ring-[#002D5E] transition-all relative"
+                     data-slot-id="{{ $slot->id }}"
+                     data-cage-id="{{ $cage->id }}"
+                     data-cage-code="{{ $cage->cage_code }}"
+                     data-slot-number="{{ $slot->slot_number }}"
+                     data-row="{{ $slot->row_number }}"
+                     data-col="{{ $slot->column_number }}"
+                     data-hens="{{ $slot->current_occupancy }}"
+                     data-breed="{{ $primaryHen?->breed ?? '—' }}"
+                     data-age="{{ $primaryHen?->current_age_weeks ?? 0 }}"
+                     data-has-sensor="{{ $isSensor ? 1 : 0 }}"
+                     data-today-eggs="{{ $slot->today_egg_count }}"
+                     onclick="selectSlot(this)">
+
+                    @if($isSensor)
+                    <div class="absolute top-2 right-2 flex items-center gap-0.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    </div>
+                    @endif
+
+                    <div class="text-xs font-semibold mb-1" style="color: {{ $cage->color }}">
+                        Slot {{ $slot->row_number }}-{{ $slot->column_number }}
+                    </div>
+
+                    <div class="text-[10px] text-[#6B7280] mb-1">
+                        {{ $slot->current_occupancy }}/{{ $cage->max_chickens_per_slot }} hens
+                    </div>
+
+                    @if($primaryHen)
+                    <div class="text-[10px] text-[#333] mb-1">{{ $primaryHen->breed }}</div>
+                    <div class="text-[10px] text-[#9CA3AF] mb-1">{{ $primaryHen->current_age_weeks }}w old</div>
+                    @else
+                    <div class="text-[10px] text-[#9CA3AF] mb-1">No hens</div>
+                    @endif
+
+                    <div class="mt-1.5 pt-1.5 border-t border-[#F0F0F0]">
+                        <div class="text-[10px] text-[#9CA3AF]">Today: <span class="font-medium text-[#333]" id="slot-eggs-{{ $slot->id }}">{{ $slot->today_egg_count }}</span> eggs</div>
+                    </div>
+
+                    <div class="selected-indicator hidden absolute inset-0 rounded-lg border-2 border-[#002D5E] pointer-events-none"></div>
+                </div>
+                @endforeach
+                </div>
+            </div>
+        </div>
+        @endforeach
         </div>
         @endif
     </div>
@@ -263,6 +281,30 @@
                     @endforelse
                 </tbody>
             </table>
+            @if($logs->hasPages())
+            <div class="px-6 py-3 border-t border-[#F0F0F0] flex items-center justify-between text-xs text-[#6B7280]">
+                <span>Showing {{ $logs->firstItem() }}-{{ $logs->lastItem() }} of {{ $logs->total() }}</span>
+                <div class="flex items-center gap-1">
+                    @if($logs->onFirstPage())
+                    <span class="px-2 py-1 text-[#9CA3AF]">‹ Prev</span>
+                    @else
+                    <a href="{{ $logs->previousPageUrl() }}" class="px-2 py-1 hover:text-[#002D5E]">‹ Prev</a>
+                    @endif
+                    @foreach($logs->getUrlRange(1, $logs->lastPage()) as $page => $url)
+                        @if($page == $logs->currentPage())
+                        <span class="px-2 py-1 font-medium text-[#002D5E]">{{ $page }}</span>
+                        @elseif($page >= $logs->currentPage() - 1 && $page <= $logs->currentPage() + 1)
+                        <a href="{{ $url }}" class="px-2 py-1 hover:text-[#002D5E]">{{ $page }}</a>
+                        @endif
+                    @endforeach
+                    @if($logs->hasMorePages())
+                    <a href="{{ $logs->nextPageUrl() }}" class="px-2 py-1 hover:text-[#002D5E]">Next ›</a>
+                    @else
+                    <span class="px-2 py-1 text-[#9CA3AF]">Next ›</span>
+                    @endif
+                </div>
+            </div>
+            @endif
         </div>
     </div>
 
@@ -402,6 +444,19 @@ function submitOverride() {
             document.getElementById('overridePasswordSection').classList.toggle('hidden', !noPinYet);
         }
     });
+}
+
+function toggleEggCage(header) {
+    const panel = header.closest('.bg-white').querySelector('.egg-cage-slots');
+    const chevron = header.querySelector('.egg-cage-chevron');
+    if (panel.classList.contains('hidden')) {
+        panel.classList.remove('hidden');
+        chevron.style.transform = 'rotate(180deg)';
+    } else {
+        panel.classList.add('hidden');
+        chevron.style.transform = '';
+    }
+    lucide.createIcons();
 }
 </script>
 @endpush

@@ -39,14 +39,13 @@ class EggLoggingController extends Controller
 
         $logsQuery = ProductionLog::with(['cageSlot.cage', 'overriddenBy', 'recorder'])
             ->orderByDesc('log_date')
-            ->orderByDesc('created_at')
-            ->limit(50);
+            ->orderByDesc('created_at');
 
         if ($cageFilter) {
             $logsQuery->whereHas('cageSlot', fn($q) => $q->where('cage_id', $cageFilter));
         }
 
-        $logs = $logsQuery->get();
+        $logs = $logsQuery->paginate(20)->withQueryString();
 
         $todayTotal = ProductionLog::where('log_date', $today)
             ->when($cageFilter, fn($q) => $q->whereHas('cageSlot', fn($s) => $s->where('cage_id', $cageFilter)))

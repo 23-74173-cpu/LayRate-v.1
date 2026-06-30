@@ -14,8 +14,8 @@ class MortalityController extends Controller
         $logs  = MortalityLog::with('cage')
             ->orderByDesc('log_date')
             ->orderByDesc('created_at')
-            ->limit(50)
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
 
         $todayTotal = MortalityLog::whereDate('log_date', today())->sum('count');
 

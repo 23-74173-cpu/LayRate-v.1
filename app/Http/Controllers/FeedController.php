@@ -16,8 +16,8 @@ class FeedController extends Controller
 
         $consumptionLogs = FeedConsumptionLog::with(['cage', 'feedBatch'])
             ->orderByDesc('log_date')
-            ->limit(50)
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
 
         // Weekly summary stats
         $avgCp = $batches->avg('crude_protein');

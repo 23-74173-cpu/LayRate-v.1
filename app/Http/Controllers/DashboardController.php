@@ -19,6 +19,7 @@ class DashboardController extends Controller
         $cages = Cage::with([
             'productionLogs',
             'latestEnvironmentLog',
+            'cageSlots',
             'hens' => fn($q) => $q->where('is_active', 1),
         ])->get();
 

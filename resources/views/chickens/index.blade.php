@@ -133,7 +133,6 @@
                         @foreach($slotsInCage as $slotId => $slotHens)
                             @php
                                 $slot = $slotHens->first()->cageSlot;
-                                $isExpanded = true;
                             @endphp
                             <div class="border-t border-[#F0F0F0]">
                                 {{-- Slot header --}}
@@ -352,6 +351,30 @@
                             @endforelse
                         </tbody>
                     </table>
+                    @if($mortalityLogs->hasPages())
+                    <div class="px-4 py-3 border-t border-[#F0F0F0] flex items-center justify-between text-xs text-[#6B7280]">
+                        <span>Showing {{ $mortalityLogs->firstItem() }}-{{ $mortalityLogs->lastItem() }} of {{ $mortalityLogs->total() }}</span>
+                        <div class="flex items-center gap-1">
+                            @if($mortalityLogs->onFirstPage())
+                            <span class="px-2 py-1 text-[#9CA3AF]">‹ Prev</span>
+                            @else
+                            <a href="{{ $mortalityLogs->previousPageUrl() }}" class="px-2 py-1 hover:text-[#002D5E]">‹ Prev</a>
+                            @endif
+                            @foreach($mortalityLogs->getUrlRange(1, $mortalityLogs->lastPage()) as $page => $url)
+                                @if($page == $mortalityLogs->currentPage())
+                                <span class="px-2 py-1 font-medium text-[#002D5E]">{{ $page }}</span>
+                                @elseif($page >= $mortalityLogs->currentPage() - 1 && $page <= $mortalityLogs->currentPage() + 1)
+                                <a href="{{ $url }}" class="px-2 py-1 hover:text-[#002D5E]">{{ $page }}</a>
+                                @endif
+                            @endforeach
+                            @if($mortalityLogs->hasMorePages())
+                            <a href="{{ $mortalityLogs->nextPageUrl() }}" class="px-2 py-1 hover:text-[#002D5E]">Next ›</a>
+                            @else
+                            <span class="px-2 py-1 text-[#9CA3Af]">Next ›</span>
+                            @endif
+                        </div>
+                    </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -389,6 +412,7 @@ function toggleCage(btn) {
         slots.classList.add('hidden');
         chevron.style.transform = '';
     }
+    lucide.createIcons();
 }
 
 function toggleSlot(btn) {
@@ -401,6 +425,7 @@ function toggleSlot(btn) {
         hens.classList.add('hidden');
         chevron.style.transform = '';
     }
+    lucide.createIcons();
 }
 
 function updateBulkBar() {
@@ -430,9 +455,5 @@ function bulkRemove() {
     const count = document.querySelectorAll('.hen-checkbox:checked').length;
     openRemoveModal(ids, count, null, null);
 }
-
-// Initialize: expand all slots
-document.querySelectorAll('.cage-slots').forEach(el => el.classList.remove('hidden'));
-document.querySelectorAll('.slot-hens').forEach(el => el.classList.remove('hidden'));
 </script>
 @endpush
