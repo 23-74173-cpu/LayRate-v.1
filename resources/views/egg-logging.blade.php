@@ -57,6 +57,10 @@
                     @endif
                 </div>
 
+                @error('egg_count')
+                <p class="text-[11px] text-red-500 mt-1">{{ $message }}</p>
+                @enderror
+
                 <div>
                     <label class="block text-xs text-[#333333] mb-1">Notes (optional)</label>
                     <input type="text" name="notes" class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
@@ -177,6 +181,7 @@ function closeOverrideModal() {
 }
 
 function submitOverride() {
+    const slotId = currentSensorSlotId;
     const pin = document.getElementById('overridePinInput').value;
     const password = document.getElementById('overridePasswordInput').value;
 
@@ -186,12 +191,12 @@ function submitOverride() {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
         },
-        body: JSON.stringify({ slot_id: currentSensorSlotId, pin: pin, password: password }),
+        body: JSON.stringify({ slot_id: slotId, pin: pin, password: password }),
     })
     .then(r => r.json().then(body => ({ status: r.status, body })))
     .then(({ status, body }) => {
         if (status === 200 && body.ok) {
-            document.getElementById('eggCount-' + currentSensorSlotId).readOnly = false;
+            document.getElementById('eggCount-' + slotId).readOnly = false;
             closeOverrideModal();
             if (body.needs_pin_setup) {
                 alert('No override PIN set yet — please set one in Account Settings.');

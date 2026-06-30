@@ -17,7 +17,11 @@ class EggLoggingController extends Controller
 
         $cages = Cage::where('is_active', 1)->orderBy('cage_code')->get();
 
-        $slotsQuery = CageSlot::with(['cage', 'hens' => fn($q) => $q->where('is_active', 1)])
+        $slotsQuery = CageSlot::with([
+                'cage',
+                'hens'           => fn($q) => $q->where('is_active', 1),
+                'productionLogs' => fn($q) => $q->where('log_date', $date),
+            ])
             ->where('current_occupancy', '>', 0)
             ->whereHas('cage', fn($q) => $q->where('is_active', 1));
 
@@ -27,9 +31,8 @@ class EggLoggingController extends Controller
 
         $slots = $slotsQuery->get()
             ->sortBy([['cage.cage_code', 'asc'], ['slot_number', 'asc']])
-            ->map(function ($slot) use ($date) {
-                $log = ProductionLog::where('cage_slot_id', $slot->id)->where('log_date', $date)->first();
-                $slot->today_egg_count = $log?->egg_count ?? 0;
+            ->map(function ($slot) {
+                $slot->today_egg_count = $slot->productionLogs->first()?->egg_count ?? 0;
                 return $slot;
             });
 
@@ -52,6 +55,9 @@ class EggLoggingController extends Controller
 
         $user = auth()->user();
 
+        $slot = CageSlot::whereHas('cage', fn($q) => $q->where('is_active', 1))
+            ->findOrFail($data['slot_id']);
+
         if ($user->override_pin_hash !== null) {
             if (! $data['pin'] || ! Hash::check($data['pin'], $user->override_pin_hash)) {
                 return response()->json(['ok' => false, 'error' => 'Incorrect PIN.'], 422);
@@ -73,14 +79,14 @@ class EggLoggingController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'log_date'     => 'required|date',
+            'log_date'     => 'required|date|before_or_equal:today',
             'cage_slot_id' => 'required|exists:cage_slots,id',
             'egg_count'    => 'required|integer|min:0',
             'hen_count'    => 'required|integer|min:1',
             'notes'        => 'nullable|string',
         ]);
 
-        $slot = CageSlot::find($data['cage_slot_id']);
+        $slot = CageSlot::findOrFail($data['cage_slot_id']);
         $existing = ProductionLog::where('cage_slot_id', $data['cage_slot_id'])
             ->where('log_date', $data['log_date'])
             ->first();
