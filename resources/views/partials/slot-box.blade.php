@@ -10,5 +10,5 @@
     <span class="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-500" title="Sensor-equipped"></span>
     @endif
     <div class="font-medium text-[#333333]">{{ $slot->label }}</div>
-    <div class="text-[#6B7280]">{{ $slot->current_occupancy }}/{{ $slot->cage->max_chickens_per_slot }}</div>
+    <div class="text-[#6B7280]">{{ $slot->current_occupancy }}/{{ $cage->max_chickens_per_slot }}</div>
 </div>

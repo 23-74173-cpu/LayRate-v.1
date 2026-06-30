@@ -67,7 +67,7 @@
                 <div class="w-6 text-[11px] text-[#6B7280] shrink-0">{{ chr(64 + $row) }}</div>
                 @foreach($cage->slots->where('row_number', $row) as $slot)
                 <div class="flex-1 min-w-[44px]">
-                    @include('partials.slot-box', ['slot' => $slot])
+                    @include('partials.slot-box', ['slot' => $slot, 'cage' => $cage])
                 </div>
                 @endforeach
             </div>

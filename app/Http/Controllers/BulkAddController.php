@@ -22,7 +22,7 @@ class BulkAddController extends Controller
         $data = $request->validate([
             'slot_ids'                  => 'required|array|min:1|max:500',
             'slot_ids.*'                => 'integer|exists:cage_slots,id',
-            'breed'                     => 'required|string|max:100',
+            'breed'                     => 'required|in:ISA Brown,Lohmann Brown-Classic,Dekalb White,Hy-Line Brown,Novogen Brown',
             'age_at_placement_weeks'    => 'required|integer|min:0',
             'chickens_per_slot'         => 'required|integer|min:1',
         ]);
