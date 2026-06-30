@@ -6,7 +6,7 @@
             {{-- Header --}}
             <div class="flex items-center justify-between px-5 py-3 border-b border-[#D9D9D9] bg-[#F5F6F8]">
                 <h3 class="text-sm font-semibold text-[#333]">Move Chickens</h3>
-                <button type="button" onclick="closeMoveModal()" class="text-[#9CA3AF] hover:text-[#333]">
+                <button type="button" onclick="closeMoveModal()" class="text-[#9CA3AF] hover:text-[#333]" aria-label="Close">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>

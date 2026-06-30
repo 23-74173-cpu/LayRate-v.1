@@ -25,7 +25,9 @@ class MortalityController extends Controller
             ->groupBy(fn($l) => $l->cage->cage_code)
             ->map(fn($g) => $g->sum('count'));
 
-        return view('mortality', compact('cages', 'logs', 'todayTotal', 'todayByCage'));
+        $preselectedCageId = (int) request('cage_id');
+
+        return view('mortality', compact('cages', 'logs', 'todayTotal', 'todayByCage', 'preselectedCageId'));
     }
 
     public function store(Request $request)

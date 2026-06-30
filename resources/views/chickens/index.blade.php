@@ -337,7 +337,7 @@
                                     <form method="POST" action="{{ route('mortality.destroy', $log) }}"
                                           onsubmit="return confirm('Delete this mortality record?')">
                                         @csrf @method('DELETE')
-                                        <button type="submit" class="text-red-400 hover:text-red-600">
+                                        <button type="submit" class="text-red-400 hover:text-red-600" aria-label="Delete record">
                                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                                         </button>
                                     </form>

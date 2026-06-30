@@ -58,7 +58,19 @@
 
         {{-- Feed Batches Panel --}}
         <div id="tab-batches" class="tab-panel">
-            <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
+            {{-- CP% Legend --}}
+            <div class="flex items-center gap-4 text-[10px] mb-3" style="color: #615d59;">
+                <span class="flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full" style="background:#1f6b3a"></span> Optimal (16–18%)
+                </span>
+                <span class="flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full" style="background:#8a5a00"></span> Watch (&lt;16% or &gt;18%)
+                </span>
+                <span class="flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full" style="background:#9b1c24"></span> Critical
+                </span>
+            </div>
+            <div class="rounded-xl border overflow-hidden" style="background-color: #ffffff; border-color: #e6e6e6;">
                 <table class="w-full">
                     <thead>
                         <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">

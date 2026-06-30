@@ -6,6 +6,16 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'LayRate' }} — LayRate Farm Monitor</title>
 
+    {{-- Favicons --}}
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+
+    {{-- Inter Font (Notion typeface) --}}
+    <link rel="preconnect" href="https://rsms.me/">
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+
     {{-- Tailwind CSS CDN --}}
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -20,11 +30,21 @@
             theme: {
                 extend: {
                     colors: {
-                        navy: { DEFAULT: '#102A4C', dark: '#001F42', mid: '#1D4E8F' },
-                        cream: '#F5F5F0',
-                        border: '#D9D9D9',
-                        muted: '#6B7280',
-                        ink:   '#333333',
+                        'canvas-soft': '#f6f5f4',
+                        'hairline': '#e6e6e6',
+                        'ink': { DEFAULT: '#1f1f1f', secondary: '#31302e', muted: '#615d59', faint: '#a39e98' },
+                        'primary': { DEFAULT: '#0075de', active: '#005bab' },
+                        'sidebar-bg': '#1a2342',
+                        'ok': { bg: '#e8f5ec', text: '#1f6b3a', border: '#cfe8d6' },
+                        'watch': { bg: '#fdf3e0', text: '#8a5a00', border: '#f3e3bf' },
+                        'alert': { bg: '#fbe4e6', text: '#9b1c24', border: '#f3cdd0' },
+                        'cage-a': { DEFAULT: '#2a9d6a', soft: '#d6f0e3' },
+                        'cage-b': { DEFAULT: '#3b7bd9', soft: '#dcebfa' },
+                        'cage-c': { DEFAULT: '#d97a3e', soft: '#fae3d0' },
+                        'cage-d': { DEFAULT: '#8a6bbf', soft: '#e9e0f5' },
+                    },
+                    fontFamily: {
+                        sans: ['Inter', '-apple-system', 'system-ui', '"Segoe UI"', 'Helvetica', 'Arial', 'sans-serif'],
                     }
                 }
             }
@@ -32,19 +52,26 @@
     </script>
 
     <style>
-        body { background-color: #F5F5F0; font-family: ui-sans-serif, system-ui, sans-serif; }
+        body { background-color: #f6f5f4; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
         .nav-active { background: rgba(255,255,255,.2); box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
         .scrollbar-thin::-webkit-scrollbar { width: 4px; }
         .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
         .scrollbar-thin::-webkit-scrollbar-thumb { background: #D9D9D9; border-radius: 9999px; }
         [x-cloak] { display: none !important; }
 
+        /* ── Focus-visible (keyboard accessibility) ── */
+        :focus-visible {
+            outline: 2px solid #0075de;
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+
         /* Sidebar collapsed state */
-        #sidebar.collapsed { width: 3.5rem; }
+        #sidebar.collapsed { width: 4rem; }
         #sidebar.collapsed .sidebar-label { display: none; }
         #sidebar.collapsed a {
-            width: 2.5rem !important;
-            height: 2.5rem !important;
+            width: 2.75rem !important;
+            height: 2.75rem !important;
             justify-content: center !important;
             margin-left: auto !important;
             margin-right: auto !important;
@@ -81,8 +108,7 @@
 <body class="flex h-screen overflow-hidden">
 
 {{-- ─── Sidebar ──────────────────────────────────────────────────────────── --}}
-{{-- The `collapsed` class drives everything; applied by inline head script before first paint when stored state is false --}}
-<aside id="sidebar" class="bg-[#102A4C] flex flex-col py-3 shrink-0 justify-between transition-all duration-200 ease-in-out overflow-hidden">
+<aside id="sidebar" class="bg-sidebar-bg flex flex-col py-3 shrink-0 justify-between transition-all duration-200 ease-in-out overflow-hidden">
 
     {{-- Logo --}}
     <div class="flex flex-col gap-1 items-center">
@@ -116,7 +142,8 @@
         <a href="{{ route($item['route']) }}"
            class="group flex items-center gap-2.5 rounded-lg transition-colors
                   {{ $active ? 'nav-active text-white' : 'text-white/85 hover:text-white hover:bg-white/10' }}"
-           title="{{ $item['label'] }}">
+           title="{{ $item['label'] }}"
+           aria-label="{{ $item['label'] }}">
             <i data-lucide="{{ $item['icon'] }}" class="w-[19px] h-[19px] shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"></i>
             <span class="sidebar-label text-sm font-medium whitespace-nowrap overflow-hidden">{{ $item['label'] }}</span>
         </a>
@@ -125,11 +152,11 @@
 
     {{-- Bottom items --}}
     <div class="flex flex-col gap-1 items-center">
-        <a href="{{ route('account') }}" class="group flex items-center gap-2.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors" title="Settings">
+        <a href="{{ route('account') }}" class="group flex items-center gap-2.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors" title="Settings" aria-label="Settings">
             <i data-lucide="settings" class="w-[19px] h-[19px] shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"></i>
             <span class="sidebar-label text-sm font-medium whitespace-nowrap overflow-hidden">Settings</span>
         </a>
-        <a href="#" class="group flex items-center gap-2.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors" title="Profile">
+        <a href="#" class="group flex items-center gap-2.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors" title="Profile" aria-label="Profile">
             <i data-lucide="user" class="w-[19px] h-[19px] shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"></i>
             <span class="sidebar-label text-sm font-medium whitespace-nowrap overflow-hidden">Profile</span>
         </a>
@@ -142,8 +169,7 @@
     {{-- Header --}}
     <header class="bg-[#1A2E1A] h-11 flex items-center justify-between px-4 shrink-0">
         <div class="flex items-center gap-3">
-            {{-- Sidebar toggle --}}
-            <button id="sidebarToggle" class="text-white/70 hover:text-white transition-colors p-1 rounded">
+            <button id="sidebarToggle" class="text-white/70 hover:text-white transition-colors p-1 rounded" aria-label="Toggle sidebar">
                 <i data-lucide="menu" class="w-4 h-4"></i>
             </button>
             <nav class="text-xs text-white/60">
@@ -158,14 +184,13 @@
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                 Offline · Local Network
             </span>
-            <a href="#" class="relative text-white/70 hover:text-white transition-colors">
+            <a href="#" class="relative text-white/70 hover:text-white transition-colors" aria-label="Notifications">
                 <i data-lucide="bell" class="w-4 h-4"></i>
                 @php $alertCount = \App\Models\Alert::where('is_read',0)->count(); @endphp
                 @if($alertCount > 0)
                 <span class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 text-white text-[8px] rounded-full flex items-center justify-center font-bold">{{ $alertCount }}</span>
                 @endif
             </a>
-            {{-- User + logout --}}
             <div class="flex items-center gap-2 pl-2 border-l border-white/20">
                 <div class="text-right hidden sm:block">
                     <div class="text-[11px] text-white/90 leading-tight">{{ auth()->user()->name }}</div>
@@ -173,7 +198,7 @@
                 </div>
                 <form action="{{ route('logout') }}" method="POST">
                     @csrf
-                    <button type="submit" title="Sign out"
+                    <button type="submit" title="Sign out" aria-label="Sign out"
                             class="text-white/60 hover:text-white transition-colors p-1 rounded">
                         <i data-lucide="log-out" class="w-4 h-4"></i>
                     </button>
@@ -206,6 +231,21 @@
 <script>
 lucide.createIcons();
 
+// ── Chart.js global defaults (colorblind-safe palette + Notion typography) ──
+if (typeof Chart !== 'undefined') {
+    Chart.defaults.color = '#31302e';
+    Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+    Chart.defaults.plugins.legend.labels.font.size = 12;
+    Chart.defaults.plugins.legend.labels.usePointStyle = true;
+    Chart.defaults.plugins.legend.labels.pointStyle = 'circle';
+    Chart.defaults.plugins.legend.labels.padding = 16;
+    Chart.defaults.elements.bar.borderRadius = 4;
+    Chart.defaults.scale.grid = { color: 'rgba(0,0,0,0.06)' };
+    window.CAGE_COLORS = {
+        'CAGE-A': '#1B8A3E', 'CAGE-B': '#2563EB', 'CAGE-C': '#EA580C', 'CAGE-D': '#7C3AED'
+    };
+}
+
 // ── Sidebar expand/collapse with localStorage persistence ──────────────────
 (function() {
     var sidebar = document.getElementById('sidebar');
@@ -220,11 +260,9 @@ lucide.createIcons();
         }
     }
 
-    // On load: restore from localStorage, defaulting to open (true) on first visit
     var stored = localStorage.getItem(STORAGE_KEY);
     applyState(stored === null ? true : stored === 'true');
 
-    // On toggle: flip state, persist, re-apply
     toggle.addEventListener('click', function() {
         var isCollapsed = sidebar.classList.contains('collapsed');
         var newState    = !isCollapsed;

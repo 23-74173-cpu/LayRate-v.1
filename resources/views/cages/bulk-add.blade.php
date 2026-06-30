@@ -7,7 +7,7 @@
     {{-- Header --}}
     <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
-            <a href="{{ route('cages.index') }}" class="text-[#6B7280] hover:text-[#002D5E]">
+            <a href="{{ route('cages.index') }}" class="text-[#6B7280] hover:text-[#002D5E]" aria-label="Back to cages">
                 <i data-lucide="arrow-left" class="w-5 h-5"></i>
             </a>
             <h1 class="text-xl font-medium text-[#333333]">Bulk Add Chickens</h1>

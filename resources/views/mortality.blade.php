@@ -34,7 +34,7 @@
                             class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                         <option value="">Select cage…</option>
                         @foreach($cages as $cage)
-                        <option value="{{ $cage->id }}" {{ old('cage_id') == $cage->id ? 'selected' : '' }}>
+                        <option value="{{ $cage->id }}" {{ (old('cage_id') ?: ($preselectedCageId ?? 0)) == $cage->id ? 'selected' : '' }}>
                             {{ $cage->cage_code }} — {{ $cage->location }}
                         </option>
                         @endforeach
@@ -163,7 +163,7 @@
                                     <form action="{{ route('mortality.destroy', $log) }}" method="POST"
                                           onsubmit="return confirm('Delete this record?')">
                                         @csrf @method('DELETE')
-                                        <button class="text-red-400 hover:text-red-600 transition-colors p-1">
+                                        <button class="text-red-400 hover:text-red-600 transition-colors p-1" aria-label="Delete record">
                                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                                         </button>
                                     </form>
