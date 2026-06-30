@@ -1,8 +1,68 @@
 # LayRate — Recent Changes Summary
 
-Generated: 2026-06-29
+Generated: 2026-06-30 (updated)
 
-Covers all commits in the repository to date (`3844751` → `2ee30a9` on `main`/`master`), spanning the initial Laravel build, the cage-level sensor/PIN/forecasting feature set, a database recovery incident, a Pi-deployment asset fix, and a teammate's Arduino/CI work merged in alongside it.
+Covers all commits in the repository to date (`3844751` → `753b0a3` on `master`), spanning the initial Laravel build, the cage-level sensor/PIN/forecasting feature set, a database recovery incident, a Pi-deployment asset fix, a teammate's Arduino/CI work merged in alongside it, and the full slot-grid cage model migration completed 2026-06-30.
+
+---
+
+## Slot-Grid Cage Model Migration (2026-06-30) — `346c872` → `753b0a3`
+
+This update is a full migration from the flat cage model (one sensor and one hen flock per cage) to a slot-grid model (cages divided into rows × slots, with per-slot occupancy, sensors, and production tracking). The manuscript and hardware design were confirmed to support per-slot granularity before this work began.
+
+### What changed
+
+**Schema (Task 1)**
+- New `cage_slots` table: `cage_id` FK, `row_number`, `column_number`, `slot_number` (sequential label), `current_occupancy`, `max_chickens_per_slot`, `has_sensor`, `sensor_device_id`. Unique constraint on `(cage_id, row_number, column_number)`.
+- `hens.cage_id` replaced by `hens.cage_slot_id` (FK → `cage_slots.id`, cascade delete).
+- `production_logs.cage_id` replaced by `production_logs.cage_slot_id` (FK → `cage_slots.id`, cascade delete).
+- `forecasts` table gained `row_number` (nullable int) for per-row scope.
+- All changes made additively via migration — no `migrate:fresh` or data wipe.
+
+**Models (Task 2)**
+- New `CageSlot` model: `belongsTo(Cage)`, `hasMany(Hen)`, `hasMany(ProductionLog)`, `latestProduction()` via `latestOfMany`, `label` accessor (e.g., "A-3"), `status` accessor.
+- `Cage`: replaced `hens()` direct relation with `hasManyThrough(Hen, CageSlot)`, added `slots()` hasMany, `total_capacity` accessor (`rows × slots_per_row × max_chickens_per_slot`), removed `latestProduction` relation.
+- `Hen`, `ProductionLog`: re-keyed to `cage_slot_id`; added `cageSlot()` belongsTo.
+
+**Seeder (Task 3)**
+- Rebuilt to generate real row×slot grids (CAGE-A: 3×10, CAGE-B: 4×8, CAGE-C: 2×6, CAGE-D: 5×4 inactive).
+- 92 total slots seeded with varied occupancy, breeds, sensor placements, and 14 days of production history per occupied slot.
+
+**Cage Management (Tasks 4 & 5)**
+- Cage index now shows the slot grid visually (slot-box partial with occupancy/sensor state per cell) instead of a flat table row.
+- Create cage form accepts `rows`, `slots_per_row`, `max_chickens_per_slot`.
+- Edit cage (resize-safety): blocks shrinking dimensions if any to-be-removed slot has occupancy or a sensor; blocks lowering `max_chickens_per_slot` if any slot already exceeds the new cap; adds/removes slots and renumbers sequentially on success.
+- Delete cage (safety guard): hard-blocks if any slot has occupancy or sensor; soft-blocks (requires typed cage code confirmation) if the cage has historical logs.
+
+**Bulk Add Chickens (Task 6)**
+- New page at `/cages/{cage}/bulk-add` with a visual row-labelled slot picker.
+- Full slots shown as disabled/dimmed. Selected slots highlighted. "Most-constrained slot" cap applied live to the chickens-per-slot input.
+- Controller: validates slot ownership to the cage, checks overflow, wraps in `DB::transaction`, creates one `Hen` per selected slot, uses `$slot->increment()` for atomic occupancy updates.
+
+**Egg Logging (Task 7)**
+- Replaced the single-cage form with a per-slot card grid.
+- Each card shows the slot label, hen count, and an egg count input keyed to `cage_slot_id`.
+- Sensor lock remains per-slot: override PIN/password check keyed to `cage_slot_id`, session flag scoped per slot, 10-minute expiry.
+- Recent Logs table: cage resolved via `$log->cageSlot->cage` (no direct `cage_id` on production_logs).
+
+**Forecast (Task 8)**
+- Added per-row scope alongside existing farm and per-cage scopes.
+- Row `<select>` appears only in row scope; row bounds guard (`abort_if`) prevents out-of-range values.
+- Historical data JOINs through `cage_slots` (no direct `production_logs.cage_id`).
+- `Carbon::parse()` applied defensively on `log_date` and `target_date` throughout the view to handle both DB-hydrated Carbon instances and freshly-constructed unsaved `Forecast` objects.
+
+**Dashboard, Analytics, Reports (Task 9)**
+- `DashboardController`: `$totalHens` now uses `CageSlot::sum('current_occupancy')`; production aggregates query `ProductionLog` directly (no removed `latestProduction` relation); Cage Overview card rebuilt to show slot occupancy counts and sensor-slot badge using eagerly-loaded `$cage->slots`.
+- `AnalyticsController`: production query now JOINs `cage_slots` on `cage_slot_id` to filter by `cage_slots.cage_id`.
+- `ReportController`: new `productionLogsForCages()` private helper centralises the JOIN; `productionReport()` resolves cage/breed via `$log->cageSlot`; feed/environment/mortality report paths are unchanged (those tables still have direct `cage_id`).
+- `cage-sensor-badge.blade.php` partial deleted (no remaining usages after the Dashboard card rebuild).
+
+**Pre-merge fixes (final review)**
+- Tailwind CSS rebuilt to include all new utility classes introduced by the new views (`bg-blue-100`, `border-blue-400`, `min-w-[44px]`, `max-w-lg`, etc.).
+- `BulkAddController` breed validation tightened from `string|max:100` to `in:ISA Brown,Lohmann Brown-Classic,Dekalb White,Hy-Line Brown,Novogen Brown` to match the DB enum and prevent a 500 on tampered input.
+- `slot-box.blade.php` N+1 eliminated: `$cage` is now passed into the partial instead of lazy-loading `$slot->cage` for each of the 92 slots on Cage Management.
+
+---
 
 ---
 
@@ -14,7 +74,7 @@ Covers all commits in the repository to date (`3844751` → `2ee30a9` on `main`/
 - **`users` table** — added `override_pin_hash` (nullable string, hashed via `Hash::make()`, never stored or displayed in plaintext).
 - **`forecasts` table** — `cage_id` changed from required to nullable, via raw `ALTER TABLE ... MODIFY` SQL rather than Laravel's `->change()` (the project doesn't have `doctrine/dbal` installed, which `->change()` requires). A `null` `cage_id` row represents a whole-farm forecast rather than a single cage's.
 - All five of the above are additive/nullable/defaulted — no existing column was dropped or renamed, so no backfill was required for the pre-existing seed data.
-- **No `cage_slots` / per-slot schema exists.** A slot-grid model (rows × slots per cage, individual slot occupancy/sensors) was proposed twice and explicitly **not implemented** — see "Open Decisions" below.
+- **`cage_slots` table and full slot-grid schema** — added 2026-06-30. See "Slot-Grid Cage Model Migration" section above.
 
 ---
 
@@ -57,7 +117,7 @@ Covers all commits in the repository to date (`3844751` → `2ee30a9` on `main`/
 
 ## Features Descoped or Reverted
 
-- **Slot-grid cage model (rows × slots, per-slot sensors/occupancy, "Battery Cage Configuration" UI)** — proposed multiple times based on a separate Figma prototype, but **never implemented**. Reason: the capstone manuscript documents one IR break-beam sensor positioned at a single egg-collection point per cage, and HDEP computed per cage — not per slot. Building the slot model would mean the working system no longer matches the documented hardware design and methodology the panel will see, unless the manuscript (and the physical sensor wiring) is updated first. Every feature requested under the slot-grid premise (Bulk Add Chickens with a visual slot picker, per-slot sensor flagging, per-row forecasting) was re-scoped down to cage-level equivalents instead: a simple flock/breed/age form, a cage-level sensor toggle, and a Whole Farm/Per Cage (not Per Row) forecast toggle.
+- **Slot-grid cage model** — was previously held back twice and listed here as descoped. It has since been fully implemented (see "Slot-Grid Cage Model Migration" section above, merged 2026-06-30).
 - **Two separate user accounts (`admin@layrate.local` / `operator@layrate.local`)** — present in the original seed data, but the working decision made earlier in the project was to use a single elevated account in practice rather than maintain two. (Both accounts still exist in the database; this is a usage decision, not a schema change.)
 - **`docs/ui-previews/` (4 HTML theme mockups), a Vite/Tailwind build pipeline (`package.json`, `vite.config.js`, `resources/css`, `resources/js`), the default Laravel `welcome.blade.php`, and the placeholder PHPUnit test suite** — all removed as unused. The app uses Tailwind/Chart.js/Lucide directly (now as local files, not CDN) rather than a Vite asset pipeline, and never had real tests behind the scaffolded `ExampleTest.php` files.
 
@@ -74,6 +134,6 @@ Covers all commits in the repository to date (`3844751` → `2ee30a9` on `main`/
 
 ## Open Decisions / Blocked Work
 
-- **Slot-grid cage model migration — not started, pending a decision that hasn't been made.** A full schema rebuild (new `cage_slots` table, per-slot sensors/occupancy, hens keyed to slots instead of cages, per-row forecasting) has been proposed but explicitly held back twice. It cannot proceed until it's confirmed whether the capstone manuscript and the physical sensor wiring are being updated to match a per-slot design — building the software side first would risk the same documentation/hardware mismatch the original cage-level design was chosen to avoid. As of this writing, the manuscript file on disk has not been modified since before this session's work began, which is evidence (not proof) that this hasn't been resolved yet.
+- **Slot-grid cage model migration — COMPLETE.** Merged to master 2026-06-30 as commit `753b0a3`. See the "Slot-Grid Cage Model Migration" section at the top of this file for full details.
 - **Cage deletion has no safety guard.** `CageController::destroy()` deletes a cage unconditionally; `hens`, `production_logs`, `environmental_logs`, `feed_consumption_logs`, `mortality_logs`, `alerts`, and `forecasts` all cascade-delete with it, with only a generic browser `confirm()` dialog standing between an admin and silently losing a cage's entire history. A fix was discussed (show what would be lost — hen count, log counts — before allowing delete) but not yet built.
 - **Arduino/hardware integration is a separate, unverified track.** Commits `03ed183`, `c0b25e5` (Arduino code for DHT22 and IR break-beam sensors) and `0496b47`/`b5fbf44`/`ec4dc1c`/`0a47faa`/`c7532ea` (a GitHub Actions deploy workflow) were authored by a teammate and merged into `main` alongside this session's Laravel work. Their contents have not been reviewed or verified as part of this changelog — they're noted here for completeness, not endorsed as working.
