@@ -2,64 +2,64 @@
 @section('title', 'Feed & Nutrition')
 
 @section('content')
-<main class="p-5 space-y-5">
+<div class="space-y-5">
+
+    <x-page-header title="Feed & Nutrition" subtitle="Track feed batches, crude protein, and daily consumption">
+        <x-slot:actions>
+            <button onclick="document.getElementById('addBatchModal').classList.remove('hidden')"
+                    class="flex items-center gap-2 bg-[#002D5E] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#001F42] transition-colors">
+                <i data-lucide="plus" class="w-4 h-4"></i> Add Feed Batch
+            </button>
+        </x-slot:actions>
+    </x-page-header>
 
     {{-- ── Metric Cards ── --}}
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-[10px] tracking-wider text-[#6B7280] mb-2">AVG CP% THIS WEEK</div>
+            <div class="text-xs tracking-wider text-[#6B7280] mb-2">AVG CP% THIS WEEK</div>
             <div class="text-3xl tracking-tight text-[#333333]">{{ number_format($avgCp, 1) }}%</div>
             <div class="text-xs text-[#6B7280] mt-1">within target</div>
         </div>
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-[10px] tracking-wider text-[#6B7280] mb-2">AVG FEED/CAGE/DAY</div>
+            <div class="text-xs tracking-wider text-[#6B7280] mb-2">AVG FEED/CAGE/DAY</div>
             <div class="text-3xl tracking-tight text-[#333333]">{{ $avgFeedPerCage }} <span class="text-xl">kg</span></div>
             <div class="text-xs text-[#6B7280] mt-1">rolling 7 days</div>
         </div>
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-[10px] tracking-wider text-[#6B7280] mb-2">TOTAL FEED USED</div>
+            <div class="text-xs tracking-wider text-[#6B7280] mb-2">TOTAL FEED USED</div>
             <div class="text-3xl tracking-tight text-[#333333]">{{ number_format($totalFeedWeek, 1) }} <span class="text-xl">kg</span></div>
             <div class="text-xs text-[#6B7280] mt-1">last 7 days</div>
         </div>
     </div>
 
     {{-- ── Tabs ── --}}
-    <div x-data="{ tab: '{{ request()->get('tab', 'batches') }}' }">
-        <script>
-            // Simple tab toggle without Alpine
-            function showTab(tab) {
-                document.querySelectorAll('.tab-panel').forEach(el => el.classList.add('hidden'));
-                document.getElementById('tab-'+tab).classList.remove('hidden');
-                document.querySelectorAll('.tab-btn').forEach(el => {
-                    el.classList.remove('bg-[#002D5E]','text-white');
-                    el.classList.add('bg-[#F5F6F8]','text-[#6B7280]','border','border-[#D9D9D9]');
-                });
-                document.getElementById('btn-'+tab).classList.add('bg-[#002D5E]','text-white');
-                document.getElementById('btn-'+tab).classList.remove('bg-[#F5F6F8]','text-[#6B7280]','border','border-[#D9D9D9]');
-            }
-        </script>
+    <x-underline-tabs :tabs="[
+        'batches'     => ['label' => 'Feed Batches',     'icon' => 'folder',   'onclick' => 'feedSwitchTab(\'batches\')'],
+        'consumption' => ['label' => 'Daily Consumption','icon' => 'utensils','onclick' => 'feedSwitchTab(\'consumption\')'],
+    ]" active="{{ request()->get('tab', 'batches') }}" />
 
-        <div class="flex items-center justify-between mb-4">
-            <div class="flex gap-1">
-                <button id="btn-batches" onclick="showTab('batches')"
-                        class="tab-btn px-4 py-2 rounded-lg text-sm transition-colors bg-[#002D5E] text-white">
-                    Feed Batches
-                </button>
-                <button id="btn-consumption" onclick="showTab('consumption')"
-                        class="tab-btn px-4 py-2 rounded-lg text-sm transition-colors bg-[#F5F6F8] text-[#6B7280] border border-[#D9D9D9]">
-                    Daily Consumption
-                </button>
-            </div>
-            <button onclick="document.getElementById('addBatchModal').classList.remove('hidden')"
-                    class="flex items-center gap-2 bg-[#002D5E] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#001F42] transition-colors">
-                <i data-lucide="plus" class="w-4 h-4"></i> Add Feed Batch
-            </button>
-        </div>
+    <script>
+        function feedSwitchTab(tab) {
+            document.querySelectorAll('.tab-panel').forEach(el => el.classList.add('hidden'));
+            document.getElementById('tab-'+tab).classList.remove('hidden');
+
+            const nav = document.getElementById('tab-'+tab).closest('.space-y-5').querySelector('.border-b nav');
+            nav.querySelectorAll('button').forEach(btn => {
+                btn.classList.remove('border-[#002D5E]', 'text-[#002D5E]');
+                btn.classList.add('border-transparent', 'text-[#6B7280]');
+            });
+            const active = nav.querySelector('button[onclick*="'+tab+'"]');
+            if (active) {
+                active.classList.remove('border-transparent', 'text-[#6B7280]');
+                active.classList.add('border-[#002D5E]', 'text-[#002D5E]');
+            }
+        }
+    </script>
 
         {{-- Feed Batches Panel --}}
         <div id="tab-batches" class="tab-panel">
             {{-- CP% Legend --}}
-            <div class="flex items-center gap-4 text-[10px] mb-3" style="color: #615d59;">
+            <div class="flex items-center gap-4 text-xs mb-3" style="color: #615d59;">
                 <span class="flex items-center gap-1.5">
                     <span class="w-2 h-2 rounded-full" style="background:#1f6b3a"></span> Optimal (16–18%)
                 </span>
@@ -161,9 +161,7 @@
                 @endif
             </div>
         </div>
-    </div>
-
-</main>
+</div>
 
 {{-- Add Batch Modal --}}
 <div id="addBatchModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/30">

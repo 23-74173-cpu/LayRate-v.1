@@ -2,7 +2,7 @@
 @section('title', 'Forecast')
 
 @section('content')
-<main class="p-5 space-y-5">
+<div class="space-y-5">
 
     @php
         $cageColorMap = ['CAGE-A'=>'#2D7D46','CAGE-B'=>'#1D4E8F','CAGE-C'=>'#C2703E','CAGE-D'=>'#6B4C8A'];
@@ -14,13 +14,13 @@
         };
     @endphp
 
-    <h1 class="text-xl font-medium text-[#333333]">Forecast</h1>
+    <x-page-header title="Forecast" subtitle="Project egg production based on historical HDEP trends" />
 
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
 
         {{-- ── Inputs Panel ── --}}
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <div class="text-[10px] tracking-wider text-[#6B7280] mb-4">FORECAST INPUTS</div>
+            <div class="text-xs tracking-wider text-[#6B7280] mb-4">FORECAST INPUTS</div>
             <form method="POST" action="{{ route('forecast.generate') }}" id="forecastForm">
                 @csrf
                 <input type="hidden" name="scope" value="{{ $scope }}" id="formScope">
@@ -85,7 +85,7 @@
 
         {{-- ── Chart Panel ── --}}
         <div class="xl:col-span-2 bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <div class="text-[10px] tracking-wider text-[#6B7280] mb-4">HISTORICAL VS FORECAST HDEP — {{ $scopeLabel }}</div>
+            <div class="text-xs tracking-wider text-[#6B7280] mb-4">HISTORICAL VS FORECAST HDEP — {{ $scopeLabel }}</div>
             <canvas id="forecastChart" height="160"></canvas>
         </div>
     </div>
@@ -120,7 +120,7 @@
         </table>
     </div>
 
-</main>
+</div>
 @endsection
 
 @push('scripts')

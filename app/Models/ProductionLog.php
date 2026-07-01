@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProductionLog extends Model
 {
@@ -31,5 +32,10 @@ class ProductionLog extends Model
     public function getCageAttribute(): ?\App\Models\Cage
     {
         return $this->cageSlot?->cage;
+    }
+
+    public function eggSizeLogs(): HasMany
+    {
+        return $this->hasMany(EggSizeLog::class);
     }
 }

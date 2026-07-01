@@ -2,7 +2,7 @@
 @section('title', 'Confirm Delete Cage')
 
 @section('content')
-<main class="p-5 max-w-lg">
+<div class="max-w-lg">
     <div class="bg-white rounded-lg border border-[#D9D9D9] p-6">
         <div class="flex items-center gap-3 mb-4">
             <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
@@ -64,5 +64,5 @@
             </form>
         </div>
     </div>
-</main>
+</div>
 @endsection

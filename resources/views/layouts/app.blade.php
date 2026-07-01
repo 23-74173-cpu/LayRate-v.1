@@ -2,8 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#1a2342">
+    <link rel="manifest" href="/manifest.json">
     <title>{{ $title ?? 'LayRate' }} — LayRate Farm Monitor</title>
 
     {{-- Favicons --}}
@@ -34,7 +39,9 @@
     <script type="module" src="{{ asset('js/turbo.js') }}"></script>
 
     <style>
-        body { background-color: #F5F6F8; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+        * { -webkit-tap-highlight-color: transparent; }
+        html { height: 100%; height: -webkit-fill-available; }
+        body { background-color: #F5F6F8; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; height: 100%; height: -webkit-fill-available; overflow: hidden; }
         .nav-active { background: rgba(255,255,255,.2); box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
         .scrollbar-thin::-webkit-scrollbar { width: 4px; }
         .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
@@ -93,16 +100,16 @@
 </script>
 
 {{-- ─── ROOT FLEX ROW ───────────────────────────────────────────────────── --}}
-<div class="flex h-screen overflow-hidden">
+<div class="flex overflow-hidden" style="height: 100vh; height: -webkit-fill-available; height: 100dvh;">
 
     {{-- ─── SIDEBAR ─────────────────────────────────────────────────────── --}}
     <aside id="sidebar" data-turbo-permanent
-           class="flex flex-col h-screen bg-sidebar-bg text-white
+           class="flex flex-col bg-sidebar-bg text-white
                   transition-all duration-300 ease-in-out
                   flex-shrink-0
                   fixed lg:relative lg:translate-x-0
                   -translate-x-full z-40 w-64"
-           style="width: 16rem;">
+           style="width: 16rem; height: 100vh; height: -webkit-fill-available; height: 100dvh;">
 
         {{-- TOP: Brand + Arrow (mobile close / desktop unused) --}}
         <div class="flex items-center justify-between px-4 pt-3 pb-1 shrink-0">
@@ -112,7 +119,7 @@
                 </div>
                 <div class="logo-text overflow-hidden whitespace-nowrap">
                     <div class="text-white text-sm font-semibold">LayRate</div>
-                    <div class="text-white/75 text-[10px]">Farm Monitor</div>
+                    <div class="text-white/75 text-xs">Farm Monitor</div>
                 </div>
             </div>
             {{-- Arrow button: mobile drawer close only (hidden on desktop) --}}
@@ -128,7 +135,7 @@
                 ['icon'=>'home',          'label'=>'Dashboard',       'route'=>'dashboard'],
                 ['icon'=>'feather',       'label'=>'Cages',           'route'=>'cages.index'],
                 ['icon'=>'bird',          'label'=>'Chickens',        'route'=>'chickens.index'],
-                ['icon'=>'egg',           'label'=>'Egg Logging',     'route'=>'egg-logging'],
+                ['icon'=>'egg',           'label'=>'Egg Management',  'route'=>'eggs.logging'],
                 ['icon'=>'thermometer',   'label'=>'Environment',     'route'=>'environment'],
                 ['icon'=>'leaf',          'label'=>'Feed & Nutrition','route'=>'feed'],
                 ['icon'=>'bar-chart-3',   'label'=>'Analytics',       'route'=>'analytics'],
@@ -151,6 +158,16 @@
 
         {{-- BOTTOM: Pinned footer nav --}}
         <div class="border-t border-white/10 py-4 px-3 shrink-0">
+            <a href="{{ route('notifications.index') }}"
+               data-route="notifications"
+               class="nav-link group flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors"
+               title="Notifications" aria-label="Notifications">
+                <i data-lucide="bell" class="w-[19px] h-[19px] shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"></i>
+                <span class="sidebar-label text-sm font-medium whitespace-nowrap overflow-hidden">Notifications</span>
+                @if($globalAlertCount > 0)
+                <span class="ml-auto bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">{{ $globalAlertCount }}</span>
+                @endif
+            </a>
             <a href="{{ route('account') }}"
                data-route="settings"
                class="nav-link group flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors"
@@ -189,21 +206,20 @@
             </div>
 
             <div class="flex items-center gap-3">
-                <span class="hidden sm:flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-600/40">
+                <span class="hidden sm:flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-600/40">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                     Offline · Local Network
                 </span>
-                <a href="#" class="relative text-white/70 hover:text-white transition-colors" aria-label="Notifications">
+                <a href="{{ route('notifications.index') }}" class="relative text-white/70 hover:text-white transition-colors" aria-label="Notifications">
                     <i data-lucide="bell" class="w-4 h-4"></i>
-                    @php $alertCount = \App\Models\Alert::where('is_read',0)->count(); @endphp
-                    @if($alertCount > 0)
-                    <span class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 text-white text-[8px] rounded-full flex items-center justify-center font-bold">{{ $alertCount }}</span>
+                    @if($globalAlertCount > 0)
+                    <span class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 text-white text-[8px] rounded-full flex items-center justify-center font-bold">{{ $globalAlertCount }}</span>
                     @endif
                 </a>
                 <div class="flex items-center gap-2 pl-2 border-l border-white/20">
                     <div class="text-right hidden sm:block">
-                        <div class="text-[11px] text-white/90 leading-tight">{{ auth()->user()->name }}</div>
-                        <div class="text-[9px] text-white/50 uppercase tracking-wider">{{ auth()->user()->role }}</div>
+                        <div class="text-xs text-white/90 leading-tight">{{ auth()->user()->name }}</div>
+                        <div class="text-xs text-white/50 uppercase tracking-wider">{{ auth()->user()->role }}</div>
                     </div>
                     <form action="{{ route('logout') }}" method="POST">
                         @csrf
@@ -231,14 +247,53 @@
         @endif
 
         {{-- SCROLLABLE PAGE CONTENT --}}
-        <main class="page-wrapper flex-1 overflow-y-auto p-6 scrollbar-thin">
+        <main class="page-wrapper flex-1 overflow-y-auto px-3 sm:px-4 lg:px-6 py-4 scrollbar-thin">
             @yield('content')
         </main>
     </div>
 </div>
 
+{{-- Session-aware alert modal --}}
+@if($showAlertsModal)
+    <x-alerts-modal :alerts="$globalNewAlerts" />
+@endif
+
 {{-- ─── Scripts ─────────────────────────────────────────────────────────── --}}
 <script>
+// ── Fullscreen for captive portal / mobile browsers ──
+(function() {
+    function goFullscreen() {
+        var el = document.documentElement;
+        if (el.requestFullscreen) {
+            el.requestFullscreen().catch(function() {});
+        } else if (el.webkitRequestFullscreen) {
+            el.webkitRequestFullscreen();
+        } else if (el.msRequestFullscreen) {
+            el.msRequestFullscreen();
+        }
+        // Hide address bar on mobile
+        window.scrollTo(0, 1);
+    }
+
+    // Try on first user interaction (browsers require gesture for fullscreen)
+    var tried = false;
+    function tryOnce() {
+        if (!tried) {
+            tried = true;
+            goFullscreen();
+        }
+    }
+    document.addEventListener('touchstart', tryOnce, { once: true });
+    document.addEventListener('click', tryOnce, { once: true });
+
+    // Also try on load (works in some captive portal browsers)
+    if (document.readyState === 'complete') {
+        goFullscreen();
+    } else {
+        window.addEventListener('load', goFullscreen);
+    }
+})();
+
 (function() {
     var SIDEBAR_INITIALIZED = false;
 

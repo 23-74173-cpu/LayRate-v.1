@@ -2,26 +2,15 @@
 @section('title', 'Chicken Inventory')
 
 @section('content')
-<main class="p-5 space-y-5">
+<div class="space-y-5">
 
-    {{-- Header + Tabs --}}
-    <div class="flex items-center justify-between">
-        <h1 class="text-xl font-medium text-[#333333]">Chickens</h1>
-    </div>
+    <x-page-header title="Chickens" subtitle="Manage hen inventory, movements, and mortality records" />
 
     {{-- Tabs --}}
-    <div class="border-b border-[#D9D9D9]">
-        <nav class="flex gap-6">
-            <button onclick="switchTab('inventory')" id="tabInventory"
-                    class="pb-2 text-sm font-medium border-b-2 -mb-px transition-colors {{ $tab === 'inventory' ? 'border-[#002D5E] text-[#002D5E]' : 'border-transparent text-[#6B7280] hover:text-[#333]' }}">
-                <i data-lucide="list" class="w-4 h-4 inline mr-1"></i> Inventory
-            </button>
-            <button onclick="switchTab('mortality')" id="tabMortality"
-                    class="pb-2 text-sm font-medium border-b-2 -mb-px transition-colors {{ $tab === 'mortality' ? 'border-[#002D5E] text-[#002D5E]' : 'border-transparent text-[#6B7280] hover:text-[#333]' }}">
-                <i data-lucide="skull" class="w-4 h-4 inline mr-1"></i> Mortality
-            </button>
-        </nav>
-    </div>
+    <x-underline-tabs :tabs="[
+        'inventory' => ['label' => 'Inventory', 'icon' => 'list', 'onclick' => 'switchTab(\'inventory\')'],
+        'mortality' => ['label' => 'Mortality', 'icon' => 'skull', 'onclick' => 'switchTab(\'mortality\')'],
+    ]" active="{{ $tab }}" />
 
     {{-- ============================================ --}}
     {{-- INVENTORY TAB --}}
@@ -45,7 +34,7 @@
 
                 {{-- Cage Filter --}}
                 <div>
-                    <label class="block text-[10px] font-medium text-[#9CA3AF] mb-1">Cage</label>
+                    <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Cage</label>
                     <select name="cage_id" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="this.form.submit()">
                         <option value="">All Cages</option>
                         @foreach($cages as $c)
@@ -56,7 +45,7 @@
 
                 {{-- Breed Filter --}}
                 <div>
-                    <label class="block text-[10px] font-medium text-[#9CA3AF] mb-1">Breed</label>
+                    <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Breed</label>
                     <select name="breed" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="this.form.submit()">
                         <option value="">All Breeds</option>
                         @foreach($breeds as $b)
@@ -67,7 +56,7 @@
 
                 {{-- Search --}}
                 <div>
-                    <label class="block text-[10px] font-medium text-[#9CA3AF] mb-1">Tag Code</label>
+                    <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Tag Code</label>
                     <div class="flex gap-1">
                         <input type="text" name="search" value="{{ $search }}" placeholder="Search tag..."
                                class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-36 focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
@@ -115,7 +104,7 @@
                         <div class="flex items-center gap-3">
                             <span class="text-sm font-semibold" style="color: {{ $cage->color }}">{{ $cage->cage_code }}</span>
                             <span class="text-xs text-[#6B7280]">{{ $cage->location ?: 'No location' }}</span>
-                            <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-white/80 text-[#6B7280]">
+                            <span class="text-xs px-1.5 py-0.5 rounded-full bg-white/80 text-[#6B7280]">
                                 {{ $hensGroup->where('is_active', 1)->count() }} active
                                 @if($hensGroup->where('is_active', 0)->count() > 0)
                                 / {{ $hensGroup->where('is_active', 0)->count() }} inactive
@@ -158,15 +147,15 @@
                                         @endif
                                     </div>
                                     <div class="flex items-center gap-2">
-                                        <span class="text-[10px] text-[#9CA3AF]">slot actions:</span>
+                                        <span class="text-xs text-[#9CA3AF]">slot actions:</span>
                                         <button type="button"
                                                 onclick="event.stopPropagation(); openMoveModal('{{ $slotHens->pluck('id')->join(',') }}', {{ $slotHens->count() }}, '{{ $cage->cage_code }} slot {{ $slot->slot_number }}', '{{ $slotHens->first()->breed ?? '' }}')"
-                                                class="px-1.5 py-0.5 text-[10px] border border-[#D9D9D9] rounded hover:bg-[#E5E7EB]">
+                                                class="px-1.5 py-0.5 text-xs border border-[#D9D9D9] rounded hover:bg-[#E5E7EB]">
                                             Move All
                                         </button>
                                         <button type="button"
                                                 onclick="event.stopPropagation(); openRemoveModal('{{ $slotHens->pluck('id')->join(',') }}', {{ $slotHens->count() }}, '{{ $cage->cage_code }} slot {{ $slot->slot_number }}', '{{ $slotHens->first()->breed ?? '' }}')"
-                                                class="px-1.5 py-0.5 text-[10px] border border-red-200 text-red-400 rounded hover:bg-red-50">
+                                                class="px-1.5 py-0.5 text-xs border border-red-200 text-red-400 rounded hover:bg-red-50">
                                             Remove All
                                         </button>
                                         <i data-lucide="chevron-down" class="w-3 h-3 text-[#9CA3AF] slot-chevron transition-transform"></i>
@@ -186,20 +175,20 @@
                                         <span class="w-16 text-[#6B7280]">flock {{ $hen->flock_age_weeks }}w</span>
                                         <span class="flex-1">
                                             @if($hen->is_active)
-                                            <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Active</span>
+                                            <span class="text-xs px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Active</span>
                                             @else
-                                            <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">Inactive</span>
+                                            <span class="text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">Inactive</span>
                                             @endif
                                         </span>
                                         <div class="flex items-center gap-1">
                                             <button type="button"
                                                     onclick="openMoveModal('{{ $hen->id }}', 1, '{{ $cage->cage_code }} slot {{ $slot->slot_number }}', '{{ $hen->breed }}')"
-                                                    class="px-1.5 py-0.5 text-[10px] border border-[#D9D9D9] rounded hover:bg-[#E5E7EB]">
+                                                    class="px-1.5 py-0.5 text-xs border border-[#D9D9D9] rounded hover:bg-[#E5E7EB]">
                                                 Move
                                             </button>
                                             <button type="button"
                                                     onclick="openRemoveModal('{{ $hen->id }}', 1, '{{ $cage->cage_code }} slot {{ $slot->slot_number }}', '{{ $hen->breed }}')"
-                                                    class="px-1.5 py-0.5 text-[10px] border border-red-200 text-red-400 rounded hover:bg-red-50">
+                                                    class="px-1.5 py-0.5 text-xs border border-red-200 text-red-400 rounded hover:bg-red-50">
                                                 Remove
                                             </button>
                                         </div>
@@ -380,7 +369,7 @@
         </div>
     </div>
 
-</main>
+</div>
 
 {{-- Modals --}}
 @include('chickens.partials.move-modal')

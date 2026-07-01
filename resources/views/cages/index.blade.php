@@ -2,22 +2,19 @@
 @section('title', 'Cage Management')
 
 @section('content')
-<main class="p-6 space-y-6" style="background-color: #f6f5f4; min-height: 100vh;">
+<div class="space-y-5">
 
-    {{-- ── Header ── --}}
-    <div class="flex items-center justify-between">
-        <div>
-            <p class="text-xs font-semibold tracking-[0.125px] uppercase mb-1" style="color: #615d59;">Cage Management</p>
-            <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px]" style="color: #1f1f1f;">Cages</h1>
-        </div>
-        <button onclick="openAddModal()"
-                class="flex items-center gap-2 px-6 py-2 text-sm font-medium rounded-full text-white transition-opacity"
-                style="background-color: #0075de;"
-                onmouseover="this.style.opacity='0.85'"
-                onmouseout="this.style.opacity='1'">
-            <i data-lucide="plus" class="w-4 h-4"></i> Add Cage
-        </button>
-    </div>
+    <x-page-header title="Cages" subtitle="Manage battery cage configurations, slots, and sensor placement">
+        <x-slot:actions>
+            <button onclick="openAddModal()"
+                    class="flex items-center gap-2 px-6 py-2 text-sm font-medium rounded-full text-white transition-opacity"
+                    style="background-color: #0075de;"
+                    onmouseover="this.style.opacity='0.85'"
+                    onmouseout="this.style.opacity='1'">
+                <i data-lucide="plus" class="w-4 h-4"></i> Add Cage
+            </button>
+        </x-slot:actions>
+    </x-page-header>
 
     {{-- ── Farm Layout Canvas (drag-and-drop) ── --}}
     <div class="rounded-xl border p-6" style="background-color: #ffffff; border-color: #e6e6e6;">
@@ -180,9 +177,9 @@
                         @endif
 
                         @if($occupancy > 0)
-                        <span class="text-[10px] font-semibold" style="color: #1f1f1f;">{{ $occupancy }}</span>
+                        <span class="text-xs font-semibold" style="color: #1f1f1f;">{{ $occupancy }}</span>
                         @else
-                        <span class="text-[10px]" style="color: #d1d5db;">—</span>
+                        <span class="text-xs" style="color: #d1d5db;">—</span>
                         @endif
                     </button>
                     @endforeach
@@ -281,16 +278,16 @@
                         <div class="border rounded-lg p-3 overflow-x-auto" style="border-color: #e6e6e6; background-color: #ffffff;">
                             <div class="flex gap-1 mb-1 pl-6" id="addPreviewColHeaders">
                                 @for($c = 1; $c <= 5; $c++)
-                                    <div class="w-8 text-center text-[9px]" style="color: #a39e98;">{{ $c }}</div>
+                                    <div class="w-8 text-center text-xs" style="color: #a39e98;">{{ $c }}</div>
                                 @endfor
                             </div>
                             <div id="addPreviewGrid" class="space-y-1">
                                 @for($r = 1; $r <= 3; $r++)
                                     <div class="flex gap-1">
-                                        <div class="w-5 flex items-center justify-center text-[9px]" style="color: #a39e98;">{{ $r }}</div>
+                                        <div class="w-5 flex items-center justify-center text-xs" style="color: #a39e98;">{{ $r }}</div>
                                         @for($c = 1; $c <= 5; $c++)
                                             <div class="w-8 h-8 rounded border flex items-center justify-center" style="border-color: #e6e6e6; background-color: #f6f5f4;">
-                                                <span class="text-[9px] font-mono" style="color: #a39e98;">{{ ($r - 1) * 5 + $c }}</span>
+                                                <span class="text-xs font-mono" style="color: #a39e98;">{{ ($r - 1) * 5 + $c }}</span>
                                             </div>
                                         @endfor
                                     </div>
@@ -406,7 +403,7 @@
     {{-- ── Confirm Modal (for delete) ── --}}
     <x-confirm-modal />
 
-</main>
+</div>
 @endsection
 
 @push('scripts')
@@ -449,11 +446,11 @@ function expandSlot(slotId, cageId, cageCode) {
                 html += '<span class="w-32" style="color: #31302e;">' + hen.breed + '</span>';
                 html += '<span class="w-12" style="color: #615d59;">' + hen.current_age_weeks + 'w</span>';
                 html += '<span class="flex-1">';
-                html += '<span class="text-[10px] px-1.5 py-0.5 rounded-full" style="background-color: ' + (hen.is_active ? '#e8f5ec' : '#f0f0f0') + '; color: ' + (hen.is_active ? '#1f6b3a' : '#615d59') + ';">';
+                html += '<span class="text-xs px-1.5 py-0.5 rounded-full" style="background-color: ' + (hen.is_active ? '#e8f5ec' : '#f0f0f0') + '; color: ' + (hen.is_active ? '#1f6b3a' : '#615d59') + ';">';
                 html += (hen.is_active ? 'Active' : 'Inactive') + '</span></span>';
                 html += '<div class="flex items-center gap-1">';
-                html += '<button type="button" onclick="openMoveModal(\'' + hen.id + '\', 1, \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + hen.breed + '\')" class="px-1.5 py-0.5 text-[10px] border rounded hover:bg-black/5" style="border-color: #e6e6e6; color: #615d59;">Move</button>';
-                html += '<button type="button" onclick="openRemoveModal(\'' + hen.id + '\', 1, \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + hen.breed + '\')" class="px-1.5 py-0.5 text-[10px] border rounded hover:bg-red-50" style="border-color: #f3cdd0; color: #9b1c24;">Remove</button>';
+                html += '<button type="button" onclick="openMoveModal(\'' + hen.id + '\', 1, \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + hen.breed + '\')" class="px-1.5 py-0.5 text-xs border rounded hover:bg-black/5" style="border-color: #e6e6e6; color: #615d59;">Move</button>';
+                html += '<button type="button" onclick="openRemoveModal(\'' + hen.id + '\', 1, \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + hen.breed + '\')" class="px-1.5 py-0.5 text-xs border rounded hover:bg-red-50" style="border-color: #f3cdd0; color: #9b1c24;">Remove</button>';
                 html += '</div></div>';
             });
             html += '</div>';
@@ -497,7 +494,7 @@ function updateAddPreview() {
     colHeaders.innerHTML = '';
     for (let c = 1; c <= slotsPerRow; c++) {
         const d = document.createElement('div');
-        d.className = 'w-8 text-center text-[9px]';
+        d.className = 'w-8 text-center text-xs';
         d.style.color = '#a39e98';
         d.textContent = c;
         colHeaders.appendChild(d);
@@ -505,11 +502,11 @@ function updateAddPreview() {
     let html = '';
     for (let r = 1; r <= rows; r++) {
         html += '<div class="flex gap-1 mb-1">';
-        html += '<div class="w-5 flex items-center justify-center text-[9px]" style="color: #a39e98;">' + r + '</div>';
+        html += '<div class="w-5 flex items-center justify-center text-xs" style="color: #a39e98;">' + r + '</div>';
         for (let c = 1; c <= slotsPerRow; c++) {
             const num = (r - 1) * slotsPerRow + c;
             html += '<div class="w-8 h-8 rounded border flex items-center justify-center" style="border-color: #e6e6e6; background-color: #f6f5f4;">';
-            html += '<span class="text-[9px] font-mono" style="color: #a39e98;">' + num + '</span>';
+            html += '<span class="text-xs font-mono" style="color: #a39e98;">' + num + '</span>';
             html += '</div>';
         }
         html += '</div>';

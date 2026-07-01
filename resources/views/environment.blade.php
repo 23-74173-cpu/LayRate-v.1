@@ -2,33 +2,33 @@
 @section('title', 'Environment')
 
 @section('content')
-<main class="p-5 space-y-5">
+<div class="space-y-5">
 
-    <h1 class="text-xl font-medium text-[#333333]">Coop Environment Monitor</h1>
+    <x-page-header title="Environment" subtitle="Monitor coop temperature, humidity, and alert thresholds" />
 
     {{-- ── Top Metric Cards ── --}}
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-[10px] tracking-wider text-[#6B7280] mb-2">COOP AVG TEMPERATURE</div>
+            <div class="text-xs tracking-wider text-[#6B7280] mb-2">COOP AVG TEMPERATURE</div>
             <div class="flex items-end gap-2 mb-1">
                 <span class="text-3xl tracking-tight text-[#333333]">{{ $avgTemp ? number_format($avgTemp,1) . '°C' : '—' }}</span>
-                <span class="text-[10px] bg-[#D5E8D4] text-[#2D6A4F] px-2 py-0.5 rounded mb-1">In Range</span>
+                <span class="text-xs bg-[#D5E8D4] text-[#2D6A4F] px-2 py-0.5 rounded mb-1">In Range</span>
             </div>
             <div class="text-xs text-[#6B7280]">Spread across sensors: 1.3°C</div>
         </div>
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-[10px] tracking-wider text-[#6B7280] mb-2">COOP AVG HUMIDITY</div>
+            <div class="text-xs tracking-wider text-[#6B7280] mb-2">COOP AVG HUMIDITY</div>
             <div class="flex items-end gap-2 mb-1">
                 <span class="text-3xl tracking-tight text-[#333333]">{{ $avgHum ? number_format($avgHum,1) . '%' : '—' }}</span>
-                <span class="text-[10px] bg-[#D5E8D4] text-[#2D6A4F] px-2 py-0.5 rounded mb-1">In Range</span>
+                <span class="text-xs bg-[#D5E8D4] text-[#2D6A4F] px-2 py-0.5 rounded mb-1">In Range</span>
             </div>
             <div class="text-xs text-[#6B7280]">Spread across sensors: 4.4%</div>
         </div>
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-[10px] tracking-wider text-[#6B7280] mb-2">ACTIVE SENSORS</div>
+            <div class="text-xs tracking-wider text-[#6B7280] mb-2">ACTIVE SENSORS</div>
             <div class="flex items-end gap-2 mb-1">
                 <span class="text-3xl tracking-tight text-[#333333]">{{ $latestPerCage->count() }}</span>
-                <span class="text-[10px] bg-[#D5E8D4] text-[#2D6A4F] px-2 py-0.5 rounded mb-1">Live</span>
+                <span class="text-xs bg-[#D5E8D4] text-[#2D6A4F] px-2 py-0.5 rounded mb-1">Live</span>
             </div>
             <div class="text-xs text-[#6B7280]">One sensor node mapped per cage.</div>
         </div>
@@ -53,7 +53,7 @@
                     <span class="w-2.5 h-2.5 rounded-full" style="background:{{ $color }}"></span>
                     <span class="text-sm font-medium text-[#333333]">{{ $r->cage->cage_code }}</span>
                 </div>
-                <span class="text-[10px] text-[#6B7280]">{{ $sensorId }}</span>
+                <span class="text-xs text-[#6B7280]">{{ $sensorId }}</span>
             </div>
             <div class="px-4 py-3 space-y-2">
                 <div class="flex justify-between text-sm">
@@ -66,15 +66,15 @@
                 </div>
                 {{-- Temp range bar --}}
                 <div>
-                    <div class="text-[10px] text-[#6B7280] mb-1">Temp range use</div>
+                    <div class="text-xs text-[#6B7280] mb-1">Temp range use</div>
                     <div class="w-full h-1.5 bg-[#F5F6F8] rounded-full">
                         <div class="h-1.5 rounded-full" style="width:{{ min(100, (($r->env->temperature_c - 18) / 12) * 100) }}%;background:{{ $color }}"></div>
                     </div>
                 </div>
                 <div class="flex flex-wrap gap-1.5 pt-1">
-                    <span class="text-[10px] px-2 py-0.5 rounded" style="background:{{ $tBg }};color:{{ $tTxt }}">Temp {{ $r->tempStatus }}</span>
-                    <span class="text-[10px] px-2 py-0.5 rounded" style="background:{{ $hBg }};color:{{ $hTxt }}">Humidity {{ $r->humStatus }}</span>
-                    <span class="text-[10px] px-2 py-0.5 rounded" style="background:{{ $statusBg }};color:{{ $statusTxt }}">Status {{ $r->status }}</span>
+                    <span class="text-xs px-2 py-0.5 rounded" style="background:{{ $tBg }};color:{{ $tTxt }}">Temp {{ $r->tempStatus }}</span>
+                    <span class="text-xs px-2 py-0.5 rounded" style="background:{{ $hBg }};color:{{ $hTxt }}">Humidity {{ $r->humStatus }}</span>
+                    <span class="text-xs px-2 py-0.5 rounded" style="background:{{ $statusBg }};color:{{ $statusTxt }}">Status {{ $r->status }}</span>
                 </div>
             </div>
         </div>
@@ -104,25 +104,25 @@
             @csrf
             <div class="flex flex-wrap items-end gap-4">
                 <div>
-                    <label class="block text-[11px] tracking-wider text-[#6B7280] mb-1.5">TEMP MIN (°C)</label>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TEMP MIN (°C)</label>
                     <input type="number" name="temp_min" step="0.5"
                            value="{{ $thresholds['temp_min'] }}"
                            class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                 </div>
                 <div>
-                    <label class="block text-[11px] tracking-wider text-[#6B7280] mb-1.5">TEMP MAX (°C)</label>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TEMP MAX (°C)</label>
                     <input type="number" name="temp_max" step="0.5"
                            value="{{ $thresholds['temp_max'] }}"
                            class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                 </div>
                 <div>
-                    <label class="block text-[11px] tracking-wider text-[#6B7280] mb-1.5">HUMIDITY MIN (%)</label>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">HUMIDITY MIN (%)</label>
                     <input type="number" name="hum_min" step="1"
                            value="{{ $thresholds['hum_min'] }}"
                            class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                 </div>
                 <div>
-                    <label class="block text-[11px] tracking-wider text-[#6B7280] mb-1.5">HUMIDITY MAX (%)</label>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">HUMIDITY MAX (%)</label>
                     <input type="number" name="hum_max" step="1"
                            value="{{ $thresholds['hum_max'] }}"
                            class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
@@ -141,11 +141,11 @@
     {{-- ── Trend Charts ── --}}
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-[10px] tracking-wider text-[#6B7280] mb-3">TEMPERATURE TREND (COOP + PER CAGE)</div>
+            <div class="text-xs tracking-wider text-[#6B7280] mb-3">TEMPERATURE TREND (COOP + PER CAGE)</div>
             <canvas id="tempChart" height="160"></canvas>
         </div>
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-[10px] tracking-wider text-[#6B7280] mb-3">HUMIDITY TREND (COOP + PER CAGE)</div>
+            <div class="text-xs tracking-wider text-[#6B7280] mb-3">HUMIDITY TREND (COOP + PER CAGE)</div>
             <canvas id="humChart" height="160"></canvas>
         </div>
     </div>
@@ -153,7 +153,7 @@
     {{-- ── Recent Log Summary ── --}}
     <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
         <div class="px-5 py-3 border-b border-[#D9D9D9]">
-            <div class="text-[10px] tracking-wider text-[#6B7280]">RECENT LOG SUMMARY</div>
+            <div class="text-xs tracking-wider text-[#6B7280]">RECENT LOG SUMMARY</div>
         </div>
         <table class="w-full">
             <thead>
@@ -177,7 +177,7 @@
                     <td class="px-5 py-3 text-sm text-[#333333]">{{ $log->avg_temp }}°C</td>
                     <td class="px-5 py-3 text-sm text-[#333333]">{{ $log->avg_hum }}%</td>
                     <td class="px-5 py-3">
-                        <span class="text-[10px] px-2.5 py-1 rounded" style="background:{{ $sBg }};color:{{ $sTxt }}">{{ $s }}</span>
+                        <span class="text-xs px-2.5 py-1 rounded" style="background:{{ $sBg }};color:{{ $sTxt }}">{{ $s }}</span>
                     </td>
                 </tr>
                 @empty
@@ -187,7 +187,7 @@
         </table>
     </div>
 
-</main>
+</div>
 @endsection
 
 @push('scripts')

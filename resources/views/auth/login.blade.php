@@ -27,7 +27,7 @@
             </div>
             <div>
                 <div class="text-lg font-semibold text-[#102A4C] leading-tight">LayRate</div>
-                <div class="text-[11px] text-[#6B7280]">Farm Monitor</div>
+                <div class="text-xs text-[#6B7280]">Farm Monitor</div>
             </div>
         </div>
 
@@ -51,7 +51,7 @@
                 @csrf
 
                 <div>
-                    <label class="block text-[11px] tracking-wider text-[#6B7280] mb-1.5">EMAIL</label>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">EMAIL</label>
                     <input type="email" name="email" required autofocus
                            value="{{ old('email') }}"
                            placeholder="operator@layrate.local"
@@ -59,12 +59,12 @@
                                   focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]
                                   {{ $errors->has('email') ? 'border-red-400' : '' }}">
                     @error('email')
-                    <p class="text-[11px] text-red-500 mt-1">{{ $message }}</p>
+                    <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div>
-                    <label class="block text-[11px] tracking-wider text-[#6B7280] mb-1.5">PASSWORD</label>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">PASSWORD</label>
                     <input type="password" name="password" required
                            placeholder="••••••••"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333]
@@ -85,7 +85,7 @@
             </form>
         </div>
 
-        <p class="text-center text-[11px] text-[#6B7280] mt-5">
+        <p class="text-center text-xs text-[#6B7280] mt-5">
             LayRate · Offline Poultry Farm Management System
         </p>
     </div>

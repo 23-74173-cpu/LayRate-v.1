@@ -25,14 +25,16 @@
 @endpush
 
 @section('content')
-<main class="p-5 space-y-5">
+<div class="space-y-5">
+
+    <x-page-header title="Reports" subtitle="Generate and export production, feed, environment, and mortality reports" />
 
     {{-- ── Filters ── --}}
     <div class="no-print">
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
             <form method="GET" action="{{ route('reports') }}" class="flex flex-wrap items-end gap-4" id="reportForm">
                 <div>
-                    <label class="block text-[11px] tracking-wider text-[#6B7280] mb-1.5">REPORT TYPE</label>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">REPORT TYPE</label>
                     <select name="type" id="reportType"
                             class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C] min-w-[180px]">
                         <option value="production" {{ $type === 'production' ? 'selected' : '' }}>Production Report</option>
@@ -42,17 +44,17 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-[11px] tracking-wider text-[#6B7280] mb-1.5">FROM</label>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">FROM</label>
                     <input type="date" name="from" value="{{ $from }}"
                            class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                 </div>
                 <div>
-                    <label class="block text-[11px] tracking-wider text-[#6B7280] mb-1.5">TO</label>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TO</label>
                     <input type="date" name="to" value="{{ $to }}"
                            class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                 </div>
                 <div>
-                    <label class="block text-[11px] tracking-wider text-[#6B7280] mb-1.5">CAGE</label>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CAGE</label>
                     <select name="cage"
                             class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                         <option value="all" {{ $cageId === 'all' ? 'selected' : '' }}>All Cages</option>
@@ -64,7 +66,7 @@
 
                 {{-- Reason filter — only visible for mortality report --}}
                 <div id="reasonFilter" class="{{ $type === 'mortality' ? '' : 'hidden' }}">
-                    <label class="block text-[11px] tracking-wider text-[#6B7280] mb-1.5">REASON</label>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">REASON</label>
                     <select name="reason"
                             class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                         <option value="all" {{ $reason === 'all' ? 'selected' : '' }}>All Reasons</option>
@@ -141,70 +143,70 @@
         <div class="flex gap-4 mb-6">
             @if($type === 'production')
             <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-[10px] tracking-wider text-[#6B7280] uppercase">Total Eggs</div>
+                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Total Eggs</div>
                 <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->total_eggs }}</div>
             </div>
             <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-[10px] tracking-wider text-[#6B7280] uppercase">Avg HDEP</div>
+                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Avg HDEP</div>
                 <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->avg_hdep }}</div>
             </div>
             <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-[10px] tracking-wider text-[#6B7280] uppercase">Total Hens</div>
+                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Total Hens</div>
                 <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->total_hens }}</div>
             </div>
             <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-[10px] tracking-wider text-[#6B7280] uppercase">Days Covered</div>
+                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Days Covered</div>
                 <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->days }}</div>
             </div>
             @elseif($type === 'feed')
             <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-[10px] tracking-wider text-[#6B7280] uppercase">Total Consumed</div>
+                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Total Consumed</div>
                 <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->total_kg }} kg</div>
             </div>
             <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-[10px] tracking-wider text-[#6B7280] uppercase">Avg per Day</div>
+                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Avg per Day</div>
                 <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->avg_per_day }} kg</div>
             </div>
             <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-[10px] tracking-wider text-[#6B7280] uppercase">Batches Used</div>
+                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Batches Used</div>
                 <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->batches }}</div>
             </div>
             <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-[10px] tracking-wider text-[#6B7280] uppercase">Days Covered</div>
+                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Days Covered</div>
                 <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->days }}</div>
             </div>
             @elseif($type === 'environment')
             <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-[10px] tracking-wider text-[#6B7280] uppercase">Avg Temperature</div>
+                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Avg Temperature</div>
                 <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->avg_temp }}</div>
             </div>
             <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-[10px] tracking-wider text-[#6B7280] uppercase">Avg Humidity</div>
+                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Avg Humidity</div>
                 <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->avg_hum }}</div>
             </div>
             <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-[10px] tracking-wider text-[#6B7280] uppercase">Total Readings</div>
+                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Total Readings</div>
                 <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->readings }}</div>
             </div>
             <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-[10px] tracking-wider text-[#6B7280] uppercase">Alert Readings</div>
+                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Alert Readings</div>
                 <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->alerts }}</div>
             </div>
             @elseif($type === 'mortality')
             <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-[10px] tracking-wider text-[#6B7280] uppercase">Total Deaths</div>
+                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Total Deaths</div>
                 <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->total_deaths }}</div>
             </div>
             <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-[10px] tracking-wider text-[#6B7280] uppercase">Top Cause</div>
+                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Top Cause</div>
                 <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->top_cause }}</div>
             </div>
             <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-[10px] tracking-wider text-[#6B7280] uppercase">Most Affected</div>
+                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Most Affected</div>
                 <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->most_affected }}</div>
             </div>
             <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-[10px] tracking-wider text-[#6B7280] uppercase">Days Covered</div>
+                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Days Covered</div>
                 <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->days }}</div>
             </div>
             @endif
@@ -276,7 +278,7 @@
     </div>
     @endif
 
-</main>
+</div>
 @endsection
 
 @push('scripts')

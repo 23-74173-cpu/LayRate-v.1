@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class MortalityLog extends Model
 {
@@ -22,5 +24,12 @@ class MortalityLog extends Model
     public function recorder()
     {
         return $this->belongsTo(User::class, 'recorded_by');
+    }
+
+    public function hens(): BelongsToMany
+    {
+        return $this->belongsToMany(Hen::class, 'mortality_log_hens')
+            ->withPivot('id', 'cage_slot_id')
+            ->withTimestamps();
     }
 }

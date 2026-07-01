@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Alert;
 use App\Models\Cage;
 use App\Models\EnvironmentalLog;
 use App\Models\FeedConsumptionLog;
@@ -40,8 +39,8 @@ class DashboardController extends Controller
             $cage->has_sensor = $cage->cageSlots->contains('has_sensor', true);
         });
 
-        // Total active hens (sum of total_capacity across all cages)
-        $totalHens = $cages->sum('total_capacity');
+        // Total active hens (actual live count, not theoretical capacity)
+        $totalHens = \App\Models\Hen::where('is_active', 1)->count();
 
         // Today's average HDEP
         $todayLogs = ProductionLog::whereDate('log_date', $today)->get();
@@ -83,14 +82,6 @@ class DashboardController extends Controller
             ->map(fn ($g) => $g->sum('count'));
         $mortalityTodayTotal = $mortalityToday->sum();
 
-        // Alerts
-        $alertCount = Alert::where('is_read', false)->count();
-        $recentAlerts = Alert::with('cage')
-            ->orderByRaw('is_read ASC')
-            ->orderByDesc('triggered_at')
-            ->limit(4)
-            ->get();
-
         // Live readings per cage
         $liveReadings = $cages->map(function ($cage) {
             $env = $cage->latestEnvironmentLog;
@@ -117,7 +108,7 @@ class DashboardController extends Controller
             'cages', 'totalHens', 'todayHdep', 'hdepDelta',
             'eggsToday', 'avgTemp', 'avgHum', 'feedToday',
             'mortalityToday', 'mortalityTodayTotal',
-            'alertCount', 'recentAlerts', 'liveReadings', 'today',
+            'liveReadings', 'today',
             'gridRows', 'gridCols', 'needsOnboarding'
         ));
     }

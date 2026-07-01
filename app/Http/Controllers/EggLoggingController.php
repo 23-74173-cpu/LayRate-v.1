@@ -28,14 +28,17 @@ class EggLoggingController extends Controller
             $slotQuery->where('cage_id', $cageFilter);
         }
 
-        $cageSlots = $slotQuery->get()
-            ->map(function ($slot) use ($today) {
-                $log = ProductionLog::where('cage_slot_id', $slot->id)
-                    ->where('log_date', $today)
-                    ->first();
-                $slot->today_egg_count = $log?->egg_count ?? 0;
-                return $slot;
-            });
+        $cageSlots = $slotQuery->get();
+
+        $slotIds = $cageSlots->pluck('id');
+        $todayLogs = ProductionLog::whereIn('cage_slot_id', $slotIds)
+            ->where('log_date', $today)
+            ->get()
+            ->keyBy('cage_slot_id');
+
+        $cageSlots->each(function ($slot) use ($todayLogs) {
+            $slot->today_egg_count = $todayLogs->get($slot->id)?->egg_count ?? 0;
+        });
 
         $logsQuery = ProductionLog::with(['cageSlot.cage', 'overriddenBy', 'recorder'])
             ->orderByDesc('log_date')
@@ -118,12 +121,12 @@ class EggLoggingController extends Controller
             $payload
         );
 
-        return redirect()->route('egg-logging')->with('success', 'Production log saved.');
+        return redirect()->route('eggs.logging')->with('success', 'Production log saved.');
     }
 
     public function destroy(ProductionLog $productionLog)
     {
         $productionLog->delete();
-        return redirect()->route('egg-logging')->with('success', 'Log deleted.');
+        return redirect()->route('eggs.logging')->with('success', 'Log deleted.');
     }
 }

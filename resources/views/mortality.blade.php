@@ -2,15 +2,11 @@
 @section('title', 'Mortality Log')
 
 @section('content')
-<main class="p-5 space-y-5">
+<div class="space-y-5">
 
-    {{-- ── Header ── --}}
     <div class="flex items-center justify-between">
-        <div>
-            <h1 class="text-lg font-semibold text-[#333333]">Mortality Log</h1>
-            <p class="text-xs text-[#6B7280] mt-0.5">Record and track hen mortality per cage</p>
-        </div>
-        <span class="text-[11px] px-3 py-1.5 rounded-full bg-[#F8D7DA] text-[#721C24] border border-[#F5C6CB]">
+        <x-page-header title="Mortality Log" subtitle="Record and track hen mortality per cage" />
+        <span class="text-xs px-3 py-1.5 rounded-full bg-[#F8D7DA] text-[#721C24] border border-[#F5C6CB] shrink-0 ml-3">
             {{ $todayTotal }} recorded today
         </span>
     </div>
@@ -29,7 +25,7 @@
 
                 {{-- Cage --}}
                 <div>
-                    <label class="block text-[11px] tracking-wider text-[#6B7280] mb-1.5">CAGE</label>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CAGE</label>
                     <select name="cage_id" required
                             class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                         <option value="">Select cage…</option>
@@ -39,30 +35,30 @@
                         </option>
                         @endforeach
                     </select>
-                    @error('cage_id')<p class="text-[11px] text-red-500 mt-1">{{ $message }}</p>@enderror
+                    @error('cage_id')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
                 </div>
 
                 {{-- Date --}}
                 <div>
-                    <label class="block text-[11px] tracking-wider text-[#6B7280] mb-1.5">DATE</label>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">DATE</label>
                     <input type="date" name="log_date" required
                            value="{{ old('log_date', date('Y-m-d')) }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                    @error('log_date')<p class="text-[11px] text-red-500 mt-1">{{ $message }}</p>@enderror
+                    @error('log_date')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
                 </div>
 
                 {{-- Count --}}
                 <div>
-                    <label class="block text-[11px] tracking-wider text-[#6B7280] mb-1.5">NUMBER OF DEATHS</label>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">NUMBER OF DEATHS</label>
                     <input type="number" name="count" min="1" required
                            value="{{ old('count', 1) }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                    @error('count')<p class="text-[11px] text-red-500 mt-1">{{ $message }}</p>@enderror
+                    @error('count')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
                 </div>
 
                 {{-- Reason dropdown --}}
                 <div>
-                    <label class="block text-[11px] tracking-wider text-[#6B7280] mb-1.5">CAUSE OF DEATH</label>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CAUSE OF DEATH</label>
                     <select name="reason" required id="reasonSelect"
                             class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                         <option value="">Select reason…</option>
@@ -72,16 +68,16 @@
                         </option>
                         @endforeach
                     </select>
-                    @error('reason')<p class="text-[11px] text-red-500 mt-1">{{ $message }}</p>@enderror
+                    @error('reason')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
                 </div>
 
                 {{-- Notes (always visible, below reason) --}}
                 <div>
-                    <label class="block text-[11px] tracking-wider text-[#6B7280] mb-1.5">ADDITIONAL NOTES</label>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">ADDITIONAL NOTES</label>
                     <textarea name="notes" rows="3"
                               placeholder="Describe symptoms, location in cage, or any observations…"
                               class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] resize-none focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">{{ old('notes') }}</textarea>
-                    @error('notes')<p class="text-[11px] text-red-500 mt-1">{{ $message }}</p>@enderror
+                    @error('notes')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
                 </div>
 
                 <button type="submit"
@@ -106,9 +102,9 @@
                         $txt   = $count > 0 ? '#721C24' : '#6B7280';
                     @endphp
                     <div class="rounded-lg border p-3" style="border-color:{{ $count > 0 ? '#F5C6CB' : '#D9D9D9' }};background:{{ $bg }}">
-                        <div class="text-[10px] tracking-wider mb-1" style="color:{{ $color }}">{{ $cage->cage_code }}</div>
+                        <div class="text-xs tracking-wider mb-1" style="color:{{ $color }}">{{ $cage->cage_code }}</div>
                         <div class="text-2xl font-semibold" style="color:{{ $txt }}">{{ $count }}</div>
-                        <div class="text-[10px] mt-1" style="color:{{ $txt }}">{{ $count === 1 ? 'hen' : 'hens' }}</div>
+                        <div class="text-xs mt-1" style="color:{{ $txt }}">{{ $count === 1 ? 'hen' : 'hens' }}</div>
                     </div>
                     @endforeach
                 </div>
@@ -202,5 +198,5 @@
         </div>
     </div>
 
-</main>
+</div>
 @endsection

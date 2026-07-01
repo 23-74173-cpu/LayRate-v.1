@@ -2,7 +2,7 @@
 @section('title', 'Bulk Add Chickens')
 
 @section('content')
-<main class="p-5 max-w-5xl mx-auto space-y-5">
+<div class="max-w-5xl mx-auto space-y-5">
 
     {{-- Header --}}
     <div class="flex items-center justify-between">
@@ -75,7 +75,7 @@
         <div class="p-5 border-b border-[#D9D9D9]">
             <div class="flex items-center justify-between mb-3">
                 <span class="text-xs font-medium text-[#6B7280] uppercase tracking-wider">Select Slots (click or drag to select)</span>
-                <div class="flex items-center gap-4 text-[10px] text-[#9CA3AF]">
+                <div class="flex items-center gap-4 text-xs text-[#9CA3AF]">
                     <span class="flex items-center gap-1">
                         <span class="w-3 h-3 rounded border-2 border-[#002D5E] bg-[#002D5E]/10"></span> selected
                     </span>
@@ -118,7 +118,7 @@
 
         <input type="hidden" name="slot_ids" id="slotIdsInput" value="">
     </form>
-</main>
+</div>
 @endsection
 
 @push('scripts')
@@ -173,14 +173,14 @@
         // Column headers
         html += '<div class="flex gap-1 mb-1 pl-8">';
         for (let c = 1; c <= slotsPerRow; c++) {
-            html += `<div class="w-9 text-center text-[9px] text-[#9CA3AF]">${c}</div>`;
+            html += `<div class="w-9 text-center text-xs text-[#9CA3AF]">${c}</div>`;
         }
         html += '</div>';
 
         // Rows
         for (let r = 1; r <= rows; r++) {
             html += `<div class="flex gap-1 mb-1">`;
-            html += `<div class="w-7 flex items-center justify-center text-[9px] text-[#9CA3AF]">${r}</div>`;
+            html += `<div class="w-7 flex items-center justify-center text-xs text-[#9CA3AF]">${r}</div>`;
             for (let c = 1; c <= slotsPerRow; c++) {
                 const slot = cageSlots.find(s => s.row_number === r && s.column_number === c);
                 if (!slot) {
@@ -204,7 +204,7 @@
                              data-is-sensor="${isSensor ? 1 : 0}"
                              title="${title}">
                     ${isSensor ? '<div class="absolute top-0 right-0 w-2 h-2 rounded-bl bg-emerald-500"></div>' : ''}
-                    <span class="text-[9px] font-mono text-[#6B7280]">${slot.slot_number}</span>
+                    <span class="text-xs font-mono text-[#6B7280]">${slot.slot_number}</span>
                     <span class="text-[8px] text-[#9CA3AF]">${occupancy}/${currentMaxPerSlot}</span>
                 </div>`;
             }

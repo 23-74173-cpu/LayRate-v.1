@@ -47,6 +47,11 @@ class Cage extends Model
         return $this->hasMany(Forecast::class);
     }
 
+    public function eggStockBatches(): HasMany
+    {
+        return $this->hasMany(EggStockBatch::class);
+    }
+
     public function latestProductionLog()
     {
         return $this->productionLogs->sortByDesc('log_date')->first();

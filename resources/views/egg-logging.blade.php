@@ -2,14 +2,13 @@
 @section('title', 'Egg Logging')
 
 @section('content')
-<main class="p-6 space-y-6" style="background-color: #f6f5f4; min-height: 100vh;">
+<div class="space-y-5">
 
-    {{-- ── Header ── --}}
+    <x-page-header title="Egg Logging" subtitle="Log daily egg production per cage slot" />
+
+    @include('eggs._tabs', ['activeTab' => 'logging'])
+
     <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-        <div>
-            <p class="text-xs font-semibold tracking-[0.125px] uppercase mb-1" style="color: #615d59;">Egg Logging</p>
-            <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px]" style="color: #1f1f1f;">Log Daily Eggs</h1>
-        </div>
         <div class="flex items-center gap-4">
             <span class="text-sm font-medium" style="color: #31302e;">
                 Today: <strong style="color: #1f1f1f;">{{ number_format($todayTotal) }}</strong> eggs
@@ -42,72 +41,76 @@
                 No slots found for the selected filter.
             </div>
             @else
-            <div class="space-y-3">
-            @foreach($cageSlots->groupBy(fn($s) => $s->cage->cage_code) as $cageCode => $slotsInCage)
-            @php
-                $cage = $slotsInCage->first()->cage;
-            @endphp
             <div class="rounded-xl border overflow-hidden" style="background-color: #ffffff; border-color: #e6e6e6;">
-                {{-- Cage header (collapsible) --}}
-                <button type="button"
-                        class="flex items-center justify-between w-full px-4 py-3 text-left transition-colors"
-                        style="background-color: {{ $cage->colorSoft }};"
-                        onclick="toggleEggCage(this)">
-                    <div class="flex items-center gap-3">
-                        <x-cage-color :cage="$cage" />
-                        <span class="text-xs" style="color: #615d59;">{{ $cage->location ?: 'No location' }}</span>
-                        <span class="text-xs px-2 py-0.5 rounded-full" style="background-color: {{ $cage->colorSoft }}; color: {{ $cage->color }};">
-                            {{ $slotsInCage->count() }} slot{{ $slotsInCage->count() !== 1 ? 's' : '' }}
-                        </span>
-                    </div>
-                    <i data-lucide="chevron-down" class="w-4 h-4 egg-cage-chevron transition-transform" style="color: #615d59;"></i>
-                </button>
-
-                {{-- Slots grid --}}
-                <div class="egg-cage-slots hidden p-3">
-                    <div class="grid grid-cols-4 sm:grid-cols-5 gap-2">
-                    @foreach($slotsInCage as $slot)
+                <div class="overflow-y-auto" style="max-height: 320px; box-shadow: inset 0 -12px 12px -6px rgba(0,0,0,0.06);">
+                    <div class="space-y-3 p-3">
+                    @foreach($cageSlots->groupBy(fn($s) => $s->cage->cage_code) as $cageCode => $slotsInCage)
                     @php
-                        $primaryHen = $slot->primaryHen();
-                        $isSensor = $slot->has_sensor;
-                        $isSelected = isset($selectedSlotId) && $selectedSlotId == $slot->id;
+                        $cage = $slotsInCage->first()->cage;
                     @endphp
-                    <button type="button"
-                            class="slot-card flex flex-col items-center justify-center w-full aspect-square rounded-xl border transition-all relative cursor-pointer hover:scale-[1.02]"
-                            style="background-color: {{ $isSelected ? $cage->colorSoft : '#ffffff' }}; border-color: {{ $isSelected ? $cage->color : '#e6e6e6' }}; {{ $isSelected ? 'border-width: 2px;' : '' }}"
-                            data-slot-id="{{ $slot->id }}"
-                            data-cage-id="{{ $cage->id }}"
-                            data-cage-code="{{ $cage->cage_code }}"
-                            data-slot-number="{{ $slot->slot_number }}"
-                            data-row="{{ $slot->row_number }}"
-                            data-col="{{ $slot->column_number }}"
-                            data-hens="{{ $slot->current_occupancy }}"
-                            data-breed="{{ $primaryHen?->breed ?? '—' }}"
-                            data-age="{{ $primaryHen?->current_age_weeks ?? 0 }}"
-                            data-has-sensor="{{ $isSensor ? 1 : 0 }}"
-                            data-today-eggs="{{ $slot->today_egg_count }}"
-                            onclick="selectSlot(this)"
-                            aria-label="{{ $cage->cage_code }} slot {{ $slot->row_number }}-{{ $slot->column_number }}, {{ $slot->current_occupancy }} hens"
-                            tabindex="0"
-                            onkeydown="if(event.key==='Enter'||event.key===' ') selectSlot(this)">
+                    <div class="rounded-lg border overflow-hidden" style="background-color: #ffffff; border-color: #e6e6e6;">
+                        {{-- Cage header (collapsible) --}}
+                        <button type="button"
+                                class="flex items-center justify-between w-full px-4 py-3 text-left transition-colors"
+                                style="background-color: {{ $cage->colorSoft }};"
+                                onclick="toggleEggCage(this)">
+                            <div class="flex items-center gap-3">
+                                <x-cage-color :cage="$cage" />
+                                <span class="text-xs" style="color: #615d59;">{{ $cage->location ?: 'No location' }}</span>
+                                <span class="text-xs px-2 py-0.5 rounded-full" style="background-color: {{ $cage->colorSoft }}; color: {{ $cage->color }};">
+                                    {{ $slotsInCage->count() }} slot{{ $slotsInCage->count() !== 1 ? 's' : '' }}
+                                </span>
+                            </div>
+                            <i data-lucide="chevron-down" class="w-4 h-4 egg-cage-chevron transition-transform" style="color: #615d59;"></i>
+                        </button>
 
-                        @if($isSensor)
-                        <span class="absolute top-1 right-1 w-2 h-2 rounded-full" style="background-color: #0075de;"></span>
-                        @endif
+                        {{-- Slots grid --}}
+                        <div class="egg-cage-slots hidden p-3">
+                            <div class="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                            @foreach($slotsInCage as $slot)
+                            @php
+                                $primaryHen = $slot->primaryHen();
+                                $isSensor = $slot->has_sensor;
+                                $isSelected = isset($selectedSlotId) && $selectedSlotId == $slot->id;
+                            @endphp
+                            <button type="button"
+                                    class="slot-card flex flex-col items-center justify-center w-full aspect-square rounded-xl border transition-all relative cursor-pointer hover:scale-[1.02]"
+                                    style="background-color: {{ $isSelected ? $cage->colorSoft : '#ffffff' }}; border-color: {{ $isSelected ? $cage->color : '#e6e6e6' }}; {{ $isSelected ? 'border-width: 2px;' : '' }}"
+                                    data-slot-id="{{ $slot->id }}"
+                                    data-cage-id="{{ $cage->id }}"
+                                    data-cage-code="{{ $cage->cage_code }}"
+                                    data-slot-number="{{ $slot->slot_number }}"
+                                    data-row="{{ $slot->row_number }}"
+                                    data-col="{{ $slot->column_number }}"
+                                    data-hens="{{ $slot->current_occupancy }}"
+                                    data-breed="{{ $primaryHen?->breed ?? '—' }}"
+                                    data-age="{{ $primaryHen?->current_age_weeks ?? 0 }}"
+                                    data-has-sensor="{{ $isSensor ? 1 : 0 }}"
+                                    data-today-eggs="{{ $slot->today_egg_count }}"
+                                    onclick="selectSlot(this)"
+                                    aria-label="{{ $cage->cage_code }} slot {{ $slot->row_number }}-{{ $slot->column_number }}, {{ $slot->current_occupancy }} hens"
+                                    tabindex="0"
+                                    onkeydown="if(event.key==='Enter'||event.key===' ') selectSlot(this)">
 
-                        @if($slot->current_occupancy === 0)
-                        <span class="text-xs" style="color: #a39e98;">—</span>
-                        @else
-                        <span class="text-sm font-semibold" style="color: {{ $slot->current_occupancy >= $cage->max_chickens_per_slot ? '#9b1c24' : '#1f1f1f' }}">
-                            {{ $slot->current_occupancy }}
-                        </span>
-                        @endif
-                    </button>
+                                @if($isSensor)
+                                <span class="absolute top-1 right-1 w-2 h-2 rounded-full" style="background-color: #0075de;"></span>
+                                @endif
+
+                                @if($slot->current_occupancy === 0)
+                                <span class="text-xs" style="color: #a39e98;">—</span>
+                                @else
+                                <span class="text-sm font-semibold" style="color: {{ $slot->current_occupancy >= $cage->max_chickens_per_slot ? '#9b1c24' : '#1f1f1f' }}">
+                                    {{ $slot->current_occupancy }}
+                                </span>
+                                @endif
+                            </button>
+                            @endforeach
+                            </div>
+                        </div>
+                    </div>
                     @endforeach
                     </div>
                 </div>
-            </div>
-            @endforeach
             </div>
             @endif
         </div>
@@ -125,7 +128,7 @@
 
                 {{-- Active form --}}
                 <div id="slotForm" class="hidden">
-                    <form method="POST" action="{{ route('egg-logging.store') }}" id="eggForm">
+                    <form method="POST" action="{{ route('eggs.logging.store') }}" id="eggForm">
                         @csrf
 
                         {{-- Selected slot info bar --}}
@@ -259,7 +262,7 @@
                             </td>
                             @if(auth()->user()->role === 'admin')
                             <td class="px-6 py-3">
-                                <form method="POST" action="{{ route('egg-logging.destroy', $log) }}"
+                                <form method="POST" action="{{ route('eggs.logging.destroy', $log) }}"
                                       data-confirm="Delete this log?" data-confirm-action="Delete">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="p-1.5 rounded-full hover:bg-red-50 transition-colors" style="color: #a39e98;" aria-label="Delete log">
@@ -312,7 +315,7 @@
         </div>
     </div>
 
-</main>
+</div>
 @endsection
 
 @push('scripts')
@@ -409,7 +412,7 @@ function submitOverride() {
     const pin = document.getElementById('overridePinInput').value;
     const password = document.getElementById('overridePasswordInput').value;
 
-    fetch('{{ route("egg-logging.verify-override") }}', {
+    fetch('{{ route("eggs.logging.verify-override") }}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

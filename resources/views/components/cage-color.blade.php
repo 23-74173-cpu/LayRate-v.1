@@ -16,7 +16,7 @@
 <span class="inline-flex items-center gap-1.5 {{ $class }}">
     @if($soft)
         <span
-            class="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold"
+            class="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
             style="background-color: {{ $cage->colorSoft }}; color: {{ $cage->color }};"
         >
             {{ $cage->cage_code }}

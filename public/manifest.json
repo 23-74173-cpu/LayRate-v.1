@@ -1,0 +1,23 @@
+{
+    "name": "LayRate Farm Monitor",
+    "short_name": "LayRate",
+    "description": "Poultry Farm Management System",
+    "start_url": "/",
+    "display": "standalone",
+    "display_override": ["fullscreen", "minimal-ui"],
+    "background_color": "#F5F6F8",
+    "theme_color": "#1a2342",
+    "orientation": "any",
+    "icons": [
+        {
+            "src": "/favicon-32x32.png",
+            "sizes": "32x32",
+            "type": "image/png"
+        },
+        {
+            "src": "/apple-touch-icon.png",
+            "sizes": "180x180",
+            "type": "image/png"
+        }
+    ]
+}

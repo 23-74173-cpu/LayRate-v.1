@@ -18,7 +18,7 @@ $primaryHen = $slot->primaryHen();
 >
     {{-- Slot number label (shown on hover) --}}
     <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-        <span class="text-[9px] font-medium text-white/90">{{ $rowNum }}-{{ $colNum }}</span>
+        <span class="text-xs font-medium text-white/90">{{ $rowNum }}-{{ $colNum }}</span>
     </div>
 
     {{-- Normal view --}}
@@ -26,10 +26,10 @@ $primaryHen = $slot->primaryHen();
         @if($isSensor)
             <div class="absolute top-0 right-0 w-2 h-2 rounded-bl bg-emerald-500"></div>
         @endif
-        <span class="text-[10px] font-mono text-[#6B7280]">{{ $slotNumber }}</span>
+        <span class="text-xs font-mono text-[#6B7280]">{{ $slotNumber }}</span>
         @if($primaryHen)
-            <span class="text-[9px] text-[#333333] mt-0.5">{{ $primaryHen->breed ?? '' }}</span>
+            <span class="text-xs text-[#333333] mt-0.5">{{ $primaryHen->breed ?? '' }}</span>
         @endif
-        <span class="text-[9px] text-[#9CA3AF] mt-0.5">{{ $occupancy }}/{{ $cage->max_chickens_per_slot }}</span>
+        <span class="text-xs text-[#9CA3AF] mt-0.5">{{ $occupancy }}/{{ $cage->max_chickens_per_slot }}</span>
     </div>
 </div>

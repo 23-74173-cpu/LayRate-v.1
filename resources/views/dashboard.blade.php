@@ -2,20 +2,9 @@
 @section('title', 'Dashboard')
 
 @section('content')
-<main class="p-6 space-y-6" style="background-color: #f6f5f4; min-height: 100vh;">
+<div class="space-y-5">
 
-    {{-- ── Header: Greeting + Date + Breadcrumb ── --}}
-    <div class="mb-2">
-        <p class="text-sm font-medium" style="color: #615d59;">
-            {{ now()->format('l, F j') }} — {{ now()->format('g:i A') }}
-        </p>
-        <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px]" style="color: #1f1f1f;">
-            Dashboard
-        </h1>
-    </div>
-
-    {{-- ── Alert Banner (moved from card → full-width persistent) ── --}}
-    <x-alert-banner :alerts="$recentAlerts->where('is_read', false)" />
+    <x-page-header title="Dashboard" subtitle="{{ now()->format('l, F j') }} — {{ now()->format('g:i A') }}" />
 
     {{-- ── Metric Cards ── --}}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -47,11 +36,11 @@
             <div class="text-xs font-semibold tracking-[0.125px] uppercase mb-2" style="color: #615d59;">Coop Environment</div>
             <div class="grid grid-cols-2 gap-2 mb-2">
                 <div>
-                    <div class="text-[10px]" style="color: #a39e98;">Temp</div>
+                    <div class="text-xs" style="color: #a39e98;">Temp</div>
                     <div class="text-lg font-semibold" style="color: #1f1f1f;">{{ $avgTemp ? $avgTemp.'°C' : '—' }}</div>
                 </div>
                 <div>
-                    <div class="text-[10px]" style="color: #a39e98;">Humidity</div>
+                    <div class="text-xs" style="color: #a39e98;">Humidity</div>
                     <div class="text-lg font-semibold" style="color: #1f1f1f;">{{ $avgHum ? $avgHum.'%' : '—' }}</div>
                 </div>
             </div>
@@ -276,5 +265,5 @@
 
 
 
-</main>
+</div>
 @endsection

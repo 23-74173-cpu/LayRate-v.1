@@ -8,10 +8,12 @@ use App\Http\Controllers\CageController;
 use App\Http\Controllers\ChickensController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EggLoggingController;
+use App\Http\Controllers\EggStockController;
 use App\Http\Controllers\EnvironmentController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\ForecastController;
 use App\Http\Controllers\MortalityController;
+use App\Http\Controllers\PreOrderController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
@@ -46,10 +48,22 @@ Route::middleware('auth')->group(function () {
     Route::post('/chickens/move',  [ChickensController::class, 'move'])->name('chickens.move');
     Route::post('/chickens/remove', [ChickensController::class, 'remove'])->name('chickens.remove');
 
-    Route::get('/egg-logging',                        [EggLoggingController::class, 'index'])->name('egg-logging');
-    Route::post('/egg-logging',                       [EggLoggingController::class, 'store'])->name('egg-logging.store');
-    Route::post('/egg-logging/verify-override',       [EggLoggingController::class, 'verifyOverride'])->name('egg-logging.verify-override')->middleware('throttle:6,1');
-    Route::delete('/egg-logging/{productionLog}',     [EggLoggingController::class, 'destroy'])->name('egg-logging.destroy')->middleware('admin');
+    Route::redirect('/egg-logging', '/eggs/logging', 301);
+
+    Route::get('/eggs/logging',                        [EggLoggingController::class, 'index'])->name('eggs.logging');
+    Route::post('/eggs/logging',                       [EggLoggingController::class, 'store'])->name('eggs.logging.store');
+    Route::post('/eggs/logging/verify-override',       [EggLoggingController::class, 'verifyOverride'])->name('eggs.logging.verify-override')->middleware('throttle:6,1');
+    Route::delete('/eggs/logging/{productionLog}',     [EggLoggingController::class, 'destroy'])->name('eggs.logging.destroy')->middleware('admin');
+
+    Route::get('/eggs/stocks',                         [EggStockController::class, 'index'])->name('eggs.stocks');
+    Route::post('/eggs/stocks',                        [EggStockController::class, 'store'])->name('eggs.stocks.store');
+    Route::delete('/eggs/stocks/{batch}',              [EggStockController::class, 'destroy'])->name('eggs.stocks.destroy');
+    Route::get('/eggs/stocks/{batch}/qr',              [EggStockController::class, 'qr'])->name('eggs.stocks.qr');
+
+    Route::get('/eggs/pre-orders',                     [PreOrderController::class, 'index'])->name('eggs.preorders');
+    Route::post('/eggs/pre-orders',                    [PreOrderController::class, 'store'])->name('eggs.preorders.store');
+    Route::patch('/eggs/pre-orders/{order}',           [PreOrderController::class, 'update'])->name('eggs.preorders.update');
+    Route::delete('/eggs/pre-orders/{order}',          [PreOrderController::class, 'destroy'])->name('eggs.preorders.destroy');
 
     Route::get('/environment',  [EnvironmentController::class, 'index'])->name('environment');
     Route::post('/environment/thresholds', [EnvironmentController::class, 'saveThresholds'])->name('environment.thresholds');
@@ -71,8 +85,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/reports',     [ReportController::class, 'index'])->name('reports');
     Route::get('/reports/csv', [ReportController::class, 'exportCsv'])->name('reports.csv');
 
-    Route::post('/alerts/{alert}/read',  [AlertController::class, 'markRead'])->name('alerts.read');
-    Route::post('/alerts/read-all',      [AlertController::class, 'markAllRead'])->name('alerts.read-all');
+    Route::get('/notifications',                    [AlertController::class, 'index'])->name('notifications.index');
+    Route::post('/alerts/acknowledge-modal',         [AlertController::class, 'acknowledgeModal'])->name('alerts.acknowledge-modal');
+    Route::post('/alerts/{alert}/read',              [AlertController::class, 'markRead'])->name('alerts.read');
+    Route::post('/alerts/read-all',                  [AlertController::class, 'markAllRead'])->name('alerts.read-all');
 
     Route::get('/mortality',                    [MortalityController::class, 'index'])->name('mortality.index');
     Route::post('/mortality',                   [MortalityController::class, 'store'])->name('mortality.store');
