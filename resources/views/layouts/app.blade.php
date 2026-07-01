@@ -309,6 +309,8 @@
 {{-- ─── Scripts ─────────────────────────────────────────────────────────── --}}
 <script>
 // ── Fullscreen for captive portal / mobile browsers ──
+// (Disabled for now)
+/*
 (function() {
     function goFullscreen() {
         var el = document.documentElement;
@@ -341,6 +343,7 @@
         window.addEventListener('load', goFullscreen);
     }
 })();
+*/
 
 (function() {
     var SIDEBAR_INITIALIZED = false;
