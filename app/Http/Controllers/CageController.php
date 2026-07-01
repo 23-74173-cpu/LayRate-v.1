@@ -101,10 +101,18 @@ class CageController extends Controller
             foreach ($data['slots'] as $slotId => $slotData) {
                 $slot = $cage->cageSlots()->find($slotId);
                 if ($slot) {
-                    $slot->update([
-                        'has_sensor' => (bool) ($slotData['has_sensor'] ?? false),
-                        'sensor_device_id' => ! empty($slotData['sensor_device_id']) ? $slotData['sensor_device_id'] : null,
-                    ]);
+                    $hasSensor = (bool) ($slotData['has_sensor'] ?? false);
+                    $deviceId = ! empty($slotData['sensor_device_id']) ? $slotData['sensor_device_id'] : null;
+                    if ($hasSensor && $deviceId) {
+                        HardwareItem::updateOrCreate(
+                            ['cage_slot_id' => $slot->id, 'device_type' => 'IR_breakbeam'],
+                            ['serial_number' => $deviceId, 'cage_id' => null, 'status' => 'active', 'installation_date' => now()]
+                        );
+                    } elseif (! $hasSensor) {
+                        HardwareItem::where('cage_slot_id', $slot->id)
+                            ->where('device_type', 'IR_breakbeam')
+                            ->update(['status' => 'removed']);
+                    }
                 }
             }
         }
@@ -155,14 +163,14 @@ class CageController extends Controller
 
     public function slotsJson(Cage $cage)
     {
-        return response()->json($cage->cageSlots->map(fn ($s) => [
+        return response()->json($cage->cageSlots->load('hardwareItems')->map(fn ($s) => [
             'id' => $s->id,
             'slot_number' => $s->slot_number,
             'row_number' => $s->row_number,
             'column_number' => $s->column_number,
             'current_occupancy' => $s->current_occupancy,
-            'has_sensor' => $s->has_sensor,
-            'sensor_device_id' => $s->sensor_device_id,
+            'has_sensor' => $s->hasBreakbeam(),
+            'sensor_device_id' => optional($s->hardwareItems->where('device_type', 'IR_breakbeam')->where('status', 'active')->first())?->serial_number ?? '',
         ]));
     }
 
@@ -184,7 +192,7 @@ class CageController extends Controller
                 'row_number' => $slot->row_number,
                 'column_number' => $slot->column_number,
                 'current_occupancy' => $slot->current_occupancy,
-                'has_sensor' => $slot->has_sensor,
+                'has_sensor' => $slot->hasBreakbeam(),
                 'remaining' => $slot->remaining,
             ],
             'hens' => $hens,
@@ -199,7 +207,7 @@ class CageController extends Controller
     public function deleteConfirm(Cage $cage)
     {
         $slotCount = $cage->cageSlots()->count();
-        $sensorSlotCount = $cage->cageSlots()->where('has_sensor', true)->count();
+        $sensorSlotCount = $cage->cageSlots()->whereHas('hardwareItems', fn ($q) => $q->where('device_type', 'IR_breakbeam')->where('status', 'active'))->count();
         $henCount = $cage->hens()->count();
         $productionLogCount = ProductionLog::whereIn('cage_slot_id', $cage->cageSlots()->pluck('id'))->count();
         $envLogCount = EnvironmentalLog::where('cage_id', $cage->id)->count();
@@ -245,7 +253,7 @@ class CageController extends Controller
             $issues[] = "{$occupiedOrphaned} slot(s) have hens and would be removed.";
         }
 
-        $sensorOrphaned = $orphanedSlots->where('has_sensor', true)->count();
+        $sensorOrphaned = $orphanedSlots->load('hardwareItems')->filter(fn ($s) => $s->hasBreakbeam())->count();
         if ($sensorOrphaned > 0) {
             $issues[] = "{$sensorOrphaned} sensor-equipped slot(s) would be removed.";
         }
@@ -288,8 +296,6 @@ class CageController extends Controller
                     'row_number' => $row,
                     'column_number' => $col,
                     'current_occupancy' => 0,
-                    'has_sensor' => false,
-                    'sensor_device_id' => null,
                 ]);
             }
 
@@ -380,8 +386,6 @@ class CageController extends Controller
                 'row_number' => $row,
                 'column_number' => $col,
                 'current_occupancy' => 0,
-                'has_sensor' => false,
-                'sensor_device_id' => null,
             ]);
         }
     }

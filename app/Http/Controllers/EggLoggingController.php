@@ -124,6 +124,26 @@ class EggLoggingController extends Controller
         return redirect()->route('eggs.logging')->with('success', 'Production log saved.');
     }
 
+    public function update(Request $request, ProductionLog $productionLog)
+    {
+        $data = $request->validate([
+            'log_date'  => 'required|date',
+            'egg_count' => 'required|integer|min:0',
+            'hen_count' => 'required|integer|min:1',
+            'notes'     => 'nullable|string',
+        ]);
+
+        $productionLog->update([
+            'log_date'  => $data['log_date'],
+            'egg_count' => $data['egg_count'],
+            'hen_count' => $data['hen_count'],
+            'hdep'      => round(($data['egg_count'] / $data['hen_count']) * 100, 2),
+            'notes'     => $data['notes'] ?? null,
+        ]);
+
+        return redirect()->route('eggs.logging')->with('success', 'Production log updated.');
+    }
+
     public function destroy(ProductionLog $productionLog)
     {
         $productionLog->delete();

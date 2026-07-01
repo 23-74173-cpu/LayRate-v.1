@@ -1,8 +1,9 @@
 @import "tailwindcss";
+@source "../views/";
 
 @keyframes pageFadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .page-wrapper {
@@ -36,5 +37,89 @@
     --color-cage-c-soft: #fae3d0;
     --color-cage-d: #8a6bbf;
     --color-cage-d-soft: #e9e0f5;
+
+    /* Surface & structural accents (DESIGN-SYSTEM.md §2) */
+    --color-surface: #ffffff;
+    --color-secondary: #213183;
+    --color-on-primary: #ffffff;
+
+    /* Sticker palette — decorative only (DESIGN-SYSTEM.md §2.6) */
+    --color-sticker-sky: #62aef0;
+    --color-sticker-purple: #d6b6f6;
+    --color-sticker-pink: #ff64c8;
+    --color-sticker-orange: #dd5b00;
+    --color-sticker-teal: #2a9d99;
+    --color-sticker-green: #1aae39;
+    --color-sticker-brown: #523410;
+
     --font-family-sans: Inter, -apple-system, system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
+
+    /* Spacing scale (DESIGN-SYSTEM.md §4) */
+    --space-xxs: 4px;
+    --space-xs: 8px;
+    --space-sm: 12px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 28px;
+    --space-xxl: 32px;
+
+    /* Border radius scale (DESIGN-SYSTEM.md §5) */
+    --radius-xs: 4px;
+    --radius-sm: 5px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+
+    /* Elevation (DESIGN-SYSTEM.md §6) */
+    --shadow-soft: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px;
+    --shadow-elevated: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;
+
+    /* Typography tokens (DESIGN-SYSTEM.md §3.2 / §9) */
+    --text-display-1: 64px;
+    --text-display-1--line-height: 1.0;
+    --text-display-1--letter-spacing: -2.125px;
+    --text-display-1--font-weight: 700;
+
+    --text-display-2: 54px;
+    --text-display-2--line-height: 1.04;
+    --text-display-2--letter-spacing: -1.875px;
+    --text-display-2--font-weight: 700;
+
+    --text-heading-1: 40px;
+    --text-heading-1--line-height: 1.1;
+    --text-heading-1--letter-spacing: -1px;
+    --text-heading-1--font-weight: 700;
+
+    --text-heading-2: 26px;
+    --text-heading-2--line-height: 1.23;
+    --text-heading-2--letter-spacing: -0.625px;
+    --text-heading-2--font-weight: 700;
+
+    --text-heading-3: 22px;
+    --text-heading-3--line-height: 1.27;
+    --text-heading-3--letter-spacing: -0.25px;
+    --text-heading-3--font-weight: 700;
+
+    --text-title: 20px;
+    --text-title--line-height: 1.4;
+    --text-title--letter-spacing: -0.125px;
+    --text-title--font-weight: 600;
+
+    --text-body-md: 16px;
+    --text-body-md--line-height: 1.5;
+
+    --text-body-sm: 15px;
+    --text-body-sm--line-height: 1.33;
+
+    --text-button: 16px;
+    --text-button--line-height: 1.5;
+    --text-button--font-weight: 500;
+
+    --text-caption: 14px;
+    --text-caption--line-height: 1.43;
+
+    --text-eyebrow: 12px;
+    --text-eyebrow--line-height: 1.33;
+    --text-eyebrow--letter-spacing: 0.125px;
+    --text-eyebrow--font-weight: 600;
 }

@@ -52,6 +52,25 @@ class Cage extends Model
         return $this->hasMany(EggStockBatch::class);
     }
 
+    public function hardwareItems(): HasMany
+    {
+        return $this->hasMany(HardwareItem::class);
+    }
+
+    public function hasDht22(): bool
+    {
+        if ($this->relationLoaded('hardwareItems')) {
+            return $this->hardwareItems
+                ->where('device_type', 'DHT22')
+                ->where('status', 'active')
+                ->isNotEmpty();
+        }
+        return $this->hardwareItems()
+            ->where('device_type', 'DHT22')
+            ->where('status', 'active')
+            ->exists();
+    }
+
     public function latestProductionLog()
     {
         return $this->productionLogs->sortByDesc('log_date')->first();

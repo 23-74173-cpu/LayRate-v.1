@@ -25,7 +25,8 @@ class DashboardController extends Controller
         $cages = Cage::with([
             'productionLogs',
             'latestEnvironmentLog',
-            'cageSlots',
+            'cageSlots.hardwareItems',
+            'hardwareItems',
             'hens' => fn ($q) => $q->where('is_active', 1),
         ])->get();
 
@@ -36,7 +37,7 @@ class DashboardController extends Controller
             $cage->today_eggs = $todayLog?->egg_count ?? ($cage->latestProductionLog()?->egg_count ?? 0);
             $cage->hen_count = $cage->hens->count();
             $cage->breed = $cage->hens->first()?->breed ?? '—';
-            $cage->has_sensor = $cage->cageSlots->contains('has_sensor', true);
+            $cage->has_sensor = $cage->cageSlots->contains(fn ($s) => $s->hasBreakbeam()) || $cage->hasDht22();
         });
 
         // Total active hens (actual live count, not theoretical capacity)

@@ -2,7 +2,7 @@
 $slotNumber = $slot->slot_number;
 $rowNum = $slot->row_number;
 $colNum = $slot->column_number;
-$isSensor = $slot->has_sensor;
+$isSensor = $slot->hasBreakbeam();
 $occupancy = $slot->current_occupancy;
 $status = $slot->status;
 $primaryHen = $slot->primaryHen();

@@ -110,7 +110,7 @@
             $color = $cage->color;
             $colorSoft = $cage->colorSoft;
             $slotsByRow = $cage->cageSlots->groupBy('row_number');
-            $sensorCount = $cage->cageSlots->where('has_sensor', true)->count();
+            $sensorCount = $cage->cageSlots->filter(fn($s) => $s->hasBreakbeam())->count();
             $occupiedCount = $cage->cageSlots->where('current_occupancy', '>', 0)->count();
             $primaryHen = $cage->hens->first();
         @endphp
@@ -160,7 +160,7 @@
                 <div class="grid gap-1" style="grid-template-columns: repeat({{ $cage->slots_per_row }}, 1fr);">
                     @foreach($cage->cageSlots as $slot)
                     @php
-                        $isSensor = $slot->has_sensor;
+                        $isSensor = $slot->hasBreakbeam();
                         $occupancy = $slot->current_occupancy;
                         $slotBg = $isSensor ? '#d6f0e3' : ($occupancy > 0 ? '#f6f5f4' : '#ffffff');
                         $slotBorder = $isSensor ? '#2a9d6a' : '#e6e6e6';
@@ -219,7 +219,7 @@
                 </button>
             </div>
 
-            <form method="POST" action="{{ route('cages.store') }}" id="addCageForm" data-turbo="false">
+            <form method="POST" action="{{ route('cages.store') }}" id="addCageForm" data-turbo="false" onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Adding\u2026')">
                 @csrf
                 <div class="space-y-4">
                     <div class="rounded-lg p-3" style="background-color: #f0f7ff; border: 1px solid #b3d4fc;">
@@ -328,7 +328,7 @@
                 </button>
             </div>
 
-            <form method="POST" action="" id="editCageForm" data-turbo="false">
+            <form method="POST" action="" id="editCageForm" data-turbo="false" onsubmit="loadingButton(this.querySelector('button[type=submit]'))">
                 @csrf @method('PUT')
 
                 <div id="editResizeError" class="hidden mb-4 rounded-lg p-3" style="background-color: #fbe4e6; border: 1px solid #f3cdd0;">

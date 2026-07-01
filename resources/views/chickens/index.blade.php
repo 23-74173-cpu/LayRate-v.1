@@ -132,7 +132,7 @@
                                             Slot {{ $slot->row_number }}-{{ $slot->column_number }}
                                             (#{{ $slot->slot_number }})
                                         </span>
-                                        @if($slot->has_sensor)
+                                        @if($slot->hasBreakbeam())
                                         <span class="flex items-center gap-0.5 text-emerald-600">
                                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> sensor
                                         </span>

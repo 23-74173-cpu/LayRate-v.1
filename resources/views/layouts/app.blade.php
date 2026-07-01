@@ -68,6 +68,9 @@
             }
             #sidebar.w-16 .logo-wrap,
             .sidebar-collapsed #sidebar .logo-wrap { justify-content: center !important; }
+
+            /* Apply collapsed width synchronously before paint (Turbo-safe replacement for document.write) */
+            html.sidebar-collapsed #sidebar { width: 4rem !important; }
         }
 
         /* ─ Allow text selection in form inputs ── */
@@ -88,13 +91,57 @@
 </head>
 <body class="h-screen overflow-hidden bg-[#F5F6F8] select-none">
 
-{{-- ── Inline script: restore sidebar width BEFORE paint ────────────────── --}}
+{{-- ── Turbo navigation loading bar ─────────────────────────────────────── --}}
+<style>
+#turbo-loading-bar {
+    position: fixed; top: 0; left: 0; height: 3px;
+    background: linear-gradient(90deg, #0075de, #62aef0);
+    z-index: 9999; pointer-events: none;
+    width: 0%; opacity: 0;
+    transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s;
+}
+#turbo-loading-bar.active { opacity: 1; }
+</style>
+<div id="turbo-loading-bar"></div>
+
+{{-- ── Turbo loading bar control ─────────────────────────────────────────── --}}
 <script>
 (function() {
-    var stored = localStorage.getItem('sidebar_state');
-    if (stored === 'collapsed') {
-        document.documentElement.classList.add('sidebar-collapsed');
-        document.write('<style>#sidebar{width:4rem!important}</style>');
+    var bar = document.getElementById('turbo-loading-bar');
+    if (!bar) return;
+    var timer;
+
+    document.addEventListener('turbo:before-visit', function() {
+        clearTimeout(timer);
+        bar.style.width = '0%';
+        bar.classList.add('active');
+        requestAnimationFrame(function() {
+            bar.style.transition = 'width 3s cubic-bezier(0.22, 1, 0.36, 1)';
+            bar.style.width = '85%';
+        });
+    });
+
+    document.addEventListener('turbo:load', function() {
+        clearTimeout(timer);
+        bar.style.transition = 'width 0.3s ease-out';
+        bar.style.width = '100%';
+        timer = setTimeout(function() {
+            bar.classList.remove('active');
+            bar.style.transition = 'none';
+            bar.style.width = '0%';
+        }, 400);
+    });
+})();
+</script>
+
+{{-- ── Inline script: restore sidebar collapsed state BEFORE paint ──────── --}}
+<script>
+(function() {
+    if (window.innerWidth >= 1024) {
+        var stored = localStorage.getItem('sidebar_state');
+        if (stored === 'collapsed') {
+            document.documentElement.classList.add('sidebar-collapsed');
+        }
     }
 })();
 </script>
@@ -137,6 +184,7 @@
                 ['icon'=>'bird',          'label'=>'Chickens',        'route'=>'chickens.index'],
                 ['icon'=>'egg',           'label'=>'Egg Management',  'route'=>'eggs.logging'],
                 ['icon'=>'thermometer',   'label'=>'Environment',     'route'=>'environment'],
+                ['icon'=>'cpu',           'label'=>'Hardware',        'route'=>'hardware.index'],
                 ['icon'=>'leaf',          'label'=>'Feed & Nutrition','route'=>'feed'],
                 ['icon'=>'bar-chart-3',   'label'=>'Analytics',       'route'=>'analytics'],
                 ['icon'=>'trending-up',   'label'=>'Forecast',        'route'=>'forecast'],
@@ -315,30 +363,50 @@
 
         // ── Desktop collapse toggle ──
         function toggleDesktop() {
-            if (!sidebar) return;
-            var isCollapsed = sidebar.classList.contains('w-16');
+            var sb = document.getElementById('sidebar');
+            if (!sb) return;
+            var isCollapsed = sb.classList.contains('w-16');
             if (isCollapsed) {
-                sidebar.classList.remove('w-16');
-                sidebar.classList.add('w-64');
-                sidebar.style.setProperty('width', '16rem', 'important');
+                sb.classList.remove('w-16');
+                sb.classList.add('w-64');
+                sb.style.setProperty('width', '16rem', 'important');
+                document.documentElement.classList.remove('sidebar-collapsed');
                 localStorage.setItem(STORAGE_KEY, 'expanded');
             } else {
-                sidebar.classList.remove('w-64');
-                sidebar.classList.add('w-16');
-                sidebar.style.setProperty('width', '4rem', 'important');
+                sb.classList.remove('w-64');
+                sb.classList.add('w-16');
+                sb.style.setProperty('width', '4rem', 'important');
+                document.documentElement.classList.add('sidebar-collapsed');
                 localStorage.setItem(STORAGE_KEY, 'collapsed');
             }
         }
 
         // Apply initial state from localStorage (desktop only — mobile drawer always starts full-width)
-        if (window.innerWidth >= 1024) {
-            var stored = localStorage.getItem(STORAGE_KEY);
-            if (stored === 'collapsed') {
-                sidebar.classList.remove('w-64');
-                sidebar.classList.add('w-16');
-                sidebar.style.setProperty('width', '4rem', 'important');
+        function applySidebarState() {
+            var sb = document.getElementById('sidebar');
+            if (!sb) return;
+            if (window.innerWidth >= 1024) {
+                var stored = localStorage.getItem(STORAGE_KEY);
+                if (stored === 'collapsed') {
+                    sb.classList.remove('w-64');
+                    sb.classList.add('w-16');
+                    sb.style.setProperty('width', '4rem', 'important');
+                    document.documentElement.classList.add('sidebar-collapsed');
+                } else {
+                    sb.classList.remove('w-16');
+                    sb.classList.add('w-64');
+                    sb.style.setProperty('width', '16rem', 'important');
+                    document.documentElement.classList.remove('sidebar-collapsed');
+                }
+            } else {
+                // Mobile: ensure drawer starts full-width and off-screen
+                sb.classList.remove('w-16');
+                sb.classList.add('w-64');
+                sb.style.removeProperty('width');
+                document.documentElement.classList.remove('sidebar-collapsed');
             }
         }
+        applySidebarState();
 
         // ── Only bind sidebar events once (elements are data-turbo-permanent) ──
         if (!SIDEBAR_INITIALIZED) {
@@ -354,19 +422,30 @@
 
             // ── Mobile drawer open ──
             function openMobile() {
-                sidebar.classList.remove('-translate-x-full');
-                sidebar.classList.add('translate-x-0');
-                backdrop.classList.remove('hidden');
+                var sb = document.getElementById('sidebar');
+                var bd = document.getElementById('sidebar-backdrop');
+                if (sb) {
+                    sb.classList.remove('-translate-x-full');
+                    sb.classList.add('translate-x-0');
+                }
+                if (bd) bd.classList.remove('hidden');
             }
 
             // ── Mobile drawer close ──
             function closeMobile() {
-                sidebar.classList.remove('translate-x-0');
-                sidebar.classList.add('-translate-x-full');
-                backdrop.classList.add('hidden');
+                var sb = document.getElementById('sidebar');
+                var bd = document.getElementById('sidebar-backdrop');
+                if (sb) {
+                    sb.classList.remove('translate-x-0');
+                    sb.classList.add('-translate-x-full');
+                }
+                if (bd) bd.classList.add('hidden');
             }
 
-            if (backdrop) backdrop.addEventListener('click', closeMobile);
+            // Backdrop is replaced by Turbo, so use delegation on a permanent ancestor (body)
+            document.body.addEventListener('click', function(e) {
+                if (e.target.closest('#sidebar-backdrop')) closeMobile();
+            });
             if (arrowBtn) arrowBtn.addEventListener('click', closeMobile);
 
             // ── Nav link clicks close mobile drawer ──
@@ -411,6 +490,14 @@ if (typeof Chart !== 'undefined') {
     window.CAGE_COLORS = {
         'CAGE-A': '#1B8A3E', 'CAGE-B': '#2563EB', 'CAGE-C': '#EA580C', 'CAGE-D': '#7C3AED'
     };
+}
+
+// ── Reusable loading-button helper for form submissions ──
+function loadingButton(btn, label) {
+    if (!btn || btn.disabled) return;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-1 align-middle"></span>'
+        + (label || 'Saving\u2026');
 }
 </script>
 

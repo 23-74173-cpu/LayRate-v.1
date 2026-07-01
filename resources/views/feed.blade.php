@@ -93,10 +93,17 @@
                             </td>
                             <td class="px-5 py-3.5 text-sm text-[#6B7280] max-w-[200px] truncate">{{ $batch->notes ?? '—' }}</td>
                             <td class="px-5 py-3.5">
-                                <button onclick="openEditBatch({{ $batch->id }}, {{ $batch->crude_protein }}, '{{ addslashes($batch->notes ?? '') }}')"
-                                        class="flex items-center gap-1 text-xs border border-[#D9D9D9] px-2.5 py-1.5 rounded hover:bg-[#F5F6F8] text-[#6B7280]">
-                                    <i data-lucide="pencil" class="w-3 h-3"></i> Edit
-                                </button>
+                                <div class="flex items-center gap-1.5">
+                                    <button onclick="openEditBatch({{ $batch->id }}, {{ $batch->crude_protein }}, '{{ addslashes($batch->notes ?? '') }}')"
+                                            class="flex items-center gap-1 text-xs border border-[#D9D9D9] px-2.5 py-1.5 rounded hover:bg-[#F5F6F8] text-[#6B7280]">
+                                        <i data-lucide="pencil" class="w-3 h-3"></i> Edit
+                                    </button>
+                                    <button onclick="deleteBatch({{ $batch->id }})"
+                                            class="flex items-center gap-1 text-xs border border-[#D9D9D9] px-2.5 py-1.5 rounded hover:bg-red-50 text-[#6B7280]"
+                                            aria-label="Delete batch">
+                                        <i data-lucide="trash-2" class="w-3 h-3" style="color: #9b1c24;"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         @empty
@@ -117,6 +124,7 @@
                             <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Cage</th>
                             <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Batch</th>
                             <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Consumed (kg)</th>
+                            <th class="px-5 py-3"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -129,9 +137,18 @@
                             <td class="px-5 py-3 text-sm font-medium" style="color:{{ $cColor }}">{{ $log->cage->cage_code }}</td>
                             <td class="px-5 py-3 text-sm text-[#333333]">{{ $log->feedBatch->batch_code }}</td>
                             <td class="px-5 py-3 text-sm text-[#333333]">{{ number_format($log->feed_consumed_kg, 2) }} kg</td>
+                            <td class="px-5 py-3">
+                                <form method="POST" action="{{ route('feed.consumption.destroy', $log) }}"
+                                      data-confirm="Delete this consumption record?" data-confirm-action="Delete">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="p-1.5 rounded-full hover:bg-red-50 transition-colors" style="color: #a39e98;" aria-label="Delete consumption log">
+                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                </form>
+                            </td>
                         </tr>
                         @empty
-                        <tr><td colspan="4" class="px-5 py-8 text-center text-sm text-[#6B7280]">No consumption data yet.</td></tr>
+                        <tr><td colspan="5" class="px-5 py-8 text-center text-sm text-[#6B7280]">No consumption data yet.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -172,7 +189,7 @@
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
         </div>
-        <form method="POST" action="{{ route('feed.batch.store') }}">
+        <form method="POST" action="{{ route('feed.batch.store') }}" onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Adding\u2026')">
             @csrf
             <label class="block text-sm text-[#333333] mb-1.5">Batch Code</label>
             <input name="batch_code" placeholder="e.g. F-004" required
@@ -195,6 +212,8 @@
     </div>
 </div>
 
+<x-confirm-modal />
+
 {{-- Edit Batch Modal --}}
 <div id="editBatchModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/30">
     <div class="bg-white rounded-xl border border-[#D9D9D9] shadow-xl w-full max-w-md p-6">
@@ -204,7 +223,7 @@
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
         </div>
-        <form id="editBatchForm" method="POST">
+        <form id="editBatchForm" method="POST" onsubmit="loadingButton(this.querySelector('button[type=submit]'))">
             @csrf @method('PUT')
             <label class="block text-sm text-[#333333] mb-1.5">Crude Protein %</label>
             <input id="editCp" name="crude_protein" type="number" step="0.1"
@@ -229,6 +248,32 @@ function openEditBatch(id, cp, notes) {
     document.getElementById('editCp').value    = cp;
     document.getElementById('editNotes').value = notes;
     document.getElementById('editBatchModal').classList.remove('hidden');
+}
+
+function deleteBatch(id) {
+    fetch('/feed/batch/' + id + '/delete-check')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.can_delete) {
+                var form = document.getElementById('delete-batch-form-' + id);
+                if (!form) {
+                    form = document.createElement('form');
+                    form.id = 'delete-batch-form-' + id;
+                    form.method = 'POST';
+                    form.action = '/feed/batch/' + id;
+                    form.style.display = 'none';
+                    var csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                    form.innerHTML = '<input type="hidden" name="_token" value="' + csrf + '"><input type="hidden" name="_method" value="DELETE">';
+                    document.body.appendChild(form);
+                }
+                confirmModal('Delete this feed batch? All associated data will be permanently removed.', form, 'Delete');
+            } else {
+                confirmModal('This batch has ' + data.count + ' recorded consumption log(s) and cannot be deleted. Remove those records first.', null, 'Got it');
+            }
+        })
+        .catch(function() {
+            alert('Could not check batch status. Please try again.');
+        });
 }
 </script>
 @endpush

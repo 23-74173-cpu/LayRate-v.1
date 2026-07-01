@@ -81,6 +81,19 @@ class EggStockController extends Controller
         ])->header('Content-Type', 'application/json');
     }
 
+    public function update(Request $request, EggStockBatch $batch)
+    {
+        $data = $request->validate([
+            'egg_size' => 'required|in:small,medium,large,jumbo',
+            'count' => 'required|integer|min:1',
+            'harvested_date' => 'required|date',
+        ]);
+
+        $batch->update($data);
+
+        return redirect()->route('eggs.stocks')->with('success', 'Stock batch updated.');
+    }
+
     public function destroy(EggStockBatch $batch)
     {
         $batch->delete();

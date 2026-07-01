@@ -45,7 +45,7 @@
             {{ $selected ? 'border-width: 2px;' : '' }}
         "
     >
-        @if($slot->has_sensor)
+        @if($slot->hasBreakbeam())
             <span class="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full" style="background-color: #0075de;"></span>
         @endif
         @if($isEmpty)
@@ -80,7 +80,7 @@
             <span class="text-xs font-semibold" style="color: {{ $cageColor }}">
                 {{ $cage->cage_code }} · R{{ $slot->row_number }}C{{ $slot->column_number }}
             </span>
-            @if($slot->has_sensor)
+            @if($slot->hasBreakbeam())
                 <x-status-badge status="Sensor" type="slot" />
             @endif
         </div>

@@ -12,6 +12,7 @@ use App\Http\Controllers\EggStockController;
 use App\Http\Controllers\EnvironmentController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\ForecastController;
+use App\Http\Controllers\HardwareItemController;
 use App\Http\Controllers\MortalityController;
 use App\Http\Controllers\PreOrderController;
 use App\Http\Controllers\ReportController;
@@ -53,10 +54,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/eggs/logging',                        [EggLoggingController::class, 'index'])->name('eggs.logging');
     Route::post('/eggs/logging',                       [EggLoggingController::class, 'store'])->name('eggs.logging.store');
     Route::post('/eggs/logging/verify-override',       [EggLoggingController::class, 'verifyOverride'])->name('eggs.logging.verify-override')->middleware('throttle:6,1');
+    Route::put('/eggs/logging/{productionLog}',        [EggLoggingController::class, 'update'])->name('eggs.logging.update');
     Route::delete('/eggs/logging/{productionLog}',     [EggLoggingController::class, 'destroy'])->name('eggs.logging.destroy')->middleware('admin');
 
     Route::get('/eggs/stocks',                         [EggStockController::class, 'index'])->name('eggs.stocks');
     Route::post('/eggs/stocks',                        [EggStockController::class, 'store'])->name('eggs.stocks.store');
+    Route::put('/eggs/stocks/{batch}',                 [EggStockController::class, 'update'])->name('eggs.stocks.update');
     Route::delete('/eggs/stocks/{batch}',              [EggStockController::class, 'destroy'])->name('eggs.stocks.destroy');
     Route::get('/eggs/stocks/{batch}/qr',              [EggStockController::class, 'qr'])->name('eggs.stocks.qr');
 
@@ -68,10 +71,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/environment',  [EnvironmentController::class, 'index'])->name('environment');
     Route::post('/environment/thresholds', [EnvironmentController::class, 'saveThresholds'])->name('environment.thresholds');
 
-    Route::get('/feed',                    [FeedController::class, 'index'])->name('feed');
-    Route::post('/feed/batch',             [FeedController::class, 'storeBatch'])->name('feed.batch.store');
-    Route::put('/feed/batch/{feedBatch}',  [FeedController::class, 'updateBatch'])->name('feed.batch.update');
-    Route::post('/feed/consumption',       [FeedController::class, 'storeConsumption'])->name('feed.consumption.store');
+    Route::get('/hardware',                    [HardwareItemController::class, 'index'])->name('hardware.index');
+    Route::post('/hardware',                   [HardwareItemController::class, 'store'])->name('hardware.store');
+    Route::put('/hardware/{hardwareItem}',     [HardwareItemController::class, 'update'])->name('hardware.update');
+    Route::delete('/hardware/{hardwareItem}',  [HardwareItemController::class, 'destroy'])->name('hardware.destroy');
+
+    Route::get('/feed',                          [FeedController::class, 'index'])->name('feed');
+    Route::post('/feed/batch',                   [FeedController::class, 'storeBatch'])->name('feed.batch.store');
+    Route::put('/feed/batch/{feedBatch}',        [FeedController::class, 'updateBatch'])->name('feed.batch.update');
+    Route::delete('/feed/batch/{feedBatch}',     [FeedController::class, 'destroyBatch'])->name('feed.batch.destroy');
+    Route::get('/feed/batch/{feedBatch}/delete-check', [FeedController::class, 'checkDeleteBatch'])->name('feed.batch.delete-check');
+    Route::post('/feed/consumption',             [FeedController::class, 'storeConsumption'])->name('feed.consumption.store');
+    Route::delete('/feed/consumption/{feedConsumptionLog}', [FeedController::class, 'destroyConsumption'])->name('feed.consumption.destroy');
 
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics');
 
@@ -92,5 +103,6 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/mortality',                    [MortalityController::class, 'index'])->name('mortality.index');
     Route::post('/mortality',                   [MortalityController::class, 'store'])->name('mortality.store');
+    Route::put('/mortality/{mortalityLog}',     [MortalityController::class, 'update'])->name('mortality.update');
     Route::delete('/mortality/{mortalityLog}',  [MortalityController::class, 'destroy'])->name('mortality.destroy')->middleware('admin');
 });

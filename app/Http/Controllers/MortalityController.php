@@ -11,6 +11,7 @@ use App\Models\MortalityLogHen;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class MortalityController extends Controller
 {
@@ -87,6 +88,92 @@ class MortalityController extends Controller
 
         return redirect()->route('mortality.index')
             ->with('success', 'Mortality record saved.');
+    }
+
+    public function update(Request $request, MortalityLog $mortalityLog)
+    {
+        $data = $request->validate([
+            'log_date' => 'required|date',
+            'count'    => 'required|integer|min:1',
+            'reason'   => 'required|in:' . implode(',', MortalityLog::REASONS),
+            'notes'    => 'nullable|string|max:1000',
+        ]);
+
+        $oldCount = $mortalityLog->count;
+        $newCount = (int) $data['count'];
+
+        // Pre-flight check for increase: ensure enough active hens exist
+        $hensToDeactivate = null;
+        if ($newCount > $oldCount) {
+            $diff = $newCount - $oldCount;
+
+            $linkedHenIds = MortalityLogHen::where('mortality_log_id', $mortalityLog->id)
+                ->pluck('hen_id')
+                ->toArray();
+
+            $cage = Cage::with(['cageSlots.hens' => fn($q) => $q->where('is_active', 1)])
+                ->findOrFail($mortalityLog->cage_id);
+
+            $activeHens = $cage->cageSlots->flatMap(fn($slot) => $slot->hens)
+                ->reject(fn($h) => in_array($h->id, $linkedHenIds))
+                ->sortBy(fn($h) => [$h->cage_slot_id, $h->placement_date ?? $h->date_acquired])
+                ->values();
+
+            if ($activeHens->count() < $diff) {
+                return back()->withErrors([
+                    'count' => "Only {$activeHens->count()} remaining active hen(s) available in {$mortalityLog->cage->cage_code}, but {$diff} additional deaths recorded.",
+                ])->withInput();
+            }
+
+            $hensToDeactivate = $activeHens->take($diff);
+        }
+
+        DB::transaction(function () use ($data, $mortalityLog, $oldCount, $newCount, $hensToDeactivate) {
+            $mortalityLog->update([
+                'log_date' => $data['log_date'],
+                'count'    => $newCount,
+                'reason'   => $data['reason'],
+                'notes'    => $data['notes'] ?? null,
+            ]);
+
+            if ($newCount > $oldCount) {
+                foreach ($hensToDeactivate as $hen) {
+                    $hen->update(['is_active' => false]);
+                    MortalityLogHen::create([
+                        'mortality_log_id' => $mortalityLog->id,
+                        'hen_id'           => $hen->id,
+                        'cage_slot_id'     => $hen->cage_slot_id,
+                    ]);
+                }
+                $this->decrementSlotOccupancy($hensToDeactivate);
+
+            } elseif ($newCount < $oldCount) {
+                $diff = $oldCount - $newCount;
+
+                $pivotRows = MortalityLogHen::where('mortality_log_id', $mortalityLog->id)
+                    ->orderByDesc('id')
+                    ->take($diff)
+                    ->get();
+
+                foreach ($pivotRows as $pivot) {
+                    $hen = Hen::find($pivot->hen_id);
+
+                    if ($hen === null) {
+                        Log::warning("MortalityLogHen#{$pivot->id} references hen_id {$pivot->hen_id} which no longer exists. Skipping reactivation.");
+                        continue;
+                    }
+
+                    $hen->update(['is_active' => true]);
+                    CageSlot::where('id', $pivot->cage_slot_id)->increment('current_occupancy');
+                    $pivot->delete();
+                }
+            }
+        });
+
+        $this->checkMortalitySpike($mortalityLog->cage_id, $data['log_date']);
+
+        return redirect()->route('mortality.index')
+            ->with('success', 'Mortality record updated.');
     }
 
     public function destroy(MortalityLog $mortalityLog)

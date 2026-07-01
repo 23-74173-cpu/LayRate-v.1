@@ -70,7 +70,7 @@
                             @foreach($slotsInCage as $slot)
                             @php
                                 $primaryHen = $slot->primaryHen();
-                                $isSensor = $slot->has_sensor;
+                                $isSensor = $slot->hasBreakbeam();
                                 $isSelected = isset($selectedSlotId) && $selectedSlotId == $slot->id;
                             @endphp
                             <button type="button"
@@ -128,7 +128,7 @@
 
                 {{-- Active form --}}
                 <div id="slotForm" class="hidden">
-                    <form method="POST" action="{{ route('eggs.logging.store') }}" id="eggForm">
+                    <form method="POST" action="{{ route('eggs.logging.store') }}" id="eggForm" onsubmit="loadingButton(this.querySelector('button[type=submit]'))">
                         @csrf
 
                         {{-- Selected slot info bar --}}
@@ -237,7 +237,7 @@
                             <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-6 py-3" style="color: #615d59;">Logged By</th>
                             <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-6 py-3" style="color: #615d59;">Notes</th>
                             <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-6 py-3" style="color: #615d59;">Override</th>
-                            @if(auth()->user()->role === 'admin')<th class="px-6 py-3"></th>@endif
+                            <th class="px-6 py-3"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -260,25 +260,100 @@
                                 <span class="text-xs" style="color: #a39e98;">—</span>
                                 @endif
                             </td>
-                            @if(auth()->user()->role === 'admin')
                             <td class="px-6 py-3">
-                                <form method="POST" action="{{ route('eggs.logging.destroy', $log) }}"
-                                      data-confirm="Delete this log?" data-confirm-action="Delete">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" class="p-1.5 rounded-full hover:bg-red-50 transition-colors" style="color: #a39e98;" aria-label="Delete log">
-                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                <div class="flex items-center gap-1">
+                                    <button onclick="openEditLog({{ $log->id }}, '{{ $log->log_date->format('Y-m-d') }}', {{ $log->egg_count }}, {{ $log->hen_count }}, '{{ addslashes($log->notes ?? '') }}', {{ $log->cage_slot_id }})"
+                                            class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Edit log">
+                                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                                     </button>
-                                </form>
+                                    @if(auth()->user()->role === 'admin')
+                                    <form method="POST" action="{{ route('eggs.logging.destroy', $log) }}"
+                                          data-confirm="Delete this log?" data-confirm-action="Delete">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="p-1.5 rounded-full hover:bg-red-50 transition-colors" style="color: #a39e98;" aria-label="Delete log">
+                                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                        </button>
+                                    </form>
+                                    @endif
+                                </div>
                             </td>
-                            @endif
                         </tr>
                         @empty
-                        <tr><td colspan="{{ auth()->user()->role === 'admin' ? 10 : 9 }}" class="px-6 py-10 text-center text-sm" style="color: #a39e98;">No logs yet. Select a slot and save the first record.</td></tr>
+                        <tr><td colspan="10" class="px-6 py-10 text-center text-sm" style="color: #a39e98;">No logs yet. Select a slot and save the first record.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
             <x-paginator :paginator="$logs" />
+        </div>
+    </div>
+
+    {{-- ── Edit Log Modal ── --}}
+    <div id="editLogModal" class="hidden fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
+        <div class="absolute inset-0" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEditLogModal()"></div>
+        <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+            <div class="flex items-center justify-between mb-5">
+                <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Edit Production Log</h2>
+                <button onclick="closeEditLogModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                    <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+                </button>
+            </div>
+
+            <form id="editLogForm" method="POST" onsubmit="loadingButton(this.querySelector('button[type=submit]'))">
+                @csrf @method('PUT')
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Date</label>
+                        <input type="date" name="log_date" id="editLogDate" required
+                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                               style="border-color: #e6e6e6; color: #1f1f1f;">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Egg Count</label>
+                        <input type="number" name="egg_count" id="editEggCount" min="0" required
+                               oninput="editComputeHdep()"
+                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                               style="border-color: #e6e6e6; color: #1f1f1f;">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Hen Count <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(edit if the original was wrong)</span></label>
+                        <input type="number" name="hen_count" id="editHenCount" min="1" required
+                               oninput="editComputeHdep()"
+                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                               style="border-color: #e6e6e6; color: #1f1f1f;">
+                        <div id="editHdepDisplay" class="mt-2 inline-block border rounded-lg px-3 py-1.5 text-sm font-mono" style="background-color: #f6f5f4; border-color: #e6e6e6; color: #1f1f1f;">
+                            HDEP: —
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Notes <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
+                        <textarea name="notes" id="editNotes" rows="2"
+                                  class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1 resize-y"
+                                  style="border-color: #e6e6e6; color: #1f1f1f;"></textarea>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 mt-5">
+                    <button type="button" onclick="closeEditLogModal()"
+                            class="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors"
+                            style="color: #1f1f1f; border: 1px solid #e6e6e6;"
+                            onmouseover="this.style.backgroundColor='#f6f5f4'"
+                            onmouseout="this.style.backgroundColor='transparent'">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity"
+                            style="background-color: #0075de;"
+                            onmouseover="this.style.opacity='0.85'"
+                            onmouseout="this.style.opacity='1'">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -440,6 +515,33 @@ function submitOverride() {
     });
 }
 
+// ── Edit Log Modal ──────────────────────────────────────
+function openEditLog(id, date, eggCount, henCount, notes, cageSlotId) {
+    document.getElementById('editLogForm').action = '/eggs/logging/' + id;
+    document.getElementById('editLogDate').value = date;
+    document.getElementById('editEggCount').value = eggCount;
+    document.getElementById('editHenCount').value = henCount;
+    document.getElementById('editNotes').value = notes || '';
+    document.getElementById('editLogModal').style.display = 'flex';
+    editComputeHdep();
+    lucide.createIcons();
+}
+
+function closeEditLogModal() {
+    document.getElementById('editLogModal').style.display = 'none';
+}
+
+function editComputeHdep() {
+    const eggs = parseInt(document.getElementById('editEggCount').value) || 0;
+    const hens = parseInt(document.getElementById('editHenCount').value) || 1;
+    const hdep = ((eggs / hens) * 100).toFixed(1);
+    const el = document.getElementById('editHdepDisplay');
+    el.textContent = 'HDEP:  ' + hdep + '%';
+    el.style.backgroundColor = eggs > hens ? '#fbe4e6' : '#f6f5f4';
+    el.style.borderColor = eggs > hens ? '#f3cdd0' : '#e6e6e6';
+    el.style.color = eggs > hens ? '#9b1c24' : '#1f1f1f';
+}
+
 function toggleEggCage(header) {
     const parent = header.closest('.rounded-xl');
     const panel = parent.querySelector('.egg-cage-slots');
@@ -463,6 +565,7 @@ function toggleEggCage(header) {
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape') {
                     closeOverrideModal();
+                    closeEditLogModal();
                 }
             });
         }

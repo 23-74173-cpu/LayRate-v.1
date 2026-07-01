@@ -77,4 +77,30 @@ class FeedController extends Controller
 
         return redirect()->route('feed')->with('success', 'Feed consumption logged.');
     }
+
+    public function checkDeleteBatch(FeedBatch $feedBatch)
+    {
+        $count = $feedBatch->consumptionLogs()->count();
+        return response()->json([
+            'can_delete' => $count === 0,
+            'count'      => $count,
+        ]);
+    }
+
+    public function destroyBatch(FeedBatch $feedBatch)
+    {
+        if ($feedBatch->consumptionLogs()->exists()) {
+            $count = $feedBatch->consumptionLogs()->count();
+            return redirect()->back()->with('error', "Cannot delete this batch — {$count} consumption log(s) reference it. Remove those records first.");
+        }
+
+        $feedBatch->delete();
+        return redirect()->route('feed')->with('success', 'Feed batch deleted.');
+    }
+
+    public function destroyConsumption(FeedConsumptionLog $feedConsumptionLog)
+    {
+        $feedConsumptionLog->delete();
+        return redirect()->route('feed')->with('success', 'Consumption log deleted.');
+    }
 }

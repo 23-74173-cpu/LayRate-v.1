@@ -88,15 +88,18 @@
         @endif
 
         {{-- Farm Layout Grid --}}
+        <style>
+            @media (max-width: 639px) { .cage-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
+        </style>
         <div class="rounded-xl border p-6" style="background-color: #ffffff; border-color: #e6e6e6;">
-            <div class="grid gap-2" style="grid-template-columns: repeat({{ $gridCols }}, minmax(0, 1fr));">
+            <div class="grid gap-2 cage-grid" style="grid-template-columns: repeat({{ $gridCols }}, minmax(0, 1fr));">
                 @for($r = 0; $r < $gridRows; $r++)
                     @for($c = 0; $c < $gridCols; $c++)
                     @php
                         $placedCage = $cages->firstWhere(fn($cg) => $cg->location_row === $r && $cg->location_column === $c);
                     @endphp
                     @if($placedCage)
-                    <div class="farm-tile min-h-[5rem] rounded-lg border-2 p-3 flex flex-col justify-between cursor-pointer transition-all hover:shadow-md"
+                    <div class="farm-tile min-h-[5rem] rounded-lg border-2 p-3 flex flex-col justify-between cursor-pointer transition-all hover:shadow-md relative"
                          style="border-color: {{ $placedCage->color }}; background-color: {{ $placedCage->colorSoft }};"
                          data-cage-code="{{ $placedCage->cage_code }}"
                          data-breed="{{ $placedCage->breed }}"
@@ -107,7 +110,7 @@
                          onclick="openStatsModal(this)">
                         <div class="flex items-center justify-between">
                             <span class="text-sm font-semibold" style="color: {{ $placedCage->color }};">{{ $placedCage->cage_code }}</span>
-                            <span class="text-xs px-1.5 py-0.5 rounded-full" style="background-color: {{ $placedCage->color }}; color: #ffffff;">{{ number_format($placedCage->today_hdep, 0) }}%</span>
+                            <span class="text-xs px-1.5 py-0.5 rounded-full absolute -top-2 -right-2 z-10" style="background-color: {{ $placedCage->color }}; color: #ffffff;">{{ number_format($placedCage->today_hdep, 0) }}%</span>
                         </div>
                         <div class="text-xs truncate" style="color: #615d59;">{{ Str::limit($placedCage->breed, 16) }}</div>
                     </div>
@@ -127,7 +130,7 @@
                 <h3 class="text-xs font-semibold tracking-[0.05em] uppercase mb-3" style="color: #615d59;">Unplaced Cages</h3>
                 <div class="flex flex-wrap gap-3">
                     @foreach($unplaced as $uc)
-                    <div class="farm-tile min-h-[3.5rem] rounded-lg border-2 px-4 py-2 flex flex-col justify-center"
+                    <div class="farm-tile min-h-[3.5rem] rounded-lg border-2 px-4 py-2 flex flex-col justify-center relative"
                          style="border-color: {{ $uc->color }}; background-color: {{ $uc->colorSoft }};"
                          data-cage-code="{{ $uc->cage_code }}"
                          data-breed="{{ $uc->breed }}"
@@ -138,7 +141,7 @@
                          onclick="openStatsModal(this)">
                         <div class="flex items-center justify-between">
                             <span class="text-sm font-semibold" style="color: {{ $uc->color }};">{{ $uc->cage_code }}</span>
-                            <span class="text-xs px-1.5 py-0.5 rounded-full" style="background-color: {{ $uc->color }}; color: #ffffff;">{{ number_format($uc->today_hdep, 0) }}%</span>
+                            <span class="text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap absolute -top-2 -right-2 z-10" style="background-color: {{ $uc->color }}; color: #ffffff;">{{ number_format($uc->today_hdep, 0) }}%</span>
                         </div>
                     </div>
                     @endforeach

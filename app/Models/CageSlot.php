@@ -10,7 +10,7 @@ class CageSlot extends Model
 {
     protected $fillable = [
         'cage_id', 'row_number', 'column_number', 'slot_number',
-        'current_occupancy', 'has_sensor', 'sensor_device_id',
+        'current_occupancy',
     ];
 
     protected $casts = [
@@ -18,7 +18,6 @@ class CageSlot extends Model
         'column_number' => 'integer',
         'slot_number' => 'integer',
         'current_occupancy' => 'integer',
-        'has_sensor' => 'boolean',
     ];
 
     public function cage(): BelongsTo
@@ -36,9 +35,28 @@ class CageSlot extends Model
         return $this->hasMany(ProductionLog::class);
     }
 
+    public function hardwareItems(): HasMany
+    {
+        return $this->hasMany(HardwareItem::class);
+    }
+
     public function primaryHen(): ?Hen
     {
         return $this->hens()->where('is_active', 1)->first();
+    }
+
+    public function hasBreakbeam(): bool
+    {
+        if ($this->relationLoaded('hardwareItems')) {
+            return $this->hardwareItems
+                ->where('device_type', 'IR_breakbeam')
+                ->where('status', 'active')
+                ->isNotEmpty();
+        }
+        return $this->hardwareItems()
+            ->where('device_type', 'IR_breakbeam')
+            ->where('status', 'active')
+            ->exists();
     }
 
     public function getStatusAttribute(): string
@@ -46,7 +64,7 @@ class CageSlot extends Model
         if ($this->current_occupancy === 0) {
             return 'empty';
         }
-        if ($this->has_sensor) {
+        if ($this->hasBreakbeam()) {
             return 'sensor';
         }
         return 'manual';

@@ -206,7 +206,7 @@
             </button>
         </div>
 
-        <form method="POST" action="{{ route('eggs.preorders.store') }}">
+        <form method="POST" action="{{ route('eggs.preorders.store') }}" onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Adding\u2026')">
             @csrf
             <div class="space-y-4">
                 <div>
@@ -286,7 +286,7 @@
             </button>
         </div>
 
-        <form id="editStatusForm" method="POST">
+        <form id="editStatusForm" method="POST" onsubmit="loadingButton(this.querySelector('button[type=submit]'))">
             @csrf @method('PATCH')
             <div class="space-y-4">
                 <div>

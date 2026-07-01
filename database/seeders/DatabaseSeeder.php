@@ -8,6 +8,7 @@ use App\Models\CageSlot;
 use App\Models\EnvironmentalLog;
 use App\Models\FeedBatch;
 use App\Models\FeedConsumptionLog;
+use App\Models\HardwareItem;
 use App\Models\Forecast;
 use App\Models\Hen;
 use App\Models\MortalityLog;
@@ -63,10 +64,15 @@ class DatabaseSeeder extends Seeder
                             'row_number' => $row,
                             'column_number' => $col,
                             'current_occupancy' => $cage->is_active ? $cage->max_chickens_per_slot : 0,
-                            'has_sensor' => $isSensor,
-                            'sensor_device_id' => $isSensor ? "SN-CAGE{$cage->id}-SLOT{$slotNumber}" : null,
                         ]
                     );
+
+                    if ($isSensor) {
+                        HardwareItem::firstOrCreate(
+                            ['cage_slot_id' => $slot->id, 'device_type' => 'IR_breakbeam'],
+                            ['serial_number' => "SN-CAGE{$cage->id}-SLOT{$slotNumber}", 'status' => 'active']
+                        );
+                    }
 
                     if ($cage->is_active && isset($hensData[$cage->cage_code])) {
                         $hd = $hensData[$cage->cage_code];
