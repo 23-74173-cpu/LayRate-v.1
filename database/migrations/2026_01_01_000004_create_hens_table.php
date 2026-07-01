@@ -9,9 +9,11 @@ return new class extends Migration {
     {
         Schema::create('hens', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('cage_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('cage_slot_id')->constrained('cage_slots')->cascadeOnDelete();
             $table->string('tag_code', 50)->nullable()->unique();
             $table->date('date_acquired')->nullable();
+            $table->date('placement_date')->nullable();
+            $table->unsignedInteger('age_at_placement_weeks')->nullable();
             $table->unsignedInteger('flock_age_weeks')->default(0);
             $table->enum('breed', [
                 'ISA Brown',

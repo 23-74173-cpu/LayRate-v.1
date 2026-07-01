@@ -11,7 +11,10 @@ return new class extends Migration {
             $table->id();
             $table->string('cage_code', 50)->unique();
             $table->string('location', 100)->default('');
-            $table->unsignedInteger('capacity')->default(120);
+            $table->unsignedTinyInteger('rows')->default(3);
+            $table->unsignedTinyInteger('slots_per_row')->default(5);
+            $table->unsignedTinyInteger('max_chickens_per_slot')->default(4);
+            $table->unsignedInteger('total_capacity')->default(60);
             $table->tinyInteger('is_active')->default(1);
             $table->timestamps();
         });

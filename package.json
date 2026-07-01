@@ -1,0 +1,9 @@
+{
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.2",
+    "tailwindcss": "^4.3.2"
+  },
+  "dependencies": {
+    "@hotwired/turbo": "^8.0.23"
+  }
+}

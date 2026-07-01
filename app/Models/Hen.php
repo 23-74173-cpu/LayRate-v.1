@@ -32,4 +32,9 @@ class Hen extends Model
 
         return $this->flock_age_weeks;
     }
+
+    public function getCageAttribute(): ?Cage
+    {
+        return $this->cageSlot?->cage;
+    }
 }

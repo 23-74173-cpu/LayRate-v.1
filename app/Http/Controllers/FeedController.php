@@ -16,8 +16,8 @@ class FeedController extends Controller
 
         $consumptionLogs = FeedConsumptionLog::with(['cage', 'feedBatch'])
             ->orderByDesc('log_date')
-            ->limit(50)
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
 
         // Weekly summary stats
         $avgCp = $batches->avg('crude_protein');
@@ -72,9 +72,35 @@ class FeedController extends Controller
 
         FeedConsumptionLog::updateOrCreate(
             ['cage_id' => $data['cage_id'], 'log_date' => $data['log_date']],
-            array_merge($data, ['recorded_by' => 1])
+            array_merge($data, ['recorded_by' => auth()->id()])
         );
 
         return redirect()->route('feed')->with('success', 'Feed consumption logged.');
+    }
+
+    public function checkDeleteBatch(FeedBatch $feedBatch)
+    {
+        $count = $feedBatch->consumptionLogs()->count();
+        return response()->json([
+            'can_delete' => $count === 0,
+            'count'      => $count,
+        ]);
+    }
+
+    public function destroyBatch(FeedBatch $feedBatch)
+    {
+        if ($feedBatch->consumptionLogs()->exists()) {
+            $count = $feedBatch->consumptionLogs()->count();
+            return redirect()->back()->with('error', "Cannot delete this batch — {$count} consumption log(s) reference it. Remove those records first.");
+        }
+
+        $feedBatch->delete();
+        return redirect()->route('feed')->with('success', 'Feed batch deleted.');
+    }
+
+    public function destroyConsumption(FeedConsumptionLog $feedConsumptionLog)
+    {
+        $feedConsumptionLog->delete();
+        return redirect()->route('feed')->with('success', 'Consumption log deleted.');
     }
 }

@@ -2,9 +2,9 @@
 @section('title', 'Account Settings')
 
 @section('content')
-<main class="p-5 space-y-5 max-w-2xl">
+<div class="space-y-5 max-w-2xl">
 
-    <h1 class="text-xl font-medium text-[#333333]">Account Settings</h1>
+    <x-page-header title="Account Settings" subtitle="Change password and manage override PIN" />
 
     {{-- Change Password --}}
     <div class="bg-white rounded-lg border border-[#D9D9D9] p-6">
@@ -15,13 +15,13 @@
                 <label class="block text-sm text-[#333333] mb-1.5">Current Password</label>
                 <input type="password" name="current_password" required
                        class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#002D5E]">
-                @error('current_password')<p class="text-[11px] text-red-500 mt-1">{{ $message }}</p>@enderror
+                @error('current_password')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
             </div>
             <div>
                 <label class="block text-sm text-[#333333] mb-1.5">New Password</label>
                 <input type="password" name="password" required
                        class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#002D5E]">
-                @error('password')<p class="text-[11px] text-red-500 mt-1">{{ $message }}</p>@enderror
+                @error('password')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
             </div>
             <div>
                 <label class="block text-sm text-[#333333] mb-1.5">Confirm New Password</label>
@@ -49,14 +49,14 @@
                 <label class="block text-sm text-[#333333] mb-1.5">Or Current Password</label>
                 <input type="password" name="current_password"
                        class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#002D5E]">
-                @error('current_pin')<p class="text-[11px] text-red-500 mt-1">{{ $message }}</p>@enderror
+                @error('current_pin')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
             </div>
             @endif
             <div>
                 <label class="block text-sm text-[#333333] mb-1.5">New PIN (4-6 digits)</label>
                 <input type="text" name="pin" inputmode="numeric" maxlength="6" required
                        class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#002D5E]">
-                @error('pin')<p class="text-[11px] text-red-500 mt-1">{{ $message }}</p>@enderror
+                @error('pin')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
             </div>
             <div>
                 <label class="block text-sm text-[#333333] mb-1.5">Confirm New PIN</label>
@@ -96,5 +96,5 @@
     </div>
     @endif
 
-</main>
+</div>
 @endsection

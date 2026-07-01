@@ -9,7 +9,7 @@ return new class extends Migration {
     {
         Schema::create('production_logs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('cage_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('cage_slot_id')->constrained('cage_slots')->cascadeOnDelete();
             $table->date('log_date');
             $table->unsignedInteger('egg_count')->default(0);
             $table->unsignedInteger('hen_count')->default(0);
@@ -17,7 +17,7 @@ return new class extends Migration {
             $table->foreignId('recorded_by')->nullable()->constrained('users')->nullOnDelete();
             $table->text('notes')->nullable();
             $table->timestamp('created_at')->useCurrent();
-            $table->unique(['cage_id', 'log_date']);
+            $table->unique(['cage_slot_id', 'log_date']);
         });
     }
 

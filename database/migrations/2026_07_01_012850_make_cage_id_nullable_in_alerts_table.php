@@ -7,15 +7,15 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->string('override_pin_hash')->nullable()->after('password');
+        Schema::table('alerts', function (Blueprint $table) {
+            $table->foreignId('cage_id')->nullable()->change();
         });
     }
 
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('override_pin_hash');
+        Schema::table('alerts', function (Blueprint $table) {
+            $table->foreignId('cage_id')->nullable(false)->change();
         });
     }
 };
