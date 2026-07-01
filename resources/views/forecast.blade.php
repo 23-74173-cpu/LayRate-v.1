@@ -136,7 +136,9 @@ const allLabels  = [...histLabels, ...fcLabels];
 const histData = [...historical.map(h => h.hdep), ...Array(fcLabels.length).fill(null)];
 const fcData   = [...Array(histLabels.length).fill(null), ...forecasts.map(f => f.hdep)];
 
-new Chart(document.getElementById('forecastChart'), {
+document.addEventListener('turbo:load', function() {
+    if (window.forecastChart) window.forecastChart.destroy();
+    window.forecastChart = new Chart(document.getElementById('forecastChart'), {
     type: 'line',
     data: {
         labels: allLabels,
@@ -173,6 +175,7 @@ new Chart(document.getElementById('forecastChart'), {
             y: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } }, min: 0, max: 100 },
         }
     }
+});
 });
 </script>
 @endpush

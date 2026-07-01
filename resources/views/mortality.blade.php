@@ -204,7 +204,3 @@
 
 </main>
 @endsection
-
-@push('scripts')
-<script>lucide.createIcons();</script>
-@endpush

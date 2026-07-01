@@ -1,4 +1,4 @@
-<div id="removeModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+<div id="removeModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40" hidden>
     <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 overflow-hidden">
         <form id="removeForm" method="POST" action="{{ route('chickens.remove') }}">
             @csrf
@@ -97,10 +97,11 @@ function openRemoveModal(henIds, count, sourceInfo, breed) {
     document.getElementById('removeError').classList.add('hidden');
 
     document.getElementById('removeModal').classList.remove('hidden');
+    document.getElementById('removeModal').removeAttribute('hidden');
 }
-
 function closeRemoveModal() {
     document.getElementById('removeModal').classList.add('hidden');
+    document.getElementById('removeModal').setAttribute('hidden', '');
 }
 
 window.openRemoveModal = openRemoveModal;

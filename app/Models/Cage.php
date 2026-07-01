@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Cage extends Model
 {
-    protected $fillable = ['cage_code', 'location', 'rows', 'slots_per_row', 'max_chickens_per_slot', 'total_capacity', 'is_active'];
+    protected $fillable = ['cage_code', 'location', 'rows', 'slots_per_row', 'max_chickens_per_slot', 'total_capacity', 'is_active', 'location_row', 'location_column'];
 
     protected $casts = ['is_active' => 'boolean'];
 

@@ -1,4 +1,4 @@
-<div id="moveModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+<div id="moveModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40" hidden>
     <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 overflow-hidden">
         <form id="moveForm" method="POST" action="{{ route('chickens.move') }}">
             @csrf
@@ -100,10 +100,11 @@ function openMoveModal(henIds, count, sourceInfo, breed) {
     document.getElementById('moveSubmitBtn').disabled = true;
 
     document.getElementById('moveModal').classList.remove('hidden');
+    document.getElementById('moveModal').removeAttribute('hidden');
 }
-
 function closeMoveModal() {
     document.getElementById('moveModal').classList.add('hidden');
+    document.getElementById('moveModal').setAttribute('hidden', '');
 }
 
 function loadDestSlots() {

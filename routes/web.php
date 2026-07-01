@@ -13,6 +13,7 @@ use App\Http\Controllers\FeedController;
 use App\Http\Controllers\ForecastController;
 use App\Http\Controllers\MortalityController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Guest routes ─────────────────────────────────────────────
@@ -27,10 +28,12 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middl
 Route::middleware('auth')->group(function () {
 
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::post('/settings/farm-layout', [SettingsController::class, 'storeFarmLayout'])->name('settings.farm-layout');
 
     Route::get('/cages',               [CageController::class, 'index'])->name('cages.index');
     Route::post('/cages',              [CageController::class, 'store'])->name('cages.store');
     Route::put('/cages/{cage}',        [CageController::class, 'update'])->name('cages.update');
+    Route::patch('/cages/{cage}/position', [CageController::class, 'updatePosition'])->name('cages.position');
     Route::delete('/cages/{cage}',     [CageController::class, 'destroy'])->name('cages.destroy')->middleware('admin');
     Route::get('/cages/{cage}/slots-json', [CageController::class, 'slotsJson'])->name('cages.slots-json');
     Route::get('/cages/slots/{slot}/hens-json', [CageController::class, 'hensJson'])->name('cages.slots.hens-json');

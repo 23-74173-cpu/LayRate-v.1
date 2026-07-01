@@ -281,8 +281,13 @@
 
 @push('scripts')
 <script>
-document.getElementById('reportType').addEventListener('change', function () {
-    document.getElementById('reasonFilter').classList.toggle('hidden', this.value !== 'mortality');
+document.addEventListener('turbo:load', function() {
+    var el = document.getElementById('reportType');
+    if (el) {
+        el.addEventListener('change', function() {
+            document.getElementById('reasonFilter').classList.toggle('hidden', this.value !== 'mortality');
+        });
+    }
 });
 </script>
 @endpush

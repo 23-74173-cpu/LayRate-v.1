@@ -192,8 +192,6 @@
 
 @push('scripts')
 <script>
-lucide.createIcons();
-
 const cageColors  = ['#2D7D46','#1D4E8F','#C2703E','#6B4C8A','#6B7280'];
 const trendData   = @json($trendData);
 const cagesMap    = @json($cages->pluck('cage_code','id'));
@@ -225,7 +223,11 @@ const chartOpts = {
     }
 };
 
-new Chart(document.getElementById('tempChart'), { type:'line', data:{ labels, datasets: buildDatasets('avg_temp') }, options: {...chartOpts, scales:{...chartOpts.scales, y:{...chartOpts.scales.y, min:24,max:32}}} });
-new Chart(document.getElementById('humChart'),  { type:'line', data:{ labels, datasets: buildDatasets('avg_hum')  }, options: {...chartOpts, scales:{...chartOpts.scales, y:{...chartOpts.scales.y, min:50,max:80}}} });
+document.addEventListener('turbo:load', function() {
+    if (window.tempChart) window.tempChart.destroy();
+    window.tempChart = new Chart(document.getElementById('tempChart'), { type:'line', data:{ labels, datasets: buildDatasets('avg_temp') }, options: {...chartOpts, scales:{...chartOpts.scales, y:{...chartOpts.scales.y, min:24,max:32}}} });
+    if (window.humChart) window.humChart.destroy();
+    window.humChart = new Chart(document.getElementById('humChart'),  { type:'line', data:{ labels, datasets: buildDatasets('avg_hum')  }, options: {...chartOpts, scales:{...chartOpts.scales, y:{...chartOpts.scales.y, min:50,max:80}}} });
+});
 </script>
 @endpush

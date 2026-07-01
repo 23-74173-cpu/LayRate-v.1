@@ -129,7 +129,12 @@
     let cageSlots = [];
     let currentMaxPerSlot = 0;
 
-    document.getElementById('cageSelect').addEventListener('change', loadCageSlots);
+    document.addEventListener('turbo:load', function() {
+        var cageSelect = document.getElementById('cageSelect');
+        if (cageSelect) {
+            cageSelect.addEventListener('change', loadCageSlots);
+        }
+    });
 
     function loadCageSlots() {
         const select = document.getElementById('cageSelect');

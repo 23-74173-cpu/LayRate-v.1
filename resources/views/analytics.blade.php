@@ -104,47 +104,52 @@ const baseOpts = {
 };
 
 // HDEP line
-new Chart(document.getElementById('hdepChart'), {
-    type: 'line',
-    data: {
-        labels,
-        datasets: [{
-            data: hdeps, borderColor: cageColor, backgroundColor: cageColor+'22',
-            tension: 0.3, pointRadius: 4, fill: true, borderWidth: 2
-        }]
-    },
-    options: { ...baseOpts, scales: { ...baseOpts.scales, y: { ...baseOpts.scales.y, min: 50, max: 100 } } }
-});
+document.addEventListener('turbo:load', function() {
+    if (window.hdepChart) window.hdepChart.destroy();
+    window.hdepChart = new Chart(document.getElementById('hdepChart'), {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                data: hdeps, borderColor: cageColor, backgroundColor: cageColor+'22',
+                tension: 0.3, pointRadius: 4, fill: true, borderWidth: 2
+            }]
+        },
+        options: { ...baseOpts, scales: { ...baseOpts.scales, y: { ...baseOpts.scales.y, min: 50, max: 100 } } }
+    });
 
-// Eggs bar
-new Chart(document.getElementById('eggsChart'), {
-    type: 'bar',
-    data: {
-        labels,
-        datasets: [{ data: eggs, backgroundColor: cageColor, borderRadius: 3 }]
-    },
-    options: baseOpts
-});
+    // Eggs bar
+    if (window.eggsChart) window.eggsChart.destroy();
+    window.eggsChart = new Chart(document.getElementById('eggsChart'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{ data: eggs, backgroundColor: cageColor, borderRadius: 3 }]
+        },
+        options: baseOpts
+    });
 
-// Feed vs HDEP scatter
-const feedMap = {};
-feedLogs.forEach(f => feedMap[f.date] = f.kg);
-const scatter = logs.map(l => ({ x: feedMap[l.date] || 0, y: l.hdep }));
+    // Feed vs HDEP scatter
+    const feedMap = {};
+    feedLogs.forEach(f => feedMap[f.date] = f.kg);
+    const scatter = logs.map(l => ({ x: feedMap[l.date] || 0, y: l.hdep }));
 
-new Chart(document.getElementById('feedHdepChart'), {
-    type: 'scatter',
-    data: {
-        datasets: [{
-            data: scatter, backgroundColor: cageColor, pointRadius: 6
-        }]
-    },
-    options: {
-        ...baseOpts,
-        scales: {
-            x: { ...baseOpts.scales.x, title: { display: true, text: 'kg', font: { size: 10 } } },
-            y: { ...baseOpts.scales.y, title: { display: true, text: '%',  font: { size: 10 } }, min: 0, max: 100 },
+    if (window.feedHdepChart) window.feedHdepChart.destroy();
+    window.feedHdepChart = new Chart(document.getElementById('feedHdepChart'), {
+        type: 'scatter',
+        data: {
+            datasets: [{
+                data: scatter, backgroundColor: cageColor, pointRadius: 6
+            }]
+        },
+        options: {
+            ...baseOpts,
+            scales: {
+                x: { ...baseOpts.scales.x, title: { display: true, text: 'kg', font: { size: 10 } } },
+                y: { ...baseOpts.scales.y, title: { display: true, text: '%',  font: { size: 10 } }, min: 0, max: 100 },
+            }
         }
-    }
+    });
 });
 </script>
 @endpush

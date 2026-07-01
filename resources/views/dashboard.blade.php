@@ -59,39 +59,159 @@
         </div>
     </div>
 
-    {{-- ── Cage Overview ── --}}
+    {{-- ── Cage Overview: Farm Layout Canvas ── --}}
     <div>
         <h2 class="text-[22px] font-bold leading-[1.27] tracking-[-0.25px] mb-4" style="color: #1f1f1f;">Cage Overview</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            @foreach($cages as $cage)
-            @php
-                $prod = $cage->latestProductionLog();
-                $hdep = $prod?->hdep ?? 0;
-                $hen = $cage->hens->first();
-            @endphp
-            <div class="rounded-xl border p-4" style="background-color: #ffffff; border-color: #e6e6e6; border-left: 3px solid {{ $cage->color }};">
-                <div class="flex items-center justify-between mb-2">
-                    <x-cage-color :cage="$cage" />
-                    <x-status-badge :status="number_format($hdep, 0)" type="hdep" />
-                </div>
-                <div class="text-sm mb-3" style="color: #615d59;">
-                    {{ $hen?->breed ?? '—' }} · {{ $cage->total_capacity }} hens
-                    @if($hen)
-                    · {{ $hen->current_age_weeks }} wks
+
+        {{-- Onboarding Modal --}}
+        @if($needsOnboarding)
+        <div id="onboardingModal" class="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
+            <div class="absolute inset-0" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);"></div>
+            <div class="relative w-full max-w-sm rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+                <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px] mb-2" style="color: #1f1f1f;">Farm Layout Setup</h2>
+                <p class="text-sm mb-4" style="color: #615d59;">Define your farm grid dimensions to visualize cage placement.</p>
+                <form method="POST" action="{{ route('settings.farm-layout') }}">
+                    @csrf
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Rows</label>
+                            <input type="number" name="rows" value="4" min="1" max="10" required
+                                   class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                   style="border-color: #e6e6e6; color: #1f1f1f;">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Columns</label>
+                            <input type="number" name="cols" value="4" min="1" max="10" required
+                                   class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                   style="border-color: #e6e6e6; color: #1f1f1f;">
+                        </div>
+                    </div>
+                    <button type="submit"
+                            class="w-full py-2.5 text-sm font-medium rounded-full text-white transition-opacity"
+                            style="background-color: #0075de;"
+                            onmouseover="this.style.opacity='0.85'"
+                            onmouseout="this.style.opacity='1'">
+                        Save Layout
+                    </button>
+                </form>
+            </div>
+        </div>
+        @endif
+
+        {{-- Farm Layout Grid --}}
+        <div class="rounded-xl border p-6" style="background-color: #ffffff; border-color: #e6e6e6;">
+            <div class="grid gap-2" style="grid-template-columns: repeat({{ $gridCols }}, minmax(0, 1fr));">
+                @for($r = 0; $r < $gridRows; $r++)
+                    @for($c = 0; $c < $gridCols; $c++)
+                    @php
+                        $placedCage = $cages->firstWhere(fn($cg) => $cg->location_row === $r && $cg->location_column === $c);
+                    @endphp
+                    @if($placedCage)
+                    <div class="farm-tile min-h-[5rem] rounded-lg border-2 p-3 flex flex-col justify-between cursor-pointer transition-all hover:shadow-md"
+                         style="border-color: {{ $placedCage->color }}; background-color: {{ $placedCage->colorSoft }};"
+                         data-cage-code="{{ $placedCage->cage_code }}"
+                         data-breed="{{ $placedCage->breed }}"
+                         data-hens="{{ $placedCage->hen_count }}"
+                         data-hdep="{{ number_format($placedCage->today_hdep, 1) }}"
+                         data-eggs="{{ $placedCage->today_eggs }}"
+                         data-sensor="{{ $placedCage->has_sensor ? 'Yes' : 'No' }}"
+                         onclick="openStatsModal(this)">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-semibold" style="color: {{ $placedCage->color }};">{{ $placedCage->cage_code }}</span>
+                            <span class="text-xs px-1.5 py-0.5 rounded-full" style="background-color: {{ $placedCage->color }}; color: #ffffff;">{{ number_format($placedCage->today_hdep, 0) }}%</span>
+                        </div>
+                        <div class="text-xs truncate" style="color: #615d59;">{{ Str::limit($placedCage->breed, 16) }}</div>
+                    </div>
+                    @else
+                    <div class="min-h-[5rem] rounded-lg border p-3 flex items-center justify-center" style="border-color: #e6e6e6; background-color: #f9fafb;">
+                        <span class="text-xs" style="color: #d1d5db;">{{ $r + 1 }}-{{ $c + 1 }}</span>
+                    </div>
                     @endif
-                </div>
-                <div class="flex gap-2">
-                    <a href="{{ route('cages.index') }}" class="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium rounded-lg transition-colors" style="color: #1f1f1f; border: 1px solid #e6e6e6;" onmouseover="this.style.backgroundColor='#f6f5f4'" onmouseout="this.style.backgroundColor='transparent'">
-                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i> Edit
-                    </a>
-                    <a href="{{ route('analytics', ['cage' => $cage->cage_code]) }}" class="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium rounded-lg text-white transition-opacity" style="background-color: {{ $cage->color }};" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
-                        <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i> View
-                    </a>
+                    @endfor
+                @endfor
+            </div>
+
+            {{-- Unplaced Cages --}}
+            @php $unplaced = $cages->filter(fn($cg) => is_null($cg->location_row)); @endphp
+            @if($unplaced->count() > 0)
+            <div class="mt-6 pt-4 border-t" style="border-color: #e6e6e6;">
+                <h3 class="text-xs font-semibold tracking-[0.05em] uppercase mb-3" style="color: #615d59;">Unplaced Cages</h3>
+                <div class="flex flex-wrap gap-3">
+                    @foreach($unplaced as $uc)
+                    <div class="farm-tile min-h-[3.5rem] rounded-lg border-2 px-4 py-2 flex flex-col justify-center"
+                         style="border-color: {{ $uc->color }}; background-color: {{ $uc->colorSoft }};"
+                         data-cage-code="{{ $uc->cage_code }}"
+                         data-breed="{{ $uc->breed }}"
+                         data-hens="{{ $uc->hen_count }}"
+                         data-hdep="{{ number_format($uc->today_hdep, 1) }}"
+                         data-eggs="{{ $uc->today_eggs }}"
+                         data-sensor="{{ $uc->has_sensor ? 'Yes' : 'No' }}"
+                         onclick="openStatsModal(this)">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-semibold" style="color: {{ $uc->color }};">{{ $uc->cage_code }}</span>
+                            <span class="text-xs px-1.5 py-0.5 rounded-full" style="background-color: {{ $uc->color }}; color: #ffffff;">{{ number_format($uc->today_hdep, 0) }}%</span>
+                        </div>
+                    </div>
+                    @endforeach
                 </div>
             </div>
-            @endforeach
+            @endif
         </div>
     </div>
+
+    {{-- ─ Stats Modal (vanilla JS) ── --}}
+    <div id="statsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
+        <div class="absolute inset-0" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeStatsModal()"></div>
+        <div class="relative w-full max-w-sm rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+            <div class="flex items-center justify-between mb-4">
+                <h3 id="statsCageCode" class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;"></h3>
+                <button onclick="closeStatsModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                    <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+                </button>
+            </div>
+            <div class="space-y-3">
+                <div class="flex justify-between text-sm">
+                    <span style="color: #615d59;">Breed</span>
+                    <span id="statsBreed" class="font-medium" style="color: #1f1f1f;"></span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span style="color: #615d59;">Hens</span>
+                    <span id="statsHens" class="font-medium" style="color: #1f1f1f;"></span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span style="color: #615d59;">Today's HDEP</span>
+                    <span id="statsHdep" class="font-medium" style="color: #1f1f1f;"></span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span style="color: #615d59;">Eggs Collected</span>
+                    <span id="statsEggs" class="font-medium" style="color: #1f1f1f;"></span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span style="color: #615d59;">Sensor</span>
+                    <span id="statsSensor" class="font-medium" style="color: #1f1f1f;"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function openStatsModal(el) {
+        document.getElementById('statsCageCode').textContent = el.dataset.cageCode;
+        document.getElementById('statsBreed').textContent = el.dataset.breed;
+        document.getElementById('statsHens').textContent = el.dataset.hens;
+        document.getElementById('statsHdep').textContent = el.dataset.hdep + '%';
+        document.getElementById('statsEggs').textContent = el.dataset.eggs;
+        document.getElementById('statsSensor').textContent = el.dataset.sensor;
+        document.getElementById('statsModal').classList.remove('hidden');
+        lucide.createIcons();
+    }
+    function closeStatsModal() {
+        document.getElementById('statsModal').classList.add('hidden');
+    }
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeStatsModal();
+    });
+    </script>
 
     {{-- ── Feed Today / Mortality Today ── --}}
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -158,9 +278,3 @@
 
 </main>
 @endsection
-
-@push('scripts')
-<script>
-    lucide.createIcons();
-</script>
-@endpush

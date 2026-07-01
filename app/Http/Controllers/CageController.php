@@ -10,12 +10,16 @@ use App\Models\FeedConsumptionLog;
 use App\Models\Hen;
 use App\Models\MortalityLog;
 use App\Models\ProductionLog;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 
 class CageController extends Controller
 {
     public function index()
     {
+        $gridRows = (int) Setting::get('farm_grid_rows', 4);
+        $gridCols = (int) Setting::get('farm_grid_cols', 4);
+
         $cages = Cage::with([
             'cageSlots',
             'hens' => fn ($q) => $q->where('is_active', 1)->orderBy('id'),
@@ -23,13 +27,12 @@ class CageController extends Controller
 
         $nextCageCode = $this->generateCageCode();
 
-        return view('cages.index', compact('cages', 'nextCageCode'));
+        return view('cages.index', compact('cages', 'nextCageCode', 'gridRows', 'gridCols'));
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
-            'location' => 'nullable|string|max:100',
             'rows' => 'required|integer|min:1|max:10',
             'slots_per_row' => 'required|integer|min:1|max:10',
             'max_chickens_per_slot' => 'required|integer|min:1|max:10',
@@ -41,7 +44,6 @@ class CageController extends Controller
 
         $cage = Cage::create([
             'cage_code' => $cageCode,
-            'location' => $data['location'] ?? '',
             'rows' => $data['rows'],
             'slots_per_row' => $data['slots_per_row'],
             'max_chickens_per_slot' => $data['max_chickens_per_slot'],
@@ -57,7 +59,6 @@ class CageController extends Controller
     public function update(Request $request, Cage $cage)
     {
         $data = $request->validate([
-            'location' => 'nullable|string|max:100',
             'rows' => 'nullable|integer|min:1|max:10',
             'slots_per_row' => 'nullable|integer|min:1|max:10',
             'max_chickens_per_slot' => 'nullable|integer|min:1|max:10',
@@ -84,7 +85,7 @@ class CageController extends Controller
                 ->withErrors($resizeBlocked);
         }
 
-        $updateData = array_intersect_key($data, array_flip(['location', 'rows', 'slots_per_row', 'max_chickens_per_slot', 'is_active']));
+        $updateData = array_intersect_key($data, array_flip(['rows', 'slots_per_row', 'max_chickens_per_slot', 'is_active']));
 
         if (isset($updateData['rows']) || isset($updateData['slots_per_row']) || isset($updateData['max_chickens_per_slot'])) {
             $newRows = $updateData['rows'] ?? $cage->rows;
@@ -114,6 +115,42 @@ class CageController extends Controller
     public function destroy(Cage $cage)
     {
         return redirect()->route('cages.index');
+    }
+
+    public function updatePosition(Request $request, Cage $cage)
+    {
+        $data = $request->validate([
+            'location_row'    => 'nullable|integer|min:0',
+            'location_column' => 'nullable|integer|min:0',
+        ]);
+
+        $row = $data['location_row'] ?? null;
+        $col = $data['location_column'] ?? null;
+
+        if ($row !== null || $col !== null) {
+            $gridRows = (int) Setting::get('farm_grid_rows', 4);
+            $gridCols = (int) Setting::get('farm_grid_cols', 4);
+
+            if ($row < 0 || $row >= $gridRows || $col < 0 || $col >= $gridCols) {
+                return response()->json(['success' => false, 'message' => 'Position out of bounds'], 422)->header('Content-Type', 'application/json');
+            }
+
+            $occupied = Cage::where('id', '!=', $cage->id)
+                ->where('location_row', $row)
+                ->where('location_column', $col)
+                ->exists();
+
+            if ($occupied) {
+                return response()->json(['success' => false, 'message' => 'Cell occupied'], 422)->header('Content-Type', 'application/json');
+            }
+        }
+
+        $cage->update([
+            'location_row'    => $row,
+            'location_column' => $col,
+        ]);
+
+        return response()->json(['success' => true])->header('Content-Type', 'application/json');
     }
 
     public function slotsJson(Cage $cage)

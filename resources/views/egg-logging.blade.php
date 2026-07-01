@@ -451,11 +451,19 @@ function toggleEggCage(header) {
     lucide.createIcons();
 }
 
-// Keyboard support for slot cards
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeOverrideModal();
-    }
-});
+// Keyboard support for slot cards (bind once)
+(function() {
+    var bound = false;
+    document.addEventListener('turbo:load', function() {
+        if (!bound) {
+            bound = true;
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeOverrideModal();
+                }
+            });
+        }
+    });
+})();
 </script>
 @endpush

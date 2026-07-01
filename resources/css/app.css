@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@keyframes pageFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.page-wrapper {
+  animation: pageFadeIn 150ms ease-out forwards;
+}
+
+@theme {
+    --color-canvas-soft: #f6f5f4;
+    --color-hairline: #e6e6e6;
+    --color-ink: #1f1f1f;
+    --color-ink-secondary: #31302e;
+    --color-ink-muted: #615d59;
+    --color-ink-faint: #a39e98;
+    --color-primary: #0075de;
+    --color-primary-active: #005bab;
+    --color-sidebar-bg: #1a2342;
+    --color-ok-bg: #e8f5ec;
+    --color-ok-text: #1f6b3a;
+    --color-ok-border: #cfe8d6;
+    --color-watch-bg: #fdf3e0;
+    --color-watch-text: #8a5a00;
+    --color-watch-border: #f3e3bf;
+    --color-alert-bg: #fbe4e6;
+    --color-alert-text: #9b1c24;
+    --color-alert-border: #f3cdd0;
+    --color-cage-a: #2a9d6a;
+    --color-cage-a-soft: #d6f0e3;
+    --color-cage-b: #3b7bd9;
+    --color-cage-b-soft: #dcebfa;
+    --color-cage-c: #d97a3e;
+    --color-cage-c-soft: #fae3d0;
+    --color-cage-d: #8a6bbf;
+    --color-cage-d-soft: #e9e0f5;
+    --font-family-sans: Inter, -apple-system, system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
+}

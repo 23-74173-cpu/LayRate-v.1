@@ -226,7 +226,6 @@
 
 @push('scripts')
 <script>
-lucide.createIcons();
 function openEditBatch(id, cp, notes) {
     document.getElementById('editBatchForm').action = '/feed/batch/' + id;
     document.getElementById('editCp').value    = cp;

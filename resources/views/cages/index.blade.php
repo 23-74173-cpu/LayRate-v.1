@@ -19,6 +19,74 @@
         </button>
     </div>
 
+    {{-- ── Farm Layout Canvas (drag-and-drop) ── --}}
+    <div class="rounded-xl border p-6" style="background-color: #ffffff; border-color: #e6e6e6;">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xs font-semibold tracking-[0.05em] uppercase" style="color: #615d59;">Farm Layout</h3>
+            <button id="clearFilterBtn" class="hidden text-xs font-medium px-3 py-1 rounded-lg transition-colors" style="color: #0075de; border: 1px solid #0075de;" onclick="clearCanvasFilter()">Show all</button>
+        </div>
+        <div id="farmGrid" class="grid gap-2" style="grid-template-columns: repeat({{ $gridCols }}, minmax(0, 1fr));">
+            @for($r = 0; $r < $gridRows; $r++)
+                @for($c = 0; $c < $gridCols; $c++)
+                @php
+                    $placedCage = $cages->firstWhere(fn($cg) => $cg->location_row === $r && $cg->location_column === $c);
+                @endphp
+                @if($placedCage)
+                <div class="farm-cell min-h-[5rem] rounded-lg border-2 p-3 flex flex-col justify-between transition-all"
+                     style="border-color: {{ $placedCage->color }}; background-color: {{ $placedCage->colorSoft }};"
+                     data-row="{{ $r }}" data-col="{{ $c }}"
+                     ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, {{ $r }}, {{ $c }})">
+                    <div class="farm-tile cursor-grab active:cursor-grabbing"
+                         draggable="true"
+                         data-cage-id="{{ $placedCage->id }}"
+                         data-cage-code="{{ $placedCage->cage_code }}"
+                         ondragstart="handleDragStart(event, {{ $placedCage->id }})"
+                         onclick="handleTileClick(event, {{ $placedCage->id }}, '{{ $placedCage->cage_code }}')">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-semibold" style="color: {{ $placedCage->color }};">{{ $placedCage->cage_code }}</span>
+                        </div>
+                        <div class="text-xs truncate" style="color: #615d59;">{{ Str::limit($placedCage->hens->first()?->breed ?? '—', 16) }}</div>
+                    </div>
+                </div>
+                @else
+                <div class="farm-cell min-h-[5rem] rounded-lg border p-3 flex items-center justify-center transition-all"
+                     style="border-color: #e6e6e6; background-color: #f9fafb;"
+                     data-row="{{ $r }}" data-col="{{ $c }}"
+                     ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, {{ $r }}, {{ $c }})">
+                    <span class="text-xs" style="color: #d1d5db;">{{ $r + 1 }}-{{ $c + 1 }}</span>
+                </div>
+                @endif
+                @endfor
+            @endfor
+        </div>
+
+        {{-- Staging Area (unplaced cages) --}}
+        @php $unplaced = $cages->filter(fn($cg) => is_null($cg->location_row)); @endphp
+        @if($unplaced->count() > 0)
+        <div class="mt-4 pt-4 border-t" style="border-color: #e6e6e6;">
+            <h4 class="text-xs font-semibold tracking-[0.05em] uppercase mb-3" style="color: #615d59;">Unplaced Cages — drag to grid</h4>
+            <div id="stagingArea" class="flex flex-wrap gap-3"
+                 ondragover="handleDragOver(event)" ondrop="handleStagingDrop(event)">
+                @foreach($unplaced as $uc)
+                <div class="farm-tile min-h-[3.5rem] rounded-lg border-2 px-4 py-2 flex flex-col justify-center cursor-grab active:cursor-grabbing"
+                     style="border-color: {{ $uc->color }}; background-color: {{ $uc->colorSoft }};"
+                     draggable="true"
+                     data-cage-id="{{ $uc->id }}"
+                     data-cage-code="{{ $uc->cage_code }}"
+                     ondragstart="handleDragStart(event, {{ $uc->id }})"
+                     onclick="handleTileClick(event, {{ $uc->id }}, '{{ $uc->cage_code }}')">
+                    <span class="text-sm font-semibold" style="color: {{ $uc->color }};">{{ $uc->cage_code }}</span>
+                </div>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
+        {{-- Error Toast --}}
+        <div id="dragErrorToast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-lg px-4 py-2 text-sm font-medium text-white" style="background-color: #9b1c24;">
+        </div>
+    </div>
+
     {{-- ── Tab Bar (Notion underline style) ── --}}
     <div class="flex items-center gap-0 border-b overflow-x-auto" style="border-color: #e6e6e6;">
         <button type="button" onclick="filterCage('all')" class="cage-tab px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
@@ -57,13 +125,12 @@
             <div class="flex items-center justify-between px-4 py-3">
                 <div class="flex items-center gap-3">
                     <span class="text-sm font-semibold" style="color: {{ $color }}">{{ $cage->cage_code }}</span>
-                    <span class="text-xs" style="color: #615d59;">{{ $cage->location ?: 'No location' }}</span>
                 </div>
                 <div class="flex items-center gap-1">
                     <span class="text-xs px-2 py-0.5 rounded-full" style="background-color: {{ $cage->is_active ? '#e8f5ec' : '#f0f0f0' }}; color: {{ $cage->is_active ? '#1f6b3a' : '#615d59' }};">
                         {{ $cage->is_active ? 'Active' : 'Inactive' }}
                     </span>
-                    <button onclick="openEditModal({{ $cage->id }}, '{{ $cage->cage_code }}', '{{ addslashes($cage->location) }}', {{ $cage->rows }}, {{ $cage->slots_per_row }}, {{ $cage->max_chickens_per_slot }}, {{ $cage->is_active ? 1 : 0 }})"
+                    <button onclick="openEditModal({{ $cage->id }}, '{{ $cage->cage_code }}', {{ is_null($cage->location_row) ? 'null' : $cage->location_row }}, {{ is_null($cage->location_column) ? 'null' : $cage->location_column }}, {{ $cage->rows }}, {{ $cage->slots_per_row }}, {{ $cage->max_chickens_per_slot }}, {{ $cage->is_active ? 1 : 0 }})"
                             class="p-1.5 rounded hover:bg-black/5 transition-colors" style="color: #615d59;" aria-label="Edit cage">
                         <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                     </button>
@@ -155,7 +222,7 @@
                 </button>
             </div>
 
-            <form method="POST" action="{{ route('cages.store') }}" id="addCageForm">
+            <form method="POST" action="{{ route('cages.store') }}" id="addCageForm" data-turbo="false">
                 @csrf
                 <div class="space-y-4">
                     <div class="rounded-lg p-3" style="background-color: #f0f7ff; border: 1px solid #b3d4fc;">
@@ -167,11 +234,9 @@
                             </div>
                         </div>
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Location</label>
-                        <input name="location" id="addLocation" placeholder="e.g. North Wing"
-                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
-                               style="border-color: #e6e6e6; color: #1f1f1f;">
+                    <div class="rounded-lg p-3" style="background-color: #f6f5f4;">
+                        <div class="text-xs font-semibold tracking-[0.05em] uppercase mb-1" style="color: #615d59;">Canvas Position</div>
+                        <div class="text-sm" style="color: #a39e98;">Unplaced — drag to grid after creation</div>
                     </div>
                     <div class="grid grid-cols-3 gap-4">
                         <div>
@@ -266,7 +331,7 @@
                 </button>
             </div>
 
-            <form method="POST" action="" id="editCageForm">
+            <form method="POST" action="" id="editCageForm" data-turbo="false">
                 @csrf @method('PUT')
 
                 <div id="editResizeError" class="hidden mb-4 rounded-lg p-3" style="background-color: #fbe4e6; border: 1px solid #f3cdd0;">
@@ -277,11 +342,9 @@
                 </div>
 
                 <div class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Location</label>
-                        <input name="location" id="editLocation"
-                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
-                               style="border-color: #e6e6e6; color: #1f1f1f;">
+                    <div class="rounded-lg p-3" style="background-color: #f6f5f4;">
+                        <div class="text-xs font-semibold tracking-[0.05em] uppercase mb-1" style="color: #615d59;">Canvas Position</div>
+                        <div id="editCanvasPosition" class="text-sm" style="color: #31302e;">—</div>
                     </div>
                     <div class="grid grid-cols-3 gap-4">
                         <div>
@@ -455,15 +518,23 @@ function updateAddPreview() {
 }
 
 // ── Edit Modal ───────────────────────────────────────────
-function openEditModal(id, cageCode, location, rows, slotsPerRow, maxPerSlot, isActive) {
+function openEditModal(id, cageCode, locationRow, locationCol, rows, slotsPerRow, maxPerSlot, isActive) {
     document.getElementById('editCageForm').action = '/cages/' + id;
     document.getElementById('editCageCode').textContent = cageCode;
-    document.getElementById('editLocation').value = location || '';
     document.getElementById('editRows').value = rows;
     document.getElementById('editSlotsPerRow').value = slotsPerRow;
     document.getElementById('editMaxPerSlot').value = maxPerSlot;
     document.getElementById('editActive').checked = isActive === 1;
     document.getElementById('editResizeError').classList.add('hidden');
+
+    // Canvas position display
+    var posEl = document.getElementById('editCanvasPosition');
+    if (locationRow !== null && locationCol !== null) {
+        posEl.textContent = 'Row ' + (parseInt(locationRow) + 1) + ', Column ' + (parseInt(locationCol) + 1);
+    } else {
+        posEl.textContent = 'Unplaced — drag to grid';
+        posEl.style.color = '#a39e98';
+    }
 
     const sensorContainer = document.getElementById('editSlotSensors');
     sensorContainer.innerHTML = '<p class="text-xs text-center py-3" style="color: #a39e98;">Loading slots...</p>';
@@ -510,103 +581,168 @@ function closeEditModal() {
     document.getElementById('editCageModal').style.display = 'none';
 }
 
-// ── Move + Remove Modals ─────────────────────────────────
-function openMoveModal(henIds, count, sourceInfo, breed) {
-    document.getElementById('moveCount').textContent = count;
-    document.getElementById('moveHenIds').value = henIds;
-    document.getElementById('moveSourceInfo').classList.toggle('hidden', !sourceInfo);
-    if (sourceInfo) {
-        document.getElementById('moveSourceText').textContent = sourceInfo;
-        document.getElementById('moveSourceBreed').textContent = breed || '';
-    }
-    document.getElementById('destCageSelect').selectedIndex = 0;
-    document.getElementById('destSlotSelect').innerHTML = '<option value="">Select cage first...</option>';
-    document.getElementById('destSlotSelect').disabled = true;
-    document.getElementById('moveAvailability').classList.add('hidden');
-    document.getElementById('moveSubmitBtn').disabled = true;
-    document.getElementById('moveModal').style.display = 'flex';
-}
-function closeMoveModal() {
-    document.getElementById('moveModal').style.display = 'none';
-}
-function loadDestSlots() {
-    const cageSelect = document.getElementById('destCageSelect');
-    const slotSelect = document.getElementById('destSlotSelect');
-    const option = cageSelect.options[cageSelect.selectedIndex];
-    const toMove = parseInt(document.getElementById('moveCount').textContent) || 0;
-    slotSelect.innerHTML = '<option value="">Loading...</option>';
-    slotSelect.disabled = true;
-    if (!cageSelect.value) { slotSelect.innerHTML = '<option value="">Select cage first...</option>'; return; }
-    fetch('/cages/' + cageSelect.value + '/slots-json')
-        .then(r => r.json())
-        .then(slots => {
-            let html = '<option value="">Select slot...</option>';
-            slots.forEach(slot => {
-                const remaining = parseInt(option.dataset.max) - slot.current_occupancy;
-                const canFit = remaining >= toMove;
-                html += '<option value="' + slot.id + '" data-remaining="' + remaining + '" class="' + (canFit ? '' : 'text-red-400') + '">';
-                html += 'Slot ' + slot.row_number + '-' + slot.column_number + ' (#' + slot.slot_number + ') — ' + remaining + ' space' + (remaining !== 1 ? 's' : '') + (canFit ? '' : ' (insufficient)');
-                html += '</option>';
+// ── Keyboard: Escape closes modals (bind once) ───────────
+(function() {
+    var bound = false;
+    document.addEventListener('turbo:load', function() {
+        if (!bound) {
+            bound = true;
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeAddModal();
+                    closeEditModal();
+                    closeMoveModal();
+                    closeRemoveModal();
+                }
             });
-            slotSelect.innerHTML = html;
-            slotSelect.disabled = false;
-            slotSelect.onchange = checkMoveAvailability;
-        });
-}
-function checkMoveAvailability() {
-    const slotSelect = document.getElementById('destSlotSelect');
-    const option = slotSelect.options[slotSelect.selectedIndex];
-    const remaining = parseInt(option.dataset.remaining) || 0;
-    const toMove = parseInt(document.getElementById('moveCount').textContent) || 0;
-    const availEl = document.getElementById('moveAvailability');
-    const submitBtn = document.getElementById('moveSubmitBtn');
-    availEl.classList.remove('hidden');
-    if (remaining >= toMove) {
-        availEl.className = 'text-xs font-medium';
-        availEl.style.color = '#1f6b3a';
-        availEl.textContent = remaining + ' space' + (remaining !== 1 ? 's' : '') + ' available — ready to move.';
-        submitBtn.disabled = false;
-    } else {
-        availEl.className = 'text-xs font-medium';
-        availEl.style.color = '#9b1c24';
-        availEl.textContent = 'Insufficient capacity. Only ' + remaining + ' space' + (remaining !== 1 ? 's' : '') + ' available but ' + toMove + ' needed.';
-        submitBtn.disabled = true;
-    }
-}
-function openRemoveModal(henIds, count, sourceInfo, breed) {
-    document.getElementById('removeCount').textContent = count;
-    document.getElementById('removeHenIds').value = henIds;
-    document.getElementById('removeSourceInfo').classList.toggle('hidden', !sourceInfo);
-    if (sourceInfo) {
-        document.getElementById('removeSourceText').textContent = sourceInfo;
-        document.getElementById('removeSourceBreed').textContent = breed || '';
-    }
-    document.getElementById('recordMortality').checked = true;
-    document.getElementById('mortalityFields').classList.remove('hidden');
-    document.getElementById('removeReason').value = '';
-    document.getElementById('removeModal').style.display = 'flex';
-}
-function closeRemoveModal() {
-    document.getElementById('removeModal').style.display = 'none';
+        }
+    });
+})();
+
+// ── Farm Layout: Drag-and-Drop + Click Filter ────────────
+var draggedCageId = null;
+var dragMoved = false;
+var activeFilterId = null;
+
+function handleDragStart(e, cageId) {
+    draggedCageId = cageId;
+    dragMoved = false;
+    e.dataTransfer.setData('text/plain', cageId);
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(function() { e.target.style.opacity = '0.4'; }, 0);
 }
 
-// ── Keyboard: Escape closes modals ───────────────────────
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeAddModal();
-        closeEditModal();
-        closeMoveModal();
-        closeRemoveModal();
+function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    e.currentTarget.style.boxShadow = 'inset 0 0 0 2px #0075de';
+}
+
+function handleDragLeave(e) {
+    e.currentTarget.style.boxShadow = '';
+}
+
+function handleDrop(e, row, col) {
+    e.preventDefault();
+    e.stopPropagation();
+    e.currentTarget.style.boxShadow = '';
+    var cageId = parseInt(e.dataTransfer.getData('text/plain'));
+    if (!cageId) return;
+
+    var tile = document.querySelector('.farm-tile[data-cage-id="' + cageId + '"]');
+    if (tile) tile.style.opacity = '1';
+
+    fetch('/cages/' + cageId + '/position', {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        },
+        body: JSON.stringify({ location_row: row, location_column: col }),
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            location.reload();
+        } else {
+            showDragError(data.message || 'Cell occupied');
+        }
+    })
+    .catch(function() {
+        showDragError('Failed to update position');
+    });
+}
+
+function handleStagingDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    var cageId = parseInt(e.dataTransfer.getData('text/plain'));
+    if (!cageId) return;
+
+    var tile = document.querySelector('.farm-tile[data-cage-id="' + cageId + '"]');
+    if (tile) tile.style.opacity = '1';
+
+    fetch('/cages/' + cageId + '/position', {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        },
+        body: JSON.stringify({ location_row: null, location_column: null }),
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            location.reload();
+        }
+    });
+}
+
+function handleTileClick(e, cageId, cageCode) {
+    if (dragMoved) { dragMoved = false; return; }
+    e.stopPropagation();
+
+    if (activeFilterId === cageId) {
+        clearCanvasFilter();
+        return;
     }
-});
+
+    activeFilterId = cageId;
+    document.querySelectorAll('.cage-card').forEach(function(card) {
+        card.style.display = card.dataset.cageCode === cageCode ? '' : 'none';
+    });
+    document.getElementById('clearFilterBtn').classList.remove('hidden');
+
+    document.querySelectorAll('.cage-tab').forEach(function(tab) {
+        if (tab.dataset.tab === cageCode) {
+            tab.style.borderBottomColor = '#0075de';
+            tab.style.color = '#1f1f1f';
+        } else {
+            tab.style.borderBottomColor = 'transparent';
+            tab.style.color = '#615d59';
+        }
+    });
+}
+
+function clearCanvasFilter() {
+    activeFilterId = null;
+    document.querySelectorAll('.cage-card').forEach(function(card) {
+        card.style.display = '';
+    });
+    document.getElementById('clearFilterBtn').classList.add('hidden');
+    filterCage('all');
+}
+
+function showDragError(msg) {
+    var toast = document.getElementById('dragErrorToast');
+    toast.textContent = msg;
+    toast.classList.remove('hidden');
+    setTimeout(function() { toast.classList.add('hidden'); }, 3000);
+}
+
+(function() {
+    var bound = false;
+    document.addEventListener('turbo:load', function() {
+        if (!bound) {
+            bound = true;
+            document.addEventListener('dragend', function(e) {
+                if (e.target.classList.contains('farm-tile')) {
+                    e.target.style.opacity = '1';
+                }
+                dragMoved = true;
+            });
+        }
+    });
+})();
 
 // ── Auto-open edit modal on resize error ─────────────────
 @if(session('edit_cage_id') && isset($editCage))
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('turbo:load', function() {
     openEditModal(
         {{ $editCage->id }},
         '{{ $editCage->cage_code }}',
-        '{{ addslashes($editCage->location) }}',
+        {{ is_null($editCage->location_row) ? 'null' : $editCage->location_row }},
+        {{ is_null($editCage->location_column) ? 'null' : $editCage->location_column }},
         {{ $editCage->rows }},
         {{ $editCage->slots_per_row }},
         {{ $editCage->max_chickens_per_slot }},
@@ -615,14 +751,13 @@ document.addEventListener('DOMContentLoaded', function() {
     @if(session('errors') && session('errors')->has('resize'))
     const errEl = document.getElementById('editResizeError');
     const errText = document.getElementById('editResizeErrorText');
-    errEl.classList.remove('hidden');
-    errText.textContent = '{{ addslashes(session('errors')->first('resize')) }}';
+    if (errEl) errEl.classList.remove('hidden');
+    if (errText) errText.textContent = '{{ addslashes(session('errors')->first('resize')) }}';
     lucide.createIcons();
     @endif
 });
 @endif
 
-lucide.createIcons();
 </script>
 @endpush
 
