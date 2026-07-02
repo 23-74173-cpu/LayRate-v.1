@@ -46,12 +46,20 @@ Route::middleware('auth')->group(function () {
     Route::get('/cages/slots/{slot}/hens-json', [CageController::class, 'hensJson'])->name('cages.slots.hens-json');
     Route::get('/cages/bulk-add',  [CageController::class, 'bulkAdd'])->name('cages.bulk-add');
     Route::post('/cages/bulk-add', [CageController::class, 'storeBulkAdd'])->name('cages.bulk-add.store');
+    Route::get('/cages/{cage}/print-label', [CageController::class, 'printLabel'])->name('cages.print-label');
     Route::get('/cages/{cage}/confirm-delete', [CageController::class, 'deleteConfirm'])->name('cages.confirm-delete');
     Route::delete('/cages/{cage}/force', [CageController::class, 'forceDestroy'])->name('cages.force-destroy')->middleware('admin');
 
     Route::get('/chickens',              [ChickensController::class, 'index'])->name('chickens.index');
     Route::get('/chickens/inventory-list', [ChickensController::class, 'inventoryList'])->name('chickens.inventory-list');
     Route::get('/chickens/mortality-records', [ChickensController::class, 'mortalityRecords'])->name('chickens.mortality-records');
+    Route::post('/chickens',               [ChickensController::class, 'store'])->name('chickens.store');
+    Route::post('/chickens/health-event',  [ChickensController::class, 'storeHealthEvent'])->name('chickens.health-event');
+    Route::post('/chickens/weight-check',  [ChickensController::class, 'storeWeightCheck'])->name('chickens.weight-check');
+    Route::post('/chickens/cull',          [ChickensController::class, 'storeCulling'])->name('chickens.cull');
+    Route::post('/chickens/removal',        [ChickensController::class, 'storeRemoval'])->name('chickens.removal');
+    Route::get('/chickens/culling-records', [ChickensController::class, 'cullingRecords'])->name('chickens.culling-records');
+    Route::get('/chickens/removal-records', [ChickensController::class, 'removalRecords'])->name('chickens.removal-records');
     Route::post('/chickens/move',          [ChickensController::class, 'move'])->name('chickens.move');
     Route::post('/chickens/remove',        [ChickensController::class, 'remove'])->name('chickens.remove');
 

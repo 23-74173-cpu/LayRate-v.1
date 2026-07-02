@@ -85,6 +85,20 @@
                 {{-- Availability indicator --}}
                 <div id="moveAvailability" class="hidden text-xs font-medium"></div>
 
+                {{-- Transfer details --}}
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-[#6B7280] mb-1">Transfer Date</label>
+                        <input type="date" name="transfer_date" id="moveTransferDate" value="{{ today()->toDateString() }}"
+                               class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-[#6B7280] mb-1">Reason</label>
+                        <input type="text" name="transfer_reason" placeholder="e.g. Rebalancing"
+                               class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
+                    </div>
+                </div>
+
                 {{-- Error --}}
                 <div id="moveError" class="hidden text-xs text-red-500"></div>
             </div>

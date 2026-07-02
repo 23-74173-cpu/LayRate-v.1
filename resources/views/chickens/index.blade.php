@@ -11,6 +11,8 @@
         <x-underline-tabs :tabs="[
             'inventory' => ['label' => 'Inventory', 'icon' => 'list', 'onclick' => 'switchTab(\'inventory\')'],
             'mortality' => ['label' => 'Mortality', 'icon' => 'skull', 'onclick' => 'switchTab(\'mortality\')'],
+            'culling'   => ['label' => 'Culled',   'icon' => 'crosshair', 'onclick' => 'switchTab(\'culling\')'],
+            'removal'   => ['label' => 'Removed',   'icon' => 'log-out',  'onclick' => 'switchTab(\'removal\')'],
         ]" active="{{ $tab }}" />
     </div>
 
@@ -18,6 +20,15 @@
     {{-- INVENTORY TAB --}}
     {{-- ============================================ --}}
     <div id="panelInventory" class="{{ $tab !== 'inventory' ? 'hidden' : '' }}">
+
+        {{-- Actions --}}
+        <div class="flex items-center justify-between mb-5">
+            <div></div>
+            <button type="button" onclick="openRegisterModal()"
+                    class="px-3 py-1.5 text-xs bg-[#002D5E] text-white rounded hover:bg-[#001F42] transition-colors">
+                <i data-lucide="plus" class="w-3 h-3 inline"></i> Register New Chickens
+            </button>
+        </div>
 
         {{-- Filter Bar --}}
         <div id="inventoryFilters" class="mb-5">
@@ -176,11 +187,34 @@
         </div>
     </div>
 
+    {{-- ============================================ --}}
+    {{-- CULLING TAB --}}
+    {{-- ============================================ --}}
+    <div id="panelCulling" class="{{ $tab !== 'culling' ? 'hidden' : '' }}">
+        <turbo-frame id="chickens-culling-records" src="{{ route('chickens.culling-records') }}" loading="lazy" target="_top">
+            @include('chickens._culling-records-skeleton')
+        </turbo-frame>
+    </div>
+
+    {{-- ============================================ --}}
+    {{-- REMOVAL TAB --}}
+    {{-- ============================================ --}}
+    <div id="panelRemoval" class="{{ $tab !== 'removal' ? 'hidden' : '' }}">
+        <turbo-frame id="chickens-removal-records" src="{{ route('chickens.removal-records') }}" loading="lazy" target="_top">
+            @include('chickens._removal-records-skeleton')
+        </turbo-frame>
+    </div>
+
 </div>
 
 {{-- Modals --}}
+@include('chickens.partials.register-modal')
 @include('chickens.partials.move-modal')
 @include('chickens.partials.remove-modal')
+@include('chickens.partials.health-event-modal')
+@include('chickens.partials.weight-check-modal')
+@include('chickens.partials.cull-modal')
+@include('chickens.partials.removal-modal')
 @endsection
 
 @push('scripts')
@@ -221,6 +255,8 @@ function clearFilters() {
 function switchTab(tab) {
     document.getElementById('panelInventory').classList.toggle('hidden', tab !== 'inventory');
     document.getElementById('panelMortality').classList.toggle('hidden', tab !== 'mortality');
+    document.getElementById('panelCulling').classList.toggle('hidden', tab !== 'culling');
+    document.getElementById('panelRemoval').classList.toggle('hidden', tab !== 'removal');
 
     const nav = document.getElementById('chickens-tabs-nav');
     if (nav) {

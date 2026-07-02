@@ -152,6 +152,10 @@
                        class="p-1.5 rounded hover:bg-black/5 transition-colors" style="color: #615d59;" aria-label="Bulk add hens">
                         <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
                     </a>
+                    <button onclick="window.open('{{ route('cages.print-label', $cage) }}', 'print-{{ $cage->id }}', 'width=900,height=700')"
+                            class="p-1.5 rounded hover:bg-black/5 transition-colors" style="color: #615d59;" aria-label="Print cage label">
+                        <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                    </button>
                     <a href="{{ route('cages.confirm-delete', $cage) }}"
                        class="p-1.5 rounded hover:bg-red-50 transition-colors" style="color: #a39e98;" aria-label="Delete cage">
                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>

@@ -1,6 +1,11 @@
 <turbo-frame id="chickens-inventory-list">
     {{-- Hen List --}}
     <div class="space-y-3">
+        {{-- Unplaced Hens --}}
+        @if($unplacedHens->isNotEmpty())
+            @include('chickens._unplaced-list')
+        @endif
+
         @forelse($hensByCage as $cageId => $hensGroup)
             @php
                 $cage = $hensGroup->first()->cage;
@@ -92,8 +97,30 @@
                                     </span>
                                     <div class="flex items-center gap-1">
                                         <button type="button"
-                                                onclick="openMoveModal('{{ $hen->id }}', 1, '{{ $cage->cage_code }} slot {{ $slot->slot_number }}', '{{ $hen->breed }}')"
-                                                class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Move hen">
+                                                onclick="openWeightCheckModal('{{ $hen->id }}', '{{ $hen->tag_code ?? $hen->chicken_id }} ({{ $cage->cage_code }} slot {{ $slot->slot_number }})')"
+                                                class="p-1.5 rounded-full hover:bg-blue-50 transition-colors" style="color: #a39e98;" aria-label="Record weight">
+                                            <i data-lucide="scale" class="w-3.5 h-3.5"></i>
+                                        </button>
+                                        <button type="button"
+                                                onclick="openHealthEventModal('{{ $hen->id }}', '{{ $hen->tag_code ?? $hen->chicken_id }} ({{ $cage->cage_code }} slot {{ $slot->slot_number }})')"
+                                                class="p-1.5 rounded-full hover:bg-green-50 transition-colors" style="color: #a39e98;" aria-label="Log health event">
+                                            <i data-lucide="heart" class="w-3.5 h-3.5"></i>
+                                        </button>
+                                        @if($hen->is_active)
+                                        <button type="button"
+                                                 onclick="openCullModal('{{ $hen->id }}', '{{ $hen->tag_code ?? $hen->chicken_id }} ({{ $cage->cage_code }} slot {{ $slot->slot_number }})')"
+                                                 class="p-1.5 rounded-full hover:bg-orange-50 transition-colors" style="color: #a39e98;" aria-label="Cull hen">
+                                            <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
+                                        </button>
+                                        <button type="button"
+                                                 onclick="openRemovalModal('{{ $hen->id }}', '{{ $hen->tag_code ?? $hen->chicken_id }} ({{ $cage->cage_code }} slot {{ $slot->slot_number }})')"
+                                                 class="p-1.5 rounded-full hover:bg-purple-50 transition-colors" style="color: #a39e98;" aria-label="Remove/sell hen">
+                                            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                                        </button>
+                                        @endif
+                                        <button type="button"
+                                                 onclick="openMoveModal('{{ $hen->id }}', 1, '{{ $cage->cage_code }} slot {{ $slot->slot_number }}', '{{ $hen->breed }}')"
+                                                 class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Move hen">
                                             <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
                                         </button>
                                         <button type="button"
@@ -110,16 +137,25 @@
                 </div>
             </div>
         @empty
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-10 text-center text-sm text-[#9CA3AF]">
-            No hens found matching your filters.
-        </div>
+            @if($unplacedHens->isEmpty())
+            <div class="bg-white rounded-lg border border-[#D9D9D9] p-10 text-center text-sm text-[#9CA3AF]">
+                No hens found matching your filters.
+            </div>
+            @endif
         @endforelse
     </div>
 
     {{-- Total count --}}
-    @if($hensByCage->isNotEmpty())
+    @php
+        $placedCount = $hensByCage->flatten()->count();
+        $totalVisible = $placedCount + $unplacedCount;
+    @endphp
+    @if($totalVisible > 0)
     <p class="text-xs text-[#9CA3AF] text-right mt-3">
-        Showing {{ $hensByCage->flatten()->count() }} hen(s)
+        Showing {{ $totalVisible }} hen(s)
+        @if($unplacedCount > 0)
+        ({{ $unplacedCount }} unplaced)
+        @endif
     </p>
     @endif
 </turbo-frame>
