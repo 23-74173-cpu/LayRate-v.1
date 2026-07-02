@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="turbo-cache-control" content="no-preview">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
@@ -346,6 +347,14 @@
 */
 
 (function() {
+    // Turbo re-parses this inline <script> on every visit (it isn't inside a
+    // data-turbo-permanent element), so without this guard every navigation would
+    // attach another 'turbo:load'/'contextmenu' listener on top of the previous ones —
+    // causing page-load setup (icons, page-transition animation, etc.) to re-run once
+    // per accumulated listener on every subsequent visit.
+    if (window.__layoutScriptInitialized) return;
+    window.__layoutScriptInitialized = true;
+
     var SIDEBAR_INITIALIZED = false;
 
     document.addEventListener('turbo:load', function() {

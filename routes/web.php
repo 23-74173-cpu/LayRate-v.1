@@ -37,6 +37,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/cages',              [CageController::class, 'store'])->name('cages.store');
     Route::put('/cages/{cage}',        [CageController::class, 'update'])->name('cages.update');
     Route::patch('/cages/{cage}/position', [CageController::class, 'updatePosition'])->name('cages.position');
+    Route::post('/cages/batch-position', [CageController::class, 'batchUpdatePosition'])->name('cages.batch-position');
     Route::delete('/cages/{cage}',     [CageController::class, 'destroy'])->name('cages.destroy')->middleware('admin');
     Route::get('/cages/{cage}/slots-json', [CageController::class, 'slotsJson'])->name('cages.slots-json');
     Route::get('/cages/slots/{slot}/hens-json', [CageController::class, 'hensJson'])->name('cages.slots.hens-json');

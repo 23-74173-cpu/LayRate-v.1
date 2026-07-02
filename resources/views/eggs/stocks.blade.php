@@ -326,7 +326,7 @@
                     if (data.success) {
                         closeAddStockModal();
                         form.reset();
-                        location.reload();
+                        Turbo.visit(window.location.href, { action: 'replace' });
                         return;
                     }
                     btn.disabled = false;

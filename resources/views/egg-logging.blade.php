@@ -558,16 +558,12 @@ function toggleEggCage(header) {
 
 // Keyboard support for slot cards (bind once)
 (function() {
-    var bound = false;
-    document.addEventListener('turbo:load', function() {
-        if (!bound) {
-            bound = true;
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    closeOverrideModal();
-                    closeEditLogModal();
-                }
-            });
+    if (window.__eggLoggingEscapeBound) return;
+    window.__eggLoggingEscapeBound = true;
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeOverrideModal();
+            closeEditLogModal();
         }
     });
 })();

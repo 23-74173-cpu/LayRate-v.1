@@ -383,16 +383,12 @@ function closeEditModal() {
 }
 
 (function() {
-    var bound = false;
-    document.addEventListener('turbo:load', function() {
-        if (!bound) {
-            bound = true;
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    closeAddModal();
-                    closeEditModal();
-                }
-            });
+    if (window.__hardwareEscapeBound) return;
+    window.__hardwareEscapeBound = true;
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeAddModal();
+            closeEditModal();
         }
     });
 })();

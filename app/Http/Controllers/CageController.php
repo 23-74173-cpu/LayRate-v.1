@@ -12,6 +12,7 @@ use App\Models\MortalityLog;
 use App\Models\ProductionLog;
 use App\Models\Setting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CageController extends Controller
 {
@@ -159,6 +160,63 @@ class CageController extends Controller
         ]);
 
         return response()->json(['success' => true])->header('Content-Type', 'application/json');
+    }
+
+    public function batchUpdatePosition(Request $request)
+    {
+        $data = $request->validate([
+            'positions'                   => 'required|array|min:1',
+            'positions.*.id'              => 'required|integer|distinct|exists:cages,id',
+            'positions.*.location_row'    => 'nullable|integer|min:0',
+            'positions.*.location_column' => 'nullable|integer|min:0',
+        ]);
+
+        $gridRows = (int) Setting::get('farm_grid_rows', 4);
+        $gridCols = (int) Setting::get('farm_grid_cols', 4);
+
+        // Compute the final layout (current positions + requested changes) so
+        // occupancy is checked against the whole batch, not one cage at a time.
+        $final = Cage::query()->get(['id', 'location_row', 'location_column'])
+            ->keyBy('id')
+            ->map(fn ($c) => ['row' => $c->location_row, 'col' => $c->location_column]);
+
+        foreach ($data['positions'] as $entry) {
+            $row = $entry['location_row'] ?? null;
+            $col = $entry['location_column'] ?? null;
+
+            if (($row === null) !== ($col === null)) {
+                return response()->json(['success' => false, 'message' => 'Row and column must both be set or both be empty'], 422);
+            }
+
+            if ($row !== null && ($row >= $gridRows || $col >= $gridCols)) {
+                return response()->json(['success' => false, 'message' => 'Position out of bounds'], 422);
+            }
+
+            $final[$entry['id']] = ['row' => $row, 'col' => $col];
+        }
+
+        $seen = [];
+        foreach ($final as $pos) {
+            if ($pos['row'] === null) {
+                continue;
+            }
+            $key = $pos['row'].'-'.$pos['col'];
+            if (isset($seen[$key])) {
+                return response()->json(['success' => false, 'message' => 'Two cages assigned to the same cell'], 422);
+            }
+            $seen[$key] = true;
+        }
+
+        DB::transaction(function () use ($data) {
+            foreach ($data['positions'] as $entry) {
+                Cage::whereKey($entry['id'])->update([
+                    'location_row'    => $entry['location_row'] ?? null,
+                    'location_column' => $entry['location_column'] ?? null,
+                ]);
+            }
+        });
+
+        return response()->json(['success' => true]);
     }
 
     public function slotsJson(Cage $cage)

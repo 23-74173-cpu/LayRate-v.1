@@ -18,9 +18,30 @@
 
     {{-- ── Farm Layout Canvas (drag-and-drop) ── --}}
     <div class="rounded-xl border p-6" style="background-color: #ffffff; border-color: #e6e6e6;">
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
             <h3 class="text-xs font-semibold tracking-[0.05em] uppercase" style="color: #615d59;">Farm Layout</h3>
-            <button id="clearFilterBtn" class="hidden text-xs font-medium px-3 py-1 rounded-lg transition-colors" style="color: #0075de; border: 1px solid #0075de;" onclick="clearCanvasFilter()">Show all</button>
+            <div class="flex items-center gap-2">
+                <button id="clearFilterBtn" class="hidden text-xs font-medium px-3 py-1 rounded-lg transition-colors" style="color: #0075de; border: 1px solid #0075de;" onclick="clearCanvasFilter()">Show all</button>
+                <button id="clearAllBtn" onclick="clearAllCages()"
+                        class="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+                        style="color: #9b1c24; border: 1px solid #f0c8cb;"
+                        onmouseover="if(!this.disabled)this.style.backgroundColor='#fbe4e6'"
+                        onmouseout="this.style.backgroundColor='transparent'">
+                    Clear All Cages
+                </button>
+                <button id="saveLayoutBtn" onclick="saveLayout()" disabled
+                        class="text-xs font-medium px-4 py-1.5 rounded-lg text-white transition-opacity disabled:opacity-45 disabled:cursor-not-allowed"
+                        style="background-color: #0075de;">
+                    Save Layout
+                </button>
+            </div>
+        </div>
+        <div id="farmCanvas" class="relative">
+        <div id="farmSaveOverlay" class="hidden absolute inset-0 z-10 items-center justify-center rounded-lg" style="background-color: rgba(255,255,255,0.7);">
+            <svg class="animate-spin w-8 h-8" style="color: #0075de;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" role="status" aria-label="Saving layout">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+            </svg>
         </div>
         <div id="farmGrid" class="grid gap-2" style="grid-template-columns: repeat({{ $gridCols }}, minmax(0, 1fr));">
             @for($r = 0; $r < $gridRows; $r++)
@@ -57,13 +78,12 @@
             @endfor
         </div>
 
-        {{-- Staging Area (unplaced cages) --}}
+        {{-- Staging Area (unplaced cages) — always rendered so tiles can be moved here client-side --}}
         @php $unplaced = $cages->filter(fn($cg) => is_null($cg->location_row)); @endphp
-        @if($unplaced->count() > 0)
-        <div class="mt-4 pt-4 border-t" style="border-color: #e6e6e6;">
+        <div id="stagingSection" class="mt-4 pt-4 border-t {{ $unplaced->count() > 0 ? '' : 'hidden' }}" style="border-color: #e6e6e6;">
             <h4 class="text-xs font-semibold tracking-[0.05em] uppercase mb-3" style="color: #615d59;">Unplaced Cages — drag to grid</h4>
-            <div id="stagingArea" class="flex flex-wrap gap-3"
-                 ondragover="handleDragOver(event)" ondrop="handleStagingDrop(event)">
+            <div id="stagingArea" class="flex flex-wrap gap-3 min-h-[3.5rem]"
+                 ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleStagingDrop(event)">
                 @foreach($unplaced as $uc)
                 <div class="farm-tile min-h-[3.5rem] rounded-lg border-2 px-4 py-2 flex flex-col justify-center cursor-grab active:cursor-grabbing"
                      style="border-color: {{ $uc->color }}; background-color: {{ $uc->colorSoft }};"
@@ -77,7 +97,7 @@
                 @endforeach
             </div>
         </div>
-        @endif
+        </div>{{-- /#farmCanvas --}}
 
         {{-- Error Toast --}}
         <div id="dragErrorToast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-lg px-4 py-2 text-sm font-medium text-white" style="background-color: #9b1c24;">
@@ -524,10 +544,16 @@ function openEditModal(id, cageCode, locationRow, locationCol, rows, slotsPerRow
     document.getElementById('editActive').checked = isActive === 1;
     document.getElementById('editResizeError').classList.add('hidden');
 
-    // Canvas position display
+    // Canvas position display — positions saved this session (without a page
+    // refresh) override the values baked into the server-rendered edit button.
+    if (Object.prototype.hasOwnProperty.call(savedPositions, id)) {
+        locationRow = savedPositions[id].location_row;
+        locationCol = savedPositions[id].location_column;
+    }
     var posEl = document.getElementById('editCanvasPosition');
     if (locationRow !== null && locationCol !== null) {
         posEl.textContent = 'Row ' + (parseInt(locationRow) + 1) + ', Column ' + (parseInt(locationCol) + 1);
+        posEl.style.color = '';
     } else {
         posEl.textContent = 'Unplaced — drag to grid';
         posEl.style.color = '#a39e98';
@@ -579,19 +605,18 @@ function closeEditModal() {
 }
 
 // ── Keyboard: Escape closes modals (bind once) ───────────
+// Guarded on window, not a local var, because Turbo re-parses this inline
+// script on every visit to this page — a local flag would reset each time
+// and a new listener would stack on top of the previous ones.
 (function() {
-    var bound = false;
-    document.addEventListener('turbo:load', function() {
-        if (!bound) {
-            bound = true;
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    closeAddModal();
-                    closeEditModal();
-                    closeMoveModal();
-                    closeRemoveModal();
-                }
-            });
+    if (window.__cagesEscapeBound) return;
+    window.__cagesEscapeBound = true;
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeAddModal();
+            closeEditModal();
+            closeMoveModal();
+            closeRemoveModal();
         }
     });
 })();
@@ -600,6 +625,93 @@ function closeEditModal() {
 var draggedCageId = null;
 var dragMoved = false;
 var activeFilterId = null;
+
+// cageId -> { location_row, location_column } (nulls = staging). Applied on Save Layout.
+var pendingMoves = {};
+// Positions persisted this session without a page refresh; overrides the
+// server-rendered values baked into each cage card's edit button.
+var savedPositions = {};
+var cageMeta = {!! $cages->mapWithKeys(fn($c) => [$c->id => [
+    'code' => $c->cage_code,
+    'color' => $c->color,
+    'colorSoft' => $c->colorSoft,
+    'breed' => \Illuminate\Support\Str::limit($c->hens->first()?->breed ?? '—', 16),
+]])->toJson(JSON_UNESCAPED_UNICODE) !!};
+
+function hasPendingChanges() {
+    return Object.keys(pendingMoves).length > 0;
+}
+
+function updateSaveButton() {
+    var btn = document.getElementById('saveLayoutBtn');
+    if (btn) btn.disabled = !hasPendingChanges();
+}
+
+function updateStagingVisibility() {
+    var section = document.getElementById('stagingSection');
+    var area = document.getElementById('stagingArea');
+    if (section && area) section.classList.toggle('hidden', area.children.length === 0);
+}
+
+function bindTileEvents(tile, cageId, cageCode) {
+    tile.addEventListener('dragstart', function(e) { handleDragStart(e, cageId); });
+    tile.addEventListener('click', function(e) { handleTileClick(e, cageId, cageCode); });
+}
+
+function makeGridTile(cageId) {
+    var meta = cageMeta[cageId];
+    var tile = document.createElement('div');
+    tile.className = 'farm-tile cursor-grab active:cursor-grabbing';
+    tile.draggable = true;
+    tile.dataset.cageId = cageId;
+    tile.dataset.cageCode = meta.code;
+    tile.innerHTML =
+        '<div class="flex items-center justify-between">' +
+            '<span class="text-sm font-semibold"></span>' +
+        '</div>' +
+        '<div class="text-xs truncate" style="color: #615d59;"></div>';
+    var code = tile.querySelector('span');
+    code.style.color = meta.color;
+    code.textContent = meta.code;
+    tile.querySelector('.truncate').textContent = meta.breed;
+    bindTileEvents(tile, cageId, meta.code);
+    return tile;
+}
+
+function addTileToStaging(cageId) {
+    var meta = cageMeta[cageId];
+    var tile = document.createElement('div');
+    tile.className = 'farm-tile min-h-[3.5rem] rounded-lg border-2 px-4 py-2 flex flex-col justify-center cursor-grab active:cursor-grabbing';
+    tile.draggable = true;
+    tile.dataset.cageId = cageId;
+    tile.dataset.cageCode = meta.code;
+    tile.style.borderColor = meta.color;
+    tile.style.backgroundColor = meta.colorSoft;
+    tile.innerHTML = '<span class="text-sm font-semibold"></span>';
+    var code = tile.querySelector('span');
+    code.style.color = meta.color;
+    code.textContent = meta.code;
+    bindTileEvents(tile, cageId, meta.code);
+    document.getElementById('stagingArea').appendChild(tile);
+    updateStagingVisibility();
+}
+
+function setCellOccupied(cell, cageId) {
+    var meta = cageMeta[cageId];
+    cell.className = 'farm-cell min-h-[5rem] rounded-lg border-2 p-3 flex flex-col justify-between transition-all';
+    cell.style.borderColor = meta.color;
+    cell.style.backgroundColor = meta.colorSoft;
+    cell.innerHTML = '';
+    cell.appendChild(makeGridTile(cageId));
+}
+
+function setCellEmpty(cell) {
+    cell.className = 'farm-cell min-h-[5rem] rounded-lg border p-3 flex items-center justify-center transition-all';
+    cell.style.borderColor = '#e6e6e6';
+    cell.style.backgroundColor = '#f9fafb';
+    var r = parseInt(cell.dataset.row), c = parseInt(cell.dataset.col);
+    cell.innerHTML = '<span class="text-xs" style="color: #d1d5db;">' + (r + 1) + '-' + (c + 1) + '</span>';
+}
 
 function handleDragStart(e, cageId) {
     draggedCageId = cageId;
@@ -626,52 +738,123 @@ function handleDrop(e, row, col) {
     var cageId = parseInt(e.dataTransfer.getData('text/plain'));
     if (!cageId) return;
 
+    var cell = e.currentTarget;
     var tile = document.querySelector('.farm-tile[data-cage-id="' + cageId + '"]');
     if (tile) tile.style.opacity = '1';
 
-    fetch('/cages/' + cageId + '/position', {
-        method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-        },
-        body: JSON.stringify({ location_row: row, location_column: col }),
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-        if (data.success) {
-            location.reload();
-        } else {
-            showDragError(data.message || 'Cell occupied');
-        }
-    })
-    .catch(function() {
-        showDragError('Failed to update position');
-    });
+    var existing = cell.querySelector('.farm-tile');
+    if (existing) {
+        if (parseInt(existing.dataset.cageId) === cageId) return; // dropped on its own cell
+        showDragError('Cell occupied');
+        return;
+    }
+
+    var sourceCell = tile ? tile.closest('.farm-cell') : null;
+    if (tile) tile.remove();
+    if (sourceCell) setCellEmpty(sourceCell);
+    setCellOccupied(cell, cageId);
+    updateStagingVisibility();
+
+    pendingMoves[cageId] = { location_row: row, location_column: col };
+    updateSaveButton();
 }
 
 function handleStagingDrop(e) {
     e.preventDefault();
     e.stopPropagation();
+    e.currentTarget.style.boxShadow = '';
     var cageId = parseInt(e.dataTransfer.getData('text/plain'));
     if (!cageId) return;
 
     var tile = document.querySelector('.farm-tile[data-cage-id="' + cageId + '"]');
-    if (tile) tile.style.opacity = '1';
+    if (!tile) return;
+    tile.style.opacity = '1';
 
-    fetch('/cages/' + cageId + '/position', {
-        method: 'PATCH',
+    var sourceCell = tile.closest('.farm-cell');
+    if (!sourceCell) return; // already in staging
+
+    tile.remove();
+    setCellEmpty(sourceCell);
+    addTileToStaging(cageId);
+
+    pendingMoves[cageId] = { location_row: null, location_column: null };
+    updateSaveButton();
+}
+
+function clearAllCages() {
+    if (document.querySelectorAll('#farmGrid .farm-tile').length === 0) return;
+    confirmModal(
+        'Move all cages back to the staging area? This is not applied until you click Save Layout.',
+        { submit: doClearAll },
+        'Clear All'
+    );
+}
+
+function doClearAll() {
+    document.querySelectorAll('#farmGrid .farm-tile').forEach(function(tile) {
+        var cageId = parseInt(tile.dataset.cageId);
+        var cell = tile.closest('.farm-cell');
+        tile.remove();
+        if (cell) setCellEmpty(cell);
+        addTileToStaging(cageId);
+        pendingMoves[cageId] = { location_row: null, location_column: null };
+    });
+    updateSaveButton();
+}
+
+function setSavingState(saving) {
+    var overlay = document.getElementById('farmSaveOverlay');
+    var saveBtn = document.getElementById('saveLayoutBtn');
+    var clearBtn = document.getElementById('clearAllBtn');
+    if (overlay) {
+        overlay.classList.toggle('hidden', !saving);
+        overlay.classList.toggle('flex', saving);
+    }
+    if (clearBtn) clearBtn.disabled = saving;
+    if (saveBtn) saveBtn.disabled = saving || !hasPendingChanges();
+}
+
+function saveLayout() {
+    var ids = Object.keys(pendingMoves);
+    if (ids.length === 0) return;
+
+    var positions = ids.map(function(id) {
+        return {
+            id: parseInt(id),
+            location_row: pendingMoves[id].location_row,
+            location_column: pendingMoves[id].location_column,
+        };
+    });
+
+    setSavingState(true);
+
+    fetch('/cages/batch-position', {
+        method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
         },
-        body: JSON.stringify({ location_row: null, location_column: null }),
+        body: JSON.stringify({ positions: positions }),
     })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-        if (data.success) {
-            location.reload();
+    .then(function(r) {
+        return r.json().then(function(data) { return { ok: r.ok, data: data }; });
+    })
+    .then(function(res) {
+        if (res.ok && res.data.success) {
+            // The grid DOM already matches what was saved, so no page refresh
+            // is needed — just remember the persisted positions for the edit modal.
+            Object.assign(savedPositions, pendingMoves);
+            pendingMoves = {};
+            setSavingState(false);
+            showToast('Layout saved', true);
+        } else {
+            setSavingState(false);
+            showDragError(res.data.message || 'Failed to save layout');
         }
+    })
+    .catch(function() {
+        setSavingState(false);
+        showDragError('Failed to save layout');
     });
 }
 
@@ -710,25 +893,26 @@ function clearCanvasFilter() {
     filterCage('all');
 }
 
-function showDragError(msg) {
+function showToast(msg, isSuccess) {
     var toast = document.getElementById('dragErrorToast');
     toast.textContent = msg;
+    toast.style.backgroundColor = isSuccess ? '#1f6b3a' : '#9b1c24';
     toast.classList.remove('hidden');
     setTimeout(function() { toast.classList.add('hidden'); }, 3000);
 }
 
+function showDragError(msg) {
+    showToast(msg, false);
+}
+
 (function() {
-    var bound = false;
-    document.addEventListener('turbo:load', function() {
-        if (!bound) {
-            bound = true;
-            document.addEventListener('dragend', function(e) {
-                if (e.target.classList.contains('farm-tile')) {
-                    e.target.style.opacity = '1';
-                }
-                dragMoved = true;
-            });
+    if (window.__cagesDragendBound) return;
+    window.__cagesDragendBound = true;
+    document.addEventListener('dragend', function(e) {
+        if (e.target.classList.contains('farm-tile')) {
+            e.target.style.opacity = '1';
         }
+        dragMoved = true;
     });
 })();
 

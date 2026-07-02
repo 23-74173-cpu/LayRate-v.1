@@ -287,15 +287,11 @@ function closeEditMortalityModal() {
 }
 
 (function() {
-    var bound = false;
-    document.addEventListener('turbo:load', function() {
-        if (!bound) {
-            bound = true;
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    closeEditMortalityModal();
-                }
-            });
+    if (window.__mortalityEscapeBound) return;
+    window.__mortalityEscapeBound = true;
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeEditMortalityModal();
         }
     });
 })();
