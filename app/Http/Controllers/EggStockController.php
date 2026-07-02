@@ -9,6 +9,30 @@ use Illuminate\Http\Request;
 
 class EggStockController extends Controller
 {
+    public function liveData()
+    {
+        $batches = EggStockBatch::with(['cage', 'cageSlot', 'sourceProductionLog.cageSlot.cage'])
+            ->orderByDesc('harvested_date')
+            ->orderByDesc('created_at')
+            ->get();
+
+        $sizes = ['small', 'medium', 'large', 'jumbo'];
+
+        $totals = [];
+        $trayTotals = [];
+        foreach ($sizes as $size) {
+            $totals[$size] = $batches->where('egg_size', $size)->sum('count');
+            $trayTotals[$size] = (int) ceil($totals[$size] / 30);
+        }
+
+        return view('eggs.stocks._live-data', [
+            'batches' => $batches,
+            'totals' => $totals,
+            'trayTotals' => $trayTotals,
+            'sizes' => $sizes,
+        ]);
+    }
+
     public function index()
     {
         $batches = EggStockBatch::with(['cage', 'cageSlot', 'sourceProductionLog.cageSlot.cage'])

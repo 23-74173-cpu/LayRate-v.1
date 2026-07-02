@@ -159,4 +159,13 @@ class Cage extends Model
     {
         return $this->hens()->where('is_active', 1)->first();
     }
+
+    public function getFormattedLocationAttribute(): string
+    {
+        if (is_null($this->location_row) || is_null($this->location_column)) {
+            return 'Unplaced';
+        }
+
+        return 'Row '.($this->location_row + 1).', Col '.($this->location_column + 1);
+    }
 }

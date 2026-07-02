@@ -38,10 +38,7 @@
         </div>
         <div id="farmCanvas" class="relative">
         <div id="farmSaveOverlay" class="hidden absolute inset-0 z-10 items-center justify-center rounded-lg" style="background-color: rgba(255,255,255,0.7);">
-            <svg class="animate-spin w-8 h-8" style="color: #0075de;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" role="status" aria-label="Saving layout">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-            </svg>
+            <i data-lucide="loader" class="animate-spin w-8 h-8" style="color: #0075de;"></i>
         </div>
         <div id="farmGrid" class="grid gap-2" style="grid-template-columns: repeat({{ $gridCols }}, minmax(0, 1fr));">
             @for($r = 0; $r < $gridRows; $r++)
@@ -229,8 +226,8 @@
     </div>
 
     {{-- ── Add Cage Modal (full complexity with live preview) ── --}}
-    <div id="addCageModal" class="hidden fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
-        <div class="absolute inset-0" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeAddModal()"></div>
+    <div id="addCageModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+        <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeAddModal()"></div>
         <div class="relative w-full max-w-lg rounded-2xl p-6 max-h-[90vh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
             <div class="flex items-center justify-between mb-5">
                 <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Battery Cage Configuration</h2>
@@ -338,8 +335,8 @@
     </div>
 
     {{-- ── Edit Cage Modal — with per-slot sensor config ── --}}
-    <div id="editCageModal" class="hidden fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
-        <div class="absolute inset-0" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEditModal()"></div>
+    <div id="editCageModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+        <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEditModal()"></div>
         <div class="relative w-full max-w-lg rounded-2xl p-6 max-h-[90vh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
             <div class="flex items-center justify-between mb-5">
                 <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Edit Cage — <span id="editCageCode"></span></h2>
@@ -469,15 +466,15 @@ function expandSlot(slotId, cageId, cageCode) {
                 html += '<span class="text-xs px-1.5 py-0.5 rounded-full" style="background-color: ' + (hen.is_active ? '#e8f5ec' : '#f0f0f0') + '; color: ' + (hen.is_active ? '#1f6b3a' : '#615d59') + ';">';
                 html += (hen.is_active ? 'Active' : 'Inactive') + '</span></span>';
                 html += '<div class="flex items-center gap-1">';
-                html += '<button type="button" onclick="openMoveModal(\'' + hen.id + '\', 1, \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + hen.breed + '\')" class="px-1.5 py-0.5 text-xs border rounded hover:bg-black/5" style="border-color: #e6e6e6; color: #615d59;">Move</button>';
-                html += '<button type="button" onclick="openRemoveModal(\'' + hen.id + '\', 1, \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + hen.breed + '\')" class="px-1.5 py-0.5 text-xs border rounded hover:bg-red-50" style="border-color: #f3cdd0; color: #9b1c24;">Remove</button>';
+                html += '<button type="button" onclick="openMoveModal(\'' + hen.id + '\', 1, \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + hen.breed + '\')" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #615d59;" aria-label="Move hen"><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i></button>';
+                html += '<button type="button" onclick="openRemoveModal(\'' + hen.id + '\', 1, \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + hen.breed + '\')" class="p-1.5 rounded-full hover:bg-red-50 transition-colors" style="color: #9b1c24;" aria-label="Remove hen"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>';
                 html += '</div></div>';
             });
             html += '</div>';
             html += '<div class="mt-3 flex items-center gap-2">';
             const ids = data.hens.map(h => h.id).join(',');
-            html += '<button type="button" onclick="openMoveModal(\'' + ids + '\', ' + data.hens.length + ', \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + (data.hens[0]?.breed || '') + '\')" class="px-3 py-1.5 text-xs border rounded transition-colors" style="border-color: #0075de; color: #0075de;" onmouseover="this.style.backgroundColor=\'#f0f7ff\'" onmouseout="this.style.backgroundColor=\'transparent\'">Move All (' + data.hens.length + ')</button>';
-            html += '<button type="button" onclick="openRemoveModal(\'' + ids + '\', ' + data.hens.length + ', \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + (data.hens[0]?.breed || '') + '\')" class="px-3 py-1.5 text-xs border rounded hover:bg-red-50" style="border-color: #9b1c24; color: #9b1c24;">Remove All (' + data.hens.length + ')</button>';
+            html += '<button type="button" onclick="openMoveModal(\'' + ids + '\', ' + data.hens.length + ', \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + (data.hens[0]?.breed || '') + '\')" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #615d59;" aria-label="Move all (' + data.hens.length + ')"><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i></button>';
+            html += '<button type="button" onclick="openRemoveModal(\'' + ids + '\', ' + data.hens.length + ', \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + (data.hens[0]?.breed || '') + '\')" class="p-1.5 rounded-full hover:bg-red-50 transition-colors" style="color: #9b1c24;" aria-label="Remove all (' + data.hens.length + ')"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>';
             html += '</div>';
             content.innerHTML = html;
             lucide.createIcons();

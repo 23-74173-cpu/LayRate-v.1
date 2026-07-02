@@ -7,10 +7,12 @@
     <x-page-header title="Chickens" subtitle="Manage hen inventory, movements, and mortality records" />
 
     {{-- Tabs --}}
-    <x-underline-tabs :tabs="[
-        'inventory' => ['label' => 'Inventory', 'icon' => 'list', 'onclick' => 'switchTab(\'inventory\')'],
-        'mortality' => ['label' => 'Mortality', 'icon' => 'skull', 'onclick' => 'switchTab(\'mortality\')'],
-    ]" active="{{ $tab }}" />
+    <div id="chickens-tabs-nav" class="mb-5">
+        <x-underline-tabs :tabs="[
+            'inventory' => ['label' => 'Inventory', 'icon' => 'list', 'onclick' => 'switchTab(\'inventory\')'],
+            'mortality' => ['label' => 'Mortality', 'icon' => 'skull', 'onclick' => 'switchTab(\'mortality\')'],
+        ]" active="{{ $tab }}" />
+    </div>
 
     {{-- ============================================ --}}
     {{-- INVENTORY TAB --}}
@@ -18,15 +20,15 @@
     <div id="panelInventory" class="{{ $tab !== 'inventory' ? 'hidden' : '' }}">
 
         {{-- Filter Bar --}}
-        <form method="GET" action="{{ route('chickens.index') }}" id="inventoryFilterForm" class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <input type="hidden" name="tab" value="inventory" id="filterTabInput">
+        <div id="inventoryFilters" class="mb-5">
+            <x-card padding="p-4">
             <div class="flex flex-wrap items-end gap-3">
 
                 {{-- Status Toggle --}}
                 <div class="flex items-center gap-1 border border-[#D9D9D9] rounded overflow-hidden">
                     @foreach(['all' => 'All', 'active' => 'Active', 'inactive' => 'Inactive'] as $val => $label)
                     <label class="px-3 py-1.5 text-xs cursor-pointer transition-colors {{ $isActive === $val ? 'bg-[#002D5E] text-white' : 'bg-white text-[#6B7280] hover:bg-[#F5F6F8]' }}">
-                        <input type="radio" name="status" value="{{ $val }}" class="hidden" onchange="this.form.submit()" {{ $isActive === $val ? 'checked' : '' }}>
+                        <input type="radio" name="status" value="{{ $val }}" class="hidden" onchange="filterInventory()" {{ $isActive === $val ? 'checked' : '' }}>
                         {{ $label }}
                     </label>
                     @endforeach
@@ -35,7 +37,7 @@
                 {{-- Cage Filter --}}
                 <div>
                     <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Cage</label>
-                    <select name="cage_id" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="this.form.submit()">
+                    <select name="cage_id" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="filterInventory()">
                         <option value="">All Cages</option>
                         @foreach($cages as $c)
                         <option value="{{ $c->id }}" {{ $cageId == $c->id ? 'selected' : '' }}>{{ $c->cage_code }}</option>
@@ -46,7 +48,7 @@
                 {{-- Breed Filter --}}
                 <div>
                     <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Breed</label>
-                    <select name="breed" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="this.form.submit()">
+                    <select name="breed" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="filterInventory()">
                         <option value="">All Breeds</option>
                         @foreach($breeds as $b)
                         <option value="{{ $b }}" {{ $breed == $b ? 'selected' : '' }}>{{ $b }}</option>
@@ -59,19 +61,22 @@
                     <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Tag Code</label>
                     <div class="flex gap-1">
                         <input type="text" name="search" value="{{ $search }}" placeholder="Search tag..."
-                               class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-36 focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
-                        <button type="submit" class="px-2 py-1.5 bg-[#002D5E] text-white rounded text-xs hover:bg-[#001F42]">
+                               class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-36 focus:outline-none focus:ring-1 focus:ring-[#002D5E]"
+                               id="tagSearchInput"
+                               onkeydown="if(event.key==='Enter'){ event.preventDefault(); filterInventory(); }">
+                        <button type="button" onclick="filterInventory()" class="px-2 py-1.5 bg-[#002D5E] text-white rounded text-xs hover:bg-[#001F42]">
                             <i data-lucide="search" class="w-3 h-3"></i>
                         </button>
                     </div>
                 </div>
 
                 @if($cageId || $breed || $search)
-                <a href="{{ route('chickens.index', ['tab' => 'inventory']) }}"
+                <a href="#" onclick="clearFilters(); return false;"
                    class="px-2 py-1.5 text-xs text-red-500 hover:underline">Clear filters</a>
                 @endif
             </div>
-        </form>
+            </x-card>
+        </div>
 
         {{-- Bulk Action Bar --}}
         <div id="bulkActionBar" class="hidden bg-white rounded-lg border border-[#D9D9D9] px-4 py-3 flex items-center justify-between">
@@ -90,128 +95,10 @@
             </div>
         </div>
 
-        {{-- Hen List --}}
-        <div class="space-y-3">
-            @forelse($hensByCage as $cageId => $hensGroup)
-                @php
-                    $cage = $hensGroup->first()->cage;
-                    $slotsInCage = $hensGroup->groupBy(fn($h) => $h->cageSlot?->id)->filter()->sortBy(fn($g) => $g->first()->cageSlot?->slot_number);
-                @endphp
-
-                <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
-                    {{-- Cage header --}}
-                    <div class="flex items-center justify-between px-4 py-2.5" style="background: {{ $cage->color }}10; border-bottom: 1px solid {{ $cage->color }}30">
-                        <div class="flex items-center gap-3">
-                            <span class="text-sm font-semibold" style="color: {{ $cage->color }}">{{ $cage->cage_code }}</span>
-                            <span class="text-xs text-[#6B7280]">{{ $cage->location ?: 'No location' }}</span>
-                            <span class="text-xs px-1.5 py-0.5 rounded-full bg-white/80 text-[#6B7280]">
-                                {{ $hensGroup->where('is_active', 1)->count() }} active
-                                @if($hensGroup->where('is_active', 0)->count() > 0)
-                                / {{ $hensGroup->where('is_active', 0)->count() }} inactive
-                                @endif
-                            </span>
-                        </div>
-                        <button onclick="toggleCage(this)"
-                                class="text-[#6B7280] hover:text-[#333] transition-colors">
-                            <i data-lucide="chevron-down" class="w-4 h-4 cage-chevron transition-transform"></i>
-                        </button>
-                    </div>
-
-                    {{-- Slots (expandable) --}}
-                    <div class="cage-slots hidden">
-                        @foreach($slotsInCage as $slotId => $slotHens)
-                            @php
-                                $slot = $slotHens->first()->cageSlot;
-                            @endphp
-                            <div class="border-t border-[#F0F0F0]">
-                                {{-- Slot header --}}
-                                <div class="flex items-center justify-between px-4 py-2 bg-[#FAFAFA] cursor-pointer"
-                                     onclick="toggleSlot(this)">
-                                    <div class="flex items-center gap-3 text-xs">
-                                        <span class="font-medium text-[#333]">
-                                            Slot {{ $slot->row_number }}-{{ $slot->column_number }}
-                                            (#{{ $slot->slot_number }})
-                                        </span>
-                                        @if($slot->hasBreakbeam())
-                                        <span class="flex items-center gap-0.5 text-emerald-600">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> sensor
-                                        </span>
-                                        @endif
-                                        <span class="text-[#9CA3AF]">
-                                            {{ $slotHens->count() }}/{{ $cage->max_chickens_per_slot }} hens
-                                        </span>
-                                        @if($slotHens->count() > 0)
-                                        <span class="text-[#9CA3AF]">
-                                            · {{ $slotHens->first()->breed }}
-                                        </span>
-                                        @endif
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-xs text-[#9CA3AF]">slot actions:</span>
-                                        <button type="button"
-                                                onclick="event.stopPropagation(); openMoveModal('{{ $slotHens->pluck('id')->join(',') }}', {{ $slotHens->count() }}, '{{ $cage->cage_code }} slot {{ $slot->slot_number }}', '{{ $slotHens->first()->breed ?? '' }}')"
-                                                class="px-1.5 py-0.5 text-xs border border-[#D9D9D9] rounded hover:bg-[#E5E7EB]">
-                                            Move All
-                                        </button>
-                                        <button type="button"
-                                                onclick="event.stopPropagation(); openRemoveModal('{{ $slotHens->pluck('id')->join(',') }}', {{ $slotHens->count() }}, '{{ $cage->cage_code }} slot {{ $slot->slot_number }}', '{{ $slotHens->first()->breed ?? '' }}')"
-                                                class="px-1.5 py-0.5 text-xs border border-red-200 text-red-400 rounded hover:bg-red-50">
-                                            Remove All
-                                        </button>
-                                        <i data-lucide="chevron-down" class="w-3 h-3 text-[#9CA3AF] slot-chevron transition-transform"></i>
-                                    </div>
-                                </div>
-
-                                {{-- Individual Hens --}}
-                                <div class="slot-hens hidden">
-                                    @foreach($slotHens as $hen)
-                                    <div class="flex items-center gap-3 px-4 py-2 border-t border-[#F5F5F5] hover:bg-[#FAFAFA] text-xs">
-                                        <input type="checkbox" class="hen-checkbox w-3.5 h-3.5 rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]"
-                                               value="{{ $hen->id }}"
-                                               onclick="updateBulkBar()">
-                                        <span class="w-20 font-mono text-[#6B7280]">{{ $hen->tag_code ?? '—' }}</span>
-                                        <span class="w-32 text-[#333]">{{ $hen->breed }}</span>
-                                        <span class="w-12 text-[#6B7280]">{{ $hen->current_age_weeks }}w</span>
-                                        <span class="w-16 text-[#6B7280]">flock {{ $hen->flock_age_weeks }}w</span>
-                                        <span class="flex-1">
-                                            @if($hen->is_active)
-                                            <span class="text-xs px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Active</span>
-                                            @else
-                                            <span class="text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">Inactive</span>
-                                            @endif
-                                        </span>
-                                        <div class="flex items-center gap-1">
-                                            <button type="button"
-                                                    onclick="openMoveModal('{{ $hen->id }}', 1, '{{ $cage->cage_code }} slot {{ $slot->slot_number }}', '{{ $hen->breed }}')"
-                                                    class="px-1.5 py-0.5 text-xs border border-[#D9D9D9] rounded hover:bg-[#E5E7EB]">
-                                                Move
-                                            </button>
-                                            <button type="button"
-                                                    onclick="openRemoveModal('{{ $hen->id }}', 1, '{{ $cage->cage_code }} slot {{ $slot->slot_number }}', '{{ $hen->breed }}')"
-                                                    class="px-1.5 py-0.5 text-xs border border-red-200 text-red-400 rounded hover:bg-red-50">
-                                                Remove
-                                            </button>
-                                        </div>
-                                    </div>
-                                    @endforeach
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-            @empty
-            <div class="bg-white rounded-lg border border-[#D9D9D9] p-10 text-center text-sm text-[#9CA3AF]">
-                No hens found matching your filters.
-            </div>
-            @endforelse
-        </div>
-
-        {{-- Total count --}}
-        @if($hensByCage->isNotEmpty())
-        <p class="text-xs text-[#9CA3AF] text-right">
-            Showing {{ $hensByCage->flatten()->count() }} hen(s)
-        </p>
-        @endif
+        {{-- Hen List (lazy loaded) --}}
+        <turbo-frame id="chickens-inventory-list" src="{{ route('chickens.inventory-list', request()->query()) }}" loading="lazy" target="_top">
+            @include('chickens._inventory-list-skeleton')
+        </turbo-frame>
     </div>
 
     {{-- ============================================ --}}
@@ -236,7 +123,7 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
             {{-- Record Form --}}
-            <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+            <x-card>
                 <h3 class="text-sm font-semibold text-[#333] mb-4">Record Mortality</h3>
                 <form method="POST" action="{{ route('mortality.store') }}" class="space-y-3">
                     @csrf
@@ -246,7 +133,7 @@
                                 class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
                             <option value="">Select cage...</option>
                             @foreach($cages as $c)
-                            <option value="{{ $c->id }}">{{ $c->cage_code }} — {{ $c->location ?: 'No location' }}</option>
+                            <option value="{{ $c->id }}">{{ $c->cage_code }} — {{ $c->formatted_location }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -280,92 +167,12 @@
                         Save Record
                     </button>
                 </form>
-            </div>
+            </x-card>
 
-            {{-- Recent Records --}}
-            <div class="lg:col-span-2 bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
-                <div class="px-4 py-2.5 border-b border-[#D9D9D9] bg-[#F5F6F8]">
-                    <span class="text-sm font-medium text-[#333]">Recent Records</span>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-xs">
-                        <thead>
-                            <tr class="bg-[#FAFAFA] text-left">
-                                <th class="px-3 py-2 text-[#9CA3AF] font-medium">Date</th>
-                                <th class="px-3 py-2 text-[#9CA3AF] font-medium">Cage</th>
-                                <th class="px-3 py-2 text-[#9CA3AF] font-medium">Count</th>
-                                <th class="px-3 py-2 text-[#9CA3AF] font-medium">Reason</th>
-                                <th class="px-3 py-2 text-[#9CA3AF] font-medium">Notes</th>
-                                @if(auth()->user()->role === 'admin')<th class="px-3 py-2"></th>@endif
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($mortalityLogs as $log)
-                            <tr class="border-t border-[#F0F0F0] hover:bg-[#FAFAFA]">
-                                <td class="px-3 py-2 text-[#333]">{{ $log->log_date->format('M d, Y') }}</td>
-                                <td class="px-3 py-2 text-[#333]">{{ $log->cage?->cage_code ?? '—' }}</td>
-                                <td class="px-3 py-2 text-[#333] font-medium">{{ $log->count }}</td>
-                                <td class="px-3 py-2">
-                                    @php
-                                        $reasonColors = [
-                                            'Disease' => 'bg-red-100 text-red-700',
-                                            'Heat Stress' => 'bg-yellow-100 text-yellow-700',
-                                            'Injury' => 'bg-yellow-100 text-yellow-700',
-                                            'Predator' => 'bg-red-100 text-red-700',
-                                            'Unknown' => 'bg-gray-100 text-gray-600',
-                                            'Other' => 'bg-gray-100 text-gray-600',
-                                        ];
-                                    @endphp
-                                    <span class="px-1.5 py-0.5 rounded-full text-[10px] font-medium {{ $reasonColors[$log->reason] ?? '' }}">
-                                        {{ $log->reason }}
-                                    </span>
-                                </td>
-                                <td class="px-3 py-2 text-[#9CA3AF] max-w-32 truncate">{{ $log->notes ?? '—' }}</td>
-                                @can('admin')
-                                <td class="px-3 py-2">
-                                    <form method="POST" action="{{ route('mortality.destroy', $log) }}"
-                                          onsubmit="return confirm('Delete this mortality record?')">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" class="text-red-400 hover:text-red-600" aria-label="Delete record">
-                                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                                        </button>
-                                    </form>
-                                </td>
-                                @endcan
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="6" class="px-3 py-6 text-center text-[#9CA3AF] text-sm">No records yet.</td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                    @if($mortalityLogs->hasPages())
-                    <div class="px-4 py-3 border-t border-[#F0F0F0] flex items-center justify-between text-xs text-[#6B7280]">
-                        <span>Showing {{ $mortalityLogs->firstItem() }}-{{ $mortalityLogs->lastItem() }} of {{ $mortalityLogs->total() }}</span>
-                        <div class="flex items-center gap-1">
-                            @if($mortalityLogs->onFirstPage())
-                            <span class="px-2 py-1 text-[#9CA3AF]">‹ Prev</span>
-                            @else
-                            <a href="{{ $mortalityLogs->previousPageUrl() }}" class="px-2 py-1 hover:text-[#002D5E]">‹ Prev</a>
-                            @endif
-                            @foreach($mortalityLogs->getUrlRange(1, $mortalityLogs->lastPage()) as $page => $url)
-                                @if($page == $mortalityLogs->currentPage())
-                                <span class="px-2 py-1 font-medium text-[#002D5E]">{{ $page }}</span>
-                                @elseif($page >= $mortalityLogs->currentPage() - 1 && $page <= $mortalityLogs->currentPage() + 1)
-                                <a href="{{ $url }}" class="px-2 py-1 hover:text-[#002D5E]">{{ $page }}</a>
-                                @endif
-                            @endforeach
-                            @if($mortalityLogs->hasMorePages())
-                            <a href="{{ $mortalityLogs->nextPageUrl() }}" class="px-2 py-1 hover:text-[#002D5E]">Next ›</a>
-                            @else
-                            <span class="px-2 py-1 text-[#9CA3Af]">Next ›</span>
-                            @endif
-                        </div>
-                    </div>
-                    @endif
-                </div>
-            </div>
+            {{-- Recent Records (lazy loaded) --}}
+            <turbo-frame id="chickens-mortality-records" src="{{ route('chickens.mortality-records') }}" loading="lazy" target="_top" class="lg:col-span-2">
+                @include('chickens._mortality-records-skeleton')
+            </turbo-frame>
         </div>
     </div>
 
@@ -378,17 +185,55 @@
 
 @push('scripts')
 <script>
+function filterInventory() {
+    const status = document.querySelector('input[name="status"]:checked')?.value || 'all';
+    const cageId = document.querySelector('select[name="cage_id"]')?.value || '';
+    const breed = document.querySelector('select[name="breed"]')?.value || '';
+    const search = document.getElementById('tagSearchInput')?.value || '';
+
+    const params = new URLSearchParams();
+    if (status !== 'all') params.set('status', status);
+    if (cageId) params.set('cage_id', cageId);
+    if (breed) params.set('breed', breed);
+    if (search) params.set('search', search);
+
+    const frame = document.getElementById('chickens-inventory-list');
+    frame.src = '{{ route("chickens.inventory-list") }}?' + params.toString();
+
+    const url = new URL(window.location);
+    url.search = params.toString();
+    url.searchParams.set('tab', 'inventory');
+    window.history.replaceState({}, '', url);
+}
+
+function clearFilters() {
+    document.querySelectorAll('input[name="status"]').forEach(r => r.checked = r.value === 'all');
+    document.querySelector('select[name="cage_id"]').value = '';
+    document.querySelector('select[name="breed"]').value = '';
+    document.getElementById('tagSearchInput').value = '';
+
+    const frame = document.getElementById('chickens-inventory-list');
+    frame.src = '{{ route("chickens.inventory-list") }}';
+
+    window.history.replaceState({}, '', '{{ route("chickens.index") }}');
+}
+
 function switchTab(tab) {
     document.getElementById('panelInventory').classList.toggle('hidden', tab !== 'inventory');
     document.getElementById('panelMortality').classList.toggle('hidden', tab !== 'mortality');
-    document.getElementById('tabInventory').classList.toggle('border-[#002D5E]', tab === 'inventory');
-    document.getElementById('tabInventory').classList.toggle('text-[#002D5E]', tab === 'inventory');
-    document.getElementById('tabInventory').classList.toggle('border-transparent', tab !== 'inventory');
-    document.getElementById('tabInventory').classList.toggle('text-[#6B7280]', tab !== 'inventory');
-    document.getElementById('tabMortality').classList.toggle('border-[#002D5E]', tab === 'mortality');
-    document.getElementById('tabMortality').classList.toggle('text-[#002D5E]', tab === 'mortality');
-    document.getElementById('tabMortality').classList.toggle('border-transparent', tab !== 'mortality');
-    document.getElementById('tabMortality').classList.toggle('text-[#6B7280]', tab !== 'mortality');
+
+    const nav = document.getElementById('chickens-tabs-nav');
+    if (nav) {
+        nav.querySelectorAll('button').forEach(btn => {
+            btn.classList.remove('border-[#002D5E]', 'text-[#002D5E]');
+            btn.classList.add('border-transparent', 'text-[#6B7280]');
+        });
+        const active = nav.querySelector('button[onclick*="'+tab+'"]');
+        if (active) {
+            active.classList.remove('border-transparent', 'text-[#6B7280]');
+            active.classList.add('border-[#002D5E]', 'text-[#002D5E]');
+        }
+    }
 }
 
 function toggleCage(btn) {

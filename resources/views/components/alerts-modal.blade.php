@@ -7,12 +7,17 @@
 @props(['alerts'])
 
 @if($alerts->isNotEmpty())
-<div id="alerts-modal" class="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="alerts-modal-title">
+<div id="alerts-modal" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="alerts-modal-title">
     {{-- Backdrop --}}
-    <div class="absolute inset-0" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="acknowledgeAlertsModal()"></div>
+    <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="acknowledgeAlertsModal()"></div>
 
     {{-- Card --}}
     <div class="relative w-full max-w-md rounded-2xl p-6 mx-4" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+        {{-- Close X --}}
+        <button type="button" onclick="acknowledgeAlertsModal()" class="absolute top-4 right-4 p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+            <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+        </button>
+
         {{-- Icon --}}
         <div class="mb-4 flex items-center justify-center w-10 h-10 rounded-full" style="background-color: #e0f2fe;">
             <i data-lucide="bell" class="w-5 h-5" style="color: #0075de;"></i>

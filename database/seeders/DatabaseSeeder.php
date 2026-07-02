@@ -32,10 +32,10 @@ class DatabaseSeeder extends Seeder
         );
 
         $cagesData = [
-            ['cage_code' => 'CAGE-A', 'location' => 'North Wing', 'rows' => 3, 'slots_per_row' => 5, 'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 1],
-            ['cage_code' => 'CAGE-B', 'location' => 'East Wing',  'rows' => 3, 'slots_per_row' => 5, 'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 1],
-            ['cage_code' => 'CAGE-C', 'location' => 'South Wing', 'rows' => 3, 'slots_per_row' => 5, 'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 1],
-            ['cage_code' => 'CAGE-D', 'location' => 'West Wing',  'rows' => 3, 'slots_per_row' => 5, 'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 0],
+            ['cage_code' => 'CAGE-A', 'location' => '', 'rows' => 3, 'slots_per_row' => 5, 'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 1],
+            ['cage_code' => 'CAGE-B', 'location' => '', 'rows' => 3, 'slots_per_row' => 5, 'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 1],
+            ['cage_code' => 'CAGE-C', 'location' => '', 'rows' => 3, 'slots_per_row' => 5, 'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 1],
+            ['cage_code' => 'CAGE-D', 'location' => '', 'rows' => 3, 'slots_per_row' => 5, 'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 0],
         ];
         foreach ($cagesData as $cd) {
             Cage::firstOrCreate(['cage_code' => $cd['cage_code']], $cd);

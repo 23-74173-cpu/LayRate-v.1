@@ -20,6 +20,16 @@ class ForecastController extends Controller
         $allCages  = Cage::orderBy('cage_code')->get();
         $allBreeds = Hen::distinct()->pluck('breed')->filter()->sort()->values();
 
+        return view('forecast', compact('scope', 'cageCode', 'breed', 'horizon', 'allCages', 'allBreeds'));
+    }
+
+    public function results(Request $request)
+    {
+        $scope     = $request->get('scope', 'cage');
+        $cageCode  = $request->get('cage', 'CAGE-A');
+        $breed     = $request->get('breed');
+        $horizon   = (int) $request->get('horizon', 7);
+
         if ($scope === 'farm') {
             $historical = $this->farmHistorical();
             $forecasts  = Forecast::where('forecast_date', now()->toDateString())
@@ -30,8 +40,7 @@ class ForecastController extends Controller
                 $forecasts = $this->generateForecast(null, null, $historical, $horizon);
             }
 
-            return view('forecast', compact('scope', 'cageCode', 'horizon', 'historical', 'forecasts', 'allCages', 'allBreeds'))
-                ->with('label', 'Whole Farm');
+            return view('forecast._results', compact('scope', 'horizon', 'historical', 'forecasts'))->with('label', 'Whole Farm');
         }
 
         if ($scope === 'breed' && $breed) {
@@ -44,8 +53,7 @@ class ForecastController extends Controller
                 $forecasts = $this->generateForecast(null, $breed, $historical, $horizon);
             }
 
-            return view('forecast', compact('scope', 'cageCode', 'breed', 'horizon', 'historical', 'forecasts', 'allCages', 'allBreeds'))
-                ->with('label', $breed);
+            return view('forecast._results', compact('scope', 'breed', 'horizon', 'historical', 'forecasts'))->with('label', $breed);
         }
 
         $cage = Cage::where('cage_code', $cageCode)->firstOrFail();
@@ -65,7 +73,7 @@ class ForecastController extends Controller
             $forecasts = $this->generateForecast($cage, null, $historical, $horizon);
         }
 
-        return view('forecast', compact('scope', 'cage', 'cageCode', 'horizon', 'historical', 'forecasts', 'allCages', 'allBreeds'));
+        return view('forecast._results', compact('scope', 'cage', 'cageCode', 'horizon', 'historical', 'forecasts'));
     }
 
     public function generate(Request $request)

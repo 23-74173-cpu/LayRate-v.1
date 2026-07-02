@@ -31,7 +31,7 @@
                         <option value="">Select cage…</option>
                         @foreach($cages as $cage)
                         <option value="{{ $cage->id }}" {{ (old('cage_id') ?: ($preselectedCageId ?? 0)) == $cage->id ? 'selected' : '' }}>
-                            {{ $cage->cage_code }} — {{ $cage->location }}
+                            {{ $cage->cage_code }} — {{ $cage->formatted_location }}
                         </option>
                         @endforeach
                     </select>
@@ -110,96 +110,12 @@
                 </div>
             </div>
 
-            {{-- Recent log table --}}
+            {{-- Recent log table (lazy) --}}
             <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
                 <h2 class="text-sm font-medium text-[#333333] mb-3">Recent Records</h2>
-                @if($logs->isEmpty())
-                <div class="py-8 text-center text-sm text-[#6B7280]">No mortality records yet.</div>
-                @else
-                <div class="overflow-x-auto">
-                    <table class="w-full text-xs">
-                        <thead>
-                            <tr class="border-b border-[#D9D9D9]">
-                                <th class="text-left py-2 pr-3 text-[10px] tracking-wider text-[#6B7280] font-medium">DATE</th>
-                                <th class="text-left py-2 pr-3 text-[10px] tracking-wider text-[#6B7280] font-medium">CAGE</th>
-                                <th class="text-left py-2 pr-3 text-[10px] tracking-wider text-[#6B7280] font-medium">COUNT</th>
-                                <th class="text-left py-2 pr-3 text-[10px] tracking-wider text-[#6B7280] font-medium">REASON</th>
-                                <th class="text-left py-2 pr-3 text-[10px] tracking-wider text-[#6B7280] font-medium">NOTES</th>
-                                <th class="py-2 text-[10px] tracking-wider text-[#6B7280] font-medium"></th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-[#F5F6F8]">
-                            @foreach($logs as $log)
-                            @php
-                                $reasonColors = [
-                                    'Disease'    => ['#F8D7DA','#721C24'],
-                                    'Heat Stress'=> ['#FFF3CD','#856404'],
-                                    'Injury'     => ['#FFF3CD','#856404'],
-                                    'Predator'   => ['#F8D7DA','#721C24'],
-                                    'Unknown'    => ['#F5F6F8','#6B7280'],
-                                    'Other'      => ['#F5F6F8','#6B7280'],
-                                ];
-                                [$rBg,$rTxt] = $reasonColors[$log->reason] ?? ['#F5F6F8','#6B7280'];
-                            @endphp
-                            <tr class="hover:bg-[#F5F6F8]/50">
-                                <td class="py-2.5 pr-3 text-[#6B7280]">{{ $log->log_date->format('M d, Y') }}</td>
-                                <td class="py-2.5 pr-3">
-                                    <span class="font-medium" style="color:{{ $log->cage->color }}">{{ $log->cage->cage_code }}</span>
-                                </td>
-                                <td class="py-2.5 pr-3 font-semibold text-[#333333]">{{ $log->count }}</td>
-                                <td class="py-2.5 pr-3">
-                                    <span class="px-2 py-0.5 rounded text-[10px]" style="background:{{ $rBg }};color:{{ $rTxt }}">
-                                        {{ $log->reason }}
-                                    </span>
-                                </td>
-                                <td class="py-2.5 pr-3 text-[#6B7280] max-w-[200px] truncate">
-                                    {{ $log->notes ?: '—' }}
-                                </td>
-                                <td class="py-2.5 text-right">
-                                    <div class="flex items-center justify-end gap-1">
-                                        <button onclick="openEditMortality({{ $log->id }}, '{{ $log->log_date->format('Y-m-d') }}', {{ $log->count }}, '{{ addslashes($log->reason) }}', '{{ addslashes($log->notes ?? '') }}')"
-                                                class="p-1.5 hover:bg-black/5 rounded-full transition-colors" style="color: #a39e98;" aria-label="Edit record">
-                                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                                        </button>
-                                        <form action="{{ route('mortality.destroy', $log) }}" method="POST"
-                                              onsubmit="return confirm('Delete this record?')">
-                                            @csrf @method('DELETE')
-                                            <button class="p-1.5 hover:bg-red-50 rounded-full transition-colors" style="color: #a39e98;" aria-label="Delete record">
-                                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                    @if($logs->hasPages())
-                    <div class="px-4 py-3 border-t border-[#F0F0F0] flex items-center justify-between text-xs text-[#6B7280]">
-                        <span>Showing {{ $logs->firstItem() }}-{{ $logs->lastItem() }} of {{ $logs->total() }}</span>
-                        <div class="flex items-center gap-1">
-                            @if($logs->onFirstPage())
-                            <span class="px-2 py-1 text-[#9CA3AF]">‹ Prev</span>
-                            @else
-                            <a href="{{ $logs->previousPageUrl() }}" class="px-2 py-1 hover:text-[#002D5E]">‹ Prev</a>
-                            @endif
-                            @foreach($logs->getUrlRange(1, $logs->lastPage()) as $page => $url)
-                                @if($page == $logs->currentPage())
-                                <span class="px-2 py-1 font-medium text-[#002D5E]">{{ $page }}</span>
-                                @elseif($page >= $logs->currentPage() - 1 && $page <= $logs->currentPage() + 1)
-                                <a href="{{ $url }}" class="px-2 py-1 hover:text-[#002D5E]">{{ $page }}</a>
-                                @endif
-                            @endforeach
-                            @if($logs->hasMorePages())
-                            <a href="{{ $logs->nextPageUrl() }}" class="px-2 py-1 hover:text-[#002D5E]">Next ›</a>
-                            @else
-                            <span class="px-2 py-1 text-[#9CA3AF]">Next ›</span>
-                            @endif
-                        </div>
-                    </div>
-                    @endif
-                </div>
-                @endif
+                <turbo-frame id="mortality-logs-list" src="{{ route('mortality.logs') }}" loading="lazy">
+                    @include('mortality._logs-skeleton')
+                </turbo-frame>
             </div>
         </div>
     </div>
@@ -207,8 +123,8 @@
 </div>
 
 {{-- ── Edit Mortality Modal ── --}}
-<div id="editMortalityModal" class="hidden fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
-    <div class="absolute inset-0" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEditMortalityModal()"></div>
+<div id="editMortalityModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEditMortalityModal()"></div>
     <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
             <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Edit Mortality Record</h2>
@@ -278,12 +194,14 @@ function openEditMortality(id, date, count, reason, notes) {
     document.getElementById('editMortCount').value = count;
     document.getElementById('editMortReason').value = reason;
     document.getElementById('editMortNotes').value = notes || '';
-    document.getElementById('editMortalityModal').style.display = 'flex';
+    document.getElementById('editMortalityModal').classList.remove('hidden');
+    document.getElementById('editMortalityModal').classList.add('flex');
     lucide.createIcons();
 }
 
 function closeEditMortalityModal() {
-    document.getElementById('editMortalityModal').style.display = 'none';
+    document.getElementById('editMortalityModal').classList.add('hidden');
+    document.getElementById('editMortalityModal').classList.remove('flex');
 }
 
 (function() {

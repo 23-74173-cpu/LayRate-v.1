@@ -14,6 +14,34 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        $data = $this->buildDashboardData();
+
+        return view('dashboard', $data);
+    }
+
+    public function stats()
+    {
+        $data = $this->buildDashboardData();
+
+        return view('dashboard._metric-cards', $data);
+    }
+
+    public function cageOverview()
+    {
+        $data = $this->buildDashboardData();
+
+        return view('dashboard._cage-overview', $data);
+    }
+
+    public function feedMortality()
+    {
+        $data = $this->buildDashboardData();
+
+        return view('dashboard._feed-mortality', $data);
+    }
+
+    private function buildDashboardData(): array
+    {
         $today = now()->toDateString();
 
         $gridRows = (int) Setting::get('farm_grid_rows', 4);
@@ -105,12 +133,12 @@ class DashboardController extends Controller
             ];
         })->filter();
 
-        return view('dashboard', compact(
+        return compact(
             'cages', 'totalHens', 'todayHdep', 'hdepDelta',
             'eggsToday', 'avgTemp', 'avgHum', 'feedToday',
             'mortalityToday', 'mortalityTodayTotal',
             'liveReadings', 'today',
             'gridRows', 'gridCols', 'needsOnboarding'
-        ));
+        );
     }
 }

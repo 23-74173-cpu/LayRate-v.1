@@ -1,18 +1,22 @@
-<div id="removeModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40" hidden>
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 overflow-hidden">
+<div id="removeModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] items-center justify-center p-4" role="dialog" aria-modal="true">
+    {{-- Backdrop --}}
+    <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeRemoveModal()"></div>
+
+    {{-- Card --}}
+    <div class="relative w-full max-w-md rounded-2xl p-6 overflow-hidden" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <form id="removeForm" method="POST" action="{{ route('chickens.remove') }}">
             @csrf
 
             {{-- Header --}}
-            <div class="flex items-center justify-between px-5 py-3 border-b border-[#D9D9D9] bg-[#F5F6F8]">
-                <h3 class="text-sm font-semibold text-[#333]">Remove Chickens</h3>
-                <button type="button" onclick="closeRemoveModal()" class="text-[#9CA3AF] hover:text-[#333]" aria-label="Close">
-                    <i data-lucide="x" class="w-4 h-4"></i>
+            <div class="flex items-center justify-between mb-5">
+                <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Remove Chickens</h2>
+                <button type="button" onclick="closeRemoveModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                    <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
                 </button>
             </div>
 
             {{-- Body --}}
-            <div class="p-5 space-y-4">
+            <div class="space-y-4">
                 <p class="text-sm text-[#6B7280]">
                     Removing <strong id="removeCount" class="text-red-600">0</strong> hen(s)
                 </p>
@@ -60,13 +64,19 @@
             </div>
 
             {{-- Footer --}}
-            <div class="px-5 py-3 border-t border-[#D9D9D9] flex items-center justify-end gap-3 bg-[#F5F6F8]">
+            <div class="flex gap-3 mt-5">
                 <button type="button" onclick="closeRemoveModal()"
-                        class="px-4 py-2 text-sm border border-[#D9D9D9] rounded hover:bg-[#E5E7EB]">
+                        class="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors"
+                        style="color: #1f1f1f; border: 1px solid #e6e6e6;"
+                        onmouseover="this.style.backgroundColor='#f6f5f4'"
+                        onmouseout="this.style.backgroundColor='transparent'">
                     Cancel
                 </button>
                 <button type="submit" id="removeSubmitBtn"
-                        class="px-5 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700">
+                        class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity"
+                        style="background-color: #9b1c24;"
+                        onmouseover="this.style.backgroundColor='#7a161d'"
+                        onmouseout="this.style.backgroundColor='#9b1c24'">
                     Remove Chickens
                 </button>
             </div>
@@ -97,14 +107,23 @@ function openRemoveModal(henIds, count, sourceInfo, breed) {
     document.getElementById('removeError').classList.add('hidden');
 
     document.getElementById('removeModal').classList.remove('hidden');
-    document.getElementById('removeModal').removeAttribute('hidden');
+    document.getElementById('removeModal').classList.add('flex');
 }
 function closeRemoveModal() {
     document.getElementById('removeModal').classList.add('hidden');
-    document.getElementById('removeModal').setAttribute('hidden', '');
+    document.getElementById('removeModal').classList.remove('flex');
 }
 
 window.openRemoveModal = openRemoveModal;
 window.closeRemoveModal = closeRemoveModal;
+
+// Escape key closes modal
+(function() {
+    if (window.__removeModalEscapeBound) return;
+    window.__removeModalEscapeBound = true;
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeRemoveModal();
+    });
+})();
 </script>
 @endpush

@@ -31,6 +31,9 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middl
 Route::middleware('auth')->group(function () {
 
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/stats', [DashboardController::class, 'stats'])->name('dashboard.stats');
+    Route::get('/dashboard/cage-overview', [DashboardController::class, 'cageOverview'])->name('dashboard.cage-overview');
+    Route::get('/dashboard/feed-mortality', [DashboardController::class, 'feedMortality'])->name('dashboard.feed-mortality');
     Route::post('/settings/farm-layout', [SettingsController::class, 'storeFarmLayout'])->name('settings.farm-layout');
 
     Route::get('/cages',               [CageController::class, 'index'])->name('cages.index');
@@ -46,38 +49,48 @@ Route::middleware('auth')->group(function () {
     Route::get('/cages/{cage}/confirm-delete', [CageController::class, 'deleteConfirm'])->name('cages.confirm-delete');
     Route::delete('/cages/{cage}/force', [CageController::class, 'forceDestroy'])->name('cages.force-destroy')->middleware('admin');
 
-    Route::get('/chickens',        [ChickensController::class, 'index'])->name('chickens.index');
-    Route::post('/chickens/move',  [ChickensController::class, 'move'])->name('chickens.move');
-    Route::post('/chickens/remove', [ChickensController::class, 'remove'])->name('chickens.remove');
+    Route::get('/chickens',              [ChickensController::class, 'index'])->name('chickens.index');
+    Route::get('/chickens/inventory-list', [ChickensController::class, 'inventoryList'])->name('chickens.inventory-list');
+    Route::get('/chickens/mortality-records', [ChickensController::class, 'mortalityRecords'])->name('chickens.mortality-records');
+    Route::post('/chickens/move',          [ChickensController::class, 'move'])->name('chickens.move');
+    Route::post('/chickens/remove',        [ChickensController::class, 'remove'])->name('chickens.remove');
 
     Route::redirect('/egg-logging', '/eggs/logging', 301);
 
     Route::get('/eggs/logging',                        [EggLoggingController::class, 'index'])->name('eggs.logging');
+    Route::get('/eggs/logging/logs',                   [EggLoggingController::class, 'logs'])->name('eggs.logging.logs');
+    Route::get('/eggs/recent-logs',                    [EggLoggingController::class, 'recentLogs'])->name('eggs.recent-logs');
     Route::post('/eggs/logging',                       [EggLoggingController::class, 'store'])->name('eggs.logging.store');
     Route::post('/eggs/logging/verify-override',       [EggLoggingController::class, 'verifyOverride'])->name('eggs.logging.verify-override')->middleware('throttle:6,1');
     Route::put('/eggs/logging/{productionLog}',        [EggLoggingController::class, 'update'])->name('eggs.logging.update');
     Route::delete('/eggs/logging/{productionLog}',     [EggLoggingController::class, 'destroy'])->name('eggs.logging.destroy')->middleware('admin');
 
     Route::get('/eggs/stocks',                         [EggStockController::class, 'index'])->name('eggs.stocks');
+    Route::get('/eggs/stocks/live-data',                [EggStockController::class, 'liveData'])->name('eggs.stocks.live-data');
     Route::post('/eggs/stocks',                        [EggStockController::class, 'store'])->name('eggs.stocks.store');
     Route::put('/eggs/stocks/{batch}',                 [EggStockController::class, 'update'])->name('eggs.stocks.update');
     Route::delete('/eggs/stocks/{batch}',              [EggStockController::class, 'destroy'])->name('eggs.stocks.destroy');
     Route::get('/eggs/stocks/{batch}/qr',              [EggStockController::class, 'qr'])->name('eggs.stocks.qr');
 
     Route::get('/eggs/pre-orders',                     [PreOrderController::class, 'index'])->name('eggs.preorders');
+    Route::get('/eggs/pre-orders/table',                [PreOrderController::class, 'table'])->name('eggs.preorders.table');
     Route::post('/eggs/pre-orders',                    [PreOrderController::class, 'store'])->name('eggs.preorders.store');
     Route::patch('/eggs/pre-orders/{order}',           [PreOrderController::class, 'update'])->name('eggs.preorders.update');
     Route::delete('/eggs/pre-orders/{order}',          [PreOrderController::class, 'destroy'])->name('eggs.preorders.destroy');
 
-    Route::get('/environment',  [EnvironmentController::class, 'index'])->name('environment');
+    Route::get('/environment',        [EnvironmentController::class, 'index'])->name('environment');
+    Route::get('/environment/live-data', [EnvironmentController::class, 'liveData'])->name('environment.live-data');
+    Route::get('/environment/logs',      [EnvironmentController::class, 'logs'])->name('environment.logs');
     Route::post('/environment/thresholds', [EnvironmentController::class, 'saveThresholds'])->name('environment.thresholds');
 
     Route::get('/hardware',                    [HardwareItemController::class, 'index'])->name('hardware.index');
+    Route::get('/hardware/live-data',          [HardwareItemController::class, 'liveData'])->name('hardware.live-data');
     Route::post('/hardware',                   [HardwareItemController::class, 'store'])->name('hardware.store');
     Route::put('/hardware/{hardwareItem}',     [HardwareItemController::class, 'update'])->name('hardware.update');
     Route::delete('/hardware/{hardwareItem}',  [HardwareItemController::class, 'destroy'])->name('hardware.destroy');
 
     Route::get('/feed',                          [FeedController::class, 'index'])->name('feed');
+    Route::get('/feed/live-data',                [FeedController::class, 'liveData'])->name('feed.live-data');
     Route::post('/feed/batch',                   [FeedController::class, 'storeBatch'])->name('feed.batch.store');
     Route::put('/feed/batch/{feedBatch}',        [FeedController::class, 'updateBatch'])->name('feed.batch.update');
     Route::delete('/feed/batch/{feedBatch}',     [FeedController::class, 'destroyBatch'])->name('feed.batch.destroy');
@@ -86,8 +99,10 @@ Route::middleware('auth')->group(function () {
     Route::delete('/feed/consumption/{feedConsumptionLog}', [FeedController::class, 'destroyConsumption'])->name('feed.consumption.destroy');
 
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics');
+    Route::get('/analytics/charts', [AnalyticsController::class, 'charts'])->name('analytics.charts');
 
     Route::get('/forecast',           [ForecastController::class, 'index'])->name('forecast');
+    Route::get('/forecast/results',   [ForecastController::class, 'results'])->name('forecast.results');
     Route::post('/forecast/generate', [ForecastController::class, 'generate'])->name('forecast.generate');
 
     Route::get('/account',           [AccountController::class, 'show'])->name('account');
@@ -98,11 +113,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/reports/csv', [ReportController::class, 'exportCsv'])->name('reports.csv');
 
     Route::get('/notifications',                    [AlertController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/table',              [AlertController::class, 'table'])->name('notifications.table');
     Route::post('/alerts/acknowledge-modal',         [AlertController::class, 'acknowledgeModal'])->name('alerts.acknowledge-modal');
     Route::post('/alerts/{alert}/read',              [AlertController::class, 'markRead'])->name('alerts.read');
     Route::post('/alerts/read-all',                  [AlertController::class, 'markAllRead'])->name('alerts.read-all');
 
     Route::get('/mortality',                    [MortalityController::class, 'index'])->name('mortality.index');
+    Route::get('/mortality/logs',               [MortalityController::class, 'logs'])->name('mortality.logs');
     Route::post('/mortality',                   [MortalityController::class, 'store'])->name('mortality.store');
     Route::put('/mortality/{mortalityLog}',     [MortalityController::class, 'update'])->name('mortality.update');
     Route::delete('/mortality/{mortalityLog}',  [MortalityController::class, 'destroy'])->name('mortality.destroy')->middleware('admin');

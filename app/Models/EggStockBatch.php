@@ -38,7 +38,7 @@ class EggStockBatch extends Model
 
     public function getFreshnessStatusAttribute(): string
     {
-        $days = (int) now()->diffInDays($this->harvested_date, false);
+        $days = (int) $this->harvested_date->diffInDays(now());
 
         if ($days < 0) {
             return 'fresh';

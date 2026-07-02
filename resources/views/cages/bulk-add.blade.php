@@ -33,7 +33,7 @@
                             data-slots="{{ $c->slots_per_row }}"
                             data-max="{{ $c->max_chickens_per_slot }}"
                             {{ ($selectedCage && $selectedCage->id === $c->id) ? 'selected' : '' }}>
-                        {{ $c->cage_code }} — {{ $c->location ?: 'No location' }} ({{ $c->rows }}×{{ $c->slots_per_row }})
+                        {{ $c->cage_code }} — {{ $c->formatted_location }} ({{ $c->rows }}×{{ $c->slots_per_row }})
                     </option>
                     @endforeach
                 </select>

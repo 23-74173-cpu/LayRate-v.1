@@ -6,11 +6,38 @@ use App\Models\Cage;
 use App\Models\CageSlot;
 use App\Models\Hen;
 use App\Models\MortalityLog;
+use App\Models\MortalityLogHen;
 use Illuminate\Http\Request;
 
 class ChickensController extends Controller
 {
     public function index(Request $request)
+    {
+        $cageId = $request->query('cage_id');
+        $breed = $request->query('breed');
+        $isActive = $request->query('status', 'all');
+        $search = $request->query('search');
+
+        $cages = Cage::with('cageSlots')->orderBy('cage_code')->get();
+        $breeds = Hen::distinct()->pluck('breed')->filter()->sort()->values();
+
+        $todayTotal = MortalityLog::whereDate('log_date', today())->sum('count');
+
+        $todayByCage = MortalityLog::with('cage')
+            ->whereDate('log_date', today())
+            ->get()
+            ->groupBy(fn($l) => $l->cage->cage_code)
+            ->map(fn($g) => $g->sum('count'));
+
+        $tab = $request->query('tab', 'inventory');
+
+        return view('chickens.index', compact(
+            'cages', 'breeds', 'todayTotal', 'todayByCage', 'tab',
+            'cageId', 'breed', 'isActive', 'search'
+        ));
+    }
+
+    public function inventoryList(Request $request)
     {
         $cageId = $request->query('cage_id');
         $breed = $request->query('breed');
@@ -30,40 +57,34 @@ class ChickensController extends Controller
             ->filter()
             ->sortBy(fn($group) => $group->first()->cage?->cage_code);
 
-        $cages = Cage::with('cageSlots')->orderBy('cage_code')->get();
-        $breeds = Hen::distinct()->pluck('breed')->filter()->sort()->values();
+        return view('chickens._inventory-list', compact('hensByCage'));
+    }
 
+    public function mortalityRecords(Request $request)
+    {
         $mortalityLogs = MortalityLog::with(['cage', 'recorder'])
             ->orderByDesc('log_date')
             ->orderByDesc('created_at')
             ->paginate(20)
             ->withQueryString();
 
-        $todayTotal = MortalityLog::whereDate('log_date', today())->sum('count');
-
-        $todayByCage = MortalityLog::with('cage')
-            ->whereDate('log_date', today())
-            ->get()
-            ->groupBy(fn($l) => $l->cage->cage_code)
-            ->map(fn($g) => $g->sum('count'));
-
-        $tab = $request->query('tab', 'inventory');
-
-        return view('chickens.index', compact(
-            'hensByCage', 'cages', 'breeds', 'mortalityLogs', 'todayTotal', 'todayByCage', 'tab',
-            'cageId', 'breed', 'isActive', 'search'
-        ));
+        return view('chickens._mortality-records', compact('mortalityLogs'));
     }
 
     public function move(Request $request)
     {
         $data = $request->validate([
-            'hen_ids'            => 'required|string',
+            'hen_ids'             => 'required|string',
             'destination_slot_id' => 'required|integer|exists:cage_slots,id',
+            'move_count'          => 'nullable|integer|min:1',
         ]);
 
         $henIds = array_filter(array_map('intval', explode(',', $data['hen_ids'])));
         $henIds = array_unique($henIds);
+
+        if (isset($data['move_count'])) {
+            $henIds = array_slice($henIds, 0, (int) $data['move_count']);
+        }
 
         if (empty($henIds)) {
             return back()->withErrors(['hen_ids' => 'No hens selected.']);
@@ -132,7 +153,7 @@ class ChickensController extends Controller
         }
 
         if ($recordMortality && !empty($data['reason'])) {
-            MortalityLog::create([
+            $log = MortalityLog::create([
                 'cage_id'      => $cageId,
                 'log_date'     => now()->toDateString(),
                 'count'        => $toRemove,
@@ -140,6 +161,14 @@ class ChickensController extends Controller
                 'notes'        => $data['notes'] ?? null,
                 'recorded_by'  => auth()->id(),
             ]);
+
+            foreach ($hens as $hen) {
+                MortalityLogHen::create([
+                    'mortality_log_id' => $log->id,
+                    'hen_id'           => $hen->id,
+                    'cage_slot_id'     => $hen->cage_slot_id,
+                ]);
+            }
         }
 
         $mortalityNote = $recordMortality ? ' and recorded as mortality.' : '.';
