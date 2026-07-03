@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'forecast' => [
+        'python_binary' => env('FORECAST_PYTHON_BINARY', 'python'),
+    ],
+
 ];

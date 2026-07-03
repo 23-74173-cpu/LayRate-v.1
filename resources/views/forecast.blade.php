@@ -14,7 +14,7 @@
         };
     @endphp
 
-    <x-page-header title="Forecast" subtitle="Project egg production based on historical HDEP trends" />
+    <x-page-header title="Forecast" subtitle="Project egg production based on historical egg count trends" />
 
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
 
@@ -80,15 +80,70 @@
                 <button type="submit" class="w-full bg-[#002D5E] text-white py-2.5 rounded-lg text-sm hover:bg-[#001F42] transition-colors">
                     Generate Forecast
                 </button>
+
+                <a href="{{ route('forecast.template') }}" class="mt-3 w-full flex items-center justify-center gap-2 border border-[#D9D9D9] text-[#333333] py-2.5 rounded-lg text-sm hover:bg-[#F5F6F8] transition-colors">
+                    <i data-lucide="download" class="w-4 h-4 shrink-0"></i> Download Empty Template
+                </a>
             </form>
         </div>
 
         {{-- ── Chart Panel ── --}}
         <div class="xl:col-span-2 bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <div class="text-xs tracking-wider text-[#6B7280] mb-4">HISTORICAL VS FORECAST HDEP — {{ $scopeLabel }}</div>
+            <div class="text-xs tracking-wider text-[#6B7280] mb-4">HISTORICAL VS FORECAST EGG COUNT — {{ $scopeLabel }}</div>
             <canvas id="forecastChart" height="160"></canvas>
         </div>
     </div>
+
+    {{-- ── Model Metrics ── --}}
+    @if($metrics ?? false || $recommendedModel ?? false)
+    @php
+        $metrics = $metrics ?? [];
+        $recommended = $recommendedModel ?? null;
+        $sarima = $metrics['sarima'] ?? null;
+        $xgboost = $metrics['xgboost'] ?? null;
+    @endphp
+    <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+        <div class="text-xs tracking-wider text-[#6B7280] mb-4">MODEL PERFORMANCE</div>
+        <div class="flex flex-wrap items-center gap-4 mb-4">
+            @if($recommended)
+            <div class="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#D5E8D4] text-[#1F5F35] text-sm font-medium">
+                <i data-lucide="award" class="w-4 h-4"></i>
+                Recommended: {{ $recommended }}
+            </div>
+            @endif
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            @if($sarima)
+            <div class="p-4 rounded-lg bg-[#F9F9F7] border border-[#F0F0EC]">
+                <div class="text-xs text-[#6B7280] mb-1">SARIMA MAE</div>
+                <div class="text-lg font-semibold text-[#333333]">{{ number_format($sarima['MAE'] ?? 0, 2) }}</div>
+            </div>
+            <div class="p-4 rounded-lg bg-[#F9F9F7] border border-[#F0F0EC]">
+                <div class="text-xs text-[#6B7280] mb-1">SARIMA RMSE</div>
+                <div class="text-lg font-semibold text-[#333333]">{{ number_format($sarima['RMSE'] ?? 0, 2) }}</div>
+            </div>
+            <div class="p-4 rounded-lg bg-[#F9F9F7] border border-[#F0F0EC]">
+                <div class="text-xs text-[#6B7280] mb-1">SARIMA MAPE</div>
+                <div class="text-lg font-semibold text-[#333333]">{{ number_format($sarima['MAPE'] ?? 0, 2) }}%</div>
+            </div>
+            @endif
+            @if($xgboost)
+            <div class="p-4 rounded-lg bg-[#F9F9F7] border border-[#F0F0EC]">
+                <div class="text-xs text-[#6B7280] mb-1">XGBoost MAE</div>
+                <div class="text-lg font-semibold text-[#333333]">{{ number_format($xgboost['MAE'] ?? 0, 2) }}</div>
+            </div>
+            <div class="p-4 rounded-lg bg-[#F9F9F7] border border-[#F0F0EC]">
+                <div class="text-xs text-[#6B7280] mb-1">XGBoost RMSE</div>
+                <div class="text-lg font-semibold text-[#333333]">{{ number_format($xgboost['RMSE'] ?? 0, 2) }}</div>
+            </div>
+            <div class="p-4 rounded-lg bg-[#F9F9F7] border border-[#F0F0EC]">
+                <div class="text-xs text-[#6B7280] mb-1">XGBoost MAPE</div>
+                <div class="text-lg font-semibold text-[#333333]">{{ number_format($xgboost['MAPE'] ?? 0, 2) }}%</div>
+            </div>
+            @endif
+        </div>
+    </div>
+    @endif
 
     {{-- ── Forecast Table ── --}}
     <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
@@ -96,7 +151,7 @@
             <thead>
                 <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
                     <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Date</th>
-                    <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Predicted HDEP</th>
+                    <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Predicted Eggs</th>
                     <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Confidence</th>
                 </tr>
             </thead>
@@ -104,7 +159,7 @@
                 @forelse($forecasts as $f)
                 <tr class="border-b border-[#F0F0F0] hover:bg-[#F5F6F8]">
                     <td class="px-6 py-3 text-sm text-[#333333] font-mono">{{ $f->target_date->format('Y-m-d') }}</td>
-                    <td class="px-6 py-3 text-sm text-[#333333]">{{ number_format($f->predicted_hdep,1) }}%</td>
+                    <td class="px-6 py-3 text-sm text-[#333333]">{{ number_format($f->predicted_egg_count,0) }}</td>
                     <td class="px-6 py-3">
                         <span class="text-xs px-2.5 py-1 rounded-full" style="background:{{ $f->confidenceColor }}">
                             {{ $f->confidence }}%
@@ -125,16 +180,16 @@
 
 @push('scripts')
 <script>
-const historical = @json($historical->map(fn($l) => ['date'=> is_object($l->log_date) ? $l->log_date->format('Y-m-d') : $l->log_date,'hdep'=>$l->hdep]));
-const forecasts  = @json($forecasts->map(fn($f) => ['date'=> is_object($f->target_date) ? $f->target_date->format('Y-m-d') : $f->target_date,'hdep'=>$f->predicted_hdep]));
+const historical = @json($historical->map(fn($l) => ['date'=> is_object($l->log_date) ? $l->log_date->format('Y-m-d') : $l->log_date,'egg_count'=>$l->egg_count]));
+const forecasts  = @json($forecasts->map(fn($f) => ['date'=> is_object($f->target_date) ? $f->target_date->format('Y-m-d') : $f->target_date,'egg_count'=>$f->predicted_egg_count]));
 const cageColor  = '{{ $cageColor }}';
 
 const histLabels = historical.map((h, i) => 'H-' + (historical.length - i));
 const fcLabels   = forecasts.map((_, i) => 'F+' + (i+1));
 const allLabels  = [...histLabels, ...fcLabels];
 
-const histData = [...historical.map(h => h.hdep), ...Array(fcLabels.length).fill(null)];
-const fcData   = [...Array(histLabels.length).fill(null), ...forecasts.map(f => f.hdep)];
+const histData = [...historical.map(h => h.egg_count), ...Array(fcLabels.length).fill(null)];
+const fcData   = [...Array(histLabels.length).fill(null), ...forecasts.map(f => f.egg_count)];
 
 document.addEventListener('turbo:load', function() {
     if (window.forecastChart) window.forecastChart.destroy();
@@ -172,7 +227,7 @@ document.addEventListener('turbo:load', function() {
         },
         scales: {
             x: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } } },
-            y: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } }, min: 0, max: 100 },
+            y: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } }, min: 0 },
         }
     }
 });

@@ -87,8 +87,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics');
 
-    Route::get('/forecast',           [ForecastController::class, 'index'])->name('forecast');
-    Route::post('/forecast/generate', [ForecastController::class, 'generate'])->name('forecast.generate');
+    Route::get('/forecast',             [ForecastController::class, 'index'])->name('forecast');
+    Route::post('/forecast/generate',   [ForecastController::class, 'generate'])->name('forecast.generate');
+    Route::get('/forecast/template',    [ForecastController::class, 'downloadTemplate'])->name('forecast.template');
 
     Route::get('/account',           [AccountController::class, 'show'])->name('account');
     Route::post('/account/password', [AccountController::class, 'updatePassword'])->name('account.password');
