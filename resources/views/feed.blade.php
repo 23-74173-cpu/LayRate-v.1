@@ -239,6 +239,13 @@
         </form>
     </div>
 </div>
+
+@if($preselectedCageId)
+{{-- Cage pre-selected via dashboard card navigation: show its consumption logs --}}
+<script>
+    feedSwitchTab('consumption');
+</script>
+@endif
 @endsection
 
 @push('scripts')

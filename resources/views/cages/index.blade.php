@@ -2,17 +2,29 @@
 @section('title', 'Cage Management')
 
 @section('content')
+@php $isAdmin = auth()->user()->isAdmin(); @endphp
 <div class="space-y-5">
 
     <x-page-header title="Cages" subtitle="Manage battery cage configurations, slots, and sensor placement">
         <x-slot:actions>
-            <button onclick="openAddModal()"
-                    class="flex items-center gap-2 px-6 py-2 text-sm font-medium rounded-full text-white transition-opacity"
-                    style="background-color: #0075de;"
-                    onmouseover="this.style.opacity='0.85'"
-                    onmouseout="this.style.opacity='1'">
-                <i data-lucide="plus" class="w-4 h-4"></i> Add Cage
-            </button>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('cages.bulk-add') }}"
+                   class="flex items-center gap-2 px-5 py-2 text-sm font-medium rounded-full transition-colors"
+                   style="color: #0075de; border: 1px solid #0075de;"
+                   onmouseover="this.style.backgroundColor='#dcebfa'"
+                   onmouseout="this.style.backgroundColor='transparent'">
+                    <i data-lucide="bird" class="w-4 h-4"></i> Bulk Add Chickens
+                </a>
+                @if($isAdmin)
+                <button onclick="openAddModal()"
+                        class="flex items-center gap-2 px-6 py-2 text-sm font-medium rounded-full text-white transition-opacity"
+                        style="background-color: #0075de;"
+                        onmouseover="this.style.opacity='0.85'"
+                        onmouseout="this.style.opacity='1'">
+                    <i data-lucide="plus" class="w-4 h-4"></i> Add Cage
+                </button>
+                @endif
+            </div>
         </x-slot:actions>
     </x-page-header>
 
@@ -22,6 +34,18 @@
             <h3 class="text-xs font-semibold tracking-[0.05em] uppercase" style="color: #615d59;">Farm Layout</h3>
             <div class="flex items-center gap-2">
                 <button id="clearFilterBtn" class="hidden text-xs font-medium px-3 py-1 rounded-lg transition-colors" style="color: #0075de; border: 1px solid #0075de;" onclick="clearCanvasFilter()">Show all</button>
+                {{-- Layout flow toggle (item 26) --}}
+                <div class="flex items-center rounded-lg overflow-hidden" style="border: 1px solid #e6e6e6;" role="group" aria-label="Tile flow direction">
+                    <button id="flowHorizontalBtn" onclick="setCanvasFlow('horizontal')" title="Horizontal flow" aria-label="Horizontal flow"
+                            class="p-1.5 transition-colors" style="color: #615d59;">
+                        <i data-lucide="stretch-horizontal" class="w-4 h-4"></i>
+                    </button>
+                    <button id="flowVerticalBtn" onclick="setCanvasFlow('vertical')" title="Vertical flow" aria-label="Vertical flow"
+                            class="p-1.5 transition-colors" style="color: #615d59;">
+                        <i data-lucide="stretch-vertical" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                @if($isAdmin)
                 <button id="clearAllBtn" onclick="clearAllCages()"
                         class="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
                         style="color: #9b1c24; border: 1px solid #f0c8cb;"
@@ -34,6 +58,7 @@
                         style="background-color: #0075de;">
                     Save Layout
                 </button>
+                @endif
             </div>
         </div>
         <div id="farmCanvas" class="relative">
@@ -54,11 +79,11 @@
                      style="border-color: {{ $placedCage->color }}; background-color: {{ $placedCage->colorSoft }};"
                      data-row="{{ $r }}" data-col="{{ $c }}"
                      ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, {{ $r }}, {{ $c }})">
-                    <div class="farm-tile cursor-grab active:cursor-grabbing"
-                         draggable="true"
+                    <div class="farm-tile {{ $isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer' }}"
+                         draggable="{{ $isAdmin ? 'true' : 'false' }}"
                          data-cage-id="{{ $placedCage->id }}"
                          data-cage-code="{{ $placedCage->cage_code }}"
-                         ondragstart="handleDragStart(event, {{ $placedCage->id }})"
+                         @if($isAdmin) ondragstart="handleDragStart(event, {{ $placedCage->id }})" @endif
                          onclick="handleTileClick(event, {{ $placedCage->id }}, '{{ $placedCage->cage_code }}')">
                         <div class="flex items-center justify-between">
                             <span class="text-sm font-semibold" style="color: {{ $placedCage->color }};">{{ $placedCage->cage_code }}</span>
@@ -85,12 +110,12 @@
             <div id="stagingArea" class="flex flex-wrap gap-3 min-h-[3.5rem]"
                  ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleStagingDrop(event)">
                 @foreach($unplaced as $uc)
-                <div class="farm-tile min-h-[3.5rem] rounded-lg border-2 px-4 py-2 flex flex-col justify-center cursor-grab active:cursor-grabbing"
+                <div class="farm-tile min-h-[3.5rem] rounded-lg border-2 px-4 py-2 flex flex-col justify-center {{ $isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer' }}"
                      style="border-color: {{ $uc->color }}; background-color: {{ $uc->colorSoft }};"
-                     draggable="true"
+                     draggable="{{ $isAdmin ? 'true' : 'false' }}"
                      data-cage-id="{{ $uc->id }}"
                      data-cage-code="{{ $uc->cage_code }}"
-                     ondragstart="handleDragStart(event, {{ $uc->id }})"
+                     @if($isAdmin) ondragstart="handleDragStart(event, {{ $uc->id }})" @endif
                      onclick="handleTileClick(event, {{ $uc->id }}, '{{ $uc->cage_code }}')">
                     <span class="text-sm font-semibold" style="color: {{ $uc->color }};">{{ $uc->cage_code }}</span>
                 </div>
@@ -147,18 +172,24 @@
                     <span class="text-xs px-2 py-0.5 rounded-full" style="background-color: {{ $cage->is_active ? '#e8f5ec' : '#f0f0f0' }}; color: {{ $cage->is_active ? '#1f6b3a' : '#615d59' }};">
                         {{ $cage->is_active ? 'Active' : 'Inactive' }}
                     </span>
-                    <button onclick="openEditModal({{ $cage->id }}, '{{ $cage->cage_code }}', {{ is_null($cage->location_row) ? 'null' : $cage->location_row }}, {{ is_null($cage->location_column) ? 'null' : $cage->location_column }}, {{ $cage->rows }}, {{ $cage->slots_per_row }}, {{ $cage->max_chickens_per_slot }}, {{ $cage->is_active ? 1 : 0 }})"
-                            class="p-1.5 rounded hover:bg-black/5 transition-colors" style="color: #615d59;" aria-label="Edit cage">
-                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                    </button>
+                    <a href="{{ route('cages.label', $cage) }}" target="_blank"
+                       class="p-1.5 rounded hover:bg-black/5 transition-colors" style="color: #615d59;" aria-label="Print label">
+                        <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                    </a>
                     <a href="{{ route('cages.bulk-add') }}?cage_id={{ $cage->id }}"
                        class="p-1.5 rounded hover:bg-black/5 transition-colors" style="color: #615d59;" aria-label="Bulk add hens">
                         <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
                     </a>
-                    <a href="{{ route('cages.confirm-delete', $cage) }}"
-                       class="p-1.5 rounded hover:bg-red-50 transition-colors" style="color: #a39e98;" aria-label="Delete cage">
+                    @if($isAdmin)
+                    <button onclick="openEditModal({{ $cage->id }}, '{{ $cage->cage_code }}', {{ is_null($cage->location_row) ? 'null' : $cage->location_row }}, {{ is_null($cage->location_column) ? 'null' : $cage->location_column }}, {{ $cage->rows }}, {{ $cage->slots_per_row }}, {{ $cage->max_chickens_per_slot }}, {{ $cage->is_active ? 1 : 0 }})"
+                            class="p-1.5 rounded hover:bg-black/5 transition-colors" style="color: #615d59;" aria-label="Edit cage">
+                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <button onclick="openDeleteModal({{ $cage->id }}, '{{ $cage->cage_code }}')"
+                            class="p-1.5 rounded hover:bg-red-50 transition-colors" style="color: #a39e98;" aria-label="Delete cage">
                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                    </a>
+                    </button>
+                    @endif
                 </div>
             </div>
 
@@ -388,15 +419,40 @@
                         <label for="editActive" class="text-sm" style="color: #31302e;">Active</label>
                     </div>
 
-                    {{-- Per-Slot Sensor Configuration --}}
+                    {{-- Counting sensor (IR break beam) — per slot (items 15, 21, 23, 24) --}}
                     <div class="border-t pt-4" style="border-color: #e6e6e6;">
-                        <div class="flex items-center gap-2 mb-3">
-                            <i data-lucide="cpu" class="w-4 h-4" style="color: #0075de;"></i>
-                            <span class="text-xs font-semibold tracking-[0.05em] uppercase" style="color: #615d59;">Sensor Configuration</span>
+                        <div class="flex items-center justify-between mb-1">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="scan-line" class="w-4 h-4" style="color: #0075de;"></i>
+                                <span class="text-xs font-semibold tracking-[0.05em] uppercase" style="color: #615d59;">Counting sensor (IR break beam)</span>
+                            </div>
+                            <span id="irAvailability" class="text-xs" style="color: #a39e98;"></span>
                         </div>
+                        <p class="text-xs mb-3" style="color: #a39e98;">Device IDs are assigned automatically on save.</p>
                         <div id="editSlotSensors" class="space-y-2 max-h-48 overflow-y-auto pr-1">
                             <p class="text-xs text-center py-3" style="color: #a39e98;">Loading slots...</p>
                         </div>
+                    </div>
+
+                    {{-- Temperature & Humidity sensor (DHT22) — cage level (items 21, 23, 24) --}}
+                    <div class="border-t pt-4" style="border-color: #e6e6e6;">
+                        <div class="flex items-center justify-between mb-1">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="thermometer" class="w-4 h-4" style="color: #0075de;"></i>
+                                <span class="text-xs font-semibold tracking-[0.05em] uppercase" style="color: #615d59;">Temperature &amp; Humidity sensor (DHT22)</span>
+                            </div>
+                            <span id="dhtAvailability" class="text-xs" style="color: #a39e98;"></span>
+                        </div>
+                        <input type="hidden" name="dht22_count" id="dht22CountInput" value="">
+                        <div id="editDhtList" class="space-y-2">
+                            <p class="text-xs text-center py-3" style="color: #a39e98;">Loading…</p>
+                        </div>
+                        <button type="button" id="addDhtBtn" onclick="addDht22()"
+                                class="mt-2 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+                                style="color: #0075de; border: 1px solid #0075de;">
+                            + Add DHT22
+                        </button>
+                        <p id="dhtLimitMsg" class="hidden text-xs mt-1" style="color: #9b1c24;"></p>
                     </div>
                 </div>
 
@@ -417,6 +473,70 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    {{-- ── Delete Cage Modal (items 19 + 20) ── --}}
+    <div id="deleteCageModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+        <div class="absolute inset-0" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeDeleteModal()"></div>
+        <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+            <div class="mb-4 flex items-center justify-center w-10 h-10 rounded-full" style="background-color: #fbe4e6;">
+                <i data-lucide="trash-2" class="w-5 h-5" style="color: #9b1c24;"></i>
+            </div>
+            <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Delete <span id="deleteCageCode"></span>?</h2>
+            <p class="mt-1 text-sm mb-4" style="color: #615d59;">Choose what the deletion includes:</p>
+
+            <div class="space-y-3 text-sm">
+                {{-- Hens --}}
+                <div class="rounded-lg p-3" style="background-color: #f6f5f4;">
+                    <div class="font-medium mb-2" style="color: #31302e;">Hens in this cage (<span id="delHenCount">0</span> active)</div>
+                    <label class="flex items-center gap-2 cursor-pointer mb-1.5">
+                        <input type="radio" name="delHensAction" value="move" checked class="w-4 h-4" style="accent-color: #0075de;">
+                        <span style="color: #615d59;">Move to unplaced (return to chicken inventory)</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="delHensAction" value="delete" class="w-4 h-4" style="accent-color: #9b1c24;">
+                        <span style="color: #615d59;">Delete permanently</span>
+                    </label>
+                </div>
+
+                {{-- Sensors --}}
+                <div class="rounded-lg p-3" style="background-color: #f6f5f4;">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="delReturnSensors" checked class="w-4 h-4 rounded" style="accent-color: #0075de;">
+                        <span style="color: #615d59;">Return <span id="delSensorCount">0</span> assigned sensor(s) to inventory</span>
+                    </label>
+                    <p class="text-xs mt-1 ml-6" style="color: #a39e98;">If unchecked, the sensors are deleted with the cage.</p>
+                </div>
+
+                {{-- Historical records (always removed — FK constraints) --}}
+                <div class="rounded-lg p-3" style="background-color: #fbe4e6;">
+                    <div class="flex items-start gap-2">
+                        <i data-lucide="alert-triangle" class="w-4 h-4 mt-0.5 shrink-0" style="color: #9b1c24;"></i>
+                        <p class="text-xs" style="color: #9b1c24;">
+                            Historical records are permanently deleted with the cage:
+                            <span id="delHistorySummary"></span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 mt-5">
+                <button type="button" onclick="closeDeleteModal()"
+                        class="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+                        style="color: #1f1f1f; border: 1px solid #e6e6e6;"
+                        onmouseover="this.style.backgroundColor='#f6f5f4'"
+                        onmouseout="this.style.backgroundColor='transparent'">
+                    Cancel
+                </button>
+                <button type="button" id="confirmDeleteCageBtn" onclick="confirmCageDelete()"
+                        class="px-5 py-2 text-sm font-medium rounded-lg text-white transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+                        style="background-color: #9b1c24;"
+                        onmouseover="if(!this.disabled)this.style.backgroundColor='#7a161d'"
+                        onmouseout="this.style.backgroundColor='#9b1c24'">
+                    Delete Cage
+                </button>
+            </div>
         </div>
     </div>
 
@@ -455,11 +575,29 @@ function expandSlot(slotId, cageId, cageCode) {
         .then(r => r.json())
         .then(data => {
             title.textContent = cageCode + ' — Slot ' + data.slot.row_number + '-' + data.slot.column_number + ' (#' + data.slot.slot_number + ')';
+
+            // Slot summary: hen count + today's egg status + cage notes (item 16)
+            let summary = '<div class="flex flex-wrap items-center gap-2 mb-3 text-xs">';
+            summary += '<span class="px-2 py-1 rounded-lg" style="background-color: #ffffff; border: 1px solid #e6e6e6; color: #31302e;">' + data.slot.current_occupancy + ' hen(s)</span>';
+            summary += '<span class="px-2 py-1 rounded-lg" style="background-color: #ffffff; border: 1px solid #e6e6e6; color: #31302e;"><span style="color:#615d59;">Eggs today:</span> ' + data.slot.egg_status + '</span>';
+            summary += '</div>';
+            let notesHtml = '';
+            if (data.notes && data.notes.length > 0) {
+                notesHtml += '<div class="mt-3 pt-3 border-t" style="border-color: #e6e6e6;">';
+                notesHtml += '<div class="text-xs font-semibold mb-1.5" style="color: #615d59;">Notes tagged to ' + cageCode + '</div>';
+                data.notes.forEach(function(n) {
+                    notesHtml += '<div class="text-xs mb-1.5" style="color: #31302e;">' +
+                        '<span style="color:#a39e98;">' + n.created_at + ' — </span>' +
+                        n.body.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>';
+                });
+                notesHtml += '</div>';
+            }
+
             if (data.hens.length === 0) {
-                content.innerHTML = '<p class="text-xs text-center py-3" style="color: #a39e98;">No hens in this slot.</p>';
+                content.innerHTML = summary + '<p class="text-xs text-center py-3" style="color: #a39e98;">No hens in this slot.</p>' + notesHtml;
                 return;
             }
-            let html = '<div class="space-y-1.5">';
+            let html = summary + '<div class="space-y-1.5">';
             data.hens.forEach(hen => {
                 html += '<div class="flex items-center gap-3 rounded border px-3 py-2 text-xs" style="background-color: #ffffff; border-color: #e6e6e6;">';
                 html += '<span class="w-24 font-mono" style="color: #615d59;">' + (hen.tag_code || '—') + '</span>';
@@ -479,7 +617,7 @@ function expandSlot(slotId, cageId, cageCode) {
             html += '<button type="button" onclick="openMoveModal(\'' + ids + '\', ' + data.hens.length + ', \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + (data.hens[0]?.breed || '') + '\')" class="px-3 py-1.5 text-xs border rounded transition-colors" style="border-color: #0075de; color: #0075de;" onmouseover="this.style.backgroundColor=\'#f0f7ff\'" onmouseout="this.style.backgroundColor=\'transparent\'">Move All (' + data.hens.length + ')</button>';
             html += '<button type="button" onclick="openRemoveModal(\'' + ids + '\', ' + data.hens.length + ', \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + (data.hens[0]?.breed || '') + '\')" class="px-3 py-1.5 text-xs border rounded hover:bg-red-50" style="border-color: #9b1c24; color: #9b1c24;">Remove All (' + data.hens.length + ')</button>';
             html += '</div>';
-            content.innerHTML = html;
+            content.innerHTML = html + notesHtml;
             lucide.createIcons();
         })
         .catch(() => {
@@ -561,43 +699,121 @@ function openEditModal(id, cageCode, locationRow, locationCol, rows, slotsPerRow
 
     const sensorContainer = document.getElementById('editSlotSensors');
     sensorContainer.innerHTML = '<p class="text-xs text-center py-3" style="color: #a39e98;">Loading slots...</p>';
+    document.getElementById('editDhtList').innerHTML = '<p class="text-xs text-center py-3" style="color: #a39e98;">Loading…</p>';
 
-    fetch('/cages/' + id + '/slots-json')
-        .then(r => r.json())
-        .then(slots => {
+    // Inventory state for this edit session (item 21): spares minus pending additions
+    sensorInv = { spareIR: 0, spareDHT: 0, irBaseline: {}, dhtBaseline: 0 };
+
+    Promise.all([
+        fetch('/cages/' + id + '/slots-json').then(r => r.json()),
+        fetch('/cages/' + id + '/sensor-info').then(r => r.json()),
+    ])
+        .then(function(results) {
+            var slots = results[0];
+            var info = results[1];
+            sensorInv.spareIR = info.spare.IR_breakbeam;
+            sensorInv.spareDHT = info.spare.DHT22;
+
+            // ── IR break beam per slot ──
             if (slots.length === 0) {
                 sensorContainer.innerHTML = '<p class="text-xs text-center py-3" style="color: #a39e98;">No slots in this cage.</p>';
-                return;
+            } else {
+                var html = '';
+                slots.forEach(function(slot) {
+                    sensorInv.irBaseline[slot.id] = !!slot.has_sensor;
+                    var checked = slot.has_sensor ? 'checked' : '';
+                    var serial = slot.sensor_device_id || '';
+                    html += '<div class="flex items-center gap-3 rounded-lg px-3 py-2" style="background-color: #f6f5f4;">';
+                    html += '<span class="text-xs font-medium w-16" style="color: #31302e;">Slot ' + slot.row_number + '-' + slot.column_number + '</span>';
+                    html += '<label class="flex items-center gap-1.5 cursor-pointer">';
+                    // Hidden 0 ensures unchecked state is actually posted (item 15 fix)
+                    html += '<input type="hidden" name="slots[' + slot.id + '][has_sensor]" value="0">';
+                    html += '<input type="checkbox" class="ir-sensor-box w-4 h-4 rounded" name="slots[' + slot.id + '][has_sensor]" value="1" ' + checked + ' data-slot-id="' + slot.id + '" onchange="updateIrAvailability()" style="accent-color: #0075de;">';
+                    html += '<span class="text-xs" style="color: #615d59;">Sensor</span>';
+                    html += '</label>';
+                    // Device ID is auto-generated + read-only (item 24)
+                    html += '<span class="flex-1 text-xs font-mono text-right" id="irSerial-' + slot.id + '" style="color: ' + (serial ? '#31302e' : '#a39e98') + ';">' + (serial || (slot.has_sensor ? 'assigned' : '—')) + '</span>';
+                    html += '</div>';
+                });
+                sensorContainer.innerHTML = html;
             }
-            let html = '';
-            slots.forEach(slot => {
-                const checked = slot.has_sensor ? 'checked' : '';
-                const disabled = slot.has_sensor ? '' : 'disabled';
-                const deviceId = slot.sensor_device_id || '';
-                html += '<div class="flex items-center gap-3 rounded-lg px-3 py-2" style="background-color: #f6f5f4;">';
-                html += '<span class="text-xs font-medium w-16" style="color: #31302e;">Slot ' + slot.row_number + '-' + slot.column_number + '</span>';
-                html += '<label class="flex items-center gap-1.5 cursor-pointer">';
-                html += '<input type="checkbox" name="slots[' + slot.id + '][has_sensor]" value="1" ' + checked + ' onchange="toggleSensorDeviceField(this, \'editDeviceId-' + slot.id + '\')" class="w-4 h-4 rounded" style="accent-color: #0075de;">';
-                html += '<span class="text-xs" style="color: #615d59;">Sensor</span>';
-                html += '</label>';
-                html += '<input type="text" name="slots[' + slot.id + '][sensor_device_id]" id="editDeviceId-' + slot.id + '" value="' + deviceId + '" placeholder="Device ID" ' + disabled + ' class="flex-1 border rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#0075de]" style="border-color: #e6e6e6; color: #1f1f1f;">';
-                html += '</div>';
-            });
-            sensorContainer.innerHTML = html;
+            updateIrAvailability();
+
+            // ── DHT22 cage level ──
+            sensorInv.dhtBaseline = info.dht22.length;
+            dhtCurrent = info.dht22.map(function(d) { return d.serial_number; });
+            renderDhtList();
         })
-        .catch(() => {
-            sensorContainer.innerHTML = '<p class="text-xs text-center py-3" style="color: #9b1c24;">Failed to load slots.</p>';
+        .catch(function() {
+            sensorContainer.innerHTML = '<p class="text-xs text-center py-3" style="color: #9b1c24;">Failed to load sensor data.</p>';
+            document.getElementById('editDhtList').innerHTML = '';
         });
 
     document.getElementById('editCageModal').style.display = 'flex';
 }
 
-function toggleSensorDeviceField(checkbox, deviceIdInputId) {
-    const input = document.getElementById(deviceIdInputId);
-    input.disabled = !checkbox.checked;
-    if (!checkbox.checked) {
-        input.value = '';
+// ── Sensor inventory tracking (items 21, 23, 24) ─────────
+var sensorInv = { spareIR: 0, spareDHT: 0, irBaseline: {}, dhtBaseline: 0 };
+var dhtCurrent = [];
+
+function updateIrAvailability() {
+    var boxes = document.querySelectorAll('.ir-sensor-box');
+    var newlyChecked = 0;
+    boxes.forEach(function(b) {
+        if (b.checked && !sensorInv.irBaseline[b.dataset.slotId]) newlyChecked++;
+    });
+    var remaining = sensorInv.spareIR - newlyChecked;
+    var label = document.getElementById('irAvailability');
+    label.textContent = 'Available in inventory: ' + remaining;
+    label.style.color = remaining <= 0 ? '#9b1c24' : '#a39e98';
+    // Block assigning beyond stock: disable the unchecked, not-baseline boxes
+    boxes.forEach(function(b) {
+        if (!b.checked && !sensorInv.irBaseline[b.dataset.slotId]) {
+            b.disabled = remaining <= 0;
+            b.title = remaining <= 0 ? 'No IR break-beam sensors left in inventory' : '';
+        }
+    });
+}
+
+function renderDhtList() {
+    var list = document.getElementById('editDhtList');
+    document.getElementById('dht22CountInput').value = dhtCurrent.length;
+    if (dhtCurrent.length === 0) {
+        list.innerHTML = '<p class="text-xs py-1" style="color: #a39e98;">No DHT22 assigned to this cage.</p>';
+    } else {
+        var html = '';
+        dhtCurrent.forEach(function(serial, i) {
+            html += '<div class="flex items-center justify-between rounded-lg px-3 py-2" style="background-color: #f6f5f4;">';
+            html += '<span class="text-xs font-mono" style="color: #31302e;">' + (serial || 'assigned on save') + '</span>';
+            html += '<button type="button" class="text-xs font-medium" style="color: #9b1c24;" onclick="removeDht22(' + i + ')">Remove</button>';
+            html += '</div>';
+        });
+        list.innerHTML = html;
     }
+    var added = Math.max(0, dhtCurrent.length - sensorInv.dhtBaseline);
+    var remaining = sensorInv.spareDHT - added;
+    var label = document.getElementById('dhtAvailability');
+    label.textContent = 'Available in inventory: ' + remaining;
+    label.style.color = remaining <= 0 ? '#9b1c24' : '#a39e98';
+    var btn = document.getElementById('addDhtBtn');
+    btn.disabled = remaining <= 0;
+    var msg = document.getElementById('dhtLimitMsg');
+    if (remaining <= 0) {
+        msg.textContent = 'No DHT22 sensors left in inventory — add stock in Hardware first.';
+        msg.classList.remove('hidden');
+    } else {
+        msg.classList.add('hidden');
+    }
+}
+
+function addDht22() {
+    dhtCurrent.push(null); // serial assigned server-side on save (item 24)
+    renderDhtList();
+}
+
+function removeDht22(index) {
+    dhtCurrent.splice(index, 1);
+    renderDhtList();
 }
 
 function closeEditModal() {
@@ -617,11 +833,13 @@ function closeEditModal() {
             closeEditModal();
             closeMoveModal();
             closeRemoveModal();
+            if (typeof closeDeleteModal === 'function') closeDeleteModal();
         }
     });
 })();
 
 // ── Farm Layout: Drag-and-Drop + Click Filter ────────────
+var IS_ADMIN = {{ $isAdmin ? 'true' : 'false' }};
 var draggedCageId = null;
 var dragMoved = false;
 var activeFilterId = null;
@@ -654,15 +872,17 @@ function updateStagingVisibility() {
 }
 
 function bindTileEvents(tile, cageId, cageCode) {
-    tile.addEventListener('dragstart', function(e) { handleDragStart(e, cageId); });
+    if (IS_ADMIN) {
+        tile.addEventListener('dragstart', function(e) { handleDragStart(e, cageId); });
+    }
     tile.addEventListener('click', function(e) { handleTileClick(e, cageId, cageCode); });
 }
 
 function makeGridTile(cageId) {
     var meta = cageMeta[cageId];
     var tile = document.createElement('div');
-    tile.className = 'farm-tile cursor-grab active:cursor-grabbing';
-    tile.draggable = true;
+    tile.className = 'farm-tile ' + (IS_ADMIN ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer');
+    tile.draggable = IS_ADMIN;
     tile.dataset.cageId = cageId;
     tile.dataset.cageCode = meta.code;
     tile.innerHTML =
@@ -681,8 +901,8 @@ function makeGridTile(cageId) {
 function addTileToStaging(cageId) {
     var meta = cageMeta[cageId];
     var tile = document.createElement('div');
-    tile.className = 'farm-tile min-h-[3.5rem] rounded-lg border-2 px-4 py-2 flex flex-col justify-center cursor-grab active:cursor-grabbing';
-    tile.draggable = true;
+    tile.className = 'farm-tile min-h-[3.5rem] rounded-lg border-2 px-4 py-2 flex flex-col justify-center ' + (IS_ADMIN ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer');
+    tile.draggable = IS_ADMIN;
     tile.dataset.cageId = cageId;
     tile.dataset.cageCode = meta.code;
     tile.style.borderColor = meta.color;
@@ -718,6 +938,8 @@ function handleDragStart(e, cageId) {
     dragMoved = false;
     e.dataTransfer.setData('text/plain', cageId);
     e.dataTransfer.effectAllowed = 'move';
+    // Expose every cell as a drop target while dragging (item 18)
+    resetRowSpanning();
     setTimeout(function() { e.target.style.opacity = '0.4'; }, 0);
 }
 
@@ -745,7 +967,23 @@ function handleDrop(e, row, col) {
     var existing = cell.querySelector('.farm-tile');
     if (existing) {
         if (parseInt(existing.dataset.cageId) === cageId) return; // dropped on its own cell
-        showDragError('Cell occupied');
+
+        // ── Swap (item 14): dropping onto an occupied cell swaps the two cages ──
+        var otherId = parseInt(existing.dataset.cageId);
+        var sourceCell = tile ? tile.closest('.farm-cell') : null;
+        if (!sourceCell) {
+            // Dragged from staging onto an occupied cell — nothing to swap into
+            showDragError('Cell occupied — drop on an empty cell');
+            return;
+        }
+        tile.remove();
+        existing.remove();
+        setCellOccupied(cell, cageId);
+        setCellOccupied(sourceCell, otherId);
+        pendingMoves[cageId] = { location_row: row, location_column: col };
+        pendingMoves[otherId] = { location_row: parseInt(sourceCell.dataset.row), location_column: parseInt(sourceCell.dataset.col) };
+        updateSaveButton();
+        applyRowSpanning();
         return;
     }
 
@@ -757,6 +995,7 @@ function handleDrop(e, row, col) {
 
     pendingMoves[cageId] = { location_row: row, location_column: col };
     updateSaveButton();
+    applyRowSpanning();
 }
 
 function handleStagingDrop(e) {
@@ -779,6 +1018,7 @@ function handleStagingDrop(e) {
 
     pendingMoves[cageId] = { location_row: null, location_column: null };
     updateSaveButton();
+    applyRowSpanning();
 }
 
 function clearAllCages() {
@@ -800,6 +1040,7 @@ function doClearAll() {
         pendingMoves[cageId] = { location_row: null, location_column: null };
     });
     updateSaveButton();
+    applyRowSpanning();
 }
 
 function setSavingState(saving) {
@@ -909,12 +1150,142 @@ function showDragError(msg) {
     if (window.__cagesDragendBound) return;
     window.__cagesDragendBound = true;
     document.addEventListener('dragend', function(e) {
-        if (e.target.classList.contains('farm-tile')) {
+        if (e.target.classList && e.target.classList.contains('farm-tile')) {
             e.target.style.opacity = '1';
         }
         dragMoved = true;
+        // Re-apply full-row spanning once the drag interaction ends (item 18)
+        if (typeof applyRowSpanning === 'function') applyRowSpanning();
     });
 })();
+
+// ── Full-row tile spanning (item 18) ──────────────────────
+// A cage alone on its grid row expands to consume the whole row.
+// Rows temporarily un-span during drags so empty cells stay reachable.
+function applyRowSpanning() {
+    if ((localStorage.getItem('cage_canvas_flow') || 'horizontal') === 'vertical') {
+        resetRowSpanning();
+        return;
+    }
+    var rows = {};
+    document.querySelectorAll('#farmGrid .farm-cell').forEach(function(cell) {
+        (rows[cell.dataset.row] = rows[cell.dataset.row] || []).push(cell);
+    });
+    Object.keys(rows).forEach(function(r) {
+        var cells = rows[r];
+        var occupied = cells.filter(function(c) { return c.querySelector('.farm-tile'); });
+        cells.forEach(function(c) { c.style.gridColumn = ''; c.style.display = ''; });
+        if (occupied.length === 1) {
+            occupied[0].style.gridColumn = '1 / -1';
+            cells.forEach(function(c) { if (c !== occupied[0]) c.style.display = 'none'; });
+        }
+    });
+}
+
+function resetRowSpanning() {
+    document.querySelectorAll('#farmGrid .farm-cell').forEach(function(c) {
+        c.style.gridColumn = '';
+        c.style.display = '';
+    });
+}
+
+// ── Canvas flow toggle: horizontal / vertical (item 26) ───
+function setCanvasFlow(flow) {
+    localStorage.setItem('cage_canvas_flow', flow);
+    applyCanvasFlow();
+}
+
+function applyCanvasFlow() {
+    var grid = document.getElementById('farmGrid');
+    if (!grid) return;
+    var flow = localStorage.getItem('cage_canvas_flow') || 'horizontal';
+    if (flow === 'vertical') {
+        grid.style.gridAutoFlow = 'column';
+        grid.style.gridTemplateRows = 'repeat({{ $gridRows }}, minmax(0, 1fr))';
+        resetRowSpanning();
+    } else {
+        grid.style.gridAutoFlow = '';
+        grid.style.gridTemplateRows = '';
+        applyRowSpanning();
+    }
+    var hBtn = document.getElementById('flowHorizontalBtn');
+    var vBtn = document.getElementById('flowVerticalBtn');
+    if (hBtn && vBtn) {
+        hBtn.style.backgroundColor = flow === 'horizontal' ? '#dcebfa' : 'transparent';
+        hBtn.style.color = flow === 'horizontal' ? '#0075de' : '#615d59';
+        vBtn.style.backgroundColor = flow === 'vertical' ? '#dcebfa' : 'transparent';
+        vBtn.style.color = flow === 'vertical' ? '#0075de' : '#615d59';
+    }
+}
+applyCanvasFlow();
+
+// ── Delete Cage Modal (items 19 + 20) ─────────────────────
+var deleteTargetId = null;
+
+function openDeleteModal(id, code) {
+    deleteTargetId = id;
+    document.getElementById('deleteCageCode').textContent = code;
+    document.getElementById('delHenCount').textContent = '…';
+    document.getElementById('delSensorCount').textContent = '…';
+    document.getElementById('delHistorySummary').textContent = '';
+    document.querySelector('input[name="delHensAction"][value="move"]').checked = true;
+    document.getElementById('delReturnSensors').checked = true;
+    document.getElementById('deleteCageModal').classList.remove('hidden');
+    lucide.createIcons();
+
+    fetch('/cages/' + id + '/delete-info')
+        .then(function(r) { return r.json(); })
+        .then(function(info) {
+            document.getElementById('delHenCount').textContent = info.hens;
+            document.getElementById('delSensorCount').textContent = info.sensors;
+            document.getElementById('delHistorySummary').textContent =
+                info.production_logs + ' egg log(s), ' + info.feed_logs + ' feed log(s), ' +
+                info.mortality_logs + ' mortality log(s), ' + info.env_logs + ' environment log(s).';
+        })
+        .catch(function() {
+            document.getElementById('delHistorySummary').textContent = 'Could not load record counts.';
+        });
+}
+
+function closeDeleteModal() {
+    deleteTargetId = null;
+    document.getElementById('deleteCageModal').classList.add('hidden');
+}
+
+function confirmCageDelete() {
+    if (!deleteTargetId) return;
+    var btn = document.getElementById('confirmDeleteCageBtn');
+    btn.disabled = true;
+
+    fetch('/cages/' + deleteTargetId, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        },
+        body: JSON.stringify({
+            hens_action: document.querySelector('input[name="delHensAction"]:checked').value,
+            return_sensors: document.getElementById('delReturnSensors').checked,
+        }),
+    })
+    .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
+    .then(function(res) {
+        btn.disabled = false;
+        if (res.ok && res.data.success) {
+            closeDeleteModal();
+            showToast(res.data.message || 'Cage deleted', true);
+            // Refresh the cage list in place — never navigates away (item 19)
+            Turbo.visit(window.location.href, { action: 'replace' });
+        } else {
+            showDragError(res.data.message || 'Failed to delete cage');
+        }
+    })
+    .catch(function() {
+        btn.disabled = false;
+        showDragError('Failed to delete cage');
+    });
+}
 
 // ── Auto-open edit modal on resize error ─────────────────
 @if(session('edit_cage_id') && isset($editCage))

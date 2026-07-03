@@ -162,7 +162,7 @@
         {{-- TOP: Brand + Arrow (mobile close / desktop unused) --}}
         <div class="flex items-center justify-between px-4 pt-3 pb-1 shrink-0">
             <div class="logo-wrap flex items-center gap-2.5 overflow-hidden">
-                <div class="w-9 h-9 rounded-lg bg-[#1F4B7D] flex items-center justify-center shrink-0 border border-white/25">
+                <div class="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center shrink-0 border border-white/25">
                     <i data-lucide="feather" class="w-5 h-5 text-white"></i>
                 </div>
                 <div class="logo-text overflow-hidden whitespace-nowrap">
@@ -190,6 +190,7 @@
                 ['icon'=>'bar-chart-3',   'label'=>'Analytics',       'route'=>'analytics'],
                 ['icon'=>'trending-up',   'label'=>'Forecast',        'route'=>'forecast'],
                 ['icon'=>'clipboard-list','label'=>'Reports',         'route'=>'reports'],
+                ['icon'=>'sticky-note',   'label'=>'Notes',           'route'=>'notes.index'],
             ];
             @endphp
 
@@ -214,7 +215,7 @@
                 <i data-lucide="bell" class="w-[19px] h-[19px] shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"></i>
                 <span class="sidebar-label text-sm font-medium whitespace-nowrap overflow-hidden">Notifications</span>
                 @if($globalAlertCount > 0)
-                <span class="ml-auto bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">{{ $globalAlertCount }}</span>
+                <span class="ml-auto bg-alert-text text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">{{ $globalAlertCount }}</span>
                 @endif
             </a>
             <a href="{{ route('account') }}"
@@ -231,6 +232,15 @@
                 <i data-lucide="user" class="w-[19px] h-[19px] shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"></i>
                 <span class="sidebar-label text-sm font-medium whitespace-nowrap overflow-hidden">Profile</span>
             </a>
+            <form action="{{ route('logout') }}" method="POST" data-turbo="false">
+                @csrf
+                <button type="submit"
+                        class="nav-link group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors"
+                        title="Sign out" aria-label="Sign out">
+                    <i data-lucide="log-out" class="w-[19px] h-[19px] shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"></i>
+                    <span class="sidebar-label text-sm font-medium whitespace-nowrap overflow-hidden">Sign out</span>
+                </button>
+            </form>
         </div>
     </aside>
 
@@ -241,28 +251,24 @@
     <div class="flex flex-col flex-1 overflow-hidden">
 
         {{-- TOP HEADER BAR --}}
-        <header id="main-header" data-turbo-permanent class="flex-shrink-0 bg-[#1A2E1A] h-12 flex items-center justify-between px-4">
+        <header id="main-header" data-turbo-permanent class="flex-shrink-0 bg-sidebar-bg h-12 flex items-center justify-between px-4">
             <div class="flex items-center gap-3">
                 {{-- Hamburger: visible on ALL screen sizes --}}
                 <button id="sidebar-toggle" class="mr-2 text-white/70 hover:text-white transition-colors p-1 rounded" aria-label="Toggle sidebar">
                     <i data-lucide="menu" class="w-5 h-5"></i>
                 </button>
-                <nav class="text-xs text-white/60">
+                <nav class="text-xs text-white/60" aria-label="Breadcrumb">
                     <a href="{{ route('dashboard') }}" class="hover:text-white/90 transition-colors">Home</a>
                     <span class="mx-1">/</span>
-                    <span class="text-white">{{ $title ?? 'Dashboard' }}</span>
+                    <span id="breadcrumb-current" class="text-white font-medium">{{ $title ?? 'Dashboard' }}</span>
                 </nav>
             </div>
 
             <div class="flex items-center gap-3">
-                <span class="hidden sm:flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-600/40">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    Offline · Local Network
-                </span>
                 <a href="{{ route('notifications.index') }}" class="relative text-white/70 hover:text-white transition-colors" aria-label="Notifications">
                     <i data-lucide="bell" class="w-4 h-4"></i>
                     @if($globalAlertCount > 0)
-                    <span class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 text-white text-[8px] rounded-full flex items-center justify-center font-bold">{{ $globalAlertCount }}</span>
+                    <span class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-alert-text text-white text-[8px] rounded-full flex items-center justify-center font-bold">{{ $globalAlertCount }}</span>
                     @endif
                 </a>
                 <div class="flex items-center gap-2 pl-2 border-l border-white/20">
@@ -270,13 +276,6 @@
                         <div class="text-xs text-white/90 leading-tight">{{ auth()->user()->name }}</div>
                         <div class="text-xs text-white/50 uppercase tracking-wider">{{ auth()->user()->role }}</div>
                     </div>
-                    <form action="{{ route('logout') }}" method="POST">
-                        @csrf
-                        <button type="submit" title="Sign out" aria-label="Sign out"
-                                class="text-white/60 hover:text-white transition-colors p-1 rounded">
-                            <i data-lucide="log-out" class="w-4 h-4"></i>
-                        </button>
-                    </form>
                 </div>
             </div>
         </header>
@@ -482,6 +481,19 @@
                 link.classList.add('text-white/85', 'hover:text-white', 'hover:bg-white/10');
             }
         });
+
+        // ── Breadcrumb (client-side, since the header is data-turbo-permanent) ──
+        var SECTION_LABELS = {
+            'dashboard': 'Dashboard',   'cages': 'Cages',            'chickens': 'Chickens',
+            'eggs': 'Egg Management',   'environment': 'Environment','hardware': 'Hardware',
+            'feed': 'Feed & Nutrition', 'analytics': 'Analytics',    'forecast': 'Forecast',
+            'reports': 'Reports',       'notes': 'Notes',            'mortality': 'Mortality',
+            'notifications': 'Notifications', 'account': 'Settings',
+        };
+        var crumb = document.getElementById('breadcrumb-current');
+        if (crumb) {
+            crumb.textContent = SECTION_LABELS[currentPath] || document.title.split('—')[0].trim();
+        }
     });
 
     // ── Prevent right-click context menu (bind once) ──

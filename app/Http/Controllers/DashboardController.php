@@ -38,6 +38,7 @@ class DashboardController extends Controller
             $cage->hen_count = $cage->hens->count();
             $cage->breed = $cage->hens->first()?->breed ?? '—';
             $cage->has_sensor = $cage->cageSlots->contains(fn ($s) => $s->hasBreakbeam()) || $cage->hasDht22();
+            $cage->sensor_status = $this->sensorStatusText($cage);
         });
 
         // Total active hens (actual live count, not theoretical capacity)
@@ -112,5 +113,42 @@ class DashboardController extends Controller
             'liveReadings', 'today',
             'gridRows', 'gridCols', 'needsOnboarding'
         ));
+    }
+
+    /**
+     * Human-readable sensor status for a cage.
+     * IR break-beam sensors have no heartbeat data, so "reporting" is based on
+     * their active/faulty status; DHT22 recency comes from environmental logs.
+     */
+    private function sensorStatusText(Cage $cage): string
+    {
+        $assigned = $cage->cageSlots
+            ->flatMap(fn ($s) => $s->hardwareItems)
+            ->merge($cage->hardwareItems)
+            ->whereIn('status', ['active', 'faulty']);
+
+        $total = $assigned->count();
+        if ($total === 0) {
+            return 'No sensors installed';
+        }
+
+        $reporting = $assigned->where('status', 'active')->count();
+        $text = "{$reporting} of {$total} sensor" . ($total > 1 ? 's' : '') . ' reporting';
+
+        if ($cage->hasDht22()) {
+            $env = $cage->latestEnvironmentLog;
+            if ($env && $env->recorded_at->gt(now()->subMinutes(60))) {
+                $text .= ' · DHT22 online — last reading ' . $env->recorded_at->diffForHumans();
+            } elseif ($env) {
+                $since = $env->recorded_at->isToday()
+                    ? $env->recorded_at->format('g:i A')
+                    : $env->recorded_at->format('M j, g:i A');
+                $text .= " · DHT22 offline — no data since {$since}";
+            } else {
+                $text .= ' · DHT22 offline — no data yet';
+            }
+        }
+
+        return $text;
     }
 }

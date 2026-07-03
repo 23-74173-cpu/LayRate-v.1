@@ -27,7 +27,7 @@ class ChickensController extends Controller
 
         $hensByCage = $hens
             ->groupBy(fn($h) => $h->cage?->id)
-            ->filter()
+            ->filter(fn($group, $key) => $key !== '' && $key !== null) // unplaced (inventory) hens live outside the cage hierarchy
             ->sortBy(fn($group) => $group->first()->cage?->cage_code);
 
         $cages = Cage::with('cageSlots')->orderBy('cage_code')->get();

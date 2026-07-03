@@ -14,6 +14,7 @@ use App\Http\Controllers\FeedController;
 use App\Http\Controllers\ForecastController;
 use App\Http\Controllers\HardwareItemController;
 use App\Http\Controllers\MortalityController;
+use App\Http\Controllers\NoteController;
 use App\Http\Controllers\PreOrderController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsController;
@@ -33,18 +34,31 @@ Route::middleware('auth')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::post('/settings/farm-layout', [SettingsController::class, 'storeFarmLayout'])->name('settings.farm-layout');
 
+    // Cages — reads (all authenticated users)
     Route::get('/cages',               [CageController::class, 'index'])->name('cages.index');
-    Route::post('/cages',              [CageController::class, 'store'])->name('cages.store');
-    Route::put('/cages/{cage}',        [CageController::class, 'update'])->name('cages.update');
-    Route::patch('/cages/{cage}/position', [CageController::class, 'updatePosition'])->name('cages.position');
-    Route::post('/cages/batch-position', [CageController::class, 'batchUpdatePosition'])->name('cages.batch-position');
-    Route::delete('/cages/{cage}',     [CageController::class, 'destroy'])->name('cages.destroy')->middleware('admin');
     Route::get('/cages/{cage}/slots-json', [CageController::class, 'slotsJson'])->name('cages.slots-json');
     Route::get('/cages/slots/{slot}/hens-json', [CageController::class, 'hensJson'])->name('cages.slots.hens-json');
     Route::get('/cages/bulk-add',  [CageController::class, 'bulkAdd'])->name('cages.bulk-add');
     Route::post('/cages/bulk-add', [CageController::class, 'storeBulkAdd'])->name('cages.bulk-add.store');
-    Route::get('/cages/{cage}/confirm-delete', [CageController::class, 'deleteConfirm'])->name('cages.confirm-delete');
-    Route::delete('/cages/{cage}/force', [CageController::class, 'forceDestroy'])->name('cages.force-destroy')->middleware('admin');
+    Route::get('/cages/{cage}/label', [CageController::class, 'label'])->name('cages.label');
+
+    // Cages — farm layout mutations (admins only; enforced server-side)
+    Route::middleware('admin')->group(function () {
+        Route::post('/cages',              [CageController::class, 'store'])->name('cages.store');
+        Route::put('/cages/{cage}',        [CageController::class, 'update'])->name('cages.update');
+        Route::patch('/cages/{cage}/position', [CageController::class, 'updatePosition'])->name('cages.position');
+        Route::post('/cages/batch-position', [CageController::class, 'batchUpdatePosition'])->name('cages.batch-position');
+        Route::get('/cages/{cage}/sensor-info', [CageController::class, 'sensorInfo'])->name('cages.sensor-info');
+        Route::get('/cages/{cage}/delete-info', [CageController::class, 'deleteInfo'])->name('cages.delete-info');
+        Route::delete('/cages/{cage}',     [CageController::class, 'destroy'])->name('cages.destroy');
+        Route::get('/cages/{cage}/confirm-delete', [CageController::class, 'deleteConfirm'])->name('cages.confirm-delete');
+        Route::delete('/cages/{cage}/force', [CageController::class, 'forceDestroy'])->name('cages.force-destroy');
+    });
+
+    Route::get('/notes',           [NoteController::class, 'index'])->name('notes.index');
+    Route::post('/notes',          [NoteController::class, 'store'])->name('notes.store');
+    Route::put('/notes/{note}',    [NoteController::class, 'update'])->name('notes.update');
+    Route::delete('/notes/{note}', [NoteController::class, 'destroy'])->name('notes.destroy');
 
     Route::get('/chickens',        [ChickensController::class, 'index'])->name('chickens.index');
     Route::post('/chickens/move',  [ChickensController::class, 'move'])->name('chickens.move');

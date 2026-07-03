@@ -7,8 +7,10 @@ use App\Models\Cage;
 use App\Models\CageSlot;
 use App\Models\EnvironmentalLog;
 use App\Models\FeedConsumptionLog;
+use App\Models\HardwareItem;
 use App\Models\Hen;
 use App\Models\MortalityLog;
+use App\Models\Note;
 use App\Models\ProductionLog;
 use App\Models\Setting;
 use Illuminate\Http\Request;
@@ -28,7 +30,13 @@ class CageController extends Controller
 
         $nextCageCode = $this->generateCageCode();
 
-        return view('cages.index', compact('cages', 'nextCageCode', 'gridRows', 'gridCols'));
+        // Available (spare) sensors per type — hardware inventory stock minus assigned
+        $spareCounts = HardwareItem::where('status', 'spare')
+            ->selectRaw('device_type, COUNT(*) as c')
+            ->groupBy('device_type')
+            ->pluck('c', 'device_type');
+
+        return view('cages.index', compact('cages', 'nextCageCode', 'gridRows', 'gridCols', 'spareCounts'));
     }
 
     public function store(Request $request)
@@ -66,7 +74,7 @@ class CageController extends Controller
             'is_active' => 'nullable|boolean',
             'slots' => 'nullable|array',
             'slots.*.has_sensor' => 'nullable|boolean',
-            'slots.*.sensor_device_id' => 'nullable|string|max:50',
+            'dht22_count' => 'nullable|integer|min:0|max:20',
         ]);
 
         if ($cage->is_active && isset($data['is_active']) && ! $data['is_active']) {
@@ -98,32 +106,189 @@ class CageController extends Controller
 
         $cage->update($updateData);
 
+        // ── Counting sensors (IR break beam), per slot ──
+        // Assignments draw from spare inventory; unchecking returns the sensor
+        // to inventory (status 'spare', unassigned). Device IDs auto-generated.
         if (isset($data['slots']) && is_array($data['slots'])) {
+            $slotsNeedingSensor = [];
             foreach ($data['slots'] as $slotId => $slotData) {
                 $slot = $cage->cageSlots()->find($slotId);
-                if ($slot) {
-                    $hasSensor = (bool) ($slotData['has_sensor'] ?? false);
-                    $deviceId = ! empty($slotData['sensor_device_id']) ? $slotData['sensor_device_id'] : null;
-                    if ($hasSensor && $deviceId) {
-                        HardwareItem::updateOrCreate(
-                            ['cage_slot_id' => $slot->id, 'device_type' => 'IR_breakbeam'],
-                            ['serial_number' => $deviceId, 'cage_id' => null, 'status' => 'active', 'installation_date' => now()]
-                        );
-                    } elseif (! $hasSensor) {
-                        HardwareItem::where('cage_slot_id', $slot->id)
-                            ->where('device_type', 'IR_breakbeam')
-                            ->update(['status' => 'removed']);
-                    }
+                if (! $slot) {
+                    continue;
                 }
+
+                $hasSensor = (bool) ($slotData['has_sensor'] ?? false);
+                $existing = HardwareItem::where('cage_slot_id', $slot->id)
+                    ->where('device_type', 'IR_breakbeam')
+                    ->whereIn('status', ['active', 'faulty'])
+                    ->first();
+
+                if ($hasSensor && ! $existing) {
+                    $slotsNeedingSensor[] = $slot;
+                } elseif (! $hasSensor && $existing) {
+                    $existing->update(['status' => 'spare', 'cage_id' => null, 'cage_slot_id' => null]);
+                }
+            }
+
+            if (count($slotsNeedingSensor) > 0) {
+                $spareIr = HardwareItem::where('device_type', 'IR_breakbeam')->where('status', 'spare')->count();
+                if (count($slotsNeedingSensor) > $spareIr) {
+                    return back()->withInput()->withErrors([
+                        'slots' => 'Only '.$spareIr.' IR break-beam sensor(s) available in inventory, but '.count($slotsNeedingSensor).' requested.',
+                    ]);
+                }
+                foreach ($slotsNeedingSensor as $slot) {
+                    $this->assignSpareSensor('IR_breakbeam', null, $slot->id);
+                }
+            }
+        }
+
+        // ── Temperature & humidity sensors (DHT22), cage level ──
+        if (isset($data['dht22_count'])) {
+            $target = (int) $data['dht22_count'];
+            $current = HardwareItem::where('cage_id', $cage->id)
+                ->where('device_type', 'DHT22')
+                ->whereIn('status', ['active', 'faulty'])
+                ->orderByDesc('id')
+                ->get();
+
+            if ($target > $current->count()) {
+                $needed = $target - $current->count();
+                $spareDht = HardwareItem::where('device_type', 'DHT22')->where('status', 'spare')->count();
+                if ($needed > $spareDht) {
+                    return back()->withInput()->withErrors([
+                        'dht22_count' => "Only {$spareDht} DHT22 sensor(s) available in inventory, but {$needed} more requested.",
+                    ]);
+                }
+                for ($i = 0; $i < $needed; $i++) {
+                    $this->assignSpareSensor('DHT22', $cage->id, null);
+                }
+            } elseif ($target < $current->count()) {
+                $current->take($current->count() - $target)->each(
+                    fn ($item) => $item->update(['status' => 'spare', 'cage_id' => null, 'cage_slot_id' => null])
+                );
             }
         }
 
         return redirect()->route('cages.index')->with('success', "Cage {$cage->cage_code} updated.");
     }
 
-    public function destroy(Cage $cage)
+    /**
+     * Assign the oldest spare sensor of the given type, stamping it with the
+     * next globally sequential device ID for that type (IRBBS_n / DHT22_n).
+     * IDs are never reused; gaps left by removals are acceptable.
+     */
+    private function assignSpareSensor(string $deviceType, ?int $cageId, ?int $cageSlotId): ?HardwareItem
     {
-        return redirect()->route('cages.index');
+        return DB::transaction(function () use ($deviceType, $cageId, $cageSlotId) {
+            $item = HardwareItem::where('device_type', $deviceType)
+                ->where('status', 'spare')
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->first();
+
+            if (! $item) {
+                return null;
+            }
+
+            $item->update([
+                'serial_number' => $this->nextDeviceId($deviceType),
+                'cage_id' => $cageId,
+                'cage_slot_id' => $cageSlotId,
+                'status' => 'active',
+                'installation_date' => now(),
+            ]);
+
+            return $item;
+        });
+    }
+
+    private function nextDeviceId(string $deviceType): string
+    {
+        $prefix = $deviceType === 'IR_breakbeam' ? 'IRBBS' : $deviceType;
+
+        $max = HardwareItem::where('serial_number', 'like', $prefix.'\_%')
+            ->pluck('serial_number')
+            ->reduce(function (int $carry, string $serial) use ($prefix) {
+                return preg_match('/^'.preg_quote($prefix, '/').'_(\d+)$/', $serial, $m)
+                    ? max($carry, (int) $m[1])
+                    : $carry;
+            }, 0);
+
+        return $prefix.'_'.($max + 1);
+    }
+
+    public function destroy(Request $request, Cage $cage)
+    {
+        $data = $request->validate([
+            'hens_action'    => 'required|in:move,delete',
+            'return_sensors' => 'nullable|boolean',
+        ]);
+
+        $cageCode = $cage->cage_code;
+
+        DB::transaction(function () use ($request, $data, $cage) {
+            $slotIds = $cage->cageSlots()->pluck('id');
+
+            if ($data['hens_action'] === 'move') {
+                // Unplace hens: they return to the chicken inventory
+                Hen::whereIn('cage_slot_id', $slotIds)->update(['cage_slot_id' => null]);
+            }
+            // 'delete': hens are removed by the slot FK cascade below
+
+            if ($request->boolean('return_sensors', true)) {
+                HardwareItem::where(function ($q) use ($slotIds, $cage) {
+                    $q->whereIn('cage_slot_id', $slotIds)->orWhere('cage_id', $cage->id);
+                })->update(['status' => 'spare', 'cage_id' => null, 'cage_slot_id' => null]);
+            }
+            // otherwise the FK cascade deletes the assigned hardware items
+
+            $cage->cageSlots()->delete();
+            $cage->delete();
+        });
+
+        return response()->json(['success' => true, 'message' => "Cage {$cageCode} deleted."]);
+    }
+
+    public function deleteInfo(Cage $cage)
+    {
+        $slotIds = $cage->cageSlots()->pluck('id');
+
+        return response()->json([
+            'cage_code'   => $cage->cage_code,
+            'hens'        => Hen::whereIn('cage_slot_id', $slotIds)->where('is_active', 1)->count(),
+            'sensors'     => HardwareItem::where(function ($q) use ($slotIds, $cage) {
+                $q->whereIn('cage_slot_id', $slotIds)->orWhere('cage_id', $cage->id);
+            })->whereIn('status', ['active', 'faulty'])->count(),
+            'production_logs' => ProductionLog::whereIn('cage_slot_id', $slotIds)->count(),
+            'env_logs'    => EnvironmentalLog::where('cage_id', $cage->id)->count(),
+            'feed_logs'   => FeedConsumptionLog::where('cage_id', $cage->id)->count(),
+            'mortality_logs' => MortalityLog::where('cage_id', $cage->id)->count(),
+        ]);
+    }
+
+    public function sensorInfo(Cage $cage)
+    {
+        $dht22 = HardwareItem::where('cage_id', $cage->id)
+            ->where('device_type', 'DHT22')
+            ->whereIn('status', ['active', 'faulty'])
+            ->orderBy('id')
+            ->get(['id', 'serial_number', 'status']);
+
+        return response()->json([
+            'dht22' => $dht22,
+            'spare' => [
+                'IR_breakbeam' => HardwareItem::where('device_type', 'IR_breakbeam')->where('status', 'spare')->count(),
+                'DHT22'        => HardwareItem::where('device_type', 'DHT22')->where('status', 'spare')->count(),
+            ],
+        ]);
+    }
+
+    public function label(Cage $cage)
+    {
+        $cage->load(['cageSlots', 'hens' => fn ($q) => $q->where('is_active', 1)]);
+
+        return view('cages.label', ['cage' => $cage]);
     }
 
     public function updatePosition(Request $request, Cage $cage)
@@ -208,6 +373,11 @@ class CageController extends Controller
         }
 
         DB::transaction(function () use ($data) {
+            // Two-phase apply: vacate every moved cage first so swaps can't
+            // transiently collide on the (location_row, location_column) unique index.
+            $ids = array_column($data['positions'], 'id');
+            Cage::whereIn('id', $ids)->update(['location_row' => null, 'location_column' => null]);
+
             foreach ($data['positions'] as $entry) {
                 Cage::whereKey($entry['id'])->update([
                     'location_row'    => $entry['location_row'] ?? null,
@@ -243,6 +413,29 @@ class CageController extends Controller
             'is_active' => $h->is_active,
         ]);
 
+        // Today's egg status for this slot (item 16)
+        $todayLog = ProductionLog::where('cage_slot_id', $slot->id)
+            ->whereDate('log_date', today())
+            ->first();
+        $occupancy = (int) $slot->current_occupancy;
+        if ($todayLog === null) {
+            $eggStatus = 'No eggs logged today';
+        } elseif ($occupancy > 0 && $todayLog->egg_count >= $occupancy) {
+            $eggStatus = "All laid — {$todayLog->egg_count} egg(s) collected today";
+        } else {
+            $eggStatus = "{$todayLog->egg_count} of {$occupancy} eggs collected today";
+        }
+
+        // Notes tagged to this cage (item 16)
+        $notes = Note::where('cage_id', $slot->cage_id)
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get()
+            ->map(fn ($n) => [
+                'body' => $n->body,
+                'created_at' => $n->created_at->format('M j, g:i A'),
+            ]);
+
         return response()->json([
             'slot' => [
                 'id' => $slot->id,
@@ -252,8 +445,10 @@ class CageController extends Controller
                 'current_occupancy' => $slot->current_occupancy,
                 'has_sensor' => $slot->hasBreakbeam(),
                 'remaining' => $slot->remaining,
+                'egg_status' => $eggStatus,
             ],
             'hens' => $hens,
+            'notes' => $notes,
             'cage' => [
                 'id' => $slot->cage->id,
                 'cage_code' => $slot->cage->cage_code,
@@ -375,7 +570,14 @@ class CageController extends Controller
             $selectedCage = $cages->firstWhere('id', $request->cage_id);
         }
 
-        return view('cages.bulk-add', compact('cages', 'selectedCage'));
+        // Chicken inventory: unplaced active hens, available per breed (item 22)
+        $availableByBreed = Hen::whereNull('cage_slot_id')
+            ->where('is_active', 1)
+            ->selectRaw('breed, COUNT(*) as c')
+            ->groupBy('breed')
+            ->pluck('c', 'breed');
+
+        return view('cages.bulk-add', compact('cages', 'selectedCage', 'availableByBreed'));
     }
 
     public function storeBulkAdd(Request $request)
@@ -383,7 +585,6 @@ class CageController extends Controller
         $data = $request->validate([
             'cage_id' => 'required|integer|exists:cages,id',
             'breed' => 'required|string|max:50',
-            'age_weeks' => 'required|integer|min:0|max:200',
             'chickens_per_slot' => 'required|integer|min:1|max:10',
             'slot_ids' => 'required|string',
         ]);
@@ -395,42 +596,64 @@ class CageController extends Controller
             return back()->withErrors(['slot_ids' => 'Please select at least one slot.']);
         }
 
-        $now = now();
-        $placementDate = $now->toDateString();
-
-        $created = 0;
+        // How many placements are requested across the selected slots
+        $needed = 0;
+        $slotPlan = [];
         foreach ($slotIds as $slotId) {
             $slot = $cage->cageSlots->firstWhere('id', $slotId);
             if (! $slot) {
                 continue;
             }
-
             $remaining = $cage->max_chickens_per_slot - $slot->current_occupancy;
             if ($remaining <= 0) {
                 continue;
             }
-
             $toAdd = min((int) $data['chickens_per_slot'], $remaining);
-
-            for ($i = 0; $i < $toAdd; $i++) {
-                Hen::create([
-                    'cage_slot_id' => $slot->id,
-                    'tag_code' => null,
-                    'date_acquired' => $now->toDateTimeString(),
-                    'flock_age_weeks' => $data['age_weeks'],
-                    'placement_date' => $placementDate,
-                    'age_at_placement_weeks' => $data['age_weeks'],
-                    'breed' => $data['breed'],
-                    'is_active' => true,
-                ]);
-                $created++;
-            }
-
-            $slot->update(['current_occupancy' => $slot->current_occupancy + $toAdd]);
+            $slotPlan[] = ['slot' => $slot, 'count' => $toAdd];
+            $needed += $toAdd;
         }
 
+        if ($needed === 0) {
+            return back()->withErrors(['slot_ids' => 'The selected slots have no remaining capacity.']);
+        }
+
+        // Draw from the chicken inventory (unplaced active hens of this breed)
+        $available = Hen::whereNull('cage_slot_id')
+            ->where('is_active', 1)
+            ->where('breed', $data['breed'])
+            ->orderBy('id')
+            ->limit($needed)
+            ->get();
+
+        if ($available->count() < $needed) {
+            return back()->withInput()->withErrors([
+                'breed' => "Only {$available->count()} unplaced {$data['breed']} hen(s) available in the chicken inventory, but {$needed} needed for the selected slots.",
+            ]);
+        }
+
+        $placementDate = now()->toDateString();
+        $placed = 0;
+        $pool = $available->values();
+
+        DB::transaction(function () use ($slotPlan, $pool, $placementDate, &$placed) {
+            $i = 0;
+            foreach ($slotPlan as $entry) {
+                for ($n = 0; $n < $entry['count']; $n++) {
+                    $hen = $pool[$i++];
+                    $hen->update([
+                        'cage_slot_id' => $entry['slot']->id,
+                        'placement_date' => $placementDate,
+                    ]);
+                    $placed++;
+                }
+                $entry['slot']->update([
+                    'current_occupancy' => $entry['slot']->current_occupancy + $entry['count'],
+                ]);
+            }
+        });
+
         return redirect()->route('cages.index')
-            ->with('success', "{$created} hen(s) added to {$cage->cage_code}.");
+            ->with('success', "{$placed} hen(s) placed in {$cage->cage_code} from inventory.");
     }
 
     private function createSlotsForCage(Cage $cage): void

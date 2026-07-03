@@ -14,7 +14,11 @@ class FeedController extends Controller
     {
         $batches = FeedBatch::orderByDesc('date_received')->get();
 
+        // Pre-selected cage passed from dashboard card navigation (read-only filter)
+        $preselectedCageId = (int) request('cage_id') ?: null;
+
         $consumptionLogs = FeedConsumptionLog::with(['cage', 'feedBatch'])
+            ->when($preselectedCageId, fn ($q) => $q->where('cage_id', $preselectedCageId))
             ->orderByDesc('log_date')
             ->paginate(20)
             ->withQueryString();
@@ -31,7 +35,7 @@ class FeedController extends Controller
             : 0;
 
         return view('feed', compact(
-            'batches', 'consumptionLogs', 'avgCp', 'totalFeedWeek', 'avgFeedPerCage'
+            'batches', 'consumptionLogs', 'avgCp', 'totalFeedWeek', 'avgFeedPerCage', 'preselectedCageId'
         ));
     }
 

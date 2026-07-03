@@ -45,15 +45,14 @@
                         class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
                     <option value="">Select breed...</option>
                     @foreach(['ISA Brown', 'Lohmann Brown-Classic', 'Dekalb White', 'Hy-Line Brown', 'Novogen Brown'] as $breed)
-                    <option value="{{ $breed }}">{{ $breed }}</option>
+                    @php $avail = (int) ($availableByBreed[$breed] ?? 0); @endphp
+                    <option value="{{ $breed }}" data-available="{{ $avail }}" @disabled($avail === 0)>
+                        {{ $breed }} — {{ $avail }} available
+                    </option>
                     @endforeach
                 </select>
-            </div>
-
-            <div>
-                <label class="block text-xs font-medium text-[#6B7280] mb-1">Age at Placement (weeks) <span class="text-red-500">*</span></label>
-                <input type="number" name="age_weeks" id="ageWeeks" min="0" max="200" required placeholder="e.g. 20"
-                       class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
+                <p class="text-xs text-[#9CA3AF] mt-1">Availability comes from the chicken inventory (unplaced hens).</p>
+                @error('breed')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
             </div>
 
             <div>
@@ -255,7 +254,6 @@
 
     function clearChoices() {
         document.getElementById('breedSelect').selectedIndex = 0;
-        document.getElementById('ageWeeks').value = '';
         document.getElementById('chickensPerSlot').value = 1;
         selectedSlots.forEach(id => {
             const el = document.querySelector(`[data-slot-id="${id}"]`);
@@ -292,12 +290,25 @@
         const submitBtn = document.getElementById('submitBtn');
         const errorEl = document.getElementById('summaryError');
 
+        // Inventory limit (item 22): cannot place more than available for the breed
+        const breedSelect = document.getElementById('breedSelect');
+        const breedOption = breedSelect.options[breedSelect.selectedIndex];
+        const available = breedOption && breedOption.dataset.available !== undefined
+            ? parseInt(breedOption.dataset.available)
+            : null;
+        const overInventory = available !== null && breedSelect.value !== '' && chickens > available;
+
         if (selectedSlots.size === 0) {
             submitBtn.disabled = true;
             errorEl.classList.add('hidden');
         } else if (overCapacity) {
             submitBtn.disabled = true;
             error = 'One or more selected slots have fewer spaces than the chickens-per-slot value.';
+            errorEl.textContent = error;
+            errorEl.classList.remove('hidden');
+        } else if (overInventory) {
+            submitBtn.disabled = true;
+            error = 'Only ' + available + ' ' + breedSelect.value + ' hen(s) available in inventory, but ' + chickens + ' selected.';
             errorEl.textContent = error;
             errorEl.classList.remove('hidden');
         } else {
@@ -308,7 +319,7 @@
         document.getElementById('slotIdsInput').value = Array.from(selectedSlots).join(',');
     }
 
-    document.getElementById('ageWeeks').addEventListener('input', updateSummary);
+    document.getElementById('breedSelect').addEventListener('change', updateSummary);
     document.getElementById('chickensPerSlot').addEventListener('input', updateSummary);
 
     // Pre-load if cage was already selected
