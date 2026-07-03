@@ -111,7 +111,7 @@
         <div class="flex items-center gap-1">
             <i data-lucide="bird" class="w-3 h-3" style="color: #a39e98;"></i>
             <span class="text-xs" style="color: #615d59;">
-                {{ $slot->primaryHen->breed }} · {{ $slot->primaryHen->flock_age_weeks }}w
+                {{ $slot->primaryHen->breed }} · {{ $slot->primaryHen->current_age_weeks }}w
             </span>
         </div>
         @endif

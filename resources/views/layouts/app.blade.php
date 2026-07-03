@@ -496,6 +496,11 @@
         }
     });
 
+    // ── Re-initialize Lucide icons when turbo-frame content loads ──
+    document.addEventListener('turbo:frame-load', function() {
+        lucide.createIcons();
+    });
+
     // ── Prevent right-click context menu (bind once) ──
     document.addEventListener('contextmenu', function(e) {
         e.preventDefault();

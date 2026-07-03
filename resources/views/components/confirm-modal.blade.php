@@ -14,7 +14,7 @@
 {{-- Backdrop + Card --}}
 <div
     id="confirm-modal"
-    class="fixed inset-0 z-50 hidden items-center justify-center p-4"
+    class="fixed inset-0 z-50 hidden min-h-screen min-h-[100dvh] items-center justify-center p-4"
     role="dialog"
     aria-modal="true"
     aria-labelledby="confirm-modal-title"
@@ -31,6 +31,16 @@
         class="relative w-full max-w-md rounded-2xl p-6"
         style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;"
     >
+        {{-- Close X --}}
+        <button
+            type="button"
+            onclick="confirmModalClose()"
+            class="absolute top-4 right-4 p-1.5 rounded-full hover:bg-black/5 transition-colors"
+            aria-label="Close"
+        >
+            <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+        </button>
+
         {{-- Icon --}}
         <div class="mb-4 flex items-center justify-center w-10 h-10 rounded-full" style="background-color: #fbe4e6;">
             <i data-lucide="alert-triangle" class="w-5 h-5" style="color: #9b1c24;"></i>
@@ -107,13 +117,22 @@
     });
 
     // Auto-wire forms with data-confirm attribute
-    document.querySelectorAll('form[data-confirm]').forEach(function(form) {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const message = form.getAttribute('data-confirm');
-            const action = form.getAttribute('data-confirm-action') || 'Confirm';
-            confirmModal(message, form, action);
+    function wireConfirmForms() {
+        document.querySelectorAll('form[data-confirm]:not([data-confirm-wired])').forEach(function(form) {
+            form.setAttribute('data-confirm-wired', 'true');
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const message = form.getAttribute('data-confirm');
+                const action = form.getAttribute('data-confirm-action') || 'Confirm';
+                confirmModal(message, form, action);
+            });
         });
-    });
+    }
+
+    wireConfirmForms();
+
+    // Re-wire after Turbo frame/page loads
+    document.addEventListener('turbo:frame-load', wireConfirmForms);
+    document.addEventListener('turbo:load', wireConfirmForms);
 })();
 </script>

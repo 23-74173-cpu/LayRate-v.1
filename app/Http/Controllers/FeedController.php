@@ -12,6 +12,12 @@ class FeedController extends Controller
 {
     public function index()
     {
+        // Pre-selected cage passed from dashboard card navigation (read-only)
+        return view('feed', ['preselectedCageId' => (int) request('cage_id') ?: null]);
+    }
+
+    public function liveData()
+    {
         $batches = FeedBatch::orderByDesc('date_received')->get();
 
         // Pre-selected cage passed from dashboard card navigation (read-only filter)
@@ -23,7 +29,6 @@ class FeedController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        // Weekly summary stats
         $avgCp = $batches->avg('crude_protein');
 
         $totalFeedWeek = FeedConsumptionLog::where('log_date', '>=', now()->subDays(7))
@@ -34,7 +39,7 @@ class FeedController extends Controller
             ? round($totalFeedWeek / max($activeCagesCount, 1) / 7, 1)
             : 0;
 
-        return view('feed', compact(
+        return view('feed._live-data', compact(
             'batches', 'consumptionLogs', 'avgCp', 'totalFeedWeek', 'avgFeedPerCage', 'preselectedCageId'
         ));
     }

@@ -40,16 +40,6 @@ class EggLoggingController extends Controller
             $slot->today_egg_count = $todayLogs->get($slot->id)?->egg_count ?? 0;
         });
 
-        $logsQuery = ProductionLog::with(['cageSlot.cage', 'overriddenBy', 'recorder'])
-            ->orderByDesc('log_date')
-            ->orderByDesc('created_at');
-
-        if ($cageFilter) {
-            $logsQuery->whereHas('cageSlot', fn($q) => $q->where('cage_id', $cageFilter));
-        }
-
-        $logs = $logsQuery->paginate(20)->withQueryString();
-
         $todayTotal = ProductionLog::where('log_date', $today)
             ->when($cageFilter, fn($q) => $q->whereHas('cageSlot', fn($s) => $s->where('cage_id', $cageFilter)))
             ->sum('egg_count');
@@ -63,8 +53,44 @@ class EggLoggingController extends Controller
         $selectedCage = $cageFilter ? $cages->firstWhere('id', $cageFilter) : null;
 
         return view('egg-logging', compact(
-            'cageSlots', 'cages', 'logs', 'cageFilter', 'todayTotal', 'todayByCage', 'selectedCage'
+            'cageSlots', 'cages', 'cageFilter', 'todayTotal', 'todayByCage', 'selectedCage'
         ));
+    }
+
+    public function recentLogs(Request $request)
+    {
+        $cageFilter = $request->query('cage_id');
+
+        $cages = Cage::where('is_active', 1)->orderBy('cage_code')->get();
+
+        $logsQuery = ProductionLog::with(['cageSlot.cage', 'overriddenBy', 'recorder'])
+            ->orderByDesc('log_date')
+            ->orderByDesc('created_at');
+
+        if ($cageFilter) {
+            $logsQuery->whereHas('cageSlot', fn($q) => $q->where('cage_id', $cageFilter));
+        }
+
+        $logs = $logsQuery->paginate(20)->withQueryString();
+
+        return view('eggs.recent-logs', compact('logs', 'cages', 'cageFilter'));
+    }
+
+    public function logs(Request $request)
+    {
+        $cageFilter = $request->query('cage_id');
+
+        $logsQuery = ProductionLog::with(['cageSlot.cage', 'overriddenBy', 'recorder'])
+            ->orderByDesc('log_date')
+            ->orderByDesc('created_at');
+
+        if ($cageFilter) {
+            $logsQuery->whereHas('cageSlot', fn($q) => $q->where('cage_id', $cageFilter));
+        }
+
+        $logs = $logsQuery->paginate(20)->withQueryString();
+
+        return view('egg-logging._logs', compact('logs', 'cageFilter'));
     }
 
     public function verifyOverride(Request $request)

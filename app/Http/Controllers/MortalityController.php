@@ -37,6 +37,18 @@ class MortalityController extends Controller
         return view('mortality', compact('cages', 'logs', 'todayTotal', 'todayByCage', 'preselectedCageId'));
     }
 
+    public function logs()
+    {
+        $cages = Cage::orderBy('cage_code')->get();
+        $logs  = MortalityLog::with(['cage', 'hens'])
+            ->orderByDesc('log_date')
+            ->orderByDesc('created_at')
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('mortality._logs', compact('cages', 'logs'));
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate([

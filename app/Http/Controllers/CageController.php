@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Alert;
 use App\Models\Cage;
 use App\Models\CageSlot;
+use App\Models\CageTransfer;
 use App\Models\EnvironmentalLog;
 use App\Models\FeedConsumptionLog;
 use App\Models\HardwareItem;
@@ -43,7 +44,7 @@ class CageController extends Controller
     {
         $data = $request->validate([
             'rows' => 'required|integer|min:1|max:10',
-            'slots_per_row' => 'required|integer|min:1|max:10',
+            'slots_per_row' => 'required|integer|min:1|max:100',
             'max_chickens_per_slot' => 'required|integer|min:1|max:10',
         ]);
 
@@ -69,7 +70,7 @@ class CageController extends Controller
     {
         $data = $request->validate([
             'rows' => 'nullable|integer|min:1|max:10',
-            'slots_per_row' => 'nullable|integer|min:1|max:10',
+            'slots_per_row' => 'nullable|integer|min:1|max:100',
             'max_chickens_per_slot' => 'nullable|integer|min:1|max:10',
             'is_active' => 'nullable|boolean',
             'slots' => 'nullable|array',
@@ -282,13 +283,6 @@ class CageController extends Controller
                 'DHT22'        => HardwareItem::where('device_type', 'DHT22')->where('status', 'spare')->count(),
             ],
         ]);
-    }
-
-    public function label(Cage $cage)
-    {
-        $cage->load(['cageSlots', 'hens' => fn ($q) => $q->where('is_active', 1)]);
-
-        return view('cages.label', ['cage' => $cage]);
     }
 
     public function updatePosition(Request $request, Cage $cage)
@@ -560,7 +554,7 @@ class CageController extends Controller
 
     public function bulkAdd(Request $request)
     {
-        $cages = Cage::with(['cageSlots', 'hens' => fn ($q) => $q->where('is_active', 1)])
+        $cages = Cage::with(['cageSlots'])
             ->where('is_active', 1)
             ->orderBy('cage_code')
             ->get();
@@ -570,90 +564,160 @@ class CageController extends Controller
             $selectedCage = $cages->firstWhere('id', $request->cage_id);
         }
 
-        // Chicken inventory: unplaced active hens, available per breed (item 22)
-        $availableByBreed = Hen::whereNull('cage_slot_id')
+        // Fetch unplaced hens live from inventory
+        $unplacedHens = Hen::whereNull('cage_slot_id')
             ->where('is_active', 1)
-            ->selectRaw('breed, COUNT(*) as c')
-            ->groupBy('breed')
-            ->pluck('c', 'breed');
+            ->orderBy('id')
+            ->get();
 
-        return view('cages.bulk-add', compact('cages', 'selectedCage', 'availableByBreed'));
+        $unplacedBreeds = $unplacedHens->pluck('breed')->unique()->sort()->values();
+
+        // Pre-selected hen IDs (deep-link from Chickens Inventory)
+        $preselectedIds = [];
+        if ($request->has('hen_ids')) {
+            $preselectedIds = array_filter(array_map('intval', explode(',', $request->hen_ids)));
+            $preselectedIds = $unplacedHens->whereIn('id', $preselectedIds)->pluck('id')->toArray();
+        }
+
+        return view('cages.bulk-add', compact('cages', 'selectedCage', 'unplacedHens', 'unplacedBreeds', 'preselectedIds'));
     }
 
     public function storeBulkAdd(Request $request)
     {
         $data = $request->validate([
-            'cage_id' => 'required|integer|exists:cages,id',
-            'breed' => 'required|string|max:50',
-            'chickens_per_slot' => 'required|integer|min:1|max:10',
-            'slot_ids' => 'required|string',
+            'hen_ids'            => 'required|string',
+            'cage_id'            => 'required|integer|exists:cages,id',
+            'mode'               => 'required|in:manual,auto',
+            'slot_ids'           => 'required_if:mode,manual|string|nullable',
+            'chickens_per_slot'  => 'required_if:mode,auto|integer|min:1|max:10|nullable',
         ]);
 
-        $cage = Cage::with('cageSlots')->findOrFail($data['cage_id']);
-        $slotIds = array_filter(array_map('intval', explode(',', $data['slot_ids'])));
+        $henIds = array_filter(array_map('intval', explode(',', $data['hen_ids'])));
+        $henIds = array_unique($henIds);
 
-        if (empty($slotIds)) {
-            return back()->withErrors(['slot_ids' => 'Please select at least one slot.']);
+        if (empty($henIds)) {
+            return back()->withErrors(['hen_ids' => 'No hens selected.']);
         }
 
-        // How many placements are requested across the selected slots
-        $needed = 0;
-        $slotPlan = [];
-        foreach ($slotIds as $slotId) {
-            $slot = $cage->cageSlots->firstWhere('id', $slotId);
-            if (! $slot) {
-                continue;
-            }
-            $remaining = $cage->max_chickens_per_slot - $slot->current_occupancy;
-            if ($remaining <= 0) {
-                continue;
-            }
-            $toAdd = min((int) $data['chickens_per_slot'], $remaining);
-            $slotPlan[] = ['slot' => $slot, 'count' => $toAdd];
-            $needed += $toAdd;
-        }
-
-        if ($needed === 0) {
-            return back()->withErrors(['slot_ids' => 'The selected slots have no remaining capacity.']);
-        }
-
-        // Draw from the chicken inventory (unplaced active hens of this breed)
-        $available = Hen::whereNull('cage_slot_id')
+        // Only unplaced, active hens can be placed
+        $hens = Hen::whereIn('id', $henIds)
+            ->whereNull('cage_slot_id')
             ->where('is_active', 1)
-            ->where('breed', $data['breed'])
-            ->orderBy('id')
-            ->limit($needed)
             ->get();
 
-        if ($available->count() < $needed) {
-            return back()->withInput()->withErrors([
-                'breed' => "Only {$available->count()} unplaced {$data['breed']} hen(s) available in the chicken inventory, but {$needed} needed for the selected slots.",
+        if ($hens->isEmpty()) {
+            return back()->withErrors(['hen_ids' => 'No valid unplaced hens found for the selected IDs.']);
+        }
+
+        $cage = Cage::with('cageSlots')->findOrFail($data['cage_id']);
+        $toPlace = $hens->count();
+
+        if ($data['mode'] === 'manual') {
+            $slotIds = array_filter(array_map('intval', explode(',', $data['slot_ids'] ?? '')));
+            $slotIds = array_unique($slotIds);
+
+            if (empty($slotIds)) {
+                return back()->withErrors(['slot_ids' => 'Please select at least one slot.']);
+            }
+
+            // Get selected slots that belong to this cage
+            $slots = $cage->cageSlots->whereIn('id', $slotIds);
+            if ($slots->isEmpty()) {
+                return back()->withErrors(['slot_ids' => 'No valid slots found for this cage.']);
+            }
+
+            // Validate total capacity
+            $totalRemaining = $slots->sum(fn($s) => $s->remaining);
+            if ($totalRemaining < $toPlace) {
+                return back()->withErrors([
+                    'slot_ids' => "Selected slots have {$totalRemaining} space(s) available, but {$toPlace} hens need placement.",
+                ]);
+            }
+
+            $placed = 0;
+            DB::transaction(function () use ($hens, $slots, $cage, &$placed) {
+                $henIter = $hens->values();
+                $idx = 0;
+                foreach ($slots as $slot) {
+                    $capacity = $slot->remaining;
+                    for ($i = 0; $i < $capacity && $idx < $henIter->count(); $i++) {
+                        $hen = $henIter[$idx];
+                        $hen->update([
+                            'cage_slot_id'   => $slot->id,
+                            'placement_date' => today(),
+                        ]);
+                        $slot->increment('current_occupancy');
+                        CageTransfer::create([
+                            'hen_id'           => $hen->id,
+                            'from_cage_slot_id' => null,
+                            'to_cage_slot_id'   => $slot->id,
+                            'transfer_date'    => today(),
+                            'reason'           => 'Initial placement',
+                            'recorded_by'      => auth()->id(),
+                        ]);
+                        $placed++;
+                        $idx++;
+                    }
+                }
+            });
+
+            return redirect()->route('cages.index')
+                ->with('success', "{$placed} hen(s) placed into {$cage->cage_code}.");
+        }
+
+        // Auto mode: distribute evenly across all available slots in the cage
+        $perSlot = (int) $data['chickens_per_slot'];
+
+        $availableSlots = $cage->cageSlots->filter(fn($s) => $s->remaining > 0);
+        if ($availableSlots->isEmpty()) {
+            return back()->withErrors(['cage_id' => 'No available slots in this cage.']);
+        }
+
+        $totalRemaining = $availableSlots->sum(fn($s) => $s->remaining);
+        if ($totalRemaining < $toPlace) {
+            return back()->withErrors([
+                'cage_id' => "Cage {$cage->cage_code} has {$totalRemaining} space(s) available, but {$toPlace} hens need placement.",
             ]);
         }
 
-        $placementDate = now()->toDateString();
         $placed = 0;
-        $pool = $available->values();
-
-        DB::transaction(function () use ($slotPlan, $pool, $placementDate, &$placed) {
-            $i = 0;
-            foreach ($slotPlan as $entry) {
-                for ($n = 0; $n < $entry['count']; $n++) {
-                    $hen = $pool[$i++];
+        DB::transaction(function () use ($hens, $availableSlots, $perSlot, $cage, &$placed) {
+            $henIter = $hens->values();
+            $idx = 0;
+            foreach ($availableSlots as $slot) {
+                $capacity = min($perSlot, $slot->remaining);
+                for ($i = 0; $i < $capacity && $idx < $henIter->count(); $i++) {
+                    $hen = $henIter[$idx];
                     $hen->update([
-                        'cage_slot_id' => $entry['slot']->id,
-                        'placement_date' => $placementDate,
+                        'cage_slot_id'   => $slot->id,
+                        'placement_date' => today(),
+                    ]);
+                    $slot->increment('current_occupancy');
+                    CageTransfer::create([
+                        'hen_id'           => $hen->id,
+                        'from_cage_slot_id' => null,
+                        'to_cage_slot_id'   => $slot->id,
+                        'transfer_date'    => today(),
+                        'reason'           => 'Initial placement (auto-distribute)',
+                        'recorded_by'      => auth()->id(),
                     ]);
                     $placed++;
+                    $idx++;
                 }
-                $entry['slot']->update([
-                    'current_occupancy' => $entry['slot']->current_occupancy + $entry['count'],
-                ]);
             }
         });
 
         return redirect()->route('cages.index')
-            ->with('success', "{$placed} hen(s) placed in {$cage->cage_code} from inventory.");
+            ->with('success', "{$placed} hen(s) placed into {$cage->cage_code}.");
+    }
+
+    public function printLabel(Cage $cage)
+    {
+        $cage->load(['cageSlots', 'hens' => fn ($q) => $q->where('is_active', 1)->orderBy('id')]);
+
+        $hensBySlot = $cage->hens->groupBy('cage_slot_id');
+
+        return view('cages.print-label', compact('cage', 'hensBySlot'));
     }
 
     private function createSlotsForCage(Cage $cage): void
