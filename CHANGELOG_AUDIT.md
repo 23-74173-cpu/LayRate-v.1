@@ -584,4 +584,25 @@
 
 ---
 
+## 8. Post-Audit Fixes (July 3, 2026)
+
+### 8.1 Hen Deactivation Bug — Root Cause Fix
+
+**Context:** Hen `remove()` method deactivated hens (`is_active = false`) *before* attempting to create a `MortalityLog`, without wrapping in a transaction. When removing unplaced hens (null `cage_id`), the mortality log creation crashed with a NOT NULL constraint violation — but the `is_active` updates were already committed, leaving 41 hens stuck inactive.
+
+#### Fixes Applied (uncommitted)
+
+| Fix | File | Changes |
+|-----|------|---------|
+| A | `ChickensController::remove()` | Wrapped in `DB::transaction()`. Split per-cage mortality logging. Unplaced hens skip mortality logging entirely. |
+| B | N/A (manual DB update) | **Reactivated 42 unplaced hens** that were stuck at `is_active = 0` due to the partial-update bug. Executed 2026-07-03. |
+| C | `ChickensController::storeCulling()` and `storeRemoval()` | Precautionary `DB::transaction()` wrapping per hen. |
+
+#### Data Recovery
+- **42 hens** were reactivated via `Hen::whereNull('cage_slot_id')->where('is_active', 0)->update(['is_active' => 1])`
+- This was a one-time manual DB update, not a migration
+- Rationale: these hens were never legitimately deactivated (no mortality/culling/removal log existed for them); they were victims of the partial-update crash pattern
+
+---
+
 **End of Audit**

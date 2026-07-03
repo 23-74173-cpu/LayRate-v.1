@@ -72,8 +72,8 @@ function openWeightCheckModal(henId, henLabel) {
 }
 
 function closeWeightCheckModal() {
-    document.getElementById('weightCheckModal').classList.add('hidden');
-    document.getElementById('weightCheckModal').classList.remove('flex');
+    var el = document.getElementById('weightCheckModal');
+    if (el) { el.classList.add('hidden'); el.classList.remove('flex'); }
 }
 
 window.openWeightCheckModal = openWeightCheckModal;

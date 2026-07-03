@@ -110,8 +110,8 @@ function openRegisterModal() {
 }
 
 function closeRegisterModal() {
-    document.getElementById('registerModal').classList.add('hidden');
-    document.getElementById('registerModal').classList.remove('flex');
+    var el = document.getElementById('registerModal');
+    if (el) { el.classList.add('hidden'); el.classList.remove('flex'); }
 }
 
 window.openRegisterModal = openRegisterModal;

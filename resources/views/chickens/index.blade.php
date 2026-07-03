@@ -4,7 +4,14 @@
 @section('content')
 <div class="space-y-5">
 
-    <x-page-header title="Chickens" subtitle="Manage hen inventory, movements, and mortality records" />
+    <x-page-header title="Chickens" subtitle="Manage hen inventory, movements, and mortality records">
+        <x-slot:actions>
+            <button type="button" onclick="openRegisterModal()"
+                    class="px-3 py-1.5 text-xs bg-[#002D5E] text-white rounded hover:bg-[#001F42] transition-colors">
+                <i data-lucide="plus" class="w-3 h-3 inline"></i> Register New Chickens
+            </button>
+        </x-slot:actions>
+    </x-page-header>
 
     {{-- Tabs --}}
     <div id="chickens-tabs-nav" class="mb-5">
@@ -21,15 +28,6 @@
     {{-- ============================================ --}}
     <div id="panelInventory" class="{{ $tab !== 'inventory' ? 'hidden' : '' }}">
 
-        {{-- Actions --}}
-        <div class="flex items-center justify-between mb-5">
-            <div></div>
-            <button type="button" onclick="openRegisterModal()"
-                    class="px-3 py-1.5 text-xs bg-[#002D5E] text-white rounded hover:bg-[#001F42] transition-colors">
-                <i data-lucide="plus" class="w-3 h-3 inline"></i> Register New Chickens
-            </button>
-        </div>
-
         {{-- Filter Bar --}}
         <div id="inventoryFilters" class="mb-5">
             <x-card padding="p-4">
@@ -38,7 +36,7 @@
                 {{-- Status Toggle --}}
                 <div class="flex items-center gap-1 border border-[#D9D9D9] rounded overflow-hidden">
                     @foreach(['all' => 'All', 'active' => 'Active', 'inactive' => 'Inactive'] as $val => $label)
-                    <label class="px-3 py-1.5 text-xs cursor-pointer transition-colors {{ $isActive === $val ? 'bg-[#002D5E] text-white' : 'bg-white text-[#6B7280] hover:bg-[#F5F6F8]' }}">
+                    <label class="status-pill px-3 py-1.5 text-xs cursor-pointer transition-colors {{ $isActive === $val ? 'bg-[#002D5E] text-white' : 'bg-white text-[#6B7280] hover:bg-[#F5F6F8]' }}">
                         <input type="radio" name="status" value="{{ $val }}" class="hidden" onchange="filterInventory()" {{ $isActive === $val ? 'checked' : '' }}>
                         {{ $label }}
                     </label>
@@ -67,6 +65,21 @@
                     </select>
                 </div>
 
+                {{-- Sort --}}
+                <div>
+                    <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Sort</label>
+                    <select name="sort" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="filterInventory()">
+                        <option value="" {{ $sort === '' ? 'selected' : '' }}>Chicken ID (A-Z)</option>
+                        <option value="chicken_id_desc" {{ $sort === 'chicken_id_desc' ? 'selected' : '' }}>Chicken ID (Z-A)</option>
+                        <option value="age_asc" {{ $sort === 'age_asc' ? 'selected' : '' }}>Age (Youngest)</option>
+                        <option value="age_desc" {{ $sort === 'age_desc' ? 'selected' : '' }}>Age (Oldest)</option>
+                        <option value="breed_asc" {{ $sort === 'breed_asc' ? 'selected' : '' }}>Breed (A-Z)</option>
+                        <option value="breed_desc" {{ $sort === 'breed_desc' ? 'selected' : '' }}>Breed (Z-A)</option>
+                        <option value="date_asc" {{ $sort === 'date_asc' ? 'selected' : '' }}>Date Acquired (Oldest)</option>
+                        <option value="date_desc" {{ $sort === 'date_desc' ? 'selected' : '' }}>Date Acquired (Newest)</option>
+                    </select>
+                </div>
+
                 {{-- Search --}}
                 <div>
                     <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Tag Code</label>
@@ -81,10 +94,8 @@
                     </div>
                 </div>
 
-                @if($cageId || $breed || $search)
                 <a href="#" onclick="clearFilters(); return false;"
-                   class="px-2 py-1.5 text-xs text-red-500 hover:underline">Clear filters</a>
-                @endif
+                   class="px-2 py-1.5 text-xs border border-[#D9D9D9] rounded text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333] transition-colors">Clear filters</a>
             </div>
             </x-card>
         </div>
@@ -97,17 +108,21 @@
             <div class="flex items-center gap-2">
                 <button type="button" onclick="bulkMove()"
                         class="px-3 py-1.5 text-xs border border-[#002D5E] text-[#002D5E] rounded hover:bg-[#002D5E]/5">
-                    <i data-lucide="arrow-right" class="w-3 h-3 inline"></i> Move Selected
+                    <i data-lucide="arrow-right" class="w-3 h-3 inline"></i> Move
+                </button>
+                <button type="button" onclick="bulkCull()"
+                        class="px-3 py-1.5 text-xs border border-orange-400 text-orange-600 rounded hover:bg-orange-50">
+                    <i data-lucide="crosshair" class="w-3 h-3 inline"></i> Cull
                 </button>
                 <button type="button" onclick="bulkRemove()"
                         class="px-3 py-1.5 text-xs border border-red-400 text-red-500 rounded hover:bg-red-50">
-                    <i data-lucide="trash-2" class="w-3 h-3 inline"></i> Remove Selected
+                    <i data-lucide="log-out" class="w-3 h-3 inline"></i> Remove
                 </button>
             </div>
         </div>
 
         {{-- Hen List (lazy loaded) --}}
-        <turbo-frame id="chickens-inventory-list" src="{{ route('chickens.inventory-list', request()->query()) }}" loading="lazy" target="_top">
+        <turbo-frame id="chickens-inventory-list" src="{{ route('chickens.inventory-list', ['sort' => $sort ?: null] + request()->query()) }}" loading="lazy" target="_top">
             @include('chickens._inventory-list-skeleton')
         </turbo-frame>
     </div>
@@ -219,17 +234,37 @@
 
 @push('scripts')
 <script>
+function updateStatusPills() {
+    const labels = document.querySelectorAll('.status-pill');
+    labels.forEach(l => {
+        l.classList.remove('bg-[#002D5E]', 'text-white');
+        l.classList.add('bg-white', 'text-[#6B7280]', 'hover:bg-[#F5F6F8]');
+    });
+    const checked = document.querySelector('input[name="status"]:checked');
+    if (checked) {
+        const label = checked.closest('label');
+        if (label) {
+            label.classList.remove('bg-white', 'text-[#6B7280]', 'hover:bg-[#F5F6F8]');
+            label.classList.add('bg-[#002D5E]', 'text-white');
+        }
+    }
+}
+
 function filterInventory() {
     const status = document.querySelector('input[name="status"]:checked')?.value || 'all';
     const cageId = document.querySelector('select[name="cage_id"]')?.value || '';
     const breed = document.querySelector('select[name="breed"]')?.value || '';
     const search = document.getElementById('tagSearchInput')?.value || '';
+    const sort = document.querySelector('select[name="sort"]')?.value || '';
+
+    updateStatusPills();
 
     const params = new URLSearchParams();
     if (status !== 'all') params.set('status', status);
     if (cageId) params.set('cage_id', cageId);
     if (breed) params.set('breed', breed);
     if (search) params.set('search', search);
+    if (sort) params.set('sort', sort);
 
     const frame = document.getElementById('chickens-inventory-list');
     frame.src = '{{ route("chickens.inventory-list") }}?' + params.toString();
@@ -244,7 +279,10 @@ function clearFilters() {
     document.querySelectorAll('input[name="status"]').forEach(r => r.checked = r.value === 'all');
     document.querySelector('select[name="cage_id"]').value = '';
     document.querySelector('select[name="breed"]').value = '';
+    document.querySelector('select[name="sort"]').value = '';
     document.getElementById('tagSearchInput').value = '';
+
+    updateStatusPills();
 
     const frame = document.getElementById('chickens-inventory-list');
     frame.src = '{{ route("chickens.inventory-list") }}';
@@ -324,6 +362,28 @@ function bulkRemove() {
     const ids = getCheckedHenIds();
     const count = document.querySelectorAll('.hen-checkbox:checked').length;
     openRemoveModal(ids, count, null, null);
+}
+
+function bulkCull() {
+    const ids = getCheckedHenIds();
+    const count = document.querySelectorAll('.hen-checkbox:checked').length;
+    if (count === 0) return;
+    openCullModal(ids, count + ' selected hen' + (count > 1 ? 's' : ''));
+}
+
+function toggleAllInSlot(checkbox) {
+    const container = checkbox.closest('.slot-hens');
+    if (!container) return;
+    container.querySelectorAll('.hen-checkbox').forEach(cb => cb.checked = checkbox.checked);
+    updateBulkBar();
+}
+
+function toggleColumns(btn) {
+    const card = btn.closest('.rounded-lg');
+    const hidden = card.querySelectorAll('.col-toggle');
+    const anyHidden = Array.from(hidden).some(el => el.style.display === 'none');
+    hidden.forEach(el => el.style.display = anyHidden ? '' : 'none');
+    btn.querySelector('i').dataset.toggled = anyHidden ? '' : '1';
 }
 </script>
 @endpush

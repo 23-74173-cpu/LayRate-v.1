@@ -23,6 +23,7 @@ class ChickensController extends Controller
         $breed = $request->query('breed');
         $isActive = $request->query('status', 'all');
         $search = $request->query('search');
+        $sort = $request->query('sort', '');
 
         $cages = Cage::with('cageSlots')->orderBy('cage_code')->get();
         $breeds = Hen::distinct()->pluck('breed')->filter()->sort()->values();
@@ -39,8 +40,22 @@ class ChickensController extends Controller
 
         return view('chickens.index', compact(
             'cages', 'breeds', 'todayTotal', 'todayByCage', 'tab',
-            'cageId', 'breed', 'isActive', 'search'
+            'cageId', 'breed', 'isActive', 'search', 'sort'
         ));
+    }
+
+    protected function applySort($query, ?string $sort): void
+    {
+        match ($sort) {
+            'chicken_id_desc' => $query->orderBy('chicken_id', 'desc')->orderBy('id'),
+            'breed_asc'       => $query->orderBy('breed')->orderBy('chicken_id')->orderBy('id'),
+            'breed_desc'      => $query->orderBy('breed', 'desc')->orderBy('chicken_id')->orderBy('id'),
+            'age_asc'         => $query->orderBy('flock_age_weeks')->orderBy('chicken_id')->orderBy('id'),
+            'age_desc'        => $query->orderBy('flock_age_weeks', 'desc')->orderBy('chicken_id')->orderBy('id'),
+            'date_asc'        => $query->orderBy('date_acquired')->orderBy('chicken_id')->orderBy('id'),
+            'date_desc'       => $query->orderBy('date_acquired', 'desc')->orderBy('chicken_id')->orderBy('id'),
+            default           => $query->orderBy('chicken_id')->orderBy('id'),
+        };
     }
 
     public function inventoryList(Request $request)
@@ -49,14 +64,15 @@ class ChickensController extends Controller
         $breed = $request->query('breed');
         $isActive = $request->query('status', 'all');
         $search = $request->query('search');
+        $sort = $request->query('sort', '');
 
         $hens = Hen::with(['cageSlot.cage'])
             ->when($cageId, fn($q) => $q->whereHas('cageSlot', fn($q) => $q->where('cage_id', $cageId)))
             ->when($breed, fn($q) => $q->where('breed', $breed))
             ->when($isActive !== 'all', fn($q) => $q->where('is_active', $isActive === 'active'))
             ->when($search, fn($q) => $q->where('tag_code', 'like', "%{$search}%"))
-            ->when($cageId === null, fn($q) => $q->whereNotNull('cage_slot_id')) // hide unplaced unless explicitly queried
-            ->orderBy('id')
+            ->when($cageId === null, fn($q) => $q->whereNotNull('cage_slot_id'))
+            ->when(true, fn($q) => $this->applySort($q, $sort))
             ->get();
 
         $hensByCage = $hens
@@ -72,13 +88,17 @@ class ChickensController extends Controller
                 ->when($breed, fn($q) => $q->where('breed', $breed))
                 ->when($isActive !== 'all', fn($q) => $q->where('is_active', $isActive === 'active'))
                 ->when($search, fn($q) => $q->where('tag_code', 'like', "%{$search}%"))
-                ->orderBy('id')
+                ->when(true, fn($q) => $this->applySort($q, $sort))
                 ->get();
         }
 
         $unplacedCount = $unplacedHens->count();
 
-        return view('chickens._inventory-list', compact('hensByCage', 'unplacedHens', 'unplacedCount'));
+        return response()
+            ->view('chickens._inventory-list', compact('hensByCage', 'unplacedHens', 'unplacedCount'))
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
 
     public function mortalityRecords(Request $request)
@@ -121,15 +141,16 @@ class ChickensController extends Controller
             for ($i = 0; $i < $quantity; $i++) {
                 $chickenId = sprintf("CHK-%s-%05d", $year, $next);
                 $hen = Hen::create([
-                    'chicken_id'            => $chickenId,
-                    'breed'                 => $data['breed'],
-                    'sex'                   => 'hen',
-                    'source'                => $data['source'] ?? null,
-                    'date_acquired'         => $data['date_acquired'],
+                    'chicken_id'             => $chickenId,
+                    'breed'                  => $data['breed'],
+                    'sex'                    => 'hen',
+                    'source'                 => $data['source'] ?? null,
+                    'date_acquired'          => $data['date_acquired'],
                     'age_at_placement_weeks' => $data['age_at_placement_weeks'],
-                    'initial_health_status' => $data['initial_health_status'] ?? null,
-                    'notes'                 => $data['notes'] ?? null,
-                    'is_active'             => true,
+                    'flock_age_weeks'        => $data['age_at_placement_weeks'],
+                    'initial_health_status'  => $data['initial_health_status'] ?? null,
+                    'notes'                  => $data['notes'] ?? null,
+                    'is_active'              => true,
                 ]);
                 $created[] = $hen;
                 $next++;
@@ -193,63 +214,109 @@ class ChickensController extends Controller
     public function storeCulling(Request $request)
     {
         $data = $request->validate([
-            'hen_id'    => 'required|integer|exists:hens,id',
+            'hen_id'    => 'required|string',
             'cull_date' => 'required|date',
             'reason'    => 'required|in:low_production,illness,aggression,age,other',
             'notes'     => 'nullable|string|max:1000',
         ]);
 
-        $hen = Hen::with('cageSlot')->findOrFail($data['hen_id']);
-        if (!$hen->is_active) {
-            return back()->withErrors(['hen_id' => 'This hen is already inactive.']);
+        $henIds = array_filter(array_map('intval', explode(',', $data['hen_id'])));
+        $henIds = array_unique($henIds);
+
+        if (empty($henIds)) {
+            return back()->withErrors(['hen_id' => 'No valid hens specified.']);
         }
 
-        if ($hen->cageSlot) {
-            $hen->cageSlot->decrement('current_occupancy');
+        $culled = [];
+        $errors = [];
+        foreach ($henIds as $henId) {
+            DB::transaction(function () use ($henId, $data, &$culled, &$errors) {
+                $hen = Hen::with('cageSlot')->find($henId);
+                if (!$hen || !$hen->is_active) {
+                    $errors[] = "Hen #{$henId} not found or already inactive.";
+                    return;
+                }
+
+                if ($hen->cageSlot) {
+                    $hen->cageSlot->decrement('current_occupancy');
+                }
+                $hen->update(['is_active' => false]);
+
+                CullingLog::create([
+                    'hen_id'      => $hen->id,
+                    'cull_date'   => $data['cull_date'],
+                    'reason'      => $data['reason'],
+                    'notes'       => $data['notes'] ?? null,
+                    'recorded_by' => auth()->id(),
+                ]);
+                $culled[] = $hen->chicken_id;
+            });
         }
-        $hen->update(['is_active' => false]);
 
-        CullingLog::create([
-            'hen_id'      => $hen->id,
-            'cull_date'   => $data['cull_date'],
-            'reason'      => $data['reason'],
-            'notes'       => $data['notes'] ?? null,
-            'recorded_by' => auth()->id(),
-        ]);
+        if (empty($culled)) {
+            return back()->withErrors(['hen_id' => implode(' ', $errors)]);
+        }
 
-        return redirect()->back()->with('success', "{$hen->chicken_id} culled and removed from active inventory.");
+        $msg = count($culled) . ' hen(s) culled';
+        if (!empty($errors)) {
+            $msg .= '. ' . implode(' ', $errors);
+        }
+        return redirect()->back()->with('success', $msg . '.');
     }
 
     public function storeRemoval(Request $request)
     {
         $data = $request->validate([
-            'hen_id'      => 'required|integer|exists:hens,id',
+            'hen_id'       => 'required|string',
             'removal_date' => 'required|date',
-            'reason'      => 'required|string|max:100',
-            'destination' => 'nullable|string|max:200',
-            'notes'       => 'nullable|string|max:1000',
+            'reason'       => 'required|string|max:100',
+            'destination'  => 'nullable|string|max:200',
+            'notes'        => 'nullable|string|max:1000',
         ]);
 
-        $hen = Hen::with('cageSlot')->findOrFail($data['hen_id']);
-        if (!$hen->is_active) {
-            return back()->withErrors(['hen_id' => 'This hen is already inactive.']);
+        $henIds = array_filter(array_map('intval', explode(',', $data['hen_id'])));
+        $henIds = array_unique($henIds);
+
+        if (empty($henIds)) {
+            return back()->withErrors(['hen_id' => 'No valid hens specified.']);
         }
 
-        if ($hen->cageSlot) {
-            $hen->cageSlot->decrement('current_occupancy');
+        $removed = [];
+        $errors = [];
+        foreach ($henIds as $henId) {
+            DB::transaction(function () use ($henId, $data, &$removed, &$errors) {
+                $hen = Hen::with('cageSlot')->find($henId);
+                if (!$hen || !$hen->is_active) {
+                    $errors[] = "Hen #{$henId} not found or already inactive.";
+                    return;
+                }
+
+                if ($hen->cageSlot) {
+                    $hen->cageSlot->decrement('current_occupancy');
+                }
+                $hen->update(['is_active' => false]);
+
+                Removal::create([
+                    'hen_id'       => $hen->id,
+                    'removal_date' => $data['removal_date'],
+                    'reason'       => $data['reason'],
+                    'destination'  => $data['destination'] ?? null,
+                    'notes'        => $data['notes'] ?? null,
+                    'recorded_by'  => auth()->id(),
+                ]);
+                $removed[] = $hen->chicken_id;
+            });
         }
-        $hen->update(['is_active' => false]);
 
-        Removal::create([
-            'hen_id'       => $hen->id,
-            'removal_date' => $data['removal_date'],
-            'reason'       => $data['reason'],
-            'destination'  => $data['destination'] ?? null,
-            'notes'        => $data['notes'] ?? null,
-            'recorded_by'  => auth()->id(),
-        ]);
+        if (empty($removed)) {
+            return back()->withErrors(['hen_id' => implode(' ', $errors)]);
+        }
 
-        return redirect()->back()->with('success', "{$hen->chicken_id} removed from active inventory.");
+        $msg = count($removed) . ' hen(s) removed';
+        if (!empty($errors)) {
+            $msg .= '. ' . implode(' ', $errors);
+        }
+        return redirect()->back()->with('success', $msg . '.');
     }
 
     public function cullingRecords(Request $request)
@@ -358,40 +425,60 @@ class ChickensController extends Controller
             return back()->withErrors(['hen_ids' => 'No active hens selected.']);
         }
 
-        $toRemove = $hens->count();
         $recordMortality = isset($data['record_mortality']) && $data['record_mortality'];
 
-        $cageId = $hens->first()->cage?->id;
+        $unplacedCount = $hens->filter(fn($h) => $h->cage_slot_id === null)->count();
 
-        foreach ($hens as $hen) {
-            $sourceSlot = $hen->cageSlot;
-            if ($sourceSlot) {
-                $sourceSlot->decrement('current_occupancy');
-            }
-            $hen->update(['is_active' => false]);
-        }
-
-        if ($recordMortality && !empty($data['reason'])) {
-            $log = MortalityLog::create([
-                'cage_id'      => $cageId,
-                'log_date'     => now()->toDateString(),
-                'count'        => $toRemove,
-                'reason'       => $data['reason'],
-                'notes'        => $data['notes'] ?? null,
-                'recorded_by'  => auth()->id(),
-            ]);
-
+        DB::transaction(function () use ($hens, $data, $recordMortality) {
             foreach ($hens as $hen) {
-                MortalityLogHen::create([
-                    'mortality_log_id' => $log->id,
-                    'hen_id'           => $hen->id,
-                    'cage_slot_id'     => $hen->cage_slot_id,
-                ]);
+                $sourceSlot = $hen->cageSlot;
+                if ($sourceSlot) {
+                    $sourceSlot->decrement('current_occupancy');
+                }
+                $hen->update(['is_active' => false]);
             }
+
+            if ($recordMortality && !empty($data['reason'])) {
+                $placedHens = $hens->filter(fn($h) => $h->cage_slot_id !== null);
+
+                if ($placedHens->isNotEmpty()) {
+                    $hensByCage = $placedHens->groupBy(fn($h) => $h->cage->id);
+
+                    foreach ($hensByCage as $cageId => $cageHens) {
+                        $log = MortalityLog::create([
+                            'cage_id'     => $cageId,
+                            'log_date'    => now()->toDateString(),
+                            'count'       => $cageHens->count(),
+                            'reason'      => $data['reason'],
+                            'notes'       => $data['notes'] ?? null,
+                            'recorded_by' => auth()->id(),
+                        ]);
+
+                        foreach ($cageHens as $hen) {
+                            MortalityLogHen::create([
+                                'mortality_log_id' => $log->id,
+                                'hen_id'           => $hen->id,
+                                'cage_slot_id'     => $hen->cage_slot_id,
+                            ]);
+                        }
+                    }
+                }
+            }
+        });
+
+        $totalRemoved = $hens->count();
+        $mortalityCount = $recordMortality
+            ? $hens->filter(fn($h) => $h->cage_slot_id !== null)->count()
+            : 0;
+
+        $parts = ["{$totalRemoved} hen(s) removed"];
+        if ($mortalityCount > 0) {
+            $parts[] = "{$mortalityCount} recorded as mortality";
+        }
+        if ($unplacedCount > 0) {
+            $parts[] = "{$unplacedCount} unplaced hen(s) skipped mortality logging";
         }
 
-        $mortalityNote = $recordMortality ? ' and recorded as mortality.' : '.';
-        return redirect()->back()
-            ->with('success', "{$toRemove} hen(s) removed{$mortalityNote}");
+        return redirect()->back()->with('success', implode('. ', $parts) . '.');
     }
 }

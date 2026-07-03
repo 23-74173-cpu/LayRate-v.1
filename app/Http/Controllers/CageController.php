@@ -36,7 +36,7 @@ class CageController extends Controller
     {
         $data = $request->validate([
             'rows' => 'required|integer|min:1|max:10',
-            'slots_per_row' => 'required|integer|min:1|max:10',
+            'slots_per_row' => 'required|integer|min:1|max:100',
             'max_chickens_per_slot' => 'required|integer|min:1|max:10',
         ]);
 
@@ -62,7 +62,7 @@ class CageController extends Controller
     {
         $data = $request->validate([
             'rows' => 'nullable|integer|min:1|max:10',
-            'slots_per_row' => 'nullable|integer|min:1|max:10',
+            'slots_per_row' => 'nullable|integer|min:1|max:100',
             'max_chickens_per_slot' => 'nullable|integer|min:1|max:10',
             'is_active' => 'nullable|boolean',
             'slots' => 'nullable|array',
@@ -454,7 +454,10 @@ class CageController extends Controller
                     $capacity = $slot->remaining;
                     for ($i = 0; $i < $capacity && $idx < $henIter->count(); $i++) {
                         $hen = $henIter[$idx];
-                        $hen->update(['cage_slot_id' => $slot->id]);
+                        $hen->update([
+                            'cage_slot_id'   => $slot->id,
+                            'placement_date' => today(),
+                        ]);
                         $slot->increment('current_occupancy');
                         CageTransfer::create([
                             'hen_id'           => $hen->id,
@@ -497,7 +500,10 @@ class CageController extends Controller
                 $capacity = min($perSlot, $slot->remaining);
                 for ($i = 0; $i < $capacity && $idx < $henIter->count(); $i++) {
                     $hen = $henIter[$idx];
-                    $hen->update(['cage_slot_id' => $slot->id]);
+                    $hen->update([
+                        'cage_slot_id'   => $slot->id,
+                        'placement_date' => today(),
+                    ]);
                     $slot->increment('current_occupancy');
                     CageTransfer::create([
                         'hen_id'           => $hen->id,

@@ -4,7 +4,7 @@
         <form method="POST" action="{{ route('chickens.removal') }}">
             @csrf
             <div class="flex items-center justify-between mb-5">
-                <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Remove / Sell Chicken</h2>
+                <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Remove / Sell <span id="removalModalTitle">Chicken</span></h2>
                 <button type="button" onclick="closeRemovalModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                     <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
                 </button>
@@ -60,12 +60,13 @@
 function openRemovalModal(henId, henLabel) {
     document.getElementById('removalHenId').value = henId;
     document.getElementById('removalHenText').textContent = henLabel;
+    document.getElementById('removalModalTitle').textContent = henId.indexOf(',') > -1 ? 'Hens' : 'Chicken';
     document.getElementById('removalModal').classList.remove('hidden');
     document.getElementById('removalModal').classList.add('flex');
 }
 function closeRemovalModal() {
-    document.getElementById('removalModal').classList.add('hidden');
-    document.getElementById('removalModal').classList.remove('flex');
+    var el = document.getElementById('removalModal');
+    if (el) { el.classList.add('hidden'); el.classList.remove('flex'); }
 }
 window.openRemovalModal = openRemovalModal;
 window.closeRemovalModal = closeRemovalModal;

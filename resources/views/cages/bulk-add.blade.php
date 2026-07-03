@@ -36,6 +36,11 @@
                  style="background: #F0F4FF; border-bottom: 1px solid #CCDDFF;">
                 <div class="flex items-center gap-3">
                     <span class="text-sm font-semibold text-[#1D4E8F]">Step 1: Select Hens</span>
+                    <label class="flex items-center gap-1 text-xs text-[#6B7280] cursor-pointer">
+                        <input type="checkbox" id="selectAllHens" onchange="toggleSelectAll()"
+                               class="w-3 h-3 rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]">
+                        Select all
+                    </label>
                     <span class="text-xs text-[#6B7280]">
                         <strong id="henCount" class="text-[#002D5E]">{{ count($preselectedIds) ?: 0 }}</strong> selected
                     </span>
@@ -164,6 +169,7 @@
     let isDragging = false;
     let selectedSlots = new Set();
     let cageSlots = [];
+    let slotsLoadFailed = false;
     let currentMaxPerSlot = 0;
     let currentMode = 'manual';
 
@@ -178,21 +184,43 @@
     });
 
     // ── Hen Selection ────────────────────────────────────
+    function toggleSelectAll() {
+        const checked = document.getElementById('selectAllHens').checked;
+        document.querySelectorAll('.hen-row').forEach(row => {
+            if (row.style.display !== 'none') {
+                row.querySelector('.hen-checkbox').checked = checked;
+            }
+        });
+        updateHenSelection();
+    }
+    window.toggleSelectAll = toggleSelectAll;
+
     function filterUnplaced() {
         const breed = document.getElementById('henBreedFilter').value;
         document.querySelectorAll('.hen-row').forEach(row => {
             row.style.display = (!breed || row.dataset.breed === breed) ? '' : 'none';
         });
+        syncSelectAll();
         updateHenSelection();
     }
     window.filterUnplaced = filterUnplaced;
+
+    function syncSelectAll() {
+        const allCheckboxes = document.querySelectorAll('.hen-row:not([style*=\"display: none\"]) .hen-checkbox');
+        const allChecked = allCheckboxes.length > 0 && Array.from(allCheckboxes).every(cb => cb.checked);
+        const selectAll = document.getElementById('selectAllHens');
+        if (selectAll) selectAll.checked = allChecked;
+    }
 
     function updateHenSelection() {
         const checked = document.querySelectorAll('.hen-checkbox:checked');
         const count = checked.length;
         const ids = Array.from(checked).map(el => el.value).join(',');
-        document.getElementById('henCount').textContent = count;
-        document.getElementById('henIdsInput').value = ids;
+        const henCountEl = document.getElementById('henCount');
+        const henIdsInput = document.getElementById('henIdsInput');
+        if (henCountEl) henCountEl.textContent = count;
+        if (henIdsInput) henIdsInput.value = ids;
+        syncSelectAll();
         updateAutoSummary();
         validateForm();
     }
@@ -201,9 +229,12 @@
     // ── Mode Switch ───────────────────────────────────────
     function switchMode(mode) {
         currentMode = mode;
-        document.getElementById('modeInput').value = mode;
-        document.getElementById('manualMode').classList.toggle('hidden', mode !== 'manual');
-        document.getElementById('autoMode').classList.toggle('hidden', mode !== 'auto');
+        const modeInput = document.getElementById('modeInput');
+        if (modeInput) modeInput.value = mode;
+        const manualMode = document.getElementById('manualMode');
+        const autoMode = document.getElementById('autoMode');
+        if (manualMode) manualMode.classList.toggle('hidden', mode !== 'manual');
+        if (autoMode) autoMode.classList.toggle('hidden', mode !== 'auto');
         if (mode === 'auto') updateAutoSummary();
         validateForm();
     }
@@ -212,33 +243,49 @@
     // ── Cage / Slot Grid (manual) ─────────────────────────
     function loadCageSlots() {
         const select = document.getElementById('cageSelect');
-        const option = select.options[select.selectedIndex];
-        const container = document.getElementById('slotGridContainer');
-
-        selectedSlots.clear();
-        document.getElementById('slotIdsInput').value = '';
-        validateForm();
-
+        if (!select) return;
         if (!select.value) {
-            container.innerHTML = '<p class="text-sm text-[#9CA3AF] py-8 text-center">Select a cage to see available slots.</p>';
+            const container = document.getElementById('slotGridContainer');
+            if (container) container.innerHTML = '<p class="text-sm text-[#9CA3AF] py-8 text-center">Select a cage to see available slots.</p>';
             updateAutoSummary();
             return;
         }
+        const option = select.options[select.selectedIndex];
+        if (!option) return;
+        const container = document.getElementById('slotGridContainer');
+        if (!container) return;
+
+        selectedSlots.clear();
+        const slotIdsInput = document.getElementById('slotIdsInput');
+        if (slotIdsInput) slotIdsInput.value = '';
+        validateForm();
+
+        container.innerHTML = '<p class="text-sm text-[#9CA3AF] py-8 text-center">Loading slots...</p>';
 
         const rows = parseInt(option.dataset.rows);
         const slotsPerRow = parseInt(option.dataset.slots);
         currentMaxPerSlot = parseInt(option.dataset.max);
 
+        slotsLoadFailed = false;
         const cageId = select.value;
-        fetch(`/cages/${cageId}/slots-json`)
-            .then(r => r.json())
+        fetch(`/cages/${cageId}/slots-json`, {
+            headers: { 'Accept': 'application/json' },
+            credentials: 'same-origin',
+        })
+            .then(r => {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
             .then(slots => {
                 cageSlots = slots;
                 renderGrid(rows, slotsPerRow);
                 updateAutoSummary();
             })
-            .catch(() => {
-                container.innerHTML = '<p class="text-sm text-red-500 py-8 text-center">Failed to load slots.</p>';
+            .catch(err => {
+                slotsLoadFailed = true;
+                console.error('loadCageSlots fetch error:', err);
+                container.innerHTML = '<p class="text-sm text-red-500 py-8 text-center">Failed to load slots (' + err.message + ').</p>';
+                updateAutoSummary();
             });
     }
     window.loadCageSlots = loadCageSlots;
@@ -321,28 +368,49 @@
             selectedSlots.add(id);
             el.classList.add('ring-2', 'ring-[#002D5E]', 'ring-offset-1', 'bg-[#002D5E]/10');
         }
-        document.getElementById('slotIdsInput').value = Array.from(selectedSlots).join(',');
+        const slotIdsInput = document.getElementById('slotIdsInput');
+        if (slotIdsInput) slotIdsInput.value = Array.from(selectedSlots).join(',');
         validateForm();
     }
 
     // ── Auto-distribute summary ───────────────────────────
     function updateAutoSummary() {
         const henCount = document.querySelectorAll('.hen-checkbox:checked').length;
-        document.getElementById('autoHenCount').textContent = henCount;
+        const autoHenCount = document.getElementById('autoHenCount');
+        if (!autoHenCount) return;
+        autoHenCount.textContent = henCount;
 
         const select = document.getElementById('cageSelect');
-        if (!select.value) {
-            document.getElementById('autoSummary').innerHTML =
+        if (!select || !select.value) {
+            const autoSummary = document.getElementById('autoSummary');
+            if (autoSummary) autoSummary.innerHTML =
                 'Will distribute <strong>' + henCount + '</strong> hens across available slots. <span class="text-[#9CA3AF]">Select a cage first.</span>';
             return;
         }
 
-        const maxPerSlot = parseInt(select.options[select.selectedIndex].dataset.max);
-        const perSlot = parseInt(document.getElementById('chickensPerSlot').value) || 1;
+        const option = select.options[select.selectedIndex];
+        if (!option) return;
+        const maxPerSlot = parseInt(option.dataset.max);
+
+        const autoSummary = document.getElementById('autoSummary');
+        if (!autoSummary) return;
+
+        if (cageSlots.length === 0) {
+            if (slotsLoadFailed) {
+                autoSummary.innerHTML = '<span class="text-red-500">Failed to load slot data.</span>';
+            } else {
+                autoSummary.innerHTML =
+                    'Will distribute <strong>' + henCount + '</strong> hens across available slots. <span class="text-[#9CA3AF]">Loading slots...</span>';
+            }
+            return;
+        }
+
+        const perSlotInput = document.getElementById('chickensPerSlot');
+        const perSlot = perSlotInput ? parseInt(perSlotInput.value) || 1 : 1;
         const available = cageSlots.filter(s => (s.current_occupancy || 0) < maxPerSlot);
 
         if (available.length === 0) {
-            document.getElementById('autoSummary').innerHTML =
+            autoSummary.innerHTML =
                 '<span class="text-red-500">No available slots in this cage.</span>';
             return;
         }
@@ -351,7 +419,7 @@
         available.forEach(s => { totalCapacity += Math.min(perSlot, maxPerSlot - (s.current_occupancy || 0)); });
 
         const fits = totalCapacity >= henCount;
-        document.getElementById('autoSummary').innerHTML =
+        autoSummary.innerHTML =
             'Will distribute <strong>' + henCount + '</strong> hens across <strong>' + available.length + '</strong> available slot(s)' +
             (fits ? '.' : '. <span class="text-red-500">Only ' + totalCapacity + ' space(s) available — select fewer hens or reduce per-slot count.</span>');
     }
@@ -363,8 +431,11 @@
         const submitBtn = document.getElementById('submitBtn');
         const errorEl = document.getElementById('summaryError');
         const summarySlots = document.getElementById('summarySlots');
+        const summaryHens = document.getElementById('summaryHens');
+        const cageSelect = document.getElementById('cageSelect');
 
-        document.getElementById('summaryHens').textContent = henCount;
+        if (!submitBtn) return;
+        if (summaryHens) summaryHens.textContent = henCount;
 
         let valid = true;
         let errorMsg = '';
@@ -374,7 +445,7 @@
             errorMsg = 'Select at least one hen.';
         }
 
-        const cageId = document.getElementById('cageSelect').value;
+        const cageId = cageSelect ? cageSelect.value : '';
         if (!cageId) {
             valid = false;
             if (!errorMsg) errorMsg = 'Select a cage.';
@@ -382,21 +453,23 @@
 
         if (currentMode === 'manual') {
             const slotCount = selectedSlots.size;
-            summarySlots.textContent = slotCount;
+            if (summarySlots) summarySlots.textContent = slotCount;
             if (slotCount === 0) {
                 valid = false;
                 if (!errorMsg) errorMsg = 'Select at least one slot.';
             }
-        } else {
+        } else if (summarySlots) {
             summarySlots.textContent = 'auto';
         }
 
         submitBtn.disabled = !valid;
-        if (errorMsg) {
-            errorEl.textContent = errorMsg;
-            errorEl.classList.remove('hidden');
-        } else {
-            errorEl.classList.add('hidden');
+        if (errorEl) {
+            if (errorMsg) {
+                errorEl.textContent = errorMsg;
+                errorEl.classList.remove('hidden');
+            } else {
+                errorEl.classList.add('hidden');
+            }
         }
     }
     window.validateForm = validateForm;
@@ -416,7 +489,8 @@
     window.clearAll = clearAll;
 
     // Pre-load if cage already selected
-    if (document.getElementById('cageSelect').value) {
+    var initialCage = document.getElementById('cageSelect');
+    if (initialCage && initialCage.value) {
         loadCageSlots();
     }
 })();

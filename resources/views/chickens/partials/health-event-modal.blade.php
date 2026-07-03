@@ -85,8 +85,8 @@ function openHealthEventModal(henId, henLabel) {
 }
 
 function closeHealthEventModal() {
-    document.getElementById('healthEventModal').classList.add('hidden');
-    document.getElementById('healthEventModal').classList.remove('flex');
+    var el = document.getElementById('healthEventModal');
+    if (el) { el.classList.add('hidden'); el.classList.remove('flex'); }
 }
 
 window.openHealthEventModal = openHealthEventModal;

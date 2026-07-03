@@ -1,4 +1,4 @@
-<div id="moveModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] items-center justify-center p-4" role="dialog" aria-modal="true">
+<div id="moveModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] items-center justify-center p-4" role="dialog" aria-modal="true" style="display: none;">
     {{-- Backdrop --}}
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeMoveModal()"></div>
 
@@ -165,12 +165,10 @@ function openMoveModal(henIds, count, sourceInfo, breed) {
     const noSlots = document.getElementById('moveNoSlots');
     if (noSlots) noSlots.classList.add('hidden');
 
-    document.getElementById('moveModal').classList.remove('hidden');
-    document.getElementById('moveModal').classList.add('flex');
+    document.getElementById('moveModal').style.display = 'flex';
 }
 function closeMoveModal() {
-    document.getElementById('moveModal').classList.add('hidden');
-    document.getElementById('moveModal').classList.remove('flex');
+    document.getElementById('moveModal').style.display = 'none';
 }
 
 function loadDestSlots() {

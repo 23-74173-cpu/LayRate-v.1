@@ -27,6 +27,14 @@ Route::middleware('guest')->group(function () {
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
+// Temporary: opcache reset endpoint (no auth required)
+Route::get('/_reset-opcache', function () {
+    if (function_exists('opcache_reset')) {
+        opcache_reset();
+    }
+    return 'opcache reset done';
+});
+
 // ─── Authenticated routes ──────────────────────────────────────
 Route::middleware('auth')->group(function () {
 

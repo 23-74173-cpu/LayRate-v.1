@@ -1,4 +1,4 @@
-<div id="removeModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] items-center justify-center p-4" role="dialog" aria-modal="true">
+<div id="removeModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] items-center justify-center p-4" role="dialog" aria-modal="true" style="display: none;">
     {{-- Backdrop --}}
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeRemoveModal()"></div>
 
@@ -106,12 +106,10 @@ function openRemoveModal(henIds, count, sourceInfo, breed) {
     document.getElementById('removeNotes').value = '';
     document.getElementById('removeError').classList.add('hidden');
 
-    document.getElementById('removeModal').classList.remove('hidden');
-    document.getElementById('removeModal').classList.add('flex');
+    document.getElementById('removeModal').style.display = 'flex';
 }
 function closeRemoveModal() {
-    document.getElementById('removeModal').classList.add('hidden');
-    document.getElementById('removeModal').classList.remove('flex');
+    document.getElementById('removeModal').style.display = 'none';
 }
 
 window.openRemoveModal = openRemoveModal;

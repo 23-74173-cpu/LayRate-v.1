@@ -26,10 +26,16 @@
                             @endif
                         </span>
                     </div>
-                    <button type="button" onclick="event.stopPropagation(); toggleCage(this)"
-                            class="text-[#6B7280] hover:text-[#333] transition-colors">
-                        <i data-lucide="chevron-down" class="w-4 h-4 cage-chevron transition-transform"></i>
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="event.stopPropagation(); toggleColumns(this)"
+                                class="text-[#9CA3AF] hover:text-[#6B7280] transition-colors p-1 rounded" title="Toggle columns">
+                            <i data-lucide="columns" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button type="button" onclick="event.stopPropagation(); toggleCage(this)"
+                                class="text-[#6B7280] hover:text-[#333] transition-colors">
+                            <i data-lucide="chevron-down" class="w-4 h-4 cage-chevron transition-transform"></i>
+                        </button>
+                    </div>
                 </div>
 
                 {{-- Slots (expandable) --}}
@@ -79,23 +85,36 @@
 
                             {{-- Individual Hens --}}
                             <div class="slot-hens hidden">
+                                {{-- Column headers --}}
+                                <div class="flex items-center gap-3 px-4 py-1.5 border-t border-[#F0F0F0] bg-[#F5F6F8] text-[10px] font-semibold uppercase tracking-wider text-[#6B7280]">
+                                    <label class="flex items-center gap-1 cursor-pointer" title="Select all in this slot">
+                                        <input type="checkbox" onchange="toggleAllInSlot(this)"
+                                               class="w-3 h-3 rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]">
+                                    </label>
+                                    <span data-col="id" class="w-28 shrink-0 whitespace-nowrap col-toggle">Chicken ID</span>
+                                    <span data-col="breed" class="w-32 shrink-0 whitespace-nowrap col-toggle">Breed</span>
+                                    <span data-col="age" class="w-12 shrink-0 col-toggle">Age</span>
+                                    <span data-col="flock" class="w-16 shrink-0 col-toggle">Flock</span>
+                                    <span data-col="status" class="flex-1 col-toggle">Status</span>
+                                    <span data-col="actions" class="col-toggle">Actions</span>
+                                </div>
                                 @foreach($slotHens as $hen)
                                 <div class="flex items-center gap-3 px-4 py-2 border-t border-[#F5F5F5] hover:bg-[#FAFAFA] text-xs">
                                     <input type="checkbox" class="hen-checkbox w-3.5 h-3.5 rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]"
                                            value="{{ $hen->id }}"
                                            onclick="updateBulkBar()">
-                                    <span class="w-20 font-mono text-[#6B7280]">{{ $hen->tag_code ?? '—' }}</span>
-                                    <span class="w-32 text-[#333]">{{ $hen->breed }}</span>
-                                    <span class="w-12 text-[#6B7280]">{{ $hen->current_age_weeks }}w</span>
-                                    <span class="w-16 text-[#6B7280]">flock {{ $hen->flock_age_weeks }}w</span>
-                                    <span class="flex-1">
+                                    <span data-col="id" class="w-28 shrink-0 whitespace-nowrap font-mono text-[#6B7280] col-toggle">{{ $hen->tag_code ?? $hen->chicken_id ?? '—' }}</span>
+                                    <span data-col="breed" class="w-32 shrink-0 whitespace-nowrap text-[#333] col-toggle">{{ $hen->breed }}</span>
+                                    <span data-col="age" class="w-12 shrink-0 text-[#6B7280] col-toggle">{{ $hen->current_age_weeks }}w</span>
+                                    <span data-col="flock" class="w-16 shrink-0 text-[#6B7280] col-toggle">flock {{ $hen->flock_age_weeks }}w</span>
+                                    <span data-col="status" class="flex-1 col-toggle">
                                         @if($hen->is_active)
                                         <span class="text-xs px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Active</span>
                                         @else
                                         <span class="text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">Inactive</span>
                                         @endif
                                     </span>
-                                    <div class="flex items-center gap-1">
+                                    <div data-col="actions" class="flex items-center gap-1 col-toggle">
                                         <button type="button"
                                                 onclick="openWeightCheckModal('{{ $hen->id }}', '{{ $hen->tag_code ?? $hen->chicken_id }} ({{ $cage->cage_code }} slot {{ $slot->slot_number }})')"
                                                 class="p-1.5 rounded-full hover:bg-blue-50 transition-colors" style="color: #a39e98;" aria-label="Record weight">
