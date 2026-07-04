@@ -5,9 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Cage;
 use App\Models\Forecast;
 use App\Models\Hen;
-use App\Models\ProductionLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
@@ -26,20 +27,22 @@ class ForecastController extends Controller
         $metrics = session('forecast_metrics');
         $recommendedModel = session('recommended_model');
 
+        $hasEnoughData = $this->hasEnoughForecastData($scope, $cageCode, $breed);
+
         if ($scope === 'farm') {
             $historical = $this->farmHistorical();
             $forecasts  = Forecast::where('forecast_date', now()->toDateString())
                 ->whereNull('cage_id')->whereNull('breed')
                 ->orderBy('target_date')->limit($horizon)->get();
 
-            if ($forecasts->isEmpty() && $historical->isNotEmpty()) {
+            if ($hasEnoughData && $forecasts->isEmpty() && $historical->isNotEmpty()) {
                 $result = $this->generateForecast(null, null, $historical, $horizon);
                 $forecasts = $result['forecasts'];
                 $metrics = $metrics ?: $result['metrics'];
                 $recommendedModel = $recommendedModel ?: $result['recommended_model'];
             }
 
-            return view('forecast', compact('scope', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds'))
+            return view('forecast', compact('scope', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData'))
                 ->with('label', 'Whole Farm');
         }
 
@@ -49,38 +52,33 @@ class ForecastController extends Controller
                 ->whereNull('cage_id')->where('breed', $breed)
                 ->orderBy('target_date')->limit($horizon)->get();
 
-            if ($forecasts->isEmpty() && $historical->isNotEmpty()) {
+            if ($hasEnoughData && $forecasts->isEmpty() && $historical->isNotEmpty()) {
                 $result = $this->generateForecast(null, $breed, $historical, $horizon);
                 $forecasts = $result['forecasts'];
                 $metrics = $metrics ?: $result['metrics'];
                 $recommendedModel = $recommendedModel ?: $result['recommended_model'];
             }
 
-            return view('forecast', compact('scope', 'cageCode', 'breed', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds'))
+            return view('forecast', compact('scope', 'cageCode', 'breed', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData'))
                 ->with('label', $breed);
         }
 
         $cage = Cage::where('cage_code', $cageCode)->firstOrFail();
 
-        $historical = $cage->productionLogs()
-            ->orderByDesc('log_date')
-            ->limit(14)
-            ->get()
-            ->reverse()
-            ->values();
+        $historical = $this->cageHistorical($cageCode);
 
         $forecasts = Forecast::where('forecast_date', now()->toDateString())
             ->where('cage_id', $cage->id)->whereNull('breed')
             ->orderBy('target_date')->limit($horizon)->get();
 
-        if ($forecasts->isEmpty() && $historical->isNotEmpty()) {
+        if ($hasEnoughData && $forecasts->isEmpty() && $historical->isNotEmpty()) {
             $result = $this->generateForecast($cage, null, $historical, $horizon);
             $forecasts = $result['forecasts'];
             $metrics = $metrics ?: $result['metrics'];
             $recommendedModel = $recommendedModel ?: $result['recommended_model'];
         }
 
-        return view('forecast', compact('scope', 'cage', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds'));
+        return view('forecast', compact('scope', 'cage', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData'));
     }
 
     public function downloadTemplate()
@@ -132,6 +130,12 @@ class ForecastController extends Controller
         $breed     = $request->get('breed');
         $horizon   = (int) $request->get('horizon', 7);
 
+        if (!$this->hasEnoughForecastData($scope, $cageCode, $breed)) {
+            return redirect()->back()
+                ->with('error', 'The forecast input table must contain at least 90 days of production records before generating a forecast.')
+                ->withInput();
+        }
+
         try {
             if ($scope === 'farm') {
                 $historical = $this->farmHistorical();
@@ -163,12 +167,7 @@ class ForecastController extends Controller
 
             $cage = Cage::where('cage_code', $cageCode)->firstOrFail();
 
-            $historical = $cage->productionLogs()
-                ->orderByDesc('log_date')
-                ->limit(14)
-                ->get()
-                ->reverse()
-                ->values();
+            $historical = $this->cageHistorical($cageCode);
 
             Forecast::where('cage_id', $cage->id)->whereNull('breed')
                 ->where('forecast_date', now()->toDateString())->delete();
@@ -188,30 +187,137 @@ class ForecastController extends Controller
         }
     }
 
+    public function import(Request $request)
+    {
+        $isAjax = $request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest';
+
+        try {
+            $validated = $request->validate([
+                'forecast_file' => ['required', 'file', 'mimes:xlsx', 'max:10240'],
+            ]);
+
+            $file = $validated['forecast_file'];
+            $tempPath = $file->storeAs('temp', 'forecast_import_' . uniqid() . '.xlsx');
+            $fullPath = storage_path('app/' . $tempPath);
+
+            $pythonBinary = $this->resolvePythonBinary();
+            $scriptPath = base_path('forecast-api/import_forecast_input.py');
+
+            if (!file_exists($scriptPath)) {
+                throw new RuntimeException('Forecast import script not found at: ' . $scriptPath);
+            }
+
+            $command = [
+                $pythonBinary,
+                $scriptPath,
+                $fullPath,
+                '--source-file',
+                $file->getClientOriginalName(),
+            ];
+
+            $process = new Process($command, base_path());
+            $process->setTimeout(300);
+            $process->setEnv($this->processEnv());
+            $process->run();
+
+            if (file_exists($fullPath)) {
+                unlink($fullPath);
+            }
+
+            if (!$process->isSuccessful()) {
+                $errorOutput = trim($process->getErrorOutput());
+                $stdOutput = trim($process->getOutput());
+                $detail = $errorOutput ?: $stdOutput;
+                throw new RuntimeException(
+                    'Import process failed.' . ($detail ? ' ' . $detail : '')
+                );
+            }
+
+            $output = trim($process->getOutput());
+            $count = 0;
+            if (preg_match('/Imported (\d+) row/', $output, $matches)) {
+                $count = (int) $matches[1];
+            }
+
+            $message = "Imported {$count} production record(s) successfully.";
+
+            if ($isAjax) {
+                return response()->json(['success' => true, 'message' => $message, 'count' => $count]);
+            }
+
+            return redirect()->back()->with('success', $message);
+        } catch (Illuminate\Validation\ValidationException $e) {
+            if ($isAjax) {
+                return response()->json(['success' => false, 'errors' => $e->errors()], 422);
+            }
+            return redirect()->back()->withErrors($e->errors())->withInput();
+        } catch (ProcessFailedException $e) {
+            $message = 'Forecast import failed: ' . $e->getMessage();
+            if ($isAjax) {
+                return response()->json(['success' => false, 'message' => $message], 500);
+            }
+            return redirect()->back()->with('error', $message);
+        } catch (RuntimeException $e) {
+            $message = $e->getMessage();
+            if ($isAjax) {
+                return response()->json(['success' => false, 'message' => $message], 500);
+            }
+            return redirect()->back()->with('error', $message);
+        }
+    }
+
     private function farmHistorical(): Collection
     {
-        return ProductionLog::selectRaw('log_date, SUM(egg_count) as egg_count, SUM(hen_count) as hen_count')
-            ->groupBy('log_date')
-            ->orderByDesc('log_date')
-            ->limit(14)
+        return DB::table('forecast_input_records')
+            ->select('date', DB::raw('SUM(egg_count) as egg_count'), DB::raw('SUM(hen_count) as hen_count'))
+            ->groupBy('date')
+            ->orderByDesc('date')
+            ->limit(7)
             ->get()
-            ->map(fn($row) => tap(clone $row, fn($r) => $r->hdep = $r->hen_count > 0 ? round(($r->egg_count / $r->hen_count) * 100, 2) : 0))
+            ->map(fn($row) => tap((object) [
+                'log_date'  => $row->date,
+                'egg_count' => (int) $row->egg_count,
+                'hen_count' => (int) $row->hen_count,
+                'hdep'      => $row->hen_count > 0 ? round(($row->egg_count / $row->hen_count) * 100, 2) : 0,
+            ], fn($r) => $r))
             ->reverse()
             ->values();
     }
 
     private function breedHistorical(string $breed): Collection
     {
-        return ProductionLog::selectRaw('production_logs.log_date, SUM(production_logs.egg_count) as egg_count, SUM(production_logs.hen_count) as hen_count')
-            ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
-            ->join('hens', 'hens.cage_slot_id', '=', 'cage_slots.id')
-            ->whereRaw('hens.id = (SELECT id FROM hens h2 WHERE h2.cage_slot_id = cage_slots.id AND h2.is_active = 1 LIMIT 1)')
-            ->where('hens.breed', $breed)
-            ->groupBy('production_logs.log_date')
-            ->orderByDesc('production_logs.log_date')
-            ->limit(14)
+        return DB::table('forecast_input_records')
+            ->select('date', DB::raw('SUM(egg_count) as egg_count'), DB::raw('SUM(hen_count) as hen_count'))
+            ->where('breed', $breed)
+            ->groupBy('date')
+            ->orderByDesc('date')
+            ->limit(7)
             ->get()
-            ->map(fn($row) => tap(clone $row, fn($r) => $r->hdep = $r->hen_count > 0 ? round(($r->egg_count / $r->hen_count) * 100, 2) : 0))
+            ->map(fn($row) => tap((object) [
+                'log_date'  => $row->date,
+                'egg_count' => (int) $row->egg_count,
+                'hen_count' => (int) $row->hen_count,
+                'hdep'      => $row->hen_count > 0 ? round(($row->egg_count / $row->hen_count) * 100, 2) : 0,
+            ], fn($r) => $r))
+            ->reverse()
+            ->values();
+    }
+
+    private function cageHistorical(string $cageCode): Collection
+    {
+        return DB::table('forecast_input_records')
+            ->select('date', DB::raw('SUM(egg_count) as egg_count'), DB::raw('SUM(hen_count) as hen_count'))
+            ->where('cage_code', $cageCode)
+            ->groupBy('date')
+            ->orderByDesc('date')
+            ->limit(7)
+            ->get()
+            ->map(fn($row) => tap((object) [
+                'log_date'  => $row->date,
+                'egg_count' => (int) $row->egg_count,
+                'hen_count' => (int) $row->hen_count,
+                'hdep'      => $row->hen_count > 0 ? round(($row->egg_count / $row->hen_count) * 100, 2) : 0,
+            ], fn($r) => $r))
             ->reverse()
             ->values();
     }
@@ -326,6 +432,31 @@ class ForecastController extends Controller
         }
 
         return $data;
+    }
+
+    /**
+     * Determine whether the forecast_input_records table has enough historical
+     * data for the requested scope.
+     *
+     * Whole farm needs at least 90 distinct dates. Per-cage / per-breed need
+     * at least 90 rows for the selected cage or breed.
+     */
+    private function hasEnoughForecastData(string $scope, ?string $cageCode = null, ?string $breed = null): bool
+    {
+        $query = DB::table('forecast_input_records')
+            ->whereNotNull('date')
+            ->whereNotNull('cage_code')
+            ->whereRaw("TRIM(cage_code) != ''");
+
+        if ($scope === 'cage' && $cageCode) {
+            return $query->where('cage_code', $cageCode)->count() >= 90;
+        }
+
+        if ($scope === 'breed' && $breed) {
+            return $query->where('breed', $breed)->count() >= 90;
+        }
+
+        return $query->distinct()->count('date') >= 90;
     }
 
     /**

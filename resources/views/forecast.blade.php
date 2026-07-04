@@ -16,6 +16,19 @@
 
     <x-page-header title="Forecast" subtitle="Project egg production based on historical egg count trends" />
 
+    @if(!($hasEnoughData ?? true))
+    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+        <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600 shrink-0 mt-0.5"></i>
+        <div>
+            <div class="text-sm font-medium text-amber-800">Insufficient forecast data</div>
+            <div class="text-sm text-amber-700 mt-1">
+                The forecast input table must contain at least 90 days of production records before generating a forecast.
+                Please download the forecast input sheet, fill it out, and import the data.
+            </div>
+        </div>
+    </div>
+    @endif
+
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
 
         {{-- ── Inputs Panel ── --}}
@@ -77,19 +90,45 @@
                     @endforeach
                 </div>
 
-                <button type="submit" class="w-full bg-[#002D5E] text-white py-2.5 rounded-lg text-sm hover:bg-[#001F42] transition-colors">
-                    Generate Forecast
+                <button type="submit" id="generateForecastBtn" class="w-full bg-[#002D5E] text-white py-2.5 rounded-lg text-sm hover:bg-[#001F42] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    <span id="btnText">Generate Forecast</span>
                 </button>
 
                 <a href="{{ route('forecast.template') }}" class="mt-3 w-full flex items-center justify-center gap-2 border border-[#D9D9D9] text-[#333333] py-2.5 rounded-lg text-sm hover:bg-[#F5F6F8] transition-colors">
                     <i data-lucide="download" class="w-4 h-4 shrink-0"></i> Download Forecast Input Sheet
                 </a>
             </form>
+
+            {{-- ── Import Production Data ── --}}
+            <div class="mt-5 pt-5 border-t border-[#F0F0F0]">
+                <div class="text-xs tracking-wider text-[#6B7280] mb-3">IMPORT DATA</div>
+
+                {{-- Inline import feedback messages --}}
+                <div id="importFeedback" class="hidden mb-3 rounded-lg p-3 text-sm">
+                    <div class="flex items-start gap-2">
+                        <i data-lucide="" id="importFeedbackIcon" class="w-4 h-4 shrink-0 mt-0.5"></i>
+                        <span id="importFeedbackMessage"></span>
+                    </div>
+                </div>
+
+                <form method="POST" action="{{ route('forecast.import') }}" id="forecastImportForm" enctype="multipart/form-data">
+                    @csrf
+                    <label class="block text-sm text-[#333333] mb-2">Forecast input file (.xlsx)</label>
+                    <input type="file" name="forecast_file" accept=".xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required
+                           class="w-full text-sm text-[#333333] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:bg-[#F5F6F8] file:text-[#002D5E] hover:file:bg-[#E5E7EB] border border-[#D9D9D9] rounded-lg cursor-pointer mb-3">
+                    @error('forecast_file')
+                    <p class="text-xs text-red-600 mb-2">{{ $message }}</p>
+                    @enderror
+                    <button type="submit" id="importForecastBtn" class="w-full bg-[#2D7D46] text-white py-2.5 rounded-lg text-sm hover:bg-[#226537] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                        <span id="importBtnText">Import Production Data</span>
+                    </button>
+                </form>
+            </div>
         </div>
 
         {{-- ── Chart Panel ── --}}
         <div class="xl:col-span-2 bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <div class="text-xs tracking-wider text-[#6B7280] mb-4">HISTORICAL VS FORECAST EGG COUNT — {{ $scopeLabel }}</div>
+            <div class="text-xs tracking-wider text-[#6B7280] mb-4">LAST 7 DAYS VS FORECAST EGG COUNT — {{ $scopeLabel }}</div>
             <canvas id="forecastChart" height="160"></canvas>
         </div>
     </div>
@@ -158,7 +197,10 @@
             <tbody>
                 @forelse($forecasts as $f)
                 <tr class="border-b border-[#F0F0F0] hover:bg-[#F5F6F8]">
-                    <td class="px-6 py-3 text-sm text-[#333333] font-mono">{{ $f->target_date->format('Y-m-d') }}</td>
+                    <td class="px-6 py-3 text-sm text-[#333333]">
+                        <span class="font-medium">{{ $f->target_date->format('l') }}</span>
+                        <span class="text-xs text-[#6B7280] ml-1">{{ $f->target_date->format('M j') }}</span>
+                    </td>
                     <td class="px-6 py-3 text-sm text-[#333333]">{{ number_format($f->predicted_egg_count,0) }}</td>
                     <td class="px-6 py-3">
                         <span class="text-xs px-2.5 py-1 rounded-full" style="background:{{ $f->confidenceColor }}">
@@ -176,6 +218,43 @@
     </div>
 
 </div>
+
+{{-- Forecast generation loading overlay --}}
+<div id="forecastLoadingOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center">
+    <div class="bg-white rounded-xl shadow-xl p-8 max-w-sm w-full mx-4 text-center">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#002D5E]/10 mb-4">
+            <svg class="animate-spin h-6 w-6 text-[#002D5E]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-[#333333] mb-1">Generating Forecast</h3>
+        <p class="text-sm text-[#6B7280] mb-4">Please wait while the model trains and produces predictions...</p>
+        <div class="w-full bg-[#F0F0F0] rounded-full h-2.5 overflow-hidden">
+            <div id="forecastProgressBar" class="bg-[#002D5E] h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+        <p id="forecastProgressText" class="text-xs text-[#6B7280] mt-2">0%</p>
+    </div>
+</div>
+
+{{-- Forecast import loading overlay --}}
+<div id="forecastImportLoadingOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center">
+    <div class="bg-white rounded-xl shadow-xl p-8 max-w-sm w-full mx-4 text-center">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#2D7D46]/10 mb-4">
+            <svg class="animate-spin h-6 w-6 text-[#2D7D46]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-[#333333] mb-1">Importing Production Data</h3>
+        <p class="text-sm text-[#6B7280] mb-4">Please wait while the spreadsheet is being imported...</p>
+        <div class="w-full bg-[#F0F0F0] rounded-full h-2.5 overflow-hidden">
+            <div id="importProgressBar" class="bg-[#2D7D46] h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+        <p id="importProgressText" class="text-xs text-[#6B7280] mt-2">Uploading: 0%</p>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
@@ -184,11 +263,15 @@ const historical = @json($historical->map(fn($l) => ['date'=> is_object($l->log_
 const forecasts  = @json($forecasts->map(fn($f) => ['date'=> is_object($f->target_date) ? $f->target_date->format('Y-m-d') : $f->target_date,'egg_count'=>$f->predicted_egg_count]));
 const cageColor  = '{{ $cageColor }}';
 
-const histLabels = historical.map((h, i) => 'H-' + (historical.length - i));
-const fcLabels   = forecasts.map((_, i) => 'F+' + (i+1));
+const recentHistorical = historical.slice(-7);
+const histLabels = recentHistorical.map((h, i) => 'H-' + (recentHistorical.length - i));
+const fcLabels   = forecasts.map((f) => {
+    const d = new Date(f.date);
+    return d.toLocaleDateString('en-US', { weekday: 'short' });
+});
 const allLabels  = [...histLabels, ...fcLabels];
 
-const histData = [...historical.map(h => h.egg_count), ...Array(fcLabels.length).fill(null)];
+const histData = [...recentHistorical.map(h => h.egg_count), ...Array(fcLabels.length).fill(null)];
 const fcData   = [...Array(histLabels.length).fill(null), ...forecasts.map(f => f.egg_count)];
 
 document.addEventListener('turbo:load', function() {
@@ -231,6 +314,165 @@ document.addEventListener('turbo:load', function() {
         }
     }
 });
+});
+
+document.addEventListener('turbo:load', function() {
+    const form = document.getElementById('forecastForm');
+    const overlay = document.getElementById('forecastLoadingOverlay');
+    const progressBar = document.getElementById('forecastProgressBar');
+    const progressText = document.getElementById('forecastProgressText');
+    const btn = document.getElementById('generateForecastBtn');
+    const btnText = document.getElementById('btnText');
+
+    if (form && overlay && btn) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            overlay.classList.remove('hidden');
+            btn.disabled = true;
+            if (btnText) {
+                btnText.textContent = 'Generating...';
+            }
+
+            let progress = 0;
+            progressBar.style.width = '0%';
+            progressText.textContent = '0%';
+
+            const interval = setInterval(function() {
+                if (progress < 90) {
+                    progress += Math.random() * 3;
+                    if (progress > 90) progress = 90;
+                    progressBar.style.width = progress + '%';
+                    progressText.textContent = Math.round(progress) + '%';
+                }
+            }, 1000);
+
+            fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                redirect: 'follow',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'text/html'
+                }
+            })
+            .then(function() {
+                clearInterval(interval);
+                progressBar.style.width = '100%';
+                progressText.textContent = '100%';
+                window.location.reload();
+            })
+            .catch(function(error) {
+                clearInterval(interval);
+                overlay.classList.add('hidden');
+                btn.disabled = false;
+                if (btnText) {
+                    btnText.textContent = 'Generate Forecast';
+                }
+                alert('Forecast generation failed: ' + error.message);
+            });
+        });
+    }
+});
+
+document.addEventListener('turbo:load', function() {
+    const form = document.getElementById('forecastImportForm');
+    const overlay = document.getElementById('forecastImportLoadingOverlay');
+    const progressBar = document.getElementById('importProgressBar');
+    const progressText = document.getElementById('importProgressText');
+    const btn = document.getElementById('importForecastBtn');
+    const btnText = document.getElementById('importBtnText');
+    const feedback = document.getElementById('importFeedback');
+    const feedbackMessage = document.getElementById('importFeedbackMessage');
+    const feedbackIcon = document.getElementById('importFeedbackIcon');
+
+    function showImportFeedback(type, message) {
+        if (!feedback || !feedbackMessage || !feedbackIcon) return;
+        feedback.classList.remove('hidden', 'bg-green-50', 'border', 'border-green-200', 'text-green-800', 'bg-red-50', 'border-red-200', 'text-red-800');
+        feedbackIcon.setAttribute('data-lucide', type === 'success' ? 'check-circle' : 'alert-triangle');
+        if (type === 'success') {
+            feedback.classList.add('bg-green-50', 'border', 'border-green-200', 'text-green-800');
+            feedbackIcon.classList.add('text-green-600');
+            feedbackIcon.classList.remove('text-red-600');
+        } else {
+            feedback.classList.add('bg-red-50', 'border', 'border-red-200', 'text-red-800');
+            feedbackIcon.classList.add('text-red-600');
+            feedbackIcon.classList.remove('text-green-600');
+        }
+        feedbackMessage.textContent = message;
+        if (window.lucide) lucide.createIcons();
+    }
+
+    function hideImportFeedback() {
+        if (feedback) feedback.classList.add('hidden');
+    }
+
+    if (form && overlay && btn) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            hideImportFeedback();
+            overlay.classList.remove('hidden');
+            btn.disabled = true;
+            if (btnText) {
+                btnText.textContent = 'Importing...';
+            }
+
+            progressBar.style.width = '0%';
+            progressText.textContent = 'Uploading: 0%';
+
+            const xhr = new XMLHttpRequest();
+            const formData = new FormData(form);
+
+            xhr.upload.addEventListener('progress', function(e) {
+                if (e.lengthComputable) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    progressBar.style.width = percent + '%';
+                    progressText.textContent = 'Uploading: ' + percent + '%';
+                }
+            });
+
+            xhr.addEventListener('load', function() {
+                progressBar.style.width = '100%';
+                progressText.textContent = 'Processing...';
+
+                let response = {};
+                try {
+                    response = JSON.parse(xhr.responseText);
+                } catch (e) {
+                    response = { success: false, message: 'Unexpected server response.' };
+                }
+
+                if (xhr.status >= 200 && xhr.status < 300 && response.success) {
+                    window.location.reload();
+                    return;
+                }
+
+                overlay.classList.add('hidden');
+                btn.disabled = false;
+                if (btnText) {
+                    btnText.textContent = 'Import Production Data';
+                }
+
+                let message = response.message || 'Import failed. Please check the file and try again.';
+                if (response.errors && typeof response.errors === 'object') {
+                    message = Object.values(response.errors).flat().join(' ');
+                }
+                showImportFeedback('error', message);
+            });
+
+            xhr.addEventListener('error', function() {
+                overlay.classList.add('hidden');
+                btn.disabled = false;
+                if (btnText) {
+                    btnText.textContent = 'Import Production Data';
+                }
+                showImportFeedback('error', 'Import failed. Please check the file and try again.');
+            });
+
+            xhr.open('POST', form.action);
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.send(formData);
+        });
+    }
 });
 </script>
 @endpush
