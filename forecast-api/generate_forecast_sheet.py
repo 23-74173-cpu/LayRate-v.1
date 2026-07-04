@@ -6,6 +6,11 @@ data into the database, where ForecastingV5.py reads it for model training and
 forecasting.
 
 The number of hens per cage is pre-filled from the sum of cage_slots.current_occupancy.
+
+Pre-filled columns (Date, Cage_Code, Breed, Flock_Age_Weeks, Hen_Count) are
+sheet-protected and non-editable. Only Egg_Count, Temperature_C,
+Humidity_Percent, Feed_Batch_Code, Crude_Protein_Percent, Feed_Consumed_kg,
+and Mortality_Count can be edited.
 """
 
 import argparse
@@ -14,6 +19,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 import pandas as pd
+from openpyxl.styles import Protection
 from sqlalchemy import create_engine, text
 
 
@@ -102,10 +108,34 @@ def generate_forecast_sheet(days: int = 90, output: str = "forecast_input_sheet.
             )
 
     df = pd.DataFrame(rows)
-    df.to_excel(output, index=False, engine="openpyxl")
+
+    LOCKED_COLUMNS = {
+        "Date",
+        "Cage_Code",
+        "Breed",
+        "Flock_Age_Weeks",
+        "Hen_Count",
+    }
+    editable_col_indices = [
+        idx for idx, col in enumerate(df.columns, start=1) if col not in LOCKED_COLUMNS
+    ]
+
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Forecast Input")
+        ws = writer.sheets["Forecast Input"]
+
+        # Unlock the editable cells in data rows (row 1 is the header).
+        for row in range(2, ws.max_row + 1):
+            for col_idx in editable_col_indices:
+                ws.cell(row=row, column=col_idx).protection = Protection(locked=False)
+
+        # Enable sheet protection so locked cells cannot be edited.
+        ws.protection.sheet = True
+
     print(f"Generated forecast input sheet: {output}")
     print(f"Rows: {len(rows)} ({len(dates)} days x {len(cages)} cage(s))")
     print(f"Columns: {', '.join(df.columns)}")
+    print(f"Locked columns: {', '.join(sorted(LOCKED_COLUMNS))}")
 
 
 if __name__ == "__main__":
