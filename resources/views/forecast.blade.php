@@ -82,7 +82,7 @@
                 </button>
 
                 <a href="{{ route('forecast.template') }}" class="mt-3 w-full flex items-center justify-center gap-2 border border-[#D9D9D9] text-[#333333] py-2.5 rounded-lg text-sm hover:bg-[#F5F6F8] transition-colors">
-                    <i data-lucide="download" class="w-4 h-4 shrink-0"></i> Download Empty Template
+                    <i data-lucide="download" class="w-4 h-4 shrink-0"></i> Download Forecast Input Sheet
                 </a>
             </form>
         </div>

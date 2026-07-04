@@ -37,3 +37,4 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+echo "forecast-api/EggRecord_2026_updated.xlsx" >> .gitignore

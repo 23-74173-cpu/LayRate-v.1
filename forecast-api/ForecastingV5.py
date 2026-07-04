@@ -62,50 +62,22 @@ XGB_ROLLING_FEATURES = ["rolling_mean_7", "rolling_mean_14"]
 XGB_FEATURES = XGB_EXOGENOUS_FEATURES + XGB_LAG_FEATURES + XGB_ROLLING_FEATURES
 
 FORECAST_DATASET_QUERY = """
-WITH cage_meta AS (
-    SELECT
-        cs.cage_id,
-        MAX(h.breed) AS breed,
-        MAX(h.flock_age_weeks) AS flock_age_weeks
-    FROM cage_slots cs
-    JOIN hens h ON h.cage_slot_id = cs.id
-    GROUP BY cs.cage_id
-),
-daily_environment AS (
-    SELECT
-        cage_id,
-        DATE(recorded_at) AS log_date,
-        AVG(temperature_c) AS avg_temp,
-        AVG(humidity_pct) AS avg_humidity
-    FROM environmental_logs
-    GROUP BY cage_id, DATE(recorded_at)
-)
 SELECT
-    DATE(pl.log_date) AS `Date`,
-    c.cage_code AS `Cage_ID`,
-    cm.breed AS `Breed`,
-    SUM(pl.hen_count) AS `Live_Hens`,
-    cm.flock_age_weeks AS `Flock_Age_Weeks`,
-    ROUND(AVG(de.avg_temp), 2) AS `Temperature_C`,
-    ROUND(AVG(de.avg_humidity), 2) AS `Humidity_Percent`,
-    COALESCE(MAX(fb.crude_protein), 0) AS `Crude_Protein_Percent`,
-    SUM(fcl.feed_consumed_kg) AS `Total_Feed_Consumed_kg`,
-    SUM(pl.egg_count) AS `Total_Eggs`,
-    CASE
-        WHEN SUM(pl.hen_count) > 0
-        THEN ROUND((SUM(pl.egg_count) / SUM(pl.hen_count)) * 100, 2)
-        ELSE 0
-    END AS `Lay_Rate_Percent`
-FROM production_logs pl
-JOIN cage_slots cs ON cs.id = pl.cage_slot_id
-JOIN cages c ON c.id = cs.cage_id
-JOIN cage_meta cm ON cm.cage_id = c.id
-LEFT JOIN daily_environment de
-    ON de.cage_id = c.id AND de.log_date = DATE(pl.log_date)
-LEFT JOIN feed_consumption_logs fcl
-    ON fcl.cage_id = c.id AND fcl.log_date = DATE(pl.log_date)
-LEFT JOIN feed_batches fb ON fb.id = fcl.feed_batch_id
-GROUP BY DATE(pl.log_date), c.cage_code, c.id, cm.breed, cm.flock_age_weeks
+    date AS `Date`,
+    cage_code AS `Cage_ID`,
+    breed AS `Breed`,
+    flock_age_weeks AS `Flock_Age_Weeks`,
+    COALESCE(hen_count, 0) AS `Live_Hens`,
+    COALESCE(egg_count, 0) AS `Total_Eggs`,
+    temperature_c AS `Temperature_C`,
+    humidity_percent AS `Humidity_Percent`,
+    COALESCE(crude_protein_percent, 0) AS `Crude_Protein_Percent`,
+    COALESCE(feed_consumed_kg, 0) AS `Total_Feed_Consumed_kg`,
+    COALESCE(mortality_count, 0) AS `Daily_Mortality`
+FROM forecast_input_records
+WHERE date IS NOT NULL
+  AND cage_code IS NOT NULL
+  AND TRIM(cage_code) != ''
 ORDER BY `Date`, `Cage_ID`
 """
 
@@ -186,10 +158,14 @@ def fit_sarima_model(train_series):
 
 
 def compute_daily_mortality(df: pd.DataFrame) -> pd.DataFrame:
-    """Compute Daily_Mortality as max(previous_hen_count - current_hen_count, 0) per cage."""
+    """Compute Daily_Mortality from explicit mortality_count if present,
+    otherwise derive from changes in Live_Hens per cage."""
     df = df.sort_values([CAGE_COLUMN, DATE_COLUMN]).copy()
-    df["Daily_Mortality"] = df.groupby(CAGE_COLUMN)["Live_Hens"].diff(-1) * -1
-    df["Daily_Mortality"] = df["Daily_Mortality"].clip(lower=0).fillna(0)
+    if "Daily_Mortality" in df.columns:
+        df["Daily_Mortality"] = df["Daily_Mortality"].fillna(0).clip(lower=0)
+    else:
+        df["Daily_Mortality"] = df.groupby(CAGE_COLUMN)["Live_Hens"].diff(-1) * -1
+        df["Daily_Mortality"] = df["Daily_Mortality"].clip(lower=0).fillna(0)
     return df
 
 
@@ -225,6 +201,13 @@ def build_modeling_frame(df: pd.DataFrame) -> pd.DataFrame:
     df = compute_daily_mortality(df)
     df = compute_monthly_mortality(df)
     df = compute_heat_stress(df)
+
+    if "Lay_Rate_Percent" not in df.columns:
+        df["Lay_Rate_Percent"] = 0.0
+        mask = df["Live_Hens"] > 0
+        df.loc[mask, "Lay_Rate_Percent"] = (
+            df.loc[mask, "Total_Eggs"] / df.loc[mask, "Live_Hens"] * 100
+        ).round(2)
 
     df = df.sort_values([CAGE_COLUMN, DATE_COLUMN]).reset_index(drop=True)
     return df
@@ -480,11 +463,12 @@ def load_dataset_from_db(
     connection_string: Optional[str] = None,
     breed: str = "ALL",
 ) -> pd.DataFrame:
-    """Load the forecast dataset directly from the normalized database.
+    """Load the forecast dataset directly from the forecast_input_records table.
 
-    The dataset is assembled from production_logs, cages, cage_slots, hens,
-    environmental_logs, feed_consumption_logs, and feed_batches. Mortality is
-    derived from changes in Live_Hens rather than a dedicated table.
+    The dataset is read from the denormalized forecast_input_records table,
+    which is populated from imported forecast input sheets. Mortality is taken
+    from the explicit mortality_count column when available; otherwise it is
+    derived from changes in Live_Hens.
 
     Parameters
     ----------

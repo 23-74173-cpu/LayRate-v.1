@@ -87,15 +87,23 @@ class ForecastController extends Controller
     {
         try {
             $pythonBinary = $this->resolvePythonBinary();
-            $scriptPath = base_path('forecast-api/create_empty_forecast_template.py');
-            $outputPath = base_path('forecast-api/forecast_template.xlsx');
+            $scriptPath = base_path('forecast-api/generate_forecast_sheet.py');
+            $outputName = 'forecast_input_' . now()->format('Ymd_His') . '.xlsx';
+            $outputPath = base_path('forecast-api/' . $outputName);
 
             if (!file_exists($scriptPath)) {
-                throw new RuntimeException('Template generator not found at: ' . $scriptPath);
+                throw new RuntimeException('Forecast sheet generator not found at: ' . $scriptPath);
             }
 
-            $process = new Process([$pythonBinary, $scriptPath], base_path('forecast-api'));
-            $process->setTimeout(60);
+            $command = [
+                $pythonBinary,
+                $scriptPath,
+                '--days', '90',
+                '--output', $outputName,
+            ];
+
+            $process = new Process($command, base_path('forecast-api'));
+            $process->setTimeout(120);
             $process->setEnv($this->processEnv());
             $process->run();
 
@@ -104,13 +112,13 @@ class ForecastController extends Controller
             }
 
             if (!file_exists($outputPath)) {
-                throw new RuntimeException('Template file was not created.');
+                throw new RuntimeException('Forecast sheet file was not created.');
             }
 
-            return response()->download($outputPath, 'forecast_template.xlsx')->deleteFileAfterSend(true);
+            return response()->download($outputPath, $outputName)->deleteFileAfterSend(true);
         } catch (ProcessFailedException $e) {
             return redirect()->back()
-                ->with('error', 'Template generation failed: ' . $e->getMessage());
+                ->with('error', 'Forecast sheet generation failed: ' . $e->getMessage());
         } catch (RuntimeException $e) {
             return redirect()->back()
                 ->with('error', $e->getMessage());
