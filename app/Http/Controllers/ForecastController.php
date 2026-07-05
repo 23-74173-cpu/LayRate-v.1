@@ -35,13 +35,6 @@ class ForecastController extends Controller
                 ->whereNull('cage_id')->whereNull('breed')
                 ->orderBy('target_date')->limit($horizon)->get();
 
-            if ($hasEnoughData && $forecasts->isEmpty() && $historical->isNotEmpty()) {
-                $result = $this->generateForecast(null, null, $historical, $horizon);
-                $forecasts = $result['forecasts'];
-                $metrics = $metrics ?: $result['metrics'];
-                $recommendedModel = $recommendedModel ?: $result['recommended_model'];
-            }
-
             return view('forecast', compact('scope', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData'))
                 ->with('label', 'Whole Farm');
         }
@@ -51,13 +44,6 @@ class ForecastController extends Controller
             $forecasts  = Forecast::where('forecast_date', now()->toDateString())
                 ->whereNull('cage_id')->where('breed', $breed)
                 ->orderBy('target_date')->limit($horizon)->get();
-
-            if ($hasEnoughData && $forecasts->isEmpty() && $historical->isNotEmpty()) {
-                $result = $this->generateForecast(null, $breed, $historical, $horizon);
-                $forecasts = $result['forecasts'];
-                $metrics = $metrics ?: $result['metrics'];
-                $recommendedModel = $recommendedModel ?: $result['recommended_model'];
-            }
 
             return view('forecast', compact('scope', 'cageCode', 'breed', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData'))
                 ->with('label', $breed);
@@ -70,13 +56,6 @@ class ForecastController extends Controller
         $forecasts = Forecast::where('forecast_date', now()->toDateString())
             ->where('cage_id', $cage->id)->whereNull('breed')
             ->orderBy('target_date')->limit($horizon)->get();
-
-        if ($hasEnoughData && $forecasts->isEmpty() && $historical->isNotEmpty()) {
-            $result = $this->generateForecast($cage, null, $historical, $horizon);
-            $forecasts = $result['forecasts'];
-            $metrics = $metrics ?: $result['metrics'];
-            $recommendedModel = $recommendedModel ?: $result['recommended_model'];
-        }
 
         return view('forecast', compact('scope', 'cage', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData'));
     }
@@ -145,10 +124,11 @@ class ForecastController extends Controller
 
                 $result = $this->generateForecast(null, null, $historical, $horizon, true);
 
-                return redirect()->route('forecast', ['scope' => 'farm', 'horizon' => $horizon])
-                    ->with('success', 'Whole-farm forecast generated.')
-                    ->with('forecast_metrics', $result['metrics'])
-                    ->with('recommended_model', $result['recommended_model']);
+            return redirect()->route('forecast', ['scope' => 'farm', 'horizon' => $horizon])
+                ->with('success', 'Whole-farm forecast generated.')
+                ->with('forecast_generated', true)
+                ->with('forecast_metrics', $result['metrics'])
+                ->with('recommended_model', $result['recommended_model']);
             }
 
             if ($scope === 'breed' && $breed) {
@@ -159,10 +139,11 @@ class ForecastController extends Controller
 
                 $result = $this->generateForecast(null, $breed, $historical, $horizon, true);
 
-                return redirect()->route('forecast', ['scope' => 'breed', 'breed' => $breed, 'horizon' => $horizon])
-                    ->with('success', "{$breed} forecast generated.")
-                    ->with('forecast_metrics', $result['metrics'])
-                    ->with('recommended_model', $result['recommended_model']);
+            return redirect()->route('forecast', ['scope' => 'breed', 'breed' => $breed, 'horizon' => $horizon])
+                ->with('success', "{$breed} forecast generated.")
+                ->with('forecast_generated', true)
+                ->with('forecast_metrics', $result['metrics'])
+                ->with('recommended_model', $result['recommended_model']);
             }
 
             $cage = Cage::where('cage_code', $cageCode)->firstOrFail();
@@ -176,6 +157,7 @@ class ForecastController extends Controller
 
             return redirect()->route('forecast', ['scope' => 'cage', 'cage' => $cageCode, 'horizon' => $horizon])
                 ->with('success', 'Forecast generated.')
+                ->with('forecast_generated', true)
                 ->with('forecast_metrics', $result['metrics'])
                 ->with('recommended_model', $result['recommended_model']);
         } catch (ProcessFailedException $e) {
@@ -242,6 +224,7 @@ class ForecastController extends Controller
             $message = "Imported {$count} production record(s) successfully.";
 
             if ($isAjax) {
+                session()->flash('success', $message);
                 return response()->json(['success' => true, 'message' => $message, 'count' => $count]);
             }
 
@@ -272,7 +255,7 @@ class ForecastController extends Controller
             ->select('date', DB::raw('SUM(egg_count) as egg_count'), DB::raw('SUM(hen_count) as hen_count'))
             ->groupBy('date')
             ->orderByDesc('date')
-            ->limit(7)
+            ->limit(14)
             ->get()
             ->map(fn($row) => tap((object) [
                 'log_date'  => $row->date,
@@ -291,7 +274,7 @@ class ForecastController extends Controller
             ->where('breed', $breed)
             ->groupBy('date')
             ->orderByDesc('date')
-            ->limit(7)
+            ->limit(14)
             ->get()
             ->map(fn($row) => tap((object) [
                 'log_date'  => $row->date,
@@ -310,7 +293,7 @@ class ForecastController extends Controller
             ->where('cage_code', $cageCode)
             ->groupBy('date')
             ->orderByDesc('date')
-            ->limit(7)
+            ->limit(14)
             ->get()
             ->map(fn($row) => tap((object) [
                 'log_date'  => $row->date,
