@@ -295,7 +295,7 @@
         @endif
 
         {{-- SCROLLABLE PAGE CONTENT --}}
-        <main class="page-wrapper flex-1 overflow-y-auto px-3 sm:px-4 lg:px-6 py-4 scrollbar-thin">
+        <main class="page-wrapper flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-4 lg:px-6 py-4 scrollbar-thin">
             @yield('content')
         </main>
     </div>

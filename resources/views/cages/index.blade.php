@@ -7,9 +7,9 @@
 
     <x-page-header title="Cages" subtitle="Manage battery cage configurations, slots, and sensor placement">
         <x-slot:actions>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                 <a href="{{ route('cages.bulk-add') }}"
-                   class="flex items-center gap-2 px-5 py-2 text-sm font-medium rounded-full transition-colors"
+                   class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 text-xs sm:text-sm font-medium rounded-full transition-colors"
                    style="color: #0075de; border: 1px solid #0075de;"
                    onmouseover="this.style.backgroundColor='#dcebfa'"
                    onmouseout="this.style.backgroundColor='transparent'">
@@ -17,7 +17,7 @@
                 </a>
                 @if($isAdmin)
                 <button onclick="openAddModal()"
-                        class="flex items-center gap-2 px-6 py-2 text-sm font-medium rounded-full text-white transition-opacity"
+                        class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2 text-xs sm:text-sm font-medium rounded-full text-white transition-opacity"
                         style="background-color: #0075de;"
                         onmouseover="this.style.opacity='0.85'"
                         onmouseout="this.style.opacity='1'">
@@ -68,7 +68,7 @@
                      ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, {{ $r }}, {{ $c }})">
                     @if($isAdmin)
                     <button onclick="event.stopPropagation(); confirmRemoveCell({{ $r }}, {{ $c }}, '{{ $placedCage->cage_code }}')"
-                            class="remove-cell-btn absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            class="remove-cell-btn absolute top-0.5 right-0.5 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                             style="background-color: rgba(155,28,36,0.85); color: #fff; font-size: 12px; line-height: 1;"
                             title="Remove {{ $placedCage->cage_code }} from canvas" aria-label="Remove {{ $placedCage->cage_code }}">
                         ×
@@ -93,7 +93,7 @@
                      ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, {{ $r }}, {{ $c }})">
                     @if($isAdmin)
                     <button onclick="event.stopPropagation(); confirmRemoveCell({{ $r }}, {{ $c }})"
-                            class="remove-cell-btn absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            class="remove-cell-btn absolute top-0.5 right-0.5 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                             style="background-color: rgba(155,28,36,0.85); color: #fff; font-size: 12px; line-height: 1;"
                             title="Remove empty cell" aria-label="Remove empty cell">
                         ×
@@ -165,7 +165,7 @@
         @endphp
         <div class="cage-card rounded-xl border overflow-hidden transition-all flex-grow"
              data-cage-code="{{ $cage->cage_code }}"
-             style="background-color: #ffffff; border-color: #e6e6e6; border-left: 3px solid {{ $color }}; flex: 1 1 {{ $cardMinWidth }}px; min-width: {{ $cardMinWidth }}px; max-width: 100%;">
+              style="background-color: #ffffff; border-color: #e6e6e6; border-left: 3px solid {{ $color }}; flex: 1 1 {{ $cardMinWidth }}px; min-width: min({{ $cardMinWidth }}px, 100%); max-width: 100%;">
 
             {{-- Cage Header --}}
             <div class="flex items-center justify-between px-4 py-3">
@@ -1022,8 +1022,8 @@ function addCellRemoveButton(cell, row, col, cageCode) {
     if (!IS_ADMIN) return;
     var btn = document.createElement('button');
     btn.innerHTML = '×';
-    btn.className = 'remove-cell-btn absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity';
-    btn.style.cssText = 'background-color: rgba(155,28,36,0.85); color: #fff; font-size: 12px; line-height: 1;';
+    btn.className = 'remove-cell-btn absolute top-0.5 right-0.5 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity';
+    btn.style.cssText = 'background-color: rgba(155,28,36,0.85); color: #fff; font-size: 16px; line-height: 1;';
     btn.title = cageCode ? 'Remove ' + cageCode + ' from canvas' : 'Remove empty cell';
     btn.setAttribute('aria-label', btn.title);
     btn.onclick = function(e) {
