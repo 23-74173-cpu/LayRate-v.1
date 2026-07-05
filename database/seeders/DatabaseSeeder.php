@@ -77,10 +77,9 @@ class DatabaseSeeder extends Seeder
                     if ($cage->is_active && isset($hensData[$cage->cage_code])) {
                         $hd = $hensData[$cage->cage_code];
                         for ($h = 1; $h <= $cage->max_chickens_per_slot; $h++) {
-                            Hen::firstOrCreate(
+                            $hen = Hen::firstOrCreate(
                                 ['tag_code' => "{$cage->cage_code}-SLOT{$slotNumber}-HEN{$h}"],
                                 [
-                                    'cage_slot_id' => $slot->id,
                                     'flock_age_weeks' => $hd['flock_age_weeks'],
                                     'breed' => $hd['breed'],
                                     'date_acquired' => $hd['date_acquired'],
@@ -89,6 +88,10 @@ class DatabaseSeeder extends Seeder
                                     'is_active' => 1,
                                 ]
                             );
+                            if ($hen->wasRecentlyCreated) {
+                                $hen->cage_slot_id = $slot->id;
+                                $hen->save();
+                            }
                         }
                     }
                 }
@@ -121,16 +124,18 @@ class DatabaseSeeder extends Seeder
                     if (!$slot->cage->is_active) continue;
                     $variation = ($i % 3) * 0.3;
                     $eggsPerSlot = max(0, $base['egg_count'] - (int) ($i % 3));
-                    ProductionLog::firstOrCreate(
-                        ['cage_slot_id' => $slot->id, 'log_date' => $date],
-                        [
-                            'egg_count'   => $eggsPerSlot,
-                            'hen_count'   => $slot->current_occupancy,
-                            'hdep'        => max(0, round($base['hdep'] - $variation, 2)),
-                            'recorded_by' => $user->id,
-                            'notes'       => $i % 2 === 0 ? 'IR sensor synced' : 'Manual check',
-                        ]
+                    $log = ProductionLog::firstOrNew(
+                        ['cage_slot_id' => $slot->id, 'log_date' => $date]
                     );
+                    $log->cage_slot_id = $slot->id;
+                    $log->recorded_by = $user->id;
+                    $log->fill([
+                        'egg_count' => $eggsPerSlot,
+                        'hen_count' => $slot->current_occupancy,
+                        'hdep'      => max(0, round($base['hdep'] - $variation, 2)),
+                        'notes'     => $i % 2 === 0 ? 'IR sensor synced' : 'Manual check',
+                    ]);
+                    $log->save();
                 }
             }
         }
@@ -200,10 +205,15 @@ class DatabaseSeeder extends Seeder
         $today = now()->toDateString();
         for ($i = 1; $i <= 7; $i++) {
             $v = (($i % 3) - 1) * 0.3;
-            Forecast::firstOrCreate(
-                ['cage_id' => $cages['CAGE-A']->id, 'forecast_date' => $today, 'target_date' => now()->addDays($i)->toDateString()],
-                ['predicted_hdep' => round(86.0 + $v, 2)]
+            $targetDate = now()->addDays($i)->toDateString();
+            $forecast = Forecast::firstOrNew(
+                ['cage_id' => $cages['CAGE-A']->id, 'forecast_date' => $today, 'target_date' => $targetDate]
             );
+            $forecast->cage_id = $cages['CAGE-A']->id;
+            $forecast->forecast_date = $today;
+            $forecast->target_date = $targetDate;
+            $forecast->predicted_hdep = round(86.0 + $v, 2);
+            $forecast->save();
         }
     }
 }

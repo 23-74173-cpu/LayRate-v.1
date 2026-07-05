@@ -1,21 +1,18 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
+/** @see 2026_07_03_000002_make_cage_slot_id_nullable_on_hens_table.php */
 return new class extends Migration {
     public function up(): void
     {
-        Schema::table('hens', function (Blueprint $table) {
-            $table->foreignId('cage_slot_id')->nullable()->change();
-        });
+        // cage_slot_id was already made nullable by 2026_07_03_000002
+        // This migration is intentionally empty — kept only to avoid
+        // "migrations table has row but file is missing" errors.
     }
 
     public function down(): void
     {
-        Schema::table('hens', function (Blueprint $table) {
-            $table->foreignId('cage_slot_id')->nullable(false)->change();
-        });
+        // Nothing to undo.
     }
 };

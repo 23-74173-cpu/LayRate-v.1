@@ -122,7 +122,7 @@
         </div>
 
         {{-- Hen List (lazy loaded) --}}
-        <turbo-frame id="chickens-inventory-list" src="{{ route('chickens.inventory-list', ['sort' => $sort ?: null] + request()->query()) }}" loading="lazy" target="_top">
+        <turbo-frame id="chickens-inventory-list" src="{{ route('chickens.inventory-list', ['sort' => $sort ?: null] + request()->query()) }}" target="_top">
             @include('chickens._inventory-list-skeleton')
         </turbo-frame>
     </div>

@@ -33,7 +33,7 @@ class ChickensController extends Controller
         $todayByCage = MortalityLog::with('cage')
             ->whereDate('log_date', today())
             ->get()
-            ->groupBy(fn($l) => $l->cage->cage_code)
+            ->groupBy(fn($l) => $l->cage?->cage_code ?? 'Deleted Cage')
             ->map(fn($g) => $g->sum('count'));
 
         $tab = $request->query('tab', 'inventory');
@@ -116,6 +116,7 @@ class ChickensController extends Controller
     {
         $data = $request->validate([
             'breed'              => 'required|string|in:ISA Brown,Lohmann Brown-Classic,Dekalb White,Hy-Line Brown,Novogen Brown',
+            'sex'                => 'required|in:hen,cockerel,unknown',
             'source'             => 'nullable|string|max:200',
             'date_acquired'      => 'required|date',
             'age_at_placement_weeks' => 'required|integer|min:0|max:200',
@@ -143,7 +144,7 @@ class ChickensController extends Controller
                 $hen = Hen::create([
                     'chicken_id'             => $chickenId,
                     'breed'                  => $data['breed'],
-                    'sex'                    => 'hen',
+                    'sex'                    => $data['sex'],
                     'source'                 => $data['source'] ?? null,
                     'date_acquired'          => $data['date_acquired'],
                     'age_at_placement_weeks' => $data['age_at_placement_weeks'],
@@ -367,41 +368,60 @@ class ChickensController extends Controller
             return back()->withErrors(['hen_ids' => 'No active hens selected.']);
         }
 
-        $destinationSlot = CageSlot::with('cage')->findOrFail($data['destination_slot_id']);
-        $destinationCage = $destinationSlot->cage;
-
         $toMove = $hens->count();
-        if ($destinationSlot->remaining < $toMove) {
-            return back()->withErrors([
-                'destination_slot_id' => "Destination slot only has {$destinationSlot->remaining} space(s), but {$toMove} hens need to move.",
-            ]);
-        }
-
         $transferDate = $data['transfer_date'] ?? today()->toDateString();
         $transferReason = $data['transfer_reason'] ?? null;
 
-        foreach ($hens as $hen) {
-            $fromSlotId = $hen->cage_slot_id;
+        $error = null;
+        $destCode = null;
+        $destSlotNumber = null;
 
-            $sourceSlot = $hen->cageSlot;
-            if ($sourceSlot) {
-                $sourceSlot->decrement('current_occupancy');
+        DB::transaction(function () use ($hens, $data, $toMove, $transferDate, $transferReason, &$error, &$destCode, &$destSlotNumber) {
+            $destSlot = CageSlot::with('cage')->where('id', $data['destination_slot_id'])
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $destCode = $destSlot->cage->cage_code;
+            $destSlotNumber = $destSlot->slot_number;
+
+            if ($destSlot->remaining < $toMove) {
+                $error = "Destination slot only has {$destSlot->remaining} space(s), but {$toMove} hens need to move.";
+                return;
             }
-            $hen->update(['cage_slot_id' => $destinationSlot->id]);
-            $destinationSlot->increment('current_occupancy');
 
-            CageTransfer::create([
-                'hen_id'           => $hen->id,
-                'from_cage_slot_id' => $fromSlotId,
-                'to_cage_slot_id'   => $destinationSlot->id,
-                'transfer_date'    => $transferDate,
-                'reason'           => $transferReason,
-                'recorded_by'      => auth()->id(),
-            ]);
+            $sourceSlotIds = $hens->pluck('cage_slot_id')->filter()->unique()->values()->toArray();
+            if (! empty($sourceSlotIds)) {
+                CageSlot::whereIn('id', $sourceSlotIds)->lockForUpdate()->get();
+            }
+
+            foreach ($hens as $hen) {
+                $fromSlotId = $hen->cage_slot_id;
+
+                $sourceSlot = $hen->cageSlot;
+                if ($sourceSlot) {
+                    $sourceSlot->decrement('current_occupancy');
+                }
+                $hen->cage_slot_id = $destSlot->id;
+                $hen->save();
+                $destSlot->increment('current_occupancy');
+
+                CageTransfer::create([
+                    'hen_id'            => $hen->id,
+                    'from_cage_slot_id'  => $fromSlotId,
+                    'to_cage_slot_id'    => $destSlot->id,
+                    'transfer_date'     => $transferDate,
+                    'reason'            => $transferReason,
+                    'recorded_by'       => auth()->id(),
+                ]);
+            }
+        });
+
+        if ($error) {
+            return back()->withErrors(['destination_slot_id' => $error]);
         }
 
         return redirect()->back()
-            ->with('success', "{$toMove} hen(s) moved to {$destinationCage->cage_code} slot {$destinationSlot->slot_number}.");
+            ->with('success', "{$toMove} hen(s) moved to {$destCode} slot {$destSlotNumber}.");
     }
 
     public function remove(Request $request)
@@ -420,63 +440,101 @@ class ChickensController extends Controller
             return back()->withErrors(['hen_ids' => 'No hens selected.']);
         }
 
-        $hens = Hen::whereIn('id', $henIds)->where('is_active', 1)->get();
+        $hens = Hen::with('cageSlot.cage')->whereIn('id', $henIds)->where('is_active', 1)->get();
         if ($hens->isEmpty()) {
             return back()->withErrors(['hen_ids' => 'No active hens selected.']);
         }
 
         $recordMortality = isset($data['record_mortality']) && $data['record_mortality'];
 
-        $unplacedCount = $hens->filter(fn($h) => $h->cage_slot_id === null)->count();
+        $unplacedCount = 0;
+        $removedCount = 0;
+        $mortalityCount = 0;
+        $errors = [];
+        $henIdsDeactivated = [];
 
-        DB::transaction(function () use ($hens, $data, $recordMortality) {
-            foreach ($hens as $hen) {
+        foreach ($hens as $hen) {
+            DB::transaction(function () use ($hen, $data, $recordMortality, &$errors, &$removedCount, &$unplacedCount, &$mortalityCount, &$henIdsDeactivated) {
+                $hen->refresh();
+
+                if (!$hen->is_active) {
+                    $errors[] = "Hen #{$hen->chicken_id} already inactive.";
+                    return;
+                }
+
                 $sourceSlot = $hen->cageSlot;
+                $wasPlaced = false;
                 if ($sourceSlot) {
                     $sourceSlot->decrement('current_occupancy');
+                    $wasPlaced = true;
+                } else {
+                    $unplacedCount++;
                 }
-                $hen->update(['is_active' => false]);
-            }
 
-            if ($recordMortality && !empty($data['reason'])) {
-                $placedHens = $hens->filter(fn($h) => $h->cage_slot_id !== null);
+                $hen->is_active = false;
+                if ($recordMortality && !empty($data['reason']) && $wasPlaced) {
+                    $hen->deactivation_cause = 'mortality';
+                    $mortalityCount++;
+                }
+                $hen->save();
+                $henIdsDeactivated[] = $hen->id;
+                $removedCount++;
+            });
+        }
 
-                if ($placedHens->isNotEmpty()) {
-                    $hensByCage = $placedHens->groupBy(fn($h) => $h->cage->id);
+        $mortalityCageIds = [];
 
-                    foreach ($hensByCage as $cageId => $cageHens) {
-                        $log = MortalityLog::create([
-                            'cage_id'     => $cageId,
-                            'log_date'    => now()->toDateString(),
-                            'count'       => $cageHens->count(),
-                            'reason'      => $data['reason'],
-                            'notes'       => $data['notes'] ?? null,
-                            'recorded_by' => auth()->id(),
-                        ]);
+        if ($mortalityCount > 0) {
+            $mortalityHens = Hen::whereIn('id', $henIdsDeactivated)
+                ->where('deactivation_cause', 'mortality')
+                ->with('cageSlot.cage')
+                ->get();
 
-                        foreach ($cageHens as $hen) {
-                            MortalityLogHen::create([
-                                'mortality_log_id' => $log->id,
-                                'hen_id'           => $hen->id,
-                                'cage_slot_id'     => $hen->cage_slot_id,
-                            ]);
-                        }
+            $mortalityByCage = $mortalityHens->groupBy(fn($h) => $h->cageSlot->cage_id);
+
+            DB::transaction(function () use ($mortalityByCage, $data, &$mortalityCageIds) {
+                $mortalityCageIds = [];
+                $henIdsToClear = [];
+
+                foreach ($mortalityByCage as $cageId => $cageHens) {
+                    $log = MortalityLog::create([
+                        'cage_id'     => $cageId,
+                        'log_date'    => now()->toDateString(),
+                        'count'       => $cageHens->count(),
+                        'reason'      => $data['reason'],
+                        'notes'       => $data['notes'] ?? null,
+                        'recorded_by' => auth()->id(),
+                    ]);
+
+                    foreach ($cageHens as $hen) {
+                        $pivot = new MortalityLogHen;
+                        $pivot->mortality_log_id = $log->id;
+                        $pivot->hen_id = $hen->id;
+                        $pivot->cage_slot_id = $hen->cage_slot_id;
+                        $pivot->save();
+                        $henIdsToClear[] = $hen->id;
                     }
+
+                    $mortalityCageIds[] = $cageId;
                 }
+
+                Hen::whereIn('id', $henIdsToClear)->update(['deactivation_cause' => null]);
+            });
+
+            foreach (array_unique($mortalityCageIds) as $cageId) {
+                $this->checkMortalitySpike($cageId, now()->toDateString());
             }
-        });
+        }
 
-        $totalRemoved = $hens->count();
-        $mortalityCount = $recordMortality
-            ? $hens->filter(fn($h) => $h->cage_slot_id !== null)->count()
-            : 0;
-
-        $parts = ["{$totalRemoved} hen(s) removed"];
+        $parts = ["{$removedCount} hen(s) removed"];
         if ($mortalityCount > 0) {
             $parts[] = "{$mortalityCount} recorded as mortality";
         }
         if ($unplacedCount > 0) {
             $parts[] = "{$unplacedCount} unplaced hen(s) skipped mortality logging";
+        }
+        if (!empty($errors)) {
+            $parts[] = implode(' ', $errors);
         }
 
         return redirect()->back()->with('success', implode('. ', $parts) . '.');

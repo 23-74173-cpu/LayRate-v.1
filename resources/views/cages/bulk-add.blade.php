@@ -21,12 +21,23 @@
     </div>
     @else
 
+    {{-- Server-side validation errors --}}
+    @if($errors->any())
+    <div class="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+        <ul class="list-disc list-inside space-y-1">
+            @foreach($errors->all() as $error)
+            <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+    @endif
+
     {{-- Form --}}
     <form id="placementForm" method="POST" action="{{ route('cages.bulk-add.store') }}" class="space-y-5">
         @csrf
 
         {{-- Hidden inputs --}}
-        <input type="hidden" name="mode" id="modeInput" value="manual">
+        <input type="hidden" name="mode" id="modeInput" value="{{ old('mode', 'manual') }}">
         <input type="hidden" name="slot_ids" id="slotIdsInput" value="">
         <input type="hidden" name="hen_ids" id="henIdsInput" value="{{ implode(',', $preselectedIds) }}">
 
@@ -47,9 +58,9 @@
                 </div>
                 <div class="flex items-center gap-2">
                     <select id="henBreedFilter" class="border border-[#D9D9D9] rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="filterUnplaced()">
-                        <option value="">All breeds</option>
+                        <option value="">All breeds ({{ $unplacedHens->count() }})</option>
                         @foreach($unplacedBreeds as $b)
-                        <option value="{{ $b }}">{{ $b }}</option>
+                        <option value="{{ $b }}">{{ $b }} ({{ $unplacedBreedCounts[$b] ?? 0 }} available)</option>
                         @endforeach
                     </select>
                     <span class="text-xs text-[#9CA3AF]">{{ $unplacedHens->count() }} unplaced</span>
@@ -96,19 +107,19 @@
             <div class="flex items-center gap-4 px-4 py-2.5 border-b border-[#D9D9D9]" style="background: #FAFAFA;">
                 <span class="text-xs font-semibold text-[#1D4E8F]">Step 3: Placement Mode</span>
                 <label class="flex items-center gap-1.5 text-xs cursor-pointer">
-                    <input type="radio" name="mode_radio" value="manual" checked onchange="switchMode('manual')"
+                    <input type="radio" name="mode_radio" value="manual" {{ old('mode', 'manual') === 'manual' ? 'checked' : '' }} onchange="switchMode('manual')"
                            class="w-3.5 h-3.5 text-[#002D5E]">
                     Manual slot pick
                 </label>
                 <label class="flex items-center gap-1.5 text-xs cursor-pointer">
-                    <input type="radio" name="mode_radio" value="auto" onchange="switchMode('auto')"
+                    <input type="radio" name="mode_radio" value="auto" {{ old('mode') === 'auto' ? 'checked' : '' }} onchange="switchMode('auto')"
                            class="w-3.5 h-3.5 text-[#002D5E]">
                     Auto-distribute
                 </label>
             </div>
 
             {{-- Manual mode --}}
-            <div id="manualMode" class="p-4">
+            <div id="manualMode" class="{{ old('mode') === 'auto' ? 'hidden' : '' }} p-4">
                 <div class="flex items-center justify-between mb-3">
                     <span class="text-xs font-medium text-[#6B7280] uppercase tracking-wider">Click slots to select</span>
                     <div class="flex items-center gap-3 text-xs text-[#9CA3AF]">
@@ -124,11 +135,11 @@
             </div>
 
             {{-- Auto mode --}}
-            <div id="autoMode" class="hidden p-4">
+            <div id="autoMode" class="{{ old('mode') === 'auto' ? '' : 'hidden' }} p-4">
                 <div class="flex items-center gap-4">
                     <div>
                         <label class="block text-xs font-medium text-[#6B7280] mb-1">Hens per slot</label>
-                        <input type="number" id="chickensPerSlot" min="1" max="10" value="4"
+                        <input type="number" id="chickensPerSlot" name="chickens_per_slot" min="1" max="10" value="{{ old('chickens_per_slot', 4) }}"
                                class="w-24 border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]"
                                oninput="updateAutoSummary()">
                     </div>
@@ -171,7 +182,7 @@
     let cageSlots = [];
     let slotsLoadFailed = false;
     let currentMaxPerSlot = 0;
-    let currentMode = 'manual';
+    let currentMode = '{{ old('mode', 'manual') }}';
 
     // Pre-select hens from deep-link
     updateHenSelection();

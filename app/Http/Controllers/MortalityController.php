@@ -29,7 +29,7 @@ class MortalityController extends Controller
         $todayByCage = MortalityLog::with('cage')
             ->whereDate('log_date', today())
             ->get()
-            ->groupBy(fn($l) => $l->cage->cage_code)
+            ->groupBy(fn($l) => $l->cage?->cage_code ?? 'Deleted Cage')
             ->map(fn($g) => $g->sum('count'));
 
         $preselectedCageId = (int) request('cage_id');
@@ -59,21 +59,26 @@ class MortalityController extends Controller
             'notes'    => 'nullable|string|max:1000',
         ]);
 
-        $cage = Cage::with(['cageSlots.hens' => fn($q) => $q->where('is_active', 1)])->findOrFail($data['cage_id']);
+        $error = null;
+        $cageCode = Cage::where('id', $data['cage_id'])->value('cage_code');
 
-        $activeHens = $cage->cageSlots->flatMap(fn($slot) => $slot->hens)
-            ->sortBy(fn($h) => [$h->cage_slot_id, $h->placement_date ?? $h->date_acquired])
-            ->values();
+        DB::transaction(function () use ($data, &$error) {
+            $slots = CageSlot::with(['hens' => fn($q) => $q->where('is_active', 1)])
+                ->where('cage_id', $data['cage_id'])
+                ->lockForUpdate()
+                ->get();
 
-        if ($activeHens->count() < $data['count']) {
-            return back()->withErrors([
-                'count' => "Only {$activeHens->count()} active hen(s) available in {$cage->cage_code}, but {$data['count']} deaths recorded.",
-            ])->withInput();
-        }
+            $activeHens = $slots->flatMap(fn($slot) => $slot->hens)
+                ->sortBy(fn($h) => [$h->cage_slot_id, $h->placement_date ?? $h->date_acquired])
+                ->values();
 
-        $hensToDeactivate = $activeHens->take($data['count']);
+            if ($activeHens->count() < $data['count']) {
+                $error = "Only {$activeHens->count()} active hen(s) available, but {$data['count']} deaths recorded.";
+                return;
+            }
 
-        DB::transaction(function () use ($data, $hensToDeactivate) {
+            $hensToDeactivate = $activeHens->take($data['count']);
+
             $log = MortalityLog::create([
                 'cage_id'     => $data['cage_id'],
                 'log_date'    => $data['log_date'],
@@ -86,15 +91,19 @@ class MortalityController extends Controller
             foreach ($hensToDeactivate as $hen) {
                 $hen->update(['is_active' => false]);
 
-                MortalityLogHen::create([
-                    'mortality_log_id' => $log->id,
-                    'hen_id'           => $hen->id,
-                    'cage_slot_id'     => $hen->cage_slot_id,
-                ]);
+                $pivot = new MortalityLogHen;
+                $pivot->mortality_log_id = $log->id;
+                $pivot->hen_id = $hen->id;
+                $pivot->cage_slot_id = $hen->cage_slot_id;
+                $pivot->save();
             }
 
             $this->decrementSlotOccupancy($hensToDeactivate);
         });
+
+        if ($error) {
+            return back()->withErrors(['count' => $error])->withInput();
+        }
 
         $this->checkMortalitySpike($data['cage_id'], $data['log_date']);
 
@@ -133,7 +142,7 @@ class MortalityController extends Controller
 
             if ($activeHens->count() < $diff) {
                 return back()->withErrors([
-                    'count' => "Only {$activeHens->count()} remaining active hen(s) available in {$mortalityLog->cage->cage_code}, but {$diff} additional deaths recorded.",
+                    'count' => "Only {$activeHens->count()} remaining active hen(s) available in " . ($mortalityLog->cage?->cage_code ?? 'Deleted Cage') . ", but {$diff} additional deaths recorded.",
                 ])->withInput();
             }
 
@@ -151,11 +160,11 @@ class MortalityController extends Controller
             if ($newCount > $oldCount) {
                 foreach ($hensToDeactivate as $hen) {
                     $hen->update(['is_active' => false]);
-                    MortalityLogHen::create([
-                        'mortality_log_id' => $mortalityLog->id,
-                        'hen_id'           => $hen->id,
-                        'cage_slot_id'     => $hen->cage_slot_id,
-                    ]);
+                    $pivot = new MortalityLogHen;
+                    $pivot->mortality_log_id = $mortalityLog->id;
+                    $pivot->hen_id = $hen->id;
+                    $pivot->cage_slot_id = $hen->cage_slot_id;
+                    $pivot->save();
                 }
                 $this->decrementSlotOccupancy($hensToDeactivate);
 
@@ -190,23 +199,27 @@ class MortalityController extends Controller
 
     public function destroy(MortalityLog $mortalityLog)
     {
-        $pivotRows = MortalityLogHen::where('mortality_log_id', $mortalityLog->id)->get();
+        DB::transaction(function () use ($mortalityLog) {
+            $pivotRows = MortalityLogHen::where('mortality_log_id', $mortalityLog->id)
+                ->lockForUpdate()
+                ->get();
 
-        foreach ($pivotRows as $pivot) {
-            $hen = Hen::find($pivot->hen_id);
+            foreach ($pivotRows as $pivot) {
+                $hen = Hen::find($pivot->hen_id);
 
-            if ($hen === null) {
-                Log::warning("MortalityLogHen#{$pivot->id} references hen_id {$pivot->hen_id} which no longer exists. Skipping reactivation.");
-                continue;
+                if ($hen === null) {
+                    Log::warning("MortalityLogHen#{$pivot->id} references hen_id {$pivot->hen_id} which no longer exists. Skipping reactivation.");
+                    continue;
+                }
+
+                $hen->update(['is_active' => true]);
+
+                CageSlot::where('id', $pivot->cage_slot_id)->increment('current_occupancy');
             }
 
-            $hen->update(['is_active' => true]);
-
-            CageSlot::where('id', $pivot->cage_slot_id)->increment('current_occupancy');
-        }
-
-        MortalityLogHen::where('mortality_log_id', $mortalityLog->id)->delete();
-        $mortalityLog->delete();
+            MortalityLogHen::where('mortality_log_id', $mortalityLog->id)->delete();
+            $mortalityLog->delete();
+        });
 
         return redirect()->route('mortality.index')
             ->with('success', 'Record deleted.');
@@ -234,32 +247,4 @@ class MortalityController extends Controller
      * Check if same-day same-cage mortality total exceeds threshold and create alert.
      * TODO: Move threshold (3) to settings table for operator configurability.
      */
-    private function checkMortalitySpike(int $cageId, string $logDate): void
-    {
-        $cageDailyTotal = MortalityLog::where('cage_id', $cageId)
-            ->whereDate('log_date', $logDate)
-            ->sum('count');
-
-        if ($cageDailyTotal < 3) {
-            return;
-        }
-
-        $exists = Alert::where('cage_id', $cageId)
-            ->where('alert_type', 'mortality_spike')
-            ->where('is_read', 0)
-            ->whereDate('triggered_at', $logDate)
-            ->exists();
-
-        if ($exists) {
-            return;
-        }
-
-        Alert::create([
-            'cage_id'      => $cageId,
-            'alert_type'   => 'mortality_spike',
-            'message'      => "{$cageDailyTotal} hen(s) died on {$logDate} — mortality spike detected",
-            'is_read'      => 0,
-            'triggered_at' => now(),
-        ]);
-    }
 }

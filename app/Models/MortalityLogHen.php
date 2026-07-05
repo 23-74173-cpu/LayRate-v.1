@@ -9,7 +9,7 @@ class MortalityLogHen extends Model
 {
     protected $table = 'mortality_log_hens';
 
-    protected $fillable = ['mortality_log_id', 'hen_id', 'cage_slot_id'];
+    protected $fillable = [];
 
     public function mortalityLog(): BelongsTo
     {

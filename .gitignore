@@ -30,3 +30,4 @@ Homestead.yaml
 Thumbs.db
 
 .playwright-mcp/
+.history/

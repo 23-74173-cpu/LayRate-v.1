@@ -120,11 +120,11 @@
                 <tbody>
                     @forelse($consumptionLogs as $log)
                     @php
-                        $cColor = match($log->cage->cage_code) { 'CAGE-A'=>'#2D7D46','CAGE-B'=>'#1D4E8F','CAGE-C'=>'#C2703E','CAGE-D'=>'#6B4C8A',default=>'#6B7280' };
+                        $cColor = match($log->cage?->cage_code ?? '') { 'CAGE-A'=>'#2D7D46','CAGE-B'=>'#1D4E8F','CAGE-C'=>'#C2703E','CAGE-D'=>'#6B4C8A',default=>'#6B7280' };
                     @endphp
                     <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
                         <td class="px-5 py-3 text-sm font-mono text-[#333333]">{{ $log->log_date->format('Y-m-d') }}</td>
-                        <td class="px-5 py-3 text-sm font-medium" style="color:{{ $cColor }}">{{ $log->cage->cage_code }}</td>
+                        <td class="px-5 py-3 text-sm font-medium" style="color:{{ $cColor }}">{{ $log->cage?->cage_code ?? '—' }}</td>
                         <td class="px-5 py-3 text-sm text-[#333333]">{{ $log->feedBatch->batch_code }}</td>
                         <td class="px-5 py-3 text-sm text-[#333333]">{{ number_format($log->feed_consumed_kg, 2) }} kg</td>
                         <td class="px-5 py-3">

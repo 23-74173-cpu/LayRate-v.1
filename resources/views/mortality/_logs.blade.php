@@ -30,7 +30,7 @@
                 <tr class="hover:bg-[#F5F6F8]/50">
                     <td class="py-2.5 pr-3 text-[#6B7280]">{{ $log->log_date->format('M d, Y') }}</td>
                     <td class="py-2.5 pr-3">
-                        <span class="font-medium" style="color:{{ $log->cage->color }}">{{ $log->cage->cage_code }}</span>
+                        <span class="font-medium" style="color:{{ $log->cage?->color ?? '#6B7280' }}">{{ $log->cage?->cage_code ?? '—' }}</span>
                     </td>
                     <td class="py-2.5 pr-3 font-semibold text-[#333333]">{{ $log->count }}</td>
                     <td class="py-2.5 pr-3">

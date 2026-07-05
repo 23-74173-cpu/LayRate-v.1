@@ -133,19 +133,18 @@ class EggLoggingController extends Controller
 
         $slot = CageSlot::with('cage')->findOrFail($data['cage_slot_id']);
 
-        $payload = [
-            'cage_slot_id' => $slot->id,
-            'egg_count'    => $data['egg_count'],
-            'hen_count'    => $data['hen_count'],
-            'hdep'         => round(($data['egg_count'] / $data['hen_count']) * 100, 2),
-            'recorded_by'  => auth()->id(),
-            'notes'        => $data['notes'] ?? 'Manual entry',
-        ];
-
-        ProductionLog::updateOrCreate(
-            ['cage_slot_id' => $slot->id, 'log_date' => $data['log_date']],
-            $payload
+        $log = ProductionLog::firstOrNew(
+            ['cage_slot_id' => $slot->id, 'log_date' => $data['log_date']]
         );
+        $log->cage_slot_id = $slot->id;
+        $log->recorded_by = auth()->id();
+        $log->fill([
+            'egg_count' => $data['egg_count'],
+            'hen_count' => $data['hen_count'],
+            'hdep'      => round(($data['egg_count'] / $data['hen_count']) * 100, 2),
+            'notes'     => $data['notes'] ?? 'Manual entry',
+        ]);
+        $log->save();
 
         return redirect()->route('eggs.logging')->with('success', 'Production log saved.');
     }

@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 class Hen extends Model
 {
     protected $fillable = [
-        'cage_slot_id', 'tag_code', 'chicken_id', 'date_acquired', 'flock_age_weeks',
+        'tag_code', 'chicken_id', 'date_acquired', 'flock_age_weeks',
         'placement_date', 'age_at_placement_weeks', 'breed', 'sex',
         'source', 'initial_health_status', 'notes', 'is_active',
     ];

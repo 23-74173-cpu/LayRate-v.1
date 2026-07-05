@@ -179,6 +179,10 @@
                         <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
                     </a>
                     @if($isAdmin)
+                    <button onclick="toggleReorderMode({{ $cage->id }})"
+                            class="p-1.5 rounded hover:bg-black/5 transition-colors reorder-toggle" style="color: #615d59;" aria-label="Renumber slots">
+                        <i data-lucide="list-ordered" class="w-3.5 h-3.5"></i>
+                    </button>
                     <button onclick="openEditModal({{ $cage->id }}, '{{ $cage->cage_code }}', {{ is_null($cage->location_row) ? 'null' : $cage->location_row }}, {{ is_null($cage->location_column) ? 'null' : $cage->location_column }}, {{ $cage->rows }}, {{ $cage->slots_per_row }}, {{ $cage->max_chickens_per_slot }}, {{ $cage->is_active ? 1 : 0 }})"
                             class="p-1.5 rounded hover:bg-black/5 transition-colors" style="color: #615d59;" aria-label="Edit cage">
                         <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
@@ -206,7 +210,7 @@
 
             {{-- Mini Slot Grid --}}
             <div class="px-4 pb-3">
-                <div class="grid gap-1" style="grid-template-columns: repeat({{ $cage->slots_per_row }}, 1fr);">
+                <div class="grid gap-1 slot-grid-{{ $cage->id }}" style="grid-template-columns: repeat({{ $cage->slots_per_row }}, 1fr);">
                     @foreach($cage->cageSlots as $slot)
                     @php
                         $isSensor = $slot->hasBreakbeam();
@@ -219,12 +223,13 @@
                             class="slot-mini aspect-square rounded flex flex-col items-center justify-center text-xs transition-all relative"
                             style="background-color: {{ $slotBg }}; border: 1px solid {{ $slotBorder }};"
                             title="Slot {{ $slot->row_number }}-{{ $slot->column_number }}: {{ $occupancy }} hens"
-                            aria-label="Slot {{ $slot->row_number }}-{{ $slot->column_number }}, {{ $occupancy }} hens">
-
+                            aria-label="Slot {{ $slot->row_number }}-{{ $slot->column_number }}, {{ $occupancy }} hens"
+                            data-slot-id="{{ $slot->id }}"
+                            data-original-number="{{ $slot->slot_number }}">
                         @if($isSensor)
                         <span class="absolute top-0 right-0 w-1.5 h-1.5 rounded-bl" style="background-color: #0075de;"></span>
                         @endif
-
+                        <span class="slot-reorder-number hidden text-xs font-bold" style="color: #002D5E;">{{ $slot->slot_number }}</span>
                         @if($occupancy > 0)
                         <span class="text-xs font-semibold" style="color: #1f1f1f;">{{ $occupancy }}</span>
                         @else
@@ -233,9 +238,17 @@
                     </button>
                     @endforeach
                 </div>
+                {{-- Reorder control bar --}}
+                <div id="reorderBar-{{ $cage->id }}" class="hidden mt-2 flex items-center justify-between text-xs" style="color: #615d59;">
+                    <span>Drag slots to renumber</span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="saveReorder({{ $cage->id }})" class="px-2 py-1 rounded text-white text-xs font-medium" style="background-color: #002D5E;">Save</button>
+                        <button onclick="cancelReorder({{ $cage->id }})" class="px-2 py-1 rounded text-xs" style="background-color: #e6e6e6;">Cancel</button>
+                    </div>
+                </div>
             </div>
 
-            {{-- Expanded Detail Panel --}}
+            {{-- Expanded Detail Panel (inside cage-card for proper flex containment) --}}
             <div id="slotExpandPanel-{{ $cage->id }}" class="hidden border-t" style="border-color: #e6e6e6; background-color: #f6f5f4;">
                 <div class="p-4">
                     <div class="flex items-center justify-between mb-3">
@@ -250,6 +263,7 @@
                 </div>
             </div>
         </div>
+        {{-- @empty marker --}}
         @empty
         <div class="w-full rounded-xl border p-10 text-center text-sm" style="background-color: #ffffff; border-color: #e6e6e6; color: #a39e98;">
             No cages yet. Click "+ Add Cage" to get started.
@@ -492,16 +506,40 @@
                     <p class="text-xs mt-1 ml-6" style="color: #a39e98;">If unchecked, the sensors are deleted with the cage.</p>
                 </div>
 
-                {{-- Historical records (always removed — FK constraints) --}}
-                <div class="rounded-lg p-3" style="background-color: #fbe4e6;">
-                    <div class="flex items-start gap-2">
-                        <i data-lucide="alert-triangle" class="w-4 h-4 mt-0.5 shrink-0" style="color: #9b1c24;"></i>
-                        <p class="text-xs" style="color: #9b1c24;">
-                            Historical records are permanently deleted with the cage:
-                            <span id="delHistorySummary"></span>
-                        </p>
-                    </div>
+                {{-- Historical records — per-type preservation checkboxes --}}
+                <div class="rounded-lg p-3" style="background-color: #f6f5f4;">
+                    <div class="font-medium mb-2" style="color: #31302e;">Preserve historical records</div>
+                    <p class="text-xs mb-2" style="color: #a39e98;">Checked records survive deletion (FK removed). Unchecked ones are permanently deleted.</p>
+                    <label class="flex items-center gap-2 cursor-pointer mb-1.5">
+                        <input type="checkbox" id="delPreserveProduction" checked class="w-4 h-4 rounded" style="accent-color: #0075de;">
+                        <span style="color: #615d59;">Egg production logs (<span class="del-log-count" data-type="production">0</span>)</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer mb-1.5">
+                        <input type="checkbox" id="delPreserveMortality" checked class="w-4 h-4 rounded" style="accent-color: #0075de;">
+                        <span style="color: #615d59;">Mortality records (<span class="del-log-count" data-type="mortality">0</span>)</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer mb-1.5">
+                        <input type="checkbox" id="delPreserveFeed" checked class="w-4 h-4 rounded" style="accent-color: #0075de;">
+                        <span style="color: #615d59;">Feed consumption logs (<span class="del-log-count" data-type="feed">0</span>)</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="delPreserveEnvironment" checked class="w-4 h-4 rounded" style="accent-color: #0075de;">
+                        <span style="color: #615d59;">Environment logs (<span class="del-log-count" data-type="env">0</span>)</span>
+                    </label>
                 </div>
+
+                {{-- Delete Permanently (no salvage) — admin-only destructive path --}}
+                @if($isAdmin)
+                <div class="border-t border-dashed pt-3 mt-1" style="border-color: #e6e6e6;">
+                    <a href="#" id="delPermanentLink"
+                       class="text-xs font-medium transition-colors"
+                       style="color: #9b1c24;"
+                       onmouseover="this.style.color='#7a161d'"
+                       onmouseout="this.style.color='#9b1c24'">
+                        Delete Permanently (no salvage) →
+                    </a>
+                </div>
+                @endif
             </div>
 
             <div class="flex items-center justify-end gap-3 mt-5">
@@ -1266,23 +1304,29 @@ function openDeleteModal(id, code) {
     document.getElementById('deleteCageCode').textContent = code;
     document.getElementById('delHenCount').textContent = '…';
     document.getElementById('delSensorCount').textContent = '…';
-    document.getElementById('delHistorySummary').textContent = '';
     document.querySelector('input[name="delHensAction"][value="move"]').checked = true;
     document.getElementById('delReturnSensors').checked = true;
+    document.querySelectorAll('#deleteCageModal .del-log-count').forEach(function(el) { el.textContent = '…'; });
     document.getElementById('deleteCageModal').classList.remove('hidden');
     lucide.createIcons();
+
+    var link = document.getElementById('delPermanentLink');
+    if (link) link.href = '/cages/' + id + '/confirm-delete';
 
     fetch('/cages/' + id + '/delete-info')
         .then(function(r) { return r.json(); })
         .then(function(info) {
             document.getElementById('delHenCount').textContent = info.hens;
             document.getElementById('delSensorCount').textContent = info.sensors;
-            document.getElementById('delHistorySummary').textContent =
-                info.production_logs + ' egg log(s), ' + info.feed_logs + ' feed log(s), ' +
-                info.mortality_logs + ' mortality log(s), ' + info.env_logs + ' environment log(s).';
+            var typeMap = { production: info.production_logs, mortality: info.mortality_logs, feed: info.feed_logs, env: info.env_logs };
+            document.querySelectorAll('#deleteCageModal .del-log-count').forEach(function(el) {
+                el.textContent = typeMap[el.dataset.type] || 0;
+            });
         })
         .catch(function() {
-            document.getElementById('delHistorySummary').textContent = 'Could not load record counts.';
+            document.querySelectorAll('#deleteCageModal .del-log-count').forEach(function(el) {
+                el.textContent = '?';
+            });
         });
 }
 
@@ -1306,6 +1350,10 @@ function confirmCageDelete() {
         body: JSON.stringify({
             hens_action: document.querySelector('input[name="delHensAction"]:checked').value,
             return_sensors: document.getElementById('delReturnSensors').checked,
+            preserve_production: document.getElementById('delPreserveProduction').checked,
+            preserve_mortality: document.getElementById('delPreserveMortality').checked,
+            preserve_feed: document.getElementById('delPreserveFeed').checked,
+            preserve_environment: document.getElementById('delPreserveEnvironment').checked,
         }),
     })
     .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
@@ -1324,6 +1372,176 @@ function confirmCageDelete() {
         btn.disabled = false;
         showDragError('Failed to delete cage');
     });
+}
+
+// ── Slot Reorder (Item 1: drag-and-drop renumbering) ────
+var reorderState = {};  // { cageId: { slotId: newNumber, ... } }
+
+function toggleReorderMode(cageId) {
+    var state = reorderState[cageId];
+    if (state && state.active) {
+        cancelReorder(cageId);
+        return;
+    }
+    var bar = document.getElementById('reorderBar-' + cageId);
+    var slots = document.querySelectorAll('.slot-grid-' + cageId + ' .slot-mini');
+    var numberLabels = document.querySelectorAll('.slot-grid-' + cageId + ' .slot-reorder-number');
+
+    // Initialize reorder state for this cage
+    reorderState[cageId] = { active: true };
+    slots.forEach(function(btn) {
+        var id = parseInt(btn.dataset.slotId);
+        reorderState[cageId][id] = {
+            current: parseInt(btn.dataset.originalNumber),
+            original: parseInt(btn.dataset.originalNumber),
+        };
+    });
+
+    // Show reorder bar
+    if (bar) bar.classList.remove('hidden');
+
+    // Hide occupancy numbers, show reorder numbers
+    slots.forEach(function(btn) {
+        var id = parseInt(btn.dataset.slotId);
+        var numSpan = btn.querySelector('.slot-reorder-number');
+        var occSpan = btn.querySelector('.text-xs.font-semibold');
+        var dashSpan = btn.querySelector('.text-xs');
+        if (numSpan) {
+            numSpan.textContent = reorderState[cageId][id].current;
+            numSpan.classList.remove('hidden');
+        }
+        // Hide occupancy/dash during reorder
+        if (occSpan && !occSpan.classList.contains('slot-reorder-number')) occSpan.style.display = 'none';
+        if (dashSpan && !dashSpan.classList.contains('slot-reorder-number') && !dashSpan.classList.contains('absolute')) dashSpan.style.display = 'none';
+        // Make draggable
+        btn.draggable = true;
+        btn.classList.add('cursor-grab', 'active\:cursor-grabbing');
+    });
+
+    // Setup drag events
+    setupReorderDrag(cageId);
+    lucide.createIcons();
+}
+
+function setupReorderDrag(cageId) {
+    var slots = document.querySelectorAll('.slot-grid-' + cageId + ' .slot-mini');
+    var draggedId = null;
+
+    slots.forEach(function(btn) {
+        btn.addEventListener('dragstart', function(e) {
+            draggedId = parseInt(this.dataset.slotId);
+            this.classList.add('opacity-50');
+            e.dataTransfer.effectAllowed = 'move';
+        });
+
+        btn.addEventListener('dragend', function(e) {
+            this.classList.remove('opacity-50');
+        });
+
+        btn.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+
+        btn.addEventListener('drop', function(e) {
+            e.preventDefault();
+            var targetId = parseInt(this.dataset.slotId);
+            if (!draggedId || draggedId === targetId) return;
+            swapSlotNumbers(cageId, draggedId, targetId);
+            draggedId = null;
+        });
+    });
+}
+
+function swapSlotNumbers(cageId, idA, idB) {
+    var state = reorderState[cageId];
+    if (!state || !state[idA] || !state[idB]) return;
+
+    var temp = state[idA].current;
+    state[idA].current = state[idB].current;
+    state[idB].current = temp;
+
+    // Update displayed numbers
+    var slots = document.querySelectorAll('.slot-grid-' + cageId + ' .slot-mini');
+    slots.forEach(function(btn) {
+        var id = parseInt(btn.dataset.slotId);
+        var numSpan = btn.querySelector('.slot-reorder-number');
+        if (numSpan && state[id]) {
+            numSpan.textContent = state[id].current;
+        }
+    });
+}
+
+function saveReorder(cageId) {
+    var state = reorderState[cageId];
+    if (!state || !state.active) return;
+
+    var slots = [];
+    var changed = false;
+    Object.keys(state).forEach(function(key) {
+        if (key === 'active') return;
+        var id = parseInt(key);
+        if (state[id].current !== state[id].original) {
+            changed = true;
+        }
+        slots.push({ id: id, slot_number: state[id].current });
+    });
+
+    if (!changed) {
+        cancelReorder(cageId);
+        return;
+    }
+
+    var saveBtn = document.querySelector('#reorderBar-' + cageId + ' button');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving\u2026'; }
+
+    fetch('/cages/' + cageId + '/slots/reorder', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        },
+        body: JSON.stringify({ slots: slots }),
+    })
+    .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
+    .then(function(res) {
+        if (res.ok && res.data.success) {
+            showToast('Slot numbers updated', true);
+            Turbo.visit(window.location.href, { action: 'replace' });
+        } else {
+            showDragError(res.data.message || 'Failed to reorder slots');
+            if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
+        }
+    })
+    .catch(function() {
+        showDragError('Failed to reorder slots');
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
+    });
+}
+
+function cancelReorder(cageId) {
+    var state = reorderState[cageId];
+    if (!state) return;
+
+    var bar = document.getElementById('reorderBar-' + cageId);
+    var slots = document.querySelectorAll('.slot-grid-' + cageId + ' .slot-mini');
+
+    if (bar) bar.classList.add('hidden');
+
+    slots.forEach(function(btn) {
+        var numSpan = btn.querySelector('.slot-reorder-number');
+        var occSpan = btn.querySelector('.text-xs.font-semibold');
+        var dashSpan = btn.querySelector('.text-xs');
+        if (numSpan) numSpan.classList.add('hidden');
+        if (occSpan && !occSpan.classList.contains('slot-reorder-number')) occSpan.style.display = '';
+        if (dashSpan && !dashSpan.classList.contains('slot-reorder-number') && !dashSpan.classList.contains('absolute')) dashSpan.style.display = '';
+        btn.draggable = false;
+        btn.classList.remove('cursor-grab', 'active\\:cursor-grabbing');
+    });
+
+    delete reorderState[cageId];
+    lucide.createIcons();
 }
 
 // ── Auto-open edit modal on resize error ─────────────────

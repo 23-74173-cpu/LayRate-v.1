@@ -61,11 +61,11 @@ class CageSlot extends Model
 
     public function getStatusAttribute(): string
     {
-        if ($this->current_occupancy === 0) {
-            return 'empty';
-        }
         if ($this->hasBreakbeam()) {
             return 'sensor';
+        }
+        if ($this->current_occupancy === 0) {
+            return 'empty';
         }
         return 'manual';
     }

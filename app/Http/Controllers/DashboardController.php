@@ -101,14 +101,14 @@ class DashboardController extends Controller
             ->orWhereDate('log_date', now()->subDay()->toDateString())
             ->orderByDesc('log_date')
             ->get()
-            ->groupBy(fn ($f) => $f->cage->cage_code)
+            ->groupBy(fn ($f) => $f->cage?->cage_code ?? 'Deleted Cage')
             ->map(fn ($g) => $g->first());
 
         // Mortality today
         $mortalityToday = MortalityLog::with('cage')
             ->whereDate('log_date', $today)
             ->get()
-            ->groupBy(fn ($l) => $l->cage->cage_code)
+            ->groupBy(fn ($l) => $l->cage?->cage_code ?? 'Deleted Cage')
             ->map(fn ($g) => $g->sum('count'));
         $mortalityTodayTotal = $mortalityToday->sum();
 

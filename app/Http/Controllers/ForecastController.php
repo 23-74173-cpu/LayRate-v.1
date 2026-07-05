@@ -164,13 +164,12 @@ class ForecastController extends Controller
             $variation  = (($i % 3) - 1) * 0.3;
             $predicted  = round(min(100, max(0, $avgHdep + $variation)), 2);
 
-            $forecast = new Forecast([
-                'cage_id'        => $cage?->id,
-                'breed'          => $breed,
-                'forecast_date'  => $today,
-                'target_date'    => $targetDate,
-                'predicted_hdep' => $predicted,
-            ]);
+            $forecast = new Forecast;
+            $forecast->cage_id = $cage?->id;
+            $forecast->breed = $breed;
+            $forecast->forecast_date = $today;
+            $forecast->target_date = $targetDate;
+            $forecast->predicted_hdep = $predicted;
 
             if ($save) $forecast->save();
             $forecasts->push($forecast);
