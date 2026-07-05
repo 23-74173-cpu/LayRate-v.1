@@ -59,6 +59,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/cages/{cage}',        [CageController::class, 'update'])->name('cages.update');
         Route::patch('/cages/{cage}/position', [CageController::class, 'updatePosition'])->name('cages.position');
         Route::post('/cages/batch-position', [CageController::class, 'batchUpdatePosition'])->name('cages.batch-position');
+        Route::post('/cages/remove-cell', [CageController::class, 'removeCell'])->name('cages.remove-cell');
         Route::post('/cages/{cage}/slots/reorder', [CageController::class, 'batchReorderSlots'])->name('cages.slots.reorder');
         Route::get('/cages/{cage}/sensor-info', [CageController::class, 'sensorInfo'])->name('cages.sensor-info');
         Route::get('/cages/{cage}/delete-info', [CageController::class, 'deleteInfo'])->name('cages.delete-info');

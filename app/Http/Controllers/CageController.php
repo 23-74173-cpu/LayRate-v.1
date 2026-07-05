@@ -14,6 +14,7 @@ use App\Models\MortalityLog;
 use App\Models\Note;
 use App\Models\ProductionLog;
 use App\Models\Setting;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -918,5 +919,62 @@ class CageController extends Controller
             'reason'           => $reason,
             'recorded_by'      => auth()->id(),
         ]);
+    }
+
+    public function removeCell(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'row' => 'required|integer|min:0',
+            'col' => 'required|integer|min:0',
+        ]);
+
+        $row = (int) $data['row'];
+        $col = (int) $data['col'];
+
+        $cage = Cage::where('location_row', $row)
+            ->where('location_column', $col)
+            ->first();
+
+        if ($cage) {
+            $cage->update(['location_row' => null, 'location_column' => null]);
+            return response()->json(['success' => true]);
+        }
+
+        // Empty cell — attempt grid shrink
+        $gridRows = (int) Setting::get('farm_grid_rows', 4);
+        $gridCols = (int) Setting::get('farm_grid_cols', 4);
+
+        $isEdge = ($col === $gridCols - 1 || $row === $gridRows - 1);
+        if (!$isEdge) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only empty cells at the grid\'s edge (last row or last column) can be removed, since removing one from the middle would require repositioning other cages.',
+            ], 422);
+        }
+
+        if ($col === $gridCols - 1) {
+            $lastColOccupied = Cage::where('location_column', $gridCols - 1)->whereNotNull('location_row')->exists();
+            if ($lastColOccupied) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot shrink the grid — the last column still contains cages. Move or remove them first.',
+                ], 422);
+            }
+            Setting::set('farm_grid_cols', max(1, $gridCols - 1));
+            $gridCols = max(1, $gridCols - 1);
+        }
+
+        if ($row === $gridRows - 1) {
+            $lastRowOccupied = Cage::where('location_row', $gridRows - 1)->whereNotNull('location_row')->exists();
+            if ($lastRowOccupied) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot shrink the grid — the last row still contains cages. Move or remove them first.',
+                ], 422);
+            }
+            Setting::set('farm_grid_rows', max(1, $gridRows - 1));
+        }
+
+        return response()->json(['success' => true]);
     }
 }

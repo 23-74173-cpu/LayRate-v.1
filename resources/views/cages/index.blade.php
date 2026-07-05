@@ -34,17 +34,7 @@
             <h3 class="text-xs font-semibold tracking-[0.05em] uppercase" style="color: #615d59;">Farm Layout</h3>
             <div class="flex items-center gap-2">
                 <button id="clearFilterBtn" class="hidden text-xs font-medium px-3 py-1 rounded-lg transition-colors" style="color: #0075de; border: 1px solid #0075de;" onclick="clearCanvasFilter()">Show all</button>
-                {{-- Layout flow toggle (item 26) --}}
-                <div class="flex items-center rounded-lg overflow-hidden" style="border: 1px solid #e6e6e6;" role="group" aria-label="Tile flow direction">
-                    <button id="flowHorizontalBtn" onclick="setCanvasFlow('horizontal')" title="Horizontal flow" aria-label="Horizontal flow"
-                            class="p-1.5 transition-colors" style="color: #615d59;">
-                        <i data-lucide="stretch-horizontal" class="w-4 h-4"></i>
-                    </button>
-                    <button id="flowVerticalBtn" onclick="setCanvasFlow('vertical')" title="Vertical flow" aria-label="Vertical flow"
-                            class="p-1.5 transition-colors" style="color: #615d59;">
-                        <i data-lucide="stretch-vertical" class="w-4 h-4"></i>
-                    </button>
-                </div>
+                {{-- Layout flow toggle removed per audit decision --}}
                 @if($isAdmin)
                 <button id="clearAllBtn" onclick="clearAllCages()"
                         class="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
@@ -72,10 +62,18 @@
                     $placedCage = $cages->firstWhere(fn($cg) => $cg->location_row === $r && $cg->location_column === $c);
                 @endphp
                 @if($placedCage)
-                <div class="farm-cell min-h-[5rem] rounded-lg border-2 p-3 flex flex-col justify-between transition-all"
+                <div class="farm-cell min-h-[5rem] rounded-lg border-2 p-3 flex flex-col justify-between transition-all group relative"
                      style="border-color: {{ $placedCage->color }}; background-color: {{ $placedCage->colorSoft }};"
                      data-row="{{ $r }}" data-col="{{ $c }}"
                      ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, {{ $r }}, {{ $c }})">
+                    @if($isAdmin)
+                    <button onclick="event.stopPropagation(); confirmRemoveCell({{ $r }}, {{ $c }}, '{{ $placedCage->cage_code }}')"
+                            class="remove-cell-btn absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            style="background-color: rgba(155,28,36,0.85); color: #fff; font-size: 12px; line-height: 1;"
+                            title="Remove {{ $placedCage->cage_code }} from canvas" aria-label="Remove {{ $placedCage->cage_code }}">
+                        ×
+                    </button>
+                    @endif
                     <div class="farm-tile {{ $isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer' }}"
                          draggable="{{ $isAdmin ? 'true' : 'false' }}"
                          data-cage-id="{{ $placedCage->id }}"
@@ -89,10 +87,18 @@
                     </div>
                 </div>
                 @else
-                <div class="farm-cell min-h-[5rem] rounded-lg border p-3 flex items-center justify-center transition-all"
+                <div class="farm-cell min-h-[5rem] rounded-lg border p-3 flex items-center justify-center transition-all group relative"
                      style="border-color: #e6e6e6; background-color: #f9fafb;"
                      data-row="{{ $r }}" data-col="{{ $c }}"
                      ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, {{ $r }}, {{ $c }})">
+                    @if($isAdmin)
+                    <button onclick="event.stopPropagation(); confirmRemoveCell({{ $r }}, {{ $c }})"
+                            class="remove-cell-btn absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            style="background-color: rgba(155,28,36,0.85); color: #fff; font-size: 12px; line-height: 1;"
+                            title="Remove empty cell" aria-label="Remove empty cell">
+                        ×
+                    </button>
+                    @endif
                     <span class="text-xs" style="color: #d1d5db;">{{ $r + 1 }}-{{ $c + 1 }}</span>
                 </div>
                 @endif
@@ -995,19 +1001,88 @@ function addTileToStaging(cageId) {
 
 function setCellOccupied(cell, cageId) {
     var meta = cageMeta[cageId];
-    cell.className = 'farm-cell min-h-[5rem] rounded-lg border-2 p-3 flex flex-col justify-between transition-all';
+    cell.className = 'farm-cell min-h-[5rem] rounded-lg border-2 p-3 flex flex-col justify-between transition-all group relative';
     cell.style.borderColor = meta.color;
     cell.style.backgroundColor = meta.colorSoft;
     cell.innerHTML = '';
     cell.appendChild(makeGridTile(cageId));
+    addCellRemoveButton(cell, parseInt(cell.dataset.row), parseInt(cell.dataset.col), meta.code);
 }
 
 function setCellEmpty(cell) {
-    cell.className = 'farm-cell min-h-[5rem] rounded-lg border p-3 flex items-center justify-center transition-all';
+    cell.className = 'farm-cell min-h-[5rem] rounded-lg border p-3 flex items-center justify-center transition-all group relative';
     cell.style.borderColor = '#e6e6e6';
     cell.style.backgroundColor = '#f9fafb';
     var r = parseInt(cell.dataset.row), c = parseInt(cell.dataset.col);
     cell.innerHTML = '<span class="text-xs" style="color: #d1d5db;">' + (r + 1) + '-' + (c + 1) + '</span>';
+    addCellRemoveButton(cell, r, c);
+}
+
+function addCellRemoveButton(cell, row, col, cageCode) {
+    if (!IS_ADMIN) return;
+    var btn = document.createElement('button');
+    btn.innerHTML = '×';
+    btn.className = 'remove-cell-btn absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity';
+    btn.style.cssText = 'background-color: rgba(155,28,36,0.85); color: #fff; font-size: 12px; line-height: 1;';
+    btn.title = cageCode ? 'Remove ' + cageCode + ' from canvas' : 'Remove empty cell';
+    btn.setAttribute('aria-label', btn.title);
+    btn.onclick = function(e) {
+        e.stopPropagation();
+        confirmRemoveCell(row, col, cageCode);
+    };
+    cell.appendChild(btn);
+}
+
+function confirmRemoveCell(row, col, cageCode) {
+    if (cageCode) {
+        confirmModal(
+            'Remove <strong>' + cageCode + '</strong> from this canvas position?<br><br>' +
+            'The cage and all its data (slots, hens, sensors) will remain completely untouched — ' +
+            'it will just be moved back to the unplaced area. You must save the layout to persist this change.',
+            { submit: function() { doRemoveCell(row, col); } },
+            'Remove from Canvas'
+        );
+    } else {
+        // Empty cell removal — attempt grid shrink
+        doRemoveCell(row, col);
+    }
+}
+
+function doRemoveCell(row, col) {
+    var cell = document.querySelector('.farm-cell[data-row="' + row + '"][data-col="' + col + '"]');
+    if (!cell) return;
+    var tile = cell.querySelector('.farm-tile');
+
+    if (tile) {
+        var cageId = parseInt(tile.dataset.cageId);
+        tile.remove();
+        setCellEmpty(cell);
+        addTileToStaging(cageId);
+        pendingMoves[cageId] = { location_row: null, location_column: null };
+        updateSaveButton();
+        applyRowSpanning();
+    } else {
+        // Remove empty cell: POST to backend to attempt grid shrink
+        fetch('/cages/remove-cell', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            },
+            body: JSON.stringify({ row: row, col: col }),
+        })
+        .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
+        .then(function(res) {
+            if (res.ok && res.data.success) {
+                location.reload();
+            } else {
+                showDragError(res.data.message || 'Cannot remove this cell');
+            }
+        })
+        .catch(function() {
+            showDragError('Failed to remove cell');
+        });
+    }
 }
 
 function handleDragStart(e, cageId) {
@@ -1236,27 +1311,10 @@ function showDragError(msg) {
     });
 })();
 
-// ── Full-row tile spanning (item 18) ──────────────────────
-// A cage alone on its grid row expands to consume the whole row.
-// Rows temporarily un-span during drags so empty cells stay reachable.
+// ── Row-spanning removed per audit (Item 1): lone cages no longer stretch.
+// All cells always render at their normal width; empty placeholders visible.
 function applyRowSpanning() {
-    if ((localStorage.getItem('cage_canvas_flow') || 'horizontal') === 'vertical') {
-        resetRowSpanning();
-        return;
-    }
-    var rows = {};
-    document.querySelectorAll('#farmGrid .farm-cell').forEach(function(cell) {
-        (rows[cell.dataset.row] = rows[cell.dataset.row] || []).push(cell);
-    });
-    Object.keys(rows).forEach(function(r) {
-        var cells = rows[r];
-        var occupied = cells.filter(function(c) { return c.querySelector('.farm-tile'); });
-        cells.forEach(function(c) { c.style.gridColumn = ''; c.style.display = ''; });
-        if (occupied.length === 1) {
-            occupied[0].style.gridColumn = '1 / -1';
-            cells.forEach(function(c) { if (c !== occupied[0]) c.style.display = 'none'; });
-        }
-    });
+    resetRowSpanning();
 }
 
 function resetRowSpanning() {
@@ -1266,35 +1324,7 @@ function resetRowSpanning() {
     });
 }
 
-// ── Canvas flow toggle: horizontal / vertical (item 26) ───
-function setCanvasFlow(flow) {
-    localStorage.setItem('cage_canvas_flow', flow);
-    applyCanvasFlow();
-}
-
-function applyCanvasFlow() {
-    var grid = document.getElementById('farmGrid');
-    if (!grid) return;
-    var flow = localStorage.getItem('cage_canvas_flow') || 'horizontal';
-    if (flow === 'vertical') {
-        grid.style.gridAutoFlow = 'column';
-        grid.style.gridTemplateRows = 'repeat({{ $gridRows }}, minmax(0, 1fr))';
-        resetRowSpanning();
-    } else {
-        grid.style.gridAutoFlow = '';
-        grid.style.gridTemplateRows = '';
-        applyRowSpanning();
-    }
-    var hBtn = document.getElementById('flowHorizontalBtn');
-    var vBtn = document.getElementById('flowVerticalBtn');
-    if (hBtn && vBtn) {
-        hBtn.style.backgroundColor = flow === 'horizontal' ? '#dcebfa' : 'transparent';
-        hBtn.style.color = flow === 'horizontal' ? '#0075de' : '#615d59';
-        vBtn.style.backgroundColor = flow === 'vertical' ? '#dcebfa' : 'transparent';
-        vBtn.style.color = flow === 'vertical' ? '#0075de' : '#615d59';
-    }
-}
-applyCanvasFlow();
+applyRowSpanning();
 
 // ── Delete Cage Modal (items 19 + 20) ─────────────────────
 var deleteTargetId = null;
