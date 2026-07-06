@@ -8,6 +8,7 @@ use App\Models\Hen;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
 use Symfony\Component\Process\Process;
@@ -179,8 +180,11 @@ class ForecastController extends Controller
             ]);
 
             $file = $validated['forecast_file'];
-            $tempPath = $file->storeAs('temp', 'forecast_import_' . uniqid() . '.xlsx');
-            $fullPath = storage_path('app/' . $tempPath);
+            $fullPath = $file->getRealPath();
+
+            if (!$fullPath || !file_exists($fullPath)) {
+                throw new RuntimeException('Uploaded file not found at: ' . ($fullPath ?: 'unknown path'));
+            }
 
             $pythonBinary = $this->resolvePythonBinary();
             $scriptPath = base_path('forecast-api/import_forecast_input.py');
@@ -202,14 +206,21 @@ class ForecastController extends Controller
             $process->setEnv($this->processEnv());
             $process->run();
 
-            if (file_exists($fullPath)) {
-                unlink($fullPath);
-            }
-
             if (!$process->isSuccessful()) {
                 $errorOutput = trim($process->getErrorOutput());
                 $stdOutput = trim($process->getOutput());
                 $detail = $errorOutput ?: $stdOutput;
+
+                Log::error('Forecast import Python process failed', [
+                    'python' => $pythonBinary,
+                    'script' => $scriptPath,
+                    'file_path' => $fullPath,
+                    'file_exists' => file_exists($fullPath),
+                    'exit_code' => $process->getExitCode(),
+                    'stdout' => $stdOutput,
+                    'stderr' => $errorOutput,
+                ]);
+
                 throw new RuntimeException(
                     'Import process failed.' . ($detail ? ' ' . $detail : '')
                 );

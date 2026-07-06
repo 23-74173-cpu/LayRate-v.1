@@ -237,24 +237,6 @@
     </div>
 </div>
 
-{{-- Forecast import loading overlay --}}
-<div id="forecastImportLoadingOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center">
-    <div class="bg-white rounded-xl shadow-xl p-8 max-w-sm w-full mx-4 text-center">
-        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#2D7D46]/10 mb-4">
-            <svg class="animate-spin h-6 w-6 text-[#2D7D46]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-        </div>
-        <h3 class="text-lg font-semibold text-[#333333] mb-1">Importing Production Data</h3>
-        <p class="text-sm text-[#6B7280] mb-4">Please wait while the spreadsheet is being imported...</p>
-        <div class="w-full bg-[#F0F0F0] rounded-full h-2.5 overflow-hidden">
-            <div id="importProgressBar" class="bg-[#2D7D46] h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
-        </div>
-        <p id="importProgressText" class="text-xs text-[#6B7280] mt-2">Uploading: 0%</p>
-    </div>
-</div>
-
 {{-- Floating Action Button --}}
 <div class="fixed bottom-6 right-3 z-40 flex flex-col items-end gap-3">
     {{-- FAB Menu --}}
@@ -302,11 +284,20 @@
             <div id="importFeedback" class="hidden mb-3 rounded-lg p-3 text-sm">
                 <div class="flex items-start gap-2">
                     <i data-lucide="" id="importFeedbackIcon" class="w-4 h-4 shrink-0 mt-0.5"></i>
-                    <span id="importFeedbackMessage"></span>
+                    <div class="flex-1 min-w-0">
+                        <textarea id="importFeedbackMessage" readonly rows="3"
+                            class="w-full bg-transparent border-0 p-0 text-inherit resize-none focus:ring-0 focus:outline-none select-all"
+                        ></textarea>
+                        <button type="button" id="copyImportFeedbackBtn"
+                            class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[#002D5E] hover:text-[#001b3d]">
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            <span>Copy message</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <form method="POST" action="{{ route('forecast.import') }}" id="forecastImportForm" enctype="multipart/form-data">
+            <form method="POST" action="{{ route('forecast.import') }}" id="forecastImportForm" enctype="multipart/form-data" data-turbo="false">
                 @csrf
                 <div id="dropZone" class="group relative border-2 border-dashed border-[#D9D9D9] rounded-lg p-5 hover:border-[#2D7D46] hover:bg-[#F5F6F8] transition-all cursor-pointer text-center mb-3">
                     <input type="file" name="forecast_file" id="forecastFileInput" accept=".xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required
@@ -329,9 +320,9 @@
                 @error('forecast_file')
                 <p class="text-xs text-red-600 mb-2">{{ $message }}</p>
                 @enderror
-                <button type="submit" id="importForecastBtn" class="w-full bg-[#2D7D46] text-white py-2.5 rounded-lg text-sm hover:bg-[#226537] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                    <i data-lucide="upload" class="w-4 h-4 shrink-0"></i>
-                    <span id="importBtnText">Import Production Data</span>
+                <button type="submit" id="importForecastBtn" class="w-full bg-[#2D7D46] text-white py-3 rounded-lg text-sm font-medium hover:bg-[#226537] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md">
+                    <i data-lucide="upload" class="w-5 h-5 shrink-0"></i>
+                    <span id="importBtnText">Start Importing</span>
                 </button>
             </form>
         </div>
@@ -536,14 +527,28 @@ document.addEventListener('turbo:load', function() {
 
 document.addEventListener('turbo:load', function() {
     const form = document.getElementById('forecastImportForm');
-    const overlay = document.getElementById('forecastImportLoadingOverlay');
-    const progressBar = document.getElementById('importProgressBar');
-    const progressText = document.getElementById('importProgressText');
     const btn = document.getElementById('importForecastBtn');
     const btnText = document.getElementById('importBtnText');
     const feedback = document.getElementById('importFeedback');
     const feedbackMessage = document.getElementById('importFeedbackMessage');
     const feedbackIcon = document.getElementById('importFeedbackIcon');
+    const copyFeedbackBtn = document.getElementById('copyImportFeedbackBtn');
+
+    if (copyFeedbackBtn && feedbackMessage) {
+        copyFeedbackBtn.addEventListener('click', function() {
+            feedbackMessage.select();
+            try {
+                navigator.clipboard.writeText(feedbackMessage.value);
+                const originalText = copyFeedbackBtn.querySelector('span').textContent;
+                copyFeedbackBtn.querySelector('span').textContent = 'Copied!';
+                setTimeout(function() {
+                    copyFeedbackBtn.querySelector('span').textContent = originalText;
+                }, 1500);
+            } catch (err) {
+                document.execCommand('copy');
+            }
+        });
+    }
 
     function showImportFeedback(type, message) {
         if (!feedback || !feedbackMessage || !feedbackIcon) return;
@@ -558,7 +563,9 @@ document.addEventListener('turbo:load', function() {
             feedbackIcon.classList.add('text-red-600');
             feedbackIcon.classList.remove('text-green-600');
         }
-        feedbackMessage.textContent = message;
+        feedbackMessage.value = message;
+        feedbackMessage.style.height = 'auto';
+        feedbackMessage.style.height = feedbackMessage.scrollHeight + 'px';
         if (window.lucide) lucide.createIcons();
     }
 
@@ -618,39 +625,29 @@ document.addEventListener('turbo:load', function() {
         });
     }
 
-    if (form && overlay && btn) {
+    if (form && btn) {
         form.addEventListener('submit', function(e) {
             e.preventDefault();
             hideImportFeedback();
-            overlay.classList.remove('hidden');
             btn.disabled = true;
             if (btnText) {
                 btnText.textContent = 'Importing...';
             }
 
-            progressBar.style.width = '0%';
-            progressText.textContent = 'Uploading: 0%';
-
             const xhr = new XMLHttpRequest();
             const formData = new FormData(form);
 
-            xhr.upload.addEventListener('progress', function(e) {
-                if (e.lengthComputable) {
-                    const percent = Math.round((e.loaded / e.total) * 100);
-                    progressBar.style.width = percent + '%';
-                    progressText.textContent = 'Uploading: ' + percent + '%';
-                }
-            });
-
             xhr.addEventListener('load', function() {
-                progressBar.style.width = '100%';
-                progressText.textContent = 'Processing...';
+                btn.disabled = false;
+                if (btnText) {
+                    btnText.textContent = 'Start Importing';
+                }
 
                 let response = {};
                 try {
                     response = JSON.parse(xhr.responseText);
                 } catch (e) {
-                    response = { success: false, message: 'Unexpected server response.' };
+                    response = { success: false, message: 'Unexpected server response.\n\n' + xhr.responseText };
                 }
 
                 if (xhr.status >= 200 && xhr.status < 300 && response.success) {
@@ -658,24 +655,17 @@ document.addEventListener('turbo:load', function() {
                     return;
                 }
 
-                overlay.classList.add('hidden');
-                btn.disabled = false;
-                if (btnText) {
-                    btnText.textContent = 'Import Production Data';
-                }
-
                 let message = response.message || 'Import failed. Please check the file and try again.';
                 if (response.errors && typeof response.errors === 'object') {
-                    message = Object.values(response.errors).flat().join(' ');
+                    message = Object.values(response.errors).flat().join('\n');
                 }
                 showImportFeedback('error', message);
             });
 
             xhr.addEventListener('error', function() {
-                overlay.classList.add('hidden');
                 btn.disabled = false;
                 if (btnText) {
-                    btnText.textContent = 'Import Production Data';
+                    btnText.textContent = 'Start Importing';
                 }
                 showImportFeedback('error', 'Import failed. Please check the file and try again.');
             });
