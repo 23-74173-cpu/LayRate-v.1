@@ -78,11 +78,11 @@ class RepairMortalityHenState extends Command
                         foreach ($candidates as $hen) {
                             $hen->update(['is_active' => false]);
 
-                            MortalityLogHen::create([
-                                'mortality_log_id' => $log->id,
-                                'hen_id'           => $hen->id,
-                                'cage_slot_id'     => $hen->cage_slot_id,
-                            ]);
+                            $pivot = new MortalityLogHen;
+                            $pivot->mortality_log_id = $log->id;
+                            $pivot->hen_id = $hen->id;
+                            $pivot->cage_slot_id = $hen->cage_slot_id;
+                            $pivot->save();
 
                             $deactivatedHenIds[] = $hen->id;
                             $slotDecrements[$hen->cage_slot_id] = ($slotDecrements[$hen->cage_slot_id] ?? 0) + 1;

@@ -11,6 +11,35 @@ use Illuminate\Http\Request;
 
 class PreOrderController extends Controller
 {
+    public function table(Request $request)
+    {
+        $query = PreOrder::orderByDesc('requested_date');
+
+        $statusFilter = $request->query('status');
+        $sizeFilter = $request->query('egg_size');
+        $fromFilter = $request->query('from');
+        $toFilter = $request->query('to');
+
+        if ($statusFilter && $statusFilter !== 'all') {
+            $query->where('status', $statusFilter);
+        }
+        if ($sizeFilter && $sizeFilter !== 'all') {
+            $query->where('egg_size', $sizeFilter);
+        }
+        if ($fromFilter) {
+            $query->where('requested_date', '>=', $fromFilter);
+        }
+        if ($toFilter) {
+            $query->where('requested_date', '<=', $toFilter);
+        }
+
+        $orders = $query->paginate(20)->withQueryString();
+
+        return view('eggs.pre-orders._table', [
+            'orders' => $orders,
+        ]);
+    }
+
     public function index(Request $request)
     {
         $query = PreOrder::orderByDesc('requested_date');

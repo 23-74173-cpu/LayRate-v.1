@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Cage;
 use App\Models\EnvironmentalLog;
 use App\Models\FeedConsumptionLog;
+use App\Models\Hen;
 use App\Models\MortalityLog;
 use App\Models\ProductionLog;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
 class ReportController extends Controller
@@ -55,7 +57,7 @@ class ReportController extends Controller
             'production' => (object) [
                 'total_eggs'  => ProductionLog::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->whereBetween('log_date', [$from, $to])->sum('egg_count'),
                 'avg_hdep'    => number_format(ProductionLog::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->whereBetween('log_date', [$from, $to])->avg('hdep') ?? 0, 1) . '%',
-                'total_hens'  => ProductionLog::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->whereBetween('log_date', [$from, $to])->max('hen_count') ?? 0,
+                'total_hens'  => Hen::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->where('is_active', 1)->count(),
                 'days'        => ProductionLog::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->whereBetween('log_date', [$from, $to])->distinct('log_date')->count('log_date'),
             ],
             'feed' => (object) [
@@ -82,36 +84,43 @@ class ReportController extends Controller
 
     private function productionReport($from, $to, $cageIds, $allCages)
     {
-        return ProductionLog::with(['cageSlot.cage', 'cageSlot.hens'])
+        $logs = ProductionLog::with(['cageSlot.cage', 'cageSlot.hens'])
             ->whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))
             ->whereBetween('log_date', [$from, $to])
             ->orderByDesc('log_date')
-            ->get()
-            ->map(function ($log) {
-                $feed = FeedConsumptionLog::with('feedBatch')
-                    ->where('cage_id', $log->cage->id)
-                    ->where('log_date', $log->log_date)
-                    ->first();
-                $env = EnvironmentalLog::where('cage_id', $log->cage->id)
-                    ->whereDate('recorded_at', $log->log_date)
-                    ->avg('temperature_c');
-                $hum = EnvironmentalLog::where('cage_id', $log->cage->id)
-                    ->whereDate('recorded_at', $log->log_date)
-                    ->avg('humidity_pct');
+            ->get();
 
-                return (object) [
-                    'date'     => $log->log_date->format('Y-m-d'),
-                    'cage'     => $log->cageSlot->cage->cage_code,
-                    'breed'    => $log->cageSlot->hens->first()?->breed ?? '—',
-                    'eggs'     => $log->egg_count,
-                    'hens'     => $log->hen_count,
-                    'hdep'     => number_format($log->hdep, 1) . '%',
-                    'feed_kg'  => $feed ? number_format($feed->feed_consumed_kg, 1) : '—',
-                    'cp_pct'   => $feed?->feedBatch ? number_format($feed->feedBatch->crude_protein, 1) . '%' : '—',
-                    'temp'     => $env ? number_format($env, 1) : '—',
-                    'humidity' => $hum ? number_format($hum, 1) . '%' : '—',
-                ];
-            });
+        $feedLogs = FeedConsumptionLog::with('feedBatch')
+            ->whereIn('cage_id', $cageIds)
+            ->whereBetween('log_date', [$from, $to])
+            ->get()
+            ->keyBy(fn($f) => $f->log_date->format('Y-m-d') . '-' . $f->cage_id);
+
+        $envData = EnvironmentalLog::whereIn('cage_id', $cageIds)
+            ->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59'])
+            ->selectRaw('cage_id, DATE(recorded_at) as log_date, AVG(temperature_c) as avg_temp, AVG(humidity_pct) as avg_hum')
+            ->groupBy('cage_id', DB::raw('DATE(recorded_at)'))
+            ->get()
+            ->keyBy(fn($e) => $e->log_date . '-' . $e->cage_id);
+
+        return $logs->map(function ($log) use ($feedLogs, $envData) {
+            $key = $log->log_date->format('Y-m-d') . '-' . ($log->cage?->id ?? '0');
+            $feed = $feedLogs->get($key);
+            $env  = $envData->get($key);
+
+            return (object) [
+                'date'     => $log->log_date->format('Y-m-d'),
+                'cage'     => $log->cageSlot?->cage?->cage_code ?? '—',
+                'breed'    => $log->cageSlot->hens->first()?->breed ?? '—',
+                'eggs'     => $log->egg_count,
+                'hens'     => $log->hen_count,
+                'hdep'     => number_format($log->hdep, 1) . '%',
+                'feed_kg'  => $feed ? number_format($feed->feed_consumed_kg, 1) : '—',
+                'cp_pct'   => $feed?->feedBatch ? number_format($feed->feedBatch->crude_protein, 1) . '%' : '—',
+                'temp'     => $env ? number_format($env->avg_temp, 1) : '—',
+                'humidity' => $env ? number_format($env->avg_hum, 1) . '%' : '—',
+            ];
+        });
     }
 
     private function feedReport($from, $to, $cageIds)
@@ -123,7 +132,7 @@ class ReportController extends Controller
             ->get()
             ->map(fn($l) => (object) [
                 'date'     => $l->log_date->format('Y-m-d'),
-                'cage'     => $l->cage->cage_code,
+                'cage'     => $l->cage?->cage_code ?? '—',
                 'batch'    => $l->feedBatch->batch_code,
                 'consumed' => number_format($l->feed_consumed_kg, 2) . ' kg',
                 'cp_pct'   => number_format($l->feedBatch->crude_protein, 1) . '%',
@@ -141,7 +150,7 @@ class ReportController extends Controller
             ->get()
             ->map(fn($l) => (object) [
                 'datetime' => $l->recorded_at->format('Y-m-d H:i'),
-                'cage'     => $l->cage->cage_code,
+                'cage'     => $l->cage?->cage_code ?? '—',
                 'temp'     => $l->temperature_c . '°C',
                 'humidity' => $l->humidity_pct . '%',
                 'status'   => ($l->temperature_c > 30 || $l->humidity_pct > 70) ? 'Alert'
@@ -162,7 +171,7 @@ class ReportController extends Controller
 
         return $query->get()->map(fn($l) => (object) [
             'date'   => $l->log_date->format('Y-m-d'),
-            'cage'   => $l->cage->cage_code,
+                'cage'     => $l->cage?->cage_code ?? '—',
             'count'  => $l->count,
             'reason' => $l->reason,
             'notes'  => $l->notes ?? '—',

@@ -10,7 +10,15 @@ use Illuminate\Support\Facades\DB;
 
 class EnvironmentController extends Controller
 {
-    public function index()
+    public function index(Request $request)
+    {
+        $thresholds = Setting::thresholds();
+        $envTab = $request->query('envTab', 'live');
+
+        return view('environment', compact('thresholds', 'envTab'));
+    }
+
+    public function liveData()
     {
         $thresholds = Setting::thresholds();
         $cages = Cage::with(['latestEnvironmentLog'])->orderBy('cage_code')->get();
@@ -55,10 +63,26 @@ class EnvironmentController extends Controller
         $avgTemp = $latestPerCage->avg(fn($r) => $r->env->temperature_c);
         $avgHum  = $latestPerCage->avg(fn($r) => $r->env->humidity_pct);
 
-        return view('environment', compact(
+        return view('environment._live-data', compact(
             'cages', 'latestPerCage', 'trendData', 'summaryLogs',
             'avgTemp', 'avgHum', 'thresholds'
         ));
+    }
+
+    public function logs()
+    {
+        $summaryLogs = EnvironmentalLog::selectRaw("
+                DATE_FORMAT(recorded_at, '%Y-%m-%d %H:00') as time_slot,
+                ROUND(AVG(temperature_c), 1) as avg_temp,
+                ROUND(AVG(humidity_pct), 0) as avg_hum
+            ")
+            ->where('recorded_at', '>=', now()->subHours(24))
+            ->groupBy('time_slot')
+            ->orderByDesc('time_slot')
+            ->limit(10)
+            ->get();
+
+        return view('environment._logs', compact('summaryLogs'));
     }
 
     public function saveThresholds(Request $request)

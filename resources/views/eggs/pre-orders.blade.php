@@ -40,9 +40,8 @@
     </div>
 
     {{-- ── Filters ── --}}
-    <div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <form method="GET" action="{{ route('eggs.preorders') }}" class="flex flex-wrap items-end gap-4">
+    <x-card padding="p-4">
+        <form method="GET" action="{{ route('eggs.preorders') }}" class="flex flex-wrap items-end gap-4">
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">STATUS</label>
                     <select name="status"
@@ -83,8 +82,7 @@
                     Reset
                 </a>
             </form>
-        </div>
-    </div>
+        </x-card>
 
     {{-- ── Header ── --}}
     <div class="flex items-center justify-between">
@@ -95,109 +93,15 @@
     </div>
 
     {{-- ── Orders Table ── --}}
-    <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
-        <table class="w-full">
-            <thead>
-                <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
-                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">CUSTOMER</th>
-                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">REFERENCE</th>
-                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">SIZE</th>
-                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">EGGS</th>
-                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">TRAYS</th>
-                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">REQUESTED</th>
-                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">FULFILLED</th>
-                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">STATUS</th>
-                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">ACTIONS</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($orders as $order)
-                @php
-                    $statusColors = [
-                        'pending'   => ['#fdf3e0', '#8a5a00', '#f3e3bf'],
-                        'fulfilled' => ['#e8f5ec', '#1f6b3a', '#cfe8d6'],
-                        'cancelled' => ['#f0f0f0', '#615d59', '#e6e6e6'],
-                    ];
-                    [$sBg, $sTxt, $sBorder] = $statusColors[$order->status];
-                    $sizeColors = [
-                        'small'  => ['#2D7D46', '#d6f0e3', '#b8e0cc'],
-                        'medium' => ['#1D4E8F', '#dcebfa', '#b3d4fc'],
-                        'large'  => ['#C2703E', '#fae3d0', '#f3c9a8'],
-                        'jumbo'  => ['#6B4C8A', '#e9e0f5', '#d4c5e8'],
-                    ];
-                    [$szBg, $szTxt, $szBorder] = $sizeColors[$order->egg_size];
-                @endphp
-                <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
-                    <td class="px-5 py-3.5 text-sm font-medium text-[#333333]">{{ $order->customer_name }}</td>
-                    <td class="px-5 py-3.5 text-sm text-[#6B7280]">{{ $order->customer_reference ?: '—' }}</td>
-                    <td class="px-5 py-3.5">
-                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold" style="background:{{ $szBg }};color:{{ $szTxt }};border:1px solid {{ $szBorder }}">
-                            {{ ucfirst($order->egg_size) }}
-                        </span>
-                    </td>
-                    <td class="px-5 py-3.5 text-sm font-medium text-[#333333]">{{ number_format($order->egg_count) }}</td>
-                    <td class="px-5 py-3.5 text-sm text-[#6B7280]">{{ $order->tray_count }}</td>
-                    <td class="px-5 py-3.5 text-sm font-mono text-[#333333]">{{ $order->requested_date->format('Y-m-d') }}</td>
-                    <td class="px-5 py-3.5 text-sm font-mono text-[#6B7280]">
-                        {{ $order->fulfillment_date ? $order->fulfillment_date->format('Y-m-d') : 'Pending' }}
-                    </td>
-                    <td class="px-5 py-3.5">
-                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold" style="background:{{ $sBg }};color:{{ $sTxt }};border:1px solid {{ $sBorder }}">
-                            {{ ucfirst($order->status) }}
-                        </span>
-                    </td>
-                    <td class="px-5 py-3.5">
-                        <div class="flex items-center gap-2">
-                            <button onclick="openEditStatus({{ $order->id }}, '{{ $order->status }}', '{{ $order->fulfillment_date?->toDateString() ?? '' }}')"
-                                    class="flex items-center gap-1 text-xs border border-[#D9D9D9] px-2.5 py-1.5 rounded hover:bg-[#F5F6F8] text-[#6B7280]">
-                                <i data-lucide="pencil" class="w-3 h-3"></i> Status
-                            </button>
-                            <form action="{{ route('eggs.preorders.destroy', $order) }}" method="POST"
-                                  onsubmit="return confirm('Cancel this pre-order?')">
-                                @csrf @method('DELETE')
-                                <button class="flex items-center gap-1 text-xs border border-[#D9D9D9] px-2.5 py-1.5 rounded hover:bg-[#F5F6F8] text-red-400 hover:text-red-600">
-                                    <i data-lucide="trash-2" class="w-3 h-3"></i>
-                                </button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-                @empty
-                <tr><td colspan="9" class="px-5 py-8 text-center text-sm text-[#6B7280]">No pre-orders yet.</td></tr>
-                @endforelse
-            </tbody>
-        </table>
-        @if($orders->hasPages())
-        <div class="px-5 py-3 border-t border-[#D9D9D9] flex items-center justify-between text-xs text-[#6B7280]">
-            <span>Showing {{ $orders->firstItem() }}-{{ $orders->lastItem() }} of {{ $orders->total() }}</span>
-            <div class="flex items-center gap-1">
-                @if($orders->onFirstPage())
-                <span class="px-2 py-1 text-[#9CA3AF]">‹ Prev</span>
-                @else
-                <a href="{{ $orders->previousPageUrl() }}" class="px-2 py-1 hover:text-[#002D5E]">‹ Prev</a>
-                @endif
-                @foreach($orders->getUrlRange(1, $orders->lastPage()) as $page => $url)
-                    @if($page == $orders->currentPage())
-                    <span class="px-2 py-1 font-medium text-[#002D5E]">{{ $page }}</span>
-                    @elseif($page >= $orders->currentPage() - 1 && $page <= $orders->currentPage() + 1)
-                    <a href="{{ $url }}" class="px-2 py-1 hover:text-[#002D5E]">{{ $page }}</a>
-                    @endif
-                @endforeach
-                @if($orders->hasMorePages())
-                <a href="{{ $orders->nextPageUrl() }}" class="px-2 py-1 hover:text-[#002D5E]">Next ›</a>
-                @else
-                <span class="px-2 py-1 text-[#9CA3AF]">Next ›</span>
-                @endif
-            </div>
-        </div>
-        @endif
-    </div>
+    <turbo-frame id="eggs-preorders-table" src="{{ route('eggs.preorders.table', request()->query()) }}" loading="lazy" target="_top">
+        @include('eggs.pre-orders._table-skeleton')
+    </turbo-frame>
 
 </div>
 
 {{-- Add Pre-Order Modal --}}
-<div id="addOrderModal" class="hidden fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
-    <div class="absolute inset-0" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeAddOrderModal()"></div>
+<div id="addOrderModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeAddOrderModal()"></div>
     <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
             <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Add Pre-Order</h2>
@@ -276,8 +180,8 @@
 </div>
 
 {{-- Edit Status Modal --}}
-<div id="editStatusModal" class="hidden fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
-    <div class="absolute inset-0" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEditStatusModal()"></div>
+<div id="editStatusModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEditStatusModal()"></div>
     <div class="relative w-full max-w-sm rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
             <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Update Status</h2>

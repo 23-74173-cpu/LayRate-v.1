@@ -34,7 +34,7 @@
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
 
         {{-- ── Inputs Panel ── --}}
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+        <x-card>
             <div class="text-xs tracking-wider text-[#6B7280] mb-4">FORECAST INPUTS</div>
             <form method="POST" action="{{ route('forecast.generate') }}" id="forecastForm" data-turbo="false">
                 @csrf
@@ -126,7 +126,7 @@
                     </button>
                 </form>
             </div>
-        </div>
+        </x-card>
 
         {{-- ── Chart Panel ── --}}
         <div class="xl:col-span-2 bg-white rounded-lg border border-[#D9D9D9] p-5">
@@ -246,7 +246,6 @@
                 @endforelse
             </tbody>
         </table>
-    </div>
 
 </div>
 

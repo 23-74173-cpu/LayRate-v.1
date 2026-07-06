@@ -32,10 +32,10 @@ class DatabaseSeeder extends Seeder
         );
 
         $cagesData = [
-            ['cage_code' => 'CAGE-A', 'location' => 'North Wing', 'rows' => 3, 'slots_per_row' => 5, 'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 1],
-            ['cage_code' => 'CAGE-B', 'location' => 'East Wing',  'rows' => 3, 'slots_per_row' => 5, 'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 1],
-            ['cage_code' => 'CAGE-C', 'location' => 'South Wing', 'rows' => 3, 'slots_per_row' => 5, 'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 1],
-            ['cage_code' => 'CAGE-D', 'location' => 'West Wing',  'rows' => 3, 'slots_per_row' => 5, 'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 0],
+            ['cage_code' => 'CAGE-A', 'location' => '', 'rows' => 3, 'slots_per_row' => 5, 'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 1],
+            ['cage_code' => 'CAGE-B', 'location' => '', 'rows' => 3, 'slots_per_row' => 5, 'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 1],
+            ['cage_code' => 'CAGE-C', 'location' => '', 'rows' => 3, 'slots_per_row' => 5, 'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 1],
+            ['cage_code' => 'CAGE-D', 'location' => '', 'rows' => 3, 'slots_per_row' => 5, 'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 0],
         ];
         foreach ($cagesData as $cd) {
             Cage::firstOrCreate(['cage_code' => $cd['cage_code']], $cd);
@@ -77,10 +77,9 @@ class DatabaseSeeder extends Seeder
                     if ($cage->is_active && isset($hensData[$cage->cage_code])) {
                         $hd = $hensData[$cage->cage_code];
                         for ($h = 1; $h <= $cage->max_chickens_per_slot; $h++) {
-                            Hen::firstOrCreate(
+                            $hen = Hen::firstOrCreate(
                                 ['tag_code' => "{$cage->cage_code}-SLOT{$slotNumber}-HEN{$h}"],
                                 [
-                                    'cage_slot_id' => $slot->id,
                                     'flock_age_weeks' => $hd['flock_age_weeks'],
                                     'breed' => $hd['breed'],
                                     'date_acquired' => $hd['date_acquired'],
@@ -89,6 +88,10 @@ class DatabaseSeeder extends Seeder
                                     'is_active' => 1,
                                 ]
                             );
+                            if ($hen->wasRecentlyCreated) {
+                                $hen->cage_slot_id = $slot->id;
+                                $hen->save();
+                            }
                         }
                     }
                 }
@@ -121,16 +124,18 @@ class DatabaseSeeder extends Seeder
                     if (!$slot->cage->is_active) continue;
                     $variation = ($i % 3) * 0.3;
                     $eggsPerSlot = max(0, $base['egg_count'] - (int) ($i % 3));
-                    ProductionLog::firstOrCreate(
-                        ['cage_slot_id' => $slot->id, 'log_date' => $date],
-                        [
-                            'egg_count'   => $eggsPerSlot,
-                            'hen_count'   => $slot->current_occupancy,
-                            'hdep'        => max(0, round($base['hdep'] - $variation, 2)),
-                            'recorded_by' => $user->id,
-                            'notes'       => $i % 2 === 0 ? 'IR sensor synced' : 'Manual check',
-                        ]
+                    $log = ProductionLog::firstOrNew(
+                        ['cage_slot_id' => $slot->id, 'log_date' => $date]
                     );
+                    $log->cage_slot_id = $slot->id;
+                    $log->recorded_by = $user->id;
+                    $log->fill([
+                        'egg_count' => $eggsPerSlot,
+                        'hen_count' => $slot->current_occupancy,
+                        'hdep'      => max(0, round($base['hdep'] - $variation, 2)),
+                        'notes'     => $i % 2 === 0 ? 'IR sensor synced' : 'Manual check',
+                    ]);
+                    $log->save();
                 }
             }
         }
