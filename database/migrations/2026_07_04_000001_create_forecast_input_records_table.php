@@ -18,7 +18,6 @@ return new class extends Migration {
             $table->decimal('temperature_c', 5, 2)->nullable();
             $table->decimal('humidity_percent', 5, 2)->nullable();
             $table->string('feed_batch_code', 50)->nullable();
-            $table->decimal('crude_protein_percent', 5, 2)->nullable();
             $table->decimal('feed_consumed_kg', 8, 2)->nullable();
             $table->unsignedSmallInteger('mortality_count')->nullable()->default(0);
             $table->string('source_file', 255)->nullable();

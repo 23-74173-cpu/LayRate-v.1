@@ -95,37 +95,7 @@
                 <button type="submit" id="generateForecastBtn" class="w-full bg-[#002D5E] text-white py-2.5 rounded-lg text-sm hover:bg-[#001F42] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                     <span id="btnText">Generate Forecast</span>
                 </button>
-
-                <a href="{{ route('forecast.template') }}" class="mt-3 w-full flex items-center justify-center gap-2 border border-[#D9D9D9] text-[#333333] py-2.5 rounded-lg text-sm hover:bg-[#F5F6F8] transition-colors">
-                    <i data-lucide="download" class="w-4 h-4 shrink-0"></i> Download Forecast Input Sheet
-                </a>
             </form>
-
-            {{-- ── Import Production Data ── --}}
-            <div class="mt-5 pt-5 border-t border-[#F0F0F0]">
-                <div class="text-xs tracking-wider text-[#6B7280] mb-3">IMPORT DATA</div>
-
-                {{-- Inline import feedback messages --}}
-                <div id="importFeedback" class="hidden mb-3 rounded-lg p-3 text-sm">
-                    <div class="flex items-start gap-2">
-                        <i data-lucide="" id="importFeedbackIcon" class="w-4 h-4 shrink-0 mt-0.5"></i>
-                        <span id="importFeedbackMessage"></span>
-                    </div>
-                </div>
-
-                <form method="POST" action="{{ route('forecast.import') }}" id="forecastImportForm" enctype="multipart/form-data">
-                    @csrf
-                    <label class="block text-sm text-[#333333] mb-2">Forecast input file (.xlsx)</label>
-                    <input type="file" name="forecast_file" accept=".xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required
-                           class="w-full text-sm text-[#333333] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:bg-[#F5F6F8] file:text-[#002D5E] hover:file:bg-[#E5E7EB] border border-[#D9D9D9] rounded-lg cursor-pointer mb-3">
-                    @error('forecast_file')
-                    <p class="text-xs text-red-600 mb-2">{{ $message }}</p>
-                    @enderror
-                    <button type="submit" id="importForecastBtn" class="w-full bg-[#2D7D46] text-white py-2.5 rounded-lg text-sm hover:bg-[#226537] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                        <span id="importBtnText">Import Production Data</span>
-                    </button>
-                </form>
-            </div>
         </x-card>
 
         {{-- ── Chart Panel ── --}}
@@ -282,6 +252,89 @@
             <div id="importProgressBar" class="bg-[#2D7D46] h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
         </div>
         <p id="importProgressText" class="text-xs text-[#6B7280] mt-2">Uploading: 0%</p>
+    </div>
+</div>
+
+{{-- Floating Action Button --}}
+<div class="fixed bottom-6 right-3 z-40 flex flex-col items-end gap-3">
+    {{-- FAB Menu --}}
+    <div id="fabMenu" class="flex flex-col items-end gap-2 mb-1 mr-2 transition-all duration-200 opacity-0 invisible translate-y-4">
+        <a href="{{ route('forecast.template') }}" class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>Download input sheet</span>
+            <div class="w-8 h-8 rounded-full bg-[#002D5E]/10 flex items-center justify-center">
+                <i data-lucide="download" class="w-4 h-4 text-[#002D5E]"></i>
+            </div>
+        </a>
+        <button type="button" id="fabImportBtn" class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>Import production data</span>
+            <div class="w-8 h-8 rounded-full bg-[#2D7D46]/10 flex items-center justify-center">
+                <i data-lucide="upload" class="w-4 h-4 text-[#2D7D46]"></i>
+            </div>
+        </button>
+    </div>
+
+    {{-- FAB Toggle --}}
+    <button type="button" id="fabToggle" class="w-[150px] h-[150px] rounded-full bg-[#002D5E] text-white shadow-lg hover:bg-[#001F42] transition-all flex items-center justify-center">
+        <i data-lucide="menu" id="fabIcon" class="w-20 h-20 transition-transform duration-200"></i>
+    </button>
+</div>
+
+{{-- Import Modal --}}
+<div id="importModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-auto overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-[#F0F0F0]">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-[#2D7D46]/10 flex items-center justify-center">
+                    <i data-lucide="upload-cloud" class="w-4 h-4 text-[#2D7D46]"></i>
+                </div>
+                <h3 class="text-base font-semibold text-[#333333]">Import forecast data</h3>
+            </div>
+            <button type="button" id="closeImportModal" class="text-[#6B7280] hover:text-[#333333] transition-colors">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <div class="p-5">
+            <p class="text-sm text-[#6B7280] mb-4">
+                Import a filled <strong>.xlsx</strong> forecast input sheet. At minimum the sheet must include <strong>Date</strong> and <strong>Cage_Code</strong>.
+            </p>
+
+            {{-- Inline import feedback messages --}}
+            <div id="importFeedback" class="hidden mb-3 rounded-lg p-3 text-sm">
+                <div class="flex items-start gap-2">
+                    <i data-lucide="" id="importFeedbackIcon" class="w-4 h-4 shrink-0 mt-0.5"></i>
+                    <span id="importFeedbackMessage"></span>
+                </div>
+            </div>
+
+            <form method="POST" action="{{ route('forecast.import') }}" id="forecastImportForm" enctype="multipart/form-data">
+                @csrf
+                <div id="dropZone" class="group relative border-2 border-dashed border-[#D9D9D9] rounded-lg p-5 hover:border-[#2D7D46] hover:bg-[#F5F6F8] transition-all cursor-pointer text-center mb-3">
+                    <input type="file" name="forecast_file" id="forecastFileInput" accept=".xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required
+                           class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                    <div id="dropZonePrompt" class="pointer-events-none">
+                        <div class="w-10 h-10 rounded-full bg-[#F5F6F8] group-hover:bg-white flex items-center justify-center mx-auto mb-2 transition-colors">
+                            <i data-lucide="file-spreadsheet" class="w-5 h-5 text-[#6B7280]"></i>
+                        </div>
+                        <p class="text-sm text-[#333333] font-medium">Click or drag Excel file here</p>
+                        <p class="text-xs text-[#6B7280] mt-1">.xlsx only, max 10 MB</p>
+                    </div>
+                    <div id="fileSelectedPrompt" class="hidden pointer-events-none">
+                        <div class="w-10 h-10 rounded-full bg-[#D5E8D4] flex items-center justify-center mx-auto mb-2">
+                            <i data-lucide="check-circle" class="w-5 h-5 text-[#2D7D46]"></i>
+                        </div>
+                        <p class="text-sm text-[#333333] font-medium truncate px-2" id="selectedFileName">No file selected</p>
+                        <p class="text-xs text-[#6B7280] mt-1">Click or drop another file to replace</p>
+                    </div>
+                </div>
+                @error('forecast_file')
+                <p class="text-xs text-red-600 mb-2">{{ $message }}</p>
+                @enderror
+                <button type="submit" id="importForecastBtn" class="w-full bg-[#2D7D46] text-white py-2.5 rounded-lg text-sm hover:bg-[#226537] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    <i data-lucide="upload" class="w-4 h-4 shrink-0"></i>
+                    <span id="importBtnText">Import Production Data</span>
+                </button>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -513,6 +566,58 @@ document.addEventListener('turbo:load', function() {
         if (feedback) feedback.classList.add('hidden');
     }
 
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('forecastFileInput');
+    const dropZonePrompt = document.getElementById('dropZonePrompt');
+    const fileSelectedPrompt = document.getElementById('fileSelectedPrompt');
+    const selectedFileName = document.getElementById('selectedFileName');
+
+    function updateDropZoneState() {
+        if (!fileInput || !dropZonePrompt || !fileSelectedPrompt || !selectedFileName) return;
+        if (fileInput.files && fileInput.files.length > 0) {
+            dropZonePrompt.classList.add('hidden');
+            fileSelectedPrompt.classList.remove('hidden');
+            selectedFileName.textContent = fileInput.files[0].name;
+            dropZone.classList.add('border-[#2D7D46]', 'bg-[#D5E8D4]/20');
+            dropZone.classList.remove('border-[#D9D9D9]');
+        } else {
+            dropZonePrompt.classList.remove('hidden');
+            fileSelectedPrompt.classList.add('hidden');
+            selectedFileName.textContent = 'No file selected';
+            dropZone.classList.remove('border-[#2D7D46]', 'bg-[#D5E8D4]/20');
+            dropZone.classList.add('border-[#D9D9D9]');
+        }
+        if (window.lucide) lucide.createIcons();
+    }
+
+    if (fileInput) {
+        fileInput.addEventListener('change', updateDropZoneState);
+    }
+
+    if (dropZone) {
+        ['dragenter', 'dragover'].forEach(function(eventName) {
+            dropZone.addEventListener(eventName, function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.add('border-[#2D7D46]', 'bg-[#F5F6F8]');
+            });
+        });
+        ['dragleave', 'drop'].forEach(function(eventName) {
+            dropZone.addEventListener(eventName, function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.remove('border-[#2D7D46]', 'bg-[#F5F6F8]');
+            });
+        });
+        dropZone.addEventListener('drop', function(e) {
+            const files = e.dataTransfer.files;
+            if (files.length && fileInput) {
+                fileInput.files = files;
+                updateDropZoneState();
+            }
+        });
+    }
+
     if (form && overlay && btn) {
         form.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -581,6 +686,75 @@ document.addEventListener('turbo:load', function() {
         });
     }
 });
+
+// ── FAB & Import Modal ──
+const fabToggle = document.getElementById('fabToggle');
+const fabMenu = document.getElementById('fabMenu');
+const fabIcon = document.getElementById('fabIcon');
+const importModal = document.getElementById('importModal');
+const fabImportBtn = document.getElementById('fabImportBtn');
+const closeImportModalBtn = document.getElementById('closeImportModal');
+
+function toggleFab() {
+    if (!fabMenu) return;
+    const isOpen = !fabMenu.classList.contains('invisible');
+    if (isOpen) {
+        fabMenu.classList.add('invisible', 'opacity-0', 'translate-y-4');
+        fabMenu.classList.remove('opacity-100', 'translate-y-0');
+        if (fabIcon) fabIcon.style.transform = 'rotate(0deg)';
+    } else {
+        fabMenu.classList.remove('invisible', 'opacity-0', 'translate-y-4');
+        fabMenu.classList.add('opacity-100', 'translate-y-0');
+        if (fabIcon) fabIcon.style.transform = 'rotate(45deg)';
+    }
+}
+
+function openImportModal() {
+    if (importModal) {
+        importModal.classList.remove('hidden');
+        if (window.lucide) lucide.createIcons();
+    }
+}
+
+function closeImportModalFn() {
+    if (importModal) importModal.classList.add('hidden');
+}
+
+if (fabToggle && fabMenu) {
+    fabToggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        toggleFab();
+    });
+
+    document.addEventListener('click', function() {
+        if (!fabMenu.classList.contains('invisible')) {
+            toggleFab();
+        }
+    });
+
+    fabMenu.addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+}
+
+if (fabImportBtn) {
+    fabImportBtn.addEventListener('click', function() {
+        openImportModal();
+        toggleFab();
+    });
+}
+
+if (closeImportModalBtn) {
+    closeImportModalBtn.addEventListener('click', closeImportModalFn);
+}
+
+if (importModal) {
+    importModal.addEventListener('click', function(e) {
+        if (e.target === importModal) {
+            closeImportModalFn();
+        }
+    });
+}
 })();
 </script>
 @endpush

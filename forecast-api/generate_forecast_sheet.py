@@ -9,7 +9,7 @@ The number of hens per cage is pre-filled from the sum of cage_slots.current_occ
 
 Pre-filled columns (Date, Cage_Code, Breed, Flock_Age_Weeks, Hen_Count) are
 sheet-protected and non-editable. Only Egg_Count, Temperature_C,
-Humidity_Percent, Feed_Batch_Code, Crude_Protein_Percent, Feed_Consumed_kg,
+Humidity_Percent, Crude_Protein_Percent, Feed_Consumed_kg,
 and Mortality_Count can be edited.
 """
 
@@ -100,7 +100,6 @@ def generate_forecast_sheet(days: int = 90, output: str = "forecast_input_sheet.
                     "Egg_Count": "",
                     "Temperature_C": "",
                     "Humidity_Percent": "",
-                    "Feed_Batch_Code": "",
                     "Crude_Protein_Percent": "",
                     "Feed_Consumed_kg": "",
                     "Mortality_Count": "",

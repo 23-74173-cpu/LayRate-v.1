@@ -101,7 +101,6 @@ class SyncForecastInputRecords extends Command
                 ->where('fcl.log_date', $date)
                 ->select(
                     'fcl.feed_consumed_kg',
-                    'fb.batch_code as feed_batch_code',
                     'fb.crude_protein as crude_protein_percent'
                 )
                 ->first();
@@ -123,7 +122,6 @@ class SyncForecastInputRecords extends Command
                 'egg_count' => (int) $record->egg_count,
                 'temperature_c' => $envInfo->temperature_c !== null ? round($envInfo->temperature_c, 2) : null,
                 'humidity_percent' => $envInfo->humidity_percent !== null ? round($envInfo->humidity_percent, 2) : null,
-                'feed_batch_code' => $feedInfo->feed_batch_code ?? null,
                 'crude_protein_percent' => $feedInfo->crude_protein_percent !== null ? round($feedInfo->crude_protein_percent, 2) : null,
                 'feed_consumed_kg' => $feedInfo->feed_consumed_kg !== null ? round($feedInfo->feed_consumed_kg, 2) : null,
                 'mortality_count' => (int) ($mortalityInfo->mortality_count ?? 0),
@@ -151,7 +149,6 @@ class SyncForecastInputRecords extends Command
                 'egg_count',
                 'temperature_c',
                 'humidity_percent',
-                'feed_batch_code',
                 'crude_protein_percent',
                 'feed_consumed_kg',
                 'mortality_count',
