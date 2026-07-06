@@ -62,7 +62,7 @@
                 <select name="cage" onchange="this.form.submit()"
                         class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white mb-4 focus:outline-none focus:border-[#002D5E]">
                     @foreach($allCages as $c)
-                    <option value="{{ $c->cage_code }}" {{ $c->cage_code === $cageCode ? 'selected' : '' }}>{{ $c->cage_code }}</option>
+                    <option value="{{ $c }}" {{ $c === $cageCode ? 'selected' : '' }}>{{ $c }}</option>
                     @endforeach
                 </select>
                 <p class="text-xs text-[#6B7280] mb-4">Forecasting: <span class="font-medium text-[#333333]">{{ $cageCode }}</span></p>
@@ -341,7 +341,7 @@ const forecasts  = showForecast
     : [];
 const cageColor  = '{{ $cageColor }}';
 
-const recentHistorical = historical.slice(-14);
+const recentHistorical = historical;
 const histLabels = recentHistorical.map((h) => {
     const [y, m, d] = h.date.split('-').map(Number);
     const date = new Date(Date.UTC(y, m - 1, d));
