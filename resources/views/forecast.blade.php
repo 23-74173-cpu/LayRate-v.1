@@ -185,39 +185,8 @@
     </div>
     @endif
 
-    {{-- ── Forecast Table ── --}}
-    <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
-        <table class="w-full">
-            <thead>
-                <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
-                    <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Date</th>
-                    <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Predicted Eggs</th>
-                    <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Confidence</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($forecasts as $f)
-                <tr class="border-b border-[#F0F0F0] hover:bg-[#F5F6F8]">
-                    <td class="px-6 py-3 text-sm text-[#333333]">
-                        <span class="font-medium">{{ $f->target_date->format('l') }}</span>
-                        <span class="text-xs text-[#6B7280] ml-1">{{ $f->target_date->format('M j') }}</span>
-                    </td>
-                    <td class="px-6 py-3 text-sm text-[#333333]">{{ number_format($f->predicted_egg_count,0) }}</td>
-                    <td class="px-6 py-3">
-                        <span class="text-xs px-2.5 py-1 rounded-full" style="background:{{ $f->confidenceColor }}">
-                            {{ $f->confidence }}%
-                        </span>
-                    </td>
-                </tr>
-                @empty
-                <tr><td colspan="3" class="px-6 py-8 text-center text-sm text-[#6B7280]">
-                    No forecast generated yet. Click "Generate Forecast" above.
-                </td></tr>
-                @endforelse
-            </tbody>
-        </table>
-
-</div>
+    {{-- ── Production Calendar ── --}}
+    @include('forecast._calendar')
 
 {{-- Download Template Modal --}}
 <div id="downloadTemplateModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">

@@ -20,6 +20,11 @@ class ForecastController extends Controller
     {
         $scope     = $request->get('scope', 'cage');
         $horizon   = (int) $request->get('horizon', 7);
+
+        $calendarYear  = (int) $request->get('year', now()->year);
+        $calendarMonth = (int) $request->get('month', now()->month);
+        $calendarDate  = now()->setDate($calendarYear, max(1, min(12, $calendarMonth)), 1);
+
         $allCages  = DB::table('forecast_input_records')
             ->whereNotNull('cage_code')
             ->whereRaw("TRIM(cage_code) != ''")
@@ -55,7 +60,13 @@ class ForecastController extends Controller
                 ->whereNull('cage_id')->whereNull('breed')
                 ->orderBy('target_date')->limit($horizon)->get();
 
-            return view('forecast', compact('scope', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData'))
+            $viewData = compact('scope', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate');
+
+            if ($request->header('Turbo-Frame') === 'production-calendar') {
+                return view('forecast._calendar', $viewData);
+            }
+
+            return view('forecast', $viewData)
                 ->with('label', 'Whole Farm');
         }
 
@@ -65,7 +76,13 @@ class ForecastController extends Controller
                 ->whereNull('cage_id')->where('breed', $breed)
                 ->orderBy('target_date')->limit($horizon)->get();
 
-            return view('forecast', compact('scope', 'cageCode', 'breed', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData'))
+            $viewData = compact('scope', 'cageCode', 'breed', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate');
+
+            if ($request->header('Turbo-Frame') === 'production-calendar') {
+                return view('forecast._calendar', $viewData);
+            }
+
+            return view('forecast', $viewData)
                 ->with('label', $breed);
         }
 
@@ -79,7 +96,13 @@ class ForecastController extends Controller
             ->whereNull('breed')
             ->orderBy('target_date')->limit($horizon)->get();
 
-        return view('forecast', compact('scope', 'cage', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData'));
+        $viewData = compact('scope', 'cage', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate');
+
+        if ($request->header('Turbo-Frame') === 'production-calendar') {
+            return view('forecast._calendar', $viewData);
+        }
+
+        return view('forecast', $viewData);
     }
 
     public function downloadTemplate(Request $request)
