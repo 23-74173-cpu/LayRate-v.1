@@ -68,6 +68,54 @@
         </form>
     </x-card>
 
+    {{-- ── Egg Weight Configuration (used for FCR) ── --}}
+    <x-card class="mt-5">
+        <h3 class="text-xs font-semibold tracking-[0.05em] uppercase mb-4" style="color: #615d59;">Egg Weight Configuration</h3>
+        <p class="text-xs text-[#6B7280] mb-4">Average weights used to estimate egg mass for Feed Conversion Ratio calculations.</p>
+        <form action="{{ route('environment.egg-weights') }}" method="POST">
+            @csrf
+            <div class="flex flex-wrap items-end gap-4">
+                <div>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">SMALL (g)</label>
+                    <input type="number" name="egg_weight_small" step="0.1" min="1" max="500"
+                           value="{{ $eggWeights['small'] }}"
+                           class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                </div>
+                <div>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">MEDIUM (g)</label>
+                    <input type="number" name="egg_weight_medium" step="0.1" min="1" max="500"
+                           value="{{ $eggWeights['medium'] }}"
+                           class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                </div>
+                <div>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">LARGE (g)</label>
+                    <input type="number" name="egg_weight_large" step="0.1" min="1" max="500"
+                           value="{{ $eggWeights['large'] }}"
+                           class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                </div>
+                <div>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">JUMBO (g)</label>
+                    <input type="number" name="egg_weight_jumbo" step="0.1" min="1" max="500"
+                           value="{{ $eggWeights['jumbo'] }}"
+                           class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                </div>
+                <div>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">FALLBACK (g)</label>
+                    <input type="number" name="egg_weight_fallback" step="0.1" min="1" max="500"
+                           value="{{ $eggWeights['fallback'] }}"
+                           class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                </div>
+                <button type="submit"
+                        class="bg-[#102A4C] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#1D4E8F] transition-colors">
+                    Save Weights
+                </button>
+            </div>
+            @if($errors->any())
+            <div class="mt-3 text-xs text-red-500">{{ $errors->first() }}</div>
+            @endif
+        </form>
+    </x-card>
+
     {{-- ── Per-cage Sensor Cards ── --}}
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mt-5 mb-8">
         @foreach($latestPerCage as $r)

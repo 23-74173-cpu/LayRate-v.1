@@ -21,6 +21,7 @@ class EnvironmentController extends Controller
     public function liveData()
     {
         $thresholds = Setting::thresholds();
+        $eggWeights = Setting::eggWeights();
         $cages = Cage::with(['latestEnvironmentLog'])->orderBy('cage_code')->get();
 
         $latestPerCage = $cages->map(function ($cage) use ($thresholds) {
@@ -65,7 +66,7 @@ class EnvironmentController extends Controller
 
         return view('environment._live-data', compact(
             'cages', 'latestPerCage', 'trendData', 'summaryLogs',
-            'avgTemp', 'avgHum', 'thresholds'
+            'avgTemp', 'avgHum', 'thresholds', 'eggWeights'
         ));
     }
 
@@ -100,6 +101,24 @@ class EnvironmentController extends Controller
 
         return redirect()->route('environment')
             ->with('success', 'Thresholds saved.');
+    }
+
+    public function saveEggWeights(Request $request)
+    {
+        $data = $request->validate([
+            'egg_weight_small'    => 'required|numeric|min:1|max:500',
+            'egg_weight_medium'   => 'required|numeric|min:1|max:500',
+            'egg_weight_large'    => 'required|numeric|min:1|max:500',
+            'egg_weight_jumbo'    => 'required|numeric|min:1|max:500',
+            'egg_weight_fallback' => 'required|numeric|min:1|max:500',
+        ]);
+
+        foreach ($data as $key => $value) {
+            Setting::set($key, $value);
+        }
+
+        return redirect()->route('environment')
+            ->with('success', 'Egg weights saved.');
     }
 
     private function tempStatus(float $temp, array $t): string
