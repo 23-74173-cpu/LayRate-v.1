@@ -45,6 +45,42 @@ class EggLoggingController extends Controller
         return view('egg-logging', compact('cages', 'slots', 'date', 'cageFilter', 'logs'));
     }
 
+    public function recentLogs(Request $request)
+    {
+        $cageFilter = $request->query('cage_id');
+
+        $cages = Cage::where('is_active', 1)->orderBy('cage_code')->get();
+
+        $logsQuery = ProductionLog::with(['cageSlot.cage', 'overriddenBy', 'recorder'])
+            ->orderByDesc('log_date')
+            ->orderByDesc('created_at');
+
+        if ($cageFilter) {
+            $logsQuery->whereHas('cageSlot', fn($q) => $q->where('cage_id', $cageFilter));
+        }
+
+        $logs = $logsQuery->paginate(20)->withQueryString();
+
+        return view('eggs.recent-logs', compact('logs', 'cages', 'cageFilter'));
+    }
+
+    public function logs(Request $request)
+    {
+        $cageFilter = $request->query('cage_id');
+
+        $logsQuery = ProductionLog::with(['cageSlot.cage', 'overriddenBy', 'recorder'])
+            ->orderByDesc('log_date')
+            ->orderByDesc('created_at');
+
+        if ($cageFilter) {
+            $logsQuery->whereHas('cageSlot', fn($q) => $q->where('cage_id', $cageFilter));
+        }
+
+        $logs = $logsQuery->paginate(20)->withQueryString();
+
+        return view('egg-logging._logs', compact('logs', 'cageFilter'));
+    }
+
     public function verifyOverride(Request $request)
     {
         $data = $request->validate([
@@ -121,6 +157,15 @@ class EggLoggingController extends Controller
             ['cage_slot_id' => $data['cage_slot_id'], 'log_date' => $data['log_date']],
             $payload
         );
+        $log->cage_slot_id = $slot->id;
+        $log->recorded_by = auth()->id();
+        $log->fill([
+            'egg_count' => $data['egg_count'],
+            'hen_count' => $data['hen_count'],
+            'hdep'      => round(($data['egg_count'] / $data['hen_count']) * 100, 2),
+            'notes'     => $data['notes'] ?? 'Manual entry',
+        ]);
+        $log->save();
 
         return redirect()->route('egg-logging', request()->only('date', 'cage'))->with('success', 'Production log saved.');
     }

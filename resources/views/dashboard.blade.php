@@ -48,6 +48,7 @@
             </div>
         </div>
     </div>
+    @endif
 
     {{-- ── Cage Overview ── --}}
     <div>
@@ -247,6 +248,7 @@
                 </div>
                 @endforeach
             </div>
+            <div id="kpiModalRows" class="space-y-3 max-h-80 overflow-y-auto"></div>
         </div>
     </div>
 

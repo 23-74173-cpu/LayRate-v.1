@@ -23,11 +23,20 @@ Route::middleware('guest')->group(function () {
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
+// Temporary: opcache reset endpoint (no auth required)
+Route::get('/_reset-opcache', function () {
+    if (function_exists('opcache_reset')) {
+        opcache_reset();
+    }
+    return 'opcache reset done';
+});
+
 // ─── Authenticated routes ──────────────────────────────────────
 Route::middleware('auth')->group(function () {
 
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
+    // Cages — reads (all authenticated users)
     Route::get('/cages',               [CageController::class, 'index'])->name('cages.index');
     Route::post('/cages',              [CageController::class, 'store'])->name('cages.store');
     Route::put('/cages/{cage}',        [CageController::class, 'update'])->name('cages.update');
@@ -41,7 +50,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/egg-logging/verify-override',       [EggLoggingController::class, 'verifyOverride'])->name('egg-logging.verify-override')->middleware('throttle:6,1');
     Route::delete('/egg-logging/{productionLog}',     [EggLoggingController::class, 'destroy'])->name('egg-logging.destroy')->middleware('admin');
 
-    Route::get('/environment',  [EnvironmentController::class, 'index'])->name('environment');
+    Route::get('/environment',        [EnvironmentController::class, 'index'])->name('environment');
+    Route::get('/environment/live-data', [EnvironmentController::class, 'liveData'])->name('environment.live-data');
+    Route::get('/environment/logs',      [EnvironmentController::class, 'logs'])->name('environment.logs');
     Route::post('/environment/thresholds', [EnvironmentController::class, 'saveThresholds'])->name('environment.thresholds');
 
     Route::get('/feed',                    [FeedController::class, 'index'])->name('feed');
@@ -50,8 +61,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/feed/consumption',       [FeedController::class, 'storeConsumption'])->name('feed.consumption.store');
 
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics');
+    Route::get('/analytics/charts', [AnalyticsController::class, 'charts'])->name('analytics.charts');
 
     Route::get('/forecast',           [ForecastController::class, 'index'])->name('forecast');
+    Route::get('/forecast/results',   [ForecastController::class, 'results'])->name('forecast.results');
     Route::post('/forecast/generate', [ForecastController::class, 'generate'])->name('forecast.generate');
 
     Route::get('/account',           [AccountController::class, 'show'])->name('account');
@@ -65,6 +78,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/alerts/read-all',      [AlertController::class, 'markAllRead'])->name('alerts.read-all');
 
     Route::get('/mortality',                    [MortalityController::class, 'index'])->name('mortality.index');
+    Route::get('/mortality/logs',               [MortalityController::class, 'logs'])->name('mortality.logs');
     Route::post('/mortality',                   [MortalityController::class, 'store'])->name('mortality.store');
     Route::delete('/mortality/{mortalityLog}',  [MortalityController::class, 'destroy'])->name('mortality.destroy')->middleware('admin');
 });

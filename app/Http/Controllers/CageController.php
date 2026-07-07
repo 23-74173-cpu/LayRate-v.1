@@ -5,11 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Alert;
 use App\Models\Cage;
 use App\Models\CageSlot;
+use App\Models\CageTransfer;
 use App\Models\EnvironmentalLog;
 use App\Models\FeedConsumptionLog;
 use App\Models\MortalityLog;
+use App\Models\Note;
 use App\Models\ProductionLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CageController extends Controller
 {
@@ -118,6 +121,57 @@ class CageController extends Controller
                 if (! isset($existingPositions["{$row}-{$col}"])) {
                     CageSlot::create(['cage_id' => $cage->id, 'row_number' => $row, 'column_number' => $col, 'slot_number' => 0]);
                 }
+
+                $hasSensor = (bool) ($slotData['has_sensor'] ?? false);
+                $existing = HardwareItem::where('cage_slot_id', $slot->id)
+                    ->where('device_type', 'IR_breakbeam')
+                    ->whereIn('status', ['active', 'faulty'])
+                    ->first();
+
+                if ($hasSensor && ! $existing) {
+                    $slotsNeedingSensor[] = $slot;
+                } elseif (! $hasSensor && $existing) {
+                    $existing->update(['status' => 'spare', 'cage_id' => null, 'cage_slot_id' => null]);
+                }
+            }
+
+            if (count($slotsNeedingSensor) > 0) {
+                $spareIr = HardwareItem::where('device_type', 'IR_breakbeam')->where('status', 'spare')->count();
+                if (count($slotsNeedingSensor) > $spareIr) {
+                    return back()->withInput()->withErrors([
+                        'slots' => 'Only '.$spareIr.' IR break-beam sensor(s) available in inventory, but '.count($slotsNeedingSensor).' requested.',
+                    ]);
+                }
+                foreach ($slotsNeedingSensor as $slot) {
+                    $this->assignSpareSensor('IR_breakbeam', null, $slot->id);
+                }
+            }
+        }
+
+        // ── Temperature & humidity sensors (DHT22), cage level ──
+        if (isset($data['dht22_count'])) {
+            $target = (int) $data['dht22_count'];
+            $current = HardwareItem::where('cage_id', $cage->id)
+                ->where('device_type', 'DHT22')
+                ->whereIn('status', ['active', 'faulty'])
+                ->orderByDesc('id')
+                ->get();
+
+            if ($target > $current->count()) {
+                $needed = $target - $current->count();
+                $spareDht = HardwareItem::where('device_type', 'DHT22')->where('status', 'spare')->count();
+                if ($needed > $spareDht) {
+                    return back()->withInput()->withErrors([
+                        'dht22_count' => "Only {$spareDht} DHT22 sensor(s) available in inventory, but {$needed} more requested.",
+                    ]);
+                }
+                for ($i = 0; $i < $needed; $i++) {
+                    $this->assignSpareSensor('DHT22', $cage->id, null);
+                }
+            } elseif ($target < $current->count()) {
+                $current->take($current->count() - $target)->each(
+                    fn ($item) => $item->update(['status' => 'spare', 'cage_id' => null, 'cage_slot_id' => null])
+                );
             }
         }
 
@@ -167,5 +221,78 @@ class CageController extends Controller
         $cage->delete();
 
         return redirect()->route('cages.index')->with('success', 'Cage deleted.');
+    }
+
+    private function placeHenInSlot(Hen $hen, CageSlot $slot, string $reason): void
+    {
+        $hen->cage_slot_id = $slot->id;
+        $hen->placement_date = today();
+        $hen->save();
+        $slot->increment('current_occupancy');
+        CageTransfer::create([
+            'hen_id'           => $hen->id,
+            'from_cage_slot_id' => null,
+            'to_cage_slot_id'   => $slot->id,
+            'transfer_date'    => today(),
+            'reason'           => $reason,
+            'recorded_by'      => auth()->id(),
+        ]);
+    }
+
+    public function removeCell(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'row' => 'required|integer|min:0',
+            'col' => 'required|integer|min:0',
+        ]);
+
+        $row = (int) $data['row'];
+        $col = (int) $data['col'];
+
+        $cage = Cage::where('location_row', $row)
+            ->where('location_column', $col)
+            ->first();
+
+        if ($cage) {
+            $cage->update(['location_row' => null, 'location_column' => null]);
+            return response()->json(['success' => true]);
+        }
+
+        // Empty cell — attempt grid shrink
+        $gridRows = (int) Setting::get('farm_grid_rows', 4);
+        $gridCols = (int) Setting::get('farm_grid_cols', 4);
+
+        $isEdge = ($col === $gridCols - 1 || $row === $gridRows - 1);
+        if (!$isEdge) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only empty cells at the grid\'s edge (last row or last column) can be removed, since removing one from the middle would require repositioning other cages.',
+            ], 422);
+        }
+
+        if ($col === $gridCols - 1) {
+            $lastColOccupied = Cage::where('location_column', $gridCols - 1)->whereNotNull('location_row')->exists();
+            if ($lastColOccupied) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot shrink the grid — the last column still contains cages. Move or remove them first.',
+                ], 422);
+            }
+            Setting::set('farm_grid_cols', max(1, $gridCols - 1));
+            $gridCols = max(1, $gridCols - 1);
+        }
+
+        if ($row === $gridRows - 1) {
+            $lastRowOccupied = Cage::where('location_row', $gridRows - 1)->whereNotNull('location_row')->exists();
+            if ($lastRowOccupied) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot shrink the grid — the last row still contains cages. Move or remove them first.',
+                ], 422);
+            }
+            Setting::set('farm_grid_rows', max(1, $gridRows - 1));
+        }
+
+        return response()->json(['success' => true]);
     }
 }

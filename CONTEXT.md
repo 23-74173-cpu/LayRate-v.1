@@ -71,7 +71,7 @@ LayRate-Main/
 │   ├── factories/                # UserFactory
 │   ├── migrations/               # 17 migration files (2026-01-01_* timestamped to avoid conflicts)
 │   ├── seeders/                  # DatabaseSeeder (60 cage_slots, 180 hens, 4 sensor-equipped slots)
-│   └── layrate_schema.sql        # Standalone MySQL schema (reference)
+│   └── (no standalone schema file — use migrations + seeders)
 ├── resources/views/
 │   ├── layouts/app.blade.php     # Main layout (sidebar + header)
 │   ├── auth/login.blade.php      # Login page

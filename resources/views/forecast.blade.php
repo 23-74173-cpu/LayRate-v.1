@@ -77,7 +77,7 @@
                     Generate Forecast
                 </button>
             </form>
-        </div>
+        </x-card>
 
         {{-- ── Chart Panel ── --}}
         <div class="xl:col-span-2 bg-white rounded-lg border border-[#D9D9D9] p-5">

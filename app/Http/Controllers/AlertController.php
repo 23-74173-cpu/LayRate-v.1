@@ -16,6 +16,15 @@ class AlertController extends Controller
         return view('notifications.index', compact('alerts'));
     }
 
+    public function table()
+    {
+        $alerts = Alert::with('cage')
+            ->orderByDesc('triggered_at')
+            ->paginate(25);
+
+        return view('notifications._table', compact('alerts'));
+    }
+
     public function acknowledgeModal(Request $request)
     {
         $ids = $request->input('ids', []);

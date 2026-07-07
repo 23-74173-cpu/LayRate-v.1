@@ -226,6 +226,30 @@ function updateConfigPreview() {
         }
         preview.appendChild(rowDiv);
     }
+    var added = Math.max(0, dhtCurrent.length - sensorInv.dhtBaseline);
+    var remaining = sensorInv.spareDHT - added;
+    var label = document.getElementById('dhtAvailability');
+    label.textContent = 'Available in inventory: ' + remaining;
+    label.style.color = remaining <= 0 ? '#9b1c24' : '#a39e98';
+    var btn = document.getElementById('addDhtBtn');
+    btn.disabled = remaining <= 0;
+    var msg = document.getElementById('dhtLimitMsg');
+    if (remaining <= 0) {
+        msg.textContent = 'No DHT22 sensors left in inventory — add stock in Hardware first.';
+        msg.classList.remove('hidden');
+    } else {
+        msg.classList.add('hidden');
+    }
+}
+
+function addDht22() {
+    dhtCurrent.push(null); // serial assigned server-side on save (item 24)
+    renderDhtList();
+}
+
+function removeDht22(index) {
+    dhtCurrent.splice(index, 1);
+    renderDhtList();
 }
 
 window.addEventListener('DOMContentLoaded', updateConfigPreview);

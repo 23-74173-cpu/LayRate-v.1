@@ -11,8 +11,16 @@ class HardwareItemController extends Controller
 {
     public function index()
     {
+        $cages = Cage::orderBy('cage_code')->get();
+        $cageSlots = CageSlot::with('cage')->orderBy('cage_id')->orderBy('slot_number')->get();
+
+        return view('hardware.index', compact('cages', 'cageSlots'));
+    }
+
+    public function liveData()
+    {
         $items = HardwareItem::with(['cage', 'cageSlot.cage'])
-            ->orderByDesc('status')
+            ->orderBy('status')
             ->orderBy('serial_number')
             ->get();
 
@@ -21,11 +29,8 @@ class HardwareItemController extends Controller
         $activeCount = $items->where('status', 'active')->count();
         $faultyCount = $items->where('status', 'faulty')->count();
 
-        $cages = Cage::orderBy('cage_code')->get();
-        $cageSlots = CageSlot::with('cage')->orderBy('cage_id')->orderBy('slot_number')->get();
-
-        return view('hardware.index', compact(
-            'items', 'breakbeamCount', 'dht22Count', 'activeCount', 'faultyCount', 'cages', 'cageSlots'
+        return view('hardware._live-data', compact(
+            'items', 'breakbeamCount', 'dht22Count', 'activeCount', 'faultyCount'
         ));
     }
 

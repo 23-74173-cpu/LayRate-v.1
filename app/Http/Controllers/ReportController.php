@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Cage;
 use App\Models\EnvironmentalLog;
 use App\Models\FeedConsumptionLog;
+use App\Models\Hen;
 use App\Models\MortalityLog;
 use App\Models\ProductionLog;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
 class ReportController extends Controller
@@ -132,7 +134,7 @@ class ReportController extends Controller
             ->get()
             ->map(fn($l) => (object) [
                 'date'     => $l->log_date->format('Y-m-d'),
-                'cage'     => $l->cage->cage_code,
+                'cage'     => $l->cage?->cage_code ?? '—',
                 'batch'    => $l->feedBatch->batch_code,
                 'consumed' => number_format($l->feed_consumed_kg, 2) . ' kg',
                 'cp_pct'   => number_format($l->feedBatch->crude_protein, 1) . '%',
@@ -150,7 +152,7 @@ class ReportController extends Controller
             ->get()
             ->map(fn($l) => (object) [
                 'datetime' => $l->recorded_at->format('Y-m-d H:i'),
-                'cage'     => $l->cage->cage_code,
+                'cage'     => $l->cage?->cage_code ?? '—',
                 'temp'     => $l->temperature_c . '°C',
                 'humidity' => $l->humidity_pct . '%',
                 'status'   => ($l->temperature_c > 30 || $l->humidity_pct > 70) ? 'Alert'
@@ -171,7 +173,7 @@ class ReportController extends Controller
 
         return $query->get()->map(fn($l) => (object) [
             'date'   => $l->log_date->format('Y-m-d'),
-            'cage'   => $l->cage->cage_code,
+                'cage'     => $l->cage?->cage_code ?? '—',
             'count'  => $l->count,
             'reason' => $l->reason,
             'notes'  => $l->notes ?? '—',

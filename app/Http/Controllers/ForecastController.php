@@ -18,6 +18,16 @@ class ForecastController extends Controller
         $horizon  = (int) $request->get('horizon', 7);
         $allCages = Cage::orderBy('cage_code')->get();
 
+        return view('forecast', compact('scope', 'cageCode', 'breed', 'horizon', 'allCages', 'allBreeds'));
+    }
+
+    public function results(Request $request)
+    {
+        $scope     = $request->get('scope', 'cage');
+        $cageCode  = $request->get('cage', 'CAGE-A');
+        $breed     = $request->get('breed');
+        $horizon   = (int) $request->get('horizon', 7);
+
         if ($scope === 'farm') {
             $historical = $this->farmHistorical();
             $forecasts  = Forecast::whereNull('cage_id')->whereNull('row_number')
