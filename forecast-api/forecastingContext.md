@@ -148,5 +148,45 @@ cd forecast-api
 
 This inserts synthetic production logs, environmental logs, and feed consumption logs for all cages while preserving existing recent data.
 
+## Recent Updates
+
+### Forecast Module UI/UX & Data Source Alignment
+
+#### Scope selectors now driven by `forecast_input_records`
+- **Per Cage** cage-code dropdown now lists distinct `cage_code` values from `forecast_input_records` instead of the `cages` table.
+- **Per Breed** breed dropdown now lists distinct `breed` values from `forecast_input_records` instead of the `hens` table.
+- This ensures you can only forecast scopes that actually have imported forecast data.
+
+#### Whole Farm scope fix
+- **Bug:** The Whole Farm form submitted a hidden `cage` input (carrying the last-selected cage code), and `executePythonForecast()` fell back to `request()->get('cage')` when no Cage model was loaded. This caused Whole Farm to filter to a single cage (e.g., `CAGE-A`) instead of aggregating all cages.
+- **Fix:** `executePythonForecast()` now receives an explicit `$cageCode` string. Callers pass:
+  - Whole Farm → `'ALL'`
+  - Per Breed → `'ALL'`
+  - Per Cage → the selected cage code
+
+#### Import process fix
+- Forecast import no longer stores the uploaded file to `storage/app/temp` and passes a Laravel-managed path to Python. It now uses `$file->getRealPath()` to pass the PHP-uploaded temp file directly, avoiding `FileNotFoundError` issues.
+- Import error feedback in the browser is now copyable via a `<textarea readonly>` and a **Copy message** button.
+
+#### Debug logging added
+- `executePythonForecast()` now logs the full runner command and stdout at debug level.
+- `generateForecast()` logs the recommended model, metrics, and first few predicted values at debug level.
+- Enable with `LOG_LEVEL=debug` in `.env` and check `storage/logs/laravel.log`.
+
+### Data Source Reference
+
+| UI Element | Primary Table | Notes |
+|---|---|---|
+| Per Cage dropdown | `forecast_input_records.cage_code` | Distinct active cage codes with data |
+| Per Breed dropdown | `forecast_input_records.breed` | Distinct breeds with data |
+| Whole Farm historical chart | `forecast_input_records` | Aggregated `SUM(egg_count)` per date |
+| Whole Farm forecast | `forecast_input_records` → `ForecastingV5.py` | Python aggregates all cages via `aggregate_all_cages()` |
+| Forecast results table | `forecasts` | `target_date`, `predicted_egg_count`, computed `confidence` |
+| Download input sheet | `cages`, `cage_slots`, `hens` | Pre-fills cage setup, occupancy, breed, flock age |
+
+### File Status
+- `ForecastingV5.py` remains the active production model.
+- `Forecast.py` is an older standalone Excel-based prototype and is not used by the Laravel app.
+
 ## Note
 The actual filename is `ForecastingV5.py` (capital `F` and `V`).
