@@ -5,7 +5,7 @@ hens for the whole cage). After it is filled, import_farm_data.py can load the
 data into the database, where ForecastingV5.py reads it for model training and
 forecasting.
 
-The number of hens per cage is pre-filled from the sum of cage_slots.current_occupancy.
+The number of hens per cage is pre-filled from the count of active hens in the hens table.
 
 Pre-filled columns (Date, Cage_Code, Breed, Flock_Age_Weeks, Hen_Count) are
 sheet-protected and non-editable. Only Egg_Count, Temperature_C,
@@ -61,7 +61,7 @@ def generate_forecast_sheet(days: int = 90, output: str = "forecast_input_sheet.
                 """
                 SELECT
                     c.cage_code,
-                    COALESCE(SUM(cs.current_occupancy), 0) AS current_occupancy,
+                    COUNT(h.id) AS hen_count,
                     COALESCE(MAX(h.breed), 'ISA Brown') AS breed,
                     COALESCE(MAX(h.flock_age_weeks), 0) AS flock_age_weeks
                 FROM cages c
@@ -96,7 +96,7 @@ def generate_forecast_sheet(days: int = 90, output: str = "forecast_input_sheet.
                     "Cage_Code": cage.cage_code,
                     "Breed": cage.breed,
                     "Flock_Age_Weeks": flock_age,
-                    "Hen_Count": int(cage.current_occupancy),
+                    "Hen_Count": int(cage.hen_count),
                     "Egg_Count": "",
                     "Temperature_C": "",
                     "Humidity_Percent": "",
