@@ -31,3 +31,13 @@ Thumbs.db
 
 .playwright-mcp/
 .history/
+
+# Project documentation (local only)
+/docs
+/docu
+
+# Build output
+/dist
+
+# Database backups
+*.sql
