@@ -90,7 +90,11 @@ FORECAST_PYTHON_BINARY=C:\Users\donor\OneDrive\Desktop\Layrate_Forecasting\forec
 This produces a protected Excel file with locked pre-filled columns (Date, Cage_Code, Breed, Flock_Age_Weeks, Hen_Count) and editable data columns.
 
 ```bash
+# Default: last 90 days ending today
 python generate_forecast_sheet.py --days 90 --output forecast_input_sheet.xlsx
+
+# Custom date range
+python generate_forecast_sheet.py --start-date 2026-01-01 --end-date 2026-01-30 --output forecast_input_sheet.xlsx
 ```
 
 ### Import a filled forecast sheet

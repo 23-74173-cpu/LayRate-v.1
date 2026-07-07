@@ -52,7 +52,20 @@ def build_engine():
     return create_engine(f"mysql+pymysql://{username}:{password}@{host}:{port}/{database}")
 
 
-def generate_forecast_sheet(days: int = 90, output: str = "forecast_input_sheet.xlsx"):
+def _parse_date(value: str) -> date:
+    """Parse a YYYY-MM-DD date string."""
+    try:
+        return date.fromisoformat(value)
+    except ValueError as exc:
+        raise ValueError(f"Invalid date '{value}'. Use YYYY-MM-DD format.") from exc
+
+
+def generate_forecast_sheet(
+    start_date: date | None = None,
+    end_date: date | None = None,
+    days: int = 90,
+    output: str = "forecast_input_sheet.xlsx",
+):
     engine = build_engine()
 
     with engine.connect() as conn:
@@ -78,13 +91,21 @@ def generate_forecast_sheet(days: int = 90, output: str = "forecast_input_sheet.
     if not cages:
         raise ValueError("No active cages found in the database.")
 
-    end_date = date.today()
-    start_date = end_date - timedelta(days=days - 1)
+    # Resolve date range.
+    if start_date and end_date:
+        if start_date > end_date:
+            raise ValueError("start_date cannot be after end_date.")
+    elif start_date or end_date:
+        raise ValueError("Both --start-date and --end-date are required when specifying a range.")
+    else:
+        end_date = date.today()
+        start_date = end_date - timedelta(days=days - 1)
+
     dates = pd.date_range(start=start_date, end=end_date, freq="D").date
 
     rows = []
     for d in dates:
-        # Flock age decreases by 1 week for every 7 days back from today.
+        # Flock age decreases by 1 week for every 7 days back from the end date.
         days_back = (end_date - d).days
         weeks_back = days_back // 7
 
@@ -142,10 +163,20 @@ if __name__ == "__main__":
         description="Generate a forecast input Excel sheet from database cages."
     )
     parser.add_argument(
+        "--start-date",
+        default=None,
+        help="Start date in YYYY-MM-DD format (requires --end-date).",
+    )
+    parser.add_argument(
+        "--end-date",
+        default=None,
+        help="End date in YYYY-MM-DD format (requires --start-date).",
+    )
+    parser.add_argument(
         "--days",
         type=int,
         default=90,
-        help="Number of days to generate rows for (default: 90).",
+        help="Number of days ending today (default: 90). Ignored when --start-date and --end-date are provided.",
     )
     parser.add_argument(
         "--output",
@@ -154,4 +185,12 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    generate_forecast_sheet(days=args.days, output=args.output)
+    start_date = _parse_date(args.start_date) if args.start_date else None
+    end_date = _parse_date(args.end_date) if args.end_date else None
+
+    generate_forecast_sheet(
+        start_date=start_date,
+        end_date=end_date,
+        days=args.days,
+        output=args.output,
+    )

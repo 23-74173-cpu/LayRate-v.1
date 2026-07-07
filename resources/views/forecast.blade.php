@@ -219,6 +219,51 @@
 
 </div>
 
+{{-- Download Template Modal --}}
+<div id="downloadTemplateModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-auto overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-[#F0F0F0]">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-[#002D5E]/10 flex items-center justify-center">
+                    <i data-lucide="download" class="w-4 h-4 text-[#002D5E]"></i>
+                </div>
+                <h3 class="text-base font-semibold text-[#333333]">Download input sheet</h3>
+            </div>
+            <button type="button" id="closeDownloadTemplateModal" class="text-[#6B7280] hover:text-[#333333] transition-colors">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <div class="p-5">
+            <p class="text-sm text-[#6B7280] mb-4">
+                Choose the date range to record. Pre-filled columns are locked; only egg count, environment, feed, and mortality columns are editable.
+            </p>
+            <form method="GET" action="{{ route('forecast.template') }}" id="downloadTemplateForm" data-turbo="false">
+                @php
+                    $defaultEndDate = now()->format('Y-m-d');
+                    $defaultStartDate = now()->subDays(89)->format('Y-m-d');
+                @endphp
+                <input type="hidden" name="end_date" value="{{ $defaultEndDate }}">
+                <div class="mb-4">
+                    <label for="templateStartDate" class="block text-sm text-[#333333] mb-1">Start date</label>
+                    <input type="date" name="start_date" id="templateStartDate" required
+                           value="{{ $defaultStartDate }}"
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#002D5E]">
+                </div>
+                <div class="mb-4">
+                    <label for="templateEndDate" class="block text-sm text-[#333333] mb-1">End date</label>
+                    <input type="date" id="templateEndDate" value="{{ $defaultEndDate }}" readonly
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-[#F5F6F8] text-[#6B7280] cursor-not-allowed">
+                    <p class="text-xs text-[#6B7280] mt-1">The sheet always ends today.</p>
+                </div>
+                <button type="submit" class="w-full bg-[#002D5E] text-white py-3 rounded-lg text-sm font-medium hover:bg-[#001F42] transition-colors flex items-center justify-center gap-2">
+                    <i data-lucide="download" class="w-5 h-5 shrink-0"></i>
+                    <span>Download sheet</span>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
 {{-- Forecast generation loading overlay --}}
 <div id="forecastLoadingOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center">
     <div class="bg-white rounded-xl shadow-xl p-8 max-w-sm w-full mx-4 text-center">
@@ -241,12 +286,12 @@
 <div class="fixed bottom-6 right-3 z-40 flex flex-col items-end gap-3">
     {{-- FAB Menu --}}
     <div id="fabMenu" class="flex flex-col items-end gap-2 mb-1 mr-2 transition-all duration-200 opacity-0 invisible translate-y-4">
-        <a href="{{ route('forecast.template') }}" class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+        <button type="button" id="fabDownloadBtn" class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Download input sheet</span>
             <div class="w-8 h-8 rounded-full bg-[#002D5E]/10 flex items-center justify-center">
                 <i data-lucide="download" class="w-4 h-4 text-[#002D5E]"></i>
             </div>
-        </a>
+        </button>
         <button type="button" id="fabImportBtn" class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Import production data</span>
             <div class="w-8 h-8 rounded-full bg-[#2D7D46]/10 flex items-center justify-center">
@@ -684,6 +729,9 @@ const fabIcon = document.getElementById('fabIcon');
 const importModal = document.getElementById('importModal');
 const fabImportBtn = document.getElementById('fabImportBtn');
 const closeImportModalBtn = document.getElementById('closeImportModal');
+const downloadTemplateModal = document.getElementById('downloadTemplateModal');
+const fabDownloadBtn = document.getElementById('fabDownloadBtn');
+const closeDownloadTemplateModalBtn = document.getElementById('closeDownloadTemplateModal');
 
 function toggleFab() {
     if (!fabMenu) return;
@@ -710,6 +758,17 @@ function closeImportModalFn() {
     if (importModal) importModal.classList.add('hidden');
 }
 
+function openDownloadTemplateModal() {
+    if (downloadTemplateModal) {
+        downloadTemplateModal.classList.remove('hidden');
+        if (window.lucide) lucide.createIcons();
+    }
+}
+
+function closeDownloadTemplateModalFn() {
+    if (downloadTemplateModal) downloadTemplateModal.classList.add('hidden');
+}
+
 if (fabToggle && fabMenu) {
     fabToggle.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -734,14 +793,33 @@ if (fabImportBtn) {
     });
 }
 
+if (fabDownloadBtn) {
+    fabDownloadBtn.addEventListener('click', function() {
+        openDownloadTemplateModal();
+        toggleFab();
+    });
+}
+
 if (closeImportModalBtn) {
     closeImportModalBtn.addEventListener('click', closeImportModalFn);
+}
+
+if (closeDownloadTemplateModalBtn) {
+    closeDownloadTemplateModalBtn.addEventListener('click', closeDownloadTemplateModalFn);
 }
 
 if (importModal) {
     importModal.addEventListener('click', function(e) {
         if (e.target === importModal) {
             closeImportModalFn();
+        }
+    });
+}
+
+if (downloadTemplateModal) {
+    downloadTemplateModal.addEventListener('click', function(e) {
+        if (e.target === downloadTemplateModal) {
+            closeDownloadTemplateModalFn();
         }
     });
 }

@@ -82,7 +82,7 @@ class ForecastController extends Controller
         return view('forecast', compact('scope', 'cage', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData'));
     }
 
-    public function downloadTemplate()
+    public function downloadTemplate(Request $request)
     {
         try {
             $pythonBinary = $this->resolvePythonBinary();
@@ -94,12 +94,24 @@ class ForecastController extends Controller
                 throw new RuntimeException('Forecast sheet generator not found at: ' . $scriptPath);
             }
 
+            $startDate = $request->input('start_date');
+            $endDate = $request->input('end_date');
+
             $command = [
                 $pythonBinary,
                 $scriptPath,
-                '--days', '90',
                 '--output', $outputName,
             ];
+
+            if ($startDate && $endDate) {
+                $command[] = '--start-date';
+                $command[] = $startDate;
+                $command[] = '--end-date';
+                $command[] = $endDate;
+            } else {
+                $command[] = '--days';
+                $command[] = '90';
+            }
 
             $process = new Process($command, base_path('forecast-api'));
             $process->setTimeout(120);
