@@ -87,6 +87,9 @@ class DashboardController extends Controller
         $eggsToday = $todayLogs->sum('egg_count')
             ?: $cages->sum(fn ($c) => $c->today_eggs);
 
+        // Lifetime eggs logged (since day 1)
+        $lifetimeEggs = ProductionLog::sum('egg_count');
+
         // Coop environment averages
         $latestEnv = EnvironmentalLog::whereIn('cage_id', $cages->pluck('id'))
             ->orderByDesc('recorded_at')
@@ -136,7 +139,7 @@ class DashboardController extends Controller
 
         return compact(
             'cages', 'totalHens', 'todayHdep', 'hdepDelta',
-            'eggsToday', 'avgTemp', 'avgHum', 'feedToday',
+            'eggsToday', 'lifetimeEggs', 'avgTemp', 'avgHum', 'feedToday',
             'mortalityToday', 'mortalityTodayTotal',
             'liveReadings', 'today',
             'gridRows', 'gridCols', 'needsOnboarding'

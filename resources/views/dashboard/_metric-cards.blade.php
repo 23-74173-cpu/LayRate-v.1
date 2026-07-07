@@ -1,5 +1,5 @@
 <turbo-frame id="dashboard-stats">
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-3">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-3">
         {{-- Total Hens --}}
         <div class="kpi-card relative rounded-xl border p-6 cursor-pointer transition-shadow hover:shadow-md"
              style="background-color: #ffffff; border-color: #e6e6e6;"
@@ -44,6 +44,20 @@
             <div class="text-xs mt-2" style="color: #a39e98;">manual entry · logged by operator</div>
         </div>
 
+        {{-- Lifetime Eggs --}}
+        <div class="kpi-card relative rounded-xl border p-6 cursor-pointer transition-shadow hover:shadow-md"
+             style="background-color: #ffffff; border-color: #e6e6e6;"
+             role="link" tabindex="0" aria-label="Go to Egg Production History"
+             data-nav="{{ route('egg-production-history') }}" data-kpi="lifetime-eggs">
+            <button type="button" class="absolute top-4 right-4 p-1 rounded-full hover:bg-black/5 transition-colors"
+                    onclick="event.stopPropagation(); openKpiModal('lifetime-eggs')" aria-label="Lifetime eggs per cage breakdown">
+                <i data-lucide="info" class="w-4 h-4" style="color: #a39e98;"></i>
+            </button>
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase mb-2" style="color: #615d59;">Lifetime Eggs</div>
+            <div class="text-4xl font-bold leading-none tracking-[-0.5px]" style="color: #1f1f1f;">{{ number_format($lifetimeEggs) }}</div>
+            <div class="text-xs mt-2" style="color: #a39e98;">total logged since day 1</div>
+        </div>
+
         {{-- Coop Environment --}}
         <div class="kpi-card relative rounded-xl border p-6 cursor-pointer transition-shadow hover:shadow-md"
              style="background-color: #ffffff; border-color: #e6e6e6;"
@@ -82,6 +96,10 @@
         eggs: {
             title: 'Eggs Collected by Cage',
             rows: {!! $cages->map(fn($c) => ['label' => $c->cage_code, 'color' => $c->color, 'value' => number_format($c->today_eggs) . ' eggs'])->values()->toJson() !!}
+        },
+        'lifetime-eggs': {
+            title: 'Lifetime Eggs by Cage',
+            rows: {!! $cages->map(fn($c) => ['label' => $c->cage_code, 'color' => $c->color, 'value' => number_format($c->productionLogs->sum('egg_count')) . ' eggs'])->values()->toJson() !!}
         },
         env: {
             title: 'Environment by Cage',

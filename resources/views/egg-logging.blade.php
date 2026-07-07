@@ -165,7 +165,7 @@
                             <div>
                                 <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Egg Count</label>
                                 <input type="number" name="egg_count" id="eggCount" min="0" required
-                                       oninput="computeHdep()"
+                                       oninput="computeHdep(); checkSizeSum()"
                                        class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                                        style="border-color: #e6e6e6; color: #1f1f1f;">
                                 <button type="button" id="overrideLabel" onclick="event.preventDefault(); openOverrideModal()"
@@ -192,6 +192,45 @@
                                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1 resize-y"
                                           style="border-color: #e6e6e6; color: #1f1f1f;"></textarea>
                             </div>
+                        </div>
+
+                        {{-- Size Breakdown --}}
+                        <div class="mt-5 border-t pt-4" style="border-color: #e6e6e6;">
+                            <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-3" style="color: #615d59;">
+                                Size Breakdown
+                                <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional — fill all or leave blank)</span>
+                            </label>
+                            <div class="grid grid-cols-4 gap-3" id="sizeBreakdown">
+                                <div>
+                                    <label class="block text-xs text-center mb-1" style="color: #2D7D46;">Small</label>
+                                    <input type="number" name="size_small" min="0" value="0"
+                                           oninput="checkSizeSum()"
+                                           class="size-input w-full border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                           style="border-color: #e6e6e6; color: #1f1f1f;">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-center mb-1" style="color: #1D4E8F;">Medium</label>
+                                    <input type="number" name="size_medium" min="0" value="0"
+                                           oninput="checkSizeSum()"
+                                           class="size-input w-full border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                           style="border-color: #e6e6e6; color: #1f1f1f;">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-center mb-1" style="color: #C2703E;">Large</label>
+                                    <input type="number" name="size_large" min="0" value="0"
+                                           oninput="checkSizeSum()"
+                                           class="size-input w-full border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                           style="border-color: #e6e6e6; color: #1f1f1f;">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-center mb-1" style="color: #6B4C8A;">Jumbo</label>
+                                    <input type="number" name="size_jumbo" min="0" value="0"
+                                           oninput="checkSizeSum()"
+                                           class="size-input w-full border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                           style="border-color: #e6e6e6; color: #1f1f1f;">
+                                </div>
+                            </div>
+                            <div id="sizeSumMsg" class="mt-2 text-xs" style="color: #a39e98;">Sum: 0</div>
                         </div>
 
                         <div class="flex items-center gap-3 mt-5">
@@ -304,6 +343,7 @@ function selectSlot(card) {
     document.getElementById('slotFormPlaceholder').classList.add('hidden');
     document.getElementById('slotForm').classList.remove('hidden');
     computeHdep();
+    checkSizeSum();
 }
 
 function clearSlotSelection() {
@@ -316,6 +356,7 @@ function clearSlotSelection() {
     overrideVerified = false;
     document.getElementById('slotFormPlaceholder').classList.remove('hidden');
     document.getElementById('slotForm').classList.add('hidden');
+    checkSizeSum();
 }
 
 function computeHdep() {
@@ -327,6 +368,21 @@ function computeHdep() {
     el.style.backgroundColor = eggs > hens ? '#fbe4e6' : '#f6f5f4';
     el.style.borderColor = eggs > hens ? '#f3cdd0' : '#e6e6e6';
     el.style.color = eggs > hens ? '#9b1c24' : '#1f1f1f';
+}
+
+function checkSizeSum() {
+    const totalEggs = parseInt(document.getElementById('eggCount').value) || 0;
+    const inputs = document.querySelectorAll('#sizeBreakdown .size-input');
+    let sum = 0;
+    inputs.forEach(function(inp) { sum += parseInt(inp.value) || 0; });
+    const msg = document.getElementById('sizeSumMsg');
+    if (sum === totalEggs) {
+        msg.textContent = 'Sum: ' + sum + ' ✓';
+        msg.style.color = '#1f6b3a';
+    } else {
+        msg.textContent = 'Sum: ' + sum + ' (should be ' + totalEggs + ')';
+        msg.style.color = '#9b1c24';
+    }
 }
 
 function openOverrideModal() {
@@ -377,14 +433,19 @@ function submitOverride() {
 }
 
 // ── Edit Log Modal ──────────────────────────────────────
-function openEditLog(id, date, eggCount, henCount, notes, cageSlotId) {
+function openEditLog(id, date, eggCount, henCount, notes, cageSlotId, sizeSmall, sizeMedium, sizeLarge, sizeJumbo) {
     document.getElementById('editLogForm').action = '/eggs/logging/' + id;
     document.getElementById('editLogDate').value = date;
     document.getElementById('editEggCount').value = eggCount;
     document.getElementById('editHenCount').value = henCount;
     document.getElementById('editNotes').value = notes || '';
+    document.getElementById('editSizeSmall').value = sizeSmall ?? 0;
+    document.getElementById('editSizeMedium').value = sizeMedium ?? 0;
+    document.getElementById('editSizeLarge').value = sizeLarge ?? 0;
+    document.getElementById('editSizeJumbo').value = sizeJumbo ?? 0;
     document.getElementById('editLogModal').style.display = 'flex';
     editComputeHdep();
+    editCheckSizeSum();
     lucide.createIcons();
 }
 

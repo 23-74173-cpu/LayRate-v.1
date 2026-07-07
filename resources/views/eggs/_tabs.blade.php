@@ -3,4 +3,5 @@
     'recent-logs' => ['label' => 'Recent Logs', 'icon' => 'clipboard',   'route' => 'eggs.recent-logs'],
     'stocks'      => ['label' => 'Egg Stocks',  'icon' => 'package',     'route' => 'eggs.stocks'],
     'preorders'   => ['label' => 'Pre-Orders',  'icon' => 'shopping-bag', 'route' => 'eggs.preorders'],
+    'history'     => ['label' => 'History',     'icon' => 'history',     'route' => 'egg-production-history'],
 ]" active="{{ $activeTab }}" />

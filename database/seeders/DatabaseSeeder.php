@@ -129,11 +129,13 @@ class DatabaseSeeder extends Seeder
                     );
                     $log->cage_slot_id = $slot->id;
                     $log->recorded_by = $user->id;
+                    $isSensor = $i % 2 === 0;
                     $log->fill([
-                        'egg_count' => $eggsPerSlot,
-                        'hen_count' => $slot->current_occupancy,
-                        'hdep'      => max(0, round($base['hdep'] - $variation, 2)),
-                        'notes'     => $i % 2 === 0 ? 'IR sensor synced' : 'Manual check',
+                        'egg_count'  => $eggsPerSlot,
+                        'hen_count'  => $slot->current_occupancy,
+                        'hdep'       => max(0, round($base['hdep'] - $variation, 2)),
+                        'notes'      => $isSensor ? 'IR sensor synced' : 'Manual check',
+                        'logged_via' => $isSensor ? 'sensor' : 'manual',
                     ]);
                     $log->save();
                 }
@@ -214,6 +216,21 @@ class DatabaseSeeder extends Seeder
             $forecast->target_date = $targetDate;
             $forecast->predicted_hdep = round(86.0 + $v, 2);
             $forecast->save();
+        }
+
+        // Default egg-weight configuration used for FCR egg-mass estimation.
+        $eggWeights = [
+            'egg_weight_small'     => ['value' => 50, 'label' => 'Average Egg Weight — Small (g)'],
+            'egg_weight_medium'    => ['value' => 58, 'label' => 'Average Egg Weight — Medium (g)'],
+            'egg_weight_large'     => ['value' => 65, 'label' => 'Average Egg Weight — Large (g)'],
+            'egg_weight_jumbo'     => ['value' => 73, 'label' => 'Average Egg Weight — Jumbo (g)'],
+            'egg_weight_fallback'  => ['value' => 60, 'label' => 'Average Egg Weight — Fallback (g)'],
+        ];
+        foreach ($eggWeights as $key => $meta) {
+            Setting::firstOrCreate(
+                ['key' => $key],
+                ['value' => $meta['value'], 'label' => $meta['label']]
+            );
         }
     }
 }
