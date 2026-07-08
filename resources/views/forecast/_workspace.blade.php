@@ -73,6 +73,10 @@
                     @endforeach
                 </div>
 
+                <p class="text-xs text-[#6B7280] mb-4">
+                    Click a date in the calendar to forecast a single day up to {{ now()->addDays(30)->format('F j, Y') }}.
+                </p>
+
                 <button type="submit" id="generateForecastBtn" class="w-full bg-[#002D5E] text-white py-2.5 rounded-lg text-sm hover:bg-[#001F42] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                     <span id="btnText">Generate Forecast</span>
                 </button>

@@ -27,6 +27,7 @@ MIN_REQUIRED_RECORDS = 90
 MORTALITY_ROLLING_WINDOW = 30
 HEAT_STRESS_TEMP_THRESHOLD = 30.0
 HEAT_STRESS_HUMIDITY_THRESHOLD = 80.0
+MAX_FORECAST_DAYS_FROM_TODAY = 30
 
 REQUIRED_COLUMNS = [
     DATE_COLUMN,
@@ -144,6 +145,35 @@ def fixed_train_test_split(df):
     train_df = df.iloc[:split_idx].copy().reset_index(drop=True)
     test_df = df.iloc[split_idx:].copy().reset_index(drop=True)
     return train_df, test_df
+
+
+def _resolve_future_dates(forecast_days: int, start_date: Optional[str] = None) -> pd.DatetimeIndex:
+    """Build future forecast dates, enforcing the max 30-day-ahead limit."""
+    today = pd.Timestamp(date.today())
+    max_allowed_date = today + pd.Timedelta(days=MAX_FORECAST_DAYS_FROM_TODAY)
+
+    if start_date:
+        start = pd.to_datetime(start_date, errors="coerce")
+        if pd.isna(start):
+            raise ValueError(f"Invalid start_date: {start_date!r}. Use YYYY-MM-DD format.")
+    else:
+        start = today + pd.Timedelta(days=1)
+
+    if start < today + pd.Timedelta(days=1):
+        raise ValueError(
+            f"Forecast start date must be at least tomorrow ({(today + pd.Timedelta(days=1)).date()}). "
+            f"Received: {start.date()}."
+        )
+
+    end = start + pd.Timedelta(days=forecast_days - 1)
+    if end > max_allowed_date:
+        raise ValueError(
+            f"Forecast end date ({end.date()}) exceeds the maximum allowed date "
+            f"({max_allowed_date.date()} = today + {MAX_FORECAST_DAYS_FROM_TODAY} days). "
+            f"Reduce the horizon or choose an earlier start date."
+        )
+
+    return pd.date_range(start=start, periods=forecast_days, freq="D")
 
 
 def fit_sarima_model(train_series):
@@ -588,7 +618,7 @@ def evaluate_models(df):
     return result
 
 
-def automatic_forecast(df, forecast_days: int = 7):
+def automatic_forecast(df, forecast_days: int = 7, start_date: Optional[str] = None):
     if df.empty or len(df) < 2:
         raise ValueError("Dataset is too small for forecasting.")
 
@@ -621,11 +651,7 @@ def automatic_forecast(df, forecast_days: int = 7):
     sarima_full = fit_sarima_model(df[TARGET_COLUMN].astype(float))
     xgb_full_models = [fit_xgb_model(df, seed) for seed in XGB_SEEDS]
 
-    future_dates = pd.date_range(
-        start=pd.Timestamp(date.today()) + pd.Timedelta(days=1),
-        periods=forecast_days,
-        freq="D",
-    )
+    future_dates = _resolve_future_dates(forecast_days, start_date)
 
     if recommended == "XGBoost":
         last_row = df.iloc[-1]
@@ -672,6 +698,7 @@ def manual_forecast(
     total_feed_consumed_kg: float,
     monthly_mortality: int,
     heat_stress: int,
+    start_date: Optional[str] = None,
 ):
     if df.empty or len(df) < max(XGB_LAGS):
         raise ValueError("Dataset is too small for manual XGBoost forecasting.")
@@ -695,11 +722,7 @@ def manual_forecast(
 
     xgb_models = [fit_xgb_model(df, seed) for seed in XGB_SEEDS]
 
-    future_dates = pd.date_range(
-        start=pd.Timestamp(date.today()) + pd.Timedelta(days=1),
-        periods=forecast_days,
-        freq="D",
-    )
+    future_dates = _resolve_future_dates(forecast_days, start_date)
 
     rows = []
     for step_idx in range(1, forecast_days + 1):

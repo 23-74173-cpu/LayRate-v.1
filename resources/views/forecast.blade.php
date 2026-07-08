@@ -254,96 +254,112 @@
 
         recordActualDuration();
 
-        const form = document.getElementById('forecastForm');
+        const forms = [
+            { id: 'forecastForm', btnId: 'generateForecastBtn', btnTextId: 'btnText' },
+            { id: 'forecastDayForm', btnId: null, btnTextId: null },
+        ];
         const overlay = document.getElementById('forecastLoadingOverlay');
         const progressBar = document.getElementById('forecastProgressBar');
         const progressText = document.getElementById('forecastProgressText');
         const statusText = document.getElementById('forecastStatusText');
-        const btn = document.getElementById('generateForecastBtn');
-        const btnText = document.getElementById('btnText');
 
-        if (!form || !overlay || !btn) return;
+        if (!overlay) return;
 
-        // Remove a previously attached handler so we never stack listeners when the frame reloads.
-        if (form._forecastSubmitHandler) {
-            form.removeEventListener('submit', form._forecastSubmitHandler);
+        function attachLoadingHandler(config) {
+            const form = document.getElementById(config.id);
+            if (!form) return;
+
+            const btn = config.btnId ? document.getElementById(config.btnId) : null;
+            const btnText = config.btnTextId ? document.getElementById(config.btnTextId) : null;
+
+            if (form._forecastSubmitHandler) {
+                form.removeEventListener('submit', form._forecastSubmitHandler);
+            }
+
+            let isSubmitting = false;
+
+            const handler = function(e) {
+                if (isSubmitting) {
+                    e.preventDefault();
+                    return;
+                }
+
+                isSubmitting = true;
+                e.preventDefault();
+
+                const scopeInput = form.querySelector('input[name="scope"]');
+                const horizonRadio = form.querySelector('input[name="horizon"]:checked');
+                const horizonHidden = form.querySelector('input[type="hidden"][name="horizon"]');
+                const scope = scopeInput ? scopeInput.value : 'cage';
+                let horizon = 7;
+                if (horizonRadio) {
+                    horizon = parseInt(horizonRadio.value, 10) || 7;
+                } else if (horizonHidden) {
+                    horizon = parseInt(horizonHidden.value, 10) || 7;
+                }
+                const expectedDuration = resolveExpectedDuration(scope, horizon);
+
+                overlay.classList.remove('hidden');
+                if (btn) btn.disabled = true;
+                if (btnText) {
+                    btnText.textContent = 'Generating...';
+                }
+
+                sessionStorage.setItem(STORAGE_KEYS.startTime, Date.now());
+
+                progressBar.style.width = '0%';
+                progressText.textContent = '0%';
+                if (statusText) {
+                    statusText.textContent = 'Loading historical data...';
+                }
+
+                const statusMessages = [
+                    'Loading historical data...',
+                    'Training SARIMA model...',
+                    'Training XGBoost model...',
+                    'Evaluating model performance...',
+                    'Generating predictions...',
+                    'Saving forecast results...',
+                ];
+
+                const startTime = Date.now();
+
+                function updateProgress() {
+                    const elapsed = Date.now() - startTime;
+                    const ratio = Math.min(elapsed / expectedDuration, 1);
+                    const eased = 1 - Math.pow(1 - ratio, 3);
+                    const progress = Math.min(95, eased * 95);
+
+                    progressBar.style.width = progress + '%';
+                    progressText.textContent = Math.round(progress) + '%';
+
+                    const messageIndex = Math.min(
+                        statusMessages.length - 1,
+                        Math.floor(ratio * statusMessages.length)
+                    );
+                    if (statusText) {
+                        statusText.textContent = statusMessages[messageIndex];
+                    }
+
+                    if (progress < 95) {
+                        requestAnimationFrame(updateProgress);
+                    }
+                }
+
+                requestAnimationFrame(updateProgress);
+
+                requestAnimationFrame(function() {
+                    setTimeout(function() {
+                        form.submit();
+                    }, 50);
+                });
+            };
+
+            form._forecastSubmitHandler = handler;
+            form.addEventListener('submit', handler);
         }
 
-        let isSubmitting = false;
-
-        const handler = function(e) {
-            if (isSubmitting) {
-                e.preventDefault();
-                return;
-            }
-
-            isSubmitting = true;
-            e.preventDefault();
-
-            const scopeInput = form.querySelector('input[name="scope"]');
-            const horizonInput = form.querySelector('input[name="horizon"]:checked');
-            const scope = scopeInput ? scopeInput.value : 'cage';
-            const horizon = horizonInput ? parseInt(horizonInput.value, 10) : 7;
-            const expectedDuration = resolveExpectedDuration(scope, horizon);
-
-            overlay.classList.remove('hidden');
-            btn.disabled = true;
-            if (btnText) {
-                btnText.textContent = 'Generating...';
-            }
-
-            sessionStorage.setItem(STORAGE_KEYS.startTime, Date.now());
-
-            progressBar.style.width = '0%';
-            progressText.textContent = '0%';
-            if (statusText) {
-                statusText.textContent = 'Loading historical data...';
-            }
-
-            const statusMessages = [
-                'Loading historical data...',
-                'Training SARIMA model...',
-                'Training XGBoost model...',
-                'Evaluating model performance...',
-                'Generating predictions...',
-                'Saving forecast results...',
-            ];
-
-            const startTime = Date.now();
-
-            function updateProgress() {
-                const elapsed = Date.now() - startTime;
-                const ratio = Math.min(elapsed / expectedDuration, 1);
-                const eased = 1 - Math.pow(1 - ratio, 3);
-                const progress = Math.min(95, eased * 95);
-
-                progressBar.style.width = progress + '%';
-                progressText.textContent = Math.round(progress) + '%';
-
-                const messageIndex = Math.min(
-                    statusMessages.length - 1,
-                    Math.floor(ratio * statusMessages.length)
-                );
-                if (statusText) {
-                    statusText.textContent = statusMessages[messageIndex];
-                }
-
-                if (progress < 95) {
-                    requestAnimationFrame(updateProgress);
-                }
-            }
-
-            requestAnimationFrame(updateProgress);
-
-            requestAnimationFrame(function() {
-                setTimeout(function() {
-                    form.submit();
-                }, 50);
-            });
-        };
-
-        form._forecastSubmitHandler = handler;
-        form.addEventListener('submit', handler);
+        forms.forEach(attachLoadingHandler);
     }
 
     document.addEventListener('turbo:load', function() {

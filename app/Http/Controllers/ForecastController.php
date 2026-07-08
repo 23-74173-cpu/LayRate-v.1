@@ -173,9 +173,34 @@ class ForecastController extends Controller
 
     public function generate(Request $request)
     {
-        $scope     = $request->get('scope', 'cage');
-        $horizon   = (int) $request->get('horizon', 7);
-        $breed     = $request->get('breed');
+        $scope          = $request->get('scope', 'cage');
+        $horizon        = (int) $request->get('horizon', 7);
+        $startDate      = $request->input('start_date');
+        $breed          = $request->get('breed');
+
+        // Single-day forecast triggered from the calendar: hardcode horizon to 1.
+        if ($startDate) {
+            $horizon = 1;
+
+            try {
+                $parsed = \Carbon\Carbon::parse($startDate);
+                $maxDate = now()->addDays(30);
+                if ($parsed->lt(now()->addDay()->startOfDay())) {
+                    return redirect()->back()
+                        ->with('error', 'Forecast date must be at least tomorrow.')
+                        ->withInput();
+                }
+                if ($parsed->gt($maxDate->endOfDay())) {
+                    return redirect()->back()
+                        ->with('error', 'Forecast date cannot exceed 30 days from today.')
+                        ->withInput();
+                }
+            } catch (\Exception $e) {
+                return redirect()->back()
+                    ->with('error', 'Invalid forecast date.')
+                    ->withInput();
+            }
+        }
 
         $cageCode = $request->get('cage', DB::table('forecast_input_records')
             ->whereNotNull('cage_code')
@@ -206,13 +231,15 @@ class ForecastController extends Controller
                 Forecast::whereNull('cage_id')->whereNull('breed')
                     ->where('forecast_date', now()->toDateString())->delete();
 
-                $result = $this->generateForecast(null, 'ALL', null, $historical, $horizon, true);
+                $result = $this->generateForecast(null, 'ALL', null, $historical, $horizon, true, $startDate);
 
-            return redirect()->route('forecast', ['scope' => 'farm', 'horizon' => $horizon])
-                ->with('success', 'Whole-farm forecast generated.')
-                ->with('forecast_generated', true)
-                ->with('forecast_metrics', $result['metrics'])
-                ->with('recommended_model', $result['recommended_model']);
+                return redirect()->route('forecast', array_merge(
+                    ['scope' => 'farm', 'horizon' => $horizon],
+                    $startDate ? ['start_date' => $startDate] : []
+                ))->with('success', $startDate ? 'Single-day whole-farm forecast generated.' : 'Whole-farm forecast generated.')
+                    ->with('forecast_generated', true)
+                    ->with('forecast_metrics', $result['metrics'])
+                    ->with('recommended_model', $result['recommended_model']);
             }
 
             if ($scope === 'breed' && $breed) {
@@ -221,13 +248,15 @@ class ForecastController extends Controller
                 Forecast::whereNull('cage_id')->where('breed', $breed)
                     ->where('forecast_date', now()->toDateString())->delete();
 
-                $result = $this->generateForecast(null, 'ALL', $breed, $historical, $horizon, true);
+                $result = $this->generateForecast(null, 'ALL', $breed, $historical, $horizon, true, $startDate);
 
-            return redirect()->route('forecast', ['scope' => 'breed', 'breed' => $breed, 'horizon' => $horizon])
-                ->with('success', "{$breed} forecast generated.")
-                ->with('forecast_generated', true)
-                ->with('forecast_metrics', $result['metrics'])
-                ->with('recommended_model', $result['recommended_model']);
+                return redirect()->route('forecast', array_merge(
+                    ['scope' => 'breed', 'breed' => $breed, 'horizon' => $horizon],
+                    $startDate ? ['start_date' => $startDate] : []
+                ))->with('success', $startDate ? "Single-day {$breed} forecast generated." : "{$breed} forecast generated.")
+                    ->with('forecast_generated', true)
+                    ->with('forecast_metrics', $result['metrics'])
+                    ->with('recommended_model', $result['recommended_model']);
             }
 
             $cage = Cage::where('cage_code', $cageCode)->first();
@@ -242,10 +271,12 @@ class ForecastController extends Controller
                 $forecastQuery->whereNull('cage_id')->delete();
             }
 
-            $result = $this->generateForecast($cage, $cageCode, null, $historical, $horizon, true);
+            $result = $this->generateForecast($cage, $cageCode, null, $historical, $horizon, true, $startDate);
 
-            return redirect()->route('forecast', ['scope' => 'cage', 'cage' => $cageCode, 'horizon' => $horizon])
-                ->with('success', 'Forecast generated.')
+            return redirect()->route('forecast', array_merge(
+                ['scope' => 'cage', 'cage' => $cageCode, 'horizon' => $horizon],
+                $startDate ? ['start_date' => $startDate] : []
+            ))->with('success', $startDate ? 'Single-day forecast generated.' : 'Forecast generated.')
                 ->with('forecast_generated', true)
                 ->with('forecast_metrics', $result['metrics'])
                 ->with('recommended_model', $result['recommended_model']);
@@ -414,9 +445,9 @@ class ForecastController extends Controller
      * @param bool $save
      * @return array{forecasts: Collection, metrics: array, recommended_model: string}
      */
-    private function generateForecast(?Cage $cage, string $cageCode, ?string $breed, Collection $historical, int $horizon, bool $save = false): array
+    private function generateForecast(?Cage $cage, string $cageCode, ?string $breed, Collection $historical, int $horizon, bool $save = false, ?string $startDate = null): array
     {
-        $result = $this->executePythonForecast($cageCode, $breed, $horizon, $this->collectManualParams(request()));
+        $result = $this->executePythonForecast($cageCode, $breed, $horizon, $this->collectManualParams(request()), $startDate);
 
         Log::debug('Forecast generation result', [
             'recommended_model' => $result['recommended_model'] ?? null,
@@ -466,7 +497,7 @@ class ForecastController extends Controller
     /**
      * Execute the Python forecast runner via Symfony Process.
      */
-    private function executePythonForecast(string $cageCode, ?string $breed, int $horizon, array $manualParams = []): array
+    private function executePythonForecast(string $cageCode, ?string $breed, int $horizon, array $manualParams = [], ?string $startDate = null): array
     {
         $pythonBinary = $this->resolvePythonBinary();
         $runnerPath = base_path('forecast-api/forecast_runner.py');
@@ -483,6 +514,11 @@ class ForecastController extends Controller
             '--breed', $breed ?? 'ALL',
             '--horizon', (string) $horizon,
         ];
+
+        if ($startDate) {
+            $command[] = '--start-date';
+            $command[] = $startDate;
+        }
 
         foreach ($manualParams as $key => $value) {
             $command[] = '--' . str_replace('_', '-', $key);
