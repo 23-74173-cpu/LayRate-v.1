@@ -13,7 +13,7 @@
         </x-slot:actions>
     </x-page-header>
 
-    {{-- ── Live Data (lazy): metrics, tabs, batches, consumption ── --}}
+    {{-- Live Data (lazy): metrics, tabs, batches, consumption --}}
     <turbo-frame id="feed-live-data" src="{{ route('feed.live-data', request()->only('cage_id')) }}" loading="lazy">
         @include('feed._live-data-skeleton')
     </turbo-frame>
@@ -21,11 +21,8 @@
 
 {{-- Add Batch Modal --}}
 <div id="addBatchModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] items-center justify-center p-4" role="dialog" aria-modal="true">
-    {{-- Backdrop --}}
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeAddBatchModal()"></div>
-
-    {{-- Card --}}
-    <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+    <div class="relative w-full max-w-md rounded-2xl p-6 overflow-y-auto max-h-[90vh]" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
             <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Add Feed Batch</h2>
             <button type="button" onclick="closeAddBatchModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
@@ -34,18 +31,41 @@
         </div>
         <form method="POST" action="{{ route('feed.batch.store') }}" onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Adding\u2026')">
             @csrf
-            <label class="block text-sm text-[#333333] mb-1.5">Batch Code</label>
-            <input name="batch_code" placeholder="e.g. F-004" required
+            <p class="text-xs text-[#6B7280] mb-4">Batch code is auto-generated (e.g. F-2026-001).</p>
+
+            <label class="block text-sm text-[#333333] mb-1.5">Brand</label>
+            <input name="brand" placeholder="e.g. Purina, Nutrena"
                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
-            <label class="block text-sm text-[#333333] mb-1.5">Crude Protein %</label>
+
+            <label class="block text-sm text-[#333333] mb-1.5">Crude Protein % <span class="text-[#9B1C24]">*</span></label>
             <input name="crude_protein" type="number" step="0.1" min="0" max="100" required
                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
-            <label class="block text-sm text-[#333333] mb-1.5">Date Received</label>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm text-[#333333] mb-1.5">Total Quantity (kg)</label>
+                    <input name="total_quantity_kg" type="number" step="0.01" min="0"
+                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                </div>
+                <div>
+                    <label class="block text-sm text-[#333333] mb-1.5">Unit Cost (per kg)</label>
+                    <input name="unit_cost" type="number" step="0.01" min="0"
+                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                </div>
+            </div>
+
+            <label class="block text-sm text-[#333333] mb-1.5">Date Received <span class="text-[#9B1C24]">*</span></label>
             <input name="date_received" type="date" value="{{ now()->toDateString() }}" required
                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+
+            <label class="block text-sm text-[#333333] mb-1.5">Low Stock Threshold (kg)</label>
+            <input name="low_stock_threshold" type="number" step="0.01" min="0" placeholder="e.g. 100"
+                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+
             <label class="block text-sm text-[#333333] mb-1.5">Notes</label>
             <textarea name="notes" rows="2"
                       class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-5 focus:outline-none focus:border-[#002D5E]"></textarea>
+
             <div class="flex gap-3 mt-5">
                 <button type="button" onclick="closeAddBatchModal()"
                         class="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors"
@@ -62,11 +82,8 @@
 
 {{-- Edit Batch Modal --}}
 <div id="editBatchModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] items-center justify-center p-4" role="dialog" aria-modal="true">
-    {{-- Backdrop --}}
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEditBatchModal()"></div>
-
-    {{-- Card --}}
-    <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+    <div class="relative w-full max-w-md rounded-2xl p-6 overflow-y-auto max-h-[90vh]" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
             <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Edit Feed Batch</h2>
             <button type="button" onclick="closeEditBatchModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
@@ -75,14 +92,82 @@
         </div>
         <form id="editBatchForm" method="POST" onsubmit="loadingButton(this.querySelector('button[type=submit]'))">
             @csrf @method('PUT')
-            <label class="block text-sm text-[#333333] mb-1.5">Crude Protein %</label>
+
+            <label class="block text-sm text-[#333333] mb-1.5">Brand</label>
+            <input id="editBrand" name="brand"
+                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+
+            <label class="block text-sm text-[#333333] mb-1.5">Crude Protein % <span class="text-[#9B1C24]">*</span></label>
             <input id="editCp" name="crude_protein" type="number" step="0.1"
                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm text-[#333333] mb-1.5">Total Quantity (kg)</label>
+                    <input id="editQty" name="total_quantity_kg" type="number" step="0.01" min="0"
+                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                </div>
+                <div>
+                    <label class="block text-sm text-[#333333] mb-1.5">Unit Cost (per kg)</label>
+                    <input id="editCost" name="unit_cost" type="number" step="0.01" min="0"
+                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                </div>
+            </div>
+
+            <label class="block text-sm text-[#333333] mb-1.5">Low Stock Threshold (kg)</label>
+            <input id="editThreshold" name="low_stock_threshold" type="number" step="0.01" min="0"
+                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+
             <label class="block text-sm text-[#333333] mb-1.5">Notes</label>
             <textarea id="editNotes" name="notes" rows="2"
                       class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-5 focus:outline-none focus:border-[#002D5E]"></textarea>
+
             <div class="flex gap-3 mt-5">
                 <button type="button" onclick="closeEditBatchModal()"
+                        class="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors"
+                        style="color: #1f1f1f; border: 1px solid #e6e6e6;"
+                        onmouseover="this.style.backgroundColor='#f6f5f4'"
+                        onmouseout="this.style.backgroundColor='transparent'">Cancel</button>
+                <button type="submit" class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity" style="background-color: #0075de;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- Add/Edit Consumption Modal --}}
+<div id="consumptionModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeConsumptionModal()"></div>
+    <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+        <div class="flex items-center justify-between mb-5">
+            <h2 id="consumptionModalTitle" class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Log Consumption</h2>
+            <button type="button" onclick="closeConsumptionModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+            </button>
+        </div>
+        <form method="POST" action="{{ route('feed.consumption.store') }}" onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Saving\u2026')">
+            @csrf
+            <label class="block text-sm text-[#333333] mb-1.5">Cage <span class="text-[#9B1C24]">*</span></label>
+            <select name="cage_id" required
+                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                <option value="">Select cage...</option>
+            </select>
+
+            <label class="block text-sm text-[#333333] mb-1.5">Feed Batch <span class="text-[#9B1C24]">*</span></label>
+            <select name="feed_batch_id" required
+                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                <option value="">Select batch...</option>
+            </select>
+
+            <label class="block text-sm text-[#333333] mb-1.5">Date <span class="text-[#9B1C24]">*</span></label>
+            <input name="log_date" type="date" value="{{ now()->toDateString() }}" required
+                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+
+            <label class="block text-sm text-[#333333] mb-1.5">Consumed (kg) <span class="text-[#9B1C24]">*</span></label>
+            <input name="feed_consumed_kg" type="number" step="0.01" min="0" required
+                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-5 focus:outline-none focus:border-[#002D5E]">
+
+            <div class="flex gap-3 mt-5">
+                <button type="button" onclick="closeConsumptionModal()"
                         class="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors"
                         style="color: #1f1f1f; border: 1px solid #e6e6e6;"
                         onmouseover="this.style.backgroundColor='#f6f5f4'"
@@ -97,10 +182,14 @@
 
 @push('scripts')
 <script>
-function openEditBatch(id, cp, notes) {
+function openEditBatch(id, brand, cp, qty, cost, threshold, notes) {
     document.getElementById('editBatchForm').action = '/feed/batch/' + id;
-    document.getElementById('editCp').value    = cp;
-    document.getElementById('editNotes').value = notes;
+    document.getElementById('editBrand').value     = brand || '';
+    document.getElementById('editCp').value        = cp;
+    document.getElementById('editQty').value       = qty || '';
+    document.getElementById('editCost').value      = cost || '';
+    document.getElementById('editThreshold').value = threshold || '';
+    document.getElementById('editNotes').value     = notes || '';
     document.getElementById('editBatchModal').classList.remove('hidden');
     document.getElementById('editBatchModal').classList.add('flex');
 }
@@ -115,7 +204,28 @@ function closeEditBatchModal() {
     document.getElementById('editBatchModal').classList.remove('flex');
 }
 
-// Escape key closes modals
+function openConsumptionModal(cageId, batchId, date, kg, entryId) {
+    var title = entryId ? 'Edit Consumption' : 'Log Consumption';
+    document.getElementById('consumptionModalTitle').textContent = title;
+    document.getElementById('consumptionId').value = entryId || '';
+
+    var cageSelect = document.querySelector('#consumptionModal select[name="cage_id"]');
+    var batchSelect = document.querySelector('#consumptionModal select[name="feed_batch_id"]');
+
+    cageSelect.value = cageId || '';
+    batchSelect.value = batchId || '';
+    document.querySelector('#consumptionModal input[name="log_date"]').value = date || '{{ now()->toDateString() }}';
+    document.querySelector('#consumptionModal input[name="feed_consumed_kg"]').value = kg || '';
+
+    document.getElementById('consumptionModal').classList.remove('hidden');
+    document.getElementById('consumptionModal').classList.add('flex');
+}
+
+function closeConsumptionModal() {
+    document.getElementById('consumptionModal').classList.add('hidden');
+    document.getElementById('consumptionModal').classList.remove('flex');
+}
+
 (function() {
     if (window.__feedModalEscapeBound) return;
     window.__feedModalEscapeBound = true;
@@ -123,6 +233,7 @@ function closeEditBatchModal() {
         if (e.key === 'Escape') {
             closeAddBatchModal();
             closeEditBatchModal();
+            closeConsumptionModal();
         }
     });
 })();

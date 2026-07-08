@@ -32,4 +32,5 @@ Thumbs.db
 .playwright-mcp/
 .history/
 layrate_forecast_input_updated.xlsx
-layrate_forecast_input_updated.xlsx
+/test-results/
+test-results/

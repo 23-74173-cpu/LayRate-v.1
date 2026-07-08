@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Alert;
 use App\Models\Cage;
 use App\Models\FeedBatch;
 use App\Models\FeedConsumptionLog;
@@ -12,7 +13,6 @@ class FeedController extends Controller
 {
     public function index()
     {
-        // Pre-selected cage passed from dashboard card navigation (read-only)
         return view('feed', ['preselectedCageId' => (int) request('cage_id') ?: null]);
     }
 
@@ -20,7 +20,6 @@ class FeedController extends Controller
     {
         $batches = FeedBatch::orderByDesc('date_received')->get();
 
-        // Pre-selected cage passed from dashboard card navigation (read-only filter)
         $preselectedCageId = (int) request('cage_id') ?: null;
 
         $consumptionLogs = FeedConsumptionLog::with(['cage', 'feedBatch'])
@@ -39,8 +38,15 @@ class FeedController extends Controller
             ? round($totalFeedWeek / max($activeCagesCount, 1) / 7, 1)
             : 0;
 
-        // FCR section state.
-        $fcrCageId = (int) request('fcr_cage_id') ?: $preselectedCageId ?: Cage::where('is_active', 1)->orderBy('cage_code')->value('id');
+        $totalFeedCostMonth = FeedConsumptionLog::where('log_date', '>=', now()->startOfMonth())
+            ->join('feed_batches', 'feed_consumption_logs.feed_batch_id', '=', 'feed_batches.id')
+            ->selectRaw('SUM(feed_consumption_logs.feed_consumed_kg * feed_batches.unit_cost) as total')
+            ->whereNotNull('feed_batches.unit_cost')
+            ->value('total');
+
+        $cages = Cage::where('is_active', 1)->orderBy('cage_code')->get();
+
+        $fcrCageId = (int) request('fcr_cage_id') ?: $preselectedCageId ?: $cages->value('id');
         $fcrGroupBy = request('fcr_group_by', 'week');
         if (! in_array($fcrGroupBy, ['day', 'week', 'month'])) {
             $fcrGroupBy = 'week';
@@ -58,32 +64,40 @@ class FeedController extends Controller
             ? FcrCalculator::forCage($fcrCage, now()->subDays($fcrPeriodDays - 1)->startOfDay(), now()->endOfDay())
             : null;
 
-        $fcrCages = Cage::where('is_active', 1)->orderBy('cage_code')->get();
-
         return view('feed._live-data', compact(
-            'batches', 'consumptionLogs', 'avgCp', 'totalFeedWeek', 'avgFeedPerCage', 'preselectedCageId',
-            'fcrCage', 'fcrCageId', 'fcrGroupBy', 'fcrTimeline', 'fcrCurrent', 'fcrCages'
+            'batches', 'consumptionLogs', 'avgCp', 'totalFeedWeek', 'avgFeedPerCage',
+            'totalFeedCostMonth', 'cages',
+            'preselectedCageId',
+            'fcrCage', 'fcrCageId', 'fcrGroupBy', 'fcrTimeline', 'fcrCurrent',
         ));
     }
 
     public function storeBatch(Request $request)
     {
         $data = $request->validate([
-            'batch_code' => 'required|string|max:50|unique:feed_batches',
+            'brand' => 'nullable|string|max:100',
             'crude_protein' => 'required|numeric|min:0|max:100',
+            'total_quantity_kg' => 'nullable|numeric|min:0',
+            'unit_cost' => 'nullable|numeric|min:0',
             'date_received' => 'required|date',
+            'low_stock_threshold' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
         ]);
 
-        FeedBatch::create($data);
+        $batch = FeedBatch::create($data);
 
-        return redirect()->route('feed')->with('success', "Feed batch {$data['batch_code']} added.");
+        return redirect()->route('feed')
+            ->with('success', "Feed batch {$batch->batch_code} added.");
     }
 
     public function updateBatch(Request $request, FeedBatch $feedBatch)
     {
         $data = $request->validate([
+            'brand' => 'nullable|string|max:100',
             'crude_protein' => 'required|numeric|min:0|max:100',
+            'total_quantity_kg' => 'nullable|numeric|min:0',
+            'unit_cost' => 'nullable|numeric|min:0',
+            'low_stock_threshold' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
         ]);
 
@@ -101,12 +115,17 @@ class FeedController extends Controller
             'feed_consumed_kg' => 'required|numeric|min:0',
         ]);
 
-        FeedConsumptionLog::updateOrCreate(
+        $log = FeedConsumptionLog::updateOrCreate(
             ['cage_id' => $data['cage_id'], 'log_date' => $data['log_date']],
             array_merge($data, ['recorded_by' => auth()->id()])
         );
 
-        return redirect()->route('feed')->with('success', 'Feed consumption logged.');
+        $this->checkLowStock($data['feed_batch_id']);
+
+        $verb = $log->wasRecentlyCreated ? 'logged' : 'updated';
+
+        return redirect()->route('feed')
+            ->with('success', "Feed consumption {$verb} for Cage " . Cage::find($data['cage_id'])->cage_code . ".");
     }
 
     public function checkDeleteBatch(FeedBatch $feedBatch)
@@ -134,8 +153,40 @@ class FeedController extends Controller
 
     public function destroyConsumption(FeedConsumptionLog $feedConsumptionLog)
     {
+        $batchId = $feedConsumptionLog->feed_batch_id;
         $feedConsumptionLog->delete();
 
         return redirect()->route('feed')->with('success', 'Consumption log deleted.');
+    }
+
+    protected function checkLowStock(int $feedBatchId): void
+    {
+        $batch = FeedBatch::find($feedBatchId);
+
+        if ($batch->total_quantity_kg === null || $batch->low_stock_threshold === null) {
+            return;
+        }
+
+        if (! $batch->is_low_stock) {
+            return;
+        }
+
+        $exists = Alert::where('alert_type', 'low_stock')
+            ->where('cage_id', null)
+            ->where('is_read', 0)
+            ->whereDate('triggered_at', today())
+            ->exists();
+
+        if ($exists) {
+            return;
+        }
+
+        Alert::create([
+            'cage_id' => null,
+            'alert_type' => 'low_stock',
+            'message' => "Low stock: {$batch->batch_code} — {$batch->remaining_kg} kg remaining (threshold: {$batch->low_stock_threshold} kg)",
+            'is_read' => 0,
+            'triggered_at' => now(),
+        ]);
     }
 }
