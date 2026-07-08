@@ -66,6 +66,10 @@ class ForecastController extends Controller
                 return view('forecast._calendar', $viewData);
             }
 
+            if ($request->header('Turbo-Frame') === 'forecast-workspace') {
+                return view('forecast._workspace', $viewData);
+            }
+
             return view('forecast', $viewData)
                 ->with('label', 'Whole Farm');
         }
@@ -80,6 +84,10 @@ class ForecastController extends Controller
 
             if ($request->header('Turbo-Frame') === 'production-calendar') {
                 return view('forecast._calendar', $viewData);
+            }
+
+            if ($request->header('Turbo-Frame') === 'forecast-workspace') {
+                return view('forecast._workspace', $viewData);
             }
 
             return view('forecast', $viewData)
@@ -100,6 +108,10 @@ class ForecastController extends Controller
 
         if ($request->header('Turbo-Frame') === 'production-calendar') {
             return view('forecast._calendar', $viewData);
+        }
+
+        if ($request->header('Turbo-Frame') === 'forecast-workspace') {
+            return view('forecast._workspace', $viewData);
         }
 
         return view('forecast', $viewData);

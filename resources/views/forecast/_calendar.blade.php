@@ -33,7 +33,7 @@
 
         <div class="flex items-center gap-2">
             {{-- Month selector --}}
-            <form method="GET" action="{{ request()->url() }}" class="flex items-center gap-2" data-turbo-frame="production-calendar">
+            <form method="GET" action="{{ request()->url() }}" class="flex items-center gap-2" data-turbo-frame="production-calendar" data-turbo-action="advance">
                 @foreach(request()->except(['month','year']) as $key => $value)
                     @if(is_array($value))
                         @foreach($value as $v)
@@ -58,15 +58,15 @@
             </form>
 
             {{-- Prev / Next arrows --}}
-            <a href="{{ $prevUrl }}" data-turbo-frame="production-calendar" class="w-8 h-8 flex items-center justify-center rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
-                <i data-lucide="chevron-left" class="w-4 h-4"></i>
-            </a>
-            <a href="{{ $nextUrl }}" data-turbo-frame="production-calendar" class="w-8 h-8 flex items-center justify-center rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
-                <i data-lucide="chevron-right" class="w-4 h-4"></i>
-            </a>
-            <a href="{{ $todayUrl }}" data-turbo-frame="production-calendar" class="text-xs px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
-                Today
-            </a>
+                <a href="{{ $prevUrl }}" data-turbo-frame="production-calendar" data-turbo-action="advance" class="w-8 h-8 flex items-center justify-center rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
+                    <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                </a>
+                <a href="{{ $nextUrl }}" data-turbo-frame="production-calendar" data-turbo-action="advance" class="w-8 h-8 flex items-center justify-center rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
+                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                </a>
+                <a href="{{ $todayUrl }}" data-turbo-frame="production-calendar" data-turbo-action="advance" class="text-xs px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
+                    Today
+                </a>
         </div>
     </div>
 
@@ -143,9 +143,10 @@
                 <tr>
                     @foreach($week as $cell)
                     <td class="align-top">
-                        <div class="calendar-day rounded-lg border {{ $cell['currentMonth'] ? ($cell['isToday'] ? 'border-[#002D5E] bg-[#002D5E]/5' : 'border-[#F0F0F0] bg-white hover:border-[#D9D9D9]') : 'border-[#F0F0F0] bg-[#F9F9F7] opacity-60' }} flex flex-col items-start justify-start transition-colors">
+                        <div class="calendar-day rounded-lg border {{ $cell['currentMonth'] ? ($cell['isToday'] ? 'border-[#002D5E] bg-[#002D5E]/5' : 'border-[#F0F0F0] bg-white hover:border-[#D9D9D9]') : 'border-[#F0F0F0] bg-[#F9F9F7] opacity-60' }} relative flex flex-col items-start justify-start transition-colors">
                             <span class="text-xs sm:text-sm {{ $cell['isToday'] ? 'font-bold text-[#002D5E]' : ($cell['currentMonth'] ? 'text-[#333333]' : 'text-[#9CA3AF]') }}">{{ $cell['day'] }}</span>
                             @if($cell['forecast'])
+                            <i data-lucide="egg" class="absolute top-1 right-1 w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#2D7D46]" title="Forecast: {{ number_format($cell['forecast']->predicted_egg_count, 0) }} eggs"></i>
                             <span class="forecast-badge mt-auto rounded bg-[#D5E8D4] text-[#1F5F35] font-medium whitespace-nowrap">
                                 {{ number_format($cell['forecast']->predicted_egg_count, 0) }}
                             </span>

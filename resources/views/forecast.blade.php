@@ -4,18 +4,6 @@
 @section('content')
 <div class="space-y-5">
 
-    @php
-        $cageColorMap = ['CAGE-A'=>'#2D7D46','CAGE-B'=>'#1D4E8F','CAGE-C'=>'#C2703E','CAGE-D'=>'#6B4C8A'];
-        $cageColor = $scope === 'farm' ? '#102A4C' : ($cageColorMap[$cageCode] ?? '#2D7D46');
-        $scopeLabel = match($scope) {
-            'farm' => 'Whole Farm',
-            'breed' => $breed ?? '',
-            default => $cageCode,
-        };
-        $showForecast = session('forecast_generated', false);
-        $chartTitle = $showForecast ? 'HISTORICAL DATA VS FORECASTED EGG COUNT' : 'HISTORICAL EGG COUNT';
-    @endphp
-
     <x-page-header title="Forecast" subtitle="Project egg production based on historical egg count trends" />
 
     @if(!($hasEnoughData ?? true))
@@ -31,159 +19,8 @@
     </div>
     @endif
 
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
-
-        {{-- ── Inputs Panel ── --}}
-        <x-card>
-            <div class="text-xs tracking-wider text-[#6B7280] mb-4">FORECAST INPUTS</div>
-            <form method="POST" action="{{ route('forecast.generate') }}" id="forecastForm" data-turbo="false">
-                @csrf
-                <input type="hidden" name="scope" value="{{ $scope }}" id="formScope">
-                <input type="hidden" name="cage" value="{{ $cageCode }}" id="formCage">
-
-                <label class="block text-sm text-[#333333] mb-2">Scope</label>
-                <div class="flex flex-col gap-2 mb-4">
-                    <a href="{{ route('forecast', ['scope'=>'farm','horizon'=>$horizon]) }}"
-                       class="flex items-center justify-center gap-2 overflow-hidden py-2 rounded-lg text-sm border whitespace-nowrap {{ $scope === 'farm' ? 'bg-[#002D5E] text-white border-[#002D5E]' : 'border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]' }}">
-                        <i data-lucide="globe" class="w-4 h-4 shrink-0"></i> Whole Farm
-                    </a>
-                    <a href="{{ route('forecast', ['scope'=>'cage','cage'=>$cageCode,'horizon'=>$horizon]) }}"
-                       class="flex items-center justify-center gap-2 overflow-hidden py-2 rounded-lg text-sm border whitespace-nowrap {{ $scope === 'cage' ? 'bg-[#002D5E] text-white border-[#002D5E]' : 'border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]' }}">
-                        <i data-lucide="box" class="w-4 h-4 shrink-0"></i> Per Cage
-                    </a>
-                    <a href="{{ route('forecast', ['scope'=>'breed','breed'=>$allBreeds->first() ?? 'ISA Brown','horizon'=>$horizon]) }}"
-                       class="flex items-center justify-center gap-2 overflow-hidden py-2 rounded-lg text-sm border whitespace-nowrap {{ $scope === 'breed' ? 'bg-[#002D5E] text-white border-[#002D5E]' : 'border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]' }}">
-                        <i data-lucide="bird" class="w-4 h-4 shrink-0"></i> Per Breed
-                    </a>
-                </div>
-
-                @if($scope === 'cage')
-                <label class="block text-sm text-[#333333] mb-2">Select Cage</label>
-                <select name="cage" onchange="this.form.submit()"
-                        class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white mb-4 focus:outline-none focus:border-[#002D5E]">
-                    @foreach($allCages as $c)
-                    <option value="{{ $c }}" {{ $c === $cageCode ? 'selected' : '' }}>{{ $c }}</option>
-                    @endforeach
-                </select>
-                <p class="text-xs text-[#6B7280] mb-4">Forecasting: <span class="font-medium text-[#333333]">{{ $cageCode }}</span></p>
-
-                @elseif($scope === 'breed')
-                <label class="block text-sm text-[#333333] mb-2">Select Breed</label>
-                <select name="breed" onchange="this.form.submit()"
-                        class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white mb-4 focus:outline-none focus:border-[#002D5E]">
-                    @foreach($allBreeds as $b)
-                    <option value="{{ $b }}" {{ $breed === $b ? 'selected' : '' }}>{{ $b }}</option>
-                    @endforeach
-                </select>
-                <p class="text-xs text-[#6B7280] mb-4">Forecasting: <span class="font-medium text-[#002D5E]">{{ $breed }}</span></p>
-
-                @else
-                <input type="hidden" name="cage" value="{{ $cageCode }}">
-                <p class="text-xs text-[#6B7280] mb-4">Forecasting: <span class="font-medium text-[#333333]">Whole Farm</span></p>
-                @endif
-
-                <label class="block text-sm text-[#333333] mb-2">Forecast horizon</label>
-                <div class="flex gap-4 mb-5">
-                    @foreach([7,14,30] as $h)
-                    <label class="flex items-center gap-1.5 text-sm cursor-pointer">
-                        <input type="radio" name="horizon" value="{{ $h }}" {{ $horizon == $h ? 'checked' : '' }} class="accent-[#002D5E]">
-                        {{ $h }} days
-                    </label>
-                    @endforeach
-                </div>
-
-                <button type="submit" id="generateForecastBtn" class="w-full bg-[#002D5E] text-white py-2.5 rounded-lg text-sm hover:bg-[#001F42] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                    <span id="btnText">Generate Forecast</span>
-                </button>
-            </form>
-        </x-card>
-
-        {{-- ── Chart Panel ── --}}
-        <div class="xl:col-span-2 bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <div class="text-xs tracking-wider text-[#6B7280] mb-4">{{ $chartTitle }} — {{ $scopeLabel }}</div>
-            <div class="relative h-64 w-full" style="height: 16rem;">
-                <canvas id="forecastChart" style="width: 100%; height: 100%; display: block;"></canvas>
-            </div>
-        </div>
-    </div>
-
-    {{-- ── Model Metrics ── --}}
-    @if($showForecast && (!empty($metrics) || $recommendedModel))
-    @php
-        $metrics = $metrics ?? [];
-        $recommended = $recommendedModel ?? null;
-        $sarima = $metrics['sarima'] ?? null;
-        $xgboost = $metrics['xgboost'] ?? null;
-
-        $maeWinner = null;
-        $rmseWinner = null;
-        $mapeWinner = null;
-        if ($sarima && $xgboost) {
-            $maeWinner = ($sarima['MAE'] ?? PHP_FLOAT_MAX) <= ($xgboost['MAE'] ?? PHP_FLOAT_MAX) ? 'SARIMA' : 'XGBoost';
-            $rmseWinner = ($sarima['RMSE'] ?? PHP_FLOAT_MAX) <= ($xgboost['RMSE'] ?? PHP_FLOAT_MAX) ? 'SARIMA' : 'XGBoost';
-            $mapeWinner = ($sarima['MAPE'] ?? PHP_FLOAT_MAX) <= ($xgboost['MAPE'] ?? PHP_FLOAT_MAX) ? 'SARIMA' : 'XGBoost';
-        }
-    @endphp
-    <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-        <div class="text-xs tracking-wider text-[#6B7280] mb-4">MODEL COMPARISON</div>
-
-        @if($recommended)
-        <div class="flex items-center gap-3 p-4 rounded-lg bg-[#D5E8D4] text-[#1F5F35] mb-5">
-            <div class="w-10 h-10 rounded-full bg-[#1F5F35]/10 flex items-center justify-center">
-                <i data-lucide="award" class="w-5 h-5"></i>
-            </div>
-            <div>
-                <div class="text-xs font-medium uppercase tracking-wider text-[#1F5F35]/80">Suggested Model</div>
-                <div class="text-lg font-semibold">{{ $recommended }}</div>
-            </div>
-        </div>
-        @endif
-
-        @if($sarima || $xgboost)
-        <div class="overflow-hidden rounded-lg border border-[#D9D9D9]">
-            <table class="w-full text-sm">
-                <thead class="bg-[#F9F9F7] border-b border-[#D9D9D9]">
-                    <tr>
-                        <th class="text-left text-xs font-medium text-[#6B7280] px-4 py-3">Metric</th>
-                        <th class="text-right text-xs font-medium text-[#6B7280] px-4 py-3">SARIMA</th>
-                        <th class="text-right text-xs font-medium text-[#6B7280] px-4 py-3">XGBoost Regression</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr class="border-b border-[#F0F0F0]">
-                        <td class="px-4 py-3 text-[#333333]">MAE</td>
-                        <td class="px-4 py-3 text-right font-mono {{ $maeWinner === 'SARIMA' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
-                            {{ number_format($sarima['MAE'] ?? 0, 2) }}
-                        </td>
-                        <td class="px-4 py-3 text-right font-mono {{ $maeWinner === 'XGBoost' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
-                            {{ number_format($xgboost['MAE'] ?? 0, 2) }}
-                        </td>
-                    </tr>
-                    <tr class="border-b border-[#F0F0F0]">
-                        <td class="px-4 py-3 text-[#333333]">RMSE</td>
-                        <td class="px-4 py-3 text-right font-mono {{ $rmseWinner === 'SARIMA' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
-                            {{ number_format($sarima['RMSE'] ?? 0, 2) }}
-                        </td>
-                        <td class="px-4 py-3 text-right font-mono {{ $rmseWinner === 'XGBoost' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
-                            {{ number_format($xgboost['RMSE'] ?? 0, 2) }}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="px-4 py-3 text-[#333333]">MAPE</td>
-                        <td class="px-4 py-3 text-right font-mono {{ $mapeWinner === 'SARIMA' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
-                            {{ number_format($sarima['MAPE'] ?? 0, 2) }}%
-                        </td>
-                        <td class="px-4 py-3 text-right font-mono {{ $mapeWinner === 'XGBoost' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
-                            {{ number_format($xgboost['MAPE'] ?? 0, 2) }}%
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <p class="text-xs text-[#6B7280] mt-2">Lower values are better. Highlighted cells indicate the best performing model for each metric.</p>
-        @endif
-    </div>
-    @endif
+    {{-- ── Forecast Workspace (Inputs + Chart + Metrics) ── --}}
+    @include('forecast._workspace')
 
     {{-- ── Production Calendar ── --}}
     @include('forecast._calendar')
@@ -244,8 +81,9 @@
         </div>
         <h3 class="text-lg font-semibold text-[#333333] mb-1">Generating Forecast</h3>
         <p class="text-sm text-[#6B7280] mb-4">Please wait while the model trains and produces predictions...</p>
+        <p id="forecastStatusText" class="text-xs text-[#002D5E] font-medium mb-2 h-4">Loading historical data...</p>
         <div class="w-full bg-[#F0F0F0] rounded-full h-2.5 overflow-hidden">
-            <div id="forecastProgressBar" class="bg-[#002D5E] h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+            <div id="forecastProgressBar" class="bg-[#002D5E] h-2.5 rounded-full" style="width: 0%"></div>
         </div>
         <p id="forecastProgressText" class="text-xs text-[#6B7280] mt-2">0%</p>
     </div>
@@ -348,450 +186,410 @@
 @push('scripts')
 <script>
 (function() {
-const historical = @json($historical->map(fn($l) => ['date'=> is_object($l->log_date) ? $l->log_date->format('Y-m-d') : $l->log_date,'egg_count'=>$l->egg_count]));
-const showForecast = @json($showForecast);
-const forecasts  = showForecast
-    ? @json($forecasts->map(fn($f) => ['date'=> is_object($f->target_date) ? $f->target_date->format('Y-m-d') : $f->target_date,'egg_count'=>(int) $f->predicted_egg_count]))
-    : [];
-const cageColor  = '{{ $cageColor }}';
+    if (window.__layrateForecastInitialized) return;
+    window.__layrateForecastInitialized = true;
 
-const recentHistorical = historical;
-const histLabels = recentHistorical.map((h) => {
-    const [y, m, d] = h.date.split('-').map(Number);
-    const date = new Date(Date.UTC(y, m - 1, d));
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
-});
-const fcLabels   = forecasts.map((f) => {
-    const [y, m, d] = f.date.split('-').map(Number);
-    const date = new Date(Date.UTC(y, m - 1, d));
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
-});
-const allLabels  = showForecast ? [...histLabels, ...fcLabels] : histLabels;
+    let currentFabMenu = null;
+    let currentFabIcon = null;
 
-const histData = showForecast
-    ? [...recentHistorical.map(h => h.egg_count), ...Array(fcLabels.length).fill(null)]
-    : recentHistorical.map(h => h.egg_count);
-const fcData   = showForecast
-    ? [...Array(histLabels.length).fill(null), ...forecasts.map(f => f.egg_count)]
-    : [];
-
-function setChartError(message) {
-    const canvas = document.getElementById('forecastChart');
-    if (!canvas) return;
-    const wrapper = canvas.parentElement;
-    if (!wrapper) return;
-    const errorId = 'forecastChartError';
-    let errorEl = document.getElementById(errorId);
-    if (!errorEl) {
-        errorEl = document.createElement('div');
-        errorEl.id = errorId;
-        errorEl.className = 'absolute inset-0 flex items-center justify-center text-xs text-red-600 bg-red-50/80 rounded';
-        wrapper.appendChild(errorEl);
-    }
-    errorEl.textContent = message || 'Unable to load chart.';
-}
-
-function clearChartError() {
-    const errorEl = document.getElementById('forecastChartError');
-    if (errorEl) errorEl.remove();
-}
-
-function initForecastChart() {
-    const canvas = document.getElementById('forecastChart');
-    if (!canvas) {
-        console.warn('[ForecastChart] Canvas element not found.');
-        return;
-    }
-
-    if (typeof Chart === 'undefined') {
-        console.warn('[ForecastChart] Chart.js not loaded yet.');
-        return;
-    }
-
-    if (window.forecastChartInstance) {
-        window.forecastChartInstance.destroy();
-    }
-
-    if (!recentHistorical || recentHistorical.length === 0) {
-        console.warn('[ForecastChart] No historical data available.', historical);
-        setChartError('No historical data to display.');
-        return;
-    }
-
-    clearChartError();
-
-    const datasets = [
-        {
-            label: 'Historical',
-            data: histData,
-            borderColor: '#333333',
-            backgroundColor: 'transparent',
-            tension: 0.3,
-            pointRadius: 3,
-            borderWidth: 2,
+    function toggleFab() {
+        if (!currentFabMenu) return;
+        const isOpen = !currentFabMenu.classList.contains('invisible');
+        if (isOpen) {
+            currentFabMenu.classList.add('invisible', 'opacity-0', 'translate-y-4');
+            currentFabMenu.classList.remove('opacity-100', 'translate-y-0');
+            if (currentFabIcon) currentFabIcon.style.transform = 'rotate(0deg)';
+        } else {
+            currentFabMenu.classList.remove('invisible', 'opacity-0', 'translate-y-4');
+            currentFabMenu.classList.add('opacity-100', 'translate-y-0');
+            if (currentFabIcon) currentFabIcon.style.transform = 'rotate(45deg)';
         }
-    ];
-
-    if (showForecast) {
-        datasets.push({
-            label: 'Forecast',
-            data: fcData,
-            borderColor: cageColor,
-            backgroundColor: cageColor + '22',
-            tension: 0.3,
-            borderDash: [5,3],
-            pointRadius: 3,
-            fill: true,
-            borderWidth: 2,
-        });
     }
 
-    console.log('[ForecastChart] Initializing with labels:', allLabels, 'datasets:', datasets);
+    document.addEventListener('click', function() {
+        if (currentFabMenu && !currentFabMenu.classList.contains('invisible')) {
+            toggleFab();
+        }
+    });
 
-    try {
-        window.forecastChartInstance = new Chart(canvas, {
-            type: 'line',
-            data: {
-                labels: allLabels,
-                datasets: datasets
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: true, labels: { boxWidth: 10, font: { size: 10 } } }
-                },
-                scales: {
-                    x: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 45 } },
-                    y: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } }, min: 0, beginAtZero: true },
+    function initForecastLoading() {
+        const STORAGE_KEYS = {
+            startTime: 'layrate_forecast_start_time',
+            expectedDuration: 'layrate_forecast_expected_duration_ms',
+        };
+
+        const DEFAULT_DURATIONS = {
+            cage: { 7: 5000, 14: 8000, 30: 12000 },
+            breed: { 7: 6000, 14: 10000, 30: 15000 },
+            farm: { 7: 8000, 14: 14000, 30: 20000 },
+        };
+
+        const MIN_DURATION = 3000;
+        const MAX_DURATION = 280000;
+
+        function resolveExpectedDuration(scope, horizon) {
+            const saved = localStorage.getItem(STORAGE_KEYS.expectedDuration);
+            if (saved) {
+                const parsed = parseInt(saved, 10);
+                if (!isNaN(parsed) && parsed > 0) {
+                    return Math.max(MIN_DURATION, Math.min(MAX_DURATION, parsed));
                 }
             }
-        });
-        console.log('[ForecastChart] Chart initialized successfully.');
-    } catch (e) {
-        console.error('[ForecastChart] Failed to initialize chart:', e);
-        setChartError('Chart failed to render.');
-    }
-}
 
-function ensureForecastChart() {
-    if (typeof Chart !== 'undefined') {
-        initForecastChart();
-    } else {
-        console.warn('[ForecastChart] Chart.js not available, polling...');
-        const checkChart = setInterval(function() {
-            if (typeof Chart !== 'undefined') {
-                clearInterval(checkChart);
-                console.log('[ForecastChart] Chart.js became available.');
-                initForecastChart();
+            const scopeMap = DEFAULT_DURATIONS[scope] || DEFAULT_DURATIONS.cage;
+            return scopeMap[horizon] || scopeMap[7] || MIN_DURATION;
+        }
+
+        function recordActualDuration() {
+            const start = sessionStorage.getItem(STORAGE_KEYS.startTime);
+            if (!start) return;
+
+            const actual = Date.now() - parseInt(start, 10);
+            sessionStorage.removeItem(STORAGE_KEYS.startTime);
+
+            if (actual > 1000) {
+                localStorage.setItem(STORAGE_KEYS.expectedDuration, actual);
             }
-        }, 100);
-        setTimeout(function() {
-            clearInterval(checkChart);
-            if (typeof Chart === 'undefined') {
-                console.error('[ForecastChart] Chart.js failed to load within 10 seconds.');
-                setChartError('Chart library failed to load. Please check your connection.');
+        }
+
+        recordActualDuration();
+
+        const form = document.getElementById('forecastForm');
+        const overlay = document.getElementById('forecastLoadingOverlay');
+        const progressBar = document.getElementById('forecastProgressBar');
+        const progressText = document.getElementById('forecastProgressText');
+        const statusText = document.getElementById('forecastStatusText');
+        const btn = document.getElementById('generateForecastBtn');
+        const btnText = document.getElementById('btnText');
+
+        if (!form || !overlay || !btn) return;
+
+        // Remove a previously attached handler so we never stack listeners when the frame reloads.
+        if (form._forecastSubmitHandler) {
+            form.removeEventListener('submit', form._forecastSubmitHandler);
+        }
+
+        let isSubmitting = false;
+
+        const handler = function(e) {
+            if (isSubmitting) {
+                e.preventDefault();
+                return;
             }
-        }, 10000);
-    }
-}
 
-document.addEventListener('turbo:load', ensureForecastChart);
-document.addEventListener('DOMContentLoaded', ensureForecastChart);
-window.addEventListener('load', ensureForecastChart);
+            isSubmitting = true;
+            e.preventDefault();
 
-document.addEventListener('turbo:load', function() {
-    const form = document.getElementById('forecastForm');
-    const overlay = document.getElementById('forecastLoadingOverlay');
-    const progressBar = document.getElementById('forecastProgressBar');
-    const progressText = document.getElementById('forecastProgressText');
-    const btn = document.getElementById('generateForecastBtn');
-    const btnText = document.getElementById('btnText');
+            const scopeInput = form.querySelector('input[name="scope"]');
+            const horizonInput = form.querySelector('input[name="horizon"]:checked');
+            const scope = scopeInput ? scopeInput.value : 'cage';
+            const horizon = horizonInput ? parseInt(horizonInput.value, 10) : 7;
+            const expectedDuration = resolveExpectedDuration(scope, horizon);
 
-    if (form && overlay && btn) {
-        form.addEventListener('submit', function() {
             overlay.classList.remove('hidden');
             btn.disabled = true;
             if (btnText) {
                 btnText.textContent = 'Generating...';
             }
 
-            // Animate progress while the server processes the forecast.
-            let progress = 0;
+            sessionStorage.setItem(STORAGE_KEYS.startTime, Date.now());
+
             progressBar.style.width = '0%';
             progressText.textContent = '0%';
+            if (statusText) {
+                statusText.textContent = 'Loading historical data...';
+            }
 
-            const interval = setInterval(function() {
-                if (progress < 90) {
-                    progress += Math.random() * 3;
-                    if (progress > 90) progress = 90;
-                    progressBar.style.width = progress + '%';
-                    progressText.textContent = Math.round(progress) + '%';
+            const statusMessages = [
+                'Loading historical data...',
+                'Training SARIMA model...',
+                'Training XGBoost model...',
+                'Evaluating model performance...',
+                'Generating predictions...',
+                'Saving forecast results...',
+            ];
+
+            const startTime = Date.now();
+
+            function updateProgress() {
+                const elapsed = Date.now() - startTime;
+                const ratio = Math.min(elapsed / expectedDuration, 1);
+                const eased = 1 - Math.pow(1 - ratio, 3);
+                const progress = Math.min(95, eased * 95);
+
+                progressBar.style.width = progress + '%';
+                progressText.textContent = Math.round(progress) + '%';
+
+                const messageIndex = Math.min(
+                    statusMessages.length - 1,
+                    Math.floor(ratio * statusMessages.length)
+                );
+                if (statusText) {
+                    statusText.textContent = statusMessages[messageIndex];
                 }
-            }, 1000);
 
-            // Allow the normal form submission to proceed. The overlay stays
-            // visible until the redirect response renders the results page.
-            setTimeout(function() {
-                clearInterval(interval);
-            }, 300000);
-        });
-    }
-});
+                if (progress < 95) {
+                    requestAnimationFrame(updateProgress);
+                }
+            }
 
-document.addEventListener('turbo:load', function() {
-    const form = document.getElementById('forecastImportForm');
-    const btn = document.getElementById('importForecastBtn');
-    const btnText = document.getElementById('importBtnText');
-    const feedback = document.getElementById('importFeedback');
-    const feedbackMessage = document.getElementById('importFeedbackMessage');
-    const feedbackIcon = document.getElementById('importFeedbackIcon');
-    const copyFeedbackBtn = document.getElementById('copyImportFeedbackBtn');
+            requestAnimationFrame(updateProgress);
 
-    if (copyFeedbackBtn && feedbackMessage) {
-        copyFeedbackBtn.addEventListener('click', function() {
-            feedbackMessage.select();
-            try {
-                navigator.clipboard.writeText(feedbackMessage.value);
-                const originalText = copyFeedbackBtn.querySelector('span').textContent;
-                copyFeedbackBtn.querySelector('span').textContent = 'Copied!';
+            requestAnimationFrame(function() {
                 setTimeout(function() {
-                    copyFeedbackBtn.querySelector('span').textContent = originalText;
-                }, 1500);
-            } catch (err) {
-                document.execCommand('copy');
-            }
-        });
-    }
-
-    function showImportFeedback(type, message) {
-        if (!feedback || !feedbackMessage || !feedbackIcon) return;
-        feedback.classList.remove('hidden', 'bg-green-50', 'border', 'border-green-200', 'text-green-800', 'bg-red-50', 'border-red-200', 'text-red-800');
-        feedbackIcon.setAttribute('data-lucide', type === 'success' ? 'check-circle' : 'alert-triangle');
-        if (type === 'success') {
-            feedback.classList.add('bg-green-50', 'border', 'border-green-200', 'text-green-800');
-            feedbackIcon.classList.add('text-green-600');
-            feedbackIcon.classList.remove('text-red-600');
-        } else {
-            feedback.classList.add('bg-red-50', 'border', 'border-red-200', 'text-red-800');
-            feedbackIcon.classList.add('text-red-600');
-            feedbackIcon.classList.remove('text-green-600');
-        }
-        feedbackMessage.value = message;
-        feedbackMessage.style.height = 'auto';
-        feedbackMessage.style.height = feedbackMessage.scrollHeight + 'px';
-        if (window.lucide) lucide.createIcons();
-    }
-
-    function hideImportFeedback() {
-        if (feedback) feedback.classList.add('hidden');
-    }
-
-    const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('forecastFileInput');
-    const dropZonePrompt = document.getElementById('dropZonePrompt');
-    const fileSelectedPrompt = document.getElementById('fileSelectedPrompt');
-    const selectedFileName = document.getElementById('selectedFileName');
-
-    function updateDropZoneState() {
-        if (!fileInput || !dropZonePrompt || !fileSelectedPrompt || !selectedFileName) return;
-        if (fileInput.files && fileInput.files.length > 0) {
-            dropZonePrompt.classList.add('hidden');
-            fileSelectedPrompt.classList.remove('hidden');
-            selectedFileName.textContent = fileInput.files[0].name;
-            dropZone.classList.add('border-[#2D7D46]', 'bg-[#D5E8D4]/20');
-            dropZone.classList.remove('border-[#D9D9D9]');
-        } else {
-            dropZonePrompt.classList.remove('hidden');
-            fileSelectedPrompt.classList.add('hidden');
-            selectedFileName.textContent = 'No file selected';
-            dropZone.classList.remove('border-[#2D7D46]', 'bg-[#D5E8D4]/20');
-            dropZone.classList.add('border-[#D9D9D9]');
-        }
-        if (window.lucide) lucide.createIcons();
-    }
-
-    if (fileInput) {
-        fileInput.addEventListener('change', updateDropZoneState);
-    }
-
-    if (dropZone) {
-        ['dragenter', 'dragover'].forEach(function(eventName) {
-            dropZone.addEventListener(eventName, function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                dropZone.classList.add('border-[#2D7D46]', 'bg-[#F5F6F8]');
+                    form.submit();
+                }, 50);
             });
-        });
-        ['dragleave', 'drop'].forEach(function(eventName) {
-            dropZone.addEventListener(eventName, function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                dropZone.classList.remove('border-[#2D7D46]', 'bg-[#F5F6F8]');
-            });
-        });
-        dropZone.addEventListener('drop', function(e) {
-            const files = e.dataTransfer.files;
-            if (files.length && fileInput) {
-                fileInput.files = files;
-                updateDropZoneState();
-            }
-        });
+        };
+
+        form._forecastSubmitHandler = handler;
+        form.addEventListener('submit', handler);
     }
 
-    if (form && btn) {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            hideImportFeedback();
-            btn.disabled = true;
-            if (btnText) {
-                btnText.textContent = 'Importing...';
-            }
+    document.addEventListener('turbo:load', function() {
+        const form = document.getElementById('forecastImportForm');
+        const btn = document.getElementById('importForecastBtn');
+        const btnText = document.getElementById('importBtnText');
+        const feedback = document.getElementById('importFeedback');
+        const feedbackMessage = document.getElementById('importFeedbackMessage');
+        const feedbackIcon = document.getElementById('importFeedbackIcon');
+        const copyFeedbackBtn = document.getElementById('copyImportFeedbackBtn');
 
-            const xhr = new XMLHttpRequest();
-            const formData = new FormData(form);
-
-            xhr.addEventListener('load', function() {
-                btn.disabled = false;
-                if (btnText) {
-                    btnText.textContent = 'Start Importing';
-                }
-
-                let response = {};
+        if (copyFeedbackBtn && feedbackMessage) {
+            copyFeedbackBtn.addEventListener('click', function() {
+                feedbackMessage.select();
                 try {
-                    response = JSON.parse(xhr.responseText);
-                } catch (e) {
-                    response = { success: false, message: 'Unexpected server response.\n\n' + xhr.responseText };
+                    navigator.clipboard.writeText(feedbackMessage.value);
+                    const originalText = copyFeedbackBtn.querySelector('span').textContent;
+                    copyFeedbackBtn.querySelector('span').textContent = 'Copied!';
+                    setTimeout(function() {
+                        copyFeedbackBtn.querySelector('span').textContent = originalText;
+                    }, 1500);
+                } catch (err) {
+                    document.execCommand('copy');
                 }
-
-                if (xhr.status >= 200 && xhr.status < 300 && response.success) {
-                    window.location.reload();
-                    return;
-                }
-
-                let message = response.message || 'Import failed. Please check the file and try again.';
-                if (response.errors && typeof response.errors === 'object') {
-                    message = Object.values(response.errors).flat().join('\n');
-                }
-                showImportFeedback('error', message);
             });
+        }
 
-            xhr.addEventListener('error', function() {
-                btn.disabled = false;
+        function showImportFeedback(type, message) {
+            if (!feedback || !feedbackMessage || !feedbackIcon) return;
+            feedback.classList.remove('hidden', 'bg-green-50', 'border', 'border-green-200', 'text-green-800', 'bg-red-50', 'border-red-200', 'text-red-800');
+            feedbackIcon.setAttribute('data-lucide', type === 'success' ? 'check-circle' : 'alert-triangle');
+            if (type === 'success') {
+                feedback.classList.add('bg-green-50', 'border', 'border-green-200', 'text-green-800');
+                feedbackIcon.classList.add('text-green-600');
+                feedbackIcon.classList.remove('text-red-600');
+            } else {
+                feedback.classList.add('bg-red-50', 'border', 'border-red-200', 'text-red-800');
+                feedbackIcon.classList.add('text-red-600');
+                feedbackIcon.classList.remove('text-green-600');
+            }
+            feedbackMessage.value = message;
+            feedbackMessage.style.height = 'auto';
+            feedbackMessage.style.height = feedbackMessage.scrollHeight + 'px';
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function hideImportFeedback() {
+            if (feedback) feedback.classList.add('hidden');
+        }
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('forecastFileInput');
+        const dropZonePrompt = document.getElementById('dropZonePrompt');
+        const fileSelectedPrompt = document.getElementById('fileSelectedPrompt');
+        const selectedFileName = document.getElementById('selectedFileName');
+
+        function updateDropZoneState() {
+            if (!fileInput || !dropZonePrompt || !fileSelectedPrompt || !selectedFileName) return;
+            if (fileInput.files && fileInput.files.length > 0) {
+                dropZonePrompt.classList.add('hidden');
+                fileSelectedPrompt.classList.remove('hidden');
+                selectedFileName.textContent = fileInput.files[0].name;
+                dropZone.classList.add('border-[#2D7D46]', 'bg-[#D5E8D4]/20');
+                dropZone.classList.remove('border-[#D9D9D9]');
+            } else {
+                dropZonePrompt.classList.remove('hidden');
+                fileSelectedPrompt.classList.add('hidden');
+                selectedFileName.textContent = 'No file selected';
+                dropZone.classList.remove('border-[#2D7D46]', 'bg-[#D5E8D4]/20');
+                dropZone.classList.add('border-[#D9D9D9]');
+            }
+            if (window.lucide) lucide.createIcons();
+        }
+
+        if (fileInput) {
+            fileInput.addEventListener('change', updateDropZoneState);
+        }
+
+        if (dropZone) {
+            ['dragenter', 'dragover'].forEach(function(eventName) {
+                dropZone.addEventListener(eventName, function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropZone.classList.add('border-[#2D7D46]', 'bg-[#F5F6F8]');
+                });
+            });
+            ['dragleave', 'drop'].forEach(function(eventName) {
+                dropZone.addEventListener(eventName, function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropZone.classList.remove('border-[#2D7D46]', 'bg-[#F5F6F8]');
+                });
+            });
+            dropZone.addEventListener('drop', function(e) {
+                const files = e.dataTransfer.files;
+                if (files.length && fileInput) {
+                    fileInput.files = files;
+                    updateDropZoneState();
+                }
+            });
+        }
+
+        if (form && btn) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                hideImportFeedback();
+                btn.disabled = true;
                 if (btnText) {
-                    btnText.textContent = 'Start Importing';
+                    btnText.textContent = 'Importing...';
                 }
-                showImportFeedback('error', 'Import failed. Please check the file and try again.');
+
+                const xhr = new XMLHttpRequest();
+                const formData = new FormData(form);
+
+                xhr.addEventListener('load', function() {
+                    btn.disabled = false;
+                    if (btnText) {
+                        btnText.textContent = 'Start Importing';
+                    }
+
+                    let response = {};
+                    try {
+                        response = JSON.parse(xhr.responseText);
+                    } catch (e) {
+                        response = { success: false, message: 'Unexpected server response.\n\n' + xhr.responseText };
+                    }
+
+                    if (xhr.status >= 200 && xhr.status < 300 && response.success) {
+                        window.location.reload();
+                        return;
+                    }
+
+                    let message = response.message || 'Import failed. Please check the file and try again.';
+                    if (response.errors && typeof response.errors === 'object') {
+                        message = Object.values(response.errors).flat().join('\n');
+                    }
+                    showImportFeedback('error', message);
+                });
+
+                xhr.addEventListener('error', function() {
+                    btn.disabled = false;
+                    if (btnText) {
+                        btnText.textContent = 'Start Importing';
+                    }
+                    showImportFeedback('error', 'Import failed. Please check the file and try again.');
+                });
+
+                xhr.open('POST', form.action);
+                xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                xhr.send(formData);
+            });
+        }
+
+        // ── FAB & Import Modal ──
+        const fabToggle = document.getElementById('fabToggle');
+        const fabMenu = document.getElementById('fabMenu');
+        const fabIcon = document.getElementById('fabIcon');
+        const importModal = document.getElementById('importModal');
+        const fabImportBtn = document.getElementById('fabImportBtn');
+        const closeImportModalBtn = document.getElementById('closeImportModal');
+        const downloadTemplateModal = document.getElementById('downloadTemplateModal');
+        const fabDownloadBtn = document.getElementById('fabDownloadBtn');
+        const closeDownloadTemplateModalBtn = document.getElementById('closeDownloadTemplateModal');
+
+        currentFabMenu = fabMenu;
+        currentFabIcon = fabIcon;
+
+        function openImportModal() {
+            if (importModal) {
+                importModal.classList.remove('hidden');
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+
+        function closeImportModalFn() {
+            if (importModal) importModal.classList.add('hidden');
+        }
+
+        function openDownloadTemplateModal() {
+            if (downloadTemplateModal) {
+                downloadTemplateModal.classList.remove('hidden');
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+
+        function closeDownloadTemplateModalFn() {
+            if (downloadTemplateModal) downloadTemplateModal.classList.add('hidden');
+        }
+
+        if (fabToggle && fabMenu) {
+            fabToggle.addEventListener('click', function(e) {
+                e.stopPropagation();
+                toggleFab();
             });
 
-            xhr.open('POST', form.action);
-            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-            xhr.send(formData);
-        });
-    }
-});
+            fabMenu.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+        }
 
-// ── FAB & Import Modal ──
-const fabToggle = document.getElementById('fabToggle');
-const fabMenu = document.getElementById('fabMenu');
-const fabIcon = document.getElementById('fabIcon');
-const importModal = document.getElementById('importModal');
-const fabImportBtn = document.getElementById('fabImportBtn');
-const closeImportModalBtn = document.getElementById('closeImportModal');
-const downloadTemplateModal = document.getElementById('downloadTemplateModal');
-const fabDownloadBtn = document.getElementById('fabDownloadBtn');
-const closeDownloadTemplateModalBtn = document.getElementById('closeDownloadTemplateModal');
+        if (fabImportBtn) {
+            fabImportBtn.addEventListener('click', function() {
+                openImportModal();
+                toggleFab();
+            });
+        }
 
-function toggleFab() {
-    if (!fabMenu) return;
-    const isOpen = !fabMenu.classList.contains('invisible');
-    if (isOpen) {
-        fabMenu.classList.add('invisible', 'opacity-0', 'translate-y-4');
-        fabMenu.classList.remove('opacity-100', 'translate-y-0');
-        if (fabIcon) fabIcon.style.transform = 'rotate(0deg)';
-    } else {
-        fabMenu.classList.remove('invisible', 'opacity-0', 'translate-y-4');
-        fabMenu.classList.add('opacity-100', 'translate-y-0');
-        if (fabIcon) fabIcon.style.transform = 'rotate(45deg)';
-    }
-}
+        if (fabDownloadBtn) {
+            fabDownloadBtn.addEventListener('click', function() {
+                openDownloadTemplateModal();
+                toggleFab();
+            });
+        }
 
-function openImportModal() {
-    if (importModal) {
-        importModal.classList.remove('hidden');
-        if (window.lucide) lucide.createIcons();
-    }
-}
+        if (closeImportModalBtn) {
+            closeImportModalBtn.addEventListener('click', closeImportModalFn);
+        }
 
-function closeImportModalFn() {
-    if (importModal) importModal.classList.add('hidden');
-}
+        if (closeDownloadTemplateModalBtn) {
+            closeDownloadTemplateModalBtn.addEventListener('click', closeDownloadTemplateModalFn);
+        }
 
-function openDownloadTemplateModal() {
-    if (downloadTemplateModal) {
-        downloadTemplateModal.classList.remove('hidden');
-        if (window.lucide) lucide.createIcons();
-    }
-}
+        if (importModal) {
+            importModal.addEventListener('click', function(e) {
+                if (e.target === importModal) {
+                    closeImportModalFn();
+                }
+            });
+        }
 
-function closeDownloadTemplateModalFn() {
-    if (downloadTemplateModal) downloadTemplateModal.classList.add('hidden');
-}
+        if (downloadTemplateModal) {
+            downloadTemplateModal.addEventListener('click', function(e) {
+                if (e.target === downloadTemplateModal) {
+                    closeDownloadTemplateModalFn();
+                }
+            });
+        }
 
-if (fabToggle && fabMenu) {
-    fabToggle.addEventListener('click', function(e) {
-        e.stopPropagation();
-        toggleFab();
+        initForecastLoading();
     });
 
-    document.addEventListener('click', function() {
-        if (!fabMenu.classList.contains('invisible')) {
-            toggleFab();
+    document.addEventListener('turbo:frame-load', function(e) {
+        if (e.target.id === 'forecast-workspace') {
+            initForecastLoading();
         }
     });
-
-    fabMenu.addEventListener('click', function(e) {
-        e.stopPropagation();
-    });
-}
-
-if (fabImportBtn) {
-    fabImportBtn.addEventListener('click', function() {
-        openImportModal();
-        toggleFab();
-    });
-}
-
-if (fabDownloadBtn) {
-    fabDownloadBtn.addEventListener('click', function() {
-        openDownloadTemplateModal();
-        toggleFab();
-    });
-}
-
-if (closeImportModalBtn) {
-    closeImportModalBtn.addEventListener('click', closeImportModalFn);
-}
-
-if (closeDownloadTemplateModalBtn) {
-    closeDownloadTemplateModalBtn.addEventListener('click', closeDownloadTemplateModalFn);
-}
-
-if (importModal) {
-    importModal.addEventListener('click', function(e) {
-        if (e.target === importModal) {
-            closeImportModalFn();
-        }
-    });
-}
-
-if (downloadTemplateModal) {
-    downloadTemplateModal.addEventListener('click', function(e) {
-        if (e.target === downloadTemplateModal) {
-            closeDownloadTemplateModalFn();
-        }
-    });
-}
 })();
 </script>
 @endpush
