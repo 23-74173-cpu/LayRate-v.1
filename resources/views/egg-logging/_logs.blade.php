@@ -10,6 +10,7 @@
                     <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-6 py-3" style="color: #615d59;">Hens</th>
                     <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-6 py-3" style="color: #615d59;">HDEP</th>
                     <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-6 py-3" style="color: #615d59;">Logged By</th>
+                    <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-6 py-3" style="color: #615d59;">Source</th>
                     <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-6 py-3" style="color: #615d59;">Notes</th>
                     <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-6 py-3" style="color: #615d59;">Override</th>
                     <th class="px-6 py-3"></th>
@@ -27,6 +28,15 @@
                     <td class="px-6 py-3 text-sm font-mono" style="color: #1f1f1f;">{{ $log->hen_count }}</td>
                     <td class="px-6 py-3 text-sm font-mono" style="color: #1f1f1f;">{{ number_format($log->hdep,1) }}%</td>
                     <td class="px-6 py-3 text-sm" style="color: #31302e;">{{ $log->recorder?->name ?? 'Farm Operator' }}</td>
+                    <td class="px-6 py-3">
+                        @if($log->logged_via === 'sensor')
+                        <x-status-badge status="sensor" type="slot" />
+                        @elseif($log->logged_via === 'manual')
+                        <x-status-badge status="manual" type="slot" />
+                        @else
+                        <span class="text-xs" style="color: #a39e98;">—</span>
+                        @endif
+                    </td>
                     <td class="px-6 py-3 text-sm max-w-[200px] truncate" style="color: #615d59;">{{ $log->notes ?? '—' }}</td>
                     <td class="px-6 py-3">
                         @if($log->overriddenBy)
@@ -37,7 +47,10 @@
                     </td>
                     <td class="px-6 py-3">
                         <div class="flex items-center gap-1">
-                            <button onclick="openEditLog({{ $log->id }}, '{{ $log->log_date->format('Y-m-d') }}', {{ $log->egg_count }}, {{ $log->hen_count }}, '{{ addslashes($log->notes ?? '') }}', {{ $log->cage_slot_id }})"
+                            @php
+                                $sizes = $log->eggSizeLogs->keyBy('egg_size');
+                            @endphp
+                            <button onclick="openEditLog({{ $log->id }}, '{{ $log->log_date->format('Y-m-d') }}', {{ $log->egg_count }}, {{ $log->hen_count }}, '{{ addslashes($log->notes ?? '') }}', {{ $log->cage_slot_id }}, {{ $sizes->get('small')?->count ?? 0 }}, {{ $sizes->get('medium')?->count ?? 0 }}, {{ $sizes->get('large')?->count ?? 0 }}, {{ $sizes->get('jumbo')?->count ?? 0 }})"
                                     class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Edit log">
                                 <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                             </button>
@@ -54,7 +67,7 @@
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="10" class="px-6 py-10 text-center text-sm" style="color: #a39e98;">No logs yet. Select a slot and save the first record.</td></tr>
+                <tr><td colspan="11" class="px-6 py-10 text-center text-sm" style="color: #a39e98;">No logs yet. Select a slot and save the first record.</td></tr>
                 @endforelse
             </tbody>
         </table>

@@ -180,17 +180,18 @@
         <nav class="flex-1 overflow-y-auto py-4 px-3 scrollbar-thin">
             @php
             $nav = [
-                ['icon'=>'home',          'label'=>'Dashboard',       'route'=>'dashboard'],
-                ['icon'=>'feather',       'label'=>'Cages',           'route'=>'cages.index'],
-                ['icon'=>'bird',          'label'=>'Chickens',        'route'=>'chickens.index'],
-                ['icon'=>'egg',           'label'=>'Egg Management',  'route'=>'eggs.logging'],
-                ['icon'=>'thermometer',   'label'=>'Environment',     'route'=>'environment'],
-                ['icon'=>'cpu',           'label'=>'Hardware',        'route'=>'hardware.index'],
-                ['icon'=>'leaf',          'label'=>'Feed & Nutrition','route'=>'feed'],
-                ['icon'=>'bar-chart-3',   'label'=>'Analytics',       'route'=>'analytics'],
-                ['icon'=>'trending-up',   'label'=>'Forecast',        'route'=>'forecast'],
-                ['icon'=>'clipboard-list','label'=>'Reports',         'route'=>'reports'],
-                ['icon'=>'sticky-note',   'label'=>'Notes',           'route'=>'notes.index'],
+                ['icon'=>'home',          'label'=>'Dashboard',          'route'=>'dashboard'],
+                ['icon'=>'feather',       'label'=>'Cages',              'route'=>'cages.index'],
+                ['icon'=>'bird',          'label'=>'Chickens',           'route'=>'chickens.index'],
+                ['icon'=>'egg',           'label'=>'Egg Management',     'route'=>'eggs.logging'],
+                ['icon'=>'history',       'label'=>'Egg History',        'route'=>'egg-production-history'],
+                ['icon'=>'thermometer',   'label'=>'Environment',        'route'=>'environment'],
+                ['icon'=>'cpu',           'label'=>'Hardware',           'route'=>'hardware.index'],
+                ['icon'=>'leaf',          'label'=>'Feed & Nutrition',   'route'=>'feed'],
+                ['icon'=>'bar-chart-3',   'label'=>'Analytics',          'route'=>'analytics'],
+                ['icon'=>'trending-up',   'label'=>'Forecast',           'route'=>'forecast'],
+                ['icon'=>'clipboard-list','label'=>'Reports',            'route'=>'reports'],
+                ['icon'=>'sticky-note',   'label'=>'Notes',              'route'=>'notes.index'],
             ];
             @endphp
 
@@ -485,7 +486,8 @@
         // ── Breadcrumb (client-side, since the header is data-turbo-permanent) ──
         var SECTION_LABELS = {
             'dashboard': 'Dashboard',   'cages': 'Cages',            'chickens': 'Chickens',
-            'eggs': 'Egg Management',   'environment': 'Environment','hardware': 'Hardware',
+            'eggs': 'Egg Management',   'egg-production-history': 'Egg History',
+            'environment': 'Environment','hardware': 'Hardware',
             'feed': 'Feed & Nutrition', 'analytics': 'Analytics',    'forecast': 'Forecast',
             'reports': 'Reports',       'notes': 'Notes',            'mortality': 'Mortality',
             'notifications': 'Notifications', 'account': 'Settings',

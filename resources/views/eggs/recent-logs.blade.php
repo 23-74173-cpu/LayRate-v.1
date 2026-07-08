@@ -9,20 +9,84 @@
     @include('eggs._tabs', ['activeTab' => 'recent-logs'])
 
     <x-card header="Production Logs">
-        <div class="flex items-center gap-4 mb-4">
-            <label class="text-xs" style="color: #615d59;">Cage:</label>
-            <select onchange="window.location.href = this.value ? '?cage_id=' + this.value : '?'"
-                    class="border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
-                    style="border-color: #e6e6e6; color: #1f1f1f;">
-                <option value="">All Cages</option>
-                @foreach($cages as $c)
-                <option value="{{ $c->id }}" {{ $cageFilter == $c->id ? 'selected' : '' }}>
-                    {{ $c->cage_code }}
-                </option>
-                @endforeach
-            </select>
-        </div>
-        <turbo-frame id="egg-logs-list" src="{{ route('eggs.logging.logs', ['cage_id' => $cageFilter]) }}" loading="lazy">
+        <form method="GET" action="{{ route('eggs.recent-logs') }}" class="mb-4">
+            <div class="flex flex-wrap items-end gap-4">
+                {{-- Cage filter --}}
+                <div>
+                    <label class="block text-xs mb-1" style="color: #615d59;">Cage</label>
+                    <select name="cage_id"
+                            class="border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            style="border-color: #e6e6e6; color: #1f1f1f;">
+                        <option value="">All Cages</option>
+                        @foreach($cages as $c)
+                        <option value="{{ $c->id }}" {{ $filters['cage_id'] == $c->id ? 'selected' : '' }}>
+                            {{ $c->cage_code }}
+                        </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Slot filter --}}
+                <div>
+                    <label class="block text-xs mb-1" style="color: #615d59;">Slot</label>
+                    <select name="cage_slot_id"
+                            class="border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            style="border-color: #e6e6e6; color: #1f1f1f;">
+                        <option value="">All Slots</option>
+                        @foreach($cageSlots as $slot)
+                        <option value="{{ $slot->id }}" {{ $filters['cage_slot_id'] == $slot->id ? 'selected' : '' }}>
+                            {{ $slot->cage->cage_code }} · R{{ $slot->row_number }}-C{{ $slot->column_number }}
+                        </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Breed filter --}}
+                <div>
+                    <label class="block text-xs mb-1" style="color: #615d59;">Breed</label>
+                    <select name="breed"
+                            class="border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            style="border-color: #e6e6e6; color: #1f1f1f;">
+                        <option value="">All Breeds</option>
+                        @foreach($breeds as $b)
+                        <option value="{{ $b }}" {{ $filters['breed'] == $b ? 'selected' : '' }}>
+                            {{ $b }}
+                        </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Manual vs Sensor filter (checkbox chips) --}}
+                <div>
+                    <label class="block text-xs mb-1" style="color: #615d59;">Logged Via</label>
+                    <div class="flex items-center gap-3">
+                        @foreach(['manual' => 'Manual', 'sensor' => 'Sensor', 'unknown' => 'Unknown'] as $value => $label)
+                        <label class="inline-flex items-center gap-1.5 text-sm cursor-pointer" style="color: #31302e;">
+                            <input type="checkbox" name="logged_via[]" value="{{ $value }}"
+                                   {{ in_array($value, (array) $filters['logged_via']) ? 'checked' : '' }}
+                                   class="rounded border-gray-300 text-[#0075de] focus:ring-[#0075de]">
+                            {{ $label }}
+                        </label>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button type="submit"
+                            class="px-4 py-1.5 text-sm font-medium rounded-lg text-white transition-opacity"
+                            style="background-color: #0075de;">
+                        Filter
+                    </button>
+                    <a href="{{ route('eggs.recent-logs') }}"
+                       class="px-4 py-1.5 text-sm font-medium rounded-lg transition-colors"
+                       style="color: #1f1f1f; border: 1px solid #e6e6e6;">
+                        Reset
+                    </a>
+                </div>
+            </div>
+        </form>
+
+        <turbo-frame id="egg-logs-list" src="{{ route('eggs.logging.logs', request()->only(['cage_id', 'cage_slot_id', 'breed', 'logged_via'])) }}" loading="lazy">
             @include('egg-logging._logs-skeleton')
         </turbo-frame>
     </x-card>
@@ -34,14 +98,19 @@
 
 @push('scripts')
 <script>
-function openEditLog(id, date, eggCount, henCount, notes, cageSlotId) {
+function openEditLog(id, date, eggCount, henCount, notes, cageSlotId, sizeSmall, sizeMedium, sizeLarge, sizeJumbo) {
     document.getElementById('editLogForm').action = '/eggs/logging/' + id;
     document.getElementById('editLogDate').value = date;
     document.getElementById('editEggCount').value = eggCount;
     document.getElementById('editHenCount').value = henCount;
     document.getElementById('editNotes').value = notes || '';
+    document.getElementById('editSizeSmall').value = sizeSmall ?? 0;
+    document.getElementById('editSizeMedium').value = sizeMedium ?? 0;
+    document.getElementById('editSizeLarge').value = sizeLarge ?? 0;
+    document.getElementById('editSizeJumbo').value = sizeJumbo ?? 0;
     document.getElementById('editLogModal').style.display = 'flex';
     editComputeHdep();
+    editCheckSizeSum();
     lucide.createIcons();
 }
 

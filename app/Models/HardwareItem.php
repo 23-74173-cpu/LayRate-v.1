@@ -38,4 +38,20 @@ class HardwareItem extends Model
     {
         return $this->belongsTo(CageSlot::class);
     }
+
+    /**
+     * Sensors that can be assigned from inventory:
+     * explicitly spare, or active-but-currently-unassigned.
+     */
+    public function scopeAvailableForAssignment($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('status', 'spare')
+              ->orWhere(function ($q2) {
+                  $q2->where('status', 'active')
+                     ->whereNull('cage_id')
+                     ->whereNull('cage_slot_id');
+              });
+        });
+    }
 }

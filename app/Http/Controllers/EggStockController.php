@@ -79,6 +79,15 @@ class EggStockController extends Controller
             'source_production_log_id' => 'nullable|exists:production_logs,id',
         ]);
 
+        $available = EggStockBatch::getAvailablePool();
+
+        if ($data['count'] > $available) {
+            return response()->json([
+                'success' => false,
+                'errors' => ['count' => ["Only {$available} egg(s) available to stock (logged but not yet stocked)."]],
+            ], 422);
+        }
+
         $batch = EggStockBatch::create($data);
 
         $sizes = ['small', 'medium', 'large', 'jumbo'];
@@ -112,6 +121,21 @@ class EggStockController extends Controller
             'count' => 'required|integer|min:1',
             'harvested_date' => 'required|date',
         ]);
+
+        $oldCount = $batch->count;
+
+        if ($data['count'] > $oldCount) {
+            $increase = $data['count'] - $oldCount;
+            $available = EggStockBatch::getAvailablePool();
+
+            if ($increase > $available) {
+                $message = "Only {$available} additional egg(s) available to stock (logged but not yet stocked).";
+                if ($request->expectsJson() || $request->ajax()) {
+                    return response()->json(['success' => false, 'errors' => ['count' => [$message]]], 422);
+                }
+                return back()->withErrors(['count' => $message])->withInput();
+            }
+        }
 
         $batch->update($data);
 

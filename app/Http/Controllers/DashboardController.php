@@ -8,6 +8,7 @@ use App\Models\FeedConsumptionLog;
 use App\Models\MortalityLog;
 use App\Models\ProductionLog;
 use App\Models\Setting;
+use App\Services\EnvironmentStatusService;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -43,6 +44,7 @@ class DashboardController extends Controller
     private function buildDashboardData(): array
     {
         $today = now()->toDateString();
+        $thresholds = Setting::thresholds();
 
         $gridRows = (int) Setting::get('farm_grid_rows', 4);
         $gridCols = (int) Setting::get('farm_grid_cols', 4);
@@ -87,6 +89,9 @@ class DashboardController extends Controller
         $eggsToday = $todayLogs->sum('egg_count')
             ?: $cages->sum(fn ($c) => $c->today_eggs);
 
+        // Lifetime eggs logged (since day 1)
+        $lifetimeEggs = ProductionLog::sum('egg_count');
+
         // Coop environment averages
         $latestEnv = EnvironmentalLog::whereIn('cage_id', $cages->pluck('id'))
             ->orderByDesc('recorded_at')
@@ -113,17 +118,17 @@ class DashboardController extends Controller
         $mortalityTodayTotal = $mortalityToday->sum();
 
         // Live readings per cage
-        $liveReadings = $cages->map(function ($cage) {
+        $liveReadings = $cages->map(function ($cage) use ($thresholds) {
             $env = $cage->latestEnvironmentLog;
             if (! $env) {
                 return null;
             }
-            $status = 'Normal';
-            if ($env->temperature_c > 30 || $env->humidity_pct > 70) {
-                $status = 'Alert';
-            } elseif ($env->temperature_c > 28.5 || $env->humidity_pct >= 70) {
-                $status = 'Watch';
-            }
+
+            $status = EnvironmentStatusService::summary(
+                $env->temperature_c,
+                $env->humidity_pct,
+                $thresholds
+            );
 
             return (object) [
                 'cage' => $cage->cage_code,
@@ -136,7 +141,7 @@ class DashboardController extends Controller
 
         return compact(
             'cages', 'totalHens', 'todayHdep', 'hdepDelta',
-            'eggsToday', 'avgTemp', 'avgHum', 'feedToday',
+            'eggsToday', 'lifetimeEggs', 'avgTemp', 'avgHum', 'feedToday',
             'mortalityToday', 'mortalityTodayTotal',
             'liveReadings', 'today',
             'gridRows', 'gridCols', 'needsOnboarding'

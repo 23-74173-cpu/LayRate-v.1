@@ -8,6 +8,7 @@ use App\Http\Controllers\CageController;
 use App\Http\Controllers\ChickensController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EggLoggingController;
+use App\Http\Controllers\EggProductionHistoryController;
 use App\Http\Controllers\EggStockController;
 use App\Http\Controllers\EnvironmentController;
 use App\Http\Controllers\FeedController;
@@ -91,6 +92,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/eggs/logging',                        [EggLoggingController::class, 'index'])->name('eggs.logging');
     Route::get('/eggs/logging/logs',                   [EggLoggingController::class, 'logs'])->name('eggs.logging.logs');
     Route::get('/eggs/recent-logs',                    [EggLoggingController::class, 'recentLogs'])->name('eggs.recent-logs');
+    Route::get('/egg-production-history',              [EggProductionHistoryController::class, 'index'])->name('egg-production-history');
     Route::post('/eggs/logging',                       [EggLoggingController::class, 'store'])->name('eggs.logging.store');
     Route::post('/eggs/logging/verify-override',       [EggLoggingController::class, 'verifyOverride'])->name('eggs.logging.verify-override')->middleware('throttle:6,1');
     Route::put('/eggs/logging/{productionLog}',        [EggLoggingController::class, 'update'])->name('eggs.logging.update');
@@ -113,6 +115,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/environment/live-data', [EnvironmentController::class, 'liveData'])->name('environment.live-data');
     Route::get('/environment/logs',      [EnvironmentController::class, 'logs'])->name('environment.logs');
     Route::post('/environment/thresholds', [EnvironmentController::class, 'saveThresholds'])->name('environment.thresholds');
+    Route::post('/environment/egg-weights', [EnvironmentController::class, 'saveEggWeights'])->name('environment.egg-weights');
 
     Route::get('/hardware',                    [HardwareItemController::class, 'index'])->name('hardware.index');
     Route::get('/hardware/live-data',          [HardwareItemController::class, 'liveData'])->name('hardware.live-data');

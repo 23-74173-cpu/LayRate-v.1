@@ -8,11 +8,12 @@ use App\Models\CageSlot;
 use App\Models\EnvironmentalLog;
 use App\Models\FeedBatch;
 use App\Models\FeedConsumptionLog;
-use App\Models\HardwareItem;
 use App\Models\Forecast;
+use App\Models\HardwareItem;
 use App\Models\Hen;
 use App\Models\MortalityLog;
 use App\Models\ProductionLog;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -115,13 +116,15 @@ class DatabaseSeeder extends Seeder
             'CAGE-D' => ['egg_count' => 0, 'hdep' => 0.00],
         ];
 
-        $cageSlots = CageSlot::with('cage')->get()->groupBy(fn($s) => $s->cage->cage_code);
+        $cageSlots = CageSlot::with('cage')->get()->groupBy(fn ($s) => $s->cage->cage_code);
         for ($i = 0; $i < 14; $i++) {
             $date = now()->subDays($i)->toDateString();
             foreach ($cageSlots as $code => $slots) {
                 $base = $slotEggCounts[$code] ?? $slotEggCounts['CAGE-D'];
                 foreach ($slots as $slot) {
-                    if (!$slot->cage->is_active) continue;
+                    if (! $slot->cage->is_active) {
+                        continue;
+                    }
                     $variation = ($i % 3) * 0.3;
                     $eggsPerSlot = max(0, $base['egg_count'] - (int) ($i % 3));
                     $log = ProductionLog::firstOrNew(
@@ -129,11 +132,13 @@ class DatabaseSeeder extends Seeder
                     );
                     $log->cage_slot_id = $slot->id;
                     $log->recorded_by = $user->id;
+                    $isSensor = $i % 2 === 0;
                     $log->fill([
                         'egg_count' => $eggsPerSlot,
                         'hen_count' => $slot->current_occupancy,
-                        'hdep'      => max(0, round($base['hdep'] - $variation, 2)),
-                        'notes'     => $i % 2 === 0 ? 'IR sensor synced' : 'Manual check',
+                        'hdep' => max(0, round($base['hdep'] - $variation, 2)),
+                        'notes' => $isSensor ? 'IR sensor synced' : 'Manual check',
+                        'logged_via' => $isSensor ? 'sensor' : 'manual',
                     ]);
                     $log->save();
                 }
@@ -151,25 +156,25 @@ class DatabaseSeeder extends Seeder
             foreach ($envBase as $code => $base) {
                 $v = ($h % 5) * 0.2;
                 EnvironmentalLog::create([
-                    'cage_id'       => $cages[$code]->id,
-                    'recorded_at'   => $ts,
+                    'cage_id' => $cages[$code]->id,
+                    'recorded_at' => $ts,
                     'temperature_c' => round($base['temp'] - $v, 1),
-                    'humidity_pct'  => round($base['hum']  - $v * 0.5, 1),
+                    'humidity_pct' => round($base['hum'] - $v * 0.5, 1),
                 ]);
             }
         }
 
         $feedConsumption = ['CAGE-A' => 11.4, 'CAGE-B' => 12.4, 'CAGE-C' => 13.4];
         for ($i = 0; $i < 7; $i++) {
-            $date     = now()->subDays($i)->toDateString();
+            $date = now()->subDays($i)->toDateString();
             $batchKey = $i < 3 ? 'F-003' : ($i < 5 ? 'F-002' : 'F-001');
             foreach ($feedConsumption as $code => $kg) {
                 FeedConsumptionLog::firstOrCreate(
                     ['cage_id' => $cages[$code]->id, 'log_date' => $date],
                     [
-                        'feed_batch_id'    => $batches[$batchKey]->id,
+                        'feed_batch_id' => $batches[$batchKey]->id,
                         'feed_consumed_kg' => round($kg + ($i % 3) * 0.2, 1),
-                        'recorded_by'      => $user->id,
+                        'recorded_by' => $user->id,
                     ]
                 );
             }
@@ -214,6 +219,21 @@ class DatabaseSeeder extends Seeder
             $forecast->target_date = $targetDate;
             $forecast->predicted_hdep = round(86.0 + $v, 2);
             $forecast->save();
+        }
+
+        // Default egg-weight configuration used for FCR egg-mass estimation.
+        $eggWeights = [
+            'egg_weight_small' => ['value' => 50, 'label' => 'Average Egg Weight — Small (g)'],
+            'egg_weight_medium' => ['value' => 58, 'label' => 'Average Egg Weight — Medium (g)'],
+            'egg_weight_large' => ['value' => 65, 'label' => 'Average Egg Weight — Large (g)'],
+            'egg_weight_jumbo' => ['value' => 73, 'label' => 'Average Egg Weight — Jumbo (g)'],
+            'egg_weight_fallback' => ['value' => 60, 'label' => 'Average Egg Weight — Fallback (g)'],
+        ];
+        foreach ($eggWeights as $key => $meta) {
+            Setting::firstOrCreate(
+                ['key' => $key],
+                ['value' => $meta['value'], 'label' => $meta['label']]
+            );
         }
     }
 }

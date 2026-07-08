@@ -21,8 +21,9 @@
     {{-- ── Tabs ── --}}
     <div id="feed-tabs-nav" class="mb-5">
         <x-underline-tabs :tabs="[
-            'batches'     => ['label' => 'Feed Batches',     'icon' => 'folder',   'onclick' => 'feedSwitchTab(\'batches\')'],
-            'consumption' => ['label' => 'Daily Consumption','icon' => 'utensils','onclick' => 'feedSwitchTab(\'consumption\')'],
+            'batches'     => ['label' => 'Feed Batches',     'icon' => 'folder',    'onclick' => 'feedSwitchTab(\'batches\')'],
+            'consumption' => ['label' => 'Daily Consumption','icon' => 'utensils', 'onclick' => 'feedSwitchTab(\'consumption\')'],
+            'fcr'         => ['label' => 'FCR',              'icon' => 'scale',     'onclick' => 'feedSwitchTab(\'fcr\')'],
         ]" active="{{ request()->get('tab', 'batches') }}" />
     </div>
 
@@ -44,6 +45,14 @@
                 }
             }
         }
+
+        (function() {
+            const params = new URLSearchParams(window.location.search);
+            const tab = params.get('tab') || 'batches';
+            if (document.getElementById('tab-' + tab)) {
+                feedSwitchTab(tab);
+            }
+        })();
     </script>
 
     {{-- Feed Batches Panel --}}
@@ -164,6 +173,103 @@
                     <span class="px-2 py-1 text-[#9CA3AF]">Next ›</span>
                     @endif
                 </div>
+            </div>
+            @endif
+        </div>
+    </div>
+
+    {{-- FCR Panel --}}
+    <div id="tab-fcr" class="tab-panel hidden">
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+                <div>
+                    <h3 class="text-sm font-semibold text-[#333333]">Feed Conversion Ratio</h3>
+                    <p class="text-xs text-[#6B7280]">kg feed ÷ kg egg mass (lower is better)</p>
+                </div>
+
+                <form method="GET" action="{{ route('feed') }}" class="flex flex-wrap items-center gap-3">
+                    <input type="hidden" name="tab" value="fcr">
+                    @if($preselectedCageId)
+                    <input type="hidden" name="cage_id" value="{{ $preselectedCageId }}">
+                    @endif
+
+                    <select name="fcr_cage_id" onchange="this.form.submit()"
+                            class="border border-[#D9D9D9] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[#002D5E]">
+                        @foreach($fcrCages as $c)
+                        <option value="{{ $c->id }}" {{ $fcrCageId == $c->id ? 'selected' : '' }}>
+                            {{ $c->cage_code }}
+                        </option>
+                        @endforeach
+                    </select>
+
+                    <div class="flex items-center gap-1">
+                        @foreach(['day' => 'Day', 'week' => 'Week', 'month' => 'Month'] as $value => $label)
+                        <a href="{{ route('feed', array_merge(request()->only(['cage_id']), ['tab' => 'fcr', 'fcr_cage_id' => $fcrCageId, 'fcr_group_by' => $value])) }}"
+                           class="text-xs px-3 py-1.5 rounded-full border transition-colors {{ $fcrGroupBy === $value ? 'bg-[#002D5E] text-white border-[#002D5E]' : 'border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]' }}">
+                            {{ $label }}
+                        </a>
+                        @endforeach
+                    </div>
+                </form>
+            </div>
+
+            {{-- Current-period summary card --}}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+                <div class="bg-[#F9F9F7] rounded-lg border border-[#D9D9D9] p-4">
+                    <div class="text-xs tracking-wider text-[#6B7280] mb-1">FCR (THIS {{ strtoupper($fcrGroupBy) }})</div>
+                    <div class="text-3xl tracking-tight text-[#333333]">
+                        {{ $fcrCurrent !== null ? number_format($fcrCurrent, 2) : 'N/A' }}
+                    </div>
+                    @if($fcrCurrent === null)
+                    <div class="text-xs text-[#9CA3AF] mt-1">No egg mass logged for this period</div>
+                    @else
+                    <div class="text-xs text-[#6B7280] mt-1">lower is better</div>
+                    @endif
+                </div>
+                <div class="bg-[#F9F9F7] rounded-lg border border-[#D9D9D9] p-4">
+                    <div class="text-xs tracking-wider text-[#6B7280] mb-1">FEED CONSUMED</div>
+                    <div class="text-3xl tracking-tight text-[#333333]">{{ number_format($fcrTimeline->sum('feed_kg'), 1) }} <span class="text-xl">kg</span></div>
+                    <div class="text-xs text-[#6B7280] mt-1">shown periods</div>
+                </div>
+                <div class="bg-[#F9F9F7] rounded-lg border border-[#D9D9D9] p-4">
+                    <div class="text-xs tracking-wider text-[#6B7280] mb-1">EST. EGG MASS</div>
+                    <div class="text-3xl tracking-tight text-[#333333]">{{ number_format($fcrTimeline->sum('egg_mass_kg'), 2) }} <span class="text-xl">kg</span></div>
+                    <div class="text-xs text-[#6B7280] mt-1">from egg counts + weights</div>
+                </div>
+            </div>
+
+            @if($fcrTimeline->isEmpty())
+            <div class="text-center py-10 text-sm text-[#6B7280]">
+                No feed or production data for {{ $fcrCage?->cage_code ?? 'the selected cage' }}.
+            </div>
+            @else
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
+                            <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Period</th>
+                            <th class="text-right text-xs text-[#6B7280] px-5 py-3 font-medium">Feed (kg)</th>
+                            <th class="text-right text-xs text-[#6B7280] px-5 py-3 font-medium">Egg Mass (kg)</th>
+                            <th class="text-right text-xs text-[#6B7280] px-5 py-3 font-medium">FCR</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($fcrTimeline as $row)
+                        <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
+                            <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $row['label'] }}</td>
+                            <td class="px-5 py-3.5 text-sm text-right text-[#333333]">{{ number_format($row['feed_kg'], 1) }}</td>
+                            <td class="px-5 py-3.5 text-sm text-right text-[#333333]">{{ number_format($row['egg_mass_kg'], 2) }}</td>
+                            <td class="px-5 py-3.5 text-sm text-right font-medium {{ $row['fcr'] === null ? 'text-[#9CA3AF]' : 'text-[#333333]' }}">
+                                @if($row['fcr'] === null)
+                                <span title="No eggs logged in this period">N/A</span>
+                                @else
+                                {{ number_format($row['fcr'], 2) }}
+                                @endif
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
             @endif
         </div>

@@ -32,8 +32,8 @@ class CageController extends Controller
 
         $nextCageCode = $this->generateCageCode();
 
-        // Available (spare) sensors per type — hardware inventory stock minus assigned
-        $spareCounts = HardwareItem::where('status', 'spare')
+        // Available (spare or active-unassigned) sensors per type — hardware inventory stock minus assigned
+        $spareCounts = HardwareItem::availableForAssignment()
             ->selectRaw('device_type, COUNT(*) as c')
             ->groupBy('device_type')
             ->pluck('c', 'device_type');
@@ -141,7 +141,7 @@ class CageController extends Controller
             }
 
             if (count($slotsNeedingSensor) > 0) {
-                $spareIr = HardwareItem::where('device_type', 'IR_breakbeam')->where('status', 'spare')->count();
+                $spareIr = HardwareItem::where('device_type', 'IR_breakbeam')->availableForAssignment()->count();
                 if (count($slotsNeedingSensor) > $spareIr) {
                     return back()->withInput()->withErrors([
                         'slots' => 'Only '.$spareIr.' IR break-beam sensor(s) available in inventory, but '.count($slotsNeedingSensor).' requested.',
@@ -164,7 +164,7 @@ class CageController extends Controller
 
             if ($target > $current->count()) {
                 $needed = $target - $current->count();
-                $spareDht = HardwareItem::where('device_type', 'DHT22')->where('status', 'spare')->count();
+                $spareDht = HardwareItem::where('device_type', 'DHT22')->availableForAssignment()->count();
                 if ($needed > $spareDht) {
                     return back()->withInput()->withErrors([
                         'dht22_count' => "Only {$spareDht} DHT22 sensor(s) available in inventory, but {$needed} more requested.",
@@ -192,7 +192,8 @@ class CageController extends Controller
     {
         return DB::transaction(function () use ($deviceType, $cageId, $cageSlotId) {
             $item = HardwareItem::where('device_type', $deviceType)
-                ->where('status', 'spare')
+                ->availableForAssignment()
+                ->orderByRaw("CASE WHEN status = 'spare' THEN 0 ELSE 1 END")
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->first();
@@ -305,8 +306,8 @@ class CageController extends Controller
         return response()->json([
             'dht22' => $dht22,
             'spare' => [
-                'IR_breakbeam' => HardwareItem::where('device_type', 'IR_breakbeam')->where('status', 'spare')->count(),
-                'DHT22'        => HardwareItem::where('device_type', 'DHT22')->where('status', 'spare')->count(),
+                'IR_breakbeam' => HardwareItem::where('device_type', 'IR_breakbeam')->availableForAssignment()->count(),
+                'DHT22'        => HardwareItem::where('device_type', 'DHT22')->availableForAssignment()->count(),
             ],
         ]);
     }
