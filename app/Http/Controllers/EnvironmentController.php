@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Cage;
 use App\Models\EnvironmentalLog;
 use App\Models\Setting;
+use App\Services\EnvironmentStatusService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -28,8 +29,8 @@ class EnvironmentController extends Controller
             $env = $cage->latestEnvironmentLog;
             if (! $env) return null;
 
-            $tempStatus = $this->tempStatus($env->temperature_c, $thresholds);
-            $humStatus  = $this->humStatus($env->humidity_pct, $thresholds);
+            $tempStatus = EnvironmentStatusService::tempStatus($env->temperature_c, $thresholds);
+            $humStatus = EnvironmentStatusService::humStatus($env->humidity_pct, $thresholds);
 
             $status = 'Normal';
             if ($tempStatus === 'Alert' || $humStatus === 'Alert') $status = 'Alert';
@@ -72,6 +73,8 @@ class EnvironmentController extends Controller
 
     public function logs()
     {
+        $thresholds = Setting::thresholds();
+
         $summaryLogs = EnvironmentalLog::selectRaw("
                 DATE_FORMAT(recorded_at, '%Y-%m-%d %H:00') as time_slot,
                 ROUND(AVG(temperature_c), 1) as avg_temp,
@@ -83,7 +86,7 @@ class EnvironmentController extends Controller
             ->limit(10)
             ->get();
 
-        return view('environment._logs', compact('summaryLogs'));
+        return view('environment._logs', compact('summaryLogs', 'thresholds'));
     }
 
     public function saveThresholds(Request $request)
@@ -120,18 +123,5 @@ class EnvironmentController extends Controller
         return redirect()->route('environment')
             ->with('success', 'Egg weights saved.');
     }
-
-    private function tempStatus(float $temp, array $t): string
-    {
-        if ($temp > $t['temp_max']) return 'Alert';
-        if ($temp > $t['temp_max'] - 1.5) return 'Watch';
-        return 'OK';
-    }
-
-    private function humStatus(float $hum, array $t): string
-    {
-        if ($hum > $t['hum_max']) return 'Alert';
-        if ($hum >= $t['hum_max']) return 'Watch';
-        return 'OK';
-    }
 }
+

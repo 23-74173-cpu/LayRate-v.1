@@ -15,10 +15,9 @@
             <tbody>
                 @forelse($summaryLogs as $log)
                 @php
-                    $s = ($log->avg_temp > 30 || $log->avg_hum > 70) ? 'Alert'
-                       : (($log->avg_temp > 28.5 || $log->avg_hum >= 70) ? 'Warning' : 'Normal');
-                    $sBg  = $s === 'Normal' ? '#D5E8D4' : ($s === 'Warning' ? '#FFF3CD' : '#F8D7DA');
-                    $sTxt = $s === 'Normal' ? '#2D6A4F'  : ($s === 'Warning' ? '#856404' : '#721C24');
+                    $s = \App\Services\EnvironmentStatusService::summary($log->avg_temp, $log->avg_hum, $thresholds);
+                    $sBg  = $s === 'Normal' ? '#D5E8D4' : ($s === 'Watch' ? '#FFF3CD' : '#F8D7DA');
+                    $sTxt = $s === 'Normal' ? '#2D6A4F'  : ($s === 'Watch' ? '#856404' : '#721C24');
                 @endphp
                 <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
                     <td class="px-5 py-3 text-sm text-[#333333] font-mono">{{ $log->time_slot }}</td>
