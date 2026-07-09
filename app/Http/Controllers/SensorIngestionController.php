@@ -74,12 +74,16 @@ class SensorIngestionController extends Controller
                         continue;
                     }
 
-                    $envLog = EnvironmentalLog::create([
-                        'cage_id' => $hardwareItem->cage_id,
-                        'recorded_at' => $recordedAt,
-                        'temperature_c' => (float) $reading['temperature_c'],
-                        'humidity_pct' => (float) $reading['humidity_pct'],
-                    ]);
+                    $envLog = EnvironmentalLog::updateOrCreate(
+                        [
+                            'cage_id' => $hardwareItem->cage_id,
+                            'recorded_at' => $recordedAt,
+                        ],
+                        [
+                            'temperature_c' => (float) $reading['temperature_c'],
+                            'humidity_pct' => (float) $reading['humidity_pct'],
+                        ]
+                    );
 
                     EnvironmentAlertService::check($envLog);
 
@@ -103,12 +107,16 @@ class SensorIngestionController extends Controller
                     $reportedCount = (int) $reading['count'];
                     $actualOccupancy = $slot->current_occupancy;
 
-                    SensorOccupancyReading::create([
-                        'hardware_item_id' => $hardwareItem->id,
-                        'cage_slot_id' => $slot->id,
-                        'reported_count' => $reportedCount,
-                        'recorded_at' => $recordedAt,
-                    ]);
+                    SensorOccupancyReading::updateOrCreate(
+                        [
+                            'hardware_item_id' => $hardwareItem->id,
+                            'recorded_at' => $recordedAt,
+                        ],
+                        [
+                            'cage_slot_id' => $slot->id,
+                            'reported_count' => $reportedCount,
+                        ]
+                    );
 
                     if ($reportedCount !== $actualOccupancy) {
                         self::createOccupancyMismatchAlert($slot, $reportedCount, $actualOccupancy, $recordedAt);

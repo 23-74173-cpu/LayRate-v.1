@@ -327,6 +327,82 @@ class SensorIngestionTest extends TestCase
         $this->assertNoTestEnvironmentalLogs();
     }
 
+    public function test_partial_batch_valid_persist_invalid_reported(): void
+    {
+        $item = $this->dht22Item();
+        $key = $this->deviceKey();
+
+        $response = $this->postReadings([
+            'readings' => [
+                [
+                    'serial_number' => 'DHT22-TEST-001',
+                    'temperature_c' => 26.0,
+                    'humidity_pct' => 60.0,
+                ],
+                [
+                    'serial_number' => 'DHT22-MISSING-001',
+                    'temperature_c' => 99.0,
+                    'humidity_pct' => 99.0,
+                ],
+            ],
+            'recorded_at' => now()->toDateTimeString(),
+        ], $key);
+
+        $response->assertStatus(207);
+        $response->assertJsonPath('accepted', 1);
+        $response->assertJsonPath('processed.0.serial_number', 'DHT22-TEST-001');
+        $response->assertJsonPath('errors.0', fn ($msg) => str_contains($msg, 'DHT22-MISSING-001'));
+
+        // Valid reading persisted; invalid one did not.
+        $this->assertDatabaseHas('environmental_logs', [
+            'cage_id' => $this->cage->id,
+            'temperature_c' => 26.0,
+            'humidity_pct' => 60.0,
+        ]);
+
+        $this->assertDatabaseMissing('environmental_logs', [
+            'temperature_c' => 99.0,
+            'humidity_pct' => 99.0,
+        ]);
+    }
+
+    public function test_duplicate_submission_is_idempotent(): void
+    {
+        $item = $this->dht22Item();
+        $key = $this->deviceKey();
+
+        $payload = [
+            'readings' => [
+                [
+                    'serial_number' => 'DHT22-TEST-001',
+                    'temperature_c' => 31.0,
+                    'humidity_pct' => 62.0,
+                ],
+            ],
+            'recorded_at' => now()->toDateTimeString(),
+        ];
+
+        $this->postReadings($payload, $key)->assertOk();
+        $this->postReadings($payload, $key)->assertOk();
+
+        // Only one EnvironmentalLog row despite two identical submissions.
+        $this->assertEquals(
+            1,
+            EnvironmentalLog::where('cage_id', $this->cage->id)
+                ->where('temperature_c', 31.0)
+                ->where('humidity_pct', 62.0)
+                ->count()
+        );
+
+        // Only one threshold alert should have been created.
+        $this->assertEquals(
+            1,
+            Alert::where('cage_id', $this->cage->id)
+                ->where('alert_type', 'temperature_high')
+                ->count()
+        );
+    }
+
     public function test_malformed_payload_returns_validation_error_without_writes(): void
     {
         $this->dht22Item();
