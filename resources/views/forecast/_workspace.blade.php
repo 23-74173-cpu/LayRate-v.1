@@ -6,18 +6,29 @@
         'breed' => $breed ?? '',
         default => $cageCode,
     };
-    $showForecast = session('forecast_generated', false);
+    $showForecast = $showForecast ?? session('forecast_generated', false);
     $chartTitle = $showForecast ? 'HISTORICAL DATA VS FORECASTED EGG COUNT' : 'HISTORICAL EGG COUNT';
 @endphp
 
 <turbo-frame id="forecast-workspace">
 <div class="space-y-5">
+    @php
+        $workspaceSuccess = $successMessage ?? null;
+    @endphp
+
+    @if($workspaceSuccess)
+    <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-800 flex items-start gap-2">
+        <i data-lucide="check-circle" class="w-4 h-4 text-green-600 shrink-0 mt-0.5"></i>
+        <span>{{ $workspaceSuccess }}</span>
+    </div>
+    @endif
+
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
 
         {{-- ── Inputs Panel ── --}}
         <x-card>
             <div class="text-xs tracking-wider text-[#6B7280] mb-4">FORECAST INPUTS</div>
-            <form method="POST" action="{{ route('forecast.generate') }}" id="forecastForm" data-turbo="false">
+            <form method="POST" action="{{ route('forecast.generate') }}" id="forecastForm" data-turbo-stream>
                 @csrf
                 <input type="hidden" name="scope" value="{{ $scope }}" id="formScope">
                 <input type="hidden" name="cage" value="{{ $cageCode }}" id="formCage">

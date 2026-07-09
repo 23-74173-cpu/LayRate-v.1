@@ -36,7 +36,7 @@
 
         <div class="flex items-center gap-2">
             {{-- Month selector --}}
-            <form method="GET" action="{{ request()->url() }}" class="flex items-center gap-2" data-turbo-frame="production-calendar" data-turbo-action="advance">
+            <form method="GET" action="{{ route('forecast') }}" class="flex items-center gap-2" data-turbo-frame="production-calendar" data-turbo-action="advance">
                 @foreach(request()->except(['month','year']) as $key => $value)
                     @if(is_array($value))
                         @foreach($value as $v)
@@ -70,6 +70,20 @@
                 <a href="{{ $todayUrl }}" data-turbo-frame="production-calendar" data-turbo-action="advance" class="text-xs px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
                     Today
                 </a>
+
+                <form method="POST" action="{{ route('forecast.clear') }}" class="inline" data-turbo-stream onsubmit="return confirm('Clear all forecast badges from the calendar for the current selection?');">
+                    @csrf
+                    <input type="hidden" name="scope" value="{{ $scope }}">
+                    @if($scope === 'cage')
+                    <input type="hidden" name="cage" value="{{ $cageCode }}">
+                    @elseif($scope === 'breed')
+                    <input type="hidden" name="breed" value="{{ $breed }}">
+                    @endif
+                    <button type="submit" class="text-xs px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors flex items-center gap-1.5">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        Clear
+                    </button>
+                </form>
         </div>
     </div>
 
@@ -107,10 +121,12 @@
                     // Leading days from previous month
                     $prevMonth = $calendarMonth->copy()->subMonthNoOverflow();
                     for ($i = $startOffset - 1; $i >= 0; $i--) {
+                        $day = $prevMonth->daysInMonth - $i;
+                        $dateString = $prevMonth->copy()->setDay($day)->format('Y-m-d');
                         $calendarCells->push([
-                            'day' => $prevMonth->daysInMonth - $i,
+                            'day' => $day,
                             'currentMonth' => false,
-                            'dateString' => null,
+                            'dateString' => $dateString,
                             'isToday' => false,
                             'forecast' => null,
                         ]);
@@ -129,11 +145,13 @@
                     }
 
                     // Trailing days from next month
+                    $nextMonth = $calendarMonth->copy()->addMonthNoOverflow();
                     for ($day = 1; $day <= $endOffset; $day++) {
+                        $dateString = $nextMonth->copy()->setDay($day)->format('Y-m-d');
                         $calendarCells->push([
                             'day' => $day,
                             'currentMonth' => false,
-                            'dateString' => null,
+                            'dateString' => $dateString,
                             'isToday' => false,
                             'forecast' => null,
                         ]);
@@ -153,11 +171,11 @@
                             if (!$cell['currentMonth']) {
                                 $dayClasses = $baseClasses . ' border-[#F0F0F0] bg-[#F9F9F7] opacity-60';
                             } elseif ($hasForecast) {
-                                $dayClasses = $baseClasses . ' border-[#A8D5A2] bg-[#EBF5E9] ' . ($isSelectable ? 'hover:bg-[#D5E8D4]/60 cursor-pointer' : '');
+                                $dayClasses = $baseClasses . ' border-[#A8D5A2] bg-[#EBF5E9] ' . ($isSelectable ? 'hover:bg-[#D5E8D4]/60 cursor-pointer' : 'cursor-not-allowed');
                             } elseif ($cell['isToday']) {
-                                $dayClasses = $baseClasses . ' border-[#002D5E] bg-[#002D5E]/5';
+                                $dayClasses = $baseClasses . ' border-[#002D5E] bg-[#002D5E]/5 cursor-not-allowed';
                             } else {
-                                $dayClasses = $baseClasses . ' border-[#F0F0F0] bg-white ' . ($isSelectable ? 'hover:border-[#002D5E] cursor-pointer' : 'hover:border-[#D9D9D9]');
+                                $dayClasses = $baseClasses . ' border-[#F0F0F0] bg-white ' . ($isSelectable ? 'hover:border-[#002D5E] cursor-pointer' : 'hover:border-[#D9D9D9] cursor-not-allowed');
                             }
                             $dayNumberClasses = 'text-xs sm:text-sm ';
                             if ($cell['isToday']) {
@@ -171,7 +189,9 @@
                             }
                         @endphp
                         <div class="{{ $dayClasses }}"
-                             @if($isSelectable) data-date="{{ $cell['dateString'] }}" onclick="window.openForecastDayModal('{{ $cell['dateString'] }}')" @endif>
+                             data-date="{{ $cell['dateString'] }}"
+                             data-selectable="{{ $isSelectable ? 'true' : 'false' }}"
+                             onclick="window.handleForecastDayClick('{{ $cell['dateString'] }}', {{ $isSelectable ? 'true' : 'false' }})">
                             <div class="flex items-center gap-1">
                                 <span class="{{ $dayNumberClasses }}">{{ $cell['day'] }}</span>
                                 @if($cell['isToday'])
@@ -235,7 +255,7 @@
                 This will forecast egg count for the selected date only, using the current scope
                 (<span class="font-medium text-[#333333]">{{ $scope === 'farm' ? 'Whole Farm' : ($scope === 'breed' ? $breed : $cageCode) }}</span>).
             </p>
-            <form method="POST" action="{{ route('forecast.generate') }}" id="forecastDayForm" data-turbo="false">
+            <form method="POST" action="{{ route('forecast.generate') }}" id="forecastDayForm" data-turbo-stream>
                 @csrf
                 <input type="hidden" name="scope" value="{{ $scope }}">
                 <input type="hidden" name="horizon" value="1">
@@ -274,13 +294,51 @@
             if (modal) modal.classList.add('hidden');
         }
 
+        function parseLocalDate(dateString) {
+            const [y, m, d] = dateString.split('-').map(Number);
+            return new Date(y, m - 1, d);
+        }
+
+        function formatAlertDate(dateString) {
+            const date = parseLocalDate(dateString);
+            return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+        }
+
         window.openForecastDayModal = function(dateString) {
             if (!modal || !dateDisplay || !startInput) return;
             startInput.value = dateString;
-            const date = new Date(dateString + 'T00:00:00');
-            dateDisplay.textContent = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+            dateDisplay.textContent = formatAlertDate(dateString);
             modal.classList.remove('hidden');
             if (window.lucide) lucide.createIcons();
+        };
+
+        window.handleForecastDayClick = function(dateString, isSelectable) {
+            if (isSelectable) {
+                window.openForecastDayModal(dateString);
+                return;
+            }
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const maxDate = new Date(today);
+            maxDate.setDate(today.getDate() + 30);
+            const tomorrow = new Date(today);
+            tomorrow.setDate(today.getDate() + 1);
+
+            const clicked = parseLocalDate(dateString);
+            let message = '';
+
+            if (clicked < tomorrow) {
+                message = 'Forecasting is only available for future dates. Please select a date starting from tomorrow.';
+            } else if (clicked > maxDate) {
+                message = 'Custom forecasts can only be generated up to 30 days from today (' +
+                          maxDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) +
+                          '). Please select a date within this range.';
+            } else {
+                message = 'This date cannot be forecast. Please select a date between tomorrow and 30 days from today.';
+            }
+
+            alert(message);
         };
 
         if (closeBtn) closeBtn.addEventListener('click', closeModal);

@@ -18,6 +18,30 @@ class ForecastController extends Controller
 {
     public function index(Request $request)
     {
+        $viewData = $this->buildForecastViewData($request);
+
+        if ($request->header('Turbo-Frame') === 'production-calendar') {
+            return view('forecast._calendar', $viewData);
+        }
+
+        if ($request->header('Turbo-Frame') === 'forecast-workspace') {
+            return view('forecast._workspace', $viewData);
+        }
+
+        $label = match ($viewData['scope']) {
+            'farm'  => 'Whole Farm',
+            'breed' => $viewData['breed'] ?? '',
+            default => $viewData['cageCode'],
+        };
+
+        return view('forecast', $viewData)->with('label', $label);
+    }
+
+    /**
+     * Build the full view-data array used by the forecast page and its frames.
+     */
+    private function buildForecastViewData(Request $request): array
+    {
         $scope     = $request->get('scope', 'cage');
         $horizon   = (int) $request->get('horizon', 7);
 
@@ -60,18 +84,7 @@ class ForecastController extends Controller
                 ->whereNull('cage_id')->whereNull('breed')
                 ->orderBy('target_date')->limit($horizon)->get();
 
-            $viewData = compact('scope', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate');
-
-            if ($request->header('Turbo-Frame') === 'production-calendar') {
-                return view('forecast._calendar', $viewData);
-            }
-
-            if ($request->header('Turbo-Frame') === 'forecast-workspace') {
-                return view('forecast._workspace', $viewData);
-            }
-
-            return view('forecast', $viewData)
-                ->with('label', 'Whole Farm');
+            return compact('scope', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate');
         }
 
         if ($scope === 'breed' && $breed) {
@@ -80,18 +93,7 @@ class ForecastController extends Controller
                 ->whereNull('cage_id')->where('breed', $breed)
                 ->orderBy('target_date')->limit($horizon)->get();
 
-            $viewData = compact('scope', 'cageCode', 'breed', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate');
-
-            if ($request->header('Turbo-Frame') === 'production-calendar') {
-                return view('forecast._calendar', $viewData);
-            }
-
-            if ($request->header('Turbo-Frame') === 'forecast-workspace') {
-                return view('forecast._workspace', $viewData);
-            }
-
-            return view('forecast', $viewData)
-                ->with('label', $breed);
+            return compact('scope', 'cageCode', 'breed', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate');
         }
 
         $cage = Cage::where('cage_code', $cageCode)->first();
@@ -104,17 +106,7 @@ class ForecastController extends Controller
             ->whereNull('breed')
             ->orderBy('target_date')->limit($horizon)->get();
 
-        $viewData = compact('scope', 'cage', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate');
-
-        if ($request->header('Turbo-Frame') === 'production-calendar') {
-            return view('forecast._calendar', $viewData);
-        }
-
-        if ($request->header('Turbo-Frame') === 'forecast-workspace') {
-            return view('forecast._workspace', $viewData);
-        }
-
-        return view('forecast', $viewData);
+        return compact('scope', 'cage', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate');
     }
 
     public function downloadTemplate(Request $request)
@@ -233,13 +225,13 @@ class ForecastController extends Controller
 
                 $result = $this->generateForecast(null, 'ALL', null, $historical, $horizon, true, $startDate);
 
-                return redirect()->route('forecast', array_merge(
+                $successMessage = $startDate ? 'Single-day whole-farm forecast generated.' : 'Whole-farm forecast generated.';
+                $redirectParams = array_merge(
                     ['scope' => 'farm', 'horizon' => $horizon],
                     $startDate ? ['start_date' => $startDate] : []
-                ))->with('success', $startDate ? 'Single-day whole-farm forecast generated.' : 'Whole-farm forecast generated.')
-                    ->with('forecast_generated', true)
-                    ->with('forecast_metrics', $result['metrics'])
-                    ->with('recommended_model', $result['recommended_model']);
+                );
+
+                return $this->respondAfterGenerate($request, $redirectParams, $successMessage, $result);
             }
 
             if ($scope === 'breed' && $breed) {
@@ -250,13 +242,13 @@ class ForecastController extends Controller
 
                 $result = $this->generateForecast(null, 'ALL', $breed, $historical, $horizon, true, $startDate);
 
-                return redirect()->route('forecast', array_merge(
+                $successMessage = $startDate ? "Single-day {$breed} forecast generated." : "{$breed} forecast generated.";
+                $redirectParams = array_merge(
                     ['scope' => 'breed', 'breed' => $breed, 'horizon' => $horizon],
                     $startDate ? ['start_date' => $startDate] : []
-                ))->with('success', $startDate ? "Single-day {$breed} forecast generated." : "{$breed} forecast generated.")
-                    ->with('forecast_generated', true)
-                    ->with('forecast_metrics', $result['metrics'])
-                    ->with('recommended_model', $result['recommended_model']);
+                );
+
+                return $this->respondAfterGenerate($request, $redirectParams, $successMessage, $result);
             }
 
             $cage = Cage::where('cage_code', $cageCode)->first();
@@ -273,13 +265,13 @@ class ForecastController extends Controller
 
             $result = $this->generateForecast($cage, $cageCode, null, $historical, $horizon, true, $startDate);
 
-            return redirect()->route('forecast', array_merge(
+            $successMessage = $startDate ? 'Single-day forecast generated.' : 'Forecast generated.';
+            $redirectParams = array_merge(
                 ['scope' => 'cage', 'cage' => $cageCode, 'horizon' => $horizon],
                 $startDate ? ['start_date' => $startDate] : []
-            ))->with('success', $startDate ? 'Single-day forecast generated.' : 'Forecast generated.')
-                ->with('forecast_generated', true)
-                ->with('forecast_metrics', $result['metrics'])
-                ->with('recommended_model', $result['recommended_model']);
+            );
+
+            return $this->respondAfterGenerate($request, $redirectParams, $successMessage, $result);
         } catch (ProcessFailedException $e) {
             return redirect()->back()
                 ->with('error', 'Forecast process failed: ' . $e->getMessage());
@@ -287,6 +279,91 @@ class ForecastController extends Controller
             return redirect()->back()
                 ->with('error', $e->getMessage());
         }
+    }
+
+    /**
+     * After a successful forecast generation, either return Turbo Streams for a
+     * smooth in-place update or fall back to a traditional redirect.
+     */
+    private function respondAfterGenerate(Request $request, array $redirectParams, string $successMessage, array $result)
+    {
+        if ($this->wantsTurboStream($request)) {
+            $request->query->add($redirectParams);
+            $viewData = $this->buildForecastViewData($request);
+            $viewData['successMessage'] = $successMessage;
+            $viewData['showForecast'] = true;
+            $viewData['metrics'] = $result['metrics'];
+            $viewData['recommendedModel'] = $result['recommended_model'];
+
+            return $this->renderTurboStream($viewData);
+        }
+
+        return redirect()->route('forecast', $redirectParams)
+            ->with('success', $successMessage)
+            ->with('forecast_generated', true)
+            ->with('forecast_metrics', $result['metrics'])
+            ->with('recommended_model', $result['recommended_model']);
+    }
+
+    /**
+     * Determine whether the request expects a Turbo Stream response.
+     */
+    private function wantsTurboStream(Request $request): bool
+    {
+        $accept = $request->header('Accept', '');
+        return str_contains($accept, 'text/vnd.turbo-stream.html');
+    }
+
+    /**
+     * Build a Turbo Stream response that updates the workspace and calendar frames.
+     */
+    private function renderTurboStream(array $viewData): \Illuminate\Http\Response
+    {
+        $workspaceHtml = view('forecast._workspace', $viewData)->render();
+        $calendarHtml  = view('forecast._calendar', $viewData)->render();
+
+        $stream = '';
+        $stream .= '<turbo-stream action="replace" target="forecast-workspace"><template>' . $workspaceHtml . '</template></turbo-stream>';
+        $stream .= '<turbo-stream action="replace" target="production-calendar"><template>' . $calendarHtml . '</template></turbo-stream>';
+
+        return response($stream)->header('Content-Type', 'text/vnd.turbo-stream.html');
+    }
+
+    public function clear(Request $request)
+    {
+        $scope = $request->get('scope', 'cage');
+        $breed = $request->get('breed');
+        $cageCode = $request->get('cage', 'ALL');
+
+        $query = Forecast::where('forecast_date', now()->toDateString());
+
+        if ($scope === 'farm') {
+            $query->whereNull('cage_id')->whereNull('breed');
+        } elseif ($scope === 'breed' && $breed) {
+            $query->whereNull('cage_id')->where('breed', $breed);
+        } else {
+            $cage = Cage::where('cage_code', $cageCode)->first();
+            if ($cage) {
+                $query->where('cage_id', $cage->id)->whereNull('breed');
+            } else {
+                $query->whereNull('cage_id')->whereNull('breed');
+            }
+        }
+
+        $deleted = $query->delete();
+        $successMessage = $deleted > 0 ? 'Forecast cleared from the calendar.' : 'No forecast to clear for the current selection.';
+
+        if ($this->wantsTurboStream($request)) {
+            $viewData = $this->buildForecastViewData($request);
+            $viewData['successMessage'] = $successMessage;
+            $viewData['showForecast'] = false;
+
+            return $this->renderTurboStream($viewData);
+        }
+
+        return redirect()->back()
+            ->with('success', $successMessage)
+            ->with('forecast_generated', false);
     }
 
     public function import(Request $request)

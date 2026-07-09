@@ -213,6 +213,9 @@
     });
 
     function initForecastLoading() {
+        if (window.__layrateForecastLoadingInitialized) return;
+        window.__layrateForecastLoadingInitialized = true;
+
         const STORAGE_KEYS = {
             startTime: 'layrate_forecast_start_time',
             expectedDuration: 'layrate_forecast_expected_duration_ms',
@@ -226,6 +229,7 @@
 
         const MIN_DURATION = 3000;
         const MAX_DURATION = 280000;
+        const FORECAST_FORM_IDS = ['forecastForm', 'forecastDayForm'];
 
         function resolveExpectedDuration(scope, horizon) {
             const saved = localStorage.getItem(STORAGE_KEYS.expectedDuration);
@@ -254,10 +258,6 @@
 
         recordActualDuration();
 
-        const forms = [
-            { id: 'forecastForm', btnId: 'generateForecastBtn', btnTextId: 'btnText' },
-            { id: 'forecastDayForm', btnId: null, btnTextId: null },
-        ];
         const overlay = document.getElementById('forecastLoadingOverlay');
         const progressBar = document.getElementById('forecastProgressBar');
         const progressText = document.getElementById('forecastProgressText');
@@ -265,101 +265,120 @@
 
         if (!overlay) return;
 
-        function attachLoadingHandler(config) {
-            const form = document.getElementById(config.id);
-            if (!form) return;
+        let progressFrameId = null;
+        let startTime = null;
+        let isLoading = false;
 
-            const btn = config.btnId ? document.getElementById(config.btnId) : null;
-            const btnText = config.btnTextId ? document.getElementById(config.btnTextId) : null;
-
-            if (form._forecastSubmitHandler) {
-                form.removeEventListener('submit', form._forecastSubmitHandler);
-            }
-
-            let isSubmitting = false;
-
-            const handler = function(e) {
-                if (isSubmitting) {
-                    e.preventDefault();
-                    return;
-                }
-
-                isSubmitting = true;
-                e.preventDefault();
-
-                const scopeInput = form.querySelector('input[name="scope"]');
-                const horizonRadio = form.querySelector('input[name="horizon"]:checked');
-                const horizonHidden = form.querySelector('input[type="hidden"][name="horizon"]');
-                const scope = scopeInput ? scopeInput.value : 'cage';
-                let horizon = 7;
-                if (horizonRadio) {
-                    horizon = parseInt(horizonRadio.value, 10) || 7;
-                } else if (horizonHidden) {
-                    horizon = parseInt(horizonHidden.value, 10) || 7;
-                }
-                const expectedDuration = resolveExpectedDuration(scope, horizon);
-
-                overlay.classList.remove('hidden');
-                if (btn) btn.disabled = true;
-                if (btnText) {
-                    btnText.textContent = 'Generating...';
-                }
-
-                sessionStorage.setItem(STORAGE_KEYS.startTime, Date.now());
-
-                progressBar.style.width = '0%';
-                progressText.textContent = '0%';
-                if (statusText) {
-                    statusText.textContent = 'Loading historical data...';
-                }
-
-                const statusMessages = [
-                    'Loading historical data...',
-                    'Training SARIMA model...',
-                    'Training XGBoost model...',
-                    'Evaluating model performance...',
-                    'Generating predictions...',
-                    'Saving forecast results...',
-                ];
-
-                const startTime = Date.now();
-
-                function updateProgress() {
-                    const elapsed = Date.now() - startTime;
-                    const ratio = Math.min(elapsed / expectedDuration, 1);
-                    const eased = 1 - Math.pow(1 - ratio, 3);
-                    const progress = Math.min(95, eased * 95);
-
-                    progressBar.style.width = progress + '%';
-                    progressText.textContent = Math.round(progress) + '%';
-
-                    const messageIndex = Math.min(
-                        statusMessages.length - 1,
-                        Math.floor(ratio * statusMessages.length)
-                    );
-                    if (statusText) {
-                        statusText.textContent = statusMessages[messageIndex];
-                    }
-
-                    if (progress < 95) {
-                        requestAnimationFrame(updateProgress);
-                    }
-                }
-
-                requestAnimationFrame(updateProgress);
-
-                requestAnimationFrame(function() {
-                    setTimeout(function() {
-                        form.submit();
-                    }, 50);
-                });
-            };
-
-            form._forecastSubmitHandler = handler;
-            form.addEventListener('submit', handler);
+        function isForecastForm(element) {
+            return element && FORECAST_FORM_IDS.includes(element.id);
         }
 
-        forms.forEach(attachLoadingHandler);
+        function getSubmitButton(form) {
+            if (form.id === 'forecastForm') {
+                return document.getElementById('generateForecastBtn');
+            }
+            return form.querySelector('button[type="submit"]');
+        }
+
+        function startLoading(form) {
+            if (isLoading) return;
+            isLoading = true;
+            const scopeInput = form.querySelector('input[name="scope"]');
+            const horizonRadio = form.querySelector('input[name="horizon"]:checked');
+            const horizonHidden = form.querySelector('input[type="hidden"][name="horizon"]');
+            const scope = scopeInput ? scopeInput.value : 'cage';
+            let horizon = 7;
+            if (horizonRadio) {
+                horizon = parseInt(horizonRadio.value, 10) || 7;
+            } else if (horizonHidden) {
+                horizon = parseInt(horizonHidden.value, 10) || 7;
+            }
+            const expectedDuration = resolveExpectedDuration(scope, horizon);
+
+            overlay.classList.remove('hidden');
+            sessionStorage.setItem(STORAGE_KEYS.startTime, Date.now());
+
+            const submitBtn = getSubmitButton(form);
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.dataset.originalText = submitBtn.innerHTML;
+                const btnTextSpan = submitBtn.querySelector('span');
+                if (btnTextSpan) {
+                    btnTextSpan.textContent = 'Generating...';
+                }
+            }
+
+            progressBar.style.width = '0%';
+            if (progressText) progressText.textContent = '0%';
+            if (statusText) statusText.textContent = 'Loading historical data...';
+
+            const statusMessages = [
+                'Loading historical data...',
+                'Training SARIMA model...',
+                'Training XGBoost model...',
+                'Evaluating model performance...',
+                'Generating predictions...',
+                'Saving forecast results...',
+            ];
+
+            startTime = Date.now();
+
+            function updateProgress() {
+                const elapsed = Date.now() - startTime;
+                const ratio = Math.min(elapsed / expectedDuration, 1);
+                const eased = 1 - Math.pow(1 - ratio, 3);
+                const progress = Math.min(95, eased * 95);
+
+                progressBar.style.width = progress + '%';
+                if (progressText) progressText.textContent = Math.round(progress) + '%';
+
+                const messageIndex = Math.min(
+                    statusMessages.length - 1,
+                    Math.floor(ratio * statusMessages.length)
+                );
+                if (statusText) {
+                    statusText.textContent = statusMessages[messageIndex];
+                }
+
+                if (progress < 95) {
+                    progressFrameId = requestAnimationFrame(updateProgress);
+                }
+            }
+
+            progressFrameId = requestAnimationFrame(updateProgress);
+        }
+
+        function stopLoading(form) {
+            if (progressFrameId) {
+                cancelAnimationFrame(progressFrameId);
+                progressFrameId = null;
+            }
+            overlay.classList.add('hidden');
+            startTime = null;
+            isLoading = false;
+
+            if (form) {
+                const submitBtn = getSubmitButton(form);
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    if (submitBtn.dataset.originalText) {
+                        submitBtn.innerHTML = submitBtn.dataset.originalText;
+                    }
+                }
+            }
+        }
+
+        document.addEventListener('turbo:submit-start', function(e) {
+            if (isForecastForm(e.target)) {
+                startLoading(e.target);
+            }
+        });
+
+        document.addEventListener('turbo:submit-end', function(e) {
+            if (isForecastForm(e.target)) {
+                stopLoading(e.target);
+            }
+        });
     }
 
     document.addEventListener('turbo:load', function() {
@@ -602,7 +621,7 @@
     });
 
     document.addEventListener('turbo:frame-load', function(e) {
-        if (e.target.id === 'forecast-workspace') {
+        if (e.target.id === 'forecast-workspace' || e.target.id === 'production-calendar') {
             initForecastLoading();
         }
     });
