@@ -154,9 +154,12 @@
 
     {{-- Daily Consumption Panel --}}
     <div id="tab-consumption" class="tab-panel hidden">
-        <div class="flex items-center justify-between mb-3">
-            <div></div>
-            <button onclick="openConsumptionModal(null, null, '{{ now()->toDateString() }}', null, null)"
+        <div class="flex items-center justify-end gap-2 mb-3">
+            <button onclick="openFarmEntryModal(null, null, '{{ now()->toDateString() }}', null, null, null)"
+                    class="flex items-center gap-1.5 text-xs border border-[#D9D9D9] px-3 py-1.5 rounded-lg hover:bg-[#F5F6F8] transition-colors text-[#6B7280]">
+                <i data-lucide="scale" class="w-3.5 h-3.5"></i> Log Whole-Farm Feeding
+            </button>
+            <button onclick="openConsumptionModal(null, null, '{{ now()->toDateString() }}', null, null, null)"
                     class="flex items-center gap-1.5 text-xs border border-[#D9D9D9] px-3 py-1.5 rounded-lg hover:bg-[#F5F6F8] transition-colors text-[#6B7280]">
                 <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Consumption
             </button>
@@ -166,9 +169,11 @@
                 <thead>
                     <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
                         <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Date</th>
+                        <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Time</th>
                         <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Cage</th>
                         <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Batch</th>
                         <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Consumed (kg)</th>
+                        <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Source</th>
                         <th class="px-5 py-3"></th>
                     </tr>
                 </thead>
@@ -176,30 +181,50 @@
                     @forelse($consumptionLogs as $log)
                     @php
                         $cColor = match($log->cage?->cage_code ?? '') { 'CAGE-A'=>'#2D7D46','CAGE-B'=>'#1D4E8F','CAGE-C'=>'#C2703E','CAGE-D'=>'#6B4C8A',default=>'#6B7280' };
+                        $isDistributed = $log->source === 'distributed';
                     @endphp
-                    <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
+                    <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8] {{ $isDistributed ? 'bg-amber-50/50' : '' }}">
                         <td class="px-5 py-3 text-sm font-mono text-[#333333]">{{ $log->log_date->format('Y-m-d') }}</td>
+                        <td class="px-5 py-3 text-sm text-[#6B7280]">{{ $log->log_time?->format('H:i') ?? '—' }}</td>
                         <td class="px-5 py-3 text-sm font-medium" style="color:{{ $cColor }}">{{ $log->cage?->cage_code ?? '—' }}</td>
                         <td class="px-5 py-3 text-sm text-[#333333]">{{ $log->feedBatch->batch_code }}</td>
                         <td class="px-5 py-3 text-sm text-[#333333]">{{ number_format($log->feed_consumed_kg, 2) }} kg</td>
                         <td class="px-5 py-3">
+                            @if($isDistributed)
+                                <span class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200" title="Estimated from whole-farm entry">
+                                    <i data-lucide="git-branch" class="w-3 h-3"></i> Estimated
+                                </span>
+                            @else
+                                <span class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-100">
+                                    <i data-lucide="check-circle-2" class="w-3 h-3"></i> Direct
+                                </span>
+                            @endif
+                        </td>
+                        <td class="px-5 py-3">
                             <div class="flex items-center gap-1">
-                                <button onclick="openConsumptionModal({{ $log->cage_id }}, {{ $log->feed_batch_id }}, '{{ $log->log_date->format('Y-m-d') }}', {{ $log->feed_consumed_kg }}, {{ $log->id }})"
-                                        class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Edit consumption">
-                                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                                </button>
-                                <form method="POST" action="{{ route('feed.consumption.destroy', $log) }}"
-                                      data-confirm="Delete this consumption record?" data-confirm-action="Delete">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" class="p-1.5 rounded-full hover:bg-red-50 transition-colors" style="color: #a39e98;" aria-label="Delete consumption log">
-                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                @if($isDistributed)
+                                    <button onclick="openFarmEntryModal({{ $log->farm_feed_entry_id }}, {{ $log->feed_batch_id }}, '{{ $log->log_date->format('Y-m-d') }}', '{{ $log->log_time?->format('H:i') ?? '' }}', {{ $log->farmFeedEntry?->total_kg ?? 'null' }}, {{ $log->farmFeedEntry?->unit_cost ?? 'null' }})"
+                                            class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Edit whole-farm entry">
+                                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                                     </button>
-                                </form>
+                                @else
+                                    <button onclick="openConsumptionModal({{ $log->cage_id }}, {{ $log->feed_batch_id }}, '{{ $log->log_date->format('Y-m-d') }}', '{{ $log->log_time?->format('H:i') ?? '' }}', {{ $log->feed_consumed_kg }}, {{ $log->id }})"
+                                            class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Edit consumption">
+                                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                    <form method="POST" action="{{ route('feed.consumption.destroy', $log) }}"
+                                          data-confirm="Delete this consumption record?" data-confirm-action="Delete">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="p-1.5 rounded-full hover:bg-red-50 transition-colors" style="color: #a39e98;" aria-label="Delete consumption log">
+                                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                        </button>
+                                    </form>
+                                @endif
                             </div>
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="5" class="px-5 py-8 text-center text-sm text-[#6B7280]">No consumption data yet.</td></tr>
+                    <tr><td colspan="7" class="px-5 py-8 text-center text-sm text-[#6B7280]">No consumption data yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -326,28 +351,42 @@
         </div>
     </div>
 
-    {{-- Populate consumption modal selects --}}
+    {{-- Populate consumption and farm-entry modal selects --}}
     <script>
         (function() {
             var cageSelect = document.querySelector('#consumptionModal select[name="cage_id"]');
             var batchSelect = document.querySelector('#consumptionModal select[name="feed_batch_id"]');
-            if (!cageSelect || cageSelect.options.length > 1) return;
+            var farmBatchSelect = document.querySelector('#farmEntryModal select[name="feed_batch_id"]');
 
             var cages = @json($cages->map(fn($c) => ['id' => $c->id, 'code' => $c->cage_code]));
-            cages.forEach(function(c) {
-                var opt = document.createElement('option');
-                opt.value = c.id;
-                opt.textContent = c.code;
-                cageSelect.appendChild(opt);
-            });
-
             var batches = @json($batches->map(fn($b) => ['id' => $b->id, 'code' => $b->batch_code]));
-            batches.forEach(function(b) {
-                var opt = document.createElement('option');
-                opt.value = b.id;
-                opt.textContent = b.code;
-                batchSelect.appendChild(opt);
-            });
+
+            if (cageSelect && cageSelect.options.length <= 1) {
+                cages.forEach(function(c) {
+                    var opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = c.code;
+                    cageSelect.appendChild(opt);
+                });
+            }
+
+            if (batchSelect && batchSelect.options.length <= 1) {
+                batches.forEach(function(b) {
+                    var opt = document.createElement('option');
+                    opt.value = b.id;
+                    opt.textContent = b.code;
+                    batchSelect.appendChild(opt);
+                });
+            }
+
+            if (farmBatchSelect && farmBatchSelect.options.length <= 1) {
+                batches.forEach(function(b) {
+                    var opt = document.createElement('option');
+                    opt.value = b.id;
+                    opt.textContent = b.code;
+                    farmBatchSelect.appendChild(opt);
+                });
+            }
         })();
     </script>
 

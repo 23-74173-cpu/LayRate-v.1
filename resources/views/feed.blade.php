@@ -144,8 +144,10 @@
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
         </div>
-        <form method="POST" action="{{ route('feed.consumption.store') }}" onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Saving\u2026')">
+        <form id="consumptionForm" method="POST" action="{{ route('feed.consumption.store') }}" onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Saving\u2026')">
             @csrf
+            <input type="hidden" name="_method" id="consumptionMethod" value="POST">
+
             <label class="block text-sm text-[#333333] mb-1.5">Cage <span class="text-[#9B1C24]">*</span></label>
             <select name="cage_id" required
                     class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
@@ -158,9 +160,18 @@
                 <option value="">Select batch...</option>
             </select>
 
-            <label class="block text-sm text-[#333333] mb-1.5">Date <span class="text-[#9B1C24]">*</span></label>
-            <input name="log_date" type="date" value="{{ now()->toDateString() }}" required
-                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm text-[#333333] mb-1.5">Date <span class="text-[#9B1C24]">*</span></label>
+                    <input name="log_date" type="date" value="{{ now()->toDateString() }}" required
+                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                </div>
+                <div>
+                    <label class="block text-sm text-[#333333] mb-1.5">Time</label>
+                    <input name="log_time" type="time"
+                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                </div>
+            </div>
 
             <label class="block text-sm text-[#333333] mb-1.5">Consumed (kg) <span class="text-[#9B1C24]">*</span></label>
             <input name="feed_consumed_kg" type="number" step="0.01" min="0" required
@@ -173,6 +184,63 @@
                         onmouseover="this.style.backgroundColor='#f6f5f4'"
                         onmouseout="this.style.backgroundColor='transparent'">Cancel</button>
                 <button type="submit" class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity" style="background-color: #0075de;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- Whole-Farm Entry Modal --}}
+<div id="farmEntryModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeFarmEntryModal()"></div>
+    <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+        <div class="flex items-center justify-between mb-5">
+            <h2 id="farmEntryModalTitle" class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Log Whole-Farm Feeding</h2>
+            <button type="button" onclick="closeFarmEntryModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+            </button>
+        </div>
+        <form id="farmEntryForm" method="POST" action="{{ route('feed.farm-entry.store') }}" onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Saving\u2026')">
+            @csrf
+            <input type="hidden" name="_method" id="farmEntryMethod" value="POST">
+
+            <label class="block text-sm text-[#333333] mb-1.5">Feed Batch <span class="text-[#9B1C24]">*</span></label>
+            <select name="feed_batch_id" required
+                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                <option value="">Select batch...</option>
+            </select>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm text-[#333333] mb-1.5">Date <span class="text-[#9B1C24]">*</span></label>
+                    <input name="log_date" type="date" value="{{ now()->toDateString() }}" required
+                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                </div>
+                <div>
+                    <label class="block text-sm text-[#333333] mb-1.5">Time</label>
+                    <input name="log_time" type="time"
+                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                </div>
+            </div>
+
+            <label class="block text-sm text-[#333333] mb-1.5">Total Fed (kg) <span class="text-[#9B1C24]">*</span></label>
+            <input name="total_kg" type="number" step="0.01" min="0" required
+                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+
+            <label class="block text-sm text-[#333333] mb-1.5">Unit Cost (per kg)</label>
+            <input name="unit_cost" type="number" step="0.01" min="0"
+                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-5 focus:outline-none focus:border-[#002D5E]">
+
+            <p class="text-xs text-[#6B7280] mb-5">
+                This will proportionally split the total across active cages by hen count. Distributed rows appear as "estimated" in the consumption log.
+            </p>
+
+            <div class="flex gap-3 mt-5">
+                <button type="button" onclick="closeFarmEntryModal()"
+                        class="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors"
+                        style="color: #1f1f1f; border: 1px solid #e6e6e6;"
+                        onmouseover="this.style.backgroundColor='#f6f5f4'"
+                        onmouseout="this.style.backgroundColor='transparent'">Cancel</button>
+                <button type="submit" class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity" style="background-color: #0075de;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Distribute</button>
             </div>
         </form>
     </div>
@@ -204,10 +272,20 @@ function closeEditBatchModal() {
     document.getElementById('editBatchModal').classList.remove('flex');
 }
 
-function openConsumptionModal(cageId, batchId, date, kg, entryId) {
+function openConsumptionModal(cageId, batchId, date, time, kg, entryId) {
     var title = entryId ? 'Edit Consumption' : 'Log Consumption';
     document.getElementById('consumptionModalTitle').textContent = title;
-    document.getElementById('consumptionId').value = entryId || '';
+
+    var form = document.getElementById('consumptionForm');
+    var method = document.getElementById('consumptionMethod');
+
+    if (entryId) {
+        form.action = '/feed/consumption/' + entryId;
+        method.value = 'PUT';
+    } else {
+        form.action = '{{ route('feed.consumption.store') }}';
+        method.value = 'POST';
+    }
 
     var cageSelect = document.querySelector('#consumptionModal select[name="cage_id"]');
     var batchSelect = document.querySelector('#consumptionModal select[name="feed_batch_id"]');
@@ -215,6 +293,7 @@ function openConsumptionModal(cageId, batchId, date, kg, entryId) {
     cageSelect.value = cageId || '';
     batchSelect.value = batchId || '';
     document.querySelector('#consumptionModal input[name="log_date"]').value = date || '{{ now()->toDateString() }}';
+    document.querySelector('#consumptionModal input[name="log_time"]').value = time || '';
     document.querySelector('#consumptionModal input[name="feed_consumed_kg"]').value = kg || '';
 
     document.getElementById('consumptionModal').classList.remove('hidden');
@@ -226,17 +305,48 @@ function closeConsumptionModal() {
     document.getElementById('consumptionModal').classList.remove('flex');
 }
 
-(function() {
-    if (window.__feedModalEscapeBound) return;
-    window.__feedModalEscapeBound = true;
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeAddBatchModal();
-            closeEditBatchModal();
-            closeConsumptionModal();
-        }
-    });
-})();
+function openFarmEntryModal(entryId, batchId, date, time, totalKg, unitCost) {
+    var title = entryId ? 'Edit Whole-Farm Feeding' : 'Log Whole-Farm Feeding';
+    document.getElementById('farmEntryModalTitle').textContent = title;
+
+    var form = document.getElementById('farmEntryForm');
+    var method = document.getElementById('farmEntryMethod');
+
+    if (entryId) {
+        form.action = '/feed/farm-entry/' + entryId;
+        method.value = 'PUT';
+    } else {
+        form.action = '{{ route('feed.farm-entry.store') }}';
+        method.value = 'POST';
+    }
+
+    document.querySelector('#farmEntryModal select[name="feed_batch_id"]').value = batchId || '';
+    document.querySelector('#farmEntryModal input[name="log_date"]').value = date || '{{ now()->toDateString() }}';
+    document.querySelector('#farmEntryModal input[name="log_time"]').value = time || '';
+    document.querySelector('#farmEntryModal input[name="total_kg"]').value = totalKg || '';
+    document.querySelector('#farmEntryModal input[name="unit_cost"]').value = unitCost || '';
+
+    document.getElementById('farmEntryModal').classList.remove('hidden');
+    document.getElementById('farmEntryModal').classList.add('flex');
+}
+
+function closeFarmEntryModal() {
+    document.getElementById('farmEntryModal').classList.add('hidden');
+    document.getElementById('farmEntryModal').classList.remove('flex');
+}
+
+    (function() {
+        if (window.__feedModalEscapeBound) return;
+        window.__feedModalEscapeBound = true;
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeAddBatchModal();
+                closeEditBatchModal();
+                closeConsumptionModal();
+                closeFarmEntryModal();
+            }
+        });
+    })();
 
 function deleteBatch(id) {
     fetch('/feed/batch/' + id + '/delete-check')
