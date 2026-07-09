@@ -6,6 +6,13 @@
 
     <x-page-header title="Hardware Inventory" subtitle="Manage sensors, relays, and other hardware devices">
         <x-slot:actions>
+            <button onclick="openDeviceModal()"
+                    class="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full text-white transition-opacity"
+                    style="background-color: #6B4C8A;"
+                    onmouseover="this.style.opacity='0.85'"
+                    onmouseout="this.style.opacity='1'">
+                <i data-lucide="cpu" class="w-4 h-4"></i> Add Ingestion Device
+            </button>
             <button onclick="openAddModal()"
                     class="flex items-center gap-2 px-6 py-2 text-sm font-medium rounded-full text-white transition-opacity"
                     style="background-color: #0075de;"
@@ -15,6 +22,75 @@
             </button>
         </x-slot:actions>
     </x-page-header>
+
+    @if(session('new_device_key'))
+    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5">
+        <div class="flex items-start gap-3">
+            <i data-lucide="key-round" class="w-5 h-5 text-amber-700 mt-0.5"></i>
+            <div class="flex-1">
+                <p class="text-sm font-medium text-amber-900">New API key for {{ $devices->firstWhere('id', session('new_device_id'))?->name ?? 'device' }}</p>
+                <p class="text-xs text-amber-800 mt-1">Copy this key now. It will not be shown again.</p>
+                <div class="mt-2 flex items-center gap-2">
+                    <code class="flex-1 bg-white border border-amber-200 rounded-lg px-3 py-2 text-sm font-mono text-amber-900 break-all">{{ session('new_device_key') }}</code>
+                    <button type="button" onclick="navigator.clipboard.writeText('{{ session('new_device_key') }}')" class="text-xs px-3 py-2 rounded-lg bg-amber-200 text-amber-900 hover:bg-amber-300 transition-colors">Copy</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Ingestion Devices --}}
+    <div class="bg-white rounded-xl border border-[#e6e6e6] overflow-hidden mb-5">
+        <div class="px-6 py-4 border-b border-[#e6e6e6] bg-[#f9f9f7]">
+            <h2 class="text-sm font-semibold text-[#333333]">Ingestion Devices (Raspberry Pi)</h2>
+            <p class="text-xs text-[#6B7280] mt-0.5">Each device gets one API key for the LAN sensor endpoint.</p>
+        </div>
+        <table class="w-full">
+            <thead>
+                <tr class="border-b border-[#e6e6e6] bg-[#f9f9f7]">
+                    <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Name</th>
+                    <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Status</th>
+                    <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Linked Sensors</th>
+                    <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Key</th>
+                    <th class="text-right text-xs text-[#6B7280] px-6 py-3 font-medium">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($devices as $device)
+                <tr class="border-b border-[#e6e6e6] hover:bg-black/[0.02]">
+                    <td class="px-6 py-3.5 text-sm font-medium text-[#333333]">{{ $device->name }}</td>
+                    <td class="px-6 py-3.5">
+                        @if($device->is_active)
+                            <span class="text-xs px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200">Active</span>
+                        @else
+                            <span class="text-xs px-2 py-0.5 rounded-full border bg-gray-100 text-gray-500 border-gray-200">Inactive</span>
+                        @endif
+                    </td>
+                    <td class="px-6 py-3.5 text-sm text-[#6B7280]">{{ $device->hardware_items_count }}</td>
+                    <td class="px-6 py-3.5 text-sm font-mono text-[#6B7280]">••••••••••••</td>
+                    <td class="px-6 py-3.5 text-right">
+                        <div class="flex items-center justify-end gap-1">
+                            <form method="POST" action="{{ route('devices.regenerate-key', $device) }}" class="inline">
+                                @csrf
+                                <button type="submit" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Regenerate key" onclick="return confirm('Regenerate API key? The old key will stop working immediately.')">
+                                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ route('devices.destroy', $device) }}" class="inline" data-confirm="Delete this ingestion device?" data-confirm-action="Delete">
+                                @csrf @method('DELETE')
+                                <button type="submit" class="p-1.5 rounded-full hover:bg-red-50 transition-colors" style="color: #a39e98;" aria-label="Delete device">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                @empty
+                <tr><td colspan="5" class="px-6 py-8 text-center text-sm text-[#6B7280]">No ingestion devices yet.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
 
     <turbo-frame id="hardware-live-data" src="{{ route('hardware.live-data') }}" loading="lazy">
         @include('hardware._live-data-skeleton')
@@ -53,6 +129,17 @@
                     <input type="text" name="serial_number" required maxlength="100"
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Ingestion Device <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
+                    <select name="device_id"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            style="border-color: #e6e6e6; color: #1f1f1f;">
+                        <option value="">— None —</option>
+                        @foreach($devices as $device)
+                        <option value="{{ $device->id }}">{{ $device->name }}</option>
+                        @endforeach
+                    </select>
                 </div>
                 <div id="addCageSlotGroup" class="hidden">
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Cage Slot</label>
@@ -152,6 +239,17 @@
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                 </div>
+                <div>
+                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Ingestion Device <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
+                    <select name="device_id" id="editDeviceId"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            style="border-color: #e6e6e6; color: #1f1f1f;">
+                        <option value="">— None —</option>
+                        @foreach($devices as $device)
+                        <option value="{{ $device->id }}">{{ $device->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 <div id="editCageSlotGroup" class="hidden">
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Cage Slot</label>
                     <select name="cage_slot_id" id="editCageSlot"
@@ -219,6 +317,41 @@
     </div>
 </div>
 
+{{-- Add Ingestion Device Modal --}}
+<div id="deviceModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeDeviceModal()"></div>
+    <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+        <div class="flex items-center justify-between mb-5">
+            <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Add Ingestion Device</h2>
+            <button onclick="closeDeviceModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+            </button>
+        </div>
+        <form method="POST" action="{{ route('devices.store') }}" onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Creating\u2026')">
+            @csrf
+            <div>
+                <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Device Name</label>
+                <input type="text" name="name" required maxlength="100" placeholder="e.g. Raspberry Pi 4 Farm Hub"
+                       class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                       style="border-color: #e6e6e6; color: #1f1f1f;">
+            </div>
+            <p class="text-xs text-[#6B7280] mt-3">A new API key will be generated and shown once. Save it to the Pi's configuration.</p>
+            <div class="flex gap-3 mt-5">
+                <button type="button" onclick="closeDeviceModal()"
+                        class="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors"
+                        style="color: #1f1f1f; border: 1px solid #e6e6e6;"
+                        onmouseover="this.style.backgroundColor='#f6f5f4'"
+                        onmouseout="this.style.backgroundColor='transparent'">Cancel</button>
+                <button type="submit"
+                        class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity"
+                        style="background-color: #6B4C8A;"
+                        onmouseover="this.style.opacity='0.85'"
+                        onmouseout="this.style.opacity='1'">Create & Show Key</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <x-confirm-modal />
 @endsection
 
@@ -252,7 +385,7 @@ function onEditStatusChange() {
     }
 }
 
-function openEditModal(id, deviceType, serial, cageId, cageSlotId, installDate, status, calDate) {
+function openEditModal(id, deviceType, serial, cageId, cageSlotId, deviceId, installDate, status, calDate) {
     document.getElementById('editForm').action = '/hardware/' + id;
     document.getElementById('editDeviceType').value = deviceType;
     document.getElementById('editSerial').value = serial;
@@ -265,6 +398,11 @@ function openEditModal(id, deviceType, serial, cageId, cageSlotId, installDate, 
     }
     if (cageSlotId) {
         document.getElementById('editCageSlot').value = cageSlotId;
+    }
+    if (deviceId) {
+        document.getElementById('editDeviceId').value = deviceId;
+    } else {
+        document.getElementById('editDeviceId').value = '';
     }
 
     onEditStatusChange();
@@ -286,6 +424,15 @@ function closeEditModal() {
     document.getElementById('editModal').style.display = 'none';
 }
 
+function openDeviceModal() {
+    document.getElementById('deviceModal').style.display = 'flex';
+    lucide.createIcons();
+}
+
+function closeDeviceModal() {
+    document.getElementById('deviceModal').style.display = 'none';
+}
+
 (function() {
     if (window.__hardwareEscapeBound) return;
     window.__hardwareEscapeBound = true;
@@ -293,6 +440,7 @@ function closeEditModal() {
         if (e.key === 'Escape') {
             closeAddModal();
             closeEditModal();
+            closeDeviceModal();
         }
     });
 })();

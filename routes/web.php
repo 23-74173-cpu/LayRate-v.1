@@ -7,6 +7,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CageController;
 use App\Http\Controllers\ChickensController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\EggLoggingController;
 use App\Http\Controllers\EggProductionHistoryController;
 use App\Http\Controllers\EggStockController;
@@ -122,6 +123,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/hardware',                   [HardwareItemController::class, 'store'])->name('hardware.store');
     Route::put('/hardware/{hardwareItem}',     [HardwareItemController::class, 'update'])->name('hardware.update');
     Route::delete('/hardware/{hardwareItem}',  [HardwareItemController::class, 'destroy'])->name('hardware.destroy');
+
+    Route::middleware('admin')->group(function () {
+        Route::post('/devices',                           [DeviceController::class, 'store'])->name('devices.store');
+        Route::post('/devices/{device}/regenerate-key',   [DeviceController::class, 'regenerateKey'])->name('devices.regenerate-key');
+        Route::delete('/devices/{device}',                [DeviceController::class, 'destroy'])->name('devices.destroy');
+    });
 
     Route::get('/feed',                          [FeedController::class, 'index'])->name('feed');
     Route::get('/feed/live-data',                [FeedController::class, 'liveData'])->name('feed.live-data');
