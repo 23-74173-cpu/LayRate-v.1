@@ -20,6 +20,7 @@ class StoreHardwareItemRequest extends FormRequest
             'serial_number'         => ['required', 'string', 'max:100', Rule::unique('hardware_items', 'serial_number')->ignore($this->route('hardwareItem'))],
             'cage_id'               => 'nullable|exists:cages,id',
             'cage_slot_id'          => 'nullable|exists:cage_slots,id',
+            'device_id'             => 'nullable|exists:devices,id',
             'installation_date'     => 'nullable|date',
             'status'                => ['required', Rule::in(HardwareItem::STATUSES)],
             'last_calibration_date' => 'nullable|date',

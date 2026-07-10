@@ -12,6 +12,7 @@ class HardwareItem extends Model
         'serial_number',
         'cage_id',
         'cage_slot_id',
+        'device_id',
         'installation_date',
         'status',
         'last_calibration_date',
@@ -37,6 +38,11 @@ class HardwareItem extends Model
     public function cageSlot(): BelongsTo
     {
         return $this->belongsTo(CageSlot::class);
+    }
+
+    public function device(): BelongsTo
+    {
+        return $this->belongsTo(Device::class);
     }
 
     /**

@@ -205,20 +205,13 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        $cageASlots = CageSlot::where('cage_id', $cages['CAGE-A']->id)->orderBy('slot_number')->get();
-        $firstSlot = $cageASlots->first();
         $today = now()->toDateString();
         for ($i = 1; $i <= 7; $i++) {
             $v = (($i % 3) - 1) * 0.3;
-            $targetDate = now()->addDays($i)->toDateString();
-            $forecast = Forecast::firstOrNew(
-                ['cage_id' => $cages['CAGE-A']->id, 'forecast_date' => $today, 'target_date' => $targetDate]
+            Forecast::firstOrCreate(
+                ['cage_id' => $cages['CAGE-A']->id, 'forecast_date' => $today, 'target_date' => now()->addDays($i)->toDateString()],
+                ['predicted_egg_count' => round(120.0 + $v, 2)]
             );
-            $forecast->cage_id = $cages['CAGE-A']->id;
-            $forecast->forecast_date = $today;
-            $forecast->target_date = $targetDate;
-            $forecast->predicted_hdep = round(86.0 + $v, 2);
-            $forecast->save();
         }
 
         // Default egg-weight configuration used for FCR egg-mass estimation.

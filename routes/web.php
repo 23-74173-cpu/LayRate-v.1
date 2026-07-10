@@ -7,6 +7,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CageController;
 use App\Http\Controllers\ChickensController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\EggLoggingController;
 use App\Http\Controllers\EggProductionHistoryController;
 use App\Http\Controllers\EggStockController;
@@ -123,6 +124,12 @@ Route::middleware('auth')->group(function () {
     Route::put('/hardware/{hardwareItem}',     [HardwareItemController::class, 'update'])->name('hardware.update');
     Route::delete('/hardware/{hardwareItem}',  [HardwareItemController::class, 'destroy'])->name('hardware.destroy');
 
+    Route::middleware('admin')->group(function () {
+        Route::post('/devices',                           [DeviceController::class, 'store'])->name('devices.store');
+        Route::post('/devices/{device}/regenerate-key',   [DeviceController::class, 'regenerateKey'])->name('devices.regenerate-key');
+        Route::delete('/devices/{device}',                [DeviceController::class, 'destroy'])->name('devices.destroy');
+    });
+
     Route::get('/feed',                          [FeedController::class, 'index'])->name('feed');
     Route::get('/feed/live-data',                [FeedController::class, 'liveData'])->name('feed.live-data');
     Route::post('/feed/batch',                   [FeedController::class, 'storeBatch'])->name('feed.batch.store');
@@ -130,14 +137,19 @@ Route::middleware('auth')->group(function () {
     Route::delete('/feed/batch/{feedBatch}',     [FeedController::class, 'destroyBatch'])->name('feed.batch.destroy');
     Route::get('/feed/batch/{feedBatch}/delete-check', [FeedController::class, 'checkDeleteBatch'])->name('feed.batch.delete-check');
     Route::post('/feed/consumption',             [FeedController::class, 'storeConsumption'])->name('feed.consumption.store');
+    Route::put('/feed/consumption/{feedConsumptionLog}', [FeedController::class, 'updateConsumption'])->name('feed.consumption.update');
     Route::delete('/feed/consumption/{feedConsumptionLog}', [FeedController::class, 'destroyConsumption'])->name('feed.consumption.destroy');
+    Route::post('/feed/farm-entry',              [FeedController::class, 'storeFarmFeedEntry'])->name('feed.farm-entry.store');
+    Route::put('/feed/farm-entry/{farmFeedEntry}', [FeedController::class, 'updateFarmFeedEntry'])->name('feed.farm-entry.update');
+    Route::delete('/feed/farm-entry/{farmFeedEntry}', [FeedController::class, 'destroyFarmFeedEntry'])->name('feed.farm-entry.destroy');
 
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics');
     Route::get('/analytics/charts', [AnalyticsController::class, 'charts'])->name('analytics.charts');
 
-    Route::get('/forecast',           [ForecastController::class, 'index'])->name('forecast');
-    Route::get('/forecast/results',   [ForecastController::class, 'results'])->name('forecast.results');
-    Route::post('/forecast/generate', [ForecastController::class, 'generate'])->name('forecast.generate');
+    Route::get('/forecast',             [ForecastController::class, 'index'])->name('forecast');
+    Route::post('/forecast/generate',   [ForecastController::class, 'generate'])->name('forecast.generate');
+    Route::get('/forecast/template',    [ForecastController::class, 'downloadTemplate'])->name('forecast.template');
+    Route::post('/forecast/import',     [ForecastController::class, 'import'])->name('forecast.import');
 
     Route::get('/account',           [AccountController::class, 'show'])->name('account');
     Route::post('/account/password', [AccountController::class, 'updatePassword'])->name('account.password');

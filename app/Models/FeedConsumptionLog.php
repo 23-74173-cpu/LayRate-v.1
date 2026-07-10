@@ -9,9 +9,23 @@ class FeedConsumptionLog extends Model
 {
     public $timestamps = false;
 
-    protected $fillable = ['cage_id', 'feed_batch_id', 'log_date', 'feed_consumed_kg', 'recorded_by'];
+    protected $fillable = [
+        'cage_id',
+        'feed_batch_id',
+        'log_date',
+        'log_time',
+        'feed_consumed_kg',
+        'recorded_by',
+        'source',
+        'farm_feed_entry_id',
+    ];
 
-    protected $casts = ['log_date' => 'date', 'created_at' => 'datetime'];
+    protected $casts = [
+        'log_date' => 'date',
+        'log_time' => 'datetime:H:i',
+        'created_at' => 'datetime',
+        'feed_consumed_kg' => 'float',
+    ];
 
     public function cage(): BelongsTo
     {
@@ -23,8 +37,18 @@ class FeedConsumptionLog extends Model
         return $this->belongsTo(FeedBatch::class);
     }
 
+    public function farmFeedEntry(): BelongsTo
+    {
+        return $this->belongsTo(FarmFeedEntry::class);
+    }
+
     public function recorder(): BelongsTo
     {
         return $this->belongsTo(User::class, 'recorded_by');
+    }
+
+    public function isDistributed(): bool
+    {
+        return $this->source === 'distributed';
     }
 }
