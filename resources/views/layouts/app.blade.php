@@ -252,30 +252,30 @@
     <div class="flex flex-col flex-1 overflow-hidden">
 
         {{-- TOP HEADER BAR --}}
-        <header id="main-header" data-turbo-permanent class="flex-shrink-0 bg-sidebar-bg h-12 flex items-center justify-between px-4">
+        <header id="main-header" data-turbo-permanent class="flex-shrink-0 bg-surface h-12 flex items-center justify-between px-4 border-b border-hairline shadow-soft">
             <div class="flex items-center gap-3">
                 {{-- Hamburger: visible on ALL screen sizes --}}
-                <button id="sidebar-toggle" class="mr-2 text-white/70 hover:text-white transition-colors p-1 rounded" aria-label="Toggle sidebar">
+                <button id="sidebar-toggle" class="mr-2 text-ink hover:text-ink-muted transition-colors p-1 rounded" aria-label="Toggle sidebar">
                     <i data-lucide="menu" class="w-5 h-5"></i>
                 </button>
-                <nav class="text-xs text-white/60" aria-label="Breadcrumb">
-                    <a href="{{ route('dashboard') }}" class="hover:text-white/90 transition-colors">Home</a>
-                    <span class="mx-1">/</span>
-                    <span id="breadcrumb-current" class="text-white font-medium">{{ $title ?? 'Dashboard' }}</span>
+                <nav class="text-xs text-ink-muted" aria-label="Breadcrumb">
+                    <a href="{{ route('dashboard') }}" class="hover:text-ink transition-colors">Home</a>
+                    <span class="mx-1 text-ink-faint">/</span>
+                    <span id="breadcrumb-current" class="text-ink font-medium">{{ $title ?? 'Dashboard' }}</span>
                 </nav>
             </div>
 
             <div class="flex items-center gap-3">
-                <a href="{{ route('notifications.index') }}" class="relative text-white/70 hover:text-white transition-colors" aria-label="Notifications">
+                <a href="{{ route('notifications.index') }}" class="relative text-ink hover:text-ink-muted transition-colors" aria-label="Notifications">
                     <i data-lucide="bell" class="w-4 h-4"></i>
                     @if($globalAlertCount > 0)
                     <span class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-alert-text text-white text-[8px] rounded-full flex items-center justify-center font-bold">{{ $globalAlertCount }}</span>
                     @endif
                 </a>
-                <div class="flex items-center gap-2 pl-2 border-l border-white/20">
+                <div class="flex items-center gap-2 pl-2 border-l border-hairline">
                     <div class="text-right hidden sm:block">
-                        <div class="text-xs text-white/90 leading-tight">{{ auth()->user()->name }}</div>
-                        <div class="text-xs text-white/50 uppercase tracking-wider">{{ auth()->user()->role }}</div>
+                        <div class="text-xs text-ink leading-tight">{{ auth()->user()->name }}</div>
+                        <div class="text-xs text-ink-muted uppercase tracking-wider">{{ auth()->user()->role }}</div>
                     </div>
                 </div>
             </div>
