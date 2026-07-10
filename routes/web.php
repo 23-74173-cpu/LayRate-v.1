@@ -146,9 +146,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics');
     Route::get('/analytics/charts', [AnalyticsController::class, 'charts'])->name('analytics.charts');
 
-    Route::get('/forecast',           [ForecastController::class, 'index'])->name('forecast');
-    Route::get('/forecast/results',   [ForecastController::class, 'results'])->name('forecast.results');
-    Route::post('/forecast/generate', [ForecastController::class, 'generate'])->name('forecast.generate');
+    Route::get('/forecast',             [ForecastController::class, 'index'])->name('forecast');
+    Route::post('/forecast/generate',   [ForecastController::class, 'generate'])->name('forecast.generate');
+    Route::get('/forecast/template',    [ForecastController::class, 'downloadTemplate'])->name('forecast.template');
+    Route::post('/forecast/import',     [ForecastController::class, 'import'])->name('forecast.import');
 
     Route::get('/account',           [AccountController::class, 'show'])->name('account');
     Route::post('/account/password', [AccountController::class, 'updatePassword'])->name('account.password');

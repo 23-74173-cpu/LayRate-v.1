@@ -9,7 +9,7 @@ class Forecast extends Model
 {
     public $timestamps = false;
 
-    protected $fillable = ['target_date'];
+    protected $fillable = ['cage_id', 'cage_slot_id', 'breed', 'forecast_date', 'target_date', 'predicted_egg_count'];
 
     protected $casts = [
         'forecast_date' => 'date',
