@@ -22,7 +22,7 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Egg Count</label>
                     <input type="number" name="egg_count" id="editEggCount" min="0" required
-                           oninput="editComputeHdep()"
+                           oninput="editComputeHdep(); editCheckSizeSum()"
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                 </div>
@@ -43,6 +43,45 @@
                     <textarea name="notes" id="editNotes" rows="2"
                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1 resize-y"
                               style="border-color: #e6e6e6; color: #1f1f1f;"></textarea>
+                </div>
+
+                {{-- Size Breakdown --}}
+                <div class="border-t pt-4" style="border-color: #e6e6e6;">
+                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-3" style="color: #615d59;">
+                        Size Breakdown
+                        <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span>
+                    </label>
+                    <div class="grid grid-cols-4 gap-2" id="editSizeBreakdown">
+                        <div>
+                            <label class="block text-xs text-center mb-1" style="color: #2D7D46;">Small</label>
+                            <input type="number" name="size_small" id="editSizeSmall" min="0" value="0"
+                                   oninput="editCheckSizeSum()"
+                                   class="w-full border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                   style="border-color: #e6e6e6; color: #1f1f1f;">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-center mb-1" style="color: #1D4E8F;">Medium</label>
+                            <input type="number" name="size_medium" id="editSizeMedium" min="0" value="0"
+                                   oninput="editCheckSizeSum()"
+                                   class="w-full border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                   style="border-color: #e6e6e6; color: #1f1f1f;">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-center mb-1" style="color: #C2703E;">Large</label>
+                            <input type="number" name="size_large" id="editSizeLarge" min="0" value="0"
+                                   oninput="editCheckSizeSum()"
+                                   class="w-full border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                   style="border-color: #e6e6e6; color: #1f1f1f;">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-center mb-1" style="color: #6B4C8A;">Jumbo</label>
+                            <input type="number" name="size_jumbo" id="editSizeJumbo" min="0" value="0"
+                                   oninput="editCheckSizeSum()"
+                                   class="w-full border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                   style="border-color: #e6e6e6; color: #1f1f1f;">
+                        </div>
+                    </div>
+                    <div id="editSizeSumMsg" class="mt-2 text-xs" style="color: #a39e98;">Sum: 0</div>
                 </div>
             </div>
 
@@ -65,3 +104,20 @@
         </form>
     </div>
 </div>
+
+<script>
+function editCheckSizeSum() {
+    const totalEggs = parseInt(document.getElementById('editEggCount').value) || 0;
+    const inputs = ['editSizeSmall', 'editSizeMedium', 'editSizeLarge', 'editSizeJumbo'];
+    let sum = 0;
+    inputs.forEach(function(id) { sum += parseInt(document.getElementById(id).value) || 0; });
+    const msg = document.getElementById('editSizeSumMsg');
+    if (sum === totalEggs) {
+        msg.textContent = 'Sum: ' + sum + ' ✓';
+        msg.style.color = '#1f6b3a';
+    } else {
+        msg.textContent = 'Sum: ' + sum + ' (should be ' + totalEggs + ')';
+        msg.style.color = '#9b1c24';
+    }
+}
+</script>

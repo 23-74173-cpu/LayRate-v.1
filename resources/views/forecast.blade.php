@@ -108,8 +108,10 @@
     </div>
 
     {{-- FAB Toggle --}}
-    <button type="button" id="fabToggle" class="w-[150px] h-[150px] rounded-full bg-[#002D5E] text-white shadow-lg hover:bg-[#001F42] transition-all flex items-center justify-center">
-        <i data-lucide="menu" id="fabIcon" class="w-20 h-20 transition-transform duration-200"></i>
+    <button type="button" id="fabToggle"
+        class="w-16 h-12 rounded-full bg-surface text-ink border border-hairline shadow-soft hover:bg-canvas-soft transition-colors flex items-center justify-center flex-shrink-0"
+        aria-label="Open menu" aria-expanded="false">
+        <i data-lucide="plus" id="fabIcon" class="w-6 h-6 transition-transform duration-200 ease-out"></i>
     </button>
 </div>
 
@@ -195,14 +197,26 @@
     function toggleFab() {
         if (!currentFabMenu) return;
         const isOpen = !currentFabMenu.classList.contains('invisible');
+        const fabToggle = document.getElementById('fabToggle');
+
         if (isOpen) {
             currentFabMenu.classList.add('invisible', 'opacity-0', 'translate-y-4');
             currentFabMenu.classList.remove('opacity-100', 'translate-y-0');
             if (currentFabIcon) currentFabIcon.style.transform = 'rotate(0deg)';
+
+            if (fabToggle) {
+                fabToggle.setAttribute('aria-expanded', 'false');
+                fabToggle.setAttribute('aria-label', 'Open menu');
+            }
         } else {
             currentFabMenu.classList.remove('invisible', 'opacity-0', 'translate-y-4');
             currentFabMenu.classList.add('opacity-100', 'translate-y-0');
             if (currentFabIcon) currentFabIcon.style.transform = 'rotate(45deg)';
+
+            if (fabToggle) {
+                fabToggle.setAttribute('aria-expanded', 'true');
+                fabToggle.setAttribute('aria-label', 'Close menu');
+            }
         }
     }
 

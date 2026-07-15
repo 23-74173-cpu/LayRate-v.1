@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreHardwareItemRequest;
 use App\Models\Cage;
 use App\Models\CageSlot;
+use App\Models\Device;
 use App\Models\HardwareItem;
 
 class HardwareItemController extends Controller
@@ -13,13 +14,14 @@ class HardwareItemController extends Controller
     {
         $cages = Cage::orderBy('cage_code')->get();
         $cageSlots = CageSlot::with('cage')->orderBy('cage_id')->orderBy('slot_number')->get();
+        $devices = Device::withCount('hardwareItems')->orderBy('name')->get();
 
-        return view('hardware.index', compact('cages', 'cageSlots'));
+        return view('hardware.index', compact('cages', 'cageSlots', 'devices'));
     }
 
     public function liveData()
     {
-        $items = HardwareItem::with(['cage', 'cageSlot.cage'])
+        $items = HardwareItem::with(['cage', 'cageSlot.cage', 'device'])
             ->orderBy('status')
             ->orderBy('serial_number')
             ->get();

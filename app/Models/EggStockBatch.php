@@ -7,6 +7,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class EggStockBatch extends Model
 {
+    /**
+     * Farm-wide available egg pool: total eggs logged via ProductionLog
+     * minus total eggs already converted to EggStockBatch records.
+     */
+    public static function getAvailablePool(): int
+    {
+        $logged = ProductionLog::sum('egg_count');
+        $stocked = self::sum('count');
+
+        return max(0, $logged - $stocked);
+    }
     protected $fillable = [
         'egg_size',
         'count',

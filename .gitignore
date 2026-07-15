@@ -40,3 +40,7 @@ __pycache__/
 forecast-api/EggRecord_2026_updated.xlsx
 forecast-api/layrate_forecast_input_updated.xlsx
 .history/
+layrate_forecast_input_updated.xlsx
+/test-results/
+test-results/
+test-results/

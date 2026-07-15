@@ -12,6 +12,7 @@ class HardwareItem extends Model
         'serial_number',
         'cage_id',
         'cage_slot_id',
+        'device_id',
         'installation_date',
         'status',
         'last_calibration_date',
@@ -37,5 +38,26 @@ class HardwareItem extends Model
     public function cageSlot(): BelongsTo
     {
         return $this->belongsTo(CageSlot::class);
+    }
+
+    public function device(): BelongsTo
+    {
+        return $this->belongsTo(Device::class);
+    }
+
+    /**
+     * Sensors that can be assigned from inventory:
+     * explicitly spare, or active-but-currently-unassigned.
+     */
+    public function scopeAvailableForAssignment($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('status', 'spare')
+              ->orWhere(function ($q2) {
+                  $q2->where('status', 'active')
+                     ->whereNull('cage_id')
+                     ->whereNull('cage_slot_id');
+              });
+        });
     }
 }

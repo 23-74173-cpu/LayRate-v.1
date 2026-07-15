@@ -7,7 +7,9 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CageController;
 use App\Http\Controllers\ChickensController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\EggLoggingController;
+use App\Http\Controllers\EggProductionHistoryController;
 use App\Http\Controllers\EggStockController;
 use App\Http\Controllers\EnvironmentController;
 use App\Http\Controllers\FeedController;
@@ -91,6 +93,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/eggs/logging',                        [EggLoggingController::class, 'index'])->name('eggs.logging');
     Route::get('/eggs/logging/logs',                   [EggLoggingController::class, 'logs'])->name('eggs.logging.logs');
     Route::get('/eggs/recent-logs',                    [EggLoggingController::class, 'recentLogs'])->name('eggs.recent-logs');
+    Route::get('/egg-production-history',              [EggProductionHistoryController::class, 'index'])->name('egg-production-history');
     Route::post('/eggs/logging',                       [EggLoggingController::class, 'store'])->name('eggs.logging.store');
     Route::post('/eggs/logging/verify-override',       [EggLoggingController::class, 'verifyOverride'])->name('eggs.logging.verify-override')->middleware('throttle:6,1');
     Route::put('/eggs/logging/{productionLog}',        [EggLoggingController::class, 'update'])->name('eggs.logging.update');
@@ -113,12 +116,19 @@ Route::middleware('auth')->group(function () {
     Route::get('/environment/live-data', [EnvironmentController::class, 'liveData'])->name('environment.live-data');
     Route::get('/environment/logs',      [EnvironmentController::class, 'logs'])->name('environment.logs');
     Route::post('/environment/thresholds', [EnvironmentController::class, 'saveThresholds'])->name('environment.thresholds');
+    Route::post('/environment/egg-weights', [EnvironmentController::class, 'saveEggWeights'])->name('environment.egg-weights');
 
     Route::get('/hardware',                    [HardwareItemController::class, 'index'])->name('hardware.index');
     Route::get('/hardware/live-data',          [HardwareItemController::class, 'liveData'])->name('hardware.live-data');
     Route::post('/hardware',                   [HardwareItemController::class, 'store'])->name('hardware.store');
     Route::put('/hardware/{hardwareItem}',     [HardwareItemController::class, 'update'])->name('hardware.update');
     Route::delete('/hardware/{hardwareItem}',  [HardwareItemController::class, 'destroy'])->name('hardware.destroy');
+
+    Route::middleware('admin')->group(function () {
+        Route::post('/devices',                           [DeviceController::class, 'store'])->name('devices.store');
+        Route::post('/devices/{device}/regenerate-key',   [DeviceController::class, 'regenerateKey'])->name('devices.regenerate-key');
+        Route::delete('/devices/{device}',                [DeviceController::class, 'destroy'])->name('devices.destroy');
+    });
 
     Route::get('/feed',                          [FeedController::class, 'index'])->name('feed');
     Route::get('/feed/live-data',                [FeedController::class, 'liveData'])->name('feed.live-data');
@@ -127,7 +137,11 @@ Route::middleware('auth')->group(function () {
     Route::delete('/feed/batch/{feedBatch}',     [FeedController::class, 'destroyBatch'])->name('feed.batch.destroy');
     Route::get('/feed/batch/{feedBatch}/delete-check', [FeedController::class, 'checkDeleteBatch'])->name('feed.batch.delete-check');
     Route::post('/feed/consumption',             [FeedController::class, 'storeConsumption'])->name('feed.consumption.store');
+    Route::put('/feed/consumption/{feedConsumptionLog}', [FeedController::class, 'updateConsumption'])->name('feed.consumption.update');
     Route::delete('/feed/consumption/{feedConsumptionLog}', [FeedController::class, 'destroyConsumption'])->name('feed.consumption.destroy');
+    Route::post('/feed/farm-entry',              [FeedController::class, 'storeFarmFeedEntry'])->name('feed.farm-entry.store');
+    Route::put('/feed/farm-entry/{farmFeedEntry}', [FeedController::class, 'updateFarmFeedEntry'])->name('feed.farm-entry.update');
+    Route::delete('/feed/farm-entry/{farmFeedEntry}', [FeedController::class, 'destroyFarmFeedEntry'])->name('feed.farm-entry.destroy');
 
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics');
     Route::get('/analytics/charts', [AnalyticsController::class, 'charts'])->name('analytics.charts');

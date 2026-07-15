@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Cage;
 use App\Models\CageSlot;
+use App\Models\EggSizeLog;
+use App\Models\Hen;
 use App\Models\ProductionLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -59,38 +61,72 @@ class EggLoggingController extends Controller
 
     public function recentLogs(Request $request)
     {
-        $cageFilter = $request->query('cage_id');
+        $filters = $this->logFilters($request);
 
         $cages = Cage::where('is_active', 1)->orderBy('cage_code')->get();
+        $cageSlots = CageSlot::with('cage')
+            ->when($filters['cage_id'], fn($q, $cageId) => $q->where('cage_id', $cageId))
+            ->orderBy('cage_id')
+            ->orderBy('slot_number')
+            ->get();
 
-        $logsQuery = ProductionLog::with(['cageSlot.cage', 'overriddenBy', 'recorder'])
-            ->orderByDesc('log_date')
-            ->orderByDesc('created_at');
+        $breeds = \App\Models\Hen::where('is_active', 1)
+            ->selectRaw('distinct breed')
+            ->orderBy('breed')
+            ->pluck('breed');
 
-        if ($cageFilter) {
-            $logsQuery->whereHas('cageSlot', fn($q) => $q->where('cage_id', $cageFilter));
-        }
-
+        $logsQuery = $this->buildFilteredLogsQuery($request);
         $logs = $logsQuery->paginate(20)->withQueryString();
 
-        return view('eggs.recent-logs', compact('logs', 'cages', 'cageFilter'));
+        return view('eggs.recent-logs', compact(
+            'logs', 'cages', 'cageSlots', 'breeds', 'filters'
+        ));
     }
 
     public function logs(Request $request)
     {
-        $cageFilter = $request->query('cage_id');
+        $filters = $this->logFilters($request);
+        $logsQuery = $this->buildFilteredLogsQuery($request);
+        $logs = $logsQuery->paginate(20)->withQueryString();
 
-        $logsQuery = ProductionLog::with(['cageSlot.cage', 'overriddenBy', 'recorder'])
+        return view('egg-logging._logs', compact('logs', 'filters'));
+    }
+
+    private function logFilters(Request $request): array
+    {
+        return [
+            'cage_id' => $request->query('cage_id'),
+            'cage_slot_id' => $request->query('cage_slot_id'),
+            'breed' => $request->query('breed'),
+            'logged_via' => $request->query('logged_via', []),
+        ];
+    }
+
+    private function buildFilteredLogsQuery(Request $request)
+    {
+        $filters = $this->logFilters($request);
+
+        $query = ProductionLog::with(['cageSlot.cage', 'overriddenBy', 'recorder', 'eggSizeLogs'])
             ->orderByDesc('log_date')
             ->orderByDesc('created_at');
 
-        if ($cageFilter) {
-            $logsQuery->whereHas('cageSlot', fn($q) => $q->where('cage_id', $cageFilter));
+        if ($filters['cage_id']) {
+            $query->whereHas('cageSlot', fn($q) => $q->where('cage_id', $filters['cage_id']));
         }
 
-        $logs = $logsQuery->paginate(20)->withQueryString();
+        if ($filters['cage_slot_id']) {
+            $query->where('cage_slot_id', $filters['cage_slot_id']);
+        }
 
-        return view('egg-logging._logs', compact('logs', 'cageFilter'));
+        if ($filters['breed']) {
+            $query->whereHas('cageSlot.hens', fn($q) => $q->where('breed', $filters['breed'])->where('is_active', 1));
+        }
+
+        if (! empty($filters['logged_via'])) {
+            $query->whereIn('logged_via', (array) $filters['logged_via']);
+        }
+
+        return $query;
     }
 
     public function verifyOverride(Request $request)
@@ -124,12 +160,32 @@ class EggLoggingController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'log_date'    => 'required|date',
+            'log_date'     => 'required|date',
             'cage_slot_id' => 'required|exists:cage_slots,id',
-            'egg_count'   => 'required|integer|min:0',
-            'hen_count'   => 'required|integer|min:1',
-            'notes'       => 'nullable|string',
+            'egg_count'    => 'required|integer|min:0',
+            'hen_count'    => 'required|integer|min:1',
+            'notes'        => 'nullable|string',
+            'size_small'   => 'nullable|integer|min:0',
+            'size_medium'  => 'nullable|integer|min:0',
+            'size_large'   => 'nullable|integer|min:0',
+            'size_jumbo'   => 'nullable|integer|min:0',
         ]);
+
+        $sizeSum = (int) ($data['size_small'] ?? 0)
+                 + (int) ($data['size_medium'] ?? 0)
+                 + (int) ($data['size_large'] ?? 0)
+                 + (int) ($data['size_jumbo'] ?? 0);
+
+        $anySizeFilled = ($data['size_small'] ?? null) !== null
+                      || ($data['size_medium'] ?? null) !== null
+                      || ($data['size_large'] ?? null) !== null
+                      || ($data['size_jumbo'] ?? null) !== null;
+
+        if ($anySizeFilled && $sizeSum !== (int) $data['egg_count']) {
+            return redirect()->back()
+                ->withErrors(['size_breakdown' => "Size breakdown sum ({$sizeSum}) must equal total eggs ({$data['egg_count']})."])
+                ->withInput();
+        }
 
         $slot = CageSlot::with('cage')->findOrFail($data['cage_slot_id']);
 
@@ -141,10 +197,15 @@ class EggLoggingController extends Controller
         $log->fill([
             'egg_count' => $data['egg_count'],
             'hen_count' => $data['hen_count'],
-            'hdep'      => round(($data['egg_count'] / $data['hen_count']) * 100, 2),
-            'notes'     => $data['notes'] ?? 'Manual entry',
+            'hdep'       => round(($data['egg_count'] / $data['hen_count']) * 100, 2),
+            'notes'      => $data['notes'] ?? 'Manual entry',
+            // Web form submissions are always manual. Future sensor ingestion must
+            // create ProductionLog records with logged_via = 'sensor' explicitly.
+            'logged_via' => $data['logged_via'] ?? 'manual',
         ]);
         $log->save();
+
+        $this->syncSizeLogs($log, $data);
 
         return redirect()->route('eggs.logging')->with('success', 'Production log saved.');
     }
@@ -152,11 +213,31 @@ class EggLoggingController extends Controller
     public function update(Request $request, ProductionLog $productionLog)
     {
         $data = $request->validate([
-            'log_date'  => 'required|date',
-            'egg_count' => 'required|integer|min:0',
-            'hen_count' => 'required|integer|min:1',
-            'notes'     => 'nullable|string',
+            'log_date'    => 'required|date',
+            'egg_count'   => 'required|integer|min:0',
+            'hen_count'   => 'required|integer|min:1',
+            'notes'       => 'nullable|string',
+            'size_small'  => 'nullable|integer|min:0',
+            'size_medium' => 'nullable|integer|min:0',
+            'size_large'  => 'nullable|integer|min:0',
+            'size_jumbo'  => 'nullable|integer|min:0',
         ]);
+
+        $sizeSum = (int) ($data['size_small'] ?? 0)
+                 + (int) ($data['size_medium'] ?? 0)
+                 + (int) ($data['size_large'] ?? 0)
+                 + (int) ($data['size_jumbo'] ?? 0);
+
+        $anySizeFilled = ($data['size_small'] ?? null) !== null
+                      || ($data['size_medium'] ?? null) !== null
+                      || ($data['size_large'] ?? null) !== null
+                      || ($data['size_jumbo'] ?? null) !== null;
+
+        if ($anySizeFilled && $sizeSum !== (int) $data['egg_count']) {
+            return redirect()->back()
+                ->withErrors(['size_breakdown' => "Size breakdown sum ({$sizeSum}) must equal total eggs ({$data['egg_count']})."])
+                ->withInput();
+        }
 
         $productionLog->update([
             'log_date'  => $data['log_date'],
@@ -166,7 +247,36 @@ class EggLoggingController extends Controller
             'notes'     => $data['notes'] ?? null,
         ]);
 
+        $this->syncSizeLogs($productionLog, $data);
+
         return redirect()->route('eggs.logging')->with('success', 'Production log updated.');
+    }
+
+    private function syncSizeLogs(ProductionLog $log, array $data): void
+    {
+        $sizes = ['small', 'medium', 'large', 'jumbo'];
+        $anyFilled = false;
+
+        foreach ($sizes as $size) {
+            if (($data["size_{$size}"] ?? null) !== null) {
+                $anyFilled = true;
+                break;
+            }
+        }
+
+        EggSizeLog::where('production_log_id', $log->id)->delete();
+
+        if ($anyFilled) {
+            foreach ($sizes as $size) {
+                $count = (int) ($data["size_{$size}"] ?? 0);
+                if ($count > 0) {
+                    $log->eggSizeLogs()->create([
+                        'egg_size' => $size,
+                        'count' => $count,
+                    ]);
+                }
+            }
+        }
     }
 
     public function destroy(ProductionLog $productionLog)

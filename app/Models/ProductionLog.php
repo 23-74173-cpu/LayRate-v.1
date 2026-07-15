@@ -10,9 +10,16 @@ class ProductionLog extends Model
 {
     public $timestamps = false;
 
-    protected $fillable = ['log_date', 'egg_count', 'hen_count', 'hdep', 'notes'];
+    protected $fillable = ['log_date', 'egg_count', 'hen_count', 'hdep', 'notes', 'logged_via'];
 
-    protected $casts = ['log_date' => 'date', 'created_at' => 'datetime', 'overridden_at' => 'datetime'];
+    protected $casts = [
+        'log_date' => 'date',
+        'created_at' => 'datetime',
+        'overridden_at' => 'datetime',
+        'logged_via' => 'string',
+    ];
+
+    public const LOGGED_VIA_OPTIONS = ['manual', 'sensor', 'unknown'];
 
     public function cageSlot(): BelongsTo
     {
