@@ -8,7 +8,7 @@ Usage:
 
 The server binds to 0.0.0.0:8000. Set environment variables to override:
     FLASK_HOST (default: 0.0.0.0)
-    FLASK_PORT (default: 8000)
+    FLASK_PORT (default: 5000)
     FLASK_DEBUG (default: 0)
 """
 
@@ -293,6 +293,6 @@ def internal_error(error):
 if __name__ == "__main__":
     init_db()
     host = os.getenv("FLASK_HOST", "0.0.0.0")
-    port = int(os.getenv("FLASK_PORT", "8000"))
+    port = int(os.getenv("FLASK_PORT", "5000"))
     debug = os.getenv("FLASK_DEBUG", "0") == "1"
     app.run(host=host, port=port, debug=debug)
