@@ -148,6 +148,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/forecast',             [ForecastController::class, 'index'])->name('forecast');
     Route::post('/forecast/generate',   [ForecastController::class, 'generate'])->name('forecast.generate');
+    Route::post('/forecast/clear',      [ForecastController::class, 'clear'])->name('forecast.clear');
     Route::get('/forecast/template',    [ForecastController::class, 'downloadTemplate'])->name('forecast.template');
     Route::post('/forecast/import',     [ForecastController::class, 'import'])->name('forecast.import');
 
