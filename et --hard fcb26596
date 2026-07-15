@@ -1,0 +1,23 @@
+[33m59851d86[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m HEAD@{0}: pull: Merge made by the 'ort' strategy.
+[33mde5647e3[m HEAD@{1}: checkout: moving from feature/add-forecasting-model to main
+[33mfcb26596[m[33m ([m[1;31morigin/feature/add-forecasting-model[m[33m, [m[1;32mfeature/add-forecasting-model[m[33m)[m HEAD@{2}: commit: Fixed Forecast Rending for Better UX
+[33m3c951490[m HEAD@{3}: commit: added custom days forecast
+[33m9086d638[m HEAD@{4}: commit: fixed loading feedback during generate forecast
+[33md49105d9[m HEAD@{5}: commit: change forecasting table to calendar for better UX
+[33m002e9fff[m HEAD@{6}: commit: added start and end date for download forecast sheet
+[33m80e84589[m HEAD@{7}: commit: fixed generated sheet hen columns
+[33mf70cb895[m HEAD@{8}: checkout: moving from main to feature/add-forecasting-model
+[33mde5647e3[m HEAD@{9}: commit: Merged Completed
+[33me571d98b[m HEAD@{10}: checkout: moving from feature/add-forecasting-model to main
+[33mf70cb895[m HEAD@{11}: commit: updated requirements.txt, add readme
+[33m10c97204[m HEAD@{12}: commit: fixed forecasting input parameters
+[33m98798631[m HEAD@{13}: commit: fix import historical data
+[33mb620dcfb[m HEAD@{14}: commit: added FAB for Import, Download Empty Sheet on Forecasting module
+[33m539c70d7[m HEAD@{15}: commit (merge): merged with main
+[33m2f4ce523[m HEAD@{16}: checkout: moving from feature/add-forecasting-model to feature/add-forecasting-model
+[33m2f4ce523[m HEAD@{17}: commit: added file XGBoost x SARIMA forecasting using Real Time Data
+[33m03c7c509[m HEAD@{18}: commit: Import Historical Data implemented
+[33m13dbc03b[m HEAD@{19}: commit: locked variable contents for generated sheet
+[33m8aae1f51[m HEAD@{20}: commit: created seperate table for forecasting and enhanced forecast empty sheet
+[33m4a0632a8[m HEAD@{21}: commit: Added Forecast API and Export Forecast Sheet Template
+[33m2655598b[m HEAD@{22}: checkout: moving from master to feature/add-forecasting-model
