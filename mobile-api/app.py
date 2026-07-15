@@ -20,12 +20,21 @@ from functools import wraps
 from pathlib import Path
 
 import bcrypt
+import pymysql
 from flask import Flask, g, jsonify, request
 from flask_cors import CORS
 
 # ── Configuration ───────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent
 DATABASE = BASE_DIR / "layrate_mobile.db"
+
+MYSQL_CONFIG = {
+    "host": os.getenv("MYSQL_HOST", "127.0.0.1"),
+    "port": int(os.getenv("MYSQL_PORT", "3307")),
+    "database": os.getenv("MYSQL_DATABASE", "layrate"),
+    "user": os.getenv("MYSQL_USER", "root"),
+    "password": os.getenv("MYSQL_PASSWORD", "root"),
+}
 
 app = Flask(__name__)
 CORS(app)  # Allow all origins for local mobile app access
@@ -48,6 +57,21 @@ def close_db(exception=None):
         db.close()
 
 
+def get_mysql():
+    """Open a new MySQL connection for the current request."""
+    if "mysql" not in g:
+        g.mysql = pymysql.connect(**MYSQL_CONFIG)
+    return g.mysql
+
+
+@app.teardown_appcontext
+def close_mysql(exception=None):
+    """Close the MySQL connection at the end of the request."""
+    conn = g.pop("mysql", None)
+    if conn is not None:
+        conn.close()
+
+
 def init_db():
     """Create tables and seed default data if they do not exist."""
     db = sqlite3.connect(DATABASE)
@@ -64,14 +88,6 @@ def init_db():
             token TEXT,
             created_at TEXT NOT NULL
         );
-
-        CREATE TABLE IF NOT EXISTS incubator_status (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            temperature REAL NOT NULL DEFAULT 0.0,
-            humidity REAL NOT NULL DEFAULT 0.0,
-            egg_count INTEGER NOT NULL DEFAULT 0,
-            updated_at TEXT NOT NULL
-        );
         """
     )
 
@@ -82,14 +98,6 @@ def init_db():
         cursor.execute(
             "INSERT INTO users (name, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
             ("Admin", "admin@layrate.com", password_hash, now_iso()),
-        )
-
-    # Seed incubator status if none exists.
-    cursor.execute("SELECT id FROM incubator_status")
-    if cursor.fetchone() is None:
-        cursor.execute(
-            "INSERT INTO incubator_status (temperature, humidity, egg_count, updated_at) VALUES (?, ?, ?, ?)",
-            (37.5, 55.0, 12, now_iso()),
         )
 
     db.commit()
@@ -210,23 +218,55 @@ def login():
     ), 200
 
 
+@app.route("/api/alerts", methods=["GET"])
+@require_auth
+def list_alerts():
+    """Return all alerts with optional limit/offset pagination."""
+    limit = request.args.get("limit", 50, type=int)
+    offset = request.args.get("offset", 0, type=int)
+    limit = min(limit, 200)
+
+    conn = get_mysql()
+    with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute(
+            """SELECT a.id, a.alert_type, a.message, a.is_read,
+                      a.triggered_at, a.created_at,
+                      c.cage_code
+               FROM alerts a
+               LEFT JOIN cages c ON c.id = a.cage_id
+               ORDER BY a.triggered_at DESC
+               LIMIT %s OFFSET %s""",
+            (limit, offset),
+        )
+        alerts = cursor.fetchall()
+
+        cursor.execute("SELECT COUNT(*) AS total FROM alerts")
+        total = cursor.fetchone()["total"]
+
+    return jsonify({"alerts": alerts, "total": total}), 200
+
+
 @app.route("/api/incubator/status", methods=["GET"])
 @require_auth
 def incubator_status():
-    """Return the latest incubator sensor data."""
-    db = get_db()
-    row = db.execute(
-        "SELECT temperature, humidity, egg_count FROM incubator_status ORDER BY id DESC LIMIT 1"
-    ).fetchone()
+    """Return latest environmental readings and today's egg production from MySQL."""
+    conn = get_mysql()
+    with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute(
+            "SELECT temperature_c, humidity_pct FROM environmental_logs ORDER BY recorded_at DESC LIMIT 1"
+        )
+        env = cursor.fetchone()
 
-    if row is None:
-        return jsonify({"temperature": 0.0, "humidity": 0.0, "egg_count": 0}), 200
+        cursor.execute(
+            "SELECT COALESCE(SUM(egg_count), 0) AS total_eggs FROM production_logs WHERE log_date = CURDATE()"
+        )
+        eggs = cursor.fetchone()
 
     return jsonify(
         {
-            "temperature": row["temperature"],
-            "humidity": row["humidity"],
-            "egg_count": row["egg_count"],
+            "temperature": float(env["temperature_c"]) if env else 0.0,
+            "humidity": float(env["humidity_pct"]) if env else 0.0,
+            "egg_count": eggs["total_eggs"] if eggs else 0,
         }
     ), 200
 
