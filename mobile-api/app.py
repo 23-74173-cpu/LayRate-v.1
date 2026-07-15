@@ -1,0 +1,258 @@
+"""LayRate Mobile API.
+
+A minimal Flask REST API for the LayRate mobile app. Runs on a Raspberry Pi
+and provides authentication plus incubator sensor status.
+
+Usage:
+    python app.py
+
+The server binds to 0.0.0.0:8000. Set environment variables to override:
+    FLASK_HOST (default: 0.0.0.0)
+    FLASK_PORT (default: 8000)
+    FLASK_DEBUG (default: 0)
+"""
+
+import os
+import secrets
+import sqlite3
+from datetime import datetime, timezone
+from functools import wraps
+from pathlib import Path
+
+import bcrypt
+from flask import Flask, g, jsonify, request
+from flask_cors import CORS
+
+# ── Configuration ───────────────────────────────────────────────────────────
+BASE_DIR = Path(__file__).resolve().parent
+DATABASE = BASE_DIR / "layrate_mobile.db"
+
+app = Flask(__name__)
+CORS(app)  # Allow all origins for local mobile app access
+
+# ── Database helpers ───────────────────────────────────────────────────────
+
+def get_db():
+    """Open a new SQLite connection for the current request."""
+    if "db" not in g:
+        g.db = sqlite3.connect(DATABASE)
+        g.db.row_factory = sqlite3.Row
+    return g.db
+
+
+@app.teardown_appcontext
+def close_db(exception=None):
+    """Close the SQLite connection at the end of the request."""
+    db = g.pop("db", None)
+    if db is not None:
+        db.close()
+
+
+def init_db():
+    """Create tables and seed default data if they do not exist."""
+    db = sqlite3.connect(DATABASE)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
+
+    cursor.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            token TEXT,
+            created_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS incubator_status (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            temperature REAL NOT NULL DEFAULT 0.0,
+            humidity REAL NOT NULL DEFAULT 0.0,
+            egg_count INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL
+        );
+        """
+    )
+
+    # Seed default admin user if none exists.
+    cursor.execute("SELECT id FROM users WHERE email = ?", ("admin@layrate.com",))
+    if cursor.fetchone() is None:
+        password_hash = bcrypt.hashpw("password".encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+        cursor.execute(
+            "INSERT INTO users (name, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
+            ("Admin", "admin@layrate.com", password_hash, now_iso()),
+        )
+
+    # Seed incubator status if none exists.
+    cursor.execute("SELECT id FROM incubator_status")
+    if cursor.fetchone() is None:
+        cursor.execute(
+            "INSERT INTO incubator_status (temperature, humidity, egg_count, updated_at) VALUES (?, ?, ?, ?)",
+            (37.5, 55.0, 12, now_iso()),
+        )
+
+    db.commit()
+    db.close()
+
+
+def now_iso():
+    """Return current UTC time as ISO 8601 string."""
+    return datetime.now(timezone.utc).isoformat()
+
+
+# ── Authentication helpers ─────────────────────────────────────────────────
+
+def generate_token():
+    """Generate a URL-safe random token."""
+    return secrets.token_urlsafe(32)
+
+
+def get_user_by_token(token):
+    """Look up a user by their bearer token."""
+    if not token:
+        return None
+    db = get_db()
+    row = db.execute("SELECT id, name, email FROM users WHERE token = ?", (token,)).fetchone()
+    return dict(row) if row else None
+
+
+def require_auth(f):
+    """Decorator to protect routes with Bearer token authentication."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth_header = request.headers.get("Authorization", "")
+        token = ""
+        if auth_header.lower().startswith("bearer "):
+            token = auth_header[7:].strip()
+
+        if not token:
+            return jsonify({"message": "Authorization header missing or invalid"}), 401
+
+        user = get_user_by_token(token)
+        if not user:
+            return jsonify({"message": "Invalid or expired token"}), 401
+
+        g.current_user = user
+        return f(*args, **kwargs)
+
+    return decorated
+
+
+# ── Routes ─────────────────────────────────────────────────────────────────
+
+@app.route("/api/register", methods=["POST"])
+def register():
+    """Register a new user and return a bearer token."""
+    data = request.get_json(silent=True) or {}
+    name = data.get("name", "").strip()
+    email = data.get("email", "").strip().lower()
+    password = data.get("password", "")
+
+    if not name or not email or not password:
+        return jsonify({"message": "Name, email, and password are required"}), 400
+
+    password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    token = generate_token()
+    db = get_db()
+
+    try:
+        db.execute(
+            "INSERT INTO users (name, email, password_hash, token, created_at) VALUES (?, ?, ?, ?, ?)",
+            (name, email, password_hash, token, now_iso()),
+        )
+        db.commit()
+    except sqlite3.IntegrityError:
+        return jsonify({"message": "Email already registered"}), 409
+
+    user = db.execute(
+        "SELECT id, name, email FROM users WHERE email = ?", (email,)
+    ).fetchone()
+
+    return jsonify({"token": token, "user": dict(user)}), 201
+
+
+@app.route("/api/login", methods=["POST"])
+def login():
+    """Validate credentials and return a bearer token."""
+    data = request.get_json(silent=True) or {}
+    email = data.get("email", "").strip().lower()
+    password = data.get("password", "")
+
+    if not email or not password:
+        return jsonify({"message": "Email and password are required"}), 400
+
+    db = get_db()
+    row = db.execute(
+        "SELECT id, name, email, password_hash FROM users WHERE email = ?", (email,)
+    ).fetchone()
+
+    if row is None:
+        return jsonify({"message": "Invalid email or password"}), 401
+
+    user = dict(row)
+    if not bcrypt.checkpw(password.encode("utf-8"), user["password_hash"].encode("utf-8")):
+        return jsonify({"message": "Invalid email or password"}), 401
+
+    token = generate_token()
+    db.execute("UPDATE users SET token = ? WHERE id = ?", (token, user["id"]))
+    db.commit()
+
+    return jsonify(
+        {
+            "token": token,
+            "user": {
+                "id": user["id"],
+                "email": user["email"],
+                "name": user["name"],
+            },
+        }
+    ), 200
+
+
+@app.route("/api/incubator/status", methods=["GET"])
+@require_auth
+def incubator_status():
+    """Return the latest incubator sensor data."""
+    db = get_db()
+    row = db.execute(
+        "SELECT temperature, humidity, egg_count FROM incubator_status ORDER BY id DESC LIMIT 1"
+    ).fetchone()
+
+    if row is None:
+        return jsonify({"temperature": 0.0, "humidity": 0.0, "egg_count": 0}), 200
+
+    return jsonify(
+        {
+            "temperature": row["temperature"],
+            "humidity": row["humidity"],
+            "egg_count": row["egg_count"],
+        }
+    ), 200
+
+
+# ── Error handlers ─────────────────────────────────────────────────────────
+
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({"message": "Endpoint not found"}), 404
+
+
+@app.errorhandler(405)
+def method_not_allowed(error):
+    return jsonify({"message": "Method not allowed"}), 405
+
+
+@app.errorhandler(500)
+def internal_error(error):
+    return jsonify({"message": "Internal server error"}), 500
+
+
+# ── Main entry point ───────────────────────────────────────────────────────
+
+if __name__ == "__main__":
+    init_db()
+    host = os.getenv("FLASK_HOST", "0.0.0.0")
+    port = int(os.getenv("FLASK_PORT", "8000"))
+    debug = os.getenv("FLASK_DEBUG", "0") == "1"
+    app.run(host=host, port=port, debug=debug)
