@@ -48,27 +48,27 @@
         <table class="w-full">
             <thead>
                 <tr class="border-b border-[#e6e6e6] bg-[#f9f9f7]">
-                    <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Name</th>
-                    <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Status</th>
-                    <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Linked Sensors</th>
-                    <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Key</th>
-                    <th class="text-right text-xs text-[#6B7280] px-6 py-3 font-medium">Action</th>
+                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Name</th>
+                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Status</th>
+                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Linked Sensors</th>
+                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Key</th>
+                    <th class="text-right text-xs text-[#6B7280] px-5 py-3 font-medium">Action</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($devices as $device)
                 <tr class="border-b border-[#e6e6e6] hover:bg-black/[0.02]">
-                    <td class="px-6 py-3.5 text-sm font-medium text-[#333333]">{{ $device->name }}</td>
-                    <td class="px-6 py-3.5">
+                    <td class="px-5 py-3.5 text-sm font-medium text-[#333333]">{{ $device->name }}</td>
+                    <td class="px-5 py-3.5">
                         @if($device->is_active)
                             <span class="text-xs px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200">Active</span>
                         @else
                             <span class="text-xs px-2 py-0.5 rounded-full border bg-gray-100 text-gray-500 border-gray-200">Inactive</span>
                         @endif
                     </td>
-                    <td class="px-6 py-3.5 text-sm text-[#6B7280]">{{ $device->hardware_items_count }}</td>
-                    <td class="px-6 py-3.5 text-sm font-mono text-[#6B7280]">••••••••••••</td>
-                    <td class="px-6 py-3.5 text-right">
+                    <td class="px-5 py-3.5 text-sm text-[#6B7280]">{{ $device->hardware_items_count }}</td>
+                    <td class="px-5 py-3.5 text-sm font-mono text-[#6B7280]">••••••••••••</td>
+                    <td class="px-5 py-3.5 text-right">
                         <div class="flex items-center justify-end gap-1">
                             <form method="POST" action="{{ route('devices.regenerate-key', $device) }}" class="inline">
                                 @csrf
@@ -86,7 +86,7 @@
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="5" class="px-6 py-8 text-center text-sm text-[#6B7280]">No ingestion devices yet.</td></tr>
+                <tr><td colspan="5" class="px-5 py-10 text-center text-sm text-[#6B7280]">No ingestion devices yet.</td></tr>
                 @endforelse
             </tbody>
         </table>

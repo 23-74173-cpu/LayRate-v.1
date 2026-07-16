@@ -11,7 +11,7 @@
         </span>
     </div>
 
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
 
         {{-- ── Record Form ── --}}
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">

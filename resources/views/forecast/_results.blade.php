@@ -20,24 +20,24 @@
         <table class="w-full">
             <thead>
                 <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
-                    <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Date</th>
-                    <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Predicted HDEP</th>
-                    <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Confidence</th>
+                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Date</th>
+                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Predicted HDEP</th>
+                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Confidence</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($forecasts as $f)
                 <tr class="border-b border-[#F0F0F0] hover:bg-[#F5F6F8]">
-                    <td class="px-6 py-3 text-sm text-[#333333] font-mono">{{ $f->target_date->format('Y-m-d') }}</td>
-                    <td class="px-6 py-3 text-sm text-[#333333]">{{ number_format($f->predicted_hdep,1) }}%</td>
-                    <td class="px-6 py-3">
+                    <td class="px-5 py-3.5 text-sm text-[#333333] font-mono">{{ $f->target_date->format('Y-m-d') }}</td>
+                    <td class="px-5 py-3.5 text-sm text-[#333333]">{{ number_format($f->predicted_hdep,1) }}%</td>
+                    <td class="px-5 py-3.5">
                         <span class="text-xs px-2.5 py-1 rounded-full" style="background:{{ $f->confidenceColor }}">
                             {{ $f->confidence }}%
                         </span>
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="3" class="px-6 py-8 text-center text-sm text-[#6B7280]">
+                <tr><td colspan="3" class="px-5 py-10 text-center text-sm text-[#6B7280]">
                     No forecast generated yet.
                 </td></tr>
                 @endforelse

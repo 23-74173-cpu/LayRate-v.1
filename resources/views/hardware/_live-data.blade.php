@@ -25,14 +25,14 @@
             <table class="w-full">
                 <thead>
                     <tr class="border-b" style="background-color: #f6f5f4; border-color: #e6e6e6;">
-                        <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-6 py-3" style="color: #615d59;">Device</th>
-                        <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-6 py-3" style="color: #615d59;">Serial #</th>
-                        <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-6 py-3" style="color: #615d59;">Assigned To</th>
-                        <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-6 py-3" style="color: #615d59;">Ingestion Device</th>
-                        <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-6 py-3" style="color: #615d59;">Status</th>
-                        <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-6 py-3" style="color: #615d59;">Installed</th>
-                        <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-6 py-3" style="color: #615d59;">Last Cal</th>
-                        <th class="px-6 py-3"></th>
+                        <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-5 py-3" style="color: #615d59;">Device</th>
+                        <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-5 py-3" style="color: #615d59;">Serial #</th>
+                        <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-5 py-3" style="color: #615d59;">Assigned To</th>
+                        <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-5 py-3" style="color: #615d59;">Ingestion Device</th>
+                        <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-5 py-3" style="color: #615d59;">Status</th>
+                        <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-5 py-3" style="color: #615d59;">Installed</th>
+                        <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-5 py-3" style="color: #615d59;">Last Cal</th>
+                        <th class="px-5 py-3"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -64,22 +64,22 @@
                         $linkedDevice = $item->device?->name ?? '—';
                     @endphp
                     <tr class="border-b hover:bg-black/[0.02] transition-colors" style="border-color: #e6e6e6;">
-                        <td class="px-6 py-3">
+                        <td class="px-5 py-3.5">
                             <span class="text-xs font-semibold px-2.5 py-1 rounded-full" style="background:{{ $tSoft }};color:{{ $tColor }};border:1px solid {{ $tColor }}40;">
                                 {{ str_replace('_', ' ', $item->device_type) }}
                             </span>
                         </td>
-                        <td class="px-6 py-3 text-sm font-mono" style="color: #1f1f1f;">{{ $item->serial_number }}</td>
-                        <td class="px-6 py-3 text-sm" style="color: #31302e;">{{ $assignedTo }}</td>
-                        <td class="px-6 py-3 text-sm" style="color: #6B7280;">{{ $linkedDevice }}</td>
-                        <td class="px-6 py-3">
+                        <td class="px-5 py-3.5 text-sm font-mono" style="color: #1f1f1f;">{{ $item->serial_number }}</td>
+                        <td class="px-5 py-3.5 text-sm" style="color: #31302e;">{{ $assignedTo }}</td>
+                        <td class="px-5 py-3.5 text-sm" style="color: #6B7280;">{{ $linkedDevice }}</td>
+                        <td class="px-5 py-3.5">
                             <span class="text-xs px-2 py-0.5 rounded-full border font-medium {{ $statusAttrs['class'] }}">
                                 {{ $statusAttrs['label'] }}
                             </span>
                         </td>
-                        <td class="px-6 py-3 text-sm font-mono" style="color: #615d59;">{{ $item->installation_date?->format('Y-m-d') ?? '—' }}</td>
-                        <td class="px-6 py-3 text-sm font-mono" style="color: #615d59;">{{ $item->last_calibration_date?->format('Y-m-d') ?? '—' }}</td>
-                        <td class="px-6 py-3">
+                        <td class="px-5 py-3.5 text-sm font-mono" style="color: #615d59;">{{ $item->installation_date?->format('Y-m-d') ?? '—' }}</td>
+                        <td class="px-5 py-3.5 text-sm font-mono" style="color: #615d59;">{{ $item->last_calibration_date?->format('Y-m-d') ?? '—' }}</td>
+                        <td class="px-5 py-3.5">
                             <div class="flex items-center gap-1">
                                 <button onclick="openEditModal({{ $item->id }}, '{{ $item->device_type }}', '{{ addslashes($item->serial_number) }}', {{ $item->cage_id ?? 'null' }}, {{ $item->cage_slot_id ?? 'null' }}, {{ $item->device_id ?? 'null' }}, '{{ $item->installation_date?->format('Y-m-d') ?? '' }}', '{{ $item->status }}', '{{ $item->last_calibration_date?->format('Y-m-d') ?? '' }}')"
                                         class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Edit device">
@@ -98,7 +98,7 @@
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="8" class="px-6 py-10 text-center text-sm" style="color: #a39e98;">No hardware items yet. Click "Add Device" to register the first one.</td></tr>
+                    <tr><td colspan="8" class="px-5 py-10 text-center text-sm" style="color: #a39e98;">No hardware items yet. Click "Add Device" to register the first one.</td></tr>
                     @endforelse
                 </tbody>
             </table>

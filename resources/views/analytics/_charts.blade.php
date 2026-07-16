@@ -20,7 +20,7 @@
     </div>
 
     {{-- ── Summary Row ── --}}
-    <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+    <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
         <div class="grid grid-cols-2 md:grid-cols-6 gap-4 text-center">
             @php $cColor = $cage->color; @endphp
             <div>

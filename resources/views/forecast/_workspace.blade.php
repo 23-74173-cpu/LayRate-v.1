@@ -12,7 +12,7 @@
 
 <turbo-frame id="forecast-workspace">
 <div class="space-y-5">
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
 
         {{-- ── Inputs Panel ── --}}
         <x-card>
@@ -127,36 +127,36 @@
             <table class="w-full text-sm">
                 <thead class="bg-[#F9F9F7] border-b border-[#D9D9D9]">
                     <tr>
-                        <th class="text-left text-xs font-medium text-[#6B7280] px-4 py-3">Metric</th>
-                        <th class="text-right text-xs font-medium text-[#6B7280] px-4 py-3">SARIMA</th>
-                        <th class="text-right text-xs font-medium text-[#6B7280] px-4 py-3">XGBoost Regression</th>
+                        <th class="text-left text-xs font-medium text-[#6B7280] px-5 py-3">Metric</th>
+                        <th class="text-right text-xs font-medium text-[#6B7280] px-5 py-3">SARIMA</th>
+                        <th class="text-right text-xs font-medium text-[#6B7280] px-5 py-3">XGBoost Regression</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr class="border-b border-[#F0F0F0]">
-                        <td class="px-4 py-3 text-[#333333]">MAE</td>
-                        <td class="px-4 py-3 text-right font-mono {{ $maeWinner === 'SARIMA' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
+                        <td class="px-5 py-3.5 text-[#333333]">MAE</td>
+                        <td class="px-5 py-3.5 text-right font-mono {{ $maeWinner === 'SARIMA' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
                             {{ number_format($sarima['MAE'] ?? 0, 2) }}
                         </td>
-                        <td class="px-4 py-3 text-right font-mono {{ $maeWinner === 'XGBoost' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
+                        <td class="px-5 py-3.5 text-right font-mono {{ $maeWinner === 'XGBoost' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
                             {{ number_format($xgboost['MAE'] ?? 0, 2) }}
                         </td>
                     </tr>
                     <tr class="border-b border-[#F0F0F0]">
-                        <td class="px-4 py-3 text-[#333333]">RMSE</td>
-                        <td class="px-4 py-3 text-right font-mono {{ $rmseWinner === 'SARIMA' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
+                        <td class="px-5 py-3.5 text-[#333333]">RMSE</td>
+                        <td class="px-5 py-3.5 text-right font-mono {{ $rmseWinner === 'SARIMA' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
                             {{ number_format($sarima['RMSE'] ?? 0, 2) }}
                         </td>
-                        <td class="px-4 py-3 text-right font-mono {{ $rmseWinner === 'XGBoost' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
+                        <td class="px-5 py-3.5 text-right font-mono {{ $rmseWinner === 'XGBoost' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
                             {{ number_format($xgboost['RMSE'] ?? 0, 2) }}
                         </td>
                     </tr>
                     <tr>
-                        <td class="px-4 py-3 text-[#333333]">MAPE</td>
-                        <td class="px-4 py-3 text-right font-mono {{ $mapeWinner === 'SARIMA' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
+                        <td class="px-5 py-3.5 text-[#333333]">MAPE</td>
+                        <td class="px-5 py-3.5 text-right font-mono {{ $mapeWinner === 'SARIMA' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
                             {{ number_format($sarima['MAPE'] ?? 0, 2) }}%
                         </td>
-                        <td class="px-4 py-3 text-right font-mono {{ $mapeWinner === 'XGBoost' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
+                        <td class="px-5 py-3.5 text-right font-mono {{ $mapeWinner === 'XGBoost' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
                             {{ number_format($xgboost['MAPE'] ?? 0, 2) }}%
                         </td>
                     </tr>

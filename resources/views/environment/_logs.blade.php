@@ -20,15 +20,15 @@
                     $sTxt = $s === 'Normal' ? '#2D6A4F'  : ($s === 'Watch' ? '#856404' : '#721C24');
                 @endphp
                 <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
-                    <td class="px-5 py-3 text-sm text-[#333333] font-mono">{{ $log->time_slot }}</td>
-                    <td class="px-5 py-3 text-sm text-[#333333]">{{ $log->avg_temp }}°C</td>
-                    <td class="px-5 py-3 text-sm text-[#333333]">{{ $log->avg_hum }}%</td>
+                    <td class="px-5 py-3.5 text-sm text-[#333333] font-mono">{{ $log->time_slot }}</td>
+                    <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $log->avg_temp }}°C</td>
+                    <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $log->avg_hum }}%</td>
                     <td class="px-5 py-3">
                         <span class="text-xs px-2.5 py-1 rounded" style="background:{{ $sBg }};color:{{ $sTxt }}">{{ $s }}</span>
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="4" class="px-5 py-6 text-center text-sm text-[#6B7280]">No environmental data recorded yet.</td></tr>
+                <tr><td colspan="4" class="px-5 py-10 text-center text-sm text-[#6B7280]">No environmental data recorded yet.</td></tr>
                 @endforelse
             </tbody>
         </table>

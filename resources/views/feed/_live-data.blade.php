@@ -240,7 +240,7 @@
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="9" class="px-5 py-8 text-center text-sm text-[#6B7280]">No feed batches yet.</td></tr>
+                    <tr><td colspan="9" class="px-5 py-10 text-center text-sm text-[#6B7280]">No feed batches yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -279,12 +279,12 @@
                         $isDistributed = $log->source === 'distributed';
                     @endphp
                     <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8] {{ $isDistributed ? 'bg-amber-50/50' : '' }}">
-                        <td class="px-5 py-3 text-sm font-mono text-[#333333]">{{ $log->log_date->format('Y-m-d') }}</td>
-                        <td class="px-5 py-3 text-sm text-[#6B7280]">{{ $log->log_time?->format('H:i') ?? '—' }}</td>
-                        <td class="px-5 py-3 text-sm font-medium" style="color:{{ $cColor }}">{{ $log->cage?->cage_code ?? '—' }}</td>
-                        <td class="px-5 py-3 text-sm text-[#333333]">{{ $log->feedBatch->batch_code }}</td>
-                        <td class="px-5 py-3 text-sm text-[#333333]">{{ number_format($log->feed_consumed_kg, 2) }} kg</td>
-                        <td class="px-5 py-3">
+                        <td class="px-5 py-3.5 text-sm font-mono text-[#333333]">{{ $log->log_date->format('Y-m-d') }}</td>
+                        <td class="px-5 py-3.5 text-sm text-[#6B7280]">{{ $log->log_time?->format('H:i') ?? '—' }}</td>
+                        <td class="px-5 py-3.5 text-sm font-medium" style="color:{{ $cColor }}">{{ $log->cage?->cage_code ?? '—' }}</td>
+                        <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $log->feedBatch->batch_code }}</td>
+                        <td class="px-5 py-3.5 text-sm text-[#333333]">{{ number_format($log->feed_consumed_kg, 2) }} kg</td>
+                        <td class="px-5 py-3.5">
                             @if($isDistributed)
                                 <span class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200" title="Estimated from whole-farm entry">
                                     <i data-lucide="git-branch" class="w-3 h-3"></i> Estimated
@@ -295,7 +295,7 @@
                                 </span>
                             @endif
                         </td>
-                        <td class="px-5 py-3">
+                        <td class="px-5 py-3.5">
                             <div class="flex items-center gap-1">
                                 @if($isDistributed)
                                     <button onclick="openFarmEntryModal({{ $log->farm_feed_entry_id }}, {{ $log->feed_batch_id }}, '{{ $log->log_date->format('Y-m-d') }}', '{{ $log->log_time?->format('H:i') ?? '' }}', {{ $log->farmFeedEntry?->total_kg ?? 'null' }}, {{ $log->farmFeedEntry?->unit_cost ?? 'null' }})"
@@ -321,7 +321,7 @@
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="7" class="px-5 py-8 text-center text-sm text-[#6B7280]">No consumption data yet.</td></tr>
+                    <tr><td colspan="7" class="px-5 py-10 text-center text-sm text-[#6B7280]">No consumption data yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>

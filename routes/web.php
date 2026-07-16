@@ -117,6 +117,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/environment/logs',      [EnvironmentController::class, 'logs'])->name('environment.logs');
     Route::post('/environment/thresholds', [EnvironmentController::class, 'saveThresholds'])->name('environment.thresholds');
     Route::post('/eggs/stocks/egg-weights', [EggStockController::class, 'saveEggWeights'])->name('eggs.stocks.egg-weights');
+    Route::post('/eggs/stocks/thresholds', [EggStockController::class, 'saveThresholds'])->name('eggs.stocks.thresholds');
 
     Route::get('/hardware',                    [HardwareItemController::class, 'index'])->name('hardware.index');
     Route::get('/hardware/live-data',          [HardwareItemController::class, 'liveData'])->name('hardware.live-data');

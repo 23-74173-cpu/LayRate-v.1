@@ -69,7 +69,7 @@
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="9" class="px-5 py-8 text-center text-sm text-[#6B7280]">No pre-orders yet.</td></tr>
+                <tr><td colspan="9" class="px-5 py-10 text-center text-sm text-[#6B7280]">No pre-orders yet.</td></tr>
                 @endforelse
             </tbody>
         </table>

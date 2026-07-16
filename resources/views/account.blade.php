@@ -7,7 +7,7 @@
     <x-page-header title="Account Settings" subtitle="Change password and manage override PIN" />
 
     {{-- Change Password --}}
-    <div class="bg-white rounded-lg border border-[#D9D9D9] p-6">
+    <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
         <h2 class="text-base font-medium text-[#333333] mb-4">Change Password</h2>
         <form method="POST" action="{{ route('account.password') }}" class="space-y-4">
             @csrf
@@ -33,7 +33,7 @@
     </div>
 
     {{-- Override PIN --}}
-    <div class="bg-white rounded-lg border border-[#D9D9D9] p-6">
+    <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
         <h2 class="text-base font-medium text-[#333333] mb-1">{{ auth()->user()->override_pin_hash ? 'Change Override PIN' : 'Set Override PIN' }}</h2>
         <p class="text-xs text-[#6B7280] mb-4">Used to manually override a sensor-locked egg count in Egg Logging.</p>
         <form method="POST" action="{{ route('account.pin') }}" class="space-y-4">
@@ -69,7 +69,7 @@
 
     {{-- Admin: staff PIN status --}}
     @if($staff)
-    <div class="bg-white rounded-lg border border-[#D9D9D9] p-6">
+    <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
         <h2 class="text-base font-medium text-[#333333] mb-4">Staff Override PIN Status</h2>
         <table class="w-full text-sm">
             <thead>

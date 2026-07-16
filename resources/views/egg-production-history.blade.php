@@ -57,10 +57,10 @@
             <table class="w-full">
                 <thead>
                     <tr class="border-b" style="background-color: #f6f5f4; border-color: #e6e6e6;">
-                        <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-6 py-3" style="color: #615d59;">Period</th>
-                        <th class="text-right text-xs font-semibold tracking-[0.125px] uppercase px-6 py-3" style="color: #615d59;">Records</th>
-                        <th class="text-right text-xs font-semibold tracking-[0.125px] uppercase px-6 py-3" style="color: #615d59;">Total Eggs</th>
-                        <th class="text-right text-xs font-semibold tracking-[0.125px] uppercase px-6 py-3" style="color: #615d59;">Cumulative</th>
+                        <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-5 py-3" style="color: #615d59;">Period</th>
+                        <th class="text-right text-xs font-semibold tracking-[0.125px] uppercase px-5 py-3" style="color: #615d59;">Records</th>
+                        <th class="text-right text-xs font-semibold tracking-[0.125px] uppercase px-5 py-3" style="color: #615d59;">Total Eggs</th>
+                        <th class="text-right text-xs font-semibold tracking-[0.125px] uppercase px-5 py-3" style="color: #615d59;">Cumulative</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -69,10 +69,10 @@
                     @endphp
                     @foreach($timeline as $row)
                     <tr class="border-b hover:bg-black/[0.02] transition-colors" style="border-color: #e6e6e6;">
-                        <td class="px-6 py-3 text-sm" style="color: #1f1f1f;">{{ $row['label'] }}</td>
-                        <td class="px-6 py-3 text-sm text-right font-mono" style="color: #1f1f1f;">{{ number_format($row['records']) }}</td>
-                        <td class="px-6 py-3 text-sm text-right font-mono" style="color: #1f1f1f;">{{ number_format($row['total_eggs']) }}</td>
-                        <td class="px-6 py-3 text-sm text-right font-mono" style="color: #615d59;">{{ number_format($cumulative) }}</td>
+                        <td class="px-5 py-3.5 text-sm" style="color: #1f1f1f;">{{ $row['label'] }}</td>
+                        <td class="px-5 py-3.5 text-sm text-right font-mono" style="color: #1f1f1f;">{{ number_format($row['records']) }}</td>
+                        <td class="px-5 py-3.5 text-sm text-right font-mono" style="color: #1f1f1f;">{{ number_format($row['total_eggs']) }}</td>
+                        <td class="px-5 py-3.5 text-sm text-right font-mono" style="color: #615d59;">{{ number_format($cumulative) }}</td>
                     </tr>
                     @php
                         $cumulative -= $row['total_eggs'];
@@ -84,7 +84,7 @@
         @endif
     </x-card>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {{-- By Cage --}}
         <x-card header="Breakdown by Cage">
             @if($byCage->isEmpty())

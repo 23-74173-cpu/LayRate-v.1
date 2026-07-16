@@ -147,7 +147,7 @@
             @endforeach
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {{-- Record Form --}}
             <x-card>
                 <h3 class="text-sm font-semibold text-[#333] mb-4">Record Mortality</h3>

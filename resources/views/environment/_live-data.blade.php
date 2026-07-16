@@ -1,7 +1,7 @@
 <turbo-frame id="environment-live-data">
     {{-- ── Top Metric Cards ── --}}
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
             <div class="text-xs tracking-wider text-[#6B7280] mb-2">COOP AVG TEMPERATURE</div>
             <div class="flex items-end gap-2 mb-1">
                 <span class="text-3xl tracking-tight text-[#333333]">{{ $avgTemp ? number_format($avgTemp,1) . '°C' : '—' }}</span>
@@ -9,7 +9,7 @@
             </div>
             <div class="text-xs text-[#6B7280]">Spread across sensors: 1.3°C</div>
         </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
             <div class="text-xs tracking-wider text-[#6B7280] mb-2">COOP AVG HUMIDITY</div>
             <div class="flex items-end gap-2 mb-1">
                 <span class="text-3xl tracking-tight text-[#333333]">{{ $avgHum ? number_format($avgHum,1) . '%' : '—' }}</span>
@@ -17,7 +17,7 @@
             </div>
             <div class="text-xs text-[#6B7280]">Spread across sensors: 4.4%</div>
         </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
             <div class="text-xs tracking-wider text-[#6B7280] mb-2">ACTIVE SENSORS</div>
             <div class="flex items-end gap-2 mb-1">
                 <span class="text-3xl tracking-tight text-[#333333]">{{ $latestPerCage->count() }}</span>
@@ -84,7 +84,7 @@
             $hTxt = $r->humStatus  === 'OK' ? '#2D6A4F' : ($r->humStatus  === 'Watch' ? '#856404' : '#721C24');
         @endphp
         <div class="bg-white rounded-lg border-2 overflow-hidden" style="border-color:{{ $color }}">
-            <div class="px-4 py-2.5 flex items-center justify-between" style="background:{{ $color }}22">
+            <div class="px-5 py-3 flex items-center justify-between" style="background:{{ $color }}22">
                 <div class="flex items-center gap-2">
                     <span class="w-2.5 h-2.5 rounded-full" style="background:{{ $color }}"></span>
                     <span class="text-sm font-medium text-[#333333]">{{ $r->cage->cage_code }}</span>
@@ -120,7 +120,7 @@
         @foreach($cages as $cage)
         @if($latestPerCage->pluck('cage.id')->doesntContain($cage->id))
         <div class="bg-white rounded-lg border border-dashed border-[#D9D9D9] overflow-hidden">
-            <div class="px-4 py-2.5 bg-[#F5F6F8] flex items-center gap-2">
+            <div class="px-5 py-3 bg-[#F5F6F8] flex items-center gap-2">
                 <span class="w-2.5 h-2.5 rounded-full bg-gray-300"></span>
                 <span class="text-sm text-[#333333]">{{ $cage->cage_code }}</span>
             </div>
@@ -135,11 +135,11 @@
 
     {{-- ── Trend Charts ── --}}
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
             <div class="text-xs tracking-wider text-[#6B7280] mb-3">TEMPERATURE TREND (COOP + PER CAGE)</div>
             <canvas id="envTempChart" height="160"></canvas>
         </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
             <div class="text-xs tracking-wider text-[#6B7280] mb-3">HUMIDITY TREND (COOP + PER CAGE)</div>
             <canvas id="envHumChart" height="160"></canvas>
         </div>

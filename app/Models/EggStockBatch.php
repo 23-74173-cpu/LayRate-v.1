@@ -151,19 +151,63 @@ class EggStockBatch extends Model
         return $this->belongsTo(ProductionLog::class, 'source_production_log_id');
     }
 
+    public static function sizeThresholds(): array
+    {
+        $sizes = ['small', 'medium', 'large', 'jumbo', 'unsorted'];
+        $thresholds = [];
+        foreach ($sizes as $size) {
+            $thresholds[$size] = (int) \App\Models\Setting::get("egg_low_stock_threshold_{$size}", 0);
+        }
+        return $thresholds;
+    }
+
+    public static function checkLowStock(): void
+    {
+        $pools = self::getAvailablePools();
+        $thresholds = self::sizeThresholds();
+
+        foreach ($pools as $size => $available) {
+            $threshold = $thresholds[$size] ?? 0;
+            if ($threshold <= 0) continue;
+            if ($available > $threshold) continue;
+
+            $exists = \App\Models\Alert::where('alert_type', 'low_stock')
+                ->where('cage_id', null)
+                ->where('is_read', 0)
+                ->where('message', 'like', "%{$size}%")
+                ->whereDate('triggered_at', today())
+                ->exists();
+
+            if ($exists) continue;
+
+            \App\Models\Alert::create([
+                'cage_id' => null,
+                'alert_type' => 'low_stock',
+                'message' => "Low stock: " . ucfirst($size) . " eggs — {$available} remaining (threshold: {$threshold})",
+                'is_read' => 0,
+                'triggered_at' => now(),
+            ]);
+        }
+    }
+
+    public static function freshnessThresholds(): array
+    {
+        return [
+            'fresh_days' => (int) \App\Models\Setting::get('egg_freshness_fresh_days', 7),
+            'aging_days' => (int) \App\Models\Setting::get('egg_freshness_aging_days', 14),
+        ];
+    }
+
     public function getFreshnessStatusAttribute(): string
     {
         $days = (int) $this->harvested_date->diffInDays(now());
+        $thresholds = self::freshnessThresholds();
 
-        if ($days < 0) {
+        if ($days < 0 || $days <= $thresholds['fresh_days']) {
             return 'fresh';
         }
 
-        if ($days <= 7) {
-            return 'fresh';
-        }
-
-        if ($days <= 14) {
+        if ($days <= $thresholds['aging_days']) {
             return 'aging';
         }
 

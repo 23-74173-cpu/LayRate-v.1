@@ -33,7 +33,7 @@
 
     {{-- ── Filters ── --}}
     <div class="no-print">
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
             <form method="GET" action="{{ route('reports') }}" class="flex flex-wrap items-end gap-4" id="reportForm">
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">REPORT TYPE</label>
@@ -229,7 +229,7 @@
                 <thead>
                     <tr style="background:#102A4C;color:#ffffff;">
                         @foreach(array_keys((array) $rows->first()) as $col)
-                        <th class="px-4 py-3 text-left text-[10px] tracking-widest uppercase font-medium whitespace-nowrap">
+                        <th class="px-5 py-3 text-left text-[10px] tracking-widest uppercase font-medium whitespace-nowrap">
                             {{ strtoupper(str_replace('_', ' ', $col)) }}
                         </th>
                         @endforeach
@@ -246,7 +246,7 @@
                             $style = $cageColor ? "color:{$cageColor};font-weight:600"
                                    : ($reasonColor ? "color:{$reasonColor}" : '');
                         @endphp
-                        <td class="px-4 py-2.5 text-sm {{ in_array($key, ['date','datetime']) ? 'font-mono' : '' }}"
+                        <td class="px-5 py-3.5 text-sm {{ in_array($key, ['date','datetime']) ? 'font-mono' : '' }}"
                             style="{{ $style }}">
                             {{ $val }}
                         </td>

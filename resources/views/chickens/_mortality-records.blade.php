@@ -51,7 +51,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="px-3 py-6 text-center text-[#9CA3AF] text-sm">No records yet.</td>
+                        <td colspan="6" class="px-3 py-10 text-center text-[#9CA3AF] text-sm">No records yet.</td>
                     </tr>
                     @endforelse
                 </tbody>

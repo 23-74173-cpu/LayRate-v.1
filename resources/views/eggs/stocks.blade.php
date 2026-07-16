@@ -15,6 +15,9 @@
             $total = $totals[$size] ?? 0;
             $trays = $trayTotals[$size] ?? 0;
             $label = $size === 'unsorted' ? 'Unsorted' : ucfirst($size);
+            $pool = $availablePools[$size] ?? 0;
+            $threshold = $eggStockThresholds[$size] ?? 0;
+            $isLowStock = $threshold > 0 && $pool <= $threshold;
             $colors = [
                 'small'    => ['#2D7D46', '#d6f0e3'],
                 'medium'   => ['#1D4E8F', '#dcebfa'],
@@ -24,12 +27,17 @@
             ];
             [$color, $soft] = $colors[$size];
         @endphp
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4" data-size="{{ $size }}">
-            <div class="text-xs tracking-wider mb-2" style="color: {{ $color }}">{{ $label }}</div>
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4 {{ $isLowStock ? 'ring-2 ring-amber-400' : '' }}" data-size="{{ $size }}">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs tracking-wider" style="color: {{ $color }}">{{ $label }}</span>
+                @if($isLowStock)
+                <span class="text-xs px-1.5 py-0.5 rounded-full font-semibold" style="background:#fdf3e0;color:#8a5a00;border:1px solid #f3e3bf;">Low</span>
+                @endif
+            </div>
             <div class="text-3xl font-semibold tracking-tight" style="color: #333333">{{ number_format($total) }}</div>
             <div class="text-xs mt-1" style="color: #6B7280">{{ $trays }} {{ $trays === 1 ? 'tray' : 'trays' }}</div>
             <div class="text-xs mt-1.5" style="color: #a39e98;">
-                <span class="font-medium" style="color: {{ $color }}">{{ number_format($availablePools[$size] ?? 0) }}</span> available to stock
+                <span class="font-medium" style="color: {{ $color }}">{{ number_format($pool) }}</span> available to stock
             </div>
         </div>
         @endforeach
@@ -42,7 +50,7 @@
             <p class="text-xs text-[#6B7280] mb-5">Average weights used to estimate egg mass for Feed Conversion Ratio calculations.</p>
             <form action="{{ route('eggs.stocks.egg-weights') }}" method="POST">
                 @csrf
-                <div class="flex flex-wrap items-end gap-5">
+                <div class="flex flex-wrap items-end gap-4">
                     <div>
                         <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">SMALL (g)</label>
                         <input type="number" name="egg_weight_small" step="0.1" min="1" max="500"
@@ -88,6 +96,64 @@
                 @if($errors->any())
                 <div class="mt-4 text-xs text-red-500">{{ $errors->first() }}</div>
                 @endif
+            </form>
+        </div>
+    </x-card>
+
+    {{-- ── Configuration ── --}}
+    <x-card>
+        <div class="p-1">
+            <div class="flex items-center gap-4 mb-5">
+                <h3 class="text-xs font-semibold tracking-[0.05em] uppercase" style="color: #615d59;">Configuration</h3>
+                <span class="w-px h-4 bg-[#D9D9D9]"></span>
+                <span class="text-xs" style="color: #a39e98;">Low-stock alerts &amp; freshness thresholds</span>
+            </div>
+
+            <form action="{{ route('eggs.stocks.thresholds') }}" method="POST">
+                @csrf
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div>
+                        <h4 class="text-xs font-medium tracking-[0.05em] uppercase mb-3" style="color: #615d59;">Low-Stock Thresholds</h4>
+                        <p class="text-xs text-[#6B7280] mb-4">Minimum available pool per size before alert triggers. Set to 0 to disable.</p>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                            @foreach(['small' => '#2D7D46', 'medium' => '#1D4E8F', 'large' => '#C2703E', 'jumbo' => '#6B4C8A', 'unsorted' => '#6B7280'] as $sz => $szColor)
+                            @php $key = "egg_low_stock_threshold_{$sz}"; $label = $sz === 'unsorted' ? 'Unsorted' : ucfirst($sz); @endphp
+                            <div>
+                                <label class="block text-xs tracking-wider mb-1.5" style="color: {{ $szColor }}">{{ $label }}</label>
+                                <input type="number" name="{{ $key }}" min="0" placeholder="0"
+                                       value="{{ $eggStockThresholds[$sz] ?? 0 }}"
+                                       class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="text-xs font-medium tracking-[0.05em] uppercase mb-3" style="color: #615d59;">Freshness Thresholds</h4>
+                        <p class="text-xs text-[#6B7280] mb-4">Day boundaries for freshness status (Fresh → Aging → Old).</p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs tracking-wider text-[#1f6b3a] mb-1.5">Fresh (≤ days)</label>
+                                <input type="number" name="egg_freshness_fresh_days" min="1" placeholder="7"
+                                       value="{{ $freshnessThresholds['fresh_days'] }}"
+                                       class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                            </div>
+                            <div>
+                                <label class="block text-xs tracking-wider text-[#8a5a00] mb-1.5">Aging (≤ days)</label>
+                                <input type="number" name="egg_freshness_aging_days" min="1" placeholder="14"
+                                       value="{{ $freshnessThresholds['aging_days'] }}"
+                                       class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-5 pt-4 border-t flex" style="border-color: #e6e6e6;">
+                    <button type="submit"
+                            class="bg-[#102A4C] text-white px-5 py-2.5 rounded-lg text-sm hover:bg-[#1D4E8F] transition-colors">
+                        Save Configuration
+                    </button>
+                </div>
             </form>
         </div>
     </x-card>

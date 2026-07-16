@@ -43,7 +43,7 @@
 
         {{-- ── Step 1: Select Hens ── --}}
         <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
-            <div class="flex items-center justify-between px-4 py-2.5"
+            <div class="flex items-center justify-between px-5 py-3"
                  style="background: #F0F4FF; border-bottom: 1px solid #CCDDFF;">
                 <div class="flex items-center gap-3">
                     <span class="text-sm font-semibold text-[#1D4E8F]">Step 1: Select Hens</span>
@@ -84,7 +84,7 @@
         </div>
 
         {{-- ── Step 2: Choose Cage ── --}}
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
             <label class="block text-xs font-semibold text-[#1D4E8F] mb-2">Step 2: Choose Cage</label>
             <select name="cage_id" id="cageSelect" required
                     class="w-full max-w-md border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]"
@@ -104,7 +104,7 @@
 
         {{-- ── Step 3: Choose Mode + Slot Grid ── --}}
         <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
-            <div class="flex items-center gap-4 px-4 py-2.5 border-b border-[#D9D9D9]" style="background: #FAFAFA;">
+            <div class="flex items-center gap-4 px-5 py-3 border-b border-[#D9D9D9]" style="background: #FAFAFA;">
                 <span class="text-xs font-semibold text-[#1D4E8F]">Step 3: Placement Mode</span>
                 <label class="flex items-center gap-1.5 text-xs cursor-pointer">
                     <input type="radio" name="mode_radio" value="manual" {{ old('mode', 'manual') === 'manual' ? 'checked' : '' }} onchange="switchMode('manual')"
@@ -119,7 +119,7 @@
             </div>
 
             {{-- Manual mode --}}
-            <div id="manualMode" class="{{ old('mode') === 'auto' ? 'hidden' : '' }} p-4">
+            <div id="manualMode" class="{{ old('mode') === 'auto' ? 'hidden' : '' }} p-5">
                 <div class="flex items-center justify-between mb-3">
                     <span class="text-xs font-medium text-[#6B7280] uppercase tracking-wider">Click slots to select</span>
                     <div class="flex items-center gap-3 text-xs text-[#9CA3AF]">
@@ -135,10 +135,10 @@
             </div>
 
             {{-- Auto mode --}}
-            <div id="autoMode" class="{{ old('mode') === 'auto' ? '' : 'hidden' }} p-4">
-                <div class="flex items-center gap-4">
-                    <div>
-                        <label class="block text-xs font-medium text-[#6B7280] mb-1">Hens per slot</label>
+            <div id="autoMode" class="{{ old('mode') === 'auto' ? '' : 'hidden' }} p-5">
+            <div class="flex items-center gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-[#6B7280] mb-1">Hens per slot</label>
                         <input type="number" id="chickensPerSlot" name="chickens_per_slot" min="1" max="10" value="{{ old('chickens_per_slot', 4) }}"
                                class="w-24 border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]"
                                oninput="updateAutoSummary()">

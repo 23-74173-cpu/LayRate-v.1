@@ -36,6 +36,8 @@ class EggStockController extends Controller
             'trayTotals' => $trayTotals,
             'sizes' => $sizes,
             'availablePools' => $availablePools,
+            'eggStockThresholds' => EggStockBatch::sizeThresholds(),
+            'freshnessThresholds' => EggStockBatch::freshnessThresholds(),
         ]);
     }
 
@@ -105,6 +107,8 @@ class EggStockController extends Controller
             'cages' => $cages,
             'sizes' => $sizes,
             'eggWeights' => $eggWeights,
+            'eggStockThresholds' => EggStockBatch::sizeThresholds(),
+            'freshnessThresholds' => EggStockBatch::freshnessThresholds(),
         ]);
     }
 
@@ -136,6 +140,8 @@ class EggStockController extends Controller
                 'errors' => ['count' => [$e->getMessage()]],
             ], 422);
         }
+
+        EggStockBatch::checkLowStock();
 
         $sizes = ['small', 'medium', 'large', 'jumbo', 'unsorted'];
         $allBatches = EggStockBatch::all();
@@ -194,7 +200,7 @@ class EggStockController extends Controller
                 if ($cageId) {
                     $unsortedQuery->whereHas('productionLog.cageSlot', fn($q) => $q->where('cage_id', $cageId));
                 }
-                $unsortedRecords = $unsortedQuery->orderBy('id')->get();
+                $unsortedRecords = $unsortedQuery->lockForUpdate()->orderBy('id')->get();
 
                 $remaining = $classifiedTotal;
                 $sourceLogId = null;
@@ -236,6 +242,8 @@ class EggStockController extends Controller
             ], 422);
         }
 
+        EggStockBatch::checkLowStock();
+
         return response()->json(['success' => true])
             ->header('Content-Type', 'application/json');
     }
@@ -260,12 +268,37 @@ class EggStockController extends Controller
 
         $batch->refresh();
 
+        EggStockBatch::checkLowStock();
+
         return redirect()->route('eggs.stocks')->with('success', 'Stock batch updated.');
+    }
+
+    public function saveThresholds(Request $request)
+    {
+        $data = $request->validate([
+            'egg_low_stock_threshold_small'    => 'nullable|integer|min:0',
+            'egg_low_stock_threshold_medium'   => 'nullable|integer|min:0',
+            'egg_low_stock_threshold_large'    => 'nullable|integer|min:0',
+            'egg_low_stock_threshold_jumbo'    => 'nullable|integer|min:0',
+            'egg_low_stock_threshold_unsorted' => 'nullable|integer|min:0',
+            'egg_freshness_fresh_days'         => 'nullable|integer|min:1|max:365',
+            'egg_freshness_aging_days'         => 'nullable|integer|min:1|max:365',
+        ]);
+
+        foreach ($data as $key => $value) {
+            Setting::set($key, (int) $value);
+        }
+
+        EggStockBatch::checkLowStock();
+
+        return back()->with('success', 'Egg stock configuration saved.');
     }
 
     public function destroy(EggStockBatch $batch)
     {
         $batch->delete();
+
+        EggStockBatch::checkLowStock();
 
         return back()->with('success', 'Stock batch deleted.');
     }
