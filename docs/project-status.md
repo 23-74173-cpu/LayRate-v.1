@@ -5,8 +5,9 @@
 # LayRate Poultry Farm Management System — Project Status
 
 **Overall Project Completion: 77%** (range: 74–79%)
-**Total items audited:** 92
-**Breakdown:** 56 ✅ Implemented | 22 ⚠️ Partially Implemented | 14 ❌ Not Started
+**Total items tracked:** 87
+**Breakdown:** 56 ✅ Implemented | 22 ⚠️ Partially Implemented | 9 ❌ Not Started
+> 5 items moved to Dropped/Deferred sections (excluded from active count — see below).
 **Last updated:** 2026-07-16
 
 ---
@@ -16,7 +17,6 @@
 Check items off here as they are completed. All ❌ status items from the detailed audit, grouped by section.
 
 ### DASHBOARD
-- [ ] **#29** — KPI cards pre-select cage on navigate (pass `?cage_id=X`)
 - [ ] **#32** — Feed/Mortality scrollable with `limit=5` truncation
 - [ ] **#33** — KPI card flip-to-detail animation (currently modal-based)
 
@@ -30,17 +30,9 @@ Check items off here as they are completed. All ❌ status items from the detail
 ### ENVIRONMENT
 - [ ] **#70** — Fan status displayed (KPI card, animation indicator)
 
-### FEED & NUTRITION
-- [ ] **#75** — Image recognition for feed labels (never discussed/designed)
-
 ### EGG MANAGEMENT
 - [ ] **#89** — No low-stock alerts for egg stock sizes (Feed has this; egg stock doesn't)
 - [ ] **#90** — No batch aging / expiry logic for egg stock batches
-
-### ANALYTICS
-- [ ] **#80** — Per-hen-breed analytics (breed filtering/grouping)
-- [ ] **#81** — Mortality data in Analytics
-- [ ] **#82** — Temperature/environmental data in Analytics
 
 ### REPORTS
 - [ ] **#84** — Preview table before export (currently generates output immediately)
@@ -114,8 +106,8 @@ Each section shows: audit items ✅/⚠️/❌ counts, section completion % (fro
 
 ### DASHBOARD — 65.75% complete
 
-**8 items:** 3 ✅, 2 ⚠️, 3 ❌
-**Key files:** DashboardController (187 lines), 6 views
+**7 items:** 3 ✅, 2 ⚠️, 2 ❌
+**Key files:** DashboardController (178 lines), 4 views
 
 <details>
 <summary>Expand detail table</summary>
@@ -125,7 +117,6 @@ Each section shows: audit items ✅/⚠️/❌ counts, section completion % (fro
 | 26 | Date/time live-updating | ✅ | | `dashboard.blade.php:216-227` — JS `setInterval` | |
 | 27 | KPI cards prominent font | ✅ | | `text-4xl font-bold` (36px) | |
 | 28 | KPI cards clickable | ✅ | | `Turbo.visit(card.dataset.nav)` — all 5 cards | |
-| 29 | KPI cards pre-select cage | ❌ | | No cage ID passed on navigate | Needs product decision |
 | 30 | Cage Overview card padding | ⚠️ | | Padding `p-3`/`p-4` — unverified visually | |
 | 31 | Sensor summary descriptive status | ⚠️ | | Code shows conditional classes — unverified | |
 | 32 | Feed/Mortality scrollable (5 items) | ❌ | | No limit=5 or scroll truncation found | |
@@ -257,7 +248,7 @@ Each section shows: audit items ✅/⚠️/❌ counts, section completion % (fro
 
 ### FEED & NUTRITION — 82.0% complete
 
-**5 items:** 4 ✅, 0 ⚠️, 1 ❌
+**4 items:** 4 ✅, 0 ⚠️, 0 ❌
 **Key files:** FeedController (403 lines), FeedBatch (88), FeedConsumptionLog (54), FarmFeedEntry (29); 3 views
 **Tests:** 2 test files, 44 tests (FeedBatchManagement 32, FcrCalculation 12) — strongest test coverage in the app
 
@@ -269,7 +260,6 @@ Each section shows: audit items ✅/⚠️/❌ counts, section completion % (fro
 | 72 | Full CRUD for feed batches | ✅ | | `storeBatch()`, `updateBatch()`, `destroyBatch()`, `checkDeleteBatch()` | |
 | 73 | Batch code auto-generates | ✅ | | `FeedBatch.php:15-38` — `F-YYYY-NNN` format | |
 | 74 | Feed brand field exists | ✅ | | `brand` in `$fillable`, validates `nullable|string|max:100` | |
-| 75 | Image recognition for feed labels | ❌ | | Not discussed or implemented anywhere | Open question |
 | 76 | Feed consumption: per-cage vs farm-wide | ✅ | | Per-cage with farm-wide distribution via largest-remainder | Both supported |
 
 </details>
@@ -278,7 +268,7 @@ Each section shows: audit items ✅/⚠️/❌ counts, section completion % (fro
 
 ### ANALYTICS — 60.18% complete
 
-**6 items:** 2 ✅, 1 ⚠️, 3 ❌
+**3 items:** 2 ✅, 1 ⚠️, 0 ❌
 **Key files:** AnalyticsController (93 lines), 2 views
 
 <details>
@@ -289,9 +279,6 @@ Each section shows: audit items ✅/⚠️/❌ counts, section completion % (fro
 | 77 | Cage filtering uses dropdown | ✅ | | `<select>` dropdown (not buttons) | |
 | 78 | Appropriate chart types | ✅ | | Line (HDEP), bar (eggs), scatter (feed vs HDEP) | |
 | 79 | Charts "not loading" root cause | ⚠️ | | Turbo-frame + `defer` Chart.js interaction — not reproducible from code alone | Needs browser debugging |
-| 80 | Per-hen-breed analytics | ❌ | | "breed" does not appear in AnalyticsController | Missing feature |
-| 81 | Mortality data in Analytics | ❌ | | No mortality queries in controller | Missing feature |
-| 82 | Temperature data in Analytics | ❌ | | No environmental log queries in controller | Missing feature |
 
 </details>
 
@@ -337,13 +324,25 @@ Note: Reports do work end-to-end (CSV export, printable HTML with letterhead, 4 
 
 These items cannot be resolved by code changes alone — they require a product/operator decision on the desired behavior.
 
-- [ ] **#29** — KPI cards navigate to sections but don't pre-select a cage (e.g., Mortality Today for Cage A → Mortality page with Cage A pre-filtered). Needs a decision on whether to pass `?cage_id=X` in the target URL.
 - [ ] **#50** — Cage Overview horizontal/vertical toggle was intentionally removed. Whether to restore it or finalize a single orientation is undecided.
 - [ ] **#61** — The current behavior blocks stocking when pool is 0 (no eggs logged). This implicitly prevents "speculative" stocking. Confirm this is desired.
-- [ ] **#75** — Feed label image recognition — never discussed/designed. If planned, needs a spec.
 - [ ] **#76** — Daily feed consumption is per-cage, with farm-wide distribution support. This design was not explicitly signed off by the farm operator.
-- [ ] **#80, 81, 82** — Analytics missing breed, mortality, and temperature data. Needs product decision on whether to include these in the Analytics view (vs. keeping them in their dedicated sections).
 - [ ] **#84** — Reports generate output immediately without a preview table. Whether a preview should be shown before generation is unsettled.
+
+---
+
+## Dropped / Out of Scope
+
+These items were evaluated and explicitly declined. They are excluded from the active item count.
+
+- **#29** — KPI cards pre-select cage on navigate. **Dropped.** Aggregate KPI cards (Total Hens, Eggs Today, etc.) represent farm-wide totals with no single correct target cage. Per-cage pre-selection already works correctly where it's meaningful, on the Feed Today / Mortality Today row-level items, which pass `?cage_id=` and are read by `MortalityController` and `FeedController`.
+- **#75** — Feed label image recognition. **Dropped.** Confirmed out of scope — no code footprint existed (no OCR/vision libraries, no related UI, no database schema).
+
+## Deferred / Won't Do (For Now)
+
+These items are not actively planned but may be revisited. They are excluded from the active item count.
+
+- **#80, #81, #82** — Analytics: breed filtering, mortality data, temperature data. **Decision:** Analytics stays focused on its current scope (HDEP trend, eggs collected, feed-vs-HDEP). Breed, mortality, and temperature data remain in their dedicated sections (Chickens, Mortality, Environment) rather than being duplicated into Analytics.
 
 ---
 
@@ -355,7 +354,7 @@ These sections have a significant gap between their feature status (which may lo
 |---------|:-------------:|:-------------:|:----------:|---------|
 | Dashboard | 50% (3✅) | 30% (env overlap only) | **High** | KPI cards, live clock, nav click-through all untested |
 | Chickens | 90% (4✅) | 40% | **High** | 542-line controller with 7+ POST endpoints, 4/5 audit items ✅, but only 7 occupancy tests |
-| Analytics | 41.7% (2✅) | 10% | **High** | Chart loading (item 79) root cause unfound |
+| Analytics | 66.7% (2✅) | 10% | **High** | 3 ❌ items moved to Deferred (breed, mortality, temperature out of scope). Chart loading (item 79) root cause unfound |
 | Forecast | 100% (1✅) | 10% | **Critical** | 846-line controller with Python exec, 0 PHP tests |
 
 ---
@@ -366,9 +365,6 @@ Ranked by (impact on overall %) × (implementation effort). Check off as complet
 
 - [x] **~~1. Fix broken `@can('admin')` gates — admin delete buttons always hidden (item 85)~~**
   - Fixed: `Gate::define('admin', ...)` registered in `AppServiceProvider::boot()`. Feature test in `GateAdminTest.php`. Verified: admin sees delete buttons, operator does not.
-- [ ] **1. Add Analytics: breed filtering, mortality data, temperature data (items 80–82)**
-  - Impact: +2.5% on overall | Effort: Medium | ROI: ★★★★★
-  - Closes 3 of 6 Analytics gaps at once; Analytics is the lowest-completeness section with meaningful weight (3%)
 - [x] **~~2. Replace 7 native `confirm()`/`alert()` calls with modal equivalents (item 4)~~**
   - Fixed: All 7 replaced. `<x-confirm-modal />` with `data-confirm` attribute for confirms; `<x-notification-toast />` with `showNotification()` for alerts.
 - [ ] **3. Implement Dashboard Feed/Mortality scrollable limit=5 (item 32)**
@@ -377,9 +373,6 @@ Ranked by (impact on overall %) × (implementation effort). Check off as complet
 - [ ] **4. Add Reports preview table before generation (item 84)**
   - Impact: +1.5% on overall | Effort: Medium | ROI: ★★★
   - Requires new Blade view + controller method but closes the only Reports audit gap
-- [ ] **5. KPI cards pre-select cage on navigate (item 29) + remove orphaned confirm-delete route**
-  - Impact: +1.8% on Dashboard (66%→78%) + cleanup | Effort: Low | ROI: ★★★
-  - Turbo-frame URL parameter pass and dead-route cleanup
 
 ---
 

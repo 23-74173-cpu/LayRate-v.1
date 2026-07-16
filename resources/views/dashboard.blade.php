@@ -46,11 +46,6 @@
         @include('dashboard._metric-cards-skeleton')
     </turbo-frame>
 
-    {{-- ── Cage Overview: Farm Layout Canvas (lazy) ── --}}
-    <turbo-frame id="dashboard-cage-overview" src="{{ route('dashboard.cage-overview') }}" loading="lazy" class="mb-5 block">
-        @include('dashboard._cage-overview-skeleton')
-    </turbo-frame>
-
     {{-- ─ Stats Modal (vanilla JS) ── --}}
     <div id="statsModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
         <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeStatsModal()"></div>
@@ -106,7 +101,7 @@
     </script>
 
     {{-- ── Feed Today / Mortality Today (lazy) ── --}}
-    <turbo-frame id="dashboard-feed-mortality" src="{{ route('dashboard.feed-mortality') }}" loading="lazy">
+    <turbo-frame id="dashboard-feed-mortality" src="{{ route('dashboard.feed-mortality') }}" loading="lazy" class="mt-5 block">
         @include('dashboard._feed-mortality-skeleton')
     </turbo-frame>
 

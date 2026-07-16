@@ -27,13 +27,6 @@ class DashboardController extends Controller
         return view('dashboard._metric-cards', $data);
     }
 
-    public function cageOverview()
-    {
-        $data = $this->buildDashboardData();
-
-        return view('dashboard._cage-overview', $data);
-    }
-
     public function feedMortality()
     {
         $data = $this->buildDashboardData();
@@ -46,8 +39,6 @@ class DashboardController extends Controller
         $today = now()->toDateString();
         $thresholds = Setting::thresholds();
 
-        $gridRows = (int) Setting::get('farm_grid_rows', 4);
-        $gridCols = (int) Setting::get('farm_grid_cols', 4);
         $needsOnboarding = Setting::where('key', 'farm_grid_rows')->doesntExist()
             || Setting::where('key', 'farm_grid_cols')->doesntExist()
             || Cage::count() === 0;
@@ -144,7 +135,7 @@ class DashboardController extends Controller
             'eggsToday', 'lifetimeEggs', 'avgTemp', 'avgHum', 'feedToday',
             'mortalityToday', 'mortalityTodayTotal',
             'liveReadings', 'today',
-            'gridRows', 'gridCols', 'needsOnboarding'
+            'needsOnboarding'
         );
     }
 
