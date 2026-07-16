@@ -229,11 +229,13 @@
                                         class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Edit batch">
                                     <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                                 </button>
+                                @can('admin')
                                 <button onclick="deleteBatch({{ $batch->id }})"
                                         class="flex items-center gap-1 text-xs border border-[#D9D9D9] px-2.5 py-1.5 rounded hover:bg-red-50 text-[#6B7280]"
                                         aria-label="Delete batch">
                                     <i data-lucide="trash-2" class="w-3 h-3" style="color: #9b1c24;"></i>
                                 </button>
+                                @endcan
                             </div>
                         </td>
                     </tr>
@@ -305,6 +307,7 @@
                                             class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Edit consumption">
                                         <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                                     </button>
+                                    @can('admin')
                                     <form method="POST" action="{{ route('feed.consumption.destroy', $log) }}"
                                           data-confirm="Delete this consumption record?" data-confirm-action="Delete">
                                         @csrf @method('DELETE')
@@ -312,6 +315,7 @@
                                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                                         </button>
                                     </form>
+                                    @endcan
                                 @endif
                             </div>
                         </td>

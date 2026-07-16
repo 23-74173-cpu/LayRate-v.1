@@ -111,7 +111,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/eggs/pre-orders/table',                [PreOrderController::class, 'table'])->name('eggs.preorders.table');
     Route::post('/eggs/pre-orders',                    [PreOrderController::class, 'store'])->name('eggs.preorders.store');
     Route::patch('/eggs/pre-orders/{order}',           [PreOrderController::class, 'update'])->name('eggs.preorders.update');
-    Route::delete('/eggs/pre-orders/{order}',          [PreOrderController::class, 'destroy'])->name('eggs.preorders.destroy');
+    Route::delete('/eggs/pre-orders/{order}',          [PreOrderController::class, 'destroy'])->name('eggs.preorders.destroy')->middleware('admin');
 
     Route::get('/environment',        [EnvironmentController::class, 'index'])->name('environment');
     Route::get('/environment/live-data', [EnvironmentController::class, 'liveData'])->name('environment.live-data');
@@ -123,7 +123,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/hardware/live-data',          [HardwareItemController::class, 'liveData'])->name('hardware.live-data');
     Route::post('/hardware',                   [HardwareItemController::class, 'store'])->name('hardware.store');
     Route::put('/hardware/{hardwareItem}',     [HardwareItemController::class, 'update'])->name('hardware.update');
-    Route::delete('/hardware/{hardwareItem}',  [HardwareItemController::class, 'destroy'])->name('hardware.destroy');
+    Route::delete('/hardware/{hardwareItem}',  [HardwareItemController::class, 'destroy'])->name('hardware.destroy')->middleware('admin');
 
     Route::middleware('admin')->group(function () {
         Route::post('/devices',                           [DeviceController::class, 'store'])->name('devices.store');
@@ -136,11 +136,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/feed/fcr-data',                 [FeedController::class, 'fcrData'])->name('feed.fcr-data');
     Route::post('/feed/batch',                   [FeedController::class, 'storeBatch'])->name('feed.batch.store');
     Route::put('/feed/batch/{feedBatch}',        [FeedController::class, 'updateBatch'])->name('feed.batch.update');
-    Route::delete('/feed/batch/{feedBatch}',     [FeedController::class, 'destroyBatch'])->name('feed.batch.destroy');
+    Route::delete('/feed/batch/{feedBatch}',     [FeedController::class, 'destroyBatch'])->name('feed.batch.destroy')->middleware('admin');
     Route::get('/feed/batch/{feedBatch}/delete-check', [FeedController::class, 'checkDeleteBatch'])->name('feed.batch.delete-check');
     Route::post('/feed/consumption',             [FeedController::class, 'storeConsumption'])->name('feed.consumption.store');
     Route::put('/feed/consumption/{feedConsumptionLog}', [FeedController::class, 'updateConsumption'])->name('feed.consumption.update');
-    Route::delete('/feed/consumption/{feedConsumptionLog}', [FeedController::class, 'destroyConsumption'])->name('feed.consumption.destroy');
+    Route::delete('/feed/consumption/{feedConsumptionLog}', [FeedController::class, 'destroyConsumption'])->name('feed.consumption.destroy')->middleware('admin');
     Route::post('/feed/farm-entry',              [FeedController::class, 'storeFarmFeedEntry'])->name('feed.farm-entry.store');
     Route::put('/feed/farm-entry/{farmFeedEntry}', [FeedController::class, 'updateFarmFeedEntry'])->name('feed.farm-entry.update');
     Route::delete('/feed/farm-entry/{farmFeedEntry}', [FeedController::class, 'destroyFarmFeedEntry'])->name('feed.farm-entry.destroy');
@@ -149,10 +149,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/analytics/charts', [AnalyticsController::class, 'charts'])->name('analytics.charts');
 
     Route::get('/forecast',             [ForecastController::class, 'index'])->name('forecast');
-    Route::post('/forecast/generate',   [ForecastController::class, 'generate'])->name('forecast.generate');
-    Route::post('/forecast/clear',      [ForecastController::class, 'clear'])->name('forecast.clear');
+    Route::post('/forecast/generate',   [ForecastController::class, 'generate'])->name('forecast.generate')->middleware('admin');
+    Route::post('/forecast/clear',      [ForecastController::class, 'clear'])->name('forecast.clear')->middleware('admin');
     Route::get('/forecast/template',    [ForecastController::class, 'downloadTemplate'])->name('forecast.template');
-    Route::post('/forecast/import',     [ForecastController::class, 'import'])->name('forecast.import');
+    Route::post('/forecast/import',     [ForecastController::class, 'import'])->name('forecast.import')->middleware('admin');
 
     Route::get('/account',           [AccountController::class, 'show'])->name('account');
     Route::post('/account/password', [AccountController::class, 'updatePassword'])->name('account.password');

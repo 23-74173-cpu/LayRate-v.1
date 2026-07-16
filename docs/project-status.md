@@ -6,7 +6,7 @@
 
 **Overall Project Completion: 77%** (range: 74–79%)
 **Total items audited:** 92
-**Breakdown:** 54 ✅ Implemented | 24 ⚠️ Partially Implemented | 14 ❌ Not Started
+**Breakdown:** 55 ✅ Implemented | 23 ⚠️ Partially Implemented | 14 ❌ Not Started
 **Last updated:** 2026-07-16
 
 ---
@@ -55,7 +55,7 @@ Each section shows: audit items ✅/⚠️/❌ counts, section completion % (fro
 
 ### GENERAL / SYSTEM-WIDE — 73.0% complete
 
-**23 items:** 12 ✅, 11 ⚠️, 0 ❌
+**23 items:** 13 ✅, 10 ⚠️, 0 ❌
 **Key files:** AuthController, SettingsController, NoteController, AlertController, layouts/app.blade.php, auth/login.blade.php, 17 shared components
 
 <details>
@@ -84,7 +84,7 @@ Each section shows: audit items ✅/⚠️/❌ counts, section completion % (fro
 | 19 | RBAC | ⚠️ | | Binary `admin`/`operator` role flag only; `EnsureAdmin` middleware guards 12 routes. No roles/permissions tables, no Spatie package, no Gates, no Policies. No role assignment UI. `UserFactory` does not set a default role. `@can('admin')` in views is broken (see item 85). | Corrected from ✅ — binary flag is not RBAC |
 | 20 | Responsive across screen sizes | ⚠️ | | Dashboard grid forces 2 cols on mobile; no full mobile audit | |
 | 85 | Broken `@can('admin')` gates (HIGH-PRIORITY BUG) | ✅ | | `Gate::define('admin', fn ($user) => $user->isAdmin())` registered in `AppServiceProvider::boot()`. `@can('admin')` now correctly returns true for admin, false for operator. Feature test added in `tests/Feature/GateAdminTest.php`. | Fixed — see `app/Providers/AppServiceProvider.php:25` |
-| 86 | Unprotected destructive routes (security gap) | ⚠️ | | 16+ mutating routes not admin-protected: `PreOrderController::destroy`, `FeedController::destroyBatch`/`destroyConsumption`, `HardwareItemController::destroy`, `EnvironmentController::saveThresholds`, `AlertController` actions, `ForecastController` generate/clear/import, all `ChickensController` mutations | Needs product decision on which to restrict |
+| 86 | Unprotected destructive routes (security gap) | ✅ | | 7 routes now admin-protected: `PreOrderController::destroy`, `FeedController::destroyBatch`/`destroyConsumption`, `HardwareItemController::destroy`, `ForecastController` generate/clear/import. Corresponding UI buttons wrapped in `@can('admin')`. Feature tests in `GateAdminTest.php` assert 403 for operators, success for admins on all 7. | Chickens mutations, Alert actions, Environment thresholds deliberately left operator-accessible |
 | 87 | Spacing violations in 12+ views | ⚠️ | | Non-Notion spacing (`p-5`, `gap-3`, `gap-5`) in mortality, feed, analytics, forecast, reports, environment, account, chickens, cages/bulk-add, cages/confirm-delete views. Cross-ref from `UI-UX-AUDIT.md` / `REDESIGN-AUDIT.md` | May be partially fixed; needs re-audit |
 
 **Remaining native dialog calls (item 4):**
@@ -350,7 +350,6 @@ These items cannot be resolved by code changes alone — they require a product/
 - [ ] **#61** — The current behavior blocks stocking when pool is 0 (no eggs logged). This implicitly prevents "speculative" stocking. Confirm this is desired.
 - [ ] **#75** — Feed label image recognition — never discussed/designed. If planned, needs a spec.
 - [ ] **#76** — Daily feed consumption is per-cage, with farm-wide distribution support. This design was not explicitly signed off by the farm operator.
-- [ ] **#86** — 16+ mutating routes are not admin-protected (PreOrder::destroy, Feed::destroyBatch/destroyConsumption, HardwareItem::destroy, Environment::saveThresholds, Alert actions, Forecast generate/clear/import, all Chickens mutations). Which should be admin-restricted vs. operator-accessible was never explicitly decided.
 - [ ] **#80, 81, 82** — Analytics missing breed, mortality, and temperature data. Needs product decision on whether to include these in the Analytics view (vs. keeping them in their dedicated sections).
 - [ ] **#84** — Reports generate output immediately without a preview table. Whether a preview should be shown before generation is unsettled.
 

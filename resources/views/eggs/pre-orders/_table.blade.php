@@ -56,6 +56,7 @@
                                     class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Edit status">
                                 <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                             </button>
+                            @can('admin')
                             <form action="{{ route('eggs.preorders.destroy', $order) }}" method="POST"
                                   onsubmit="return confirm('Cancel this pre-order?')">
                                 @csrf @method('DELETE')
@@ -63,6 +64,7 @@
                                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                                 </button>
                             </form>
+                            @endcan
                         </div>
                     </td>
                 </tr>

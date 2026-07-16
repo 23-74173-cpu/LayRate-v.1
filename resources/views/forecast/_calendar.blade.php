@@ -71,6 +71,7 @@
                     Today
                 </a>
 
+                @can('admin')
                 <form method="POST" action="{{ route('forecast.clear') }}" class="inline" data-turbo-stream onsubmit="return confirm('Clear all forecast badges from the calendar for the current selection?');">
                     @csrf
                     <input type="hidden" name="scope" value="{{ $scope }}">
@@ -83,6 +84,8 @@
                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                         Clear
                     </button>
+                </form>
+                @endcan
                 </form>
         </div>
     </div>
@@ -255,6 +258,7 @@
                 This will forecast egg count for the selected date only, using the current scope
                 (<span class="font-medium text-[#333333]">{{ $scope === 'farm' ? 'Whole Farm' : ($scope === 'breed' ? $breed : $cageCode) }}</span>).
             </p>
+            @can('admin')
             <form method="POST" action="{{ route('forecast.generate') }}" id="forecastDayForm" data-turbo-stream>
                 @csrf
                 <input type="hidden" name="scope" value="{{ $scope }}">
@@ -272,6 +276,7 @@
                     <span>Generate Forecast</span>
                 </button>
             </form>
+            @endcan
             <button type="button" id="cancelForecastDayModal" class="w-full mt-3 border border-[#D9D9D9] text-[#6B7280] py-2.5 rounded-lg text-sm font-medium hover:bg-[#F5F6F8] transition-colors">
                 Cancel
             </button>

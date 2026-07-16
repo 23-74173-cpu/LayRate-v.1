@@ -151,6 +151,7 @@
                 </div>
             </div>
 
+            @can('admin')
             <form method="POST" action="{{ route('forecast.import') }}" id="forecastImportForm" enctype="multipart/form-data" data-turbo="false">
                 @csrf
                 <div id="dropZone" class="group relative border-2 border-dashed border-[#D9D9D9] rounded-lg p-5 hover:border-[#2D7D46] hover:bg-[#F5F6F8] transition-all cursor-pointer text-center mb-3">
@@ -179,6 +180,7 @@
                     <span id="importBtnText">Start Importing</span>
                 </button>
             </form>
+            @endcan
         </div>
     </div>
 </div>
