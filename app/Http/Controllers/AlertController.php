@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Alert;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class AlertController extends Controller
@@ -36,6 +37,47 @@ class AlertController extends Controller
         session()->put('alerts_acknowledged_ids', $acknowledged);
 
         return response()->json(['ok' => true, 'acknowledged' => $acknowledged]);
+    }
+
+    public function apiIndex(Request $request): JsonResponse
+    {
+        $query = Alert::with('cage:cages.id,cage_code')
+            ->orderByDesc('triggered_at');
+
+        if (!$request->has('all')) {
+            $query->where('is_read', false);
+        }
+
+        if ($request->has('limit')) {
+            $query->limit(min((int) $request->limit, 100));
+        }
+
+        $alerts = $query->get();
+
+        return response()->json([
+            'data' => $alerts->map(fn (Alert $a) => [
+                'id' => $a->id,
+                'cage_code' => $a->cage?->cage_code,
+                'alert_type' => $a->alert_type,
+                'message' => $a->message,
+                'is_read' => $a->is_read,
+                'triggered_at' => $a->triggered_at->toIso8601String(),
+            ]),
+            'total' => $alerts->count(),
+        ]);
+    }
+
+    public function apiMarkRead(Alert $alert): JsonResponse
+    {
+        $alert->update(['is_read' => true]);
+
+        return response()->json([
+            'message' => 'Alert marked as read.',
+            'data' => [
+                'id' => $alert->id,
+                'is_read' => true,
+            ],
+        ]);
     }
 
     public function markRead(Alert $alert)
