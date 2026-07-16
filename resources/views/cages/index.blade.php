@@ -16,13 +16,9 @@
                     <i data-lucide="bird" class="w-4 h-4"></i> Bulk Add Chickens
                 </a>
                 @if($isAdmin)
-                <button onclick="openAddModal()"
-                        class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2 text-xs sm:text-sm font-medium rounded-full text-white transition-opacity"
-                        style="background-color: #0075de;"
-                        onmouseover="this.style.opacity='0.85'"
-                        onmouseout="this.style.opacity='1'">
+                <x-button onclick="openAddModal()">
                     <i data-lucide="plus" class="w-4 h-4"></i> Add Cage
-                </button>
+                </x-button>
                 @endif
             </div>
         </x-slot:actions>
@@ -43,11 +39,9 @@
                         onmouseout="this.style.backgroundColor='transparent'">
                     Clear All Cages
                 </button>
-                <button id="saveLayoutBtn" onclick="saveLayout()" disabled
-                        class="text-xs font-medium px-4 py-1.5 rounded-lg text-white transition-opacity disabled:opacity-45 disabled:cursor-not-allowed"
-                        style="background-color: #0075de;">
+                <x-button id="saveLayoutBtn" onclick="saveLayout()" disabled class="text-xs px-4 py-1.5">
                     Save Layout
-                </button>
+                </x-button>
                 @endif
             </div>
         </div>
@@ -359,13 +353,9 @@
                             onmouseout="this.style.backgroundColor='transparent'">
                         Cancel
                     </button>
-                    <button type="submit"
-                            class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity"
-                            style="background-color: #0075de;"
-                            onmouseover="this.style.opacity='0.85'"
-                            onmouseout="this.style.opacity='1'">
+                    <x-button type="submit" class="flex-1 py-2.5">
                         Add Cage
-                    </button>
+                    </x-button>
                 </div>
             </form>
         </div>
@@ -467,13 +457,9 @@
                             onmouseout="this.style.backgroundColor='transparent'">
                         Cancel
                     </button>
-                    <button type="submit"
-                            class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity"
-                            style="background-color: #0075de;"
-                            onmouseover="this.style.opacity='0.85'"
-                            onmouseout="this.style.opacity='1'">
+                    <x-button type="submit" class="flex-1 py-2.5">
                         Save Changes
-                    </button>
+                    </x-button>
                 </div>
             </form>
         </div>

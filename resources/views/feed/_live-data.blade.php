@@ -173,7 +173,7 @@
                 <span class="w-2 h-2 rounded-full" style="background:#9b1c24"></span> Critical
             </span>
         </div>
-        <div class="rounded-xl border overflow-hidden" style="background-color: #ffffff; border-color: #e6e6e6;">
+        <div class="rounded-xl border overflow-x-auto" style="background-color: #ffffff; border-color: #e6e6e6;">
             <table class="w-full">
                 <thead>
                     <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
@@ -259,7 +259,7 @@
                 <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Consumption
             </button>
         </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
+        <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-x-auto">
             <table class="w-full">
                 <thead>
                     <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
@@ -286,11 +286,11 @@
                         <td class="px-5 py-3.5 text-sm text-[#333333]">{{ number_format($log->feed_consumed_kg, 2) }} kg</td>
                         <td class="px-5 py-3.5">
                             @if($isDistributed)
-                                <span class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200" title="Estimated from whole-farm entry">
+                                <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200" title="Estimated from whole-farm entry">
                                     <i data-lucide="git-branch" class="w-3 h-3"></i> Estimated
                                 </span>
                             @else
-                                <span class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-100">
+                                <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-100">
                                     <i data-lucide="check-circle-2" class="w-3 h-3"></i> Direct
                                 </span>
                             @endif
@@ -457,11 +457,9 @@
                              in the egg weight configuration in the egg stocks section to match your flock profile.
                         </p>
                     </div>
-                    <button type="button" onclick="closeFcrGuideModal()"
-                            class="w-full py-2.5 text-sm font-medium rounded-full text-white transition-opacity mt-5"
-                            style="background-color: #0075de;"
-                            onmouseover="this.style.opacity='0.85'"
-                            onmouseout="this.style.opacity='1'">Got it</button>
+                    <x-button type="button" onclick="closeFcrGuideModal()" class="w-full py-2.5 mt-5">
+                        Got it
+                    </x-button>
                 </div>
             </div>
         </div>

@@ -22,7 +22,7 @@
                         <td class="px-3 py-2 font-mono text-[#333]">{{ $log->hen->chicken_id ?? '—' }}</td>
                         <td class="px-3 py-2 text-[#333]">{{ $log->hen?->cage?->cage_code ?? '—' }}</td>
                         <td class="px-3 py-2">
-                            <span class="px-1.5 py-0.5 rounded-full text-[10px] font-medium
+                            <span class="px-1.5 py-0.5 rounded-full text-xs font-medium
                                 @switch($log->reason)
                                     @case('illness') bg-red-100 text-red-700 @break
                                     @case('aggression') bg-yellow-100 text-yellow-700 @break

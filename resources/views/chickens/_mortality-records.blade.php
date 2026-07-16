@@ -32,7 +32,7 @@
                         <td class="px-3 py-2 text-[#333]">{{ $log->cage?->cage_code ?? '—' }}</td>
                         <td class="px-3 py-2 text-[#333] font-medium">{{ $log->count }}</td>
                         <td class="px-3 py-2">
-                            <span class="px-1.5 py-0.5 rounded-full text-[10px] font-medium {{ $reasonColors[$log->reason] ?? 'bg-gray-100 text-gray-600' }}">
+                            <span class="px-1.5 py-0.5 rounded-full text-xs font-medium {{ $reasonColors[$log->reason] ?? 'bg-gray-100 text-gray-600' }}">
                                 {{ $log->reason }}
                             </span>
                         </td>

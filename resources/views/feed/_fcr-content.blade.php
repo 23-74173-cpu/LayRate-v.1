@@ -19,12 +19,12 @@
                 {{ $fcrCurrent !== null ? number_format($fcrCurrent, 2) : 'N/A' }}
             </div>
             @if($summaryStatus !== 'na')
-            <span class="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full {{ $summaryBadge['bg'] }} {{ $summaryBadge['text'] }}">
+            <span class="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full {{ $summaryBadge['bg'] }} {{ $summaryBadge['text'] }}">
                 <i data-lucide="{{ $summaryBadge['icon'] }}" class="w-3 h-3"></i>
                 {{ $summaryLabel }}
             </span>
             @else
-            <span class="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full {{ $summaryBadge['bg'] }} {{ $summaryBadge['text'] }}">
+            <span class="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full {{ $summaryBadge['bg'] }} {{ $summaryBadge['text'] }}">
                 <i data-lucide="{{ $summaryBadge['icon'] }}" class="w-3 h-3"></i>
                 {{ $summaryLabel }}
             </span>

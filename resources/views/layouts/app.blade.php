@@ -269,7 +269,7 @@
                 <a href="{{ route('notifications.index') }}" class="relative text-ink hover:text-ink-muted transition-colors" aria-label="Notifications">
                     <i data-lucide="bell" class="w-4 h-4"></i>
                     @if($globalAlertCount > 0)
-                    <span class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-alert-text text-white text-[8px] rounded-full flex items-center justify-center font-bold">{{ $globalAlertCount }}</span>
+                    <span class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-alert-text text-white text-xs rounded-full flex items-center justify-center font-bold">{{ $globalAlertCount }}</span>
                     @endif
                 </a>
                 <div class="flex items-center gap-2 pl-2 border-l border-hairline">

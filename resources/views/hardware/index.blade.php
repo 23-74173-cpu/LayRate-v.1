@@ -6,20 +6,12 @@
 
     <x-page-header title="Hardware Inventory" subtitle="Manage sensors, relays, and other hardware devices">
         <x-slot:actions>
-            <button onclick="openDeviceModal()"
-                    class="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full text-white transition-opacity"
-                    style="background-color: #6B4C8A;"
-                    onmouseover="this.style.opacity='0.85'"
-                    onmouseout="this.style.opacity='1'">
+            <x-button onclick="openDeviceModal()">
                 <i data-lucide="cpu" class="w-4 h-4"></i> Add Ingestion Device
-            </button>
-            <button onclick="openAddModal()"
-                    class="flex items-center gap-2 px-6 py-2 text-sm font-medium rounded-full text-white transition-opacity"
-                    style="background-color: #0075de;"
-                    onmouseover="this.style.opacity='0.85'"
-                    onmouseout="this.style.opacity='1'">
+            </x-button>
+            <x-button onclick="openAddModal()">
                 <i data-lucide="plus" class="w-4 h-4"></i> Add Device
-            </button>
+            </x-button>
         </x-slot:actions>
     </x-page-header>
 
@@ -45,6 +37,7 @@
             <h2 class="text-sm font-semibold text-[#333333]">Ingestion Devices (Raspberry Pi)</h2>
             <p class="text-xs text-[#6B7280] mt-0.5">Each device gets one API key for the LAN sensor endpoint.</p>
         </div>
+        <div class="overflow-x-auto">
         <table class="w-full">
             <thead>
                 <tr class="border-b border-[#e6e6e6] bg-[#f9f9f7]">
@@ -88,8 +81,9 @@
                 @empty
                 <tr><td colspan="5" class="px-5 py-10 text-center text-sm text-[#6B7280]">No ingestion devices yet.</td></tr>
                 @endforelse
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+            </div>
     </div>
 
     <turbo-frame id="hardware-live-data" src="{{ route('hardware.live-data') }}" loading="lazy">
@@ -196,13 +190,9 @@
                         onmouseout="this.style.backgroundColor='transparent'">
                     Cancel
                 </button>
-                <button type="submit"
-                        class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity"
-                        style="background-color: #0075de;"
-                        onmouseover="this.style.opacity='0.85'"
-                        onmouseout="this.style.opacity='1'">
+                <x-button type="submit" class="flex-1 py-2.5">
                     Add Device
-                </button>
+                </x-button>
             </div>
         </form>
     </div>
@@ -305,13 +295,9 @@
                         onmouseout="this.style.backgroundColor='transparent'">
                     Cancel
                 </button>
-                <button type="submit"
-                        class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity"
-                        style="background-color: #0075de;"
-                        onmouseover="this.style.opacity='0.85'"
-                        onmouseout="this.style.opacity='1'">
+                <x-button type="submit" class="flex-1 py-2.5">
                     Save Changes
-                </button>
+                </x-button>
             </div>
         </form>
     </div>
@@ -342,11 +328,7 @@
                         style="color: #1f1f1f; border: 1px solid #e6e6e6;"
                         onmouseover="this.style.backgroundColor='#f6f5f4'"
                         onmouseout="this.style.backgroundColor='transparent'">Cancel</button>
-                <button type="submit"
-                        class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity"
-                        style="background-color: #6B4C8A;"
-                        onmouseover="this.style.opacity='0.85'"
-                        onmouseout="this.style.opacity='1'">Create & Show Key</button>
+                <x-button type="submit" class="flex-1 py-2.5">Create & Show Key</x-button>
             </div>
         </form>
     </div>

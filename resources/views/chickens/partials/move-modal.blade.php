@@ -112,13 +112,9 @@
                         onmouseout="this.style.backgroundColor='transparent'">
                     Cancel
                 </button>
-                <button type="submit" id="moveSubmitBtn" disabled
-                        class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
-                        style="background-color: #0075de;"
-                        onmouseover="if(!this.disabled) this.style.opacity='0.85'"
-                        onmouseout="this.style.opacity='1'">
+                <x-button type="submit" id="moveSubmitBtn" disabled class="flex-1 py-2.5">
                     Move Chickens
-                </button>
+                </x-button>
             </div>
 
             <input type="hidden" name="hen_ids" id="moveHenIds" value="">

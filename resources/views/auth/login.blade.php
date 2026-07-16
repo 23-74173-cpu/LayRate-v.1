@@ -77,11 +77,9 @@
                     <label for="remember" class="text-xs text-[#6B7280]">Remember me</label>
                 </div>
 
-                <button type="submit"
-                        class="w-full bg-[#102A4C] text-white py-2.5 rounded-lg text-sm font-medium
-                               hover:bg-[#1D4E8F] transition-colors mt-2">
+                <x-button type="submit" class="w-full py-2.5 mt-2">
                     Sign In
-                </button>
+                </x-button>
             </form>
         </div>
 

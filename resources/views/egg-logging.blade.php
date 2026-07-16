@@ -130,7 +130,7 @@
                                 @endif
 
                                 @if($activeHenCount === 0)
-                                <span class="text-[10px] text-center leading-tight" style="color: #a39e98;" title="No hens assigned">No<br>hens</span>
+                                <span class="text-xs text-center leading-tight" style="color: #a39e98;" title="No hens assigned">No<br>hens</span>
                                 @else
                                 <span class="text-xs font-semibold leading-none" style="color: {{ $activeHenCount >= $cage->max_chickens_per_slot ? '#9b1c24' : '#1f1f1f' }}">
                                     {{ $activeHenCount }}
@@ -271,13 +271,9 @@
                                     onmouseout="this.style.backgroundColor='transparent'">
                                 Cancel
                             </button>
-                            <button type="submit" id="saveBtn" disabled
-                                    class="px-6 py-2 text-sm font-medium rounded-full text-white transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
-                                    style="background-color: #0075de;"
-                                    onmouseover="if(!this.disabled)this.style.opacity='0.85'"
-                                    onmouseout="this.style.opacity='1'">
+                            <x-button type="submit" id="saveBtn" disabled class="px-6 py-2">
                                 Save Record
-                            </button>
+                            </x-button>
                         </div>
                     </form>
                 </div>
@@ -309,13 +305,9 @@
                        style="border-color: #e6e6e6; color: #1f1f1f;">
             </div>
             <p id="overrideError" class="hidden text-xs mb-3" style="color: #9b1c24;"></p>
-            <button type="button" onclick="submitOverride()"
-                    class="w-full py-2.5 text-sm font-medium rounded-full text-white transition-opacity"
-                    style="background-color: #0075de;"
-                    onmouseover="this.style.opacity='0.85'"
-                    onmouseout="this.style.opacity='1'">
+            <x-button type="button" onclick="submitOverride()" class="w-full py-2.5">
                 Unlock Field
-            </button>
+            </x-button>
         </div>
     </div>
 

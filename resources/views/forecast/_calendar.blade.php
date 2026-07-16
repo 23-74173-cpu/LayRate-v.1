@@ -109,7 +109,7 @@
             <thead>
                 <tr>
                     @foreach($weekdays as $dayLabel)
-                    <th class="text-center text-[10px] sm:text-xs font-semibold text-[#6B7280] uppercase tracking-wider py-2 px-1 bg-[#F9F9F7] rounded">
+                    <th class="text-center text-xs sm:text-xs font-semibold text-[#6B7280] uppercase tracking-wider py-2 px-1 bg-[#F9F9F7] rounded">
                         <span class="hidden sm:inline">{{ $dayLabel }}</span>
                         <span class="sm:hidden">{{ substr($dayLabel, 0, 1) }}</span>
                     </th>
@@ -197,7 +197,7 @@
                             <div class="flex items-center gap-1">
                                 <span class="{{ $dayNumberClasses }}">{{ $cell['day'] }}</span>
                                 @if($cell['isToday'])
-                                <span class="text-[9px] font-bold text-[#002D5E] bg-[#002D5E]/10 px-1 py-0.5 rounded">Today</span>
+                                <span class="text-xs font-bold text-[#002D5E] bg-[#002D5E]/10 px-1 py-0.5 rounded">Today</span>
                                 @endif
                             </div>
                             @if($cell['forecast'])

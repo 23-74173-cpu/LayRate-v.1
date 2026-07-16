@@ -92,13 +92,9 @@
                         onmouseout="this.style.backgroundColor='transparent'">
                     Cancel
                 </button>
-                <button type="submit"
-                        class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity"
-                        style="background-color: #0075de;"
-                        onmouseover="this.style.opacity='0.85'"
-                        onmouseout="this.style.opacity='1'">
+                <x-button type="submit" class="flex-1 py-2.5">
                     Save Changes
-                </button>
+                </x-button>
             </div>
         </form>
     </div>

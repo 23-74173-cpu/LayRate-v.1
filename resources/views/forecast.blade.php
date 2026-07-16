@@ -175,10 +175,10 @@
                 @error('forecast_file')
                 <p class="text-xs text-red-600 mb-2">{{ $message }}</p>
                 @enderror
-                <button type="submit" id="importForecastBtn" class="w-full bg-[#2D7D46] text-white py-3 rounded-lg text-sm font-medium hover:bg-[#226537] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md">
+                <x-button type="submit" id="importForecastBtn" class="w-full py-3 shadow-md" disabled>
                     <i data-lucide="upload" class="w-5 h-5 shrink-0"></i>
                     <span id="importBtnText">Start Importing</span>
-                </button>
+                </x-button>
             </form>
             @endcan
         </div>

@@ -80,10 +80,9 @@
                     @error('notes')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
                 </div>
 
-                <button type="submit"
-                        class="w-full bg-[#102A4C] text-white py-2.5 rounded-lg text-sm font-medium hover:bg-[#1D4E8F] transition-colors">
+                <x-button type="submit" class="w-full py-2.5">
                     Save Record
-                </button>
+                </x-button>
             </form>
         </div>
 

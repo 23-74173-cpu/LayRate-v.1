@@ -6,12 +6,12 @@
         <table class="w-full text-xs">
             <thead>
                 <tr class="border-b border-[#D9D9D9]">
-                    <th class="text-left py-2 pr-3 text-[10px] tracking-wider text-[#6B7280] font-medium">DATE</th>
-                    <th class="text-left py-2 pr-3 text-[10px] tracking-wider text-[#6B7280] font-medium">CAGE</th>
-                    <th class="text-left py-2 pr-3 text-[10px] tracking-wider text-[#6B7280] font-medium">COUNT</th>
-                    <th class="text-left py-2 pr-3 text-[10px] tracking-wider text-[#6B7280] font-medium">REASON</th>
-                    <th class="text-left py-2 pr-3 text-[10px] tracking-wider text-[#6B7280] font-medium">NOTES</th>
-                    <th class="py-2 text-[10px] tracking-wider text-[#6B7280] font-medium"></th>
+                    <th class="text-left py-2 pr-3 text-xs tracking-wider text-[#6B7280] font-medium">DATE</th>
+                    <th class="text-left py-2 pr-3 text-xs tracking-wider text-[#6B7280] font-medium">CAGE</th>
+                    <th class="text-left py-2 pr-3 text-xs tracking-wider text-[#6B7280] font-medium">COUNT</th>
+                    <th class="text-left py-2 pr-3 text-xs tracking-wider text-[#6B7280] font-medium">REASON</th>
+                    <th class="text-left py-2 pr-3 text-xs tracking-wider text-[#6B7280] font-medium">NOTES</th>
+                    <th class="py-2 text-xs tracking-wider text-[#6B7280] font-medium"></th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-[#F5F6F8]">
@@ -34,7 +34,7 @@
                     </td>
                     <td class="py-2.5 pr-3 font-semibold text-[#333333]">{{ $log->count }}</td>
                     <td class="py-2.5 pr-3">
-                        <span class="px-2 py-0.5 rounded text-[10px]" style="background:{{ $rBg }};color:{{ $rTxt }}">
+                        <span class="px-2 py-0.5 rounded text-xs" style="background:{{ $rBg }};color:{{ $rTxt }}">
                             {{ $log->reason }}
                         </span>
                     </td>

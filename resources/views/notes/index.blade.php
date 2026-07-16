@@ -27,13 +27,9 @@
                         <option value="{{ $cage->id }}" @selected(old('cage_id') == $cage->id)>{{ $cage->cage_code }}</option>
                         @endforeach
                     </select>
-                    <button type="submit"
-                            class="px-6 py-2.5 text-sm font-medium rounded-full text-white transition-opacity whitespace-nowrap"
-                            style="background-color: #0075de;"
-                            onmouseover="this.style.opacity='0.85'"
-                            onmouseout="this.style.opacity='1'">
+                    <x-button type="submit" class="px-6 py-2.5 whitespace-nowrap">
                         Add Note
-                    </button>
+                    </x-button>
                 </div>
             </div>
         </form>
@@ -115,13 +111,9 @@
                             onmouseout="this.style.backgroundColor='transparent'">
                         Cancel
                     </button>
-                    <button type="submit"
-                            class="px-5 py-2 text-sm font-medium rounded-full text-white transition-opacity"
-                            style="background-color: #0075de;"
-                            onmouseover="this.style.opacity='0.85'"
-                            onmouseout="this.style.opacity='1'">
+                    <x-button type="submit" class="px-5 py-2">
                         Save
-                    </button>
+                    </x-button>
                 </div>
             </form>
         </div>

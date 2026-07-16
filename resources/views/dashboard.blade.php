@@ -29,13 +29,9 @@
                                style="border-color: #e6e6e6; color: #1f1f1f;">
                     </div>
                 </div>
-                <button type="submit"
-                        class="w-full py-2.5 text-sm font-medium rounded-full text-white transition-opacity"
-                        style="background-color: #0075de;"
-                        onmouseover="this.style.opacity='0.85'"
-                        onmouseout="this.style.opacity='1'">
+                <x-button type="submit" class="w-full py-2.5">
                     Save Layout
-                </button>
+                </x-button>
             </form>
         </div>
     </div>

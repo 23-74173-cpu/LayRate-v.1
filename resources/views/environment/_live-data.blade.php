@@ -57,10 +57,9 @@
                            value="{{ $thresholds['hum_max'] }}"
                            class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                 </div>
-                <button type="submit"
-                        class="bg-[#102A4C] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#1D4E8F] transition-colors">
+                <x-button type="submit">
                     Save Thresholds
-                </button>
+                </x-button>
             </div>
             @if($errors->any())
             <div class="mt-3 text-xs text-red-500">{{ $errors->first() }}</div>

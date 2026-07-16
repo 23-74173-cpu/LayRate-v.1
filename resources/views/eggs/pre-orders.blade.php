@@ -73,10 +73,9 @@
                     <input type="date" name="to" value="{{ $filters['to'] }}"
                            class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                 </div>
-                <button type="submit"
-                        class="bg-[#102A4C] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#1D4E8F] transition-colors">
+                <x-button type="submit">
                     Apply Filters
-                </button>
+                </x-button>
                 <a href="{{ route('eggs.preorders') }}"
                    class="flex items-center gap-1.5 border border-[#D9D9D9] text-[#6B7280] px-4 py-2 rounded-lg text-sm hover:bg-[#F5F6F8] transition-colors">
                     Reset

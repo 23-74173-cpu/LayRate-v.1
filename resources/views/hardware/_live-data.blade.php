@@ -3,19 +3,19 @@
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div class="rounded-xl border p-4" style="background-color: #ffffff; border-color: #e6e6e6;">
             <div class="text-xs font-semibold tracking-[0.125px] uppercase" style="color: #615d59;">All Active</div>
-            <div class="text-[22px] font-bold leading-[1.27] tracking-[-0.25px] mt-1" style="color: #1f1f1f;">{{ $activeCount }}</div>
+            <div class="text-2xl font-bold leading-[1.27] tracking-[-0.25px] mt-1" style="color: #1f1f1f;">{{ $activeCount }}</div>
         </div>
         <div class="rounded-xl border p-4" style="background-color: #ffffff; border-color: #e6e6e6;">
             <div class="text-xs font-semibold tracking-[0.125px] uppercase" style="color: #615d59;">IR Breakbeams</div>
-            <div class="text-[22px] font-bold leading-[1.27] tracking-[-0.25px] mt-1" style="color: #2D7D46;">{{ $breakbeamCount }}</div>
+            <div class="text-2xl font-bold leading-[1.27] tracking-[-0.25px] mt-1" style="color: #2D7D46;">{{ $breakbeamCount }}</div>
         </div>
         <div class="rounded-xl border p-4" style="background-color: #ffffff; border-color: #e6e6e6;">
             <div class="text-xs font-semibold tracking-[0.125px] uppercase" style="color: #615d59;">DHT22</div>
-            <div class="text-[22px] font-bold leading-[1.27] tracking-[-0.25px] mt-1" style="color: #1D4E8F;">{{ $dht22Count }}</div>
+            <div class="text-2xl font-bold leading-[1.27] tracking-[-0.25px] mt-1" style="color: #1D4E8F;">{{ $dht22Count }}</div>
         </div>
         <div class="rounded-xl border p-4" style="background-color: #ffffff; border-color: #e6e6e6;">
             <div class="text-xs font-semibold tracking-[0.125px] uppercase" style="color: #615d59;">Faulty</div>
-            <div class="text-[22px] font-bold leading-[1.27] tracking-[-0.25px] mt-1" style="color: #9b1c24;">{{ $faultyCount }}</div>
+            <div class="text-2xl font-bold leading-[1.27] tracking-[-0.25px] mt-1" style="color: #9b1c24;">{{ $faultyCount }}</div>
         </div>
     </div>
 

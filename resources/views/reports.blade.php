@@ -78,10 +78,9 @@
                     </select>
                 </div>
 
-                <button type="submit"
-                        class="bg-[#102A4C] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#1D4E8F] transition-colors">
+                <x-button type="submit">
                     Generate Report
-                </button>
+                </x-button>
                 @if($rows->isNotEmpty())
                 <a href="{{ route('reports.csv', request()->query()) }}"
                    class="flex items-center gap-1.5 border border-[#D9D9D9] text-[#6B7280] px-4 py-2 rounded-lg text-sm hover:bg-[#F5F6F8] transition-colors">
@@ -229,7 +228,7 @@
                 <thead>
                     <tr style="background:#102A4C;color:#ffffff;">
                         @foreach(array_keys((array) $rows->first()) as $col)
-                        <th class="px-5 py-3 text-left text-[10px] tracking-widest uppercase font-medium whitespace-nowrap">
+                        <th class="px-5 py-3 text-left text-xs tracking-widest uppercase font-medium whitespace-nowrap">
                             {{ strtoupper(str_replace('_', ' ', $col)) }}
                         </th>
                         @endforeach

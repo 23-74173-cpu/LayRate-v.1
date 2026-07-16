@@ -335,7 +335,7 @@
                              title="${title}">
                     ${isSensor ? '<div class="absolute top-0 right-0 w-2 h-2 rounded-bl bg-emerald-500"></div>' : ''}
                     <span class="text-xs font-mono text-[#6B7280]">${slot.slot_number}</span>
-                    <span class="text-[8px] text-[#9CA3AF]">${occupancy}/${currentMaxPerSlot}</span>
+                    <span class="text-xs text-[#9CA3AF]">${occupancy}/${currentMaxPerSlot}</span>
                 </div>`;
             }
             html += '</div>';

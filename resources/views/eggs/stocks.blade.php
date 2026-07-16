@@ -82,10 +82,9 @@
                                class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                     </div>
                     <div class="flex items-end gap-3">
-                        <button type="submit"
-                                class="bg-[#102A4C] text-white px-5 py-2.5 rounded-lg text-sm hover:bg-[#1D4E8F] transition-colors">
+                        <x-button type="submit" class="px-5 py-2.5">
                             Save Weights
-                        </button>
+                        </x-button>
                         <span class="w-px h-8 bg-[#D9D9D9]"></span>
                         <button type="button" onclick="document.getElementById('addStockModal').classList.remove('hidden')"
                                 class="flex items-center gap-2 bg-[#002D5E] text-white px-4 py-2.5 rounded-lg text-sm hover:bg-[#001F42] transition-colors">
@@ -149,10 +148,9 @@
                 </div>
 
                 <div class="mt-5 pt-4 border-t flex" style="border-color: #e6e6e6;">
-                    <button type="submit"
-                            class="bg-[#102A4C] text-white px-5 py-2.5 rounded-lg text-sm hover:bg-[#1D4E8F] transition-colors">
+                    <x-button type="submit" class="px-5 py-2.5">
                         Save Configuration
-                    </button>
+                    </x-button>
                 </div>
             </form>
         </div>
@@ -325,13 +323,9 @@
                         onmouseout="this.style.backgroundColor='transparent'">
                     Cancel
                 </button>
-                <button type="submit"
-                        class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity"
-                        style="background-color: #0075de;"
-                        onmouseover="this.style.opacity='0.85'"
-                        onmouseout="this.style.opacity='1'">
+                <x-button type="submit" class="flex-1 py-2.5">
                     Save Changes
-                </button>
+                </x-button>
             </div>
         </form>
     </div>

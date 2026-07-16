@@ -54,7 +54,7 @@
             <button type="button" onclick="acknowledgeAlertsModal()" class="w-full sm:w-auto px-4 py-2 text-sm font-medium rounded-lg transition-colors" style="color: #1f1f1f; border: 1px solid #e6e6e6;" onmouseover="this.style.backgroundColor='#f6f5f4'" onmouseout="this.style.backgroundColor='transparent'">
                 Acknowledge
             </button>
-            <a href="{{ route('notifications.index') }}" class="w-full sm:w-auto px-4 py-2 text-sm font-medium rounded-lg text-center transition-colors" style="background-color: #0075de; color: #ffffff;" onmouseover="this.style.backgroundColor='#005bb5'" onmouseout="this.style.backgroundColor='#0075de'">
+            <a href="{{ route('notifications.index') }}" class="inline-flex items-center justify-center w-full sm:w-auto px-4 py-2 text-sm font-medium rounded-lg text-white bg-[#002D5E] hover:bg-[#001F42] transition-colors">
                 View all notifications
             </a>
         </div>

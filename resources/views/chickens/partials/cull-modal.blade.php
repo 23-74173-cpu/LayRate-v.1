@@ -47,11 +47,9 @@
                         style="color: #1f1f1f; border: 1px solid #e6e6e6;"
                         onmouseover="this.style.backgroundColor='#f6f5f4'"
                         onmouseout="this.style.backgroundColor='transparent'">Cancel</button>
-                <button type="submit"
-                        class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity"
-                        style="background-color: #0075de;"
-                        onmouseover="if(!this.disabled) this.style.opacity='0.85'"
-                        onmouseout="this.style.opacity='1'">Confirm Cull</button>
+                <x-button type="submit" class="flex-1 py-2.5">
+                    Confirm Cull
+                </x-button>
             </div>
         </form>
     </div>

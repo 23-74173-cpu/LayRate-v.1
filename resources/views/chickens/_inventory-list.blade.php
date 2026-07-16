@@ -86,7 +86,7 @@
                             {{-- Individual Hens --}}
                             <div class="slot-hens hidden">
                                 {{-- Column headers --}}
-                                <div class="flex items-center gap-3 px-4 py-1.5 border-t border-[#F0F0F0] bg-[#F5F6F8] text-[10px] font-semibold uppercase tracking-wider text-[#6B7280]">
+                                <div class="flex items-center gap-3 px-4 py-1.5 border-t border-[#F0F0F0] bg-[#F5F6F8] text-xs font-semibold uppercase tracking-wider text-[#6B7280]">
                                     <label class="flex items-center gap-1 cursor-pointer" title="Select all in this slot">
                                         <input type="checkbox" onchange="toggleAllInSlot(this)"
                                                class="w-3 h-3 rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]">
