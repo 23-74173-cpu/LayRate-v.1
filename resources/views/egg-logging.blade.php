@@ -501,7 +501,7 @@ function submitOverride() {
             overrideVerified = true;
             closeOverrideModal();
             if (body.needs_pin_setup) {
-                alert('No override PIN set yet — please set one in Account Settings.');
+                showNotification('No override PIN set yet — please set one in Account Settings.', 'info');
             }
         } else {
             const errEl = document.getElementById('overrideError');

@@ -58,7 +58,7 @@
                             </button>
                             @can('admin')
                             <form action="{{ route('eggs.preorders.destroy', $order) }}" method="POST"
-                                  onsubmit="return confirm('Cancel this pre-order?')">
+                                  data-confirm="Cancel this pre-order?" data-confirm-action="Delete">
                                 @csrf @method('DELETE')
                                 <button class="p-1.5 rounded-full hover:bg-red-50 transition-colors" style="color: #a39e98;" aria-label="Cancel pre-order">
                                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>

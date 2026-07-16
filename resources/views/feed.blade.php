@@ -78,8 +78,6 @@
     </div>
 </div>
 
-<x-confirm-modal />
-
 {{-- Edit Batch Modal --}}
 <div id="editBatchModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] items-center justify-center p-4" role="dialog" aria-modal="true">
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEditBatchModal()"></div>
@@ -370,7 +368,7 @@ function deleteBatch(id) {
             }
         })
         .catch(function() {
-            alert('Could not check batch status. Please try again.');
+            showNotification('Could not check batch status. Please try again.', 'error');
         });
 }
 </script>

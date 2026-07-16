@@ -104,7 +104,11 @@
 
     document.getElementById('confirm-modal-action').addEventListener('click', function() {
         if (pendingForm) {
-            pendingForm.submit();
+            if (typeof pendingForm.requestSubmit === 'function') {
+                pendingForm.requestSubmit();
+            } else {
+                pendingForm.submit();
+            }
         }
         confirmModalClose();
     });

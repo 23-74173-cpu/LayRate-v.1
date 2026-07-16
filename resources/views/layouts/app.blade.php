@@ -530,6 +530,9 @@ function loadingButton(btn, label) {
 }
 </script>
 
+<x-confirm-modal />
+<x-notification-toast />
+
 @stack('scripts')
 </body>
 </html>

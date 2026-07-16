@@ -127,7 +127,6 @@
         </div>
     </div>
 
-    <x-confirm-modal />
 </div>
 
 <script>

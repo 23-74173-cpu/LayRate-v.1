@@ -72,7 +72,7 @@
                 </a>
 
                 @can('admin')
-                <form method="POST" action="{{ route('forecast.clear') }}" class="inline" data-turbo-stream onsubmit="return confirm('Clear all forecast badges from the calendar for the current selection?');">
+                <form method="POST" action="{{ route('forecast.clear') }}" class="inline" data-confirm="Clear all forecast badges from the calendar for the current selection?" data-confirm-action="Clear">
                     @csrf
                     <input type="hidden" name="scope" value="{{ $scope }}">
                     @if($scope === 'cage')
@@ -86,7 +86,6 @@
                     </button>
                 </form>
                 @endcan
-                </form>
         </div>
     </div>
 
@@ -343,7 +342,7 @@
                 message = 'This date cannot be forecast. Please select a date between tomorrow and 30 days from today.';
             }
 
-            alert(message);
+            showNotification(message, 'warning');
         };
 
         if (closeBtn) closeBtn.addEventListener('click', closeModal);

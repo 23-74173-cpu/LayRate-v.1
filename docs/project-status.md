@@ -6,7 +6,7 @@
 
 **Overall Project Completion: 77%** (range: 74–79%)
 **Total items audited:** 92
-**Breakdown:** 55 ✅ Implemented | 23 ⚠️ Partially Implemented | 14 ❌ Not Started
+**Breakdown:** 56 ✅ Implemented | 22 ⚠️ Partially Implemented | 14 ❌ Not Started
 **Last updated:** 2026-07-16
 
 ---
@@ -55,7 +55,7 @@ Each section shows: audit items ✅/⚠️/❌ counts, section completion % (fro
 
 ### GENERAL / SYSTEM-WIDE — 73.0% complete
 
-**23 items:** 13 ✅, 10 ⚠️, 0 ❌
+**23 items:** 14 ✅, 9 ⚠️, 0 ❌
 **Key files:** AuthController, SettingsController, NoteController, AlertController, layouts/app.blade.php, auth/login.blade.php, 17 shared components
 
 <details>
@@ -66,7 +66,7 @@ Each section shows: audit items ✅/⚠️/❌ counts, section completion % (fro
 | 1 | Title + subtitle in page headers | ✅ | | 18/24 pages use `<x-page-header>` component | Consistent |
 | 2 | Components inside container with header | ✅ | | `resources/views/layouts/app.blade.php:299` | |
 | 3 | Consistent font sizing | ⚠️ | | Two ad-hoc sizes: `text-[22px]` hardware, `text-[11px]` FCR badges | Minor |
-| 4 | Modals inside site (no native confirm/alert) | ⚠️ | | 4 `confirm()` + 3 `alert()` calls remain (see file list below) | Medium |
+| 4 | Modals inside site (no native confirm/alert) | ✅ | | All 7 native dialog calls replaced. 4 `confirm()` → `data-confirm` attribute using `<x-confirm-modal />`. 3 `alert()` → `showNotification()` using `<x-notification-toast />`. Both components registered in layout. | Resolved — see components/confirm-modal.blade.php, components/notification-toast.blade.php |
 | 5 | Consistent buttons/dropdowns/tabs | ⚠️ | | 4 primary button variants, inline `onmouseover` JS | Medium |
 | 6 | Hardware Inventory section | ✅ | | `HardwareItemController` full CRUD | |
 | 7 | CRUD completeness | ⚠️ | | Mortality no Update; Environment logs no Delete | |
@@ -87,14 +87,6 @@ Each section shows: audit items ✅/⚠️/❌ counts, section completion % (fro
 | 86 | Unprotected destructive routes (security gap) | ✅ | | 7 routes now admin-protected: `PreOrderController::destroy`, `FeedController::destroyBatch`/`destroyConsumption`, `HardwareItemController::destroy`, `ForecastController` generate/clear/import. Corresponding UI buttons wrapped in `@can('admin')`. Feature tests in `GateAdminTest.php` assert 403 for operators, success for admins on all 7. | Chickens mutations, Alert actions, Environment thresholds deliberately left operator-accessible |
 | 87 | Spacing violations in 12+ views | ⚠️ | | Non-Notion spacing (`p-5`, `gap-3`, `gap-5`) in mortality, feed, analytics, forecast, reports, environment, account, chickens, cages/bulk-add, cages/confirm-delete views. Cross-ref from `UI-UX-AUDIT.md` / `REDESIGN-AUDIT.md` | May be partially fixed; needs re-audit |
 
-**Remaining native dialog calls (item 4):**
-- `resources/views/forecast/_calendar.blade.php:74` — `confirm()`
-- `resources/views/hardware/index.blade.php:75` — `confirm()`
-- `resources/views/eggs/pre-orders/_table.blade.php:60` — `confirm()`
-- `resources/views/chickens/_mortality-records.blade.php:43` — `confirm()`
-- `resources/views/egg-logging.blade.php:504` — `alert()`
-- `resources/views/feed.blade.php:373` — `alert()`
-- `resources/views/forecast/_calendar.blade.php:341` — `alert()`
 
 </details>
 
@@ -377,9 +369,8 @@ Ranked by (impact on overall %) × (implementation effort). Check off as complet
 - [ ] **1. Add Analytics: breed filtering, mortality data, temperature data (items 80–82)**
   - Impact: +2.5% on overall | Effort: Medium | ROI: ★★★★★
   - Closes 3 of 6 Analytics gaps at once; Analytics is the lowest-completeness section with meaningful weight (3%)
-- [ ] **2. Replace 7 native `confirm()`/`alert()` calls with modal equivalents (item 4)**
-  - Impact: +1.8% on General (70%→95% UI) | Effort: Low | ROI: ★★★★
-  - Pure CSS/JS fix with no data or routing changes — best effort-to-impact ratio in the app
+- [x] **~~2. Replace 7 native `confirm()`/`alert()` calls with modal equivalents (item 4)~~**
+  - Fixed: All 7 replaced. `<x-confirm-modal />` with `data-confirm` attribute for confirms; `<x-notification-toast />` with `showNotification()` for alerts.
 - [ ] **3. Implement Dashboard Feed/Mortality scrollable limit=5 (item 32)**
   - Impact: +1.9% on Dashboard (66%→80%) | Effort: Low | ROI: ★★★★
   - Simple `LIMIT 5` + `overflow-y-auto` fix documented as missing

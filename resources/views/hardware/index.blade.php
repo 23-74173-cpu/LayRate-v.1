@@ -72,7 +72,7 @@
                         <div class="flex items-center justify-end gap-1">
                             <form method="POST" action="{{ route('devices.regenerate-key', $device) }}" class="inline">
                                 @csrf
-                                <button type="submit" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Regenerate key" onclick="return confirm('Regenerate API key? The old key will stop working immediately.')">
+                                <button type="submit" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Regenerate key" onclick="confirmModal('Regenerate API key? The old key will stop working immediately.', this.closest('form'), 'Regenerate'); return false;">
                                     <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
                                 </button>
                             </form>
@@ -352,7 +352,6 @@
     </div>
 </div>
 
-<x-confirm-modal />
 @endsection
 
 @push('scripts')

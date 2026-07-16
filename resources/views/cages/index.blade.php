@@ -567,9 +567,6 @@
         </div>
     </div>
 
-    {{-- ── Confirm Modal (for delete) ── --}}
-    <x-confirm-modal />
-
 </div>
 @endsection
 
