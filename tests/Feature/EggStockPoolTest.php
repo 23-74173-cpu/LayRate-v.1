@@ -4,10 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\Cage;
 use App\Models\CageSlot;
+use App\Models\EggSizeLog;
 use App\Models\EggStockBatch;
 use App\Models\ProductionLog;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class EggStockPoolTest extends TestCase
@@ -226,5 +228,101 @@ class EggStockPoolTest extends TestCase
 
         $this->createStock(40, 'medium');
         $this->assertEquals(30, EggStockBatch::getAvailablePool());
+    }
+
+    private function createUnsortedLog(int $eggCount, ?string $date = null): ProductionLog
+    {
+        $log = new ProductionLog();
+        $log->cage_slot_id = $this->slot->id;
+        $log->log_date = $date ?? now()->toDateString();
+        $log->egg_count = $eggCount;
+        $log->hen_count = 4;
+        $log->save();
+
+        $log->eggSizeLogs()->create([
+            'egg_size' => 'unsorted',
+            'count' => $eggCount,
+        ]);
+
+        return $log;
+    }
+
+    /** @test */
+    public function store_classified_rejects_over_commit(): void
+    {
+        $this->createUnsortedLog(100);
+
+        $this->actingAs($this->user);
+
+        // Classify 60 of the 100 unsorted eggs — should succeed
+        $response1 = $this->postJson(route('eggs.stocks.store'), [
+            'egg_size' => 'unsorted',
+            'count' => 60,
+            'harvested_date' => now()->toDateString(),
+            'cage_id' => $this->cage->id,
+            'classify' => true,
+            'classify_small' => 15,
+            'classify_medium' => 15,
+            'classify_large' => 15,
+            'classify_jumbo' => 15,
+        ]);
+        $response1->assertStatus(200);
+        $response1->assertJson(['success' => true]);
+
+        // 60 eggs classified → 4 stock batches × 15
+        $this->assertEquals(60, EggStockBatch::sum('count'));
+
+        // Try to classify 50 from the remaining 40 — must be rejected
+        $response2 = $this->postJson(route('eggs.stocks.store'), [
+            'egg_size' => 'unsorted',
+            'count' => 50,
+            'harvested_date' => now()->toDateString(),
+            'cage_id' => $this->cage->id,
+            'classify' => true,
+            'classify_small' => 50,
+        ]);
+        $response2->assertStatus(422);
+        $response2->assertJson([
+            'success' => false,
+            'errors' => ['count' => ['Not enough unsorted eggs available to classify.']],
+        ]);
+
+        // Total classified stock unchanged by the failed request
+        $this->assertEquals(60, EggStockBatch::sum('count'));
+
+        // Remaining unsorted pool should still be 40 (rolled back by the failed transaction)
+        $this->assertEquals(40, EggSizeLog::where('egg_size', 'unsorted')->sum('count'));
+    }
+
+    /** @test */
+    public function store_classified_uses_lock_for_update(): void
+    {
+        $this->createUnsortedLog(50);
+
+        DB::enableQueryLog();
+
+        $this->actingAs($this->user)
+            ->postJson(route('eggs.stocks.store'), [
+                'egg_size' => 'unsorted',
+                'count' => 20,
+                'harvested_date' => now()->toDateString(),
+                'cage_id' => $this->cage->id,
+                'classify' => true,
+                'classify_small' => 20,
+            ])->assertStatus(200);
+
+        $queries = DB::getQueryLog();
+        DB::disableQueryLog();
+
+        $found = false;
+        foreach ($queries as $q) {
+            $sql = strtolower($q['query']);
+            if (str_contains($sql, 'from `egg_size_logs`') && str_contains($sql, 'for update')) {
+                $found = true;
+                break;
+            }
+        }
+
+        $this->assertTrue($found, 'Expected egg_size_logs query with lockForUpdate()');
     }
 }
