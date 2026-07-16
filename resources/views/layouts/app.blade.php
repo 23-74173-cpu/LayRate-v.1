@@ -518,9 +518,7 @@ if (typeof Chart !== 'undefined') {
     Chart.defaults.plugins.legend.labels.padding = 16;
     Chart.defaults.elements.bar.borderRadius = 4;
     Chart.defaults.scale.grid = { color: 'rgba(0,0,0,0.06)' };
-    window.CAGE_COLORS = {
-        'CAGE-A': '#1B8A3E', 'CAGE-B': '#2563EB', 'CAGE-C': '#EA580C', 'CAGE-D': '#7C3AED'
-    };
+    window.CAGE_COLORS = @json(\App\Models\Cage::getColorMap());
 }
 
 // ── Reusable loading-button helper for form submissions ──

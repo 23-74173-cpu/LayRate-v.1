@@ -45,6 +45,14 @@ class CageSlot extends Model
         return $this->hens()->where('is_active', 1)->first();
     }
 
+    public function getActiveHenCountAttribute(): int
+    {
+        if ($this->relationLoaded('hens')) {
+            return $this->hens->where('is_active', 1)->count();
+        }
+        return $this->hens()->where('is_active', 1)->count();
+    }
+
     public function hasBreakbeam(): bool
     {
         if ($this->relationLoaded('hardwareItems')) {

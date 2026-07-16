@@ -102,7 +102,7 @@ function openEditLog(id, date, eggCount, henCount, notes, cageSlotId, sizeSmall,
     document.getElementById('editLogForm').action = '/eggs/logging/' + id;
     document.getElementById('editLogDate').value = date;
     document.getElementById('editEggCount').value = eggCount;
-    document.getElementById('editHenCount').value = henCount;
+    document.getElementById('editHenCountDisplay').value = henCount;
     document.getElementById('editNotes').value = notes || '';
     document.getElementById('editSizeSmall').value = sizeSmall ?? 0;
     document.getElementById('editSizeMedium').value = sizeMedium ?? 0;
@@ -120,7 +120,7 @@ function closeEditLogModal() {
 
 function editComputeHdep() {
     const eggs = parseInt(document.getElementById('editEggCount').value) || 0;
-    const hens = parseInt(document.getElementById('editHenCount').value) || 1;
+    const hens = parseInt(document.getElementById('editHenCountDisplay').value) || 1;
     const hdep = ((eggs / hens) * 100).toFixed(1);
     const el = document.getElementById('editHdepDisplay');
     el.textContent = 'HDEP:  ' + hdep + '%';

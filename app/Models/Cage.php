@@ -155,6 +155,16 @@ class Cage extends Model
         return sprintf('#%02X%02X%02X', min($r, 245), min($g, 245), min($b, 245));
     }
 
+    public static function getColorMap(): array
+    {
+        return self::all()->mapWithKeys(fn($c) => [$c->cage_code => $c->color])->toArray();
+    }
+
+    public static function getSoftColorMap(): array
+    {
+        return self::all()->mapWithKeys(fn($c) => [$c->cage_code => $c->color_soft])->toArray();
+    }
+
     public function getPrimaryHenAttribute(): ?Hen
     {
         return $this->hens()->where('is_active', 1)->first();

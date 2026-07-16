@@ -42,7 +42,7 @@ class ForecastController extends Controller
             ->sort()
             ->values();
 
-        $cageCode = $request->get('cage', $allCages->first() ?? 'CAGE-A');
+        $cageCode = $request->get('cage', $allCages->first() ?? '');
         $breed    = $request->get('breed');
 
         if ($scope === 'breed' && empty($breed)) {
@@ -182,7 +182,7 @@ class ForecastController extends Controller
             ->whereRaw("TRIM(cage_code) != ''")
             ->distinct()
             ->orderBy('cage_code')
-            ->value('cage_code') ?? 'CAGE-A');
+            ->value('cage_code') ?? '');
 
         if ($scope === 'breed' && empty($breed)) {
             $breed = DB::table('forecast_input_records')
@@ -800,7 +800,7 @@ class ForecastController extends Controller
             ->sort()
             ->values();
 
-        $cageCode = $request->get('cage', $allCages->first() ?? 'CAGE-A');
+        $cageCode = $request->get('cage', $allCages->first() ?? '');
         $breed    = $request->get('breed');
 
         if ($scope === 'breed' && empty($breed)) {

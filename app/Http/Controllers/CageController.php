@@ -547,12 +547,69 @@ class CageController extends Controller
         ));
     }
 
-    public function forceDestroy(Cage $cage)
+    public function forceDestroy(Request $request, Cage $cage)
     {
-        $cage->cageSlots()->delete();
-        $cage->delete();
+        $data = $request->validate([
+            'confirmation'         => 'required|string',
+            'hens_action'          => 'required|in:move,delete',
+            'return_sensors'       => 'nullable|boolean',
+            'preserve_production'  => 'nullable|boolean',
+            'preserve_mortality'   => 'nullable|boolean',
+            'preserve_feed'        => 'nullable|boolean',
+            'preserve_environment' => 'nullable|boolean',
+        ]);
 
-        return redirect()->route('cages.index')->with('success', 'Cage and all associated slots deleted.');
+        if ($data['confirmation'] !== $cage->cage_code) {
+            return redirect()->back()
+                ->withErrors(['confirmation' => 'Type the cage name exactly to confirm deletion.'])
+                ->withInput();
+        }
+
+        $cageCode = $cage->cage_code;
+
+        DB::transaction(function () use ($request, $data, $cage) {
+            $slotIds = $cage->cageSlots()->pluck('id');
+
+            if ($request->boolean('preserve_production')) {
+                ProductionLog::whereIn('cage_slot_id', $slotIds)->update(['cage_slot_id' => null]);
+            }
+            if ($request->boolean('preserve_mortality')) {
+                MortalityLog::where('cage_id', $cage->id)->update(['cage_id' => null]);
+            }
+            if ($request->boolean('preserve_feed')) {
+                FeedConsumptionLog::where('cage_id', $cage->id)->update(['cage_id' => null]);
+            }
+            if ($request->boolean('preserve_environment')) {
+                EnvironmentalLog::where('cage_id', $cage->id)->update(['cage_id' => null]);
+            }
+
+            if ($data['hens_action'] === 'move') {
+                Hen::whereIn('cage_slot_id', $slotIds)->where('is_active', 1)->update(['cage_slot_id' => null]);
+            }
+
+            if ($request->boolean('return_sensors', true)) {
+                HardwareItem::where(function ($q) use ($slotIds, $cage) {
+                    $q->whereIn('cage_slot_id', $slotIds)->orWhere('cage_id', $cage->id);
+                })->update(['status' => 'spare', 'cage_id' => null, 'cage_slot_id' => null]);
+            }
+
+            $cage->cageSlots()->delete();
+            $cage->delete();
+        });
+
+        logger()->warning('Cage force-deleted', [
+            'user_id' => auth()->id(),
+            'user_name' => auth()->user()?->name,
+            'cage_code' => $cageCode,
+            'cage_id' => $cage->id,
+            'hens_action' => $data['hens_action'],
+            'preserve_production' => $request->boolean('preserve_production'),
+            'preserve_mortality' => $request->boolean('preserve_mortality'),
+            'preserve_feed' => $request->boolean('preserve_feed'),
+            'preserve_environment' => $request->boolean('preserve_environment'),
+        ]);
+
+        return redirect()->route('cages.index')->with('success', "Cage {$cageCode} and all associated slots deleted.");
     }
 
     private function checkResizeSafety(Cage $cage, array $data): ?array

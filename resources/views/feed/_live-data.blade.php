@@ -58,6 +58,99 @@
             }
         }
 
+        /* ── FCR AJAX with AbortController ── */
+        let fcrAbortController = null;
+
+        function fcrLoad(groupBy) {
+            var panel = document.getElementById('tab-fcr');
+            if (!panel) return;
+
+            /* Cancel any in-flight request before starting a new one */
+            if (fcrAbortController) {
+                fcrAbortController.abort();
+            }
+            fcrAbortController = new AbortController();
+
+            /* Read current selections */
+            var cageSelect = document.getElementById('fcr-cage-select');
+            var cageId = cageSelect ? cageSelect.value : 'all';
+
+            /* Update group-by if provided, otherwise keep current */
+            if (!groupBy) {
+                groupBy = panel.getAttribute('data-fcr-group-by') || 'week';
+            }
+            panel.setAttribute('data-fcr-group-by', groupBy);
+
+            /* Update active button style */
+            panel.querySelectorAll('[data-group-by]').forEach(function(btn) {
+                var isActive = btn.getAttribute('data-group-by') === groupBy;
+                btn.className = 'text-xs px-3 py-1.5 rounded-full border transition-colors ' +
+                    (isActive
+                        ? 'bg-[#002D5E] text-white border-[#002D5E]'
+                        : 'border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]');
+            });
+
+            /* Show loading, hide error + content */
+            var loadingEl = document.getElementById('fcr-loading');
+            var errorEl   = document.getElementById('fcr-error');
+            var contentEl = document.getElementById('fcr-content');
+            if (loadingEl) loadingEl.classList.remove('hidden');
+            if (errorEl)   errorEl.classList.add('hidden');
+            if (contentEl) contentEl.classList.add('hidden');
+
+            var url = '/feed/fcr-data?cage_id=' + encodeURIComponent(cageId) + '&group_by=' + encodeURIComponent(groupBy);
+
+            fetch(url, { signal: fcrAbortController.signal })
+                .then(function(r) {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.text();
+                })
+                .then(function(html) {
+                    if (!contentEl) return;
+                    contentEl.innerHTML = html;
+                    panel.setAttribute('data-fcr-cage-id', cageId);
+                    if (loadingEl) loadingEl.classList.add('hidden');
+                    contentEl.classList.remove('hidden');
+                    /* Re-run lucide icon replacement on new content */
+                    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                        lucide.createIcons({ els: contentEl.querySelectorAll('[data-lucide]') });
+                    }
+                })
+                .catch(function(err) {
+                    if (err.name === 'AbortError') return;
+                    if (loadingEl) loadingEl.classList.add('hidden');
+                    if (errorEl)   errorEl.classList.remove('hidden');
+                    if (contentEl) contentEl.classList.add('hidden');
+                });
+        }
+
+        /* ── FCR Interpretation Guide Modal ── */
+        function openFcrGuideModal() {
+            var modal = document.getElementById('fcr-guide-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeFcrGuideModal() {
+            var modal = document.getElementById('fcr-guide-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                document.body.style.overflow = '';
+            }
+        }
+
+        (function() {
+            if (window.__fcrGuideEscapeBound) return;
+            window.__fcrGuideEscapeBound = true;
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') closeFcrGuideModal();
+            });
+        })();
+
         (function() {
             const params = new URLSearchParams(window.location.search);
             const tab = params.get('tab') || 'batches';
@@ -180,7 +273,7 @@
                 <tbody>
                     @forelse($consumptionLogs as $log)
                     @php
-                        $cColor = match($log->cage?->cage_code ?? '') { 'CAGE-A'=>'#2D7D46','CAGE-B'=>'#1D4E8F','CAGE-C'=>'#C2703E','CAGE-D'=>'#6B4C8A',default=>'#6B7280' };
+                        $cColor = $log->cage?->color ?? '#6B7280';
                         $isDistributed = $log->source === 'distributed';
                     @endphp
                     <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8] {{ $isDistributed ? 'bg-amber-50/50' : '' }}">
@@ -256,24 +349,22 @@
     </div>
 
     {{-- FCR Panel --}}
-    <div id="tab-fcr" class="tab-panel hidden">
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+    <div id="tab-fcr" class="tab-panel hidden"
+         data-fcr-cage-id="{{ $fcrSelectedId ?? $cages->value('id') ?? '' }}"
+         data-fcr-group-by="{{ $fcrGroupBy }}">
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5 relative">
             <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
                 <div>
                     <h3 class="text-sm font-semibold text-[#333333]">Feed Conversion Ratio</h3>
                     <p class="text-xs text-[#6B7280]">kg feed ÷ kg egg mass (lower is better)</p>
                 </div>
 
-                <form method="GET" action="{{ route('feed') }}" class="flex flex-wrap items-center gap-3">
-                    <input type="hidden" name="tab" value="fcr">
-                    @if($preselectedCageId)
-                    <input type="hidden" name="cage_id" value="{{ $preselectedCageId }}">
-                    @endif
-
-                    <select name="fcr_cage_id" onchange="this.form.submit()"
+                <div class="flex flex-wrap items-center gap-3">
+                    <select id="fcr-cage-select" onchange="fcrLoad()"
                             class="border border-[#D9D9D9] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[#002D5E]">
+                        <option value="all">All Cages</option>
                         @foreach($cages as $c)
-                        <option value="{{ $c->id }}" {{ $fcrCageId == $c->id ? 'selected' : '' }}>
+                        <option value="{{ $c->id }}" {{ (int) $fcrSelectedId === $c->id ? 'selected' : '' }}>
                             {{ $c->cage_code }}
                         </option>
                         @endforeach
@@ -281,73 +372,94 @@
 
                     <div class="flex items-center gap-1">
                         @foreach(['day' => 'Day', 'week' => 'Week', 'month' => 'Month'] as $value => $label)
-                        <a href="{{ route('feed', array_merge(request()->only(['cage_id']), ['tab' => 'fcr', 'fcr_cage_id' => $fcrCageId, 'fcr_group_by' => $value])) }}"
-                           class="text-xs px-3 py-1.5 rounded-full border transition-colors {{ $fcrGroupBy === $value ? 'bg-[#002D5E] text-white border-[#002D5E]' : 'border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]' }}">
+                        <button type="button"
+                                data-group-by="{{ $value }}"
+                                onclick="fcrLoad('{{ $value }}')"
+                                class="text-xs px-3 py-1.5 rounded-full border transition-colors {{ $fcrGroupBy === $value ? 'bg-[#002D5E] text-white border-[#002D5E]' : 'border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]' }}">
                             {{ $label }}
-                        </a>
+                        </button>
                         @endforeach
                     </div>
-                </form>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
-                <div class="bg-[#F9F9F7] rounded-lg border border-[#D9D9D9] p-4">
-                    <div class="text-xs tracking-wider text-[#6B7280] mb-1">FCR (THIS {{ strtoupper($fcrGroupBy) }})</div>
-                    <div class="text-3xl tracking-tight text-[#333333]">
-                        {{ $fcrCurrent !== null ? number_format($fcrCurrent, 2) : 'N/A' }}
-                    </div>
-                    @if($fcrCurrent === null)
-                    <div class="text-xs text-[#9CA3AF] mt-1">No egg mass logged for this period</div>
-                    @else
-                    <div class="text-xs text-[#6B7280] mt-1">lower is better</div>
-                    @endif
-                </div>
-                <div class="bg-[#F9F9F7] rounded-lg border border-[#D9D9D9] p-4">
-                    <div class="text-xs tracking-wider text-[#6B7280] mb-1">FEED CONSUMED</div>
-                    <div class="text-3xl tracking-tight text-[#333333]">{{ number_format($fcrTimeline->sum('feed_kg'), 1) }} <span class="text-xl">kg</span></div>
-                    <div class="text-xs text-[#6B7280] mt-1">shown periods</div>
-                </div>
-                <div class="bg-[#F9F9F7] rounded-lg border border-[#D9D9D9] p-4">
-                    <div class="text-xs tracking-wider text-[#6B7280] mb-1">EST. EGG MASS</div>
-                    <div class="text-3xl tracking-tight text-[#333333]">{{ number_format($fcrTimeline->sum('egg_mass_kg'), 2) }} <span class="text-xl">kg</span></div>
-                    <div class="text-xs text-[#6B7280] mt-1">egg counts + weights</div>
                 </div>
             </div>
 
-            @if($fcrTimeline->isEmpty())
-            <div class="text-center py-10 text-sm text-[#6B7280]">
-                No feed or production data for {{ $fcrCage?->cage_code ?? 'the selected cage' }}.
+            {{-- Loading skeleton --}}
+            <div id="fcr-loading" class="hidden">
+                <div class="animate-pulse space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-gray-100 rounded-lg h-20"></div>
+                        <div class="bg-gray-100 rounded-lg h-20"></div>
+                        <div class="bg-gray-100 rounded-lg h-20"></div>
+                    </div>
+                    <div class="bg-gray-100 rounded-lg h-48"></div>
+                </div>
             </div>
-            @else
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead>
-                        <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
-                            <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Period</th>
-                            <th class="text-right text-xs text-[#6B7280] px-5 py-3 font-medium">Feed (kg)</th>
-                            <th class="text-right text-xs text-[#6B7280] px-5 py-3 font-medium">Egg Mass (kg)</th>
-                            <th class="text-right text-xs text-[#6B7280] px-5 py-3 font-medium">FCR</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($fcrTimeline as $row)
-                        <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
-                            <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $row['label'] }}</td>
-                            <td class="px-5 py-3.5 text-sm text-right text-[#333333]">{{ number_format($row['feed_kg'], 1) }}</td>
-                            <td class="px-5 py-3.5 text-sm text-right text-[#333333]">{{ number_format($row['egg_mass_kg'], 2) }}</td>
-                            <td class="px-5 py-3.5 text-sm text-right font-medium {{ $row['fcr'] === null ? 'text-[#9CA3AF]' : 'text-[#333333]' }}">
-                                @if($row['fcr'] === null)
-                                <span title="No eggs logged in this period">N/A</span>
-                                @else
-                                {{ number_format($row['fcr'], 2) }}
-                                @endif
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+
+            {{-- Error state --}}
+            <div id="fcr-error" class="hidden text-center py-8">
+                <p class="text-sm text-[#9B1C24] mb-3">
+                    <i data-lucide="alert-triangle" class="inline-block w-4 h-4 align-text-bottom"></i>
+                    Failed to load FCR data.
+                </p>
+                <button type="button" onclick="fcrLoad()"
+                        class="text-xs px-4 py-2 rounded-lg border border-[#D9D9D9] text-[#333333] hover:bg-[#F5F6F8] transition-colors">
+                    Retry
+                </button>
             </div>
-            @endif
+
+            {{-- Content (initially server-rendered) --}}
+            <div id="fcr-content">
+                @include('feed._fcr-content', [
+                    'fcrCurrent'    => $fcrCurrent,
+                    'fcrTimeline'   => $fcrTimeline,
+                    'fcrGroupBy'    => $fcrGroupBy,
+                    'fcrCageLabel'  => $fcrCageLabel,
+                    'fcrSelectedId' => $fcrSelectedId,
+                ])
+            </div>
+
+            {{-- FCR Guide Modal --}}
+            <div id="fcr-guide-modal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] items-center justify-center p-4" role="dialog" aria-modal="true">
+                <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeFcrGuideModal()"></div>
+                <div class="relative w-full max-w-md rounded-2xl p-6 overflow-y-auto max-h-[90vh]" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+                    <div class="flex items-center justify-between mb-5">
+                        <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Understanding FCR</h2>
+                        <button type="button" onclick="closeFcrGuideModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                            <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+                        </button>
+                    </div>
+                    <div class="text-sm leading-relaxed" style="color: #4B5563;">
+                        <p class="mb-4">
+                            <strong>Feed Conversion Ratio</strong> = kg of feed consumed ÷ kg of egg mass produced.
+                            It measures how efficiently your flock converts feed into eggs.
+                        </p>
+                        <div class="space-y-2.5 mb-4">
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-2.5 h-2.5 rounded-full bg-green-500 flex-shrink-0"></span>
+                                <span><strong>&le; {{ config('fcr.good_threshold', 2.5) }}</strong> — Efficient conversion</span>
+                            </div>
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-2.5 h-2.5 rounded-full bg-yellow-500 flex-shrink-0"></span>
+                                <span><strong>{{ config('fcr.good_threshold', 2.5) }} – {{ config('fcr.warning_threshold', 4.0) }}</strong> — Monitor closely</span>
+                            </div>
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-2.5 h-2.5 rounded-full bg-red-500 flex-shrink-0"></span>
+                                <span><strong>&gt; {{ config('fcr.warning_threshold', 4.0) }}</strong> — Investigate feed or flock health</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-[#9CA3AF] border-t border-[#D9D9D9] pt-3">
+                            Pre-lay pullets, molting flocks, or very young hens may show high FCR
+                            due to low egg mass rather than poor feed efficiency. Adjust thresholds
+                            in <code class="text-[#6B7280] bg-[#F5F6F8] px-1 rounded text-[11px]">config/fcr.php</code> to match your flock profile.
+                        </p>
+                    </div>
+                    <button type="button" onclick="closeFcrGuideModal()"
+                            class="w-full py-2.5 text-sm font-medium rounded-full text-white transition-opacity mt-5"
+                            style="background-color: #0075de;"
+                            onmouseover="this.style.opacity='0.85'"
+                            onmouseout="this.style.opacity='1'">Got it</button>
+                </div>
+            </div>
         </div>
     </div>
 

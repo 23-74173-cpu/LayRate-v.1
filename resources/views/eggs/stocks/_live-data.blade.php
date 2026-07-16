@@ -18,6 +18,9 @@
             <div class="text-xs tracking-wider mb-2" style="color: {{ $color }}">{{ $label }}</div>
             <div class="text-3xl font-semibold tracking-tight" style="color: #333333">{{ number_format($total) }}</div>
             <div class="text-xs mt-1" style="color: #6B7280">{{ $trays }} {{ $trays === 1 ? 'tray' : 'trays' }}</div>
+            <div class="text-xs mt-1.5" style="color: #a39e98;">
+                <span class="font-medium" style="color: {{ $color }}">{{ number_format($availablePools[$size] ?? 0) }}</span> available to stock
+            </div>
         </div>
         @endforeach
     </div>

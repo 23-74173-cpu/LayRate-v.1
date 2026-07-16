@@ -1,6 +1,6 @@
 @php
-    $cageColorMap = ['CAGE-A'=>'#2D7D46','CAGE-B'=>'#1D4E8F','CAGE-C'=>'#C2703E','CAGE-D'=>'#6B4C8A'];
-    $cageColor = $scope === 'farm' ? '#102A4C' : ($cageColorMap[$cageCode] ?? '#2D7D46');
+    $cageColorMap = \App\Models\Cage::getColorMap();
+    $cageColor = $scope === 'farm' ? '#102A4C' : ($cageColorMap[$cageCode] ?? '#6B7280');
     $scopeLabel = match($scope) {
         'farm' => 'Whole Farm',
         'breed' => $breed ?? '',

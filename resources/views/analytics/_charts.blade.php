@@ -22,7 +22,7 @@
     {{-- ── Summary Row ── --}}
     <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
         <div class="grid grid-cols-2 md:grid-cols-6 gap-4 text-center">
-            @php $cColor = match($cageCode){'CAGE-A'=>'#2D7D46','CAGE-B'=>'#1D4E8F','CAGE-C'=>'#C2703E','CAGE-D'=>'#6B4C8A',default=>'#6B7280'}; @endphp
+            @php $cColor = $cage->color; @endphp
             <div>
                 <div class="text-xs text-[#6B7280] mb-1">CAGE</div>
                 <div class="text-sm font-semibold" style="color:{{ $cColor }}">{{ $cageCode }}</div>
@@ -54,7 +54,7 @@
     (function() {
         const logs = @json($logs->map(fn($l) => ['date'=>$l->log_date->format('Y-m-d'),'hdep'=>$l->hdep,'eggs'=>$l->egg_count]));
         const feedLogs = @json($feedLogs->map(fn($l) => ['date'=>$l->log_date->format('Y-m-d'),'kg'=>$l->feed_consumed_kg]));
-        const cageColor = '{{ match($cageCode){"CAGE-A"=>"#2D7D46","CAGE-B"=>"#1D4E8F","CAGE-C"=>"#C2703E","CAGE-D"=>"#6B4C8A",default=>"#2D7D46"} }}';
+        const cageColor = '{{ $cage->color }}';
 
         const labels = logs.map(l => l.date.slice(5));
         const hdeps  = logs.map(l => l.hdep);

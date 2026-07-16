@@ -8,7 +8,7 @@
             </button>
         </div>
 
-        <form id="editLogForm" method="POST" onsubmit="loadingButton(this.querySelector('button[type=submit]'))">
+        <form id="editLogForm" method="POST" data-turbo="false" onsubmit="loadingButton(this.querySelector('button[type=submit]'))">
             @csrf @method('PUT')
 
             <div class="space-y-4">
@@ -28,11 +28,10 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Hen Count <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(edit if the original was wrong)</span></label>
-                    <input type="number" name="hen_count" id="editHenCount" min="1" required
-                           oninput="editComputeHdep()"
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
-                           style="border-color: #e6e6e6; color: #1f1f1f;">
+                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Hen Count <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(auto-populated from active hens on slot)</span></label>
+                    <input type="number" id="editHenCountDisplay" readonly
+                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-gray-50 cursor-not-allowed focus:outline-none"
+                           style="border-color: #e6e6e6; color: #615d59;">
                     <div id="editHdepDisplay" class="mt-2 inline-block border rounded-lg px-3 py-1.5 text-sm font-mono" style="background-color: #f6f5f4; border-color: #e6e6e6; color: #1f1f1f;">
                         HDEP: —
                     </div>

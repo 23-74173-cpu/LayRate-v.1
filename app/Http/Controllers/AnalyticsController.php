@@ -11,8 +11,14 @@ class AnalyticsController extends Controller
 {
     public function index(Request $request)
     {
-        $cageCode = $request->get('cage', 'CAGE-A');
         $period   = $request->get('period', 'week');
+
+        $allCages = Cage::orderBy('cage_code')->get();
+        if ($allCages->isEmpty()) {
+            return redirect()->route('dashboard')->with('error', 'No cages configured. Create a cage first.');
+        }
+
+        $cageCode = $request->get('cage', $allCages->first()->cage_code);
 
         $cage = Cage::with([
             'hens' => fn($q) => $q->where('is_active', 1),
@@ -38,8 +44,6 @@ class AnalyticsController extends Controller
         $bestDay  = $logs->count() ? round($logs->max('hdep'), 1) : 0;
         $worstDay = $logs->count() ? round($logs->min('hdep'), 1) : 0;
 
-        $allCages = Cage::orderBy('cage_code')->get();
-
         return view('analytics', compact(
             'cage', 'cageCode', 'period', 'logs', 'feedLogs',
             'avgHdep', 'bestDay', 'worstDay', 'allCages'
@@ -48,8 +52,14 @@ class AnalyticsController extends Controller
 
     public function charts(Request $request)
     {
-        $cageCode = $request->get('cage', 'CAGE-A');
         $period   = $request->get('period', 'week');
+
+        $allCages = Cage::orderBy('cage_code')->get();
+        if ($allCages->isEmpty()) {
+            return response('', 422);
+        }
+
+        $cageCode = $request->get('cage', $allCages->first()->cage_code);
 
         $cage = Cage::with([
             'hens' => fn($q) => $q->where('is_active', 1),

@@ -38,21 +38,22 @@
             <div class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG SIZE</label>
-                    <select name="egg_size" required
+                    <select name="egg_size" id="addStockEggSize" required
                             class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select size…</option>
-                        <option value="small">Small</option>
-                        <option value="medium">Medium</option>
-                        <option value="large">Large</option>
-                        <option value="jumbo">Jumbo</option>
+                        @foreach(['small','medium','large','jumbo'] as $sz)
+                        @php $pool = $availablePools[$sz] ?? 0; @endphp
+                        <option value="{{ $sz }}" data-available="{{ $pool }}" {{ $pool < 1 ? 'disabled' : '' }}>{{ ucfirst($sz) }} ({{ number_format($pool) }} avail.)</option>
+                        @endforeach
                     </select>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG COUNT</label>
-                    <input type="number" name="count" min="1" required
+                    <input type="number" name="count" id="addStockCount" min="1" required
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
+                    <p id="addStockPoolHint" class="text-xs mt-1" style="color: #a39e98;">Select a size to see available pool.</p>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">HARVESTED DATE</label>
@@ -202,6 +203,35 @@
             cageSelect.addEventListener('change', function() {
                 updateLogSelect(this.value);
             });
+        }
+
+        var sizeSelect = document.getElementById('addStockEggSize');
+        var poolHint = document.getElementById('addStockPoolHint');
+        var addBtn = document.getElementById('addStockBtn');
+        var countInput = document.getElementById('addStockCount');
+        function updateAddStockHint() {
+            if (!sizeSelect || !poolHint) return;
+            var opt = sizeSelect.options[sizeSelect.selectedIndex];
+            if (!opt || !opt.value) {
+                poolHint.textContent = 'Select a size to see available pool.';
+                if (addBtn) addBtn.disabled = true;
+                if (countInput) countInput.disabled = true;
+                return;
+            }
+            var avail = parseInt(opt.getAttribute('data-available') || '0');
+            if (avail < 1) {
+                poolHint.textContent = 'No eggs available to stock for this size (pool exhausted).';
+                if (addBtn) addBtn.disabled = true;
+                if (countInput) countInput.disabled = true;
+            } else {
+                poolHint.textContent = avail + ' egg(s) available to stock for this size.';
+                if (addBtn) addBtn.disabled = false;
+                if (countInput) countInput.disabled = false;
+            }
+        }
+        if (sizeSelect) {
+            sizeSelect.addEventListener('change', updateAddStockHint);
+            updateAddStockHint();
         }
 
         var form = document.getElementById('addStockForm');

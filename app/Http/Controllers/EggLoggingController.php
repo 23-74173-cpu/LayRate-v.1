@@ -19,18 +19,13 @@ class EggLoggingController extends Controller
 
         $cages = Cage::where('is_active', 1)->orderBy('cage_code')->get();
 
-        $slotQuery = CageSlot::with([
+        $cageSlots = CageSlot::with([
             'cage',
             'hens' => fn($q) => $q->where('is_active', 1),
         ])->whereHas('cage', fn($q) => $q->where('is_active', 1))
           ->orderBy('cage_id')
-          ->orderBy('slot_number');
-
-        if ($cageFilter) {
-            $slotQuery->where('cage_id', $cageFilter);
-        }
-
-        $cageSlots = $slotQuery->get();
+          ->orderBy('slot_number')
+          ->get();
 
         $slotIds = $cageSlots->pluck('id');
         $todayLogs = ProductionLog::whereIn('cage_slot_id', $slotIds)
@@ -46,16 +41,18 @@ class EggLoggingController extends Controller
             ->when($cageFilter, fn($q) => $q->whereHas('cageSlot', fn($s) => $s->where('cage_id', $cageFilter)))
             ->sum('egg_count');
 
-        $todayByCage = ProductionLog::with('cageSlot.cage')
+        $todayData = ProductionLog::with('cageSlot.cage')
             ->where('log_date', $today)
             ->get()
-            ->groupBy(fn($l) => $l->cageSlot?->cage?->cage_code)
-            ->map(fn($g) => $g->sum('egg_count'));
+            ->groupBy(fn($l) => $l->cageSlot?->cage?->cage_code);
+
+        $todayByCage = $todayData->map(fn($g) => $g->sum('egg_count'));
+        $todayLoggedCountByCage = $todayData->map(fn($g) => $g->count());
 
         $selectedCage = $cageFilter ? $cages->firstWhere('id', $cageFilter) : null;
 
         return view('egg-logging', compact(
-            'cageSlots', 'cages', 'cageFilter', 'todayTotal', 'todayByCage', 'selectedCage'
+            'cageSlots', 'cages', 'cageFilter', 'todayTotal', 'todayByCage', 'todayLoggedCountByCage', 'selectedCage'
         ));
     }
 
@@ -163,7 +160,6 @@ class EggLoggingController extends Controller
             'log_date'     => 'required|date',
             'cage_slot_id' => 'required|exists:cage_slots,id',
             'egg_count'    => 'required|integer|min:0',
-            'hen_count'    => 'required|integer|min:1',
             'notes'        => 'nullable|string',
             'size_small'   => 'nullable|integer|min:0',
             'size_medium'  => 'nullable|integer|min:0',
@@ -176,10 +172,10 @@ class EggLoggingController extends Controller
                  + (int) ($data['size_large'] ?? 0)
                  + (int) ($data['size_jumbo'] ?? 0);
 
-        $anySizeFilled = ($data['size_small'] ?? null) !== null
-                      || ($data['size_medium'] ?? null) !== null
-                      || ($data['size_large'] ?? null) !== null
-                      || ($data['size_jumbo'] ?? null) !== null;
+        $anySizeFilled = ($data['size_small'] ?? 0) > 0
+                      || ($data['size_medium'] ?? 0) > 0
+                      || ($data['size_large'] ?? 0) > 0
+                      || ($data['size_jumbo'] ?? 0) > 0;
 
         if ($anySizeFilled && $sizeSum !== (int) $data['egg_count']) {
             return redirect()->back()
@@ -189,6 +185,13 @@ class EggLoggingController extends Controller
 
         $slot = CageSlot::with('cage')->findOrFail($data['cage_slot_id']);
 
+        $henCount = $slot->active_hen_count;
+        if ($henCount === 0) {
+            return redirect()->back()
+                ->withErrors(['cage_slot_id' => 'This slot has no hens assigned. Cannot log egg production for an empty slot.'])
+                ->withInput();
+        }
+
         $log = ProductionLog::firstOrNew(
             ['cage_slot_id' => $slot->id, 'log_date' => $data['log_date']]
         );
@@ -196,8 +199,8 @@ class EggLoggingController extends Controller
         $log->recorded_by = auth()->id();
         $log->fill([
             'egg_count' => $data['egg_count'],
-            'hen_count' => $data['hen_count'],
-            'hdep'       => round(($data['egg_count'] / $data['hen_count']) * 100, 2),
+            'hen_count' => $henCount,
+            'hdep'       => round(($data['egg_count'] / $henCount) * 100, 2),
             'notes'      => $data['notes'] ?? 'Manual entry',
             // Web form submissions are always manual. Future sensor ingestion must
             // create ProductionLog records with logged_via = 'sensor' explicitly.
@@ -215,7 +218,6 @@ class EggLoggingController extends Controller
         $data = $request->validate([
             'log_date'    => 'required|date',
             'egg_count'   => 'required|integer|min:0',
-            'hen_count'   => 'required|integer|min:1',
             'notes'       => 'nullable|string',
             'size_small'  => 'nullable|integer|min:0',
             'size_medium' => 'nullable|integer|min:0',
@@ -228,10 +230,10 @@ class EggLoggingController extends Controller
                  + (int) ($data['size_large'] ?? 0)
                  + (int) ($data['size_jumbo'] ?? 0);
 
-        $anySizeFilled = ($data['size_small'] ?? null) !== null
-                      || ($data['size_medium'] ?? null) !== null
-                      || ($data['size_large'] ?? null) !== null
-                      || ($data['size_jumbo'] ?? null) !== null;
+        $anySizeFilled = ($data['size_small'] ?? 0) > 0
+                      || ($data['size_medium'] ?? 0) > 0
+                      || ($data['size_large'] ?? 0) > 0
+                      || ($data['size_jumbo'] ?? 0) > 0;
 
         if ($anySizeFilled && $sizeSum !== (int) $data['egg_count']) {
             return redirect()->back()
@@ -239,11 +241,19 @@ class EggLoggingController extends Controller
                 ->withInput();
         }
 
+        $slot = $productionLog->cageSlot;
+        if (!$slot || $slot->active_hen_count === 0) {
+            return redirect()->back()
+                ->withErrors(['cage_slot_id' => 'This slot has no hens assigned. Cannot update production log for an empty slot.'])
+                ->withInput();
+        }
+        $henCount = $slot->active_hen_count;
+
         $productionLog->update([
             'log_date'  => $data['log_date'],
             'egg_count' => $data['egg_count'],
-            'hen_count' => $data['hen_count'],
-            'hdep'      => round(($data['egg_count'] / $data['hen_count']) * 100, 2),
+            'hen_count' => $henCount,
+            'hdep'      => round(($data['egg_count'] / $henCount) * 100, 2),
             'notes'     => $data['notes'] ?? null,
         ]);
 

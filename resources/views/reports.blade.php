@@ -27,6 +27,8 @@
 @section('content')
 <div class="space-y-5">
 
+    @php $cageColorMap = \App\Models\Cage::getColorMap(); @endphp
+
     <x-page-header title="Reports" subtitle="Generate and export production, feed, environment, and mortality reports" />
 
     {{-- ── Filters ── --}}
@@ -239,7 +241,7 @@
                     <tr class="{{ $loop->even ? 'bg-[#F9F9F7]' : 'bg-white' }}">
                         @foreach($arr as $key => $val)
                         @php
-                            $cageColor   = $key === 'cage' ? match($val){'CAGE-A'=>'#2D7D46','CAGE-B'=>'#1D4E8F','CAGE-C'=>'#C2703E','CAGE-D'=>'#6B4C8A',default=>null} : null;
+                            $cageColor   = $key === 'cage' ? ($cageColorMap[$val] ?? null) : null;
                             $reasonColor = $key === 'reason' ? ($reasonColors[$val] ?? null) : null;
                             $style = $cageColor ? "color:{$cageColor};font-weight:600"
                                    : ($reasonColor ? "color:{$reasonColor}" : '');

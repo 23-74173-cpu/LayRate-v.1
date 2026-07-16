@@ -132,6 +132,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/feed',                          [FeedController::class, 'index'])->name('feed');
     Route::get('/feed/live-data',                [FeedController::class, 'liveData'])->name('feed.live-data');
+    Route::get('/feed/fcr-data',                 [FeedController::class, 'fcrData'])->name('feed.fcr-data');
     Route::post('/feed/batch',                   [FeedController::class, 'storeBatch'])->name('feed.batch.store');
     Route::put('/feed/batch/{feedBatch}',        [FeedController::class, 'updateBatch'])->name('feed.batch.update');
     Route::delete('/feed/batch/{feedBatch}',     [FeedController::class, 'destroyBatch'])->name('feed.batch.destroy');

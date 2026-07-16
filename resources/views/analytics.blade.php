@@ -11,7 +11,7 @@
     <div class="flex flex-wrap items-center gap-3">
         {{-- Cage tabs --}}
         @foreach($allCages as $c)
-        @php $isActive = $c->cage_code === $cageCode; $cColor = match($c->cage_code){'CAGE-A'=>'#2D7D46','CAGE-B'=>'#1D4E8F','CAGE-C'=>'#C2703E','CAGE-D'=>'#6B4C8A',default=>'#6B7280'}; @endphp
+        @php $isActive = $c->cage_code === $cageCode; $cColor = $c->color; @endphp
         <a href="{{ route('analytics', ['cage'=>$c->cage_code,'period'=>$period]) }}"
            class="px-3 py-1.5 rounded-lg text-sm transition-colors {{ $isActive ? 'text-white' : 'border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]' }}"
            style="{{ $isActive ? 'background:'.$cColor : '' }}">

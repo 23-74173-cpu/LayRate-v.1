@@ -15,6 +15,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo(fn () => route('login'));
         $middleware->alias(['admin' => \App\Http\Middleware\EnsureAdmin::class]);
     })
+    ->withSchedule(function (Illuminate\Console\Scheduling\Schedule $schedule) {
+        $schedule->command('layrate:reconcile-occupancy --apply')
+            ->daily()
+            ->withoutOverlapping()
+            ->appendOutputTo(storage_path('logs/occupancy-reconcile.log'));
+    })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })->create();

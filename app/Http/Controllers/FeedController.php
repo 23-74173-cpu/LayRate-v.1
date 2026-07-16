@@ -49,30 +49,94 @@ class FeedController extends Controller
 
         $cages = Cage::where('is_active', 1)->orderBy('cage_code')->get();
 
-        $fcrCageId = (int) request('fcr_cage_id') ?: $preselectedCageId ?: $cages->value('id');
+        $fcrCageId = request('fcr_cage_id', $preselectedCageId ? (string) $preselectedCageId : null);
         $fcrGroupBy = request('fcr_group_by', 'week');
         if (! in_array($fcrGroupBy, ['day', 'week', 'month'])) {
             $fcrGroupBy = 'week';
         }
 
-        $fcrCage = $fcrCageId ? Cage::find($fcrCageId) : null;
-        $fcrTimeline = $fcrCage ? FcrCalculator::timeline($fcrCage, $fcrGroupBy) : collect();
+        // Default to first cage when no FCR selection is provided
+        if ($fcrCageId === null) {
+            $firstCage = $cages->first();
+            $fcrCageId = $firstCage ? (string) $firstCage->id : null;
+        }
 
-        $fcrPeriodDays = match ($fcrGroupBy) {
-            'month' => 30,
-            'week' => 7,
-            default => 1,
-        };
-        $fcrCurrent = $fcrCage
-            ? FcrCalculator::forCage($fcrCage, now()->subDays($fcrPeriodDays - 1)->startOfDay(), now()->endOfDay())
-            : null;
+        $fcrData = $this->computeFcrData($fcrCageId, $fcrGroupBy);
 
-        return view('feed._live-data', compact(
-            'batches', 'consumptionLogs', 'avgCp', 'totalFeedWeek', 'avgFeedPerCage',
-            'totalFeedCostMonth', 'cages',
-            'preselectedCageId',
-            'fcrCage', 'fcrCageId', 'fcrGroupBy', 'fcrTimeline', 'fcrCurrent',
+        return view('feed._live-data', array_merge(
+            compact('batches', 'consumptionLogs', 'avgCp', 'totalFeedWeek', 'avgFeedPerCage',
+                     'totalFeedCostMonth', 'cages', 'preselectedCageId'),
+            $fcrData
         ));
+    }
+
+    /**
+     * AJAX endpoint: returns rendered FCR content HTML.
+     */
+    public function fcrData()
+    {
+        $cageId = request('cage_id', 'all');
+        $groupBy = request('group_by', 'week');
+        if (! in_array($groupBy, ['day', 'week', 'month'])) {
+            $groupBy = 'week';
+        }
+
+        $fcrData = $this->computeFcrData($cageId, $groupBy);
+
+        return view('feed._fcr-content', $fcrData);
+    }
+
+    /**
+     * Shared FCR computation for both server-render and AJAX.
+     */
+    private function computeFcrData(string|null $cageId, string $groupBy): array
+    {
+        $periodDays = match ($groupBy) {
+            'month' => 30,
+            'week'   => 7,
+            default  => 1,
+        };
+
+        $label = null;
+        $selectedCageId = null;
+
+        if ($cageId === 'all' || $cageId === null) {
+            if ($cageId === 'all') {
+                $fcrCurrent  = FcrCalculator::forAllCages(
+                    now()->subDays($periodDays - 1)->startOfDay(), now()->endOfDay()
+                );
+                $fcrTimeline = FcrCalculator::timelineAll($groupBy);
+                $label       = 'All Cages';
+                $selectedCageId = 'all';
+            } else {
+                $fcrCurrent  = null;
+                $fcrTimeline = collect();
+                $label       = null;
+                $selectedCageId = null;
+            }
+        } else {
+            $selectedCageId = (int) $cageId;
+            $cage = Cage::find($selectedCageId);
+            if ($cage) {
+                $fcrTimeline = FcrCalculator::timeline($cage, $groupBy);
+                $fcrCurrent  = FcrCalculator::forCage(
+                    $cage, now()->subDays($periodDays - 1)->startOfDay(), now()->endOfDay()
+                );
+                $label = $cage->cage_code;
+            } else {
+                $fcrTimeline = collect();
+                $fcrCurrent  = null;
+                $label       = null;
+            }
+        }
+
+        return [
+            'fcrCurrent'    => $fcrCurrent,
+            'fcrTimeline'   => $fcrTimeline,
+            'fcrGroupBy'    => $groupBy,
+            'fcrCageLabel'  => $label,
+            'fcrSelectedId' => $selectedCageId,
+        ];
     }
 
     public function storeBatch(Request $request)

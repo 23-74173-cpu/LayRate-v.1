@@ -25,11 +25,14 @@ class EggStockController extends Controller
             $trayTotals[$size] = (int) ceil($totals[$size] / 30);
         }
 
+        $availablePools = EggStockBatch::getAvailablePools();
+
         return view('eggs.stocks._live-data', [
             'batches' => $batches,
             'totals' => $totals,
             'trayTotals' => $trayTotals,
             'sizes' => $sizes,
+            'availablePools' => $availablePools,
         ]);
     }
 
@@ -57,11 +60,14 @@ class EggStockController extends Controller
 
         $cages = Cage::where('is_active', 1)->orderBy('cage_code')->get();
 
+        $availablePools = EggStockBatch::getAvailablePools();
+
         return view('eggs.stocks', [
             'activeTab' => 'stocks',
             'batches' => $batches,
             'totals' => $totals,
             'trayTotals' => $trayTotals,
+            'availablePools' => $availablePools,
             'productionLogs' => $productionLogs,
             'cages' => $cages,
             'sizes' => $sizes,
@@ -74,21 +80,19 @@ class EggStockController extends Controller
             'egg_size' => 'required|in:small,medium,large,jumbo',
             'count' => 'required|integer|min:1',
             'harvested_date' => 'required|date',
-            'cage_id' => 'required|exists:cages,id',
+            'cage_id' => 'required|exists:cages,id,is_active,1',
             'cage_slot_id' => 'nullable|exists:cage_slots,id',
             'source_production_log_id' => 'nullable|exists:production_logs,id',
         ]);
 
-        $available = EggStockBatch::getAvailablePool();
-
-        if ($data['count'] > $available) {
+        try {
+            $batch = EggStockBatch::createWithinPool($data);
+        } catch (\OverflowException $e) {
             return response()->json([
                 'success' => false,
-                'errors' => ['count' => ["Only {$available} egg(s) available to stock (logged but not yet stocked)."]],
+                'errors' => ['count' => [$e->getMessage()]],
             ], 422);
         }
-
-        $batch = EggStockBatch::create($data);
 
         $sizes = ['small', 'medium', 'large', 'jumbo'];
         $allBatches = EggStockBatch::all();
@@ -122,22 +126,17 @@ class EggStockController extends Controller
             'harvested_date' => 'required|date',
         ]);
 
-        $oldCount = $batch->count;
-
-        if ($data['count'] > $oldCount) {
-            $increase = $data['count'] - $oldCount;
-            $available = EggStockBatch::getAvailablePool();
-
-            if ($increase > $available) {
-                $message = "Only {$available} additional egg(s) available to stock (logged but not yet stocked).";
-                if ($request->expectsJson() || $request->ajax()) {
-                    return response()->json(['success' => false, 'errors' => ['count' => [$message]]], 422);
-                }
-                return back()->withErrors(['count' => $message])->withInput();
+        try {
+            $batch->updateWithinPool($data);
+        } catch (\OverflowException $e) {
+            $message = $e->getMessage();
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'errors' => ['count' => [$message]]], 422);
             }
+            return back()->withErrors(['count' => $message])->withInput();
         }
 
-        $batch->update($data);
+        $batch->refresh();
 
         return redirect()->route('eggs.stocks')->with('success', 'Stock batch updated.');
     }

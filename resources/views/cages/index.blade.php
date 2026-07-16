@@ -577,7 +577,7 @@
 <script>
 // ── Tab Filter ────────────────────────────────────────────
 function filterCage(code) {
-    const cageColors = { 'CAGE-A': '#2D7D46', 'CAGE-B': '#1D4E8F', 'CAGE-C': '#C2703E', 'CAGE-D': '#6B4C8A' };
+    const cageColors = @json(\App\Models\Cage::getColorMap());
     document.querySelectorAll('.cage-tab').forEach(tab => {
         if (tab.dataset.tab === code) {
             tab.style.borderBottomColor = code === 'all' ? '#0075de' : (cageColors[code] || '#0075de');

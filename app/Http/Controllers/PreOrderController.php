@@ -108,7 +108,13 @@ class PreOrderController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        PreOrder::create($data);
+        try {
+            PreOrder::createWithinPool($data);
+        } catch (\OverflowException $e) {
+            return redirect()->back()
+                ->withErrors(['egg_count' => $e->getMessage()])
+                ->withInput();
+        }
 
         return redirect()->route('eggs.preorders')->with('success', 'Pre-order added.');
     }
@@ -124,7 +130,13 @@ class PreOrderController extends Controller
             $data['fulfillment_date'] = now()->toDateString();
         }
 
-        $order->update($data);
+        try {
+            $order->updateWithinPool($data);
+        } catch (\OverflowException $e) {
+            return redirect()->back()
+                ->withErrors(['egg_count' => $e->getMessage()])
+                ->withInput();
+        }
 
         return redirect()->route('eggs.preorders')->with('success', 'Pre-order updated.');
     }
