@@ -26,6 +26,12 @@ class EggStockPoolTest extends TestCase
         $log->hen_count = 4;
         $log->save();
 
+        // Create a matching egg_size_log so per-size pool queries work
+        $log->eggSizeLogs()->create([
+            'egg_size' => 'large',
+            'count' => $eggCount,
+        ]);
+
         return $log;
     }
 
@@ -132,7 +138,7 @@ class EggStockPoolTest extends TestCase
         $response->assertStatus(422);
         $response->assertJson([
             'success' => false,
-            'errors' => ['count' => ['Only 50 egg(s) available to stock (logged but not yet stocked).']],
+            'errors' => ['count' => ['Only 50 large egg(s) available to stock.']],
         ]);
 
         $this->assertEquals(0, EggStockBatch::count());
@@ -162,7 +168,7 @@ class EggStockPoolTest extends TestCase
         $response->assertStatus(422);
         $response->assertJson([
             'success' => false,
-            'errors' => ['count' => ['Only 0 egg(s) available to stock (logged but not yet stocked).']],
+            'errors' => ['count' => ['Only 0 medium egg(s) available to stock.']],
         ]);
     }
 
@@ -201,7 +207,7 @@ class EggStockPoolTest extends TestCase
         $response->assertStatus(422);
         $response->assertJson([
             'success' => false,
-            'errors' => ['count' => ['Only 50 additional egg(s) available to stock (logged but not yet stocked).']],
+            'errors' => ['count' => ['Only 50 additional large egg(s) available to stock.']],
         ]);
 
         $this->assertEquals(50, $stock->fresh()->count);

@@ -286,6 +286,11 @@ class EggLoggingController extends Controller
                     ]);
                 }
             }
+        } elseif ($log->egg_count > 0) {
+            $log->eggSizeLogs()->create([
+                'egg_size' => 'unsorted',
+                'count' => $log->egg_count,
+            ]);
         }
     }
 

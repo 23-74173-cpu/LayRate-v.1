@@ -5,8 +5,8 @@ namespace App\Services;
 /**
  * FCR status classification using configurable thresholds.
  *
- * Thresholds are defined in config/fcr.php and are adjustable
- * by the farm manager. Expected FCR varies by breed, flock age,
+ * Thresholds are adjustable by editing the egg weight configuration
+ * in the egg stocks section. Expected FCR varies by breed, flock age,
  * and whether birds are in lay, pre-lay, or molting.
  */
 class FcrStatusService

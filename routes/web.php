@@ -101,9 +101,10 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/eggs/stocks',                         [EggStockController::class, 'index'])->name('eggs.stocks');
     Route::get('/eggs/stocks/live-data',                [EggStockController::class, 'liveData'])->name('eggs.stocks.live-data');
+    Route::get('/eggs/stocks/pool-data',                [EggStockController::class, 'poolData'])->name('eggs.stocks.pool-data');
     Route::post('/eggs/stocks',                        [EggStockController::class, 'store'])->name('eggs.stocks.store');
     Route::put('/eggs/stocks/{batch}',                 [EggStockController::class, 'update'])->name('eggs.stocks.update');
-    Route::delete('/eggs/stocks/{batch}',              [EggStockController::class, 'destroy'])->name('eggs.stocks.destroy');
+    Route::delete('/eggs/stocks/{batch}',              [EggStockController::class, 'destroy'])->name('eggs.stocks.destroy')->middleware('admin');
     Route::get('/eggs/stocks/{batch}/qr',              [EggStockController::class, 'qr'])->name('eggs.stocks.qr');
 
     Route::get('/eggs/pre-orders',                     [PreOrderController::class, 'index'])->name('eggs.preorders');
@@ -116,7 +117,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/environment/live-data', [EnvironmentController::class, 'liveData'])->name('environment.live-data');
     Route::get('/environment/logs',      [EnvironmentController::class, 'logs'])->name('environment.logs');
     Route::post('/environment/thresholds', [EnvironmentController::class, 'saveThresholds'])->name('environment.thresholds');
-    Route::post('/environment/egg-weights', [EnvironmentController::class, 'saveEggWeights'])->name('environment.egg-weights');
+    Route::post('/eggs/stocks/egg-weights', [EggStockController::class, 'saveEggWeights'])->name('eggs.stocks.egg-weights');
 
     Route::get('/hardware',                    [HardwareItemController::class, 'index'])->name('hardware.index');
     Route::get('/hardware/live-data',          [HardwareItemController::class, 'liveData'])->name('hardware.live-data');

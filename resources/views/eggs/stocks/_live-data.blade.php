@@ -1,30 +1,4 @@
 <turbo-frame id="eggs-stocks-live-data">
-    {{-- Summary Cards --}}
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" id="summaryCards">
-        @foreach($sizes as $size)
-        @php
-            $total = $totals[$size] ?? 0;
-            $trays = $trayTotals[$size] ?? 0;
-            $label = ucfirst($size);
-            $colors = [
-                'small'  => ['#2D7D46', '#d6f0e3'],
-                'medium' => ['#1D4E8F', '#dcebfa'],
-                'large'  => ['#C2703E', '#fae3d0'],
-                'jumbo'  => ['#6B4C8A', '#e9e0f5'],
-            ];
-            [$color, $soft] = $colors[$size];
-        @endphp
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4" data-size="{{ $size }}">
-            <div class="text-xs tracking-wider mb-2" style="color: {{ $color }}">{{ $label }}</div>
-            <div class="text-3xl font-semibold tracking-tight" style="color: #333333">{{ number_format($total) }}</div>
-            <div class="text-xs mt-1" style="color: #6B7280">{{ $trays }} {{ $trays === 1 ? 'tray' : 'trays' }}</div>
-            <div class="text-xs mt-1.5" style="color: #a39e98;">
-                <span class="font-medium" style="color: {{ $color }}">{{ number_format($availablePools[$size] ?? 0) }}</span> available to stock
-            </div>
-        </div>
-        @endforeach
-    </div>
-
     {{-- Batch Table --}}
     <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
         <table class="w-full">
@@ -52,10 +26,11 @@
                     $cageColor = $batch->cage?->color ?? '#6B7280';
                     $cageSoft = $batch->cage?->color_soft ?? '#f0f0f0';
                     $sizeColors = [
-                        'small'  => ['#2D7D46', '#d6f0e3', '#b8e0cc'],
-                        'medium' => ['#1D4E8F', '#dcebfa', '#b3d4fc'],
-                        'large'  => ['#C2703E', '#fae3d0', '#f3c9a8'],
-                        'jumbo'  => ['#6B4C8A', '#e9e0f5', '#d4c5e8'],
+                        'small'    => ['#2D7D46', '#d6f0e3', '#b8e0cc'],
+                        'medium'   => ['#1D4E8F', '#dcebfa', '#b3d4fc'],
+                        'large'    => ['#C2703E', '#fae3d0', '#f3c9a8'],
+                        'jumbo'    => ['#6B4C8A', '#e9e0f5', '#d4c5e8'],
+                        'unsorted' => ['#6B7280', '#f0f0f0', '#e0e0e0'],
                     ];
                     [$sBg, $sTxt, $sBorder] = $sizeColors[$batch->egg_size];
                 @endphp

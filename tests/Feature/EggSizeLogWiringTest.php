@@ -70,7 +70,7 @@ class EggSizeLogWiringTest extends TestCase
     }
 
     /** @test */
-    public function store_with_no_size_fields_creates_no_size_logs()
+    public function store_with_no_size_fields_creates_unsorted_size_log()
     {
         $log = $this->createLog(4);
 
@@ -83,7 +83,9 @@ class EggSizeLogWiringTest extends TestCase
             'hen_count' => 4,
         ])->assertSessionHasNoErrors();
 
-        $this->assertEquals(0, EggSizeLog::count());
+        $this->assertEquals(1, EggSizeLog::count());
+        $this->assertEquals('unsorted', EggSizeLog::first()->egg_size);
+        $this->assertEquals(4, EggSizeLog::first()->count);
     }
 
     /** @test */
@@ -207,7 +209,10 @@ class EggSizeLogWiringTest extends TestCase
         $response->assertSessionHasNoErrors();
         $response->assertSessionHas('success');
 
-        $this->assertEquals(0, EggSizeLog::where('production_log_id', $log->id)->count());
+        $sizeLogs = EggSizeLog::where('production_log_id', $log->id)->get();
+        $this->assertEquals(1, $sizeLogs->count());
+        $this->assertEquals('unsorted', $sizeLogs->first()->egg_size);
+        $this->assertEquals(4, $sizeLogs->first()->count);
     }
 
     /** @test */

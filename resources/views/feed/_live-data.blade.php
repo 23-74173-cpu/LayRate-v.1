@@ -450,7 +450,7 @@
                         <p class="text-xs text-[#9CA3AF] border-t border-[#D9D9D9] pt-3">
                             Pre-lay pullets, molting flocks, or very young hens may show high FCR
                             due to low egg mass rather than poor feed efficiency. Adjust thresholds
-                            in <code class="text-[#6B7280] bg-[#F5F6F8] px-1 rounded text-[11px]">config/fcr.php</code> to match your flock profile.
+                             in the egg weight configuration in the egg stocks section to match your flock profile.
                         </p>
                     </div>
                     <button type="button" onclick="closeFcrGuideModal()"
