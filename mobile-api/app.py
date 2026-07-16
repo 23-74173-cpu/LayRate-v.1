@@ -80,25 +80,15 @@ def init_db():
 
     cursor.executescript(
         """
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE IF NOT EXISTS auth_tokens (
+            user_id INTEGER NOT NULL,
             name TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            token TEXT,
+            email TEXT NOT NULL,
+            token TEXT NOT NULL,
             created_at TEXT NOT NULL
         );
         """
     )
-
-    # Seed default admin user if none exists.
-    cursor.execute("SELECT id FROM users WHERE email = ?", ("admin@layrate.com",))
-    if cursor.fetchone() is None:
-        password_hash = bcrypt.hashpw("password".encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-        cursor.execute(
-            "INSERT INTO users (name, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
-            ("Admin", "admin@layrate.com", password_hash, now_iso()),
-        )
 
     db.commit()
     db.close()
@@ -121,7 +111,7 @@ def get_user_by_token(token):
     if not token:
         return None
     db = get_db()
-    row = db.execute("SELECT id, name, email FROM users WHERE token = ?", (token,)).fetchone()
+    row = db.execute("SELECT user_id AS id, name, email FROM auth_tokens WHERE token = ?", (token,)).fetchone()
     return dict(row) if row else None
 
 
@@ -151,7 +141,7 @@ def require_auth(f):
 
 @app.route("/api/register", methods=["POST"])
 def register():
-    """Register a new user and return a bearer token."""
+    """Register a new user in MySQL and return a bearer token."""
     data = request.get_json(silent=True) or {}
     name = data.get("name", "").strip()
     email = data.get("email", "").strip().lower()
@@ -161,28 +151,34 @@ def register():
         return jsonify({"message": "Name, email, and password are required"}), 400
 
     password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    # Python generates $2b$ hashes; convert to $2y$ for Laravel/PHP compatibility
+    password_hash = password_hash.replace("$2b$", "$2y$")
+    conn = get_mysql()
+    with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+        try:
+            cursor.execute(
+                "INSERT INTO users (name, email, password, created_at, updated_at) VALUES (%s, %s, %s, NOW(), NOW())",
+                (name, email, password_hash),
+            )
+            conn.commit()
+            user_id = cursor.lastrowid
+        except pymysql.err.IntegrityError:
+            return jsonify({"message": "Email already registered"}), 409
+
     token = generate_token()
     db = get_db()
+    db.execute(
+        "INSERT INTO auth_tokens (user_id, name, email, token, created_at) VALUES (?, ?, ?, ?, ?)",
+        (user_id, name, email, token, now_iso()),
+    )
+    db.commit()
 
-    try:
-        db.execute(
-            "INSERT INTO users (name, email, password_hash, token, created_at) VALUES (?, ?, ?, ?, ?)",
-            (name, email, password_hash, token, now_iso()),
-        )
-        db.commit()
-    except sqlite3.IntegrityError:
-        return jsonify({"message": "Email already registered"}), 409
-
-    user = db.execute(
-        "SELECT id, name, email FROM users WHERE email = ?", (email,)
-    ).fetchone()
-
-    return jsonify({"token": token, "user": dict(user)}), 201
+    return jsonify({"token": token, "user": {"id": user_id, "email": email, "name": name}}), 201
 
 
 @app.route("/api/login", methods=["POST"])
 def login():
-    """Validate credentials and return a bearer token."""
+    """Validate credentials against MySQL and return a bearer token."""
     data = request.get_json(silent=True) or {}
     email = data.get("email", "").strip().lower()
     password = data.get("password", "")
@@ -190,20 +186,29 @@ def login():
     if not email or not password:
         return jsonify({"message": "Email and password are required"}), 400
 
-    db = get_db()
-    row = db.execute(
-        "SELECT id, name, email, password_hash FROM users WHERE email = ?", (email,)
-    ).fetchone()
+    conn = get_mysql()
+    with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute(
+            "SELECT id, name, email, password FROM users WHERE email = %s", (email,)
+        )
+        user = cursor.fetchone()
 
-    if row is None:
+    if user is None:
         return jsonify({"message": "Invalid email or password"}), 401
 
-    user = dict(row)
-    if not bcrypt.checkpw(password.encode("utf-8"), user["password_hash"].encode("utf-8")):
+    stored_hash = user["password"].replace("$2y$", "$2b$")
+    if not bcrypt.checkpw(password.encode("utf-8"), stored_hash.encode("utf-8")):
         return jsonify({"message": "Invalid email or password"}), 401
 
     token = generate_token()
-    db.execute("UPDATE users SET token = ? WHERE id = ?", (token, user["id"]))
+    db = get_db()
+    db.execute(
+        "DELETE FROM auth_tokens WHERE user_id = ?", (user["id"],)
+    )
+    db.execute(
+        "INSERT INTO auth_tokens (user_id, name, email, token, created_at) VALUES (?, ?, ?, ?, ?)",
+        (user["id"], user["name"], user["email"], token, now_iso()),
+    )
     db.commit()
 
     return jsonify(

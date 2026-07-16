@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AlertController;
 use App\Http\Controllers\SensorIngestionController;
 use App\Http\Middleware\DeviceAuth;
 use Illuminate\Support\Facades\Route;
@@ -18,4 +19,10 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(DeviceAuth::class)->group(function () {
     Route::post('/sensor-readings', [SensorIngestionController::class, 'store'])
         ->name('api.sensor-readings.store');
+
+    Route::get('/alerts', [AlertController::class, 'apiIndex'])
+        ->name('api.alerts.index');
+
+    Route::put('/alerts/{alert}/read', [AlertController::class, 'apiMarkRead'])
+        ->name('api.alerts.read');
 });
