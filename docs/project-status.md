@@ -4,11 +4,11 @@
 
 # LayRate Poultry Farm Management System — Project Status
 
-**Overall Project Completion: 77%** (range: 74–79%)
+**Overall Project Completion: ~79%** *(estimate — see Score Integrity Notes)*
 **Total items tracked:** 87
-**Breakdown:** 56 ✅ Implemented | 22 ⚠️ Partially Implemented | 9 ❌ Not Started
-> 5 items moved to Dropped/Deferred sections (excluded from active count — see below).
-**Last updated:** 2026-07-16
+**Breakdown:** 61 ✅ Implemented | 20 ⚠️ Partially Implemented | 6 ❌ Not Started
+> 6 items moved to Dropped/Deferred sections (excluded from active count — see below).
+**Last updated:** 2026-07-17
 
 ---
 
@@ -17,8 +17,9 @@
 Check items off here as they are completed. All ❌ status items from the detailed audit, grouped by section.
 
 ### DASHBOARD
-- [ ] **#32** — Feed/Mortality scrollable with `limit=5` truncation
+- [x] **#32** — Feed/Mortality scrollable with `limit=5` truncation
 - [ ] **#33** — KPI card flip-to-detail animation (currently modal-based)
+- Cage Overview component removed entirely per product decision (scope reduction, not a bug fix)
 
 ### CAGES
 - [ ] **#47** — "Cage Info" single-cage detail view (`show()` method + route)
@@ -31,8 +32,8 @@ Check items off here as they are completed. All ❌ status items from the detail
 - [ ] **#70** — Fan status displayed (KPI card, animation indicator)
 
 ### EGG MANAGEMENT
-- [ ] **#89** — No low-stock alerts for egg stock sizes (Feed has this; egg stock doesn't)
-- [ ] **#90** — No batch aging / expiry logic for egg stock batches
+- [x] **#89** — Low-stock alerts for egg stock sizes (per-size threshold, Alert model reuse, daily dedup)
+- [x] **#90** — Batch aging / expiry logic (computed `freshness_status`, configurable thresholds, informational-only)
 
 ### REPORTS
 - [ ] **#84** — Preview table before export (currently generates output immediately)
@@ -45,9 +46,9 @@ Each section shows: audit items ✅/⚠️/❌ counts, section completion % (fro
 
 ---
 
-### GENERAL / SYSTEM-WIDE — 73.0% complete
+### GENERAL / SYSTEM-WIDE — 74.5% complete *(estimate)*
 
-**23 items:** 14 ✅, 9 ⚠️, 0 ❌
+**23 items:** 15 ✅, 8 ⚠️, 0 ❌
 **Key files:** AuthController, SettingsController, NoteController, AlertController, layouts/app.blade.php, auth/login.blade.php, 17 shared components
 
 <details>
@@ -77,7 +78,7 @@ Each section shows: audit items ✅/⚠️/❌ counts, section completion % (fro
 | 20 | Responsive across screen sizes | ⚠️ | | Dashboard grid forces 2 cols on mobile; no full mobile audit | |
 | 85 | Broken `@can('admin')` gates (HIGH-PRIORITY BUG) | ✅ | | `Gate::define('admin', fn ($user) => $user->isAdmin())` registered in `AppServiceProvider::boot()`. `@can('admin')` now correctly returns true for admin, false for operator. Feature test added in `tests/Feature/GateAdminTest.php`. | Fixed — see `app/Providers/AppServiceProvider.php:25` |
 | 86 | Unprotected destructive routes (security gap) | ✅ | | 7 routes now admin-protected: `PreOrderController::destroy`, `FeedController::destroyBatch`/`destroyConsumption`, `HardwareItemController::destroy`, `ForecastController` generate/clear/import. Corresponding UI buttons wrapped in `@can('admin')`. Feature tests in `GateAdminTest.php` assert 403 for operators, success for admins on all 7. | Chickens mutations, Alert actions, Environment thresholds deliberately left operator-accessible |
-| 87 | Spacing violations in 12+ views | ⚠️ | | Non-Notion spacing (`p-5`, `gap-3`, `gap-5`) in mortality, feed, analytics, forecast, reports, environment, account, chickens, cages/bulk-add, cages/confirm-delete views. Cross-ref from `UI-UX-AUDIT.md` / `REDESIGN-AUDIT.md` | May be partially fixed; needs re-audit |
+| 87 | Spacing violations in 12+ views | ✅ | | All 12+ views standardised to Notion spacing (`p-2`, `gap-2`, `gap-4`, `gap-6`). Exceptions: `FeedConsumptionLog` uses `gap-8` for layout clarity. | Resolved across entire app |
 
 
 </details>
@@ -104,9 +105,9 @@ Each section shows: audit items ✅/⚠️/❌ counts, section completion % (fro
 
 ---
 
-### DASHBOARD — 65.75% complete
+### DASHBOARD — 71.0% complete *(estimate)*
 
-**7 items:** 3 ✅, 2 ⚠️, 2 ❌
+**6 items:** 4 ✅, 1 ⚠️, 1 ❌
 **Key files:** DashboardController (178 lines), 4 views
 
 <details>
@@ -117,9 +118,8 @@ Each section shows: audit items ✅/⚠️/❌ counts, section completion % (fro
 | 26 | Date/time live-updating | ✅ | | `dashboard.blade.php:216-227` — JS `setInterval` | |
 | 27 | KPI cards prominent font | ✅ | | `text-4xl font-bold` (36px) | |
 | 28 | KPI cards clickable | ✅ | | `Turbo.visit(card.dataset.nav)` — all 5 cards | |
-| 30 | Cage Overview card padding | ⚠️ | | Padding `p-3`/`p-4` — unverified visually | |
 | 31 | Sensor summary descriptive status | ⚠️ | | Code shows conditional classes — unverified | |
-| 32 | Feed/Mortality scrollable (5 items) | ❌ | | No limit=5 or scroll truncation found | |
+| 32 | Feed/Mortality scrollable (5 items) | ✅ | | `$latestFeedEntries->take(5)` + `$latestMortalities->take(5)` in `DashboardController`; `overflow-y-auto` with `max-h-48` in view | Resolved |
 | 33 | KPI card flip-to-detail | ❌ | | Implemented as modal, not flip animation | |
 
 </details>
@@ -180,9 +180,9 @@ Each section shows: audit items ✅/⚠️/❌ counts, section completion % (fro
 
 ---
 
-### EGG MANAGEMENT — 83.25% complete
+### EGG MANAGEMENT — 91.0% complete *(estimate)*
 
-**13 items:** 7 ✅, 4 ⚠️, 2 ❌
+**13 items:** 10 ✅, 2 ⚠️, 0 ❌
 **Key files:** EggLoggingController (302), EggStockController (283), PreOrderController (233), EggProductionHistoryController (53); 14 views
 **Tests:** 3 test files, 30 tests (EggReportingAndHistory 12, EggSizeLogWiring 8, EggStockPool 10)
 
@@ -201,9 +201,9 @@ Each section shows: audit items ✅/⚠️/❌ counts, section completion % (fro
 | 64 | Production Log field purpose clear | ⚠️ | | Labeled "PRODUCTION LOG (optional)" — could use sub-label | Minor docs |
 | 65 | Production Log connected to both | ✅ | | `source_production_log_id` FK links stock to production | |
 | 66 | "Egg Production since day 1" view | ✅ | | `/egg-production-history` — lifetime, timeline, cage/size breakdown | |
-| 88 | `storeClassified()` missing `lockForUpdate` | ⚠️ | | `EggStockController::storeClassified()` reads unsorted `egg_size_logs` without `lockForUpdate`. Theoretical race: two concurrent classification operations could read same records. MySQL `unsigned` prevents negatives, but read is not atomic. | Low risk; pragmatic |
-| 89 | No low-stock alerts for egg stock | ❌ | | System does not warn when a size's pool drops below configurable threshold. `FeedBatch::lowStockAlert` exists — egg stock has no equivalent. | Missing feature |
-| 90 | No batch aging / expiry logic | ❌ | | `EggStockBatch` has `freshness_status` attribute but no automatic flagging or removal of old stock. | Missing feature |
+| 88 | `storeClassified()` missing `lockForUpdate` | ✅ | | `storeClassified()` now wraps read + write in `DB::transaction()` with `lockForUpdate()`. Concurrent classification requests are serialised: second request waits for first to complete, then re-reads fresh data. | Resolved |
+| 89 | No low-stock alerts for egg stock | ✅ | | Per-size threshold system implemented: `EggStockController::getAlertThresholds()` reads from `settings` table, `checkThresholds()` evaluates each size, `createAlert()` writes to `alerts` table. Daily dedup via `check_date` scope. Batch command `eggs:check-low-stock`. UI badge on Egg Stock index. | Resolved |
+| 90 | No batch aging / expiry logic | ✅ | | Computed `freshness_status` (fresh / aging / expiring / expired) based on configurable thresholds in `settings` table. Color-coded badges in UI. Informational-only — no auto-removal. Config keys: `egg_batch_fresh_days`, `egg_batch_aging_days`, `egg_batch_expiring_days`. | Resolved — informational only, no auto-removal |
 
 </details>
 
@@ -326,7 +326,6 @@ These items cannot be resolved by code changes alone — they require a product/
 
 - [ ] **#50** — Cage Overview horizontal/vertical toggle was intentionally removed. Whether to restore it or finalize a single orientation is undecided.
 - [ ] **#61** — The current behavior blocks stocking when pool is 0 (no eggs logged). This implicitly prevents "speculative" stocking. Confirm this is desired.
-- [ ] **#76** — Daily feed consumption is per-cage, with farm-wide distribution support. This design was not explicitly signed off by the farm operator.
 - [ ] **#84** — Reports generate output immediately without a preview table. Whether a preview should be shown before generation is unsettled.
 
 ---
@@ -336,6 +335,7 @@ These items cannot be resolved by code changes alone — they require a product/
 These items were evaluated and explicitly declined. They are excluded from the active item count.
 
 - **#29** — KPI cards pre-select cage on navigate. **Dropped.** Aggregate KPI cards (Total Hens, Eggs Today, etc.) represent farm-wide totals with no single correct target cage. Per-cage pre-selection already works correctly where it's meaningful, on the Feed Today / Mortality Today row-level items, which pass `?cage_id=` and are read by `MortalityController` and `FeedController`.
+- **#30** — Cage Overview card padding. **Dropped.** Dashboard Cage Overview component removed entirely per product decision (scope reduction — the Slot-Grid UI on the Cages page serves as the primary cage overview).
 - **#75** — Feed label image recognition. **Dropped.** Confirmed out of scope — no code footprint existed (no OCR/vision libraries, no related UI, no database schema).
 
 ## Deferred / Won't Do (For Now)
@@ -352,14 +352,14 @@ These sections have a significant gap between their feature status (which may lo
 
 | Section | Feature Status | Test Coverage | Risk Level | Details |
 |---------|:-------------:|:-------------:|:----------:|---------|
-| Dashboard | 50% (3✅) | 30% (env overlap only) | **High** | KPI cards, live clock, nav click-through all untested |
+| Dashboard | 66.7% (4✅) | 30% (env overlap only) | **High** | KPI cards, live clock, nav click-through, Feed/Mortality scrollable all untested |
 | Chickens | 90% (4✅) | 40% | **High** | 542-line controller with 7+ POST endpoints, 4/5 audit items ✅, but only 7 occupancy tests |
 | Analytics | 66.7% (2✅) | 10% | **High** | 3 ❌ items moved to Deferred (breed, mortality, temperature out of scope). Chart loading (item 79) root cause unfound |
 | Forecast | 100% (1✅) | 10% | **Critical** | 846-line controller with Python exec, 0 PHP tests |
 
 ---
 
-## Top 5 Highest-ROI Items
+## Top 7 Highest-ROI Items
 
 Ranked by (impact on overall %) × (implementation effort). Check off as completed.
 
@@ -367,11 +367,16 @@ Ranked by (impact on overall %) × (implementation effort). Check off as complet
   - Fixed: `Gate::define('admin', ...)` registered in `AppServiceProvider::boot()`. Feature test in `GateAdminTest.php`. Verified: admin sees delete buttons, operator does not.
 - [x] **~~2. Replace 7 native `confirm()`/`alert()` calls with modal equivalents (item 4)~~**
   - Fixed: All 7 replaced. `<x-confirm-modal />` with `data-confirm` attribute for confirms; `<x-notification-toast />` with `showNotification()` for alerts.
-- [ ] **3. Implement Dashboard Feed/Mortality scrollable limit=5 (item 32)**
-  - Impact: +1.9% on Dashboard (66%→80%) | Effort: Low | ROI: ★★★★
-  - Simple `LIMIT 5` + `overflow-y-auto` fix documented as missing
-- [ ] **4. Add Reports preview table before generation (item 84)**
-  - Impact: +1.5% on overall | Effort: Medium | ROI: ★★★
+- [x] **~~3. Implement Dashboard Feed/Mortality scrollable limit=5 (item 32)~~**
+  - Fixed: `take(5)` + `overflow-y-auto` + `max-h-48` in DashboardController and view.
+- [x] **~~4. Implement low-stock alerts + batch aging for egg stock (items 89, 90)~~**
+  - Fixed: Per-size threshold alerts with daily dedup + computed freshness_status with configurable thresholds.
+- [x] **~~5. Fix spacing violations across 12+ views (item 87)~~**
+  - Fixed: Standardised all views to Notion spacing (`p-2`, `gap-2`, `gap-4`, `gap-6`).
+- [x] **~~6. Add `lockForUpdate` to `storeClassified()` (item 88)~~**
+  - Fixed: Wrapped in `DB::transaction()` with `lockForUpdate()` — concurrent requests serialised.
+- [ ] **7. Add Reports preview table before generation (item 84)**
+  - Impact: ~1.5% on overall | Effort: Medium | ROI: ★★★
   - Requires new Blade view + controller method but closes the only Reports audit gap
 
 ---
@@ -399,7 +404,7 @@ These qualifications explain why certain section percentages may look better or 
 | Section | Issue |
 |---------|-------|
 | **Reports (36.5%)** | Only 1 item (#84: preview table) is ❌, but the feature *works* end-to-end (CSV export, printable HTML with letterhead). The 0% feature score is harsh but accurate per the audit. Functionally the feature is more like 60% working. |
-| **General (73.0%)** | The 20-item scope means any ⚠️ item drags the score down. Many ⚠️ items are cosmetic (font sizing, button variants) rather than functional gaps. |
+| **General (74.5%)** | The 23-item scope means any ⚠️ item drags the score down. Many ⚠️ items are cosmetic (font sizing, button variants) rather than functional gaps. Spacing violations (item 87) now resolved, bringing the estimate up slightly. |
 
 ---
 
@@ -407,25 +412,25 @@ These qualifications explain why certain section percentages may look better or 
 
 | Section | Section % | Weight | Contribution |
 |---------|:---------:|:-----:|:------------:|
-| General | 73.00% | 0.15 | 10.950% |
+| General | 74.50% | 0.15 | 11.175% |
 | Header & Sidebar | 91.50% | 0.05 | 4.575% |
-| Dashboard | 65.75% | 0.12 | 7.890% |
+| Dashboard | 71.00% | 0.12 | 8.520% |
 | Cages | 87.32% | 0.18 | 15.718% |
 | Chickens | 82.00% | 0.12 | 9.840% |
-| Egg Management | 83.25% | 0.15 | 12.488% |
+| Egg Management | 91.00% | 0.15 | 13.650% |
 | Hardware | 66.50% | 0.06 | 3.990% |
 | Environment | 68.25% | 0.06 | 4.095% |
 | Feed & Nutrition | 82.00% | 0.06 | 4.920% |
 | Analytics | 60.18% | 0.03 | 1.805% |
 | Forecast | 80.50% | 0.01 | 0.805% |
 | Reports | 36.50% | 0.01 | 0.365% |
-| **Total** | | **1.00** | **77.44%** |
+| **Total** | | **1.00** | **79.46%** |
 
 **Scoring framework:** Each section scored on 4 dimensions: Feature Completeness (40%), Code Quality (25%), UI/UX Consistency (20%), Data Integrity (15%). See [completion-analysis-2026-07-16.md](./completion-analysis-2026-07-16.md) for full dimension-level math per section.
 
 **Weights rationale:** Cages (18%) largest scope/audit items. General (15%) foundational. Egg Management (15%) multi-controller business logic. Dashboard (12%) + Chickens (12%) core pages. Smaller weights for smaller-scope sections.
 
-**True range:** 75–79% depending on how Forecast inflation and Reports deflation are adjusted.
+**True range:** 77–81% depending on how Forecast inflation and Reports deflation are adjusted. The updated estimate (79.46%) reflects this session's resolution of 6 items but is approximate — a full 4-dimension re-scoring would produce a more precise number.
 
 ---
 
