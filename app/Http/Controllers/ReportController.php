@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cage;
+use App\Models\EggStockBatch;
 use App\Models\EnvironmentalLog;
 use App\Models\FeedConsumptionLog;
 use App\Models\Hen;
@@ -24,13 +25,16 @@ class ReportController extends Controller
         $allCages = Cage::orderBy('cage_code')->get();
         $rows    = collect();
         $summary = null;
+        // Item #84: results land on a preview table first; the printable
+        // letterhead document is an explicit second step (?full=1).
+        $full    = $request->boolean('full');
 
         if ($from && $to) {
             $rows    = $this->buildReport($type, $from, $to, $cageId, $reason, $allCages);
             $summary = $this->buildSummary($type, $from, $to, $cageId, $reason, $allCages);
         }
 
-        return view('reports', compact('type', 'from', 'to', 'cageId', 'reason', 'allCages', 'rows', 'summary'));
+        return view('reports', compact('type', 'from', 'to', 'cageId', 'reason', 'allCages', 'rows', 'summary', 'full'));
     }
 
     private function buildReport($type, $from, $to, $cageId, $reason, $allCages)
@@ -43,6 +47,7 @@ class ReportController extends Controller
             'feed'        => $this->feedReport($from, $to, $cageIds),
             'environment' => $this->environmentReport($from, $to, $cageIds),
             'mortality'   => $this->mortalityReport($from, $to, $cageIds, $reason),
+            'egg_stock'   => $this->eggStockReport($from, $to, $cageIds, $cageId),
             default       => $this->productionReport($from, $to, $cageIds, $allCages),
         };
     }
@@ -72,6 +77,12 @@ class ReportController extends Controller
                 'readings'    => EnvironmentalLog::whereIn('cage_id', $cageIds)->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59'])->count(),
                 'alerts'      => EnvironmentalLog::whereIn('cage_id', $cageIds)->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59'])->where(fn($q) => $q->where('temperature_c', '>', 30)->orWhere('humidity_pct', '>', 70))->count(),
             ],
+            'egg_stock' => (object) [
+                'total_stocked' => (int) $this->eggStockQuery($from, $to, $cageIds, $cageId)->sum('count'),
+                'batches'       => $this->eggStockQuery($from, $to, $cageIds, $cageId)->count(),
+                'top_size'      => ucfirst($this->eggStockQuery($from, $to, $cageIds, $cageId)->selectRaw('egg_size, SUM(`count`) as total')->groupBy('egg_size')->orderByDesc('total')->value('egg_size') ?? '—'),
+                'days'          => $this->eggStockQuery($from, $to, $cageIds, $cageId)->distinct('harvested_date')->count('harvested_date'),
+            ],
             'mortality' => (object) [
                 'total_deaths'  => MortalityLog::whereIn('cage_id', $cageIds)->whereBetween('log_date', [$from, $to])->sum('count'),
                 'top_cause'     => MortalityLog::whereIn('cage_id', $cageIds)->whereBetween('log_date', [$from, $to])->selectRaw('reason, SUM(`count`) as total')->groupBy('reason')->orderByDesc('total')->value('reason') ?? '—',
@@ -84,7 +95,10 @@ class ReportController extends Controller
 
     private function productionReport($from, $to, $cageIds, $allCages)
     {
-        $logs = ProductionLog::with(['cageSlot.cage', 'cageSlot.hens'])
+        // Hens must be filtered to active here (same as AnalyticsController) —
+        // an unfiltered ->first() can attribute a dead/transferred hen's breed
+        // to a historical production row.
+        $logs = ProductionLog::with(['cageSlot.cage', 'cageSlot.hens' => fn($q) => $q->where('is_active', 1)])
             ->whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))
             ->whereBetween('log_date', [$from, $to])
             ->orderByDesc('log_date')
@@ -176,6 +190,31 @@ class ReportController extends Controller
             'reason' => $l->reason,
             'notes'  => $l->notes ?? '—',
         ]);
+    }
+
+    // egg_stock_batches.cage_id is nullable (farm-level batches) — "All Cages"
+    // must include NULL-cage rows, unlike the other report types.
+    private function eggStockQuery($from, $to, $cageIds, $cageId)
+    {
+        return EggStockBatch::whereBetween('harvested_date', [$from, $to])
+            ->when($cageId === 'all',
+                fn($q) => $q->where(fn($w) => $w->whereIn('cage_id', $cageIds)->orWhereNull('cage_id')),
+                fn($q) => $q->whereIn('cage_id', $cageIds));
+    }
+
+    private function eggStockReport($from, $to, $cageIds, $cageId)
+    {
+        return $this->eggStockQuery($from, $to, $cageIds, $cageId)
+            ->with('cage')
+            ->orderByDesc('harvested_date')
+            ->get()
+            ->map(fn($b) => (object) [
+                'date'      => $b->harvested_date->format('Y-m-d'),
+                'cage'      => $b->cage?->cage_code ?? '—',
+                'size'      => ucfirst($b->egg_size),
+                'count'     => $b->count,
+                'freshness' => ucfirst($b->freshness_status),
+            ]);
     }
 
     public function exportCsv(Request $request)

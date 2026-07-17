@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -v \"^\\\\s*$\")",
+      "Bash(sed 's/^ *//')",
+      "Bash(php artisan *)",
+      "Bash(DB_SOCKET= php artisan test)",
+      "mcp__plugin_playwright_playwright__browser_click",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "mcp__plugin_playwright_playwright__browser_evaluate"
+    ]
+  }
+}

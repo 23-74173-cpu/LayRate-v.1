@@ -70,9 +70,19 @@
             }
         };
 
+        // Chart instances live in a namespaced store — never bare window.<canvasId>
+        // (e.g. window.hdepChart): the browser auto-exposes every element with an id
+        // as a global pointing at the DOM node itself, which shadows the cache and
+        // has no .destroy(), crashing this function before any chart renders.
+        const charts = window.__analyticsCharts = window.__analyticsCharts || {};
+        const destroyChart = (key) => {
+            if (charts[key] && typeof charts[key].destroy === 'function') charts[key].destroy();
+            charts[key] = null;
+        };
+
         function initAnalyticsCharts() {
-            if (window.hdepChart) window.hdepChart.destroy();
-            window.hdepChart = new Chart(document.getElementById('hdepChart'), {
+            destroyChart('hdep');
+            charts.hdep = new Chart(document.getElementById('hdepChart'), {
                 type: 'line',
                 data: {
                     labels,
@@ -84,8 +94,8 @@
                 options: { ...baseOpts, scales: { ...baseOpts.scales, y: { ...baseOpts.scales.y, min: 50, max: 100 } } }
             });
 
-            if (window.eggsChart) window.eggsChart.destroy();
-            window.eggsChart = new Chart(document.getElementById('eggsChart'), {
+            destroyChart('eggs');
+            charts.eggs = new Chart(document.getElementById('eggsChart'), {
                 type: 'bar',
                 data: {
                     labels,
@@ -98,8 +108,8 @@
             feedLogs.forEach(f => feedMap[f.date] = f.kg);
             const scatter = logs.map(l => ({ x: feedMap[l.date] || 0, y: l.hdep }));
 
-            if (window.feedHdepChart) window.feedHdepChart.destroy();
-            window.feedHdepChart = new Chart(document.getElementById('feedHdepChart'), {
+            destroyChart('feedHdep');
+            charts.feedHdep = new Chart(document.getElementById('feedHdepChart'), {
                 type: 'scatter',
                 data: {
                     datasets: [{

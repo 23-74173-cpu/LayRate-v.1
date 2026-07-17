@@ -17,6 +17,7 @@
     }
     body { font-family: Georgia, 'Times New Roman', serif !important; background: white !important; }
     thead { display: table-header-group; }
+    tbody tr { page-break-inside: avoid; }
     tfoot, .signature-block { page-break-inside: avoid; }
     .no-screen { display: block !important; }
 }
@@ -29,7 +30,7 @@
 
     @php $cageColorMap = \App\Models\Cage::getColorMap(); @endphp
 
-    <x-page-header title="Reports" subtitle="Generate and export production, feed, environment, and mortality reports" />
+    <x-page-header title="Reports" subtitle="Generate and export production, feed, environment, mortality, and egg stock reports" />
 
     {{-- ── Filters ── --}}
     <div class="no-print">
@@ -43,6 +44,7 @@
                         <option value="feed"        {{ $type === 'feed'       ? 'selected' : '' }}>Feed Report</option>
                         <option value="environment" {{ $type === 'environment'? 'selected' : '' }}>Environment Report</option>
                         <option value="mortality"   {{ $type === 'mortality'  ? 'selected' : '' }}>Mortality Report</option>
+                        <option value="egg_stock"   {{ $type === 'egg_stock'  ? 'selected' : '' }}>Egg Stock Report</option>
                     </select>
                 </div>
                 <div>
@@ -86,17 +88,67 @@
                    class="flex items-center gap-1.5 border border-[#D9D9D9] text-[#6B7280] px-4 py-2 rounded-lg text-sm hover:bg-[#F5F6F8] transition-colors">
                     <i data-lucide="download" class="w-4 h-4"></i> Export CSV
                 </a>
+                @if($full)
+                <a href="{{ route('reports', request()->except('full')) }}"
+                   class="flex items-center gap-1.5 border border-[#D9D9D9] text-[#6B7280] px-4 py-2 rounded-lg text-sm hover:bg-[#F5F6F8] transition-colors">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Preview
+                </a>
                 <button type="button" onclick="window.print()"
                         class="flex items-center gap-1.5 border border-[#D9D9D9] text-[#6B7280] px-3 py-2 rounded-lg text-sm hover:bg-[#F5F6F8] transition-colors">
                     <i data-lucide="printer" class="w-4 h-4"></i>
                 </button>
                 @endif
+                @endif
             </form>
         </div>
     </div>
 
-    {{-- ── Report Document ── --}}
     @if($from && $to && $rows->isNotEmpty())
+    @if(!$full)
+    {{-- ── Preview table (item #84) — the printable document is an explicit second step ── --}}
+    <div class="bg-white rounded-lg border border-[#D9D9D9]">
+        <div class="px-5 py-4 border-b border-[#D9D9D9] flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="text-sm font-semibold text-[#333333]">Report Preview</h2>
+                <p class="text-xs text-[#6B7280] mt-0.5">
+                    {{ ucfirst(str_replace('_', ' ', $type)) }} &middot; {{ $from }} &mdash; {{ $to }} &middot; {{ $cageId === 'all' ? 'All Cages' : $cageId }} &middot; {{ $rows->count() }} record(s)
+                </p>
+            </div>
+            <a href="{{ route('reports', array_merge(request()->query(), ['full' => 1])) }}"
+               class="inline-flex items-center gap-2 bg-[#002D5E] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#001F42] transition-colors">
+                <i data-lucide="file-text" class="w-4 h-4"></i> View Printable Report
+            </a>
+        </div>
+        <div class="p-5">
+            @include('reports._summary-pills')
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-[#e6e6e6] bg-[#f9f9f7]">
+                            @foreach(array_keys((array) $rows->first()) as $col)
+                            <th class="px-5 py-3 text-left text-xs tracking-wider text-[#6B7280] uppercase font-medium whitespace-nowrap">
+                                {{ strtoupper(str_replace('_', ' ', $col)) }}
+                            </th>
+                            @endforeach
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($rows as $row)
+                        <tr class="border-b border-[#F0F0F0]">
+                            @foreach((array) $row as $key => $val)
+                            <td class="px-5 py-3 text-sm text-[#333333] {{ in_array($key, ['date','datetime']) ? 'font-mono' : '' }}">
+                                {{ $val }}
+                            </td>
+                            @endforeach
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    @else
+    {{-- ── Report Document ── --}}
     <div id="report-doc" class="bg-white rounded-lg border border-[#D9D9D9] p-8 max-w-5xl mx-auto shadow-sm">
 
         {{-- 1. Letterhead --}}
@@ -139,80 +191,8 @@
             </div>
         </div>
 
-        {{-- 3. Summary pills --}}
-        @if($summary !== null)
-        <div class="flex gap-4 mb-6">
-            @if($type === 'production')
-            <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Total Eggs</div>
-                <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->total_eggs }}</div>
-            </div>
-            <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Avg HDEP</div>
-                <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->avg_hdep }}</div>
-            </div>
-            <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Total Hens</div>
-                <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->total_hens }}</div>
-            </div>
-            <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Days Covered</div>
-                <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->days }}</div>
-            </div>
-            @elseif($type === 'feed')
-            <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Total Consumed</div>
-                <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->total_kg }} kg</div>
-            </div>
-            <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Avg per Day</div>
-                <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->avg_per_day }} kg</div>
-            </div>
-            <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Batches Used</div>
-                <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->batches }}</div>
-            </div>
-            <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Days Covered</div>
-                <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->days }}</div>
-            </div>
-            @elseif($type === 'environment')
-            <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Avg Temperature</div>
-                <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->avg_temp }}</div>
-            </div>
-            <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Avg Humidity</div>
-                <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->avg_hum }}</div>
-            </div>
-            <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Total Readings</div>
-                <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->readings }}</div>
-            </div>
-            <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Alert Readings</div>
-                <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->alerts }}</div>
-            </div>
-            @elseif($type === 'mortality')
-            <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Total Deaths</div>
-                <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->total_deaths }}</div>
-            </div>
-            <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Top Cause</div>
-                <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->top_cause }}</div>
-            </div>
-            <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Most Affected</div>
-                <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->most_affected }}</div>
-            </div>
-            <div class="flex-1 border border-[#D9D9D9] rounded px-4 py-2 text-center">
-                <div class="text-xs tracking-wider text-[#6B7280] uppercase">Days Covered</div>
-                <div class="text-lg font-semibold text-[#102A4C]">{{ $summary->days }}</div>
-            </div>
-            @endif
-        </div>
-        @endif
+        {{-- 3. Summary pills (shared with the preview via partial) --}}
+        @include('reports._summary-pills')
 
         {{-- 4. Data table --}}
         @php
@@ -273,6 +253,7 @@
         </div>
 
     </div>
+    @endif
     @elseif($from && $to && $rows->isEmpty())
     <div class="bg-white rounded-lg border border-[#D9D9D9] p-10 text-center text-sm text-[#6B7280]">
         No data found for the selected filters.
