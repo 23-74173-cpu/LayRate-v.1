@@ -21,9 +21,35 @@ class AlertController extends Controller
     {
         $alerts = Alert::with('cage')
             ->orderByDesc('triggered_at')
-            ->paginate(25);
+            ->get();
 
-        return view('notifications._table', compact('alerts'));
+        $groups = [
+            'Eggs'        => collect(),
+            'Temperature' => collect(),
+            'Humidity'    => collect(),
+            'Other'       => collect(),
+        ];
+
+        $eggTypes = ['mortality_spike', 'stock_depletion', 'occupancy_mismatch', 'low_stock'];
+        $tempTypes = ['temperature_low', 'temperature_high'];
+        $humTypes = ['humidity_low', 'humidity_high'];
+
+        foreach ($alerts as $alert) {
+            $type = $alert->alert_type;
+            if (in_array($type, $eggTypes)) {
+                $groups['Eggs']->push($alert);
+            } elseif (in_array($type, $tempTypes)) {
+                $groups['Temperature']->push($alert);
+            } elseif (in_array($type, $humTypes)) {
+                $groups['Humidity']->push($alert);
+            } else {
+                $groups['Other']->push($alert);
+            }
+        }
+
+        $groups = array_filter($groups, fn($g) => $g->isNotEmpty());
+
+        return view('notifications._table', compact('groups'));
     }
 
     public function acknowledgeModal(Request $request)

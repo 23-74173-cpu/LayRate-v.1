@@ -1,7 +1,7 @@
 """LayRate Mobile API.
 
 A minimal Flask REST API for the LayRate mobile app. Runs on a Raspberry Pi
-and provides authentication plus incubator sensor status.
+and provides authentication plus sensor status.
 
 Usage:
     python app.py
@@ -251,10 +251,10 @@ def list_alerts():
     return jsonify({"alerts": alerts, "total": total}), 200
 
 
-@app.route("/api/incubator/status", methods=["GET"])
+@app.route("/api/dashboard/status", methods=["GET"])
 @require_auth
-def incubator_status():
-    """Return latest environmental readings and today's egg production from MySQL."""
+def dashboard_status():
+    """Return latest environmental readings and today's egg production from MySQL for the dashboard."""
     conn = get_mysql()
     with conn.cursor(pymysql.cursors.DictCursor) as cursor:
         cursor.execute(
@@ -267,11 +267,17 @@ def incubator_status():
         )
         eggs = cursor.fetchone()
 
+        cursor.execute(
+            "SELECT COALESCE(SUM(current_occupancy), 0) AS total_hens FROM cage_slots"
+        )
+        hens = cursor.fetchone()
+
     return jsonify(
         {
             "temperature": float(env["temperature_c"]) if env else 0.0,
             "humidity": float(env["humidity_pct"]) if env else 0.0,
             "egg_count": eggs["total_eggs"] if eggs else 0,
+            "total_hens": hens["total_hens"] if hens else 0,
         }
     ), 200
 

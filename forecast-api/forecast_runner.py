@@ -70,7 +70,6 @@ def run_manual(args) -> dict:
         total_feed_consumed_kg=args.total_feed_consumed_kg,
         monthly_mortality=args.monthly_mortality,
         heat_stress=args.heat_stress,
-        start_date=args.start_date,
     )
     return {"success": True, **result}
 
@@ -82,8 +81,7 @@ def main():
     parser.add_argument("--breed", default="ALL")
     parser.add_argument("--horizon", type=int, default=7)
     parser.add_argument("--start-date", default=None,
-                        help="Forecast start date (YYYY-MM-DD). Defaults to tomorrow. "
-                             "Combined horizon must not exceed today + 30 days.")
+                        help="Forecast start date (YYYY-MM-DD). Defaults to tomorrow.")
 
     # Manual-only parameters
     parser.add_argument("--manual-breed", default=None)
@@ -97,9 +95,6 @@ def main():
     parser.add_argument("--heat-stress", type=int, default=None)
 
     args = parser.parse_args()
-
-    if args.horizon < 1:
-        fail("Forecast horizon must be at least 1 day.")
 
     try:
         if args.mode == "manual":

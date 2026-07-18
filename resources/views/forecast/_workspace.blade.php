@@ -6,29 +6,18 @@
         'breed' => $breed ?? '',
         default => $cageCode,
     };
-    $showForecast = $showForecast ?? session('forecast_generated', false);
+    $showForecast = session('forecast_generated', false);
     $chartTitle = $showForecast ? 'HISTORICAL DATA VS FORECASTED EGG COUNT' : 'HISTORICAL EGG COUNT';
 @endphp
 
 <turbo-frame id="forecast-workspace">
 <div class="space-y-5">
-    @php
-        $workspaceSuccess = $successMessage ?? null;
-    @endphp
-
-    @if($workspaceSuccess)
-    <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-800 flex items-start gap-2">
-        <i data-lucide="check-circle" class="w-4 h-4 text-green-600 shrink-0 mt-0.5"></i>
-        <span>{{ $workspaceSuccess }}</span>
-    </div>
-    @endif
-
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
 
         {{-- ── Inputs Panel ── --}}
         <x-card>
             <div class="text-xs tracking-wider text-[#6B7280] mb-4">FORECAST INPUTS</div>
-            <form method="POST" action="{{ route('forecast.generate') }}" id="forecastForm" data-turbo-stream>
+            <form method="POST" action="{{ route('forecast.generate') }}" id="forecastForm" data-turbo="false">
                 @csrf
                 <input type="hidden" name="scope" value="{{ $scope }}" id="formScope">
                 <input type="hidden" name="cage" value="{{ $cageCode }}" id="formCage">
@@ -83,10 +72,6 @@
                     </label>
                     @endforeach
                 </div>
-
-                <p class="text-xs text-[#6B7280] mb-4">
-                    Click a date in the calendar to forecast a single day up to {{ now()->addDays(30)->format('F j, Y') }}.
-                </p>
 
                 <button type="submit" id="generateForecastBtn" class="w-full bg-[#002D5E] text-white py-2.5 rounded-lg text-sm hover:bg-[#001F42] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                     <span id="btnText">Generate Forecast</span>

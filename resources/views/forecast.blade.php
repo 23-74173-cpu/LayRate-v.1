@@ -227,9 +227,6 @@
     });
 
     function initForecastLoading() {
-        if (window.__layrateForecastLoadingInitialized) return;
-        window.__layrateForecastLoadingInitialized = true;
-
         const STORAGE_KEYS = {
             startTime: 'layrate_forecast_start_time',
             expectedDuration: 'layrate_forecast_expected_duration_ms',
@@ -243,7 +240,6 @@
 
         const MIN_DURATION = 3000;
         const MAX_DURATION = 280000;
-        const FORECAST_FORM_IDS = ['forecastForm', 'forecastDayForm'];
 
         function resolveExpectedDuration(scope, horizon) {
             const saved = localStorage.getItem(STORAGE_KEYS.expectedDuration);
@@ -272,59 +268,51 @@
 
         recordActualDuration();
 
+        const form = document.getElementById('forecastForm');
         const overlay = document.getElementById('forecastLoadingOverlay');
         const progressBar = document.getElementById('forecastProgressBar');
         const progressText = document.getElementById('forecastProgressText');
         const statusText = document.getElementById('forecastStatusText');
+        const btn = document.getElementById('generateForecastBtn');
+        const btnText = document.getElementById('btnText');
 
-        if (!overlay) return;
+        if (!form || !overlay || !btn) return;
 
-        let progressFrameId = null;
-        let startTime = null;
-        let isLoading = false;
-
-        function isForecastForm(element) {
-            return element && FORECAST_FORM_IDS.includes(element.id);
+        // Remove a previously attached handler so we never stack listeners when the frame reloads.
+        if (form._forecastSubmitHandler) {
+            form.removeEventListener('submit', form._forecastSubmitHandler);
         }
 
-        function getSubmitButton(form) {
-            if (form.id === 'forecastForm') {
-                return document.getElementById('generateForecastBtn');
+        let isSubmitting = false;
+
+        const handler = function(e) {
+            if (isSubmitting) {
+                e.preventDefault();
+                return;
             }
-            return form.querySelector('button[type="submit"]');
-        }
 
-        function startLoading(form) {
-            if (isLoading) return;
-            isLoading = true;
+            isSubmitting = true;
+            e.preventDefault();
+
             const scopeInput = form.querySelector('input[name="scope"]');
-            const horizonRadio = form.querySelector('input[name="horizon"]:checked');
-            const horizonHidden = form.querySelector('input[type="hidden"][name="horizon"]');
+            const horizonInput = form.querySelector('input[name="horizon"]:checked');
             const scope = scopeInput ? scopeInput.value : 'cage';
-            let horizon = 7;
-            if (horizonRadio) {
-                horizon = parseInt(horizonRadio.value, 10) || 7;
-            } else if (horizonHidden) {
-                horizon = parseInt(horizonHidden.value, 10) || 7;
-            }
+            const horizon = horizonInput ? parseInt(horizonInput.value, 10) : 7;
             const expectedDuration = resolveExpectedDuration(scope, horizon);
 
             overlay.classList.remove('hidden');
-            sessionStorage.setItem(STORAGE_KEYS.startTime, Date.now());
-
-            const submitBtn = getSubmitButton(form);
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.dataset.originalText = submitBtn.innerHTML;
-                const btnTextSpan = submitBtn.querySelector('span');
-                if (btnTextSpan) {
-                    btnTextSpan.textContent = 'Generating...';
-                }
+            btn.disabled = true;
+            if (btnText) {
+                btnText.textContent = 'Generating...';
             }
 
+            sessionStorage.setItem(STORAGE_KEYS.startTime, Date.now());
+
             progressBar.style.width = '0%';
-            if (progressText) progressText.textContent = '0%';
-            if (statusText) statusText.textContent = 'Loading historical data...';
+            progressText.textContent = '0%';
+            if (statusText) {
+                statusText.textContent = 'Loading historical data...';
+            }
 
             const statusMessages = [
                 'Loading historical data...',
@@ -335,7 +323,7 @@
                 'Saving forecast results...',
             ];
 
-            startTime = Date.now();
+            const startTime = Date.now();
 
             function updateProgress() {
                 const elapsed = Date.now() - startTime;
@@ -344,7 +332,7 @@
                 const progress = Math.min(95, eased * 95);
 
                 progressBar.style.width = progress + '%';
-                if (progressText) progressText.textContent = Math.round(progress) + '%';
+                progressText.textContent = Math.round(progress) + '%';
 
                 const messageIndex = Math.min(
                     statusMessages.length - 1,
@@ -355,44 +343,21 @@
                 }
 
                 if (progress < 95) {
-                    progressFrameId = requestAnimationFrame(updateProgress);
+                    requestAnimationFrame(updateProgress);
                 }
             }
 
-            progressFrameId = requestAnimationFrame(updateProgress);
-        }
+            requestAnimationFrame(updateProgress);
 
-        function stopLoading(form) {
-            if (progressFrameId) {
-                cancelAnimationFrame(progressFrameId);
-                progressFrameId = null;
-            }
-            overlay.classList.add('hidden');
-            startTime = null;
-            isLoading = false;
+            requestAnimationFrame(function() {
+                setTimeout(function() {
+                    form.submit();
+                }, 50);
+            });
+        };
 
-            if (form) {
-                const submitBtn = getSubmitButton(form);
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    if (submitBtn.dataset.originalText) {
-                        submitBtn.innerHTML = submitBtn.dataset.originalText;
-                    }
-                }
-            }
-        }
-
-        document.addEventListener('turbo:submit-start', function(e) {
-            if (isForecastForm(e.target)) {
-                startLoading(e.target);
-            }
-        });
-
-        document.addEventListener('turbo:submit-end', function(e) {
-            if (isForecastForm(e.target)) {
-                stopLoading(e.target);
-            }
-        });
+        form._forecastSubmitHandler = handler;
+        form.addEventListener('submit', handler);
     }
 
     document.addEventListener('turbo:load', function() {
@@ -635,7 +600,7 @@
     });
 
     document.addEventListener('turbo:frame-load', function(e) {
-        if (e.target.id === 'forecast-workspace' || e.target.id === 'production-calendar') {
+        if (e.target.id === 'forecast-workspace') {
             initForecastLoading();
         }
     });

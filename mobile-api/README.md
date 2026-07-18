@@ -145,7 +145,7 @@ Response:
 ### Get Incubator Status
 
 ```bash
-curl -X GET http://192.168.4.1:8000/api/incubator/status \
+curl -X GET http://192.168.4.1:8000/api/dashboard/status \
   -H "Authorization: Bearer <token-from-login>"
 ```
 

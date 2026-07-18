@@ -9,7 +9,7 @@ use Illuminate\Http\JsonResponse;
 
 class MobileAppController extends Controller
 {
-    public function incubatorStatus(): JsonResponse
+    public function dashboardStatus(): JsonResponse
     {
         $today = Carbon::today();
 
