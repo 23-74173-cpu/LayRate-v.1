@@ -184,7 +184,6 @@
                 ['icon'=>'feather',       'label'=>'Cages',              'route'=>'cages.index'],
                 ['icon'=>'bird',          'label'=>'Chickens',           'route'=>'chickens.index'],
                 ['icon'=>'egg',           'label'=>'Egg Management',     'route'=>'eggs.logging'],
-                ['icon'=>'history',       'label'=>'Egg History',        'route'=>'egg-production-history'],
                 ['icon'=>'thermometer',   'label'=>'Environment',        'route'=>'environment'],
                 ['icon'=>'cpu',           'label'=>'Hardware',           'route'=>'hardware.index'],
                 ['icon'=>'leaf',          'label'=>'Feed & Nutrition',   'route'=>'feed'],
@@ -209,24 +208,7 @@
 
         {{-- BOTTOM: Pinned footer nav --}}
         <div class="border-t border-white/10 py-4 px-3 shrink-0">
-            <a href="{{ route('notifications.index') }}"
-               data-route="notifications"
-               class="nav-link group flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors"
-               title="Notifications" aria-label="Notifications">
-                <i data-lucide="bell" class="w-[19px] h-[19px] shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"></i>
-                <span class="sidebar-label text-sm font-medium whitespace-nowrap overflow-hidden">Notifications</span>
-                @if($globalAlertCount > 0)
-                <span class="ml-auto bg-alert-text text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">{{ $globalAlertCount }}</span>
-                @endif
-            </a>
-            <a href="{{ route('account') }}"
-               data-route="settings"
-               class="nav-link group flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors"
-               title="Settings" aria-label="Settings">
-                <i data-lucide="settings" class="w-[19px] h-[19px] shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"></i>
-                <span class="sidebar-label text-sm font-medium whitespace-nowrap overflow-hidden">Settings</span>
-            </a>
-            <a href="#"
+            <a href="{{ route('profile') }}"
                data-route="profile"
                class="nav-link group flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors"
                title="Profile" aria-label="Profile">
@@ -490,7 +472,7 @@
             'environment': 'Environment','hardware': 'Hardware',
             'feed': 'Feed & Nutrition', 'analytics': 'Analytics',    'forecast': 'Forecast',
             'reports': 'Reports',       'notes': 'Notes',            'mortality': 'Mortality',
-            'notifications': 'Notifications', 'account': 'Settings',
+            'notifications': 'Notifications', 'profile': 'Profile',
         };
         var crumb = document.getElementById('breadcrumb-current');
         if (crumb) {

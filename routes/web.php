@@ -154,7 +154,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/forecast/template',    [ForecastController::class, 'downloadTemplate'])->name('forecast.template');
     Route::post('/forecast/import',     [ForecastController::class, 'import'])->name('forecast.import')->middleware('admin');
 
-    Route::get('/account',           [AccountController::class, 'show'])->name('account');
+    Route::get('/profile',           [AccountController::class, 'profile'])->name('profile');
+    Route::redirect('/account', '/profile', 301);
     Route::post('/account/password', [AccountController::class, 'updatePassword'])->name('account.password');
     Route::post('/account/pin',      [AccountController::class, 'updatePin'])->name('account.pin');
 

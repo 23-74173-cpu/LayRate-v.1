@@ -11,7 +11,7 @@ class AccountController extends Controller
 {
     private const WEAK_PINS = ['0000','1111','2222','3333','4444','5555','6666','7777','8888','9999','1234','4321','0123','1212'];
 
-    public function show()
+    public function profile(Request $request)
     {
         $staff = auth()->user()->isAdmin()
             ? User::orderBy('name')->get(['id', 'name', 'role', 'override_pin_hash'])
@@ -22,7 +22,11 @@ class AccountController extends Controller
                 ])
             : null;
 
-        return view('account', compact('staff'));
+        $tab = in_array($request->get('tab'), ['profile', 'settings'], true)
+            ? $request->get('tab')
+            : 'profile';
+
+        return view('profile', compact('staff', 'tab'));
     }
 
     public function updatePassword(Request $request)
@@ -38,7 +42,7 @@ class AccountController extends Controller
 
         auth()->user()->update(['password' => Hash::make($data['password'])]);
 
-        return redirect()->route('account')->with('success', 'Password updated.');
+        return redirect()->route('profile', ['tab' => 'settings'])->with('success', 'Password updated.');
     }
 
     public function updatePin(Request $request)
@@ -67,6 +71,6 @@ class AccountController extends Controller
 
         $user->update(['override_pin_hash' => Hash::make($pin)]);
 
-        return redirect()->route('account')->with('success', 'Override PIN saved.');
+        return redirect()->route('profile', ['tab' => 'settings'])->with('success', 'Override PIN saved.');
     }
 }
