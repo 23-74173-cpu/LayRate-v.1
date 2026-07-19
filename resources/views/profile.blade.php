@@ -23,27 +23,35 @@
             <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
                 <h2 class="text-base font-medium text-[#333333] mb-4">Your Profile</h2>
 
-                <div class="space-y-4">
+                <form method="POST" action="{{ route('profile.update') }}" class="space-y-4">
+                    @csrf
                     <div>
-                        <label class="block text-xs text-[#6B7280] mb-1">Name</label>
-                        <p class="text-sm text-[#333333]">{{ auth()->user()->name }}</p>
+                        <label class="block text-sm text-[#333333] mb-1.5">Name</label>
+                        <input type="text" name="name" value="{{ old('name', auth()->user()->name) }}" required
+                               class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#002D5E]">
+                        @error('name')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
                     </div>
 
                     <div>
-                        <label class="block text-xs text-[#6B7280] mb-1">Email</label>
-                        <p class="text-sm text-[#333333]">{{ auth()->user()->email }}</p>
+                        <label class="block text-sm text-[#333333] mb-1.5">Email</label>
+                        <input type="email" name="email" value="{{ old('email', auth()->user()->email) }}" required
+                               class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#002D5E]">
+                        @error('email')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
                     </div>
 
                     <div>
-                        <label class="block text-xs text-[#6B7280] mb-1">Role</label>
+                        <label class="block text-sm text-[#333333] mb-1.5">Role</label>
                         <p class="text-sm text-[#333333] capitalize">{{ auth()->user()->role }}</p>
+                        <p class="text-xs text-[#6B7280] mt-1">Role is managed by an administrator.</p>
                     </div>
 
                     <div>
-                        <label class="block text-xs text-[#6B7280] mb-1">Member Since</label>
+                        <label class="block text-sm text-[#333333] mb-1.5">Member Since</label>
                         <p class="text-sm text-[#333333]">{{ auth()->user()->created_at->format('F d, Y') }}</p>
                     </div>
-                </div>
+
+                    <button type="submit" class="bg-[#002D5E] text-white px-5 py-2.5 rounded-lg text-sm hover:bg-[#001F42]">Save Profile</button>
+                </form>
             </div>
 
             {{-- Security Status --}}
@@ -200,6 +208,40 @@
                 </table>
             </div>
             @endif
+
+            {{-- Danger Zone --}}
+            <div class="bg-white rounded-lg border border-red-200 p-5">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                        <i data-lucide="alert-triangle" class="w-5 h-5 text-red-600"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-medium text-[#9b1c24]">Danger Zone</h2>
+                        <p class="text-sm text-[#6B7280]">Sensitive actions that affect your account security.</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <h3 class="text-sm font-medium text-[#9b1c24] mb-1">Sign out of all other devices</h3>
+                        <p class="text-xs text-[#6B7280] mb-3">This will invalidate all other active sessions for your account. Your current session will remain active.</p>
+                        <form method="POST" action="{{ route('profile.logout-other-devices') }}" class="space-y-3">
+                            @csrf
+                            <div class="input-with-toggle relative">
+                                <input type="password" name="logout_password" placeholder="Enter current password to confirm" required
+                                       class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-[#002D5E]">
+                                <button type="button" onclick="toggleVisibility(this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] hover:text-[#333333] transition-colors" aria-label="Show password">
+                                    <i data-lucide="eye" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                            @error('logout_password')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
+                            <button type="submit" class="w-full sm:w-auto border border-red-300 text-red-700 bg-white hover:bg-red-50 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                                Sign out of all other devices
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
 
         </div>
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
@@ -29,6 +30,20 @@ class AccountController extends Controller
         return view('profile', compact('staff', 'tab'));
     }
 
+    public function updateProfile(Request $request)
+    {
+        $user = auth()->user();
+
+        $data = $request->validate([
+            'name'  => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $user->id,
+        ]);
+
+        $user->update($data);
+
+        return redirect()->route('profile', ['tab' => 'profile'])->with('success', 'Profile updated.');
+    }
+
     public function updatePassword(Request $request)
     {
         $data = $request->validate([
@@ -40,7 +55,13 @@ class AccountController extends Controller
             return back()->withErrors(['current_password' => 'Current password is incorrect.']);
         }
 
-        auth()->user()->update(['password' => Hash::make($data['password'])]);
+        $user = auth()->user();
+        $user->update(['password' => Hash::make($data['password'])]);
+
+        // Keep the current session valid after a password change by syncing the
+        // session hash that AuthenticateSession middleware checks on each request.
+        // The middleware key is guard-specific (default guard = 'web').
+        $request->session()->put('password_hash_' . Auth::getDefaultDriver(), $user->password);
 
         return redirect()->route('profile', ['tab' => 'settings'])->with('success', 'Password updated.');
     }
@@ -72,5 +93,26 @@ class AccountController extends Controller
         $user->update(['override_pin_hash' => Hash::make($pin)]);
 
         return redirect()->route('profile', ['tab' => 'settings'])->with('success', 'Override PIN saved.');
+    }
+
+    public function logoutOtherDevices(Request $request)
+    {
+        $data = $request->validate([
+            'logout_password' => 'required',
+        ]);
+
+        if (! Hash::check($data['logout_password'], auth()->user()->password)) {
+            return back()->withErrors(['logout_password' => 'Current password is incorrect.']);
+        }
+
+        Auth::logoutOtherDevices($data['logout_password']);
+
+        // logoutOtherDevices() rehashes the user's password with a new salt, which
+        // invalidates every other session. Sync the current session's hash so this
+        // session stays alive.
+        $user = auth()->user()->fresh();
+        $request->session()->put('password_hash_' . Auth::getDefaultDriver(), $user->password);
+
+        return redirect()->route('profile', ['tab' => 'settings'])->with('success', 'Signed out of all other devices.');
     }
 }

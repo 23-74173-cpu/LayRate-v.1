@@ -14,6 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->redirectGuestsTo(fn () => route('login'));
         $middleware->alias(['admin' => \App\Http\Middleware\EnsureAdmin::class]);
+        $middleware->web(append: [
+            \Illuminate\Session\Middleware\AuthenticateSession::class,
+        ]);
     })
     ->withSchedule(function (Illuminate\Console\Scheduling\Schedule $schedule) {
         $schedule->command('layrate:reconcile-occupancy --apply')
