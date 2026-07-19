@@ -1,0 +1,25 @@
+[Unit]
+Description=LayRate Mobile API
+Documentation=https://github.com/anomalyco/LayRate-Main
+After=network.target mysql.service mariadb.service
+
+[Service]
+Type=simple
+User=layratepi
+Group=www-data
+WorkingDirectory=/var/www/layrate/mobile-api
+ExecStart=/var/www/layrate/mobile-api/.venv/bin/python app.py
+Restart=always
+RestartSec=5
+
+# Port is set explicitly at the deployment layer (not relying on app.py default)
+Environment=FLASK_HOST=0.0.0.0
+Environment=FLASK_PORT=5000
+Environment=FLASK_DEBUG=0
+
+# Database credentials — app.py reads MYSQL_HOST/ MYSQL_PORT/ MYSQL_USER/
+# MYSQL_PASSWORD from the environment. If your Pi uses different values,
+# override them with: systemctl edit layrate-api
+
+[Install]
+WantedBy=multi-user.target

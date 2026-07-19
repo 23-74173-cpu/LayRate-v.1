@@ -6,7 +6,7 @@ and provides authentication plus sensor status.
 Usage:
     python app.py
 
-The server binds to 0.0.0.0:8000. Set environment variables to override:
+The server binds to 0.0.0.0:5000. Set environment variables to override:
     FLASK_HOST (default: 0.0.0.0)
     FLASK_PORT (default: 5000)
     FLASK_DEBUG (default: 0)
@@ -280,6 +280,14 @@ def dashboard_status():
             "total_hens": hens["total_hens"] if hens else 0,
         }
     ), 200
+
+
+# ── Health check ────────────────────────────────────────────────────────────
+
+@app.route("/api/health", methods=["GET"])
+def health():
+    """Simple health check for deployment monitoring."""
+    return jsonify({"status": "ok"}), 200
 
 
 # ── Error handlers ─────────────────────────────────────────────────────────
