@@ -2,18 +2,18 @@
 
 **Purpose of this file:** LayRate has accumulated 26 audit/analysis/reference markdown files across multiple sessions and tools. This is an index of all of them — what each contains, whether it's still accurate, and which one is the actual current source of truth — so a new AI assistant (or teammate) can get oriented without reading all 8,300+ lines individually.
 
-**Generated:** 2026-07-17, by Claude Code, after a full verified re-audit of the codebase.
+**Last updated:** 2026-07-17 — the final verified recalculation (80.52%, 208/208 suite green) after the Reports & Analytics implementation pass (commit cd13284) and subsequent fix passes.
 
 ---
 
 ## Read this first: the one authoritative document
 
-**[`docs/project-status.md`](docs/project-status.md)** is the current, maintained source of truth for project completion. Everything else in this list is a historical snapshot that fed into it at some point. If a claim in any other document below conflicts with `project-status.md`, **trust `project-status.md`** — it was last verified via live browser testing, direct database queries, and a full automated test run (190/191 passing), not assumption.
+**[`docs/project-status.md`](docs/project-status.md)** is the current, maintained source of truth for project completion. Everything else in this list is a historical snapshot that fed into it at some point. If a claim in any other document below conflicts with `project-status.md`, **trust `project-status.md`** — it was last verified via live browser testing, direct database queries, and a full automated test run (208/208 passing, 623 assertions), not assumption.
 
 Current headline numbers (from `project-status.md`, verified not estimated):
-- **89 total tracked items: 61 ✅ implemented | 19 ⚠️ partial | 9 ❌ missing**
-- **Overall completion: 79.21%**
-- Full per-section breakdown, an "Audit History" table showing how this number moved across 3 passes, and a prioritized ROI list are all in that file.
+- **89 total tracked items: 66 ✅ implemented | 18 ⚠️ partial | 5 ❌ missing** (plus 6 dropped/deferred, excluded from active count)
+- **Overall completion: 80.52%** (verified recalculation)
+- Full per-section breakdown, an "Audit History" table showing how this number moved across 6 passes, and a prioritized ROI list are all in that file.
 
 ---
 
@@ -25,7 +25,7 @@ Several older documents contain claims that are **factually wrong about the curr
 |---|---|---|
 | "Tailwind CSS, Chart.js, and Lucide Icons are loaded via CDN" | `CONTEXT.md`, `UI-UX-AUDIT.md` (header), `docs/cdn-audit-report.md` | **False.** Verified by grepping every `<script src=` / `<link href=` in the entire `resources/views/` tree — zero external URLs anywhere. All four libraries (Tailwind, Chart.js, Lucide, Turbo) plus the Inter font are self-hosted in `public/css/` and `public/js/`, served via Laravel's `asset()` helper. Confirmed 2026-07-17 in response to a direct "check for CDN usage" request. |
 | "RBAC exists on an unmerged feature branch" | `QA_REPORT_2026-07-10.md` | **False.** No such branch exists or ever existed. Access control is a binary `admin`/`operator` flag on `User` + one `Gate::define('admin', ...)` + `EnsureAdmin` middleware. That report's test counts and other claims are accurate — only this one claim is wrong. |
-| "Analytics charts don't render — root cause unknown, needs browser debugging" | `docs/codebase-audit-2026-07-16.md`, `docs/completion-analysis-2026-07-16.md` (item 79, originally ⚠️) | **Superseded.** Root cause is now definitively known (see `docs/reports-analytics-deep-audit-2026-07-16.md`): `window.hdepChart` collides with the browser's automatic `id`→global-variable exposure for `<canvas id="hdepChart">`, so `.destroy()` throws before any chart renders. Confirmed via 3 independent live Playwright reproductions. **Still not fixed in code** — this is a diagnosis, not a resolution. |
+| "Analytics charts don't render — root cause unknown, needs browser debugging" | `docs/codebase-audit-2026-07-16.md`, `docs/completion-analysis-2026-07-16.md` (item 79, originally ⚠️) | **Superseded.** Root cause was diagnosed in `docs/reports-analytics-deep-audit-2026-07-16.md` — a `window.hdepChart` naming collision with the browser's automatic `id`→global binding. **Fixed 2026-07-17 in commit cd13284** via a namespaced `window.__analyticsCharts` store + type-guarded `destroyChart()`. Live-verified: all 3 charts render with real data, re-render keeps exactly 3 Chart.js instances (no leak). |
 | "Forecast section: 80.5%, single item, 100% feature-complete" | `docs/project-status.md`, prior versions | **Arithmetic error, now corrected to 67.4%.** Items #91/#92 were added to the section's checklist in a later pass but never recalculated into the percentage — it was still using the original 1-item/100% math. Fixed 2026-07-17. |
 | "Egg Management: 10✅, 2⚠️" | `docs/project-status.md`, prior versions | **Off-by-one, corrected to 10✅/3⚠️.** The detail table has always listed 3 partial items (61, 63, 64); the header summary undercounted. |
 
@@ -75,8 +75,8 @@ Full directory-tree mapping and documentation-file cross-reference. Re-checked 2
 ### 2026-07-16 — [`docs/reports-analytics-deep-audit-2026-07-16.md`](docs/reports-analytics-deep-audit-2026-07-16.md) (172 lines)
 Deep investigation specifically into Analytics and Reports, including **live Playwright browser testing** that definitively diagnosed the chart-rendering bug (item #79) and found two new latent issues (breed-lookup bug in the Production report, missing Egg Stock report type). This is the source of the most significant corrections in the current `project-status.md`.
 
-### 2026-07-17 — `docs/project-status.md` verified re-audit (this session, see Audit History section inside that file)
-Not a separate document — this is the pass that produced the current state of `project-status.md`. Re-verified every section against current code via `git diff` since the last known-good commit, ran the full test suite (190/191 passing, one stale test identified), live-tested the chart bug, and recalculated General/Analytics/Forecast/Reports section scores from scratch using the `completion-analysis-2026-07-16.md` methodology. Overall completion: 79.21% (verified).
+### 2026-07-17 — `docs/project-status.md` final verified recalculation (commit cd13284 + subsequent fix passes)
+The re-audit pass that diagnosed items #79/#93/#94, followed by the implementation pass that fixed all three (reports-analytics-deep-audit → code fixes → preview table build → test coverage → stale Forecast test rewrite). **Final state: 80.52% (verified), test suite fully green at 208/208 (623 assertions).** The Audit History table inside `project-status.md` tracks all five passes on this date.
 
 ### 2026-07-17 — CDN usage check (this session, informal, folded into this document)
 Direct grep of every script/link tag in `resources/views/` plus a domain-keyword search (`cdn.`, `jsdelivr`, `unpkg`, `cdnjs`, `googleapis`, etc.). Result: zero external URLs. See stale-claims table above for which older docs this contradicts.
