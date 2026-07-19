@@ -44,3 +44,5 @@ layrate_forecast_input_updated.xlsx
 /test-results/
 test-results/
 test-results/
+mobile-api/.venv/
+forecast-api/venv/
