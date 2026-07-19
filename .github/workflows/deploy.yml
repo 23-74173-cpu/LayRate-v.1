@@ -7,32 +7,119 @@ on:
 jobs:
   deploy:
     runs-on: self-hosted
+
+    env:
+      LARAVEL_DIR: /var/www/layrate
+      MOBILE_API_VENV: /var/www/layrate/mobile-api/.venv
+      FORECAST_API_VENV: /var/www/layrate/forecast-api/.venv
+
     steps:
       - name: Pull latest code
         run: |
-          cd /var/www/layrate
+          cd ${{ env.LARAVEL_DIR }}
           git pull origin main
 
-      - name: Install dependencies
+      # ── PHP ────────────────────────────────────────────────────────────────
+      - name: Install PHP dependencies
         run: |
-          cd /var/www/layrate
+          cd ${{ env.LARAVEL_DIR }}
           composer install --no-dev --optimize-autoloader
 
-      - name: Run migrations
+      - name: Run database migrations
         run: |
-          cd /var/www/layrate
+          cd ${{ env.LARAVEL_DIR }}
           php artisan migrate --force
 
-      - name: Clear caches
+      - name: Create storage symlink
         run: |
-          cd /var/www/layrate
+          cd ${{ env.LARAVEL_DIR }}
+          php artisan storage:link
+
+      # ── Frontend ───────────────────────────────────────────────────────────
+      - name: Install and build frontend assets
+        run: |
+          cd ${{ env.LARAVEL_DIR }}
+          npm ci
+          npm run build
+
+      # ── Python services ────────────────────────────────────────────────────
+      - name: Install mobile-api dependencies
+        run: |
+          python3 -m venv ${{ env.MOBILE_API_VENV }}
+          ${{ env.MOBILE_API_VENV }}/bin/pip install --upgrade pip
+          ${{ env.MOBILE_API_VENV }}/bin/pip install -r ${{ env.LARAVEL_DIR }}/mobile-api/requirements.txt
+
+      - name: Install forecast-api dependencies
+        run: |
+          python3 -m venv ${{ env.FORECAST_API_VENV }}
+          ${{ env.FORECAST_API_VENV }}/bin/pip install --upgrade pip
+          ${{ env.FORECAST_API_VENV }}/bin/pip install -r ${{ env.LARAVEL_DIR }}/forecast-api/requirements.txt
+
+      # ── systemd: mobile-api ────────────────────────────────────────────────
+      - name: Install / update mobile-api systemd unit
+        run: |
+          SRC="${{ env.LARAVEL_DIR }}/mobile-api/layrate-api.service"
+          DST="/etc/systemd/system/layrate-api.service"
+          CHANGED=0
+
+          if [ ! -f "$DST" ]; then
+            echo "Installing systemd unit (first time)..."
+            sudo cp "$SRC" "$DST"
+            CHANGED=1
+          elif ! diff -q "$SRC" "$DST" >/dev/null 2>&1; then
+            echo "Systemd unit changed — updating..."
+            sudo cp "$SRC" "$DST"
+            CHANGED=1
+          else
+            echo "Systemd unit is unchanged."
+          fi
+
+          if [ "$CHANGED" = "1" ]; then
+            sudo systemctl daemon-reload
+          fi
+
+      - name: Enable and restart mobile-api service
+        run: |
+          sudo systemctl enable layrate-api
+          sudo systemctl restart layrate-api
+
+      - name: Health-check mobile-api service
+        run: |
+          sleep 3
+          if ! systemctl is-active --quiet layrate-api; then
+            echo "ERROR: layrate-api service is not active after restart"
+            sudo systemctl status layrate-api --no-pager
+            exit 1
+          fi
+          echo "Checking HTTP health endpoint..."
+          curl --fail --max-time 5 http://127.0.0.1:5000/api/health || {
+            echo "ERROR: mobile-api health check failed (HTTP)"
+            sudo systemctl status layrate-api --no-pager
+            journalctl -u layrate-api --no-pager -n 30
+            exit 1
+          }
+          echo "mobile-api is healthy."
+
+      # ── Laravel caches (run after everything is in place) ──────────────────
+      - name: Clear and rebuild Laravel caches
+        run: |
+          cd ${{ env.LARAVEL_DIR }}
           php artisan config:cache
           php artisan route:cache
           php artisan view:cache
 
+      # ── Permissions ────────────────────────────────────────────────────────
       - name: Fix permissions
         run: |
-          sudo chown -R layratepi:www-data /var/www/layrate/storage
-          sudo chown -R layratepi:www-data /var/www/layrate/bootstrap/cache
-          sudo chmod -R 775 /var/www/layrate/storage
-          sudo chmod -R 775 /var/www/layrate/bootstrap/cache
+          sudo chown -R layratepi:www-data ${{ env.LARAVEL_DIR }}/storage
+          sudo chown -R layratepi:www-data ${{ env.LARAVEL_DIR }}/bootstrap/cache
+          sudo chmod -R 775 ${{ env.LARAVEL_DIR }}/storage
+          sudo chmod -R 775 ${{ env.LARAVEL_DIR }}/bootstrap/cache
+
+          # Ensure Python venvs are accessible by www-data if needed
+          if [ -d "${{ env.MOBILE_API_VENV }}" ]; then
+            sudo chown -R layratepi:www-data ${{ env.MOBILE_API_VENV }}
+          fi
+          if [ -d "${{ env.FORECAST_API_VENV }}" ]; then
+            sudo chown -R layratepi:www-data ${{ env.FORECAST_API_VENV }}
+          fi

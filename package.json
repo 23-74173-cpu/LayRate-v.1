@@ -1,4 +1,10 @@
 {
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "npx @tailwindcss/cli -i resources/css/app.css -o public/css/tailwind.css",
+    "dev": "npx @tailwindcss/cli -i resources/css/app.css -o public/css/tailwind.css --watch"
+  },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
     "@tailwindcss/cli": "^4.3.2",
