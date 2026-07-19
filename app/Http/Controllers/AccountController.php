@@ -2,9 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FeedConsumptionLog;
+use App\Models\MortalityLog;
+use App\Models\ProductionLog;
+use App\Models\Setting;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
@@ -27,7 +33,91 @@ class AccountController extends Controller
             ? $request->get('tab')
             : 'profile';
 
-        return view('profile', compact('staff', 'tab'));
+        $user = auth()->user();
+
+        // Personal contribution stats — everything this account has recorded.
+        $activity = (object) [
+            'egg_logs'       => ProductionLog::where('recorded_by', $user->id)->count(),
+            'eggs_total'     => (int) ProductionLog::where('recorded_by', $user->id)->sum('egg_count'),
+            'feed_logs'      => FeedConsumptionLog::where('recorded_by', $user->id)->count(),
+            'mortality_logs' => MortalityLog::where('recorded_by', $user->id)->count(),
+        ];
+
+        // The sessions table is only authoritative when the database session
+        // driver is active — under the file driver it holds stale rows, so we
+        // fall back to showing just the current session from the live request.
+        if (config('session.driver') === 'database') {
+            $currentSessionId = $request->session()->getId();
+            $sessions = DB::table('sessions')
+                ->where('user_id', $user->id)
+                ->orderByDesc('last_activity')
+                ->get()
+                ->map(fn ($s) => (object) [
+                    'current'     => $s->id === $currentSessionId,
+                    'ip'          => $s->ip_address ?? '—',
+                    'device'      => $this->describeDevice($s->user_agent ?? ''),
+                    'last_active' => Carbon::createFromTimestamp($s->last_activity),
+                ]);
+        } else {
+            $sessions = collect([(object) [
+                'current'     => true,
+                'ip'          => $request->ip(),
+                'device'      => $this->describeDevice($request->userAgent() ?? ''),
+                'last_active' => now(),
+            ]]);
+        }
+
+        // Admin-only read-only overview of farm-level configuration; each group
+        // is edited on its own page, this is just the hub view.
+        $farmSettings = $user->isAdmin() ? [
+            'Environment thresholds' => [
+                'route' => route('environment'),
+                'values' => [
+                    'Temperature' => Setting::get('temp_min', 18) . '°C — ' . Setting::get('temp_max', 30) . '°C',
+                    'Humidity'    => Setting::get('hum_min', 40) . '% — ' . Setting::get('hum_max', 70) . '%',
+                ],
+            ],
+            'Egg weights (FCR)' => [
+                'route' => route('eggs.stocks'),
+                'values' => [
+                    'Small / Medium'  => Setting::get('egg_weight_small', 50) . 'g / ' . Setting::get('egg_weight_medium', 58) . 'g',
+                    'Large / Jumbo'   => Setting::get('egg_weight_large', 65) . 'g / ' . Setting::get('egg_weight_jumbo', 73) . 'g',
+                    'Fallback'        => Setting::get('egg_weight_fallback', 60) . 'g',
+                ],
+            ],
+            'Farm layout grid' => [
+                'route' => route('cages.index'),
+                'values' => [
+                    'Canvas size' => Setting::get('farm_grid_rows', 4) . ' rows × ' . Setting::get('farm_grid_cols', 4) . ' columns',
+                ],
+            ],
+        ] : null;
+
+        return view('profile', compact('staff', 'tab', 'activity', 'sessions', 'farmSettings'));
+    }
+
+    private function describeDevice(string $userAgent): string
+    {
+        $browser = match (true) {
+            str_contains($userAgent, 'Edg')     => 'Edge',
+            str_contains($userAgent, 'Chrome')  => 'Chrome',
+            str_contains($userAgent, 'Firefox') => 'Firefox',
+            str_contains($userAgent, 'Safari')  => 'Safari',
+            $userAgent === ''                    => 'Unknown device',
+            default                              => 'Browser',
+        };
+
+        $os = match (true) {
+            str_contains($userAgent, 'Windows') => 'Windows',
+            str_contains($userAgent, 'Android') => 'Android',
+            str_contains($userAgent, 'iPhone'),
+            str_contains($userAgent, 'iPad')    => 'iOS',
+            str_contains($userAgent, 'Mac')     => 'macOS',
+            str_contains($userAgent, 'Linux')   => 'Linux',
+            default                              => null,
+        };
+
+        return $os ? "{$browser} on {$os}" : $browser;
     }
 
     public function updateProfile(Request $request)

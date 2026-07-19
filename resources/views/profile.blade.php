@@ -20,6 +20,43 @@
         {{-- PROFILE TAB --}}
         {{-- ============================================ --}}
         <div id="panelProfile" class="{{ $tab !== 'profile' ? 'hidden' : '' }} space-y-5">
+
+            {{-- Identity header --}}
+            <div class="bg-white rounded-lg border border-[#D9D9D9] p-5 flex items-center gap-4">
+                <div class="w-14 h-14 rounded-full bg-[#002D5E] text-white flex items-center justify-center text-xl font-semibold shrink-0">
+                    {{ collect(explode(' ', auth()->user()->name))->map(fn($w) => mb_substr($w, 0, 1))->take(2)->implode('') }}
+                </div>
+                <div class="min-w-0">
+                    <div class="text-base font-semibold text-[#333333] truncate">{{ auth()->user()->name }}</div>
+                    <div class="text-sm text-[#6B7280] truncate">{{ auth()->user()->email }}</div>
+                    <span class="inline-block mt-1 text-xs px-2 py-0.5 rounded-full bg-[#002D5E]/10 text-[#002D5E] capitalize">{{ auth()->user()->role }}</span>
+                </div>
+            </div>
+
+            {{-- Your Activity --}}
+            <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+                <h2 class="text-base font-medium text-[#333333] mb-1">Your Activity</h2>
+                <p class="text-xs text-[#6B7280] mb-4">Records logged with this account since day 1.</p>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                    <div class="border border-[#D9D9D9] rounded-lg px-3 py-3">
+                        <div class="text-2xl font-bold text-[#002D5E]">{{ number_format($activity->egg_logs) }}</div>
+                        <div class="text-xs text-[#6B7280] mt-1">Egg log entries</div>
+                    </div>
+                    <div class="border border-[#D9D9D9] rounded-lg px-3 py-3">
+                        <div class="text-2xl font-bold text-[#002D5E]">{{ number_format($activity->eggs_total) }}</div>
+                        <div class="text-xs text-[#6B7280] mt-1">Eggs recorded</div>
+                    </div>
+                    <div class="border border-[#D9D9D9] rounded-lg px-3 py-3">
+                        <div class="text-2xl font-bold text-[#002D5E]">{{ number_format($activity->feed_logs) }}</div>
+                        <div class="text-xs text-[#6B7280] mt-1">Feed entries</div>
+                    </div>
+                    <div class="border border-[#D9D9D9] rounded-lg px-3 py-3">
+                        <div class="text-2xl font-bold text-[#002D5E]">{{ number_format($activity->mortality_logs) }}</div>
+                        <div class="text-xs text-[#6B7280] mt-1">Mortality records</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
                 <h2 class="text-base font-medium text-[#333333] mb-4">Your Profile</h2>
 
@@ -206,6 +243,56 @@
                         @endforeach
                     </tbody>
                 </table>
+            </div>
+            @endif
+
+            {{-- Active Sessions --}}
+            <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+                <h2 class="text-base font-medium text-[#333333] mb-1">Active Sessions</h2>
+                <p class="text-xs text-[#6B7280] mb-4">Devices currently signed in to your account. Use the Danger Zone below to sign out every device except this one.</p>
+                <div class="space-y-2">
+                    @forelse($sessions as $s)
+                    <div class="flex items-center justify-between border border-[#D9D9D9] rounded-lg px-4 py-2.5 {{ $s->current ? 'bg-[#002D5E]/5' : '' }}">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <i data-lucide="{{ str_contains($s->device, 'Android') || str_contains($s->device, 'iOS') ? 'smartphone' : 'monitor' }}" class="w-4 h-4 text-[#6B7280] shrink-0"></i>
+                            <div class="min-w-0">
+                                <div class="text-sm text-[#333333] truncate">{{ $s->device }}</div>
+                                <div class="text-xs text-[#6B7280]">{{ $s->ip }} · last active {{ $s->last_active->diffForHumans() }}</div>
+                            </div>
+                        </div>
+                        @if($s->current)
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-[#D5E8D4] text-[#2D6A4F] shrink-0">This device</span>
+                        @endif
+                    </div>
+                    @empty
+                    <p class="text-sm text-[#6B7280]">No session data available.</p>
+                    @endforelse
+                </div>
+            </div>
+
+            {{-- Admin: farm configuration overview --}}
+            @if($farmSettings)
+            <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+                <h2 class="text-base font-medium text-[#333333] mb-1">Farm Configuration</h2>
+                <p class="text-xs text-[#6B7280] mb-4">Current farm-level settings. Each group is edited on its own page.</p>
+                <div class="space-y-4">
+                    @foreach($farmSettings as $group => $cfg)
+                    <div class="border border-[#D9D9D9] rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-sm font-medium text-[#333333]">{{ $group }}</h3>
+                            <a href="{{ $cfg['route'] }}" class="text-xs text-[#0075DE] hover:underline">Edit →</a>
+                        </div>
+                        <dl class="space-y-1">
+                            @foreach($cfg['values'] as $label => $value)
+                            <div class="flex items-center justify-between text-sm">
+                                <dt class="text-[#6B7280]">{{ $label }}</dt>
+                                <dd class="text-[#333333]">{{ $value }}</dd>
+                            </div>
+                            @endforeach
+                        </dl>
+                    </div>
+                    @endforeach
+                </div>
             </div>
             @endif
 
