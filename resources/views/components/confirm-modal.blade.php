@@ -103,14 +103,23 @@
     };
 
     document.getElementById('confirm-modal-action').addEventListener('click', function() {
-        if (pendingForm) {
-            if (typeof pendingForm.requestSubmit === 'function') {
-                pendingForm.requestSubmit();
-            } else {
-                pendingForm.submit();
-            }
-        }
+        var form = pendingForm;
         confirmModalClose();
+        if (!form) return;
+        if (form instanceof HTMLFormElement) {
+            // Flag lets the data-confirm submit interceptor pass this
+            // submission through — without it, requestSubmit() re-fires the
+            // intercepted submit event and the form never actually submits.
+            form.dataset.confirmed = 'true';
+            if (typeof form.requestSubmit === 'function') {
+                form.requestSubmit();
+            } else {
+                form.submit();
+            }
+        } else if (typeof form.submit === 'function') {
+            // JS-path pseudo-form ({ submit: callback }) — e.g. Clear All Cages.
+            form.submit();
+        }
     });
 
     // Escape key closes modal
@@ -125,6 +134,10 @@
         document.querySelectorAll('form[data-confirm]:not([data-confirm-wired])').forEach(function(form) {
             form.setAttribute('data-confirm-wired', 'true');
             form.addEventListener('submit', function(e) {
+                if (form.dataset.confirmed === 'true') {
+                    delete form.dataset.confirmed;
+                    return; // user already confirmed — let the submit proceed
+                }
                 e.preventDefault();
                 const message = form.getAttribute('data-confirm');
                 const action = form.getAttribute('data-confirm-action') || 'Confirm';

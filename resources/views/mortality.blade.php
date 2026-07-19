@@ -20,7 +20,9 @@
                 Record Mortality
             </h2>
 
-            <form action="{{ route('mortality.store') }}" method="POST" class="space-y-4">
+            <form action="{{ route('mortality.store') }}" method="POST" class="space-y-4"
+                  data-confirm="Record this mortality? The affected hen(s) will be deactivated and slot occupancy updated."
+                  data-confirm-action="Record">
                 @csrf
 
                 {{-- Cage --}}

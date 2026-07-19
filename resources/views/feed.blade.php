@@ -347,7 +347,8 @@ function closeFarmEntryModal() {
     })();
 
 function deleteBatch(id) {
-    fetch('/feed/batch/' + id + '/delete-check')
+    // url() keeps this working under both artisan serve and the XAMPP subfolder
+    fetch('{{ url('feed/batch') }}/' + id + '/delete-check')
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.can_delete) {
@@ -356,7 +357,7 @@ function deleteBatch(id) {
                     form = document.createElement('form');
                     form.id = 'delete-batch-form-' + id;
                     form.method = 'POST';
-                    form.action = '/feed/batch/' + id;
+                    form.action = '{{ url('feed/batch') }}/' + id;
                     form.style.display = 'none';
                     var csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
                     form.innerHTML = '<input type="hidden" name="_token" value="' + csrf + '"><input type="hidden" name="_method" value="DELETE">';

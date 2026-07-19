@@ -20,17 +20,6 @@
 
     <div class="w-full max-w-sm">
 
-        {{-- Logo --}}
-        <div class="flex items-center justify-center gap-3 mb-8">
-            <div class="w-10 h-10 rounded-xl bg-[#102A4C] flex items-center justify-center">
-                <i data-lucide="feather" class="w-5 h-5 text-white"></i>
-            </div>
-            <div>
-                <div class="text-lg font-semibold text-[#102A4C] leading-tight">LayRate</div>
-                <div class="text-xs text-[#6B7280]">Farm Monitor</div>
-            </div>
-        </div>
-
         {{-- Login Error Banner --}}
         @if($errors->any())
         <div class="mb-4 rounded-lg px-4 py-3 flex items-start gap-3" style="background-color: #fdf2f2; border: 1px solid #f3cdd0; border-left: 3px solid #e03e3e;">
@@ -44,8 +33,15 @@
 
         {{-- Card --}}
         <div class="bg-white rounded-xl border border-[#D9D9D9] p-7 shadow-sm">
-            <h1 class="text-base font-semibold text-[#333333] mb-1">Sign in</h1>
-            <p class="text-xs text-[#6B7280] mb-6">Enter your credentials to access the dashboard.</p>
+            {{-- Logo — lives inside the card: the PNG has a solid white
+                 background, which blends invisibly here but would show as a
+                 white box on the page's warm canvas. --}}
+            <img src="{{ asset('images/layrate-logo.png') }}"
+                 alt="LayRate — Egg Counting &amp; Forecasting System"
+                 class="w-36 mx-auto -mt-3 -mb-5">
+
+            <h1 class="text-base font-semibold text-[#333333] mb-1 text-center">Sign in</h1>
+            <p class="text-xs text-[#6B7280] mb-6 text-center">Enter your credentials to access the dashboard.</p>
 
             <form action="{{ route('login') }}" method="POST" class="space-y-4">
                 @csrf

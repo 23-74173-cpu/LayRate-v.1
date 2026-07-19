@@ -162,8 +162,8 @@
         {{-- TOP: Brand + Arrow (mobile close / desktop unused) --}}
         <div class="flex items-center justify-between px-4 pt-3 pb-1 shrink-0">
             <div class="logo-wrap flex items-center gap-2.5 overflow-hidden">
-                <div class="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center shrink-0 border border-white/25">
-                    <i data-lucide="feather" class="w-5 h-5 text-white"></i>
+                <div class="w-9 h-9 rounded-lg bg-white flex items-center justify-center shrink-0 border border-white/25 overflow-hidden">
+                    <img src="{{ asset('images/layrate-logo-mark.png') }}" alt="LayRate logo" class="w-8 h-8 object-contain">
                 </div>
                 <div class="logo-text overflow-hidden whitespace-nowrap">
                     <div class="text-white text-sm font-semibold">LayRate</div>
@@ -532,6 +532,7 @@ function loadingButton(btn, label) {
 
 <x-confirm-modal />
 <x-notification-toast />
+<x-loading-modal />
 
 @stack('scripts')
 </body>

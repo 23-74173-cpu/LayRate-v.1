@@ -4,7 +4,11 @@
 
     {{-- Card --}}
     <div class="relative w-full max-w-md rounded-2xl p-6 overflow-hidden" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
-        <form id="removeForm" method="POST" action="{{ route('chickens.remove') }}">
+        <form id="removeForm" method="POST" action="{{ route('chickens.remove') }}"
+              data-confirm="Remove these chicken(s)? Mortality removals are logged and the hens are permanently deactivated."
+              data-confirm-action="Remove"
+              data-loading="Removing chickens and updating occupancy..."
+              data-loading-title="Removing Chickens">
             @csrf
 
             {{-- Header --}}

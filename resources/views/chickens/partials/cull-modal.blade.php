@@ -1,7 +1,9 @@
 <div id="cullModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] items-center justify-center p-4" role="dialog" aria-modal="true">
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeCullModal()"></div>
     <div class="relative w-full max-w-md rounded-2xl p-6 overflow-hidden" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
-        <form method="POST" action="{{ route('chickens.cull') }}">
+        <form method="POST" action="{{ route('chickens.cull') }}"
+              data-confirm="Cull the selected chicken(s)? This permanently deactivates them and cannot be undone."
+              data-confirm-action="Cull">
             @csrf
             <div class="flex items-center justify-between mb-5">
                 <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Cull <span id="cullModalTitle">Chicken</span></h2>

@@ -33,7 +33,11 @@
     @endif
 
     {{-- Form --}}
-    <form id="placementForm" method="POST" action="{{ route('cages.bulk-add.store') }}" class="space-y-5">
+    <form id="placementForm" method="POST" action="{{ route('cages.bulk-add.store') }}" class="space-y-5"
+          data-confirm="Place the selected chickens into their assigned slots?"
+          data-confirm-action="Place Chickens"
+          data-loading="Placing chickens and updating slot occupancy..."
+          data-loading-title="Placing Chickens">
         @csrf
 
         {{-- Hidden inputs --}}

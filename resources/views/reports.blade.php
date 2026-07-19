@@ -35,7 +35,9 @@
     {{-- ── Filters ── --}}
     <div class="no-print">
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <form method="GET" action="{{ route('reports') }}" class="flex flex-wrap items-end gap-4" id="reportForm">
+            <form method="GET" action="{{ route('reports') }}" class="flex flex-wrap items-end gap-4" id="reportForm"
+                  data-loading="Gathering records for the selected filters..."
+                  data-loading-title="Generating Report">
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">REPORT TYPE</label>
                     <select name="type" id="reportType"
