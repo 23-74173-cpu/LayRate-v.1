@@ -6,13 +6,13 @@
         <div class="overflow-x-auto">
             <table class="w-full text-xs">
                 <thead>
-                    <tr class="bg-[#FAFAFA] text-left">
-                        <th class="px-3 py-2 text-[#9CA3AF] font-medium">Date</th>
-                        <th class="px-3 py-2 text-[#9CA3AF] font-medium">Chicken ID</th>
-                        <th class="px-3 py-2 text-[#9CA3AF] font-medium">Cage</th>
-                        <th class="px-3 py-2 text-[#9CA3AF] font-medium">Reason</th>
-                        <th class="px-3 py-2 text-[#9CA3AF] font-medium">Notes</th>
-                        <th class="px-3 py-2 text-[#9CA3AF] font-medium">By</th>
+                    <tr class="bg-[#FAFAFA] text-left text-xs font-semibold uppercase tracking-wider text-[#6B7280]">
+                        <th class="px-3 py-2">Date</th>
+                        <th class="px-3 py-2">Chicken ID</th>
+                        <th class="px-3 py-2">Cage</th>
+                        <th class="px-3 py-2">Reason</th>
+                        <th class="px-3 py-2">Notes</th>
+                        <th class="px-3 py-2">By</th>
                     </tr>
                 </thead>
                 <tbody>

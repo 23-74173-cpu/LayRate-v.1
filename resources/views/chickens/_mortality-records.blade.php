@@ -1,17 +1,17 @@
 <turbo-frame id="chickens-mortality-records">
     <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
         <div class="px-4 py-2.5 border-b border-[#D9D9D9] bg-[#F5F6F8]">
-            <span class="text-sm font-medium text-[#333]">Recent Records</span>
+            <span class="text-sm font-medium text-[#333333]">Recent Records</span>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-xs">
                 <thead>
-                    <tr class="bg-[#FAFAFA] text-left">
-                        <th class="px-3 py-2 text-[#9CA3AF] font-medium">Date</th>
-                        <th class="px-3 py-2 text-[#9CA3AF] font-medium">Cage</th>
-                        <th class="px-3 py-2 text-[#9CA3AF] font-medium">Count</th>
-                        <th class="px-3 py-2 text-[#9CA3AF] font-medium">Reason</th>
-                        <th class="px-3 py-2 text-[#9CA3AF] font-medium">Notes</th>
+                    <tr class="bg-[#FAFAFA] text-left text-xs font-semibold uppercase tracking-wider text-[#6B7280]">
+                        <th class="px-3 py-2">Date</th>
+                        <th class="px-3 py-2">Cage</th>
+                        <th class="px-3 py-2">Count</th>
+                        <th class="px-3 py-2">Reason</th>
+                        <th class="px-3 py-2">Notes</th>
                         @can('admin')<th class="px-3 py-2"></th>@endcan
                     </tr>
                 </thead>

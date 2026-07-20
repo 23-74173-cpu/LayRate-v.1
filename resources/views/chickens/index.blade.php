@@ -95,7 +95,7 @@
                 </div>
 
                 <a href="#" onclick="clearFilters(); return false;"
-                   class="px-2 py-1.5 text-xs border border-[#D9D9D9] rounded text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333] transition-colors">Clear filters</a>
+                   class="px-2 py-1.5 text-xs border border-[#D9D9D9] rounded text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">Clear filters</a>
             </div>
             </x-card>
         </div>
@@ -133,16 +133,16 @@
     <div id="panelMortality" class="{{ $tab !== 'mortality' ? 'hidden' : '' }}">
 
         {{-- Today's Summary Cards --}}
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-            <div class="bg-white rounded-lg border border-[#D9D9D9] p-4 text-center">
-                <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333]">{{ $todayTotal }}</div>
-                <div class="text-xs text-[#6B7280] mt-1">Deaths Today</div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
+            <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+                <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Deaths Today</div>
+                <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $todayTotal }}</div>
             </div>
             @foreach($cages as $c)
             @php $count = $todayByCage->get($c->cage_code, 0); @endphp
-            <div class="bg-white rounded-lg border border-[#D9D9D9] p-4 text-center {{ $count > 0 ? 'bg-red-50 border-red-200' : '' }}">
-                <div class="text-2xl font-bold leading-none tracking-[-0.5px] {{ $count > 0 ? 'text-red-600' : 'text-[#333]' }}">{{ $count }}</div>
-                <div class="text-xs text-[#6B7280] mt-1">{{ $c->cage_code }}</div>
+            <div class="bg-white rounded-lg border border-[#D9D9D9] p-4 {{ $count > 0 ? 'bg-red-50 border-red-200' : '' }}">
+                <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">{{ $c->cage_code }}</div>
+                <div class="text-2xl font-bold leading-none tracking-[-0.5px] {{ $count > 0 ? 'text-red-600' : 'text-[#333333]' }}">{{ $count }}</div>
             </div>
             @endforeach
         </div>
@@ -150,48 +150,47 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {{-- Record Form --}}
             <x-card>
-                <h3 class="text-sm font-semibold text-[#333] mb-4">Record Mortality</h3>
-                <form method="POST" action="{{ route('mortality.store') }}" class="space-y-3">
+                <h3 class="text-sm font-medium text-[#333333] mb-4">Record Mortality</h3>
+                <form method="POST" action="{{ route('mortality.store') }}" class="space-y-4">
                     @csrf
                     <div>
-                        <label class="block text-xs font-medium text-[#6B7280] mb-1">Cage <span class="text-red-500">*</span></label>
+                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CAGE <span class="text-red-500">*</span></label>
                         <select name="cage_id" required
-                                class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
-                            <option value="">Select cage...</option>
+                                class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]">
+                            <option value="">Select cage…</option>
                             @foreach($cages as $c)
                             <option value="{{ $c->id }}">{{ $c->cage_code }} — {{ $c->formatted_location }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-[#6B7280] mb-1">Date <span class="text-red-500">*</span></label>
+                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">DATE <span class="text-red-500">*</span></label>
                         <input type="date" name="log_date" required value="{{ today()->toDateString() }}"
-                               class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
+                               class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]">
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-[#6B7280] mb-1">Count <span class="text-red-500">*</span></label>
+                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">NUMBER OF DEATHS <span class="text-red-500">*</span></label>
                         <input type="number" name="count" min="1" required placeholder="e.g. 2"
-                               class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
+                               class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]">
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-[#6B7280] mb-1">Reason <span class="text-red-500">*</span></label>
+                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CAUSE OF DEATH <span class="text-red-500">*</span></label>
                         <select name="reason" required
-                                class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
-                            <option value="">Select reason...</option>
+                                class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]">
+                            <option value="">Select reason…</option>
                             @foreach(['Disease', 'Heat Stress', 'Injury', 'Predator', 'Unknown', 'Other'] as $reason)
                             <option value="{{ $reason }}">{{ $reason }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-[#6B7280] mb-1">Notes</label>
-                        <textarea name="notes" rows="2" placeholder="Optional details..."
-                                  class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E] resize-none"></textarea>
+                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">ADDITIONAL NOTES</label>
+                        <textarea name="notes" rows="2" placeholder="Optional details…"
+                                  class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] resize-none focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]"></textarea>
                     </div>
-                    <button type="submit"
-                            class="w-full py-2 bg-[#002D5E] text-white text-sm rounded hover:bg-[#001F42]">
+                    <x-button type="submit" class="w-full py-2.5">
                         Save Record
-                    </button>
+                    </x-button>
                 </form>
             </x-card>
 
