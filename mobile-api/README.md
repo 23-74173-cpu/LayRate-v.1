@@ -7,7 +7,7 @@ A minimal Flask REST API for the LayRate mobile app. Designed to run on a Raspbe
 The mobile app expects:
 
 ```
-http://192.168.4.1:8000
+http://192.168.4.1:5000
 ```
 
 You can change the host/port with environment variables if needed.
