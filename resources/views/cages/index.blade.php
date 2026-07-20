@@ -592,6 +592,8 @@
 
 @push('scripts')
 <script>
+var cagesBase = '{{ url('cages') }}';
+
 // ── Tab Filter ────────────────────────────────────────────
 function filterCage(code) {
     const cageColors = @json(\App\Models\Cage::getColorMap());
@@ -615,7 +617,7 @@ function expandSlot(slotId, cageId, cageCode) {
     const content = document.getElementById('slotPanelContent-' + cageId);
     const title = document.getElementById('slotPanelTitle-' + cageId);
     panel.classList.remove('hidden');
-    fetch(`/cages/slots/${slotId}/hens-json`)
+    fetch(`${cagesBase}/slots/${slotId}/hens-json`)
         .then(r => r.json())
         .then(data => {
             title.textContent = cageCode + ' — Slot ' + data.slot.row_number + '-' + data.slot.column_number + ' (#' + data.slot.slot_number + ')';
@@ -784,7 +786,7 @@ function updateAddPreview() {
 
 // ── Edit Modal ───────────────────────────────────────────
 function openEditModal(id, cageCode, locationRow, locationCol, rows, slotsPerRow, maxPerSlot, isActive) {
-    document.getElementById('editCageForm').action = '/cages/' + id;
+    document.getElementById('editCageForm').action = cagesBase + '/' + id;
     document.getElementById('editCageCode').textContent = cageCode;
     document.getElementById('editRows').value = rows;
     document.getElementById('editSlotsPerRow').value = slotsPerRow;
@@ -815,8 +817,8 @@ function openEditModal(id, cageCode, locationRow, locationCol, rows, slotsPerRow
     sensorInv = { spareIR: 0, spareDHT: 0, irBaseline: {}, dhtBaseline: 0 };
 
     Promise.all([
-        fetch('/cages/' + id + '/slots-json').then(r => r.json()),
-        fetch('/cages/' + id + '/sensor-info').then(r => r.json()),
+        fetch(cagesBase + '/' + id + '/slots-json').then(r => r.json()),
+        fetch(cagesBase + '/' + id + '/sensor-info').then(r => r.json()),
     ])
         .then(function(results) {
             var slots = results[0];
@@ -1090,7 +1092,7 @@ function doRemoveCell(row, col) {
         applyRowSpanning();
     } else {
         // Remove empty cell: POST to backend to attempt grid shrink
-        fetch('/cages/remove-cell', {
+        fetch(cagesBase + '/remove-cell', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1248,7 +1250,7 @@ function saveLayout() {
 
     setSavingState(true);
 
-    fetch('/cages/batch-position', {
+    fetch(cagesBase + '/batch-position', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -1368,9 +1370,9 @@ function openDeleteModal(id, code) {
     lucide.createIcons();
 
     var link = document.getElementById('delPermanentLink');
-    if (link) link.href = '/cages/' + id + '/confirm-delete';
+    if (link) link.href = cagesBase + '/' + id + '/confirm-delete';
 
-    fetch('/cages/' + id + '/delete-info')
+    fetch(cagesBase + '/' + id + '/delete-info')
         .then(function(r) { return r.json(); })
         .then(function(info) {
             document.getElementById('delHenCount').textContent = info.hens;
@@ -1397,7 +1399,7 @@ function confirmCageDelete() {
     var btn = document.getElementById('confirmDeleteCageBtn');
     btn.disabled = true;
 
-    fetch('/cages/' + deleteTargetId, {
+    fetch(cagesBase + '/' + deleteTargetId, {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json',
@@ -1552,7 +1554,7 @@ function saveReorder(cageId) {
     var saveBtn = document.querySelector('#reorderBar-' + cageId + ' button');
     if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving\u2026'; }
 
-    fetch('/cages/' + cageId + '/slots/reorder', {
+    fetch(cagesBase + '/' + cageId + '/slots/reorder', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
