@@ -24,6 +24,7 @@ COLUMN_MAP = {
     "Egg_Count": "egg_count",
     "Temperature_C": "temperature_c",
     "Humidity_Percent": "humidity_percent",
+    "Crude_Protein_Percent": "crude_protein_percent",
     "Feed_Consumed_kg": "feed_consumed_kg",
     "Mortality_Count": "mortality_count",
 }
@@ -105,11 +106,12 @@ def import_forecast_input(file_path: str, source_file: str | None = None) -> int
                 """
                 INSERT INTO forecast_input_records (
                     date, cage_code, breed, flock_age_weeks, hen_count, egg_count,
-                    temperature_c, humidity_percent,
+                    temperature_c, humidity_percent, crude_protein_percent,
                     feed_consumed_kg, mortality_count, source_file
                 ) VALUES (
                     :date, :cage_code, :breed, :flock_age_weeks, :hen_count,
                     :egg_count, :temperature_c, :humidity_percent,
+                    :crude_protein_percent,
                     :feed_consumed_kg,
                     :mortality_count, :source_file
                 )
@@ -120,6 +122,7 @@ def import_forecast_input(file_path: str, source_file: str | None = None) -> int
                     egg_count = VALUES(egg_count),
                     temperature_c = VALUES(temperature_c),
                     humidity_percent = VALUES(humidity_percent),
+                    crude_protein_percent = VALUES(crude_protein_percent),
                     feed_consumed_kg = VALUES(feed_consumed_kg),
                     mortality_count = VALUES(mortality_count),
                     source_file = VALUES(source_file),
