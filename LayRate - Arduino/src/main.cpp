@@ -70,8 +70,6 @@ void printBlock() {
 
   Serial.print("Beam: ");
   Serial.println(beamBroken ? "BROKEN" : "UNBROKEN");
-  Serial.print("Pin: ");
-  Serial.println(digitalRead(IR_PIN) ? "HIGH" : "LOW");
 
   // Temperature line — show value, error message, or placeholder
   Serial.print("Temp: ");
