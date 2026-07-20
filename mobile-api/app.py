@@ -226,26 +226,37 @@ def login():
 @app.route("/api/alerts", methods=["GET"])
 @require_auth
 def list_alerts():
-    """Return all alerts with optional limit/offset pagination."""
+    """Return alerts with optional is_read filter and limit/offset pagination."""
     limit = request.args.get("limit", 50, type=int)
     offset = request.args.get("offset", 0, type=int)
     limit = min(limit, 200)
 
+    is_read = request.args.get("is_read")
+    where = ""
+    params = []
+    if is_read is not None:
+        where = "WHERE a.is_read = %s"
+        params.append(int(is_read))
+
     conn = get_mysql()
     with conn.cursor(pymysql.cursors.DictCursor) as cursor:
         cursor.execute(
-            """SELECT a.id, a.alert_type, a.message, a.is_read,
-                      a.triggered_at, a.created_at,
-                      c.cage_code
-               FROM alerts a
-               LEFT JOIN cages c ON c.id = a.cage_id
-               ORDER BY a.triggered_at DESC
-               LIMIT %s OFFSET %s""",
-            (limit, offset),
+            f"""SELECT a.id, a.alert_type, a.message, a.is_read,
+                        a.triggered_at, a.created_at,
+                        c.cage_code
+                 FROM alerts a
+                 LEFT JOIN cages c ON c.id = a.cage_id
+                 {where}
+                 ORDER BY a.triggered_at DESC
+                 LIMIT %s OFFSET %s""",
+            (*params, limit, offset),
         )
         alerts = cursor.fetchall()
 
-        cursor.execute("SELECT COUNT(*) AS total FROM alerts")
+        cursor.execute(
+            f"SELECT COUNT(*) AS total FROM alerts a {where}",
+            params,
+        )
         total = cursor.fetchone()["total"]
 
     return jsonify({"alerts": alerts, "total": total}), 200
