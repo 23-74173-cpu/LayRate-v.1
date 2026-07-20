@@ -11,27 +11,27 @@
     {{-- Summary cards --}}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <x-card>
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase mb-2" style="color: #615d59;">Lifetime Total</div>
-            <div class="text-4xl font-bold leading-none tracking-[-0.5px]" style="color: #1f1f1f;">{{ number_format($lifetimeEggs) }}</div>
-            <div class="text-xs mt-2" style="color: #a39e98;">eggs logged since day 1</div>
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase mb-1 text-[#6B7280]">Lifetime Total</div>
+            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ number_format($lifetimeEggs) }}</div>
+            <div class="text-xs mt-2 text-[#6B7280]">eggs logged since day 1</div>
         </x-card>
 
         <x-card>
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase mb-2" style="color: #615d59;">Timeline Records</div>
-            <div class="text-4xl font-bold leading-none tracking-[-0.5px]" style="color: #1f1f1f;">{{ number_format($timeline->sum('records')) }}</div>
-            <div class="text-xs mt-2" style="color: #a39e98;">{{ ucfirst($groupBy) }} aggregates</div>
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase mb-1 text-[#6B7280]">Timeline Records</div>
+            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ number_format($timeline->sum('records')) }}</div>
+            <div class="text-xs mt-2 text-[#6B7280]">{{ ucfirst($groupBy) }} aggregates</div>
         </x-card>
 
         <x-card>
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase mb-2" style="color: #615d59;">Active Cages</div>
-            <div class="text-4xl font-bold leading-none tracking-[-0.5px]" style="color: #1f1f1f;">{{ $byCage->count() }}</div>
-            <div class="text-xs mt-2" style="color: #a39e98;">with production records</div>
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase mb-1 text-[#6B7280]">Active Cages</div>
+            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $byCage->count() }}</div>
+            <div class="text-xs mt-2 text-[#6B7280]">with production records</div>
         </x-card>
 
         <x-card>
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase mb-2" style="color: #615d59;">Size Records</div>
-            <div class="text-4xl font-bold leading-none tracking-[-0.5px]" style="color: #1f1f1f;">{{ number_format($bySize->sum('total')) }}</div>
-            <div class="text-xs mt-2" style="color: #a39e98;">eggs with size breakdown</div>
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase mb-1 text-[#6B7280]">Size Records</div>
+            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ number_format($bySize->sum('total')) }}</div>
+            <div class="text-xs mt-2 text-[#6B7280]">eggs with size breakdown</div>
         </x-card>
     </div>
 

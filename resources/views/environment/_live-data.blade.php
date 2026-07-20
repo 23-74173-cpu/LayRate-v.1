@@ -1,29 +1,29 @@
 <turbo-frame id="environment-live-data">
     {{-- ── Top Metric Cards ── --}}
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <div class="text-xs tracking-wider text-[#6B7280] mb-2">COOP AVG TEMPERATURE</div>
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">COOP AVG TEMPERATURE</div>
             <div class="flex items-end gap-2 mb-1">
-                <span class="text-3xl tracking-tight text-[#333333]">{{ $avgTemp ? number_format($avgTemp,1) . '°C' : '—' }}</span>
+                <span class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $avgTemp ? number_format($avgTemp,1) . '°C' : '—' }}</span>
                 <span class="text-xs bg-[#D5E8D4] text-[#2D6A4F] px-2 py-0.5 rounded mb-1">In Range</span>
             </div>
-            <div class="text-xs text-[#6B7280]">Spread across sensors: 1.3°C</div>
+            <div class="text-xs text-[#6B7280] mt-1">Spread across sensors: 1.3°C</div>
         </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <div class="text-xs tracking-wider text-[#6B7280] mb-2">COOP AVG HUMIDITY</div>
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">COOP AVG HUMIDITY</div>
             <div class="flex items-end gap-2 mb-1">
-                <span class="text-3xl tracking-tight text-[#333333]">{{ $avgHum ? number_format($avgHum,1) . '%' : '—' }}</span>
+                <span class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $avgHum ? number_format($avgHum,1) . '%' : '—' }}</span>
                 <span class="text-xs bg-[#D5E8D4] text-[#2D6A4F] px-2 py-0.5 rounded mb-1">In Range</span>
             </div>
-            <div class="text-xs text-[#6B7280]">Spread across sensors: 4.4%</div>
+            <div class="text-xs text-[#6B7280] mt-1">Spread across sensors: 4.4%</div>
         </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <div class="text-xs tracking-wider text-[#6B7280] mb-2">ACTIVE SENSORS</div>
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">ACTIVE SENSORS</div>
             <div class="flex items-end gap-2 mb-1">
-                <span class="text-3xl tracking-tight text-[#333333]">{{ $latestPerCage->count() }}</span>
+                <span class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $latestPerCage->count() }}</span>
                 <span class="text-xs bg-[#D5E8D4] text-[#2D6A4F] px-2 py-0.5 rounded mb-1">Live</span>
             </div>
-            <div class="text-xs text-[#6B7280]">One sensor node mapped per cage.</div>
+            <div class="text-xs text-[#6B7280] mt-1">One sensor node mapped per cage.</div>
         </div>
     </div>
 

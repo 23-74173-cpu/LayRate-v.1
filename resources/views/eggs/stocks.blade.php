@@ -29,14 +29,14 @@
         @endphp
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-4 {{ $isLowStock ? 'ring-2 ring-amber-400' : '' }}" data-size="{{ $size }}">
             <div class="flex items-center justify-between mb-2">
-                <span class="text-xs tracking-wider" style="color: {{ $color }}">{{ $label }}</span>
+                <span class="text-xs font-semibold tracking-[0.125px] uppercase" style="color: {{ $color }}">{{ $label }}</span>
                 @if($isLowStock)
                 <span class="text-xs px-1.5 py-0.5 rounded-full font-semibold" style="background:#fdf3e0;color:#8a5a00;border:1px solid #f3e3bf;">Low</span>
                 @endif
             </div>
-            <div class="text-3xl font-semibold tracking-tight" style="color: #333333">{{ number_format($total) }}</div>
-            <div class="text-xs mt-1" style="color: #6B7280">{{ $trays }} {{ $trays === 1 ? 'tray' : 'trays' }}</div>
-            <div class="text-xs mt-1.5" style="color: #a39e98;">
+            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ number_format($total) }}</div>
+            <div class="text-xs mt-1 text-[#6B7280]">{{ $trays }} {{ $trays === 1 ? 'tray' : 'trays' }}</div>
+            <div class="text-xs mt-1.5 text-[#a39e98]">
                 <span class="font-medium" style="color: {{ $color }}">{{ number_format($pool) }}</span> available to stock
             </div>
         </div>
@@ -86,7 +86,7 @@
                             Save Weights
                         </x-button>
                         <span class="w-px h-8 bg-[#D9D9D9]"></span>
-                        <button type="button" onclick="document.getElementById('addStockModal').classList.remove('hidden')"
+                        <button type="button" onclick="document.getElementById('addStockModal').style.display = 'flex'"
                                 class="flex items-center gap-2 bg-[#002D5E] text-white px-4 py-2.5 rounded-lg text-sm hover:bg-[#001F42] transition-colors">
                             <i data-lucide="plus" class="w-4 h-4"></i> Add Stock
                         </button>
@@ -164,7 +164,7 @@
 </div>
 
 {{-- Add Stock Modal --}}
-<div id="addStockModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+<div id="addStockModal" style="display: none;" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeAddStockModal()"></div>
     <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
@@ -275,7 +275,7 @@
     </div>
 </div>
 {{-- Edit Stock Modal --}}
-<div id="editStockModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+<div id="editStockModal" style="display: none;" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEditStockModal()"></div>
     <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
@@ -348,7 +348,7 @@
 var cageLogs = @json($cageLogsJson);
 
 function closeAddStockModal() {
-    document.getElementById('addStockModal').classList.add('hidden');
+    document.getElementById('addStockModal').style.display = 'none';
 }
 
 function openEditStock(id, eggSize, count, harvestedDate) {
@@ -356,12 +356,12 @@ function openEditStock(id, eggSize, count, harvestedDate) {
     document.getElementById('editEggSize').value = eggSize;
     document.getElementById('editEggCount').value = count;
     document.getElementById('editHarvestedDate').value = harvestedDate;
-    document.getElementById('editStockModal').classList.remove('hidden');
+    document.getElementById('editStockModal').style.display = 'flex';
     lucide.createIcons();
 }
 
 function closeEditStockModal() {
-    document.getElementById('editStockModal').classList.add('hidden');
+    document.getElementById('editStockModal').style.display = 'none';
 }
 
 function updateLogSelect(cageId) {
