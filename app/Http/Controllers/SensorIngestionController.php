@@ -6,6 +6,7 @@ use App\Models\Alert;
 use App\Models\Device;
 use App\Models\EnvironmentalLog;
 use App\Models\HardwareItem;
+use App\Models\ProductionLog;
 use App\Models\SensorOccupancyReading;
 use App\Services\EnvironmentAlertService;
 use Illuminate\Http\JsonResponse;
@@ -107,15 +108,35 @@ class SensorIngestionController extends Controller
                     $reportedCount = (int) $reading['count'];
                     $actualOccupancy = $slot->current_occupancy;
 
-                    if ($actualOccupancy === 1) {
-                        $lastReading = SensorOccupancyReading::where('hardware_item_id', $hardwareItem->id)
-                            ->latest('recorded_at')
-                            ->first();
+                    /*
+                     * DESIGN DECISION — rate-limit based on slot design capacity,
+                     * not current occupancy.
+                     *
+                     * The cooldown is derived from max_chickens_per_slot (the slot's
+                     * design capacity) so that occupancy never enters the equation.
+                     * This lets the operator stock any number of hens per slot without
+                     * affecting sensor behavior — the rate limit is purely a function
+                     * of the hardware design.
+                     *
+                     * Cooldown = 22 / max_chickens_per_slot (min 1h). For a 4-cap slot
+                     * this yields ~5.5h — enough headroom for 4 eggs/day while still
+                     * blocking runaway sensors. Underfilled slots (e.g. 1 hen in a
+                     * 4-cap slot) get a wider window than strictly necessary, accepting
+                     * occasional false positives over missed real readings.
+                     *
+                     * Previously the condition checked current_occupancy, which meant
+                     * a 4-cap slot with 1 hen was rate-limited to 1 reading per 22h
+                     * (effectively blocking the sensor for that cage).
+                     */
+                    $cooldownHours = max(1, 22 / $slot->cage->max_chickens_per_slot);
 
-                        if ($lastReading && $lastReading->recorded_at->gt(now()->subHours(22))) {
-                            $errors[] = "Reading {$index}: slot has 1 hen — rate-limited (last reading was {$lastReading->recorded_at->diffForHumans()}).";
-                            continue;
-                        }
+                    $lastReading = SensorOccupancyReading::where('hardware_item_id', $hardwareItem->id)
+                        ->latest('recorded_at')
+                        ->first();
+
+                    if ($lastReading && $lastReading->recorded_at->gt(now()->subHours($cooldownHours))) {
+                        $errors[] = "Reading {$index}: rate-limited (cooldown {$cooldownHours}h for {$slot->cage->max_chickens_per_slot}-hen slot). Last reading was {$lastReading->recorded_at->diffForHumans()}.";
+                        continue;
                     }
 
                     SensorOccupancyReading::updateOrCreate(
@@ -128,6 +149,38 @@ class SensorIngestionController extends Controller
                             'reported_count' => $reportedCount,
                         ]
                     );
+
+                    /*
+                     * Auto-create/update a ProductionLog for today from the
+                     * sensor reading so it appears in the egg logging UI.
+                     * Does NOT overwrite a manual entry — only sensor-via
+                     * or nonexistent logs are touched. The user can then
+                     * override via the web UI's PIN/password flow.
+                     */
+                    if ($slot->active_hen_count > 0) {
+                        $logDate = now()->parse($recordedAt)->toDateString();
+                        $existingLog = ProductionLog::where('cage_slot_id', $slot->id)
+                            ->where('log_date', $logDate)
+                            ->first();
+
+                        if (! $existingLog || $existingLog->logged_via === 'sensor') {
+                            $henCount = $slot->active_hen_count;
+                            $log = ProductionLog::updateOrCreate(
+                                ['cage_slot_id' => $slot->id, 'log_date' => $logDate],
+                                [
+                                    'egg_count' => $reportedCount,
+                                    'hen_count' => $henCount,
+                                    'hdep' => $henCount > 0 ? round(($reportedCount / $henCount) * 100, 2) : 0,
+                                    'logged_via' => 'sensor',
+                                    'notes' => 'Sensor reading',
+                                ]
+                            );
+                            if ($log->wasRecentlyCreated || $log->wasChanged()) {
+                                $log->recorded_by = null;
+                                $log->save();
+                            }
+                        }
+                    }
 
                     if ($reportedCount !== $actualOccupancy) {
                         self::createOccupancyMismatchAlert($slot, $reportedCount, $actualOccupancy, $recordedAt);
