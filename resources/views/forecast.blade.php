@@ -193,27 +193,26 @@
     if (window.__layrateForecastInitialized) return;
     window.__layrateForecastInitialized = true;
 
-    let currentFabMenu = null;
-    let currentFabIcon = null;
-
     function toggleFab() {
-        if (!currentFabMenu) return;
-        const isOpen = !currentFabMenu.classList.contains('invisible');
+        const fabMenu = document.getElementById('fabMenu');
+        const fabIcon = document.getElementById('fabIcon');
         const fabToggle = document.getElementById('fabToggle');
+        if (!fabMenu) return;
+        const isOpen = !fabMenu.classList.contains('invisible');
 
         if (isOpen) {
-            currentFabMenu.classList.add('invisible', 'opacity-0', 'translate-y-4');
-            currentFabMenu.classList.remove('opacity-100', 'translate-y-0');
-            if (currentFabIcon) currentFabIcon.style.transform = 'rotate(0deg)';
+            fabMenu.classList.add('invisible', 'opacity-0', 'translate-y-4');
+            fabMenu.classList.remove('opacity-100', 'translate-y-0');
+            if (fabIcon) fabIcon.style.transform = 'rotate(0deg)';
 
             if (fabToggle) {
                 fabToggle.setAttribute('aria-expanded', 'false');
                 fabToggle.setAttribute('aria-label', 'Open menu');
             }
         } else {
-            currentFabMenu.classList.remove('invisible', 'opacity-0', 'translate-y-4');
-            currentFabMenu.classList.add('opacity-100', 'translate-y-0');
-            if (currentFabIcon) currentFabIcon.style.transform = 'rotate(45deg)';
+            fabMenu.classList.remove('invisible', 'opacity-0', 'translate-y-4');
+            fabMenu.classList.add('opacity-100', 'translate-y-0');
+            if (fabIcon) fabIcon.style.transform = 'rotate(45deg)';
 
             if (fabToggle) {
                 fabToggle.setAttribute('aria-expanded', 'true');
@@ -223,7 +222,8 @@
     }
 
     document.addEventListener('click', function() {
-        if (currentFabMenu && !currentFabMenu.classList.contains('invisible')) {
+        const m = document.getElementById('fabMenu');
+        if (m && !m.classList.contains('invisible')) {
             toggleFab();
         }
     });
@@ -525,9 +525,6 @@
         const downloadTemplateModal = document.getElementById('downloadTemplateModal');
         const fabDownloadBtn = document.getElementById('fabDownloadBtn');
         const closeDownloadTemplateModalBtn = document.getElementById('closeDownloadTemplateModal');
-
-        currentFabMenu = fabMenu;
-        currentFabIcon = fabIcon;
 
         function openImportModal() {
             if (importModal) {
