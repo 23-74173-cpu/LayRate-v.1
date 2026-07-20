@@ -105,7 +105,7 @@
         </div>
     </div>
 
-    @if($from && $to && $rows->isNotEmpty())
+    @if($rows->isNotEmpty())
     @if(!$full)
     {{-- ── Preview table (item #84) — the printable document is an explicit second step ── --}}
     <div class="bg-white rounded-lg border border-[#D9D9D9]">
@@ -113,7 +113,7 @@
             <div>
                 <h2 class="text-sm font-semibold text-[#333333]">Report Preview</h2>
                 <p class="text-xs text-[#6B7280] mt-0.5">
-                    {{ ucfirst(str_replace('_', ' ', $type)) }} &middot; {{ $from }} &mdash; {{ $to }} &middot; {{ $cageId === 'all' ? 'All Cages' : $cageId }} &middot; {{ $rows->count() }} record(s)
+                    {{ ucfirst(str_replace('_', ' ', $type)) }} &middot; {{ $from && $to ? "{$from} — {$to}" : 'All time' }} &middot; {{ $cageId === 'all' ? 'All Cages' : $cageId }} &middot; {{ $rows->count() }} record(s)
                 </p>
             </div>
             <a href="{{ route('reports', array_merge(request()->query(), ['full' => 1])) }}"
@@ -168,7 +168,7 @@
             {{-- Right: report title + date range --}}
             <div class="text-right">
                 <div class="text-sm font-bold text-[#102A4C] uppercase tracking-widest">{{ ucfirst($type) }} Report</div>
-                <div class="text-xs text-[#6B7280] mt-0.5">{{ $from }} &mdash; {{ $to }}</div>
+                <div class="text-xs text-[#6B7280] mt-0.5">{{ $from && $to ? "{$from} — {$to}" : 'All time' }}</div>
             </div>
         </div>
         <hr style="border:none;border-top:3px solid #102A4C;margin:12px 0">
@@ -256,7 +256,7 @@
 
     </div>
     @endif
-    @elseif($from && $to && $rows->isEmpty())
+    @elseif($rows->isEmpty())
     <div class="bg-white rounded-lg border border-[#D9D9D9] p-10 text-center text-sm text-[#6B7280]">
         No data found for the selected filters.
     </div>

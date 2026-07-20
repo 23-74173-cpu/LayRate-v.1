@@ -17,12 +17,11 @@ class ReportController extends Controller
     public function index(Request $request)
     {
         $type   = $request->get('type', 'production');
-        // Clicking Generate with the date fields untouched submits them as
-        // empty strings (same as a first page load with no query string at
-        // all) — default to the last 30 days so the report always generates
-        // instead of silently showing nothing.
-        $from   = $request->get('from') ?: now()->subDays(30)->toDateString();
-        $to     = $request->get('to') ?: now()->toDateString();
+        // No date filter means "all time", not "nothing" — a first page load
+        // or a Generate click with the date fields untouched must still
+        // produce a real report instead of silently showing empty results.
+        $from   = $request->get('from') ?: null;
+        $to     = $request->get('to') ?: null;
         $cageId = $request->get('cage', 'all');
         $reason = $request->get('reason', 'all');
 
@@ -58,24 +57,26 @@ class ReportController extends Controller
             ? $allCages->pluck('id')
             : [$allCages->where('cage_code', $cageId)->first()?->id];
 
+        $hasRange = $from && $to;
+
         return match($type) {
             'production' => (object) [
-                'total_eggs'  => ProductionLog::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->whereBetween('log_date', [$from, $to])->sum('egg_count'),
-                'avg_hdep'    => number_format(ProductionLog::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->whereBetween('log_date', [$from, $to])->avg('hdep') ?? 0, 1) . '%',
+                'total_eggs'  => ProductionLog::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->sum('egg_count'),
+                'avg_hdep'    => number_format(ProductionLog::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->avg('hdep') ?? 0, 1) . '%',
                 'total_hens'  => Hen::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->where('is_active', 1)->count(),
-                'days'        => ProductionLog::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->whereBetween('log_date', [$from, $to])->distinct('log_date')->count('log_date'),
+                'days'        => ProductionLog::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->distinct('log_date')->count('log_date'),
             ],
             'feed' => (object) [
-                'total_kg'    => number_format(FeedConsumptionLog::whereIn('cage_id', $cageIds)->whereBetween('log_date', [$from, $to])->sum('feed_consumed_kg'), 1),
-                'avg_per_day' => number_format(FeedConsumptionLog::whereIn('cage_id', $cageIds)->whereBetween('log_date', [$from, $to])->avg('feed_consumed_kg') ?? 0, 1),
-                'batches'     => FeedConsumptionLog::whereIn('cage_id', $cageIds)->whereBetween('log_date', [$from, $to])->distinct('feed_batch_id')->count('feed_batch_id'),
-                'days'        => FeedConsumptionLog::whereIn('cage_id', $cageIds)->whereBetween('log_date', [$from, $to])->distinct('log_date')->count('log_date'),
+                'total_kg'    => number_format(FeedConsumptionLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->sum('feed_consumed_kg'), 1),
+                'avg_per_day' => number_format(FeedConsumptionLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->avg('feed_consumed_kg') ?? 0, 1),
+                'batches'     => FeedConsumptionLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->distinct('feed_batch_id')->count('feed_batch_id'),
+                'days'        => FeedConsumptionLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->distinct('log_date')->count('log_date'),
             ],
             'environment' => (object) [
-                'avg_temp'    => number_format(EnvironmentalLog::whereIn('cage_id', $cageIds)->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59'])->avg('temperature_c') ?? 0, 1) . '°C',
-                'avg_hum'     => number_format(EnvironmentalLog::whereIn('cage_id', $cageIds)->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59'])->avg('humidity_pct') ?? 0, 1) . '%',
-                'readings'    => EnvironmentalLog::whereIn('cage_id', $cageIds)->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59'])->count(),
-                'alerts'      => EnvironmentalLog::whereIn('cage_id', $cageIds)->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59'])->where(fn($q) => $q->where('temperature_c', '>', 30)->orWhere('humidity_pct', '>', 70))->count(),
+                'avg_temp'    => number_format(EnvironmentalLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59']))->avg('temperature_c') ?? 0, 1) . '°C',
+                'avg_hum'     => number_format(EnvironmentalLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59']))->avg('humidity_pct') ?? 0, 1) . '%',
+                'readings'    => EnvironmentalLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59']))->count(),
+                'alerts'      => EnvironmentalLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59']))->where(fn($q) => $q->where('temperature_c', '>', 30)->orWhere('humidity_pct', '>', 70))->count(),
             ],
             'egg_stock' => (object) [
                 'total_stocked' => (int) $this->eggStockQuery($from, $to, $cageIds, $cageId)->sum('count'),
@@ -84,10 +85,10 @@ class ReportController extends Controller
                 'days'          => $this->eggStockQuery($from, $to, $cageIds, $cageId)->distinct('harvested_date')->count('harvested_date'),
             ],
             'mortality' => (object) [
-                'total_deaths'  => MortalityLog::whereIn('cage_id', $cageIds)->whereBetween('log_date', [$from, $to])->sum('count'),
-                'top_cause'     => MortalityLog::whereIn('cage_id', $cageIds)->whereBetween('log_date', [$from, $to])->selectRaw('reason, SUM(`count`) as total')->groupBy('reason')->orderByDesc('total')->value('reason') ?? '—',
-                'most_affected' => optional($allCages->find(MortalityLog::whereIn('cage_id', $cageIds)->whereBetween('log_date', [$from, $to])->selectRaw('cage_id, SUM(`count`) as total')->groupBy('cage_id')->orderByDesc('total')->value('cage_id')))->cage_code ?? '—',
-                'days'          => MortalityLog::whereIn('cage_id', $cageIds)->whereBetween('log_date', [$from, $to])->distinct('log_date')->count('log_date'),
+                'total_deaths'  => MortalityLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->sum('count'),
+                'top_cause'     => MortalityLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->selectRaw('reason, SUM(`count`) as total')->groupBy('reason')->orderByDesc('total')->value('reason') ?? '—',
+                'most_affected' => optional($allCages->find(MortalityLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->selectRaw('cage_id, SUM(`count`) as total')->groupBy('cage_id')->orderByDesc('total')->value('cage_id')))->cage_code ?? '—',
+                'days'          => MortalityLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->distinct('log_date')->count('log_date'),
             ],
             default => null,
         };
@@ -98,20 +99,22 @@ class ReportController extends Controller
         // Hens must be filtered to active here (same as AnalyticsController) —
         // an unfiltered ->first() can attribute a dead/transferred hen's breed
         // to a historical production row.
+        $hasRange = $from && $to;
+
         $logs = ProductionLog::with(['cageSlot.cage', 'cageSlot.hens' => fn($q) => $q->where('is_active', 1)])
             ->whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))
-            ->whereBetween('log_date', [$from, $to])
+            ->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))
             ->orderByDesc('log_date')
             ->get();
 
         $feedLogs = FeedConsumptionLog::with('feedBatch')
             ->whereIn('cage_id', $cageIds)
-            ->whereBetween('log_date', [$from, $to])
+            ->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))
             ->get()
             ->keyBy(fn($f) => $f->log_date->format('Y-m-d') . '-' . $f->cage_id);
 
         $envData = EnvironmentalLog::whereIn('cage_id', $cageIds)
-            ->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59'])
+            ->when($hasRange, fn($q) => $q->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59']))
             ->selectRaw('cage_id, DATE(recorded_at) as log_date, AVG(temperature_c) as avg_temp, AVG(humidity_pct) as avg_hum')
             ->groupBy('cage_id', DB::raw('DATE(recorded_at)'))
             ->get()
@@ -141,7 +144,7 @@ class ReportController extends Controller
     {
         return FeedConsumptionLog::with(['cage', 'feedBatch'])
             ->whereIn('cage_id', $cageIds)
-            ->whereBetween('log_date', [$from, $to])
+            ->when($from && $to, fn($q) => $q->whereBetween('log_date', [$from, $to]))
             ->orderByDesc('log_date')
             ->get()
             ->map(fn($l) => (object) [
@@ -158,7 +161,7 @@ class ReportController extends Controller
     {
         return EnvironmentalLog::with('cage')
             ->whereIn('cage_id', $cageIds)
-            ->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59'])
+            ->when($from && $to, fn($q) => $q->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59']))
             ->orderByDesc('recorded_at')
             ->limit(200)
             ->get()
@@ -176,7 +179,7 @@ class ReportController extends Controller
     {
         $query = MortalityLog::with('cage')
             ->whereIn('cage_id', $cageIds)
-            ->whereBetween('log_date', [$from, $to])
+            ->when($from && $to, fn($q) => $q->whereBetween('log_date', [$from, $to]))
             ->orderByDesc('log_date');
 
         if ($reason !== 'all') {
@@ -196,7 +199,7 @@ class ReportController extends Controller
     // must include NULL-cage rows, unlike the other report types.
     private function eggStockQuery($from, $to, $cageIds, $cageId)
     {
-        return EggStockBatch::whereBetween('harvested_date', [$from, $to])
+        return EggStockBatch::when($from && $to, fn($q) => $q->whereBetween('harvested_date', [$from, $to]))
             ->when($cageId === 'all',
                 fn($q) => $q->where(fn($w) => $w->whereIn('cage_id', $cageIds)->orWhereNull('cage_id')),
                 fn($q) => $q->whereIn('cage_id', $cageIds));
@@ -220,15 +223,16 @@ class ReportController extends Controller
     public function exportCsv(Request $request)
     {
         $type   = $request->get('type', 'production');
-        $from   = $request->get('from') ?: now()->subDays(30)->toDateString();
-        $to     = $request->get('to') ?: now()->toDateString();
+        $from   = $request->get('from') ?: null;
+        $to     = $request->get('to') ?: null;
         $cageId = $request->get('cage', 'all');
         $reason = $request->get('reason', 'all');
 
         $allCages = Cage::orderBy('cage_code')->get();
         $rows = $this->buildReport($type, $from, $to, $cageId, $reason, $allCages);
 
-        $filename = "layrate_{$type}_{$from}_to_{$to}.csv";
+        $rangeLabel = ($from && $to) ? "{$from}_to_{$to}" : 'all_time';
+        $filename = "layrate_{$type}_{$rangeLabel}.csv";
         $headers  = ['Content-Type' => 'text/csv', 'Content-Disposition' => "attachment; filename={$filename}"];
 
         $callback = function () use ($rows) {
