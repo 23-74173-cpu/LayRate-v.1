@@ -82,37 +82,28 @@ class DemoDataSeeder extends Seeder
             'CAGE-B' => ['flock_age_weeks' => 34, 'breed' => 'Lohmann Brown-Classic', 'date_acquired' => '2025-09-06', 'tag_code' => 'FLOCK-B-2025', 'placement_date' => '2025-09-06', 'age_at_placement_weeks' => 0],
             'CAGE-C' => ['flock_age_weeks' => 52, 'breed' => 'Dekalb White',          'date_acquired' => '2025-04-19', 'tag_code' => 'FLOCK-C-2025', 'placement_date' => '2025-04-19', 'age_at_placement_weeks' => 0],
             'CAGE-D' => ['flock_age_weeks' => 18, 'breed' => 'ISA Brown',             'date_acquired' => '2025-12-13', 'tag_code' => 'FLOCK-D-2026', 'placement_date' => '2025-12-13', 'age_at_placement_weeks' => 0],
+            'CAGE-T' => ['flock_age_weeks' => 30, 'breed' => 'ISA Brown',             'date_acquired' => '2026-01-15', 'tag_code' => 'FLOCK-T-2026', 'placement_date' => '2026-01-15', 'age_at_placement_weeks' => 0],
         ];
 
-        // ── IR breakbeam sensor placement (slot numbers, 1-indexed) ──
-        $sensorSlots = [
-            'CAGE-A' => [1, 5, 6, 10],
-        ];
-
-        // ── CageSlots + Hens + HardwareItems ──────────────────────
+        // ── CageSlots + Hens ──────────────────────────────────────
+        // CageSlots and HardwareItems are created by StructuralDataSeeder.
+        // This loop populates existing slots with hens and updates occupancy.
         foreach ($cages as $cage) {
             for ($row = 1; $row <= $cage->rows; $row++) {
                 for ($col = 1; $col <= $cage->slots_per_row; $col++) {
                     $slotNumber = ($row - 1) * $cage->slots_per_row + $col;
-                    $isSensor = isset($sensorSlots[$cage->cage_code]) && in_array($slotNumber, $sensorSlots[$cage->cage_code]);
-                    $slot = CageSlot::firstOrCreate(
-                        ['cage_id' => $cage->id, 'slot_number' => $slotNumber],
-                        [
-                            'row_number' => $row,
-                            'column_number' => $col,
-                            'current_occupancy' => $cage->is_active ? $cage->max_chickens_per_slot : 0,
-                        ]
-                    );
+                    $slot = CageSlot::where('cage_id', $cage->id)
+                        ->where('slot_number', $slotNumber)
+                        ->first();
 
-                    if ($isSensor) {
-                        HardwareItem::firstOrCreate(
-                            ['cage_slot_id' => $slot->id, 'device_type' => 'IR_breakbeam'],
-                            ['serial_number' => "SN-CAGE{$cage->id}-SLOT{$slotNumber}", 'status' => 'active']
-                        );
+                    if (! $slot) {
+                        continue;
                     }
 
                     if ($cage->is_active && isset($hensData[$cage->cage_code])) {
                         $hd = $hensData[$cage->cage_code];
+                        $slot->update(['current_occupancy' => $cage->max_chickens_per_slot]);
+
                         for ($h = 1; $h <= $cage->max_chickens_per_slot; $h++) {
                             $hen = Hen::firstOrCreate(
                                 ['tag_code' => "{$cage->cage_code}-SLOT{$slotNumber}-HEN{$h}"],
@@ -141,6 +132,7 @@ class DemoDataSeeder extends Seeder
             'CAGE-B' => ['egg_count' => 5, 'hdep' => 72.50],
             'CAGE-C' => ['egg_count' => 3, 'hdep' => 58.33],
             'CAGE-D' => ['egg_count' => 0, 'hdep' => 0.00],
+            'CAGE-T' => ['egg_count' => 3, 'hdep' => 75.00],
         ];
 
         $cageSlots = CageSlot::with('cage')->get()->groupBy(fn ($s) => $s->cage->cage_code);
@@ -181,6 +173,7 @@ class DemoDataSeeder extends Seeder
                 'CAGE-B' => ['temp' => 28.7, 'hum' => 70.0],
                 'CAGE-C' => ['temp' => 29.2, 'hum' => 71.0],
                 'CAGE-D' => ['temp' => 27.9, 'hum' => 66.6],
+                'CAGE-T' => ['temp' => 28.5, 'hum' => 67.0],
             ];
             foreach ($envBase as $code => $base) {
                 $v = ($h % 5) * 0.2;

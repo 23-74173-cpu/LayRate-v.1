@@ -1,0 +1,8 @@
+{
+  "port": "/dev/ttyACM0",
+  "baud": 9600,
+  "device_key": "layrate-pi-dev-key-2026",
+  "api_url": "http://localhost/api/sensor-readings",
+  "dht_serial": "DHT22-001",
+  "ir_serial": "IRBBS-001"
+}

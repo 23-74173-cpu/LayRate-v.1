@@ -34,6 +34,7 @@ DEFAULT_API_URL = "http://localhost/api/sensor-readings"
 POLL_INTERVAL = 0.05
 RECONNECT_DELAY = 5
 ENV_KEY_PREFIX = "LAYrate_"
+DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "sensors.json")
 
 
 def find_arduino_port():
@@ -207,14 +208,29 @@ def run_loop(args):
             break
 
 
+def merge_config(args):
+    """Load --config JSON and overlay CLI args on top (CLI wins)."""
+    config_path = args.config
+    if config_path and os.path.exists(config_path):
+        with open(config_path) as f:
+            cfg = json.load(f)
+        for key, val in cfg.items():
+            if hasattr(args, key) and getattr(args, key) is None and val is not None:
+                setattr(args, key, val)
+        log.info("Loaded config from %s", config_path)
+    return args
+
+
 def main():
     parser = argparse.ArgumentParser(description="LayRate Serial Bridge")
-    parser.add_argument("--port", help="Serial port (e.g. /dev/ttyACM0)")
+    parser.add_argument("--config", default=None,
+                        help="Path to JSON config file (CLI args override config)")
+    parser.add_argument("--port", default=None, help="Serial port (e.g. /dev/ttyACM0)")
     parser.add_argument("--baud", type=int, default=DEFAULT_BAUD)
     parser.add_argument("--api-url", default=DEFAULT_API_URL)
-    parser.add_argument("--device-key", help="X-Device-Key header value")
-    parser.add_argument("--dht-serial", default="DHT22-001")
-    parser.add_argument("--ir-serial", default="IRBBS-001")
+    parser.add_argument("--device-key", default=None, help="X-Device-Key header value")
+    parser.add_argument("--dht-serial", default=None, help="DHT22 sensor serial number")
+    parser.add_argument("--ir-serial", default=None, help="IR breakbeam sensor serial number")
     parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"])
     parser.add_argument("--auto-port", action="store_true", help="Auto-detect Arduino port")
     args = parser.parse_args()
@@ -224,6 +240,13 @@ def main():
         format="%(asctime)s [%(levelname)s] %(message)s",
         datefmt="%Y-%m-%dT%H:%M:%S",
     )
+
+    args = merge_config(args)
+
+    if not args.dht_serial:
+        args.dht_serial = "DHT22-001"
+    if not args.ir_serial:
+        args.ir_serial = "IRBBS-001"
 
     run_loop(args)
 
