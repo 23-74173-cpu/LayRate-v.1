@@ -71,7 +71,7 @@
 </div>
 
 {{-- Forecast generation loading overlay --}}
-<div id="forecastLoadingOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center">
+<div id="forecastLoadingOverlay" class="fixed inset-0 min-h-screen min-h-[100dvh] bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-xl shadow-xl p-8 max-w-sm w-full mx-4 text-center">
         <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#002D5E]/10 mb-4">
             <svg class="animate-spin h-6 w-6 text-[#002D5E]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -417,19 +417,21 @@
         const selectedFileName = document.getElementById('selectedFileName');
 
         function updateDropZoneState() {
-            if (!fileInput || !dropZonePrompt || !fileSelectedPrompt || !selectedFileName) return;
+            if (!fileInput || !dropZonePrompt || !fileSelectedPrompt || !selectedFileName || !btn) return;
             if (fileInput.files && fileInput.files.length > 0) {
                 dropZonePrompt.classList.add('hidden');
                 fileSelectedPrompt.classList.remove('hidden');
                 selectedFileName.textContent = fileInput.files[0].name;
                 dropZone.classList.add('border-[#2D7D46]', 'bg-[#D5E8D4]/20');
                 dropZone.classList.remove('border-[#D9D9D9]');
+                btn.disabled = false;
             } else {
                 dropZonePrompt.classList.remove('hidden');
                 fileSelectedPrompt.classList.add('hidden');
                 selectedFileName.textContent = 'No file selected';
                 dropZone.classList.remove('border-[#2D7D46]', 'bg-[#D5E8D4]/20');
                 dropZone.classList.add('border-[#D9D9D9]');
+                btn.disabled = true;
             }
             if (window.lucide) lucide.createIcons();
         }

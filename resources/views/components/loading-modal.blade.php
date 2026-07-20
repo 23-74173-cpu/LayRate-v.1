@@ -14,7 +14,7 @@
 
     Not for lazy-loaded turbo-frames — those keep their skeleton partials.
 --}}
-<div id="loading-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] hidden items-center justify-center" role="alert" aria-live="assertive" aria-busy="true">
+<div id="loading-modal" class="fixed inset-0 min-h-screen min-h-[100dvh] bg-black/50 backdrop-blur-sm z-[60] hidden items-center justify-center p-4" role="alert" aria-live="assertive" aria-busy="true">
     <div class="bg-white rounded-xl shadow-xl p-8 max-w-sm w-full mx-4 text-center">
         <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#002D5E]/10 mb-4">
             <svg class="animate-spin h-6 w-6 text-[#002D5E]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
