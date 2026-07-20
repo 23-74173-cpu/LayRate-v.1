@@ -29,16 +29,20 @@
 
 <script>
 (function() {
-    window.showLoadingModal = function(title, message) {
-        document.getElementById('loading-modal-title').textContent = title || 'Processing';
-        document.getElementById('loading-modal-message').textContent = message || 'Please wait...';
-        var el = document.getElementById('loading-modal');
-        el.classList.remove('hidden');
-        el.classList.add('flex');
-    };
+        window.showLoadingModal = function(title, message) {
+            var el = document.getElementById('loading-modal');
+            if (!el) return;
+            var titleEl = document.getElementById('loading-modal-title');
+            var msgEl = document.getElementById('loading-modal-message');
+            if (titleEl) titleEl.textContent = title || 'Processing';
+            if (msgEl) msgEl.textContent = message || 'Please wait...';
+            el.classList.remove('hidden');
+            el.classList.add('flex');
+        };
 
     window.hideLoadingModal = function() {
         var el = document.getElementById('loading-modal');
+        if (!el) return;
         el.classList.add('hidden');
         el.classList.remove('flex');
     };

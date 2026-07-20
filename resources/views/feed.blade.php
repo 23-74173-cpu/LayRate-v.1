@@ -288,11 +288,14 @@ function openConsumptionModal(cageId, batchId, date, time, kg, entryId) {
     var cageSelect = document.querySelector('#consumptionModal select[name="cage_id"]');
     var batchSelect = document.querySelector('#consumptionModal select[name="feed_batch_id"]');
 
-    cageSelect.value = cageId || '';
-    batchSelect.value = batchId || '';
-    document.querySelector('#consumptionModal input[name="log_date"]').value = date || '{{ now()->toDateString() }}';
-    document.querySelector('#consumptionModal input[name="log_time"]').value = time || '';
-    document.querySelector('#consumptionModal input[name="feed_consumed_kg"]').value = kg || '';
+    if (cageSelect) cageSelect.value = cageId || '';
+    if (batchSelect) batchSelect.value = batchId || '';
+    var dateInput = document.querySelector('#consumptionModal input[name="log_date"]');
+    if (dateInput) dateInput.value = date || '{{ now()->toDateString() }}';
+    var timeInput = document.querySelector('#consumptionModal input[name="log_time"]');
+    if (timeInput) timeInput.value = time || '';
+    var kgInput = document.querySelector('#consumptionModal input[name="feed_consumed_kg"]');
+    if (kgInput) kgInput.value = kg || '';
 
     document.getElementById('consumptionModal').classList.remove('hidden');
     document.getElementById('consumptionModal').classList.add('flex');
@@ -318,11 +321,16 @@ function openFarmEntryModal(entryId, batchId, date, time, totalKg, unitCost) {
         method.value = 'POST';
     }
 
-    document.querySelector('#farmEntryModal select[name="feed_batch_id"]').value = batchId || '';
-    document.querySelector('#farmEntryModal input[name="log_date"]').value = date || '{{ now()->toDateString() }}';
-    document.querySelector('#farmEntryModal input[name="log_time"]').value = time || '';
-    document.querySelector('#farmEntryModal input[name="total_kg"]').value = totalKg || '';
-    document.querySelector('#farmEntryModal input[name="unit_cost"]').value = unitCost || '';
+    var farmBatch = document.querySelector('#farmEntryModal select[name="feed_batch_id"]');
+    if (farmBatch) farmBatch.value = batchId || '';
+    var farmDate = document.querySelector('#farmEntryModal input[name="log_date"]');
+    if (farmDate) farmDate.value = date || '{{ now()->toDateString() }}';
+    var farmTime = document.querySelector('#farmEntryModal input[name="log_time"]');
+    if (farmTime) farmTime.value = time || '';
+    var farmKg = document.querySelector('#farmEntryModal input[name="total_kg"]');
+    if (farmKg) farmKg.value = totalKg || '';
+    var farmCost = document.querySelector('#farmEntryModal input[name="unit_cost"]');
+    if (farmCost) farmCost.value = unitCost || '';
 
     document.getElementById('farmEntryModal').classList.remove('hidden');
     document.getElementById('farmEntryModal').classList.add('flex');
@@ -359,7 +367,8 @@ function deleteBatch(id) {
                     form.method = 'POST';
                     form.action = '{{ url('feed/batch') }}/' + id;
                     form.style.display = 'none';
-                    var csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                    var meta = document.querySelector('meta[name="csrf-token"]');
+                    var csrf = meta ? meta.getAttribute('content') : '';
                     form.innerHTML = '<input type="hidden" name="_token" value="' + csrf + '"><input type="hidden" name="_method" value="DELETE">';
                     document.body.appendChild(form);
                 }

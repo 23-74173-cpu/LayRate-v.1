@@ -277,9 +277,12 @@ function filterInventory() {
 
 function clearFilters() {
     document.querySelectorAll('input[name="status"]').forEach(r => r.checked = r.value === 'all');
-    document.querySelector('select[name="cage_id"]').value = '';
-    document.querySelector('select[name="breed"]').value = '';
-    document.querySelector('select[name="sort"]').value = '';
+    var cageSelect = document.querySelector('select[name="cage_id"]');
+    if (cageSelect) cageSelect.value = '';
+    var breedSelect = document.querySelector('select[name="breed"]');
+    if (breedSelect) breedSelect.value = '';
+    var sortSelect = document.querySelector('select[name="sort"]');
+    if (sortSelect) sortSelect.value = '';
     document.getElementById('tagSearchInput').value = '';
 
     updateStatusPills();

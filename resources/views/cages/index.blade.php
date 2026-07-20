@@ -1050,7 +1050,7 @@ function doRemoveCell(row, col) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '',
             },
             body: JSON.stringify({ row: row, col: col }),
         })
@@ -1361,7 +1361,7 @@ function confirmCageDelete() {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
         },
         body: JSON.stringify({
-            hens_action: document.querySelector('input[name="delHensAction"]:checked').value,
+            hens_action: document.querySelector('input[name="delHensAction"]:checked')?.value ?? 'delete',
             return_sensors: document.getElementById('delReturnSensors').checked,
             preserve_production: document.getElementById('delPreserveProduction').checked,
             preserve_mortality: document.getElementById('delPreserveMortality').checked,

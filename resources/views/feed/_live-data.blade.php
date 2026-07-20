@@ -42,7 +42,8 @@
     <script>
         function feedSwitchTab(tab) {
             document.querySelectorAll('.tab-panel').forEach(el => el.classList.add('hidden'));
-            document.getElementById('tab-'+tab).classList.remove('hidden');
+            var panel = document.getElementById('tab-'+tab);
+            if (panel) panel.classList.remove('hidden');
 
             const nav = document.querySelector('#feed-tabs-nav');
             if (nav) {

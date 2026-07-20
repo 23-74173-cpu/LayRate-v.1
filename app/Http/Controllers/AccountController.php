@@ -9,7 +9,6 @@ use App\Models\Setting;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
@@ -151,7 +150,7 @@ class AccountController extends Controller
         // Keep the current session valid after a password change by syncing the
         // session hash that AuthenticateSession middleware checks on each request.
         // The middleware key is guard-specific (default guard = 'web').
-        $request->session()->put('password_hash_' . Auth::getDefaultDriver(), $user->password);
+        $request->session()->put('password_hash_' . config('auth.defaults.guard', 'web'), $user->password);
 
         return redirect()->route('profile', ['tab' => 'settings'])->with('success', 'Password updated.');
     }
@@ -195,13 +194,13 @@ class AccountController extends Controller
             return back()->withErrors(['logout_password' => 'Current password is incorrect.']);
         }
 
-        Auth::logoutOtherDevices($data['logout_password']);
+        auth('web')->logoutOtherDevices($data['logout_password']);
 
         // logoutOtherDevices() rehashes the user's password with a new salt, which
         // invalidates every other session. Sync the current session's hash so this
         // session stays alive.
         $user = auth()->user()->fresh();
-        $request->session()->put('password_hash_' . Auth::getDefaultDriver(), $user->password);
+        $request->session()->put('password_hash_' . config('auth.defaults.guard', 'web'), $user->password);
 
         return redirect()->route('profile', ['tab' => 'settings'])->with('success', 'Signed out of all other devices.');
     }
