@@ -40,6 +40,7 @@
     </div>
 
     <script>
+    (function() {
         function feedSwitchTab(tab) {
             document.querySelectorAll('.tab-panel').forEach(el => el.classList.add('hidden'));
             var panel = document.getElementById('tab-'+tab);
@@ -144,21 +145,24 @@
             }
         }
 
-        (function() {
-            if (window.__fcrGuideEscapeBound) return;
+        window.feedSwitchTab = feedSwitchTab;
+        window.fcrLoad = fcrLoad;
+        window.openFcrGuideModal = openFcrGuideModal;
+        window.closeFcrGuideModal = closeFcrGuideModal;
+
+        if (!window.__fcrGuideEscapeBound) {
             window.__fcrGuideEscapeBound = true;
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape') closeFcrGuideModal();
             });
-        })();
+        }
 
-        (function() {
-            const params = new URLSearchParams(window.location.search);
-            const tab = params.get('tab') || 'batches';
-            if (document.getElementById('tab-' + tab)) {
-                feedSwitchTab(tab);
-            }
-        })();
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get('tab') || 'batches';
+        if (document.getElementById('tab-' + tab)) {
+            feedSwitchTab(tab);
+        }
+    })();
     </script>
 
     {{-- Feed Batches Panel --}}

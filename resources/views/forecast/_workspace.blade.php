@@ -231,8 +231,9 @@
             return;
         }
 
-        if (window.forecastChartInstance) {
+        if (window.forecastChartInstance && typeof window.forecastChartInstance.destroy === 'function') {
             window.forecastChartInstance.destroy();
+            window.forecastChartInstance = null;
         }
 
         if (!recentHistorical || recentHistorical.length === 0) {

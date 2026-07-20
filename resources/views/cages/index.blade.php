@@ -1559,25 +1559,28 @@ function cancelReorder(cageId) {
 
 // ── Auto-open edit modal on resize error ─────────────────
 @if(session('edit_cage_id') && isset($editCage))
-document.addEventListener('turbo:load', function() {
-    openEditModal(
-        {{ $editCage->id }},
-        '{{ $editCage->cage_code }}',
-        {{ is_null($editCage->location_row) ? 'null' : $editCage->location_row }},
-        {{ is_null($editCage->location_column) ? 'null' : $editCage->location_column }},
-        {{ $editCage->rows }},
-        {{ $editCage->slots_per_row }},
-        {{ $editCage->max_chickens_per_slot }},
-        {{ $editCage->is_active ? 1 : 0 }}
-    );
-    @if(session('errors') && session('errors')->has('resize'))
-    const errEl = document.getElementById('editResizeError');
-    const errText = document.getElementById('editResizeErrorText');
-    if (errEl) errEl.classList.remove('hidden');
-    if (errText) errText.textContent = '{{ addslashes(session('errors')->first('resize')) }}';
-    lucide.createIcons();
-    @endif
-});
+if (!window.__cagesAutoEditBound) {
+    window.__cagesAutoEditBound = true;
+    document.addEventListener('turbo:load', function() {
+        openEditModal(
+            {{ $editCage->id }},
+            '{{ $editCage->cage_code }}',
+            {{ is_null($editCage->location_row) ? 'null' : $editCage->location_row }},
+            {{ is_null($editCage->location_column) ? 'null' : $editCage->location_column }},
+            {{ $editCage->rows }},
+            {{ $editCage->slots_per_row }},
+            {{ $editCage->max_chickens_per_slot }},
+            {{ $editCage->is_active ? 1 : 0 }}
+        );
+        @if(session('errors') && session('errors')->has('resize'))
+        const errEl = document.getElementById('editResizeError');
+        const errText = document.getElementById('editResizeErrorText');
+        if (errEl) errEl.classList.remove('hidden');
+        if (errText) errText.textContent = '{{ addslashes(session('errors')->first('resize')) }}';
+        lucide.createIcons();
+        @endif
+    });
+}
 @endif
 
 </script>

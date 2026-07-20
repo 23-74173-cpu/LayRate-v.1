@@ -61,7 +61,10 @@
         function initForecastChart() {
             const canvas = document.getElementById('forecastChart');
             if (!canvas) return;
-            if (window.forecastChart) window.forecastChart.destroy();
+            if (window.forecastChart && typeof window.forecastChart.destroy === 'function') {
+                window.forecastChart.destroy();
+                window.forecastChart = null;
+            }
             window.forecastChart = new Chart(canvas, {
                 type: 'line',
                 data: {

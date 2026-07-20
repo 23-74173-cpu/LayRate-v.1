@@ -148,45 +148,66 @@
 
     <script>
     (function() {
-        const cageColors  = ['#2D7D46','#1D4E8F','#C2703E','#6B4C8A','#6B7280'];
-        const trendData   = @json($trendData);
-        const cagesMap    = @json($cages->pluck('cage_code','id'));
-        const labels = ['14:00','16:00','18:00','20:00','22:00','00:00','02:00','04:00','06:00','08:00','10:00','12:00'];
-
-        function buildDatasets(field) {
-            const sets = [];
-            let i = 0;
-            for (const [cageId, rows] of Object.entries(trendData)) {
-                const name = cagesMap[cageId] || 'Cage '+cageId;
-                const data = labels.map(l => {
-                    const r = rows.find(r => r.hour === l);
-                    return r ? r[field] : null;
-                });
-                sets.push({ label: name, data, borderColor: cageColors[i%cageColors.length], tension: 0.3, pointRadius: 3, borderWidth: 1.5, fill: false });
-                i++;
-            }
-            return sets;
-        }
-
-        const chartOpts = {
-            responsive: true,
-            plugins: { legend: { display: true, labels: { boxWidth: 10, font: { size: 10 } } } },
-            scales: {
-                x: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } } },
-                y: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } } },
-            }
-        };
-
         function initEnvCharts() {
+            const cageColors  = ['#2D7D46','#1D4E8F','#C2703E','#6B4C8A','#6B7280'];
+            const trendData   = @json($trendData);
+            const cagesMap    = @json($cages->pluck('cage_code','id'));
+            const labels = ['14:00','16:00','18:00','20:00','22:00','00:00','02:00','04:00','06:00','08:00','10:00','12:00'];
+
+            function buildDatasets(field) {
+                const sets = [];
+                let i = 0;
+                for (const [cageId, rows] of Object.entries(trendData)) {
+                    const name = cagesMap[cageId] || 'Cage '+cageId;
+                    const data = labels.map(l => {
+                        const r = rows.find(r => r.hour === l);
+                        return r ? r[field] : null;
+                    });
+                    sets.push({ label: name, data, borderColor: cageColors[i%cageColors.length], tension: 0.3, pointRadius: 3, borderWidth: 1.5, fill: false });
+                    i++;
+                }
+                return sets;
+            }
+
+            const chartOpts = {
+                responsive: true,
+                plugins: { legend: { display: true, labels: { boxWidth: 10, font: { size: 10 } } } },
+                scales: {
+                    x: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } } },
+                    y: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } } },
+                }
+            };
+
             const tempCanvas = document.getElementById('envTempChart');
             const humCanvas  = document.getElementById('envHumChart');
             if (!tempCanvas || !humCanvas) return;
 
-            if (window.envTempChart) window.envTempChart.destroy();
+            if (window.envTempChart && typeof window.envTempChart.destroy === 'function') {
+                window.envTempChart.destroy();
+                window.envTempChart = null;
+            }
             window.envTempChart = new Chart(tempCanvas, { type:'line', data:{ labels, datasets: buildDatasets('avg_temp') }, options: {...chartOpts, scales:{...chartOpts.scales, y:{...chartOpts.scales.y, min:24,max:32}}} });
 
-            if (window.envHumChart) window.envHumChart.destroy();
+            if (window.envHumChart && typeof window.envHumChart.destroy === 'function') {
+                window.envHumChart.destroy();
+                window.envHumChart = null;
+            }
             window.envHumChart = new Chart(humCanvas, { type:'line', data:{ labels, datasets: buildDatasets('avg_hum')  }, options: {...chartOpts, scales:{...chartOpts.scales, y:{...chartOpts.scales.y, min:50,max:80}}} });
+        }
+
+        if (!window.__envChartsLifecycleBound) {
+            window.__envChartsLifecycleBound = true;
+            document.addEventListener('turbo:load', initEnvCharts);
+            document.addEventListener('turbo:before-cache', function () {
+                if (window.envTempChart && typeof window.envTempChart.destroy === 'function') {
+                    window.envTempChart.destroy();
+                    window.envTempChart = null;
+                }
+                if (window.envHumChart && typeof window.envHumChart.destroy === 'function') {
+                    window.envHumChart.destroy();
+                    window.envHumChart = null;
+                }
+            });
         }
 
         if (document.readyState === 'loading') {
