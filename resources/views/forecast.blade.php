@@ -26,7 +26,7 @@
     @include('forecast._calendar')
 
 {{-- Download Template Modal --}}
-<div id="downloadTemplateModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+<div id="downloadTemplateModal" class="fixed inset-0 min-h-screen min-h-[100dvh] bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-auto overflow-hidden">
         <div class="flex items-center justify-between px-5 py-4 border-b border-[#F0F0F0]">
             <div class="flex items-center gap-2">
@@ -116,7 +116,7 @@
 </div>
 
 {{-- Import Modal --}}
-<div id="importModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+<div id="importModal" class="fixed inset-0 min-h-screen min-h-[100dvh] bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-auto overflow-hidden">
         <div class="flex items-center justify-between px-5 py-4 border-b border-[#F0F0F0]">
             <div class="flex items-center gap-2">
