@@ -39,8 +39,18 @@ jobs:
       - name: Install and build frontend assets
         run: |
           cd ${{ env.LARAVEL_DIR }}
-          npm ci
-          npm run build
+          if command -v node &>/dev/null && command -v npm &>/dev/null; then
+            npm ci
+            npm run build
+          else
+            echo "WARNING: Node.js/npm not installed. Skipping frontend build."
+            echo "Existing assets at public/js/ and public/css/ will be used."
+            echo "To install Node.js: https://github.com/nodesource/distributions"
+            if [ ! -f public/js/turbo.js ]; then
+              echo "ERROR: No pre-built frontend assets found. Deploy will be incomplete."
+              exit 1
+            fi
+          fi
 
       # ── Python services ────────────────────────────────────────────────────
       - name: Install mobile-api dependencies
