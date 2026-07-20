@@ -8,7 +8,8 @@
 
     {{-- ── Add Note ── --}}
     <div class="rounded-xl border p-6" style="background-color: #ffffff; border-color: #e6e6e6;">
-        <form method="POST" action="{{ route('notes.store') }}">
+        <form method="POST" action="{{ route('notes.store') }}"
+              data-confirm="Add this note?" data-confirm-action="Add Note">
             @csrf
             <div class="flex flex-col sm:flex-row gap-3">
                 <div class="flex-1">

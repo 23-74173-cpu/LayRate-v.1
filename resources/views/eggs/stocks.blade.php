@@ -196,6 +196,7 @@
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                     <p id="addStockPoolHint" class="text-xs mt-1" style="color: #a39e98;">Select a size and source cage to see available pool.</p>
+                    <p id="addStockExceedsWarning" class="hidden text-xs mt-1" style="color: #9B1C24;"></p>
                 </div>
 
                 <div id="classifySection" class="hidden p-4 rounded-lg border border-dashed" style="border-color: #D9D9D9; background-color: #fafafa;">
@@ -394,8 +395,12 @@ document.addEventListener('turbo:load', function() {
     var classifySumHint = document.getElementById('classifySumHint');
     var classifyRemainingCount = document.getElementById('classifyRemainingCount');
 
+    // Absolute "/eggs/stocks" breaks under a subfolder deployment (e.g.
+    // XAMPP's /LayRate/public) — build every fetch from this base instead.
+    var eggsStocksBase = '{{ url('eggs/stocks') }}';
+
     function fetchPoolForCage(cageId, callback) {
-        var url = '/eggs/stocks/pool-data?cage_id=' + (cageId || 0);
+        var url = eggsStocksBase + '/pool-data?cage_id=' + (cageId || 0);
         fetch(url)
             .then(function(r) { return r.json(); })
             .then(function(data) {
@@ -441,7 +446,6 @@ document.addEventListener('turbo:load', function() {
             if (countInput) countInput.disabled = true;
         } else {
             poolHint.textContent = avail + ' egg(s) available to stock for this size.';
-            if (addBtn) addBtn.disabled = false;
             if (countInput) countInput.disabled = false;
         }
 
@@ -451,6 +455,25 @@ document.addEventListener('turbo:load', function() {
             } else {
                 classifySection.classList.add('hidden');
             }
+        }
+
+        checkCountExceedsPool();
+    }
+
+    function checkCountExceedsPool() {
+        var warningEl = document.getElementById('addStockExceedsWarning');
+        if (!warningEl || !sizeSelect || !countInput || !addBtn) return;
+        var opt = sizeSelect.options[sizeSelect.selectedIndex];
+        var avail = opt && opt.value ? parseInt(opt.getAttribute('data-available') || '0') : 0;
+        var entered = parseInt(countInput.value) || 0;
+
+        if (opt && opt.value && avail >= 1 && entered > avail) {
+            warningEl.textContent = 'Only ' + avail + ' egg(s) available for this size — cannot stock ' + entered + '.';
+            warningEl.classList.remove('hidden');
+            addBtn.disabled = true;
+        } else {
+            warningEl.classList.add('hidden');
+            if (opt && opt.value && avail >= 1) addBtn.disabled = false;
         }
     }
 
@@ -516,6 +539,7 @@ document.addEventListener('turbo:load', function() {
 
     if (countInput) {
         countInput.addEventListener('input', updateClassifyStatus);
+        countInput.addEventListener('input', checkCountExceedsPool);
     }
     classifyInputs.forEach(function(inp) {
         inp.addEventListener('input', updateClassifyStatus);
@@ -525,7 +549,16 @@ document.addEventListener('turbo:load', function() {
     if (form) {
         form.addEventListener('submit', function(e) {
             e.preventDefault();
+            // This form submits via a bespoke fetch() call rather than a
+            // native POST, so the declarative data-confirm/console-log
+            // auto-wiring (which listen for real form submissions) can't see
+            // it \u2014 gate manually through the same confirmModal() used
+            // elsewhere, matching the deleteBatch() pattern in feed.blade.php.
+            confirmModal('Add this stock batch?', { submit: performAddStock }, 'Add Batch');
+        });
+    }
 
+    function performAddStock() {
             var btn = document.getElementById('addStockBtn');
             var originalLabel = btn.textContent;
             loadingButton(btn, 'Adding\u2026');
@@ -548,7 +581,9 @@ document.addEventListener('turbo:load', function() {
                 body['classify'] = '1';
             }
 
-            fetch('/eggs/stocks', {
+            console.log('[Transaction] POST /eggs/stocks', body);
+
+            fetch(eggsStocksBase, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -571,7 +606,6 @@ document.addEventListener('turbo:load', function() {
                 btn.disabled = false;
                 btn.textContent = originalLabel;
             });
-        });
     }
 });
 

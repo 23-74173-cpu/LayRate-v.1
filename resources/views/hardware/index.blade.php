@@ -105,7 +105,9 @@
             </button>
         </div>
 
-        <form method="POST" action="{{ route('hardware.store') }}" onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Adding\u2026')">
+        <form method="POST" action="{{ route('hardware.store') }}"
+              data-confirm="Add this hardware item?" data-confirm-action="Add Item"
+              onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Adding\u2026')">
             @csrf
             <div class="space-y-4">
                 <div>
@@ -315,7 +317,10 @@
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
         </div>
-        <form method="POST" action="{{ route('devices.store') }}" onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Creating\u2026')">
+        <form method="POST" action="{{ route('devices.store') }}"
+              data-confirm="Create this ingestion device? Its API key will be shown only once \u2014 copy it immediately."
+              data-confirm-action="Create"
+              onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Creating\u2026')">
             @csrf
             <div>
                 <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Device Name</label>

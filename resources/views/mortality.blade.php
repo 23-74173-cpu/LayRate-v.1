@@ -28,11 +28,11 @@
                 {{-- Cage --}}
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CAGE</label>
-                    <select name="cage_id" required
+                    <select name="cage_id" id="mortalityCageSelect" required
                             class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                         <option value="">Select cage…</option>
                         @foreach($cages as $cage)
-                        <option value="{{ $cage->id }}" {{ (old('cage_id') ?: ($preselectedCageId ?? 0)) == $cage->id ? 'selected' : '' }}>
+                        <option value="{{ $cage->id }}" data-active-hens="{{ $cage->active_hens_count }}" {{ (old('cage_id') ?: ($preselectedCageId ?? 0)) == $cage->id ? 'selected' : '' }}>
                             {{ $cage->cage_code }} — {{ $cage->formatted_location }}
                         </option>
                         @endforeach
@@ -52,9 +52,10 @@
                 {{-- Count --}}
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">NUMBER OF DEATHS</label>
-                    <input type="number" name="count" min="1" required
+                    <input type="number" name="count" id="mortalityCountInput" min="1" required
                            value="{{ old('count', 1) }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                    <p id="mortalityExceedsWarning" class="hidden text-xs text-red-500 mt-1"></p>
                     @error('count')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
                 </div>
 
@@ -82,7 +83,7 @@
                     @error('notes')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
                 </div>
 
-                <x-button type="submit" class="w-full py-2.5">
+                <x-button type="submit" id="mortalitySubmitBtn" class="w-full py-2.5">
                     Save Record
                 </x-button>
             </form>
@@ -213,6 +214,37 @@ function closeEditMortalityModal() {
             closeEditMortalityModal();
         }
     });
+})();
+
+(function() {
+    // Live "count exceeds active hens in this cage" check — mirrors
+    // MortalityController::store()'s server-side guard, surfaced before submit.
+    var cageSelect = document.getElementById('mortalityCageSelect');
+    var countInput = document.getElementById('mortalityCountInput');
+    var warningEl = document.getElementById('mortalityExceedsWarning');
+    var submitBtn = document.getElementById('mortalitySubmitBtn');
+    if (!cageSelect || !countInput || !warningEl || !submitBtn) return;
+
+    function check() {
+        var opt = cageSelect.options[cageSelect.selectedIndex];
+        var activeHens = opt && opt.value ? parseInt(opt.getAttribute('data-active-hens') || '0') : null;
+        var entered = parseInt(countInput.value) || 0;
+
+        if (activeHens !== null && entered > activeHens) {
+            warningEl.textContent = 'Only ' + activeHens + ' active hen(s) in this cage — cannot record ' + entered + ' death(s).';
+            warningEl.classList.remove('hidden');
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+            warningEl.classList.add('hidden');
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
+    cageSelect.addEventListener('change', check);
+    countInput.addEventListener('input', check);
+    check();
 })();
 </script>
 @endpush

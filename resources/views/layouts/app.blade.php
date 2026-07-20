@@ -515,6 +515,7 @@ function loadingButton(btn, label) {
 <x-confirm-modal />
 <x-notification-toast />
 <x-loading-modal />
+<x-transaction-logger />
 
 @stack('scripts')
 </body>

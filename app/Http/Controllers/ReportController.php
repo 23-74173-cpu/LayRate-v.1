@@ -17,22 +17,22 @@ class ReportController extends Controller
     public function index(Request $request)
     {
         $type   = $request->get('type', 'production');
-        $from   = $request->get('from');
-        $to     = $request->get('to');
+        // Clicking Generate with the date fields untouched submits them as
+        // empty strings (same as a first page load with no query string at
+        // all) — default to the last 30 days so the report always generates
+        // instead of silently showing nothing.
+        $from   = $request->get('from') ?: now()->subDays(30)->toDateString();
+        $to     = $request->get('to') ?: now()->toDateString();
         $cageId = $request->get('cage', 'all');
         $reason = $request->get('reason', 'all');
 
         $allCages = Cage::orderBy('cage_code')->get();
-        $rows    = collect();
-        $summary = null;
         // Item #84: results land on a preview table first; the printable
         // letterhead document is an explicit second step (?full=1).
         $full    = $request->boolean('full');
 
-        if ($from && $to) {
-            $rows    = $this->buildReport($type, $from, $to, $cageId, $reason, $allCages);
-            $summary = $this->buildSummary($type, $from, $to, $cageId, $reason, $allCages);
-        }
+        $rows    = $this->buildReport($type, $from, $to, $cageId, $reason, $allCages);
+        $summary = $this->buildSummary($type, $from, $to, $cageId, $reason, $allCages);
 
         return view('reports', compact('type', 'from', 'to', 'cageId', 'reason', 'allCages', 'rows', 'summary', 'full'));
     }
@@ -220,8 +220,8 @@ class ReportController extends Controller
     public function exportCsv(Request $request)
     {
         $type   = $request->get('type', 'production');
-        $from   = $request->get('from');
-        $to     = $request->get('to');
+        $from   = $request->get('from') ?: now()->subDays(30)->toDateString();
+        $to     = $request->get('to') ?: now()->toDateString();
         $cageId = $request->get('cage', 'all');
         $reason = $request->get('reason', 'all');
 

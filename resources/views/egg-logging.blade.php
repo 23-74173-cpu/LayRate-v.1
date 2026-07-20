@@ -156,7 +156,9 @@
 
                 {{-- Active form --}}
                 <div id="slotForm" class="hidden">
-                    <form method="POST" action="{{ route('eggs.logging.store') }}" id="eggForm" data-turbo="false" onsubmit="loadingButton(this.querySelector('button[type=submit]'))">
+                    <form method="POST" action="{{ route('eggs.logging.store') }}" id="eggForm" data-turbo="false"
+                          data-confirm="Save this egg count?" data-confirm-action="Save"
+                          onsubmit="loadingButton(this.querySelector('button[type=submit]'))">
                         @csrf
 
                         {{-- Selected slot info bar --}}

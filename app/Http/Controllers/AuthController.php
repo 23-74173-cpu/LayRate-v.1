@@ -23,6 +23,13 @@ class AuthController extends Controller
         ]);
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
+            if (Auth::user()->is_active === false) {
+                Auth::logout();
+                return back()
+                    ->withInput($request->only('email'))
+                    ->withErrors(['email' => 'This account has been deactivated.']);
+            }
+
             $request->session()->regenerate();
             return redirect()->intended(route('dashboard'));
         }

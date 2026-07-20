@@ -478,7 +478,9 @@
             var farmBatchSelect = document.querySelector('#farmEntryModal select[name="feed_batch_id"]');
 
             var cages = @json($cages->map(fn($c) => ['id' => $c->id, 'code' => $c->cage_code]));
-            var batches = @json($batches->map(fn($b) => ['id' => $b->id, 'code' => $b->batch_code]));
+            // remaining_kg is null for batches with no total_quantity_kg set (unlimited/untracked) —
+            // the exceeds-check below treats null as "no limit to check against".
+            var batches = @json($batches->map(fn($b) => ['id' => $b->id, 'code' => $b->batch_code, 'remaining' => $b->remaining_kg]));
 
             if (cageSelect && cageSelect.options.length <= 1) {
                 cages.forEach(function(c) {
@@ -494,6 +496,7 @@
                     var opt = document.createElement('option');
                     opt.value = b.id;
                     opt.textContent = b.code;
+                    opt.dataset.remaining = b.remaining === null ? '' : b.remaining;
                     batchSelect.appendChild(opt);
                 });
             }
@@ -503,9 +506,49 @@
                     var opt = document.createElement('option');
                     opt.value = b.id;
                     opt.textContent = b.code;
+                    opt.dataset.remaining = b.remaining === null ? '' : b.remaining;
                     farmBatchSelect.appendChild(opt);
                 });
             }
+
+            // Live "exceeds remaining stock" check, mirroring FeedController's
+            // server-side validation, but visible before the user submits.
+            function wireExceedsCheck(selectEl, kgInputEl, warningEl, saveBtnEl) {
+                if (!selectEl || !kgInputEl || !warningEl || !saveBtnEl) return;
+
+                function check() {
+                    const opt = selectEl.options[selectEl.selectedIndex];
+                    const remaining = opt && opt.dataset.remaining !== '' ? parseFloat(opt.dataset.remaining) : null;
+                    const entered = parseFloat(kgInputEl.value);
+
+                    if (remaining !== null && !isNaN(entered) && entered > remaining) {
+                        warningEl.textContent = `Only ${remaining.toFixed(1)} kg remaining in this batch — cannot log ${entered} kg.`;
+                        warningEl.classList.remove('hidden');
+                        saveBtnEl.disabled = true;
+                        saveBtnEl.classList.add('opacity-50', 'cursor-not-allowed');
+                    } else {
+                        warningEl.classList.add('hidden');
+                        saveBtnEl.disabled = false;
+                        saveBtnEl.classList.remove('opacity-50', 'cursor-not-allowed');
+                    }
+                }
+
+                selectEl.addEventListener('change', check);
+                kgInputEl.addEventListener('input', check);
+            }
+
+            wireExceedsCheck(
+                batchSelect,
+                document.getElementById('consumptionKgInput'),
+                document.getElementById('consumptionExceedsWarning'),
+                document.getElementById('consumptionSaveBtn')
+            );
+            wireExceedsCheck(
+                farmBatchSelect,
+                document.getElementById('farmKgInput'),
+                document.getElementById('farmExceedsWarning'),
+                document.getElementById('farmSaveBtn')
+            );
         })();
     </script>
 

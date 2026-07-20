@@ -90,7 +90,7 @@
         {{-- ── Step 2: Choose Cage ── --}}
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
             <label class="block text-xs font-semibold text-[#1D4E8F] mb-2">Step 2: Choose Cage</label>
-            <select name="cage_id" id="cageSelect" required
+            <select name="cage_id" id="cageSelect" required data-slots-url-base="{{ url('cages') }}"
                     class="w-full max-w-md border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]"
                     onchange="loadCageSlots()">
                 <option value="">Select cage...</option>
@@ -283,7 +283,10 @@
 
         slotsLoadFailed = false;
         const cageId = select.value;
-        fetch(`/cages/${cageId}/slots-json`, {
+        // Absolute "/cages/..." breaks under a subfolder deployment (e.g.
+        // XAMPP's /LayRate/public) — build from the select's own base URL.
+        const slotsUrlBase = select.dataset.slotsUrlBase || '/cages';
+        fetch(`${slotsUrlBase}/${cageId}/slots-json`, {
             headers: { 'Accept': 'application/json' },
             credentials: 'same-origin',
         })
@@ -390,10 +393,11 @@
 
     // ── Auto-distribute summary ───────────────────────────
     function updateAutoSummary() {
+        // Every branch below fully replaces #autoSummary's innerHTML, so
+        // #autoHenCount (only present in the static placeholder markup) gets
+        // destroyed on the very first call and never exists again — do not
+        // guard on it or the function permanently no-ops after first render.
         const henCount = document.querySelectorAll('.hen-checkbox:checked').length;
-        const autoHenCount = document.getElementById('autoHenCount');
-        if (!autoHenCount) return;
-        autoHenCount.textContent = henCount;
 
         const select = document.getElementById('cageSelect');
         if (!select || !select.value) {
@@ -425,8 +429,10 @@
         const available = cageSlots.filter(s => (s.current_occupancy || 0) < maxPerSlot);
 
         if (available.length === 0) {
+            window.autoModeFits = henCount === 0;
             autoSummary.innerHTML =
                 '<span class="text-red-500">No available slots in this cage.</span>';
+            validateForm();
             return;
         }
 
@@ -434,9 +440,11 @@
         available.forEach(s => { totalCapacity += Math.min(perSlot, maxPerSlot - (s.current_occupancy || 0)); });
 
         const fits = totalCapacity >= henCount;
+        window.autoModeFits = fits;
         autoSummary.innerHTML =
             'Will distribute <strong>' + henCount + '</strong> hens across <strong>' + available.length + '</strong> available slot(s)' +
             (fits ? '.' : '. <span class="text-red-500">Only ' + totalCapacity + ' space(s) available — select fewer hens or reduce per-slot count.</span>');
+        validateForm();
     }
     window.updateAutoSummary = updateAutoSummary;
 
@@ -473,8 +481,14 @@
                 valid = false;
                 if (!errorMsg) errorMsg = 'Select at least one slot.';
             }
-        } else if (summarySlots) {
-            summarySlots.textContent = 'auto';
+        } else {
+            if (summarySlots) summarySlots.textContent = 'auto';
+            // window.autoModeFits is set by updateAutoSummary() — false when
+            // the selected hens exceed the selected cage's available capacity.
+            if (henCount > 0 && window.autoModeFits === false) {
+                valid = false;
+                if (!errorMsg) errorMsg = 'Selected hens exceed available slot capacity in this cage.';
+            }
         }
 
         submitBtn.disabled = !valid;

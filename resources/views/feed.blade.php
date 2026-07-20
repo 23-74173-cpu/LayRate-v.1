@@ -29,7 +29,9 @@
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
         </div>
-        <form method="POST" action="{{ route('feed.batch.store') }}" onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Adding\u2026')">
+        <form method="POST" action="{{ route('feed.batch.store') }}"
+              data-confirm="Add this feed batch?" data-confirm-action="Add Batch"
+              onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Adding\u2026')">
             @csrf
             <p class="text-xs text-[#6B7280] mb-4">Batch code is auto-generated (e.g. F-2026-001).</p>
 
@@ -172,8 +174,9 @@
             </div>
 
             <label class="block text-sm text-[#333333] mb-1.5">Consumed (kg) <span class="text-[#9B1C24]">*</span></label>
-            <input name="feed_consumed_kg" type="number" step="0.01" min="0" required
-                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-5 focus:outline-none focus:border-[#002D5E]">
+            <input name="feed_consumed_kg" type="number" step="0.01" min="0" required id="consumptionKgInput"
+                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-1 focus:outline-none focus:border-[#002D5E]">
+            <p id="consumptionExceedsWarning" class="hidden text-xs text-[#9B1C24] mb-4"></p>
 
             <div class="flex gap-3 mt-5">
                 <button type="button" onclick="closeConsumptionModal()"
@@ -181,7 +184,7 @@
                         style="color: #1f1f1f; border: 1px solid #e6e6e6;"
                         onmouseover="this.style.backgroundColor='#f6f5f4'"
                         onmouseout="this.style.backgroundColor='transparent'">Cancel</button>
-                <x-button type="submit" class="flex-1 py-2.5">Save</x-button>
+                <x-button type="submit" class="flex-1 py-2.5" id="consumptionSaveBtn">Save</x-button>
             </div>
         </form>
     </div>
@@ -221,8 +224,9 @@
             </div>
 
             <label class="block text-sm text-[#333333] mb-1.5">Total Fed (kg) <span class="text-[#9B1C24]">*</span></label>
-            <input name="total_kg" type="number" step="0.01" min="0" required
-                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+            <input name="total_kg" type="number" step="0.01" min="0" required id="farmKgInput"
+                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-1 focus:outline-none focus:border-[#002D5E]">
+            <p id="farmExceedsWarning" class="hidden text-xs text-[#9B1C24] mb-4"></p>
 
             <label class="block text-sm text-[#333333] mb-1.5">Unit Cost (per kg)</label>
             <input name="unit_cost" type="number" step="0.01" min="0"
@@ -238,7 +242,7 @@
                         style="color: #1f1f1f; border: 1px solid #e6e6e6;"
                         onmouseover="this.style.backgroundColor='#f6f5f4'"
                         onmouseout="this.style.backgroundColor='transparent'">Cancel</button>
-                <x-button type="submit" class="flex-1 py-2.5">Distribute</x-button>
+                <x-button type="submit" class="flex-1 py-2.5" id="farmSaveBtn">Distribute</x-button>
             </div>
         </form>
     </div>

@@ -17,7 +17,11 @@ class MortalityController extends Controller
 {
     public function index()
     {
-        $cages = Cage::orderBy('cage_code')->get();
+        // active_hens_count feeds the client-side "count exceeds active hens
+        // in this cage" check on the mortality form (red text + disabled
+        // submit) — mirrors the server-side guard in store()/update() below.
+        $cages = Cage::withCount(['hens as active_hens_count' => fn($q) => $q->where('is_active', 1)])
+            ->orderBy('cage_code')->get();
         $logs  = MortalityLog::with(['cage', 'hens'])
             ->orderByDesc('log_date')
             ->orderByDesc('created_at')

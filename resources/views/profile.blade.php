@@ -10,7 +10,7 @@
     <div id="profile-tabs-nav">
         <x-underline-tabs :tabs="[
             'profile'  => ['label' => 'Profile',         'icon' => 'user',     'onclick' => 'switchProfileTab(\'profile\')'],
-            'settings' => ['label' => 'Account Settings', 'icon' => 'settings', 'onclick' => 'switchProfileTab(\'settings\')'],
+            'settings' => ['label' => 'Settings', 'icon' => 'settings', 'onclick' => 'switchProfileTab(\'settings\')'],
         ]" active="{{ $tab }}" />
     </div>
 
@@ -109,7 +109,7 @@
                     </div>
                     <div class="flex items-center justify-between">
                         <span class="text-sm text-[#333333]">Password</span>
-                        <span class="text-xs text-[#6B7280]">Change anytime in Account Settings</span>
+                        <span class="text-xs text-[#6B7280]">Change anytime in Settings</span>
                     </div>
                 </div>
             </div>
@@ -216,6 +216,53 @@
                     <button type="submit" class="bg-[#002D5E] text-white px-5 py-2.5 rounded-lg text-sm hover:bg-[#001F42]">Save PIN</button>
                 </form>
             </div>
+
+            {{-- Admin: Team management --}}
+            @if($team)
+            <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+                <div class="flex items-center justify-between mb-1">
+                    <h2 class="text-base font-medium text-[#333333]">Team</h2>
+                    <button type="button" onclick="openAddUserModal()"
+                            class="flex items-center gap-1.5 bg-[#002D5E] text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-[#001F42] transition-colors">
+                        <i data-lucide="user-plus" class="w-3.5 h-3.5"></i> Add User
+                    </button>
+                </div>
+                <p class="text-xs text-[#6B7280] mb-4">Manage who has access to LayRate.</p>
+                <div class="space-y-2">
+                    @foreach($team as $member)
+                    <div class="flex items-center justify-between border border-[#D9D9D9] rounded-lg px-4 py-2.5 {{ !$member->is_active ? 'opacity-50' : '' }}">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm text-[#333333] truncate">{{ $member->name }}</span>
+                                @if($member->id === auth()->id())
+                                <span class="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 shrink-0">You</span>
+                                @endif
+                                @if(!$member->is_active)
+                                <span class="text-xs px-1.5 py-0.5 rounded bg-gray-200 text-gray-600 shrink-0">Deactivated</span>
+                                @endif
+                            </div>
+                            <div class="text-xs text-[#6B7280] truncate">{{ $member->email }} · <span class="capitalize">{{ $member->role }}</span></div>
+                        </div>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button type="button" onclick='openEditUserModal(@json($member))' class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Edit {{ $member->name }}">
+                                <i data-lucide="pencil" class="w-4 h-4 text-[#6B7280]"></i>
+                            </button>
+                            @if($member->id !== auth()->id())
+                            <form method="POST" action="{{ route('settings.users.toggle-active', $member->id) }}"
+                                  data-confirm="{{ $member->is_active ? 'Deactivate '.$member->name.'? They will be signed out and unable to log in until reactivated.' : 'Reactivate '.$member->name.'?' }}"
+                                  data-confirm-action="{{ $member->is_active ? 'Deactivate' : 'Reactivate' }}">
+                                @csrf
+                                <button type="submit" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="{{ $member->is_active ? 'Deactivate' : 'Reactivate' }} {{ $member->name }}">
+                                    <i data-lucide="{{ $member->is_active ? 'user-x' : 'user-check' }}" class="w-4 h-4 text-[#6B7280]"></i>
+                                </button>
+                            </form>
+                            @endif
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+            @endif
 
             {{-- Admin: staff PIN status --}}
             @if($staff)
@@ -334,6 +381,101 @@
 
     </div>
 </div>
+
+@if($team)
+{{-- Add User Modal --}}
+<div id="addUserModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeAddUserModal()"></div>
+    <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+        <div class="flex items-center justify-between mb-5">
+            <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Add User</h2>
+            <button type="button" onclick="closeAddUserModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+            </button>
+        </div>
+        <form method="POST" action="{{ route('settings.users.store') }}"
+              data-loading="Creating account..." data-loading-title="Adding User">
+            @csrf
+            <label class="block text-sm text-[#333333] mb-1.5">Name</label>
+            <input name="name" required class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+
+            <label class="block text-sm text-[#333333] mb-1.5">Email</label>
+            <input name="email" type="email" required class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+
+            <label class="block text-sm text-[#333333] mb-1.5">Temporary Password</label>
+            <input name="password" type="password" required minlength="8" class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-1 focus:outline-none focus:border-[#002D5E]">
+            <p class="text-xs text-[#6B7280] mb-4">Minimum 8 characters. Share this with the new user — they can change it in their own Settings.</p>
+
+            <label class="block text-sm text-[#333333] mb-1.5">Role</label>
+            <select name="role" required class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-5 bg-white focus:outline-none focus:border-[#002D5E]">
+                <option value="operator">Operator</option>
+                <option value="admin">Admin</option>
+            </select>
+
+            <div class="flex gap-3">
+                <button type="button" onclick="closeAddUserModal()" class="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors" style="color: #1f1f1f; border: 1px solid #e6e6e6;">Cancel</button>
+                <x-button type="submit" class="flex-1 py-2.5">Add User</x-button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- Edit User Modal --}}
+<div id="editUserModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEditUserModal()"></div>
+    <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+        <div class="flex items-center justify-between mb-5">
+            <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Edit User</h2>
+            <button type="button" onclick="closeEditUserModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+            </button>
+        </div>
+        <form id="editUserForm" method="POST" data-loading="Saving changes..." data-loading-title="Saving">
+            @csrf @method('PUT')
+            <label class="block text-sm text-[#333333] mb-1.5">Name</label>
+            <input id="editUserName" name="name" required class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+
+            <label class="block text-sm text-[#333333] mb-1.5">Email</label>
+            <input id="editUserEmail" name="email" type="email" required class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+
+            <label class="block text-sm text-[#333333] mb-1.5">Role</label>
+            <select id="editUserRole" name="role" required class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-5 bg-white focus:outline-none focus:border-[#002D5E]">
+                <option value="operator">Operator</option>
+                <option value="admin">Admin</option>
+            </select>
+
+            <div class="flex gap-3">
+                <button type="button" onclick="closeEditUserModal()" class="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors" style="color: #1f1f1f; border: 1px solid #e6e6e6;">Cancel</button>
+                <x-button type="submit" class="flex-1 py-2.5">Save Changes</x-button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openAddUserModal() {
+        const m = document.getElementById('addUserModal');
+        m.classList.remove('hidden'); m.classList.add('flex');
+    }
+    function closeAddUserModal() {
+        const m = document.getElementById('addUserModal');
+        m.classList.add('hidden'); m.classList.remove('flex');
+    }
+    function openEditUserModal(user) {
+        const form = document.getElementById('editUserForm');
+        form.action = '{{ url('settings/users') }}/' + user.id;
+        document.getElementById('editUserName').value = user.name;
+        document.getElementById('editUserEmail').value = user.email;
+        document.getElementById('editUserRole').value = user.role;
+        const m = document.getElementById('editUserModal');
+        m.classList.remove('hidden'); m.classList.add('flex');
+    }
+    function closeEditUserModal() {
+        const m = document.getElementById('editUserModal');
+        m.classList.add('hidden'); m.classList.remove('flex');
+    }
+</script>
+@endif
 
 <script>
     // Hide the layout's flash-message banners on this page — we use toasts instead.

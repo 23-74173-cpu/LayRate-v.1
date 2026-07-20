@@ -282,7 +282,9 @@
                 </button>
             </div>
 
-            <form method="POST" action="{{ route('cages.store') }}" id="addCageForm" data-turbo="false" onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Adding\u2026')">
+            <form method="POST" action="{{ route('cages.store') }}" id="addCageForm" data-turbo="false"
+                  data-confirm="Add this cage?" data-confirm-action="Add Cage"
+                  onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Adding\u2026')">
                 @csrf
                 <div class="space-y-4">
                     <div class="rounded-lg p-3" style="background-color: #f0f7ff; border: 1px solid #b3d4fc;">

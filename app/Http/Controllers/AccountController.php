@@ -28,6 +28,10 @@ class AccountController extends Controller
                 ])
             : null;
 
+        $team = auth()->user()->isAdmin()
+            ? User::orderBy('name')->get(['id', 'name', 'email', 'role', 'is_active'])
+            : null;
+
         $tab = in_array($request->get('tab'), ['profile', 'settings'], true)
             ? $request->get('tab')
             : 'profile';
@@ -92,7 +96,67 @@ class AccountController extends Controller
             ],
         ] : null;
 
-        return view('profile', compact('staff', 'tab', 'activity', 'sessions', 'farmSettings'));
+        return view('profile', compact('staff', 'tab', 'team', 'activity', 'sessions', 'farmSettings'));
+    }
+
+    public function storeUser(Request $request)
+    {
+        $data = $request->validate([
+            'name'     => 'required|string|max:255',
+            'email'    => 'required|email|unique:users,email',
+            'password' => ['required', Password::min(8)],
+            'role'     => 'required|in:admin,operator',
+        ]);
+
+        User::create([
+            'name'     => $data['name'],
+            'email'    => $data['email'],
+            'password' => Hash::make($data['password']),
+            'role'     => $data['role'],
+        ]);
+
+        return redirect()->route('profile', ['tab' => 'settings'])->with('success', "User {$data['name']} created.");
+    }
+
+    public function updateUser(Request $request, User $targetUser)
+    {
+        $data = $request->validate([
+            'name'  => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $targetUser->id,
+            'role'  => 'required|in:admin,operator',
+        ]);
+
+        if ($targetUser->id === auth()->id() && $data['role'] !== 'admin') {
+            return back()->withErrors(['role' => 'You cannot change your own role.']);
+        }
+
+        $targetUser->update($data);
+
+        return redirect()->route('profile', ['tab' => 'settings'])->with('success', "User {$targetUser->name} updated.");
+    }
+
+    public function toggleUserActive(Request $request, User $targetUser)
+    {
+        if ($targetUser->id === auth()->id()) {
+            return back()->withErrors(['user' => 'You cannot deactivate your own account.']);
+        }
+
+        if ($targetUser->is_active && $targetUser->role === 'admin') {
+            $otherActiveAdmins = User::where('role', 'admin')
+                ->where('is_active', true)
+                ->where('id', '!=', $targetUser->id)
+                ->exists();
+
+            if (! $otherActiveAdmins) {
+                return back()->withErrors(['user' => 'Cannot deactivate the only active admin account.']);
+            }
+        }
+
+        $targetUser->update(['is_active' => ! $targetUser->is_active]);
+
+        $verb = $targetUser->is_active ? 'reactivated' : 'deactivated';
+
+        return redirect()->route('profile', ['tab' => 'settings'])->with('success', "User {$targetUser->name} {$verb}.");
     }
 
     private function describeDevice(string $userAgent): string

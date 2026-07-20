@@ -109,7 +109,9 @@
             </button>
         </div>
 
-        <form method="POST" action="{{ route('eggs.preorders.store') }}" onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Adding\u2026')">
+        <form method="POST" action="{{ route('eggs.preorders.store') }}"
+              data-confirm="Create this pre-order?" data-confirm-action="Create"
+              onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Adding\u2026')">
             @csrf
             <div class="space-y-4">
                 <div>
