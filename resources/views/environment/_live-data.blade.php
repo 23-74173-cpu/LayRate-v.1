@@ -148,7 +148,7 @@
 
     <script>
     (function() {
-        function initEnvCharts() {
+        window.initEnvCharts = function initEnvCharts() {
             const cageColors  = ['#2D7D46','#1D4E8F','#C2703E','#6B4C8A','#6B7280'];
             const trendData   = @json($trendData);
             const cagesMap    = @json($cages->pluck('cage_code','id'));
