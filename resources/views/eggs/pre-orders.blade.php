@@ -23,10 +23,11 @@
             $isDeficit = $data['available'] < 0;
         @endphp
         <div class="rounded-lg border p-4 {{ $isDeficit ? 'border-red-300 bg-red-50' : 'bg-white border-[#D9D9D9]' }}">
-            <div class="text-xs tracking-wider mb-2" style="color: {{ $color }}">{{ $label }}</div>
-            <div class="text-lg font-semibold" style="color: {{ $isDeficit ? '#9b1c24' : '#333333' }}">
-                {{ number_format($data['available']) }} available
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase mb-1" style="color: {{ $color }}">{{ $label }}</div>
+            <div class="text-2xl font-bold leading-none tracking-[-0.5px]" style="color: {{ $isDeficit ? '#9b1c24' : '#333333' }}">
+                {{ number_format($data['available']) }}
             </div>
+            <div class="text-xs mt-1" style="color: #6B7280">available</div>
             <div class="text-xs mt-1" style="color: #6B7280">
                 {{ number_format($data['current_stock']) }} stock · {{ number_format($data['forecasted']) }} forecast · {{ number_format($data['committed']) }} committed
             </div>
@@ -85,7 +86,7 @@
 
     {{-- ── Header ── --}}
     <div class="flex items-center justify-between">
-        <button onclick="document.getElementById('addOrderModal').classList.remove('hidden')"
+        <button onclick="document.getElementById('addOrderModal').style.display = 'flex'"
                 class="flex items-center gap-2 bg-[#002D5E] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#001F42] transition-colors">
             <i data-lucide="plus" class="w-4 h-4"></i> Add Pre-Order
         </button>
@@ -99,7 +100,7 @@
 </div>
 
 {{-- Add Pre-Order Modal --}}
-<div id="addOrderModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+<div id="addOrderModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" style="display: none;">
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeAddOrderModal()"></div>
     <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
@@ -181,7 +182,7 @@
 </div>
 
 {{-- Edit Status Modal --}}
-<div id="editStatusModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+<div id="editStatusModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" style="display: none;">
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEditStatusModal()"></div>
     <div class="relative w-full max-w-sm rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
@@ -230,7 +231,7 @@
 @push('scripts')
 <script>
 function closeAddOrderModal() {
-    document.getElementById('addOrderModal').classList.add('hidden');
+    document.getElementById('addOrderModal').style.display = 'none';
 }
 
 function updateOrderTrays() {
@@ -244,11 +245,11 @@ function openEditStatus(id, currentStatus, fulfillmentDate) {
     document.getElementById('editStatusSelect').value = currentStatus;
     document.getElementById('editFulfillmentDate').value = fulfillmentDate || '';
     toggleEditFulfillmentDate();
-    document.getElementById('editStatusModal').classList.remove('hidden');
+    document.getElementById('editStatusModal').style.display = 'flex';
 }
 
 function closeEditStatusModal() {
-    document.getElementById('editStatusModal').classList.add('hidden');
+    document.getElementById('editStatusModal').style.display = 'none';
 }
 
 function toggleEditFulfillmentDate() {

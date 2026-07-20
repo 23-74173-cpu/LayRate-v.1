@@ -6,14 +6,60 @@
 
     <x-page-header title="Forecast" subtitle="Project egg production based on historical egg count trends" />
 
+    @php
+        $calendarMonth = $calendarDate->copy();
+        $daysInMonth = $calendarMonth->daysInMonth;
+        $monthStart = $calendarMonth->copy()->startOfMonth();
+        $startOffset = ($monthStart->dayOfWeek + 6) % 7;
+        $totalCells = $startOffset + $daysInMonth;
+        $endOffset = (7 - ($totalCells % 7)) % 7;
+        $weeksInMonth = ($totalCells + $endOffset) / 7;
+        $calendarToday = now();
+        $forecastMap = collect($forecasts ?? [])->keyBy(fn($f) => $f->target_date->format('Y-m-d'));
+    @endphp
+
+    {{-- ── Forecast KPI Cards ── --}}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Weeks in month</div>
+            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $weeksInMonth }}</div>
+        </div>
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Days in month</div>
+            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $daysInMonth }}</div>
+        </div>
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Forecast days</div>
+            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ count($forecastMap) }}</div>
+        </div>
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Current week</div>
+            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $calendarToday->weekOfMonth }}</div>
+        </div>
+    </div>
+
+    @php
+        $scopeLabel = match($scope) { 'farm' => 'Whole Farm', 'breed' => $breed ?? '', default => $cageCode ?? '' };
+        $forecastCount = $forecastDataDays ?? 0;
+        $pct = min(100, ($forecastCount / 90) * 100);
+    @endphp
     @if(!($hasEnoughData ?? true))
     <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
         <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600 shrink-0 mt-0.5"></i>
-        <div>
+        <div class="flex-1">
             <div class="text-sm font-medium text-amber-800">Insufficient forecast data</div>
-            <div class="text-sm text-amber-700 mt-1">
-                The forecast input table must contain at least 90 days of production records before generating a forecast.
-                Please download the forecast input sheet, fill it out, and import the data.
+            <div class="text-sm text-amber-700 mt-1">Need at least 90 days of records to generate a forecast.</div>
+            <div class="mt-3">
+                <div class="flex items-center justify-between text-xs text-amber-700 mb-1">
+                    <span>{{ $scopeLabel }}: {{ $forecastCount }}/90 days collected</span>
+                    <span>{{ number_format($pct, 0) }}%</span>
+                </div>
+                <div class="w-full bg-amber-200 rounded-full h-2 overflow-hidden">
+                    <div class="bg-amber-500 h-2 rounded-full transition-all" style="width: {{ $pct }}%"></div>
+                </div>
+            </div>
+            <div class="text-xs text-amber-600 mt-2">
+                Download the forecast input sheet, fill it with historical data, and import it.
             </div>
         </div>
     </div>
@@ -26,7 +72,7 @@
     @include('forecast._calendar')
 
 {{-- Download Template Modal --}}
-<div id="downloadTemplateModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+<div id="downloadTemplateModal" class="fixed inset-0 min-h-screen min-h-[100dvh] bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
     <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-auto overflow-hidden">
         <div class="flex items-center justify-between px-5 py-4 border-b border-[#F0F0F0]">
             <div class="flex items-center gap-2">
@@ -71,7 +117,7 @@
 </div>
 
 {{-- Forecast generation loading overlay --}}
-<div id="forecastLoadingOverlay" class="fixed inset-0 min-h-screen min-h-[100dvh] bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+<div id="forecastLoadingOverlay" class="fixed inset-0 min-h-screen min-h-[100dvh] bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
     <div class="bg-white rounded-xl shadow-xl p-8 max-w-sm w-full mx-4 text-center">
         <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#002D5E]/10 mb-4">
             <svg class="animate-spin h-6 w-6 text-[#002D5E]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -116,7 +162,7 @@
 </div>
 
 {{-- Import Modal --}}
-<div id="importModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+<div id="importModal" class="fixed inset-0 min-h-screen min-h-[100dvh] bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
     <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-auto overflow-hidden">
         <div class="flex items-center justify-between px-5 py-4 border-b border-[#F0F0F0]">
             <div class="flex items-center gap-2">
@@ -132,6 +178,10 @@
         <div class="p-5">
             <p class="text-sm text-[#6B7280] mb-4">
                 Import a filled <strong>.xlsx</strong> forecast input sheet. At minimum the sheet must include <strong>Date</strong> and <strong>Cage_Code</strong>.
+            </p>
+            <p class="text-xs text-[#6B7280] mt-2 flex items-start gap-1.5">
+                <i data-lucide="info" class="w-3.5 h-3.5 shrink-0 mt-0.5"></i>
+                Re-uploading will update existing records for matching dates/cages, not duplicate them.
             </p>
 
             {{-- Inline import feedback messages --}}
@@ -193,27 +243,26 @@
     if (window.__layrateForecastInitialized) return;
     window.__layrateForecastInitialized = true;
 
-    let currentFabMenu = null;
-    let currentFabIcon = null;
-
     function toggleFab() {
-        if (!currentFabMenu) return;
-        const isOpen = !currentFabMenu.classList.contains('invisible');
+        const fabMenu = document.getElementById('fabMenu');
+        const fabIcon = document.getElementById('fabIcon');
         const fabToggle = document.getElementById('fabToggle');
+        if (!fabMenu) return;
+        const isOpen = !fabMenu.classList.contains('invisible');
 
         if (isOpen) {
-            currentFabMenu.classList.add('invisible', 'opacity-0', 'translate-y-4');
-            currentFabMenu.classList.remove('opacity-100', 'translate-y-0');
-            if (currentFabIcon) currentFabIcon.style.transform = 'rotate(0deg)';
+            fabMenu.classList.add('invisible', 'opacity-0', 'translate-y-4');
+            fabMenu.classList.remove('opacity-100', 'translate-y-0');
+            if (fabIcon) fabIcon.style.transform = 'rotate(0deg)';
 
             if (fabToggle) {
                 fabToggle.setAttribute('aria-expanded', 'false');
                 fabToggle.setAttribute('aria-label', 'Open menu');
             }
         } else {
-            currentFabMenu.classList.remove('invisible', 'opacity-0', 'translate-y-4');
-            currentFabMenu.classList.add('opacity-100', 'translate-y-0');
-            if (currentFabIcon) currentFabIcon.style.transform = 'rotate(45deg)';
+            fabMenu.classList.remove('invisible', 'opacity-0', 'translate-y-4');
+            fabMenu.classList.add('opacity-100', 'translate-y-0');
+            if (fabIcon) fabIcon.style.transform = 'rotate(45deg)';
 
             if (fabToggle) {
                 fabToggle.setAttribute('aria-expanded', 'true');
@@ -223,7 +272,8 @@
     }
 
     document.addEventListener('click', function() {
-        if (currentFabMenu && !currentFabMenu.classList.contains('invisible')) {
+        const m = document.getElementById('fabMenu');
+        if (m && !m.classList.contains('invisible')) {
             toggleFab();
         }
     });
@@ -302,7 +352,7 @@
             const horizon = horizonInput ? parseInt(horizonInput.value, 10) : 7;
             const expectedDuration = resolveExpectedDuration(scope, horizon);
 
-            overlay.classList.remove('hidden');
+            overlay.style.display = 'flex';
             btn.disabled = true;
             if (btnText) {
                 btnText.textContent = 'Generating...';
@@ -526,29 +576,26 @@
         const fabDownloadBtn = document.getElementById('fabDownloadBtn');
         const closeDownloadTemplateModalBtn = document.getElementById('closeDownloadTemplateModal');
 
-        currentFabMenu = fabMenu;
-        currentFabIcon = fabIcon;
-
         function openImportModal() {
             if (importModal) {
-                importModal.classList.remove('hidden');
+                importModal.style.display = 'flex';
                 if (window.lucide) lucide.createIcons();
             }
         }
 
         function closeImportModalFn() {
-            if (importModal) importModal.classList.add('hidden');
+            if (importModal) importModal.style.display = 'none';
         }
 
         function openDownloadTemplateModal() {
             if (downloadTemplateModal) {
-                downloadTemplateModal.classList.remove('hidden');
+                downloadTemplateModal.style.display = 'flex';
                 if (window.lucide) lucide.createIcons();
             }
         }
 
         function closeDownloadTemplateModalFn() {
-            if (downloadTemplateModal) downloadTemplateModal.classList.add('hidden');
+            if (downloadTemplateModal) downloadTemplateModal.style.display = 'none';
         }
 
         if (fabToggle && fabMenu) {

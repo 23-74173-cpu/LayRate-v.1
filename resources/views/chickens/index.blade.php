@@ -135,13 +135,13 @@
         {{-- Today's Summary Cards --}}
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
             <div class="bg-white rounded-lg border border-[#D9D9D9] p-4 text-center">
-                <div class="text-2xl font-bold text-[#333]">{{ $todayTotal }}</div>
+                <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333]">{{ $todayTotal }}</div>
                 <div class="text-xs text-[#6B7280] mt-1">Deaths Today</div>
             </div>
             @foreach($cages as $c)
             @php $count = $todayByCage->get($c->cage_code, 0); @endphp
             <div class="bg-white rounded-lg border border-[#D9D9D9] p-4 text-center {{ $count > 0 ? 'bg-red-50 border-red-200' : '' }}">
-                <div class="text-2xl font-bold {{ $count > 0 ? 'text-red-600' : 'text-[#333]' }}">{{ $count }}</div>
+                <div class="text-2xl font-bold leading-none tracking-[-0.5px] {{ $count > 0 ? 'text-red-600' : 'text-[#333]' }}">{{ $count }}</div>
                 <div class="text-xs text-[#6B7280] mt-1">{{ $c->cage_code }}</div>
             </div>
             @endforeach

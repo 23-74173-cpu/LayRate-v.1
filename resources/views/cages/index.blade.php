@@ -363,6 +363,38 @@
         </div>
     </div>
 
+    {{-- ── No Unplaced Chickens Modal ────────────────────── --}}
+    <div id="noChickensModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" style="display: none;">
+        <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeNoChickensModal()"></div>
+        <div class="relative w-full max-w-sm rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+            <div class="flex items-center justify-between mb-5">
+                <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">No Unplaced Chickens</h2>
+                <button onclick="closeNoChickensModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                    <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+                </button>
+            </div>
+            <p class="text-sm" style="color: #6B7280;">
+                All registered chickens are already assigned to cages. Register new chickens before using bulk placement.
+            </p>
+            <div class="flex gap-3 mt-5">
+                <button type="button" onclick="closeNoChickensModal()"
+                        class="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors"
+                        style="color: #1f1f1f; border: 1px solid #e6e6e6;"
+                        onmouseover="this.style.backgroundColor='#f6f5f4'"
+                        onmouseout="this.style.backgroundColor='transparent'">
+                    Maybe Later
+                </button>
+                <button type="button" onclick="closeNoChickensModal(); openRegisterModal()"
+                        class="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors"
+                        style="color: #ffffff; background-color: #002D5E;"
+                        onmouseover="this.style.backgroundColor='#0a3d7a'"
+                        onmouseout="this.style.backgroundColor='#002D5E'">
+                    Register Chickens
+                </button>
+            </div>
+        </div>
+    </div>
+
     {{-- ── Edit Cage Modal — with per-slot sensor config ── --}}
     <div id="editCageModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" style="display: none;">
         <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEditModal()"></div>
@@ -468,7 +500,7 @@
     </div>
 
     {{-- ── Delete Cage Modal (items 19 + 20) ── --}}
-    <div id="deleteCageModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div id="deleteCageModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="display: none;" role="dialog" aria-modal="true">
         <div class="absolute inset-0" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeDeleteModal()"></div>
         <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
             <div class="mb-4 flex items-center justify-center w-10 h-10 rounded-full" style="background-color: #fbe4e6;">
@@ -649,6 +681,16 @@ function openAddModal() {
 
 function closeAddModal() {
     document.getElementById('addCageModal').style.display = 'none';
+}
+
+// ── No Chickens Modal ───────────────────────────────
+function openNoChickensModal() {
+    document.getElementById('noChickensModal').style.display = 'flex';
+    lucide.createIcons();
+}
+
+function closeNoChickensModal() {
+    document.getElementById('noChickensModal').style.display = 'none';
 }
 
 function updateAddPreview() {
@@ -1322,7 +1364,7 @@ function openDeleteModal(id, code) {
     document.querySelector('input[name="delHensAction"][value="move"]').checked = true;
     document.getElementById('delReturnSensors').checked = true;
     document.querySelectorAll('#deleteCageModal .del-log-count').forEach(function(el) { el.textContent = '…'; });
-    document.getElementById('deleteCageModal').classList.remove('hidden');
+    document.getElementById('deleteCageModal').style.display = 'flex';
     lucide.createIcons();
 
     var link = document.getElementById('delPermanentLink');
@@ -1347,7 +1389,7 @@ function openDeleteModal(id, code) {
 
 function closeDeleteModal() {
     deleteTargetId = null;
-    document.getElementById('deleteCageModal').classList.add('hidden');
+    document.getElementById('deleteCageModal').style.display = 'none';
 }
 
 function confirmCageDelete() {
@@ -1585,9 +1627,20 @@ if (!window.__cagesAutoEditBound) {
 }
 @endif
 
+// ── Auto-open no-chickens modal ───────────────────────────
+@if(session('show_no_chickens_modal'))
+if (!window.__cagesNoChickensBound) {
+    window.__cagesNoChickensBound = true;
+    document.addEventListener('turbo:load', function() {
+        openNoChickensModal();
+    });
+}
+@endif
+
 </script>
 @endpush
 
-{{-- Move + Remove Modals ──────────────────────────────────── --}}
+{{-- Move + Remove + Register Modals ─────────────────────────── --}}
 @include('chickens.partials.move-modal')
 @include('chickens.partials.remove-modal')
+@include('chickens.partials.register-modal')

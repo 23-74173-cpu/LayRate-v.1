@@ -11,7 +11,7 @@
 
     {{-- ── Chart Panel ── --}}
     <div class="xl:col-span-2 bg-white rounded-lg border border-[#D9D9D9] p-5 mb-8">
-        <div class="text-xs tracking-wider text-[#6B7280] mb-4">HISTORICAL VS FORECAST HDEP — {{ $scopeLabel }}</div>
+        <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-4">Historical vs Forecast Hdep — {{ $scopeLabel }}</div>
         <canvas id="forecastChart" height="160"></canvas>
     </div>
 

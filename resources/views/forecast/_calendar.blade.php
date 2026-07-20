@@ -26,11 +26,11 @@
 @endphp
 
 <turbo-frame id="production-calendar">
-<div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+<div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
     {{-- Month / Year header with navigation --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
         <div>
-            <div class="text-xs tracking-wider text-[#6B7280]">PRODUCTION CALENDAR</div>
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Production Calendar</div>
             <div class="text-xl font-semibold text-[#333333]">{{ $calendarMonth->format('F Y') }}</div>
         </div>
 
@@ -215,29 +215,10 @@
         </table>
     </div>
 
-    {{-- Week summary footer --}}
-    <div class="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
-        <div class="bg-[#F9F9F7] rounded-lg p-3 text-center">
-            <div class="text-xs text-[#6B7280]">Weeks in month</div>
-            <div class="text-lg font-semibold text-[#333333]">{{ $weeksInMonth }}</div>
-        </div>
-        <div class="bg-[#F9F9F7] rounded-lg p-3 text-center">
-            <div class="text-xs text-[#6B7280]">Days in month</div>
-            <div class="text-lg font-semibold text-[#333333]">{{ $daysInMonth }}</div>
-        </div>
-        <div class="bg-[#F9F9F7] rounded-lg p-3 text-center">
-            <div class="text-xs text-[#6B7280]">Forecast days</div>
-            <div class="text-lg font-semibold text-[#333333]">{{ count($forecastMap) }}</div>
-        </div>
-        <div class="bg-[#F9F9F7] rounded-lg p-3 text-center">
-            <div class="text-xs text-[#6B7280]">Current week</div>
-            <div class="text-lg font-semibold text-[#333333]">{{ $calendarToday->weekOfMonth }}</div>
-        </div>
-    </div>
 </div>
 
 {{-- Single-day forecast modal --}}
-<div id="forecastDayModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+<div id="forecastDayModal" class="fixed inset-0 min-h-screen min-h-[100dvh] bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
     <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-auto overflow-hidden">
         <div class="flex items-center justify-between px-5 py-4 border-b border-[#F0F0F0]">
             <div class="flex items-center gap-2">
@@ -295,7 +276,7 @@
         const cancelBtn = document.getElementById('cancelForecastDayModal');
 
         function closeModal() {
-            if (modal) modal.classList.add('hidden');
+            if (modal) modal.style.display = 'none';
         }
 
         function parseLocalDate(dateString) {
@@ -312,7 +293,7 @@
             if (!modal || !dateDisplay || !startInput) return;
             startInput.value = dateString;
             dateDisplay.textContent = formatAlertDate(dateString);
-            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
             if (window.lucide) lucide.createIcons();
         };
 

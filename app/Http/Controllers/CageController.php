@@ -725,6 +725,11 @@ class CageController extends Controller
             ->orderBy('id')
             ->get();
 
+        if ($unplacedHens->isEmpty() && !$request->has('hen_ids')) {
+            return redirect()->route('cages.index')
+                ->with('show_no_chickens_modal', true);
+        }
+
         $unplacedBreeds = $unplacedHens->pluck('breed')->unique()->sort()->values();
         $unplacedBreedCounts = $unplacedHens->groupBy('breed')->map->count();
 

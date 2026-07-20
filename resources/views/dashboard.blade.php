@@ -37,13 +37,31 @@
     </div>
     @endif
 
+    {{-- ── Cage Filter Tabs ── --}}
+    <div class="flex items-center gap-0 border-b overflow-x-auto" style="border-color: #e6e6e6;">
+        <button type="button" onclick="filterDashboard('all')" class="dashboard-tab px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
+                data-tab="all"
+                style="border-bottom-color: #0075de; color: #1f1f1f;">
+            All
+            <span class="ml-1 text-xs" style="color: #a39e98;">({{ $cages->count() }})</span>
+        </button>
+        @foreach($cages as $cage)
+        <button type="button" onclick="filterDashboard('{{ $cage->cage_code }}')" class="dashboard-tab px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
+                data-tab="{{ $cage->cage_code }}"
+                style="border-bottom-color: transparent; color: #615d59;">
+            <span class="inline-block w-2 h-2 rounded-full mr-1.5" style="background-color: {{ $cage->color }};"></span>
+            {{ $cage->cage_code }}
+        </button>
+        @endforeach
+    </div>
+
     {{-- ── Metric Cards (lazy) ── --}}
     <turbo-frame id="dashboard-stats" src="{{ route('dashboard.stats') }}" loading="lazy" class="mb-8 block">
         @include('dashboard._metric-cards-skeleton')
     </turbo-frame>
 
     {{-- ─ Stats Modal (vanilla JS) ── --}}
-    <div id="statsModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div id="statsModal" style="display: none;" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
         <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeStatsModal()"></div>
         <div class="relative w-full max-w-sm rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
             <div class="flex items-center justify-between mb-4">
@@ -85,11 +103,11 @@
         document.getElementById('statsHdep').textContent = el.dataset.hdep + '%';
         document.getElementById('statsEggs').textContent = el.dataset.eggs;
         document.getElementById('statsSensor').textContent = el.dataset.sensor;
-        document.getElementById('statsModal').classList.remove('hidden');
+        document.getElementById('statsModal').style.display = 'flex';
         lucide.createIcons();
     }
     function closeStatsModal() {
-        document.getElementById('statsModal').classList.add('hidden');
+        document.getElementById('statsModal').style.display = 'none';
     }
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') closeStatsModal();
@@ -102,7 +120,7 @@
     </turbo-frame>
 
     {{-- ── KPI Breakdown Modal (shared by all metric cards — item 9) ── --}}
-    <div id="kpiModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div id="kpiModal" style="display: none;" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
         <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeKpiModal()"></div>
         <div class="relative w-full max-w-sm rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
             <div class="flex items-center justify-between mb-4">
@@ -153,12 +171,12 @@
             line.appendChild(value);
             container.appendChild(line);
         });
-        document.getElementById('kpiModal').classList.remove('hidden');
+        document.getElementById('kpiModal').style.display = 'flex';
         lucide.createIcons();
     }
     function closeKpiModal() {
         var m = document.getElementById('kpiModal');
-        if (m) m.classList.add('hidden');
+        if (m) m.style.display = 'none';
     }
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') closeKpiModal();
@@ -216,6 +234,33 @@
         if (window.__dashboardClockTimer) clearInterval(window.__dashboardClockTimer);
         window.__dashboardClockTimer = setInterval(tick, 1000);
     })();
+
+    // ── Cage filter: reloads Turbo Frames with ?cage=CODE ──
+    var dashboardCageColors = @json(\App\Models\Cage::getColorMap());
+
+    window.filterDashboard = function(code) {
+        document.querySelectorAll('.dashboard-tab').forEach(function(tab) {
+            if (tab.dataset.tab === code) {
+                tab.style.borderBottomColor = code === 'all' ? '#0075de' : (dashboardCageColors[code] || '#0075de');
+                tab.style.color = '#1f1f1f';
+            } else {
+                tab.style.borderBottomColor = 'transparent';
+                tab.style.color = '#615d59';
+            }
+        });
+
+        var statsUrl = '{{ route('dashboard.stats') }}';
+        var feedUrl  = '{{ route('dashboard.feed-mortality') }}';
+        if (code !== 'all') {
+            statsUrl += '?cage=' + encodeURIComponent(code);
+            feedUrl  += '?cage=' + encodeURIComponent(code);
+        }
+
+        var statsFrame = document.getElementById('dashboard-stats');
+        var feedFrame  = document.getElementById('dashboard-feed-mortality');
+        if (statsFrame) { statsFrame.src = statsUrl; statsFrame.reload(); }
+        if (feedFrame)  { feedFrame.src  = feedUrl;  feedFrame.reload();  }
+    };
     </script>
 
 </div>

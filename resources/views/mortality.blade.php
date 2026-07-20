@@ -103,9 +103,9 @@
                         $bg    = $count > 0 ? '#F8D7DA' : '#F5F6F8';
                         $txt   = $count > 0 ? '#721C24' : '#6B7280';
                     @endphp
-                    <div class="rounded-lg border p-3" style="border-color:{{ $count > 0 ? '#F5C6CB' : '#D9D9D9' }};background:{{ $bg }}">
-                        <div class="text-xs tracking-wider mb-1" style="color:{{ $color }}">{{ $cage->cage_code }}</div>
-                        <div class="text-2xl font-semibold" style="color:{{ $txt }}">{{ $count }}</div>
+                    <div class="rounded-lg border p-4" style="border-color:{{ $count > 0 ? '#F5C6CB' : '#D9D9D9' }};background:{{ $bg }}">
+                        <div class="text-xs font-semibold tracking-[0.125px] uppercase mb-1" style="color:{{ $color }}">{{ $cage->cage_code }}</div>
+                        <div class="text-2xl font-bold leading-none tracking-[-0.5px]" style="color:{{ $txt }}">{{ $count }}</div>
                         <div class="text-xs mt-1" style="color:{{ $txt }}">{{ $count === 1 ? 'hen' : 'hens' }}</div>
                     </div>
                     @endforeach
@@ -125,7 +125,7 @@
 </div>
 
 {{-- ── Edit Mortality Modal ── --}}
-<div id="editMortalityModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+<div id="editMortalityModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" style="display: none;">
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEditMortalityModal()"></div>
     <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
@@ -196,14 +196,12 @@ function openEditMortality(id, date, count, reason, notes) {
     document.getElementById('editMortCount').value = count;
     document.getElementById('editMortReason').value = reason;
     document.getElementById('editMortNotes').value = notes || '';
-    document.getElementById('editMortalityModal').classList.remove('hidden');
-    document.getElementById('editMortalityModal').classList.add('flex');
+    document.getElementById('editMortalityModal').style.display = 'flex';
     lucide.createIcons();
 }
 
 function closeEditMortalityModal() {
-    document.getElementById('editMortalityModal').classList.add('hidden');
-    document.getElementById('editMortalityModal').classList.remove('flex');
+    document.getElementById('editMortalityModal').style.display = 'none';
 }
 
 (function() {

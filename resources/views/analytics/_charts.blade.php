@@ -19,37 +19,6 @@
         </div>
     </div>
 
-    {{-- ── Summary Row ── --}}
-    <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-        <div class="grid grid-cols-2 md:grid-cols-6 gap-4 text-center">
-            @php $cColor = $cage->color; @endphp
-            <div>
-                <div class="text-xs text-[#6B7280] mb-1">CAGE</div>
-                <div class="text-sm font-semibold" style="color:{{ $cColor }}">{{ $cageCode }}</div>
-            </div>
-            <div>
-                <div class="text-xs text-[#6B7280] mb-1">BREED</div>
-                <div class="text-sm text-[#333333]">{{ $cage->hens->first()?->breed ?? '—' }}</div>
-            </div>
-            <div>
-                <div class="text-xs text-[#6B7280] mb-1">AVG HDEP</div>
-                <div class="text-sm text-[#333333]">{{ $avgHdep }}%</div>
-            </div>
-            <div>
-                <div class="text-xs text-[#6B7280] mb-1">BEST DAY</div>
-                <div class="text-sm text-[#333333]">{{ $bestDay }}%</div>
-            </div>
-            <div>
-                <div class="text-xs text-[#6B7280] mb-1">WORST DAY</div>
-                <div class="text-sm text-[#333333]">{{ $worstDay }}%</div>
-            </div>
-            <div>
-                <div class="text-xs text-[#6B7280] mb-1">FLOCK AGE</div>
-                <div class="text-sm text-[#333333]">{{ $cage->hens->first() ? $cage->hens->first()->current_age_weeks . ' wks' : '—' }}</div>
-            </div>
-        </div>
-    </div>
-
     <script>
     (function() {
         const logs = @json($logs->map(fn($l) => ['date'=>$l->log_date->format('Y-m-d'),'hdep'=>$l->hdep,'eggs'=>$l->egg_count]));

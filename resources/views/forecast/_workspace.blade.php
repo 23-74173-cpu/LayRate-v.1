@@ -15,8 +15,8 @@
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
 
         {{-- ── Inputs Panel ── --}}
-        <x-card>
-            <div class="text-xs tracking-wider text-[#6B7280] mb-4">FORECAST INPUTS</div>
+        <x-card padding="p-4">
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-4">Forecast Inputs</div>
             <form method="POST" action="{{ route('forecast.generate') }}" id="forecastForm" data-turbo="false">
                 @csrf
                 <input type="hidden" name="scope" value="{{ $scope }}" id="formScope">
@@ -82,8 +82,8 @@
         </x-card>
 
         {{-- ── Chart Panel ── --}}
-        <div class="xl:col-span-2 bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <div class="text-xs tracking-wider text-[#6B7280] mb-4">{{ $chartTitle }} — {{ $scopeLabel }}</div>
+        <div class="xl:col-span-2 bg-white rounded-lg border border-[#D9D9D9] p-4">
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-4">{{ $chartTitle }} — {{ $scopeLabel }}</div>
             <div class="relative h-64 w-full" style="height: 16rem;">
                 <canvas id="forecastChart" style="width: 100%; height: 100%; display: block;"></canvas>
             </div>
@@ -107,8 +107,37 @@
             $mapeWinner = ($sarima['MAPE'] ?? PHP_FLOAT_MAX) <= ($xgboost['MAPE'] ?? PHP_FLOAT_MAX) ? 'SARIMA' : 'XGBoost';
         }
     @endphp
-    <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-        <div class="text-xs tracking-wider text-[#6B7280] mb-4">MODEL COMPARISON</div>
+
+    {{-- ── Forecast Summary ── --}}
+    @if($forecasts->count() > 0)
+    @php
+        $usedMetrics = match($recommended) {
+            'SARIMA'  => $sarima,
+            'XGBoost' => $xgboost,
+            default   => $sarima ?? $xgboost,
+        };
+        $avgEggs = round($forecasts->avg('predicted_egg_count'));
+    @endphp
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 p-4 rounded-lg bg-[#F5F6F8] border border-[#D9D9D9] text-sm mb-5">
+        <span class="text-[#6B7280]">Forecast avg for <strong>{{ $scopeLabel }}</strong>:</span>
+        <span class="text-2xl font-bold text-[#333333]">{{ number_format($avgEggs) }}</span>
+        <span class="text-[#6B7280]">eggs/day</span>
+        @if($usedMetrics)
+            @if(isset($usedMetrics['MAE']))
+            <span class="text-[#6B7280]">±{{ number_format($usedMetrics['MAE'], 1) }} MAE</span>
+            @endif
+            @if(isset($usedMetrics['MAPE']) && $usedMetrics['MAPE'] !== null)
+            <span class="text-[#6B7280]">{{ number_format($usedMetrics['MAPE'], 1) }}% MAPE</span>
+            @endif
+            <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-[#002D5E]/10 text-[#002D5E] font-medium">
+                <i data-lucide="award" class="w-3 h-3"></i>{{ $recommended }}
+            </span>
+        @endif
+    </div>
+    @endif
+
+    <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+        <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-4">Model Comparison</div>
 
         @if($recommended)
         <div class="flex items-center gap-3 p-4 rounded-lg bg-[#D5E8D4] text-[#1F5F35] mb-5">
@@ -190,6 +219,38 @@
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
     });
     const allLabels  = showForecast ? [...histLabels, ...fcLabels] : histLabels;
+
+    // ── Vertical reference line (historical → forecast transition) ──
+    (function() {
+        const plugin = {
+            id: 'forecastSeparator',
+            afterDraw(chart) {
+                if (!showForecast) return;
+                const histCount = histLabels.length;
+                if (histCount === 0) return;
+                const xScale = chart.scales.x;
+                const chartArea = chart.chartArea;
+                const x = xScale.getPixelForValue(histCount - 0.5);
+                const ctx = chart.ctx;
+                ctx.save();
+                ctx.beginPath();
+                ctx.strokeStyle = '#6B7280';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([4, 4]);
+                ctx.moveTo(x, chartArea.top);
+                ctx.lineTo(x, chartArea.bottom - 12);
+                ctx.stroke();
+                ctx.fillStyle = '#6B7280';
+                ctx.font = '10px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('▼ forecast starts', x, chartArea.bottom - 2);
+                ctx.restore();
+            }
+        };
+        if (typeof Chart !== 'undefined' && !Chart.registry.plugins.get('forecastSeparator')) {
+            Chart.register(plugin);
+        }
+    })();
 
     const histData = showForecast
         ? [...recentHistorical.map(h => h.egg_count), ...Array(fcLabels.length).fill(null)]

@@ -1,32 +1,28 @@
 @php use App\Models\Alert; @endphp
 <turbo-frame id="feed-live-data">
-    {{-- ── Metric Cards (now 4) ── --}}
+    {{-- ── Metric Cards ── --}}
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs tracking-wider text-[#6B7280] mb-2">AVG CP% THIS WEEK</div>
-            <div class="text-3xl tracking-tight text-[#333333]">{{ number_format($avgCp, 1) }}%</div>
-            <div class="text-xs text-[#6B7280] mt-1">within target</div>
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Avg CP% This Week</div>
+            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ number_format($avgCp, 1) }}%</div>
         </div>
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs tracking-wider text-[#6B7280] mb-2">AVG FEED/CAGE/DAY</div>
-            <div class="text-3xl tracking-tight text-[#333333]">{{ $avgFeedPerCage }} <span class="text-xl">kg</span></div>
-            <div class="text-xs text-[#6B7280] mt-1">rolling 7 days</div>
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Avg Feed/Cage/Day</div>
+            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $avgFeedPerCage }} kg</div>
         </div>
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs tracking-wider text-[#6B7280] mb-2">TOTAL FEED USED</div>
-            <div class="text-3xl tracking-tight text-[#333333]">{{ number_format($totalFeedWeek, 1) }} <span class="text-xl">kg</span></div>
-            <div class="text-xs text-[#6B7280] mt-1">last 7 days</div>
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Total Feed Used</div>
+            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ number_format($totalFeedWeek, 1) }} kg</div>
         </div>
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs tracking-wider text-[#6B7280] mb-2">FEED COST THIS MONTH</div>
-            <div class="text-3xl tracking-tight text-[#333333]">
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Feed Cost This Month</div>
+            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">
                 @if($totalFeedCostMonth !== null && $totalFeedCostMonth > 0)
                     ₱{{ number_format($totalFeedCostMonth, 2) }}
                 @else
                     <span class="text-lg text-[#9CA3AF]">—</span>
                 @endif
             </div>
-            <div class="text-xs text-[#6B7280] mt-1">from batches with unit cost</div>
         </div>
     </div>
 

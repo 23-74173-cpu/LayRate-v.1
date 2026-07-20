@@ -12,10 +12,10 @@
     $warningThreshold = (float) config('fcr.warning_threshold', 4.0);
 @endphp
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
-    <div class="bg-[#F9F9F7] rounded-lg border border-[#D9D9D9] p-4">
-        <div class="text-xs tracking-wider text-[#6B7280] mb-1">FCR (THIS {{ $periodLabel }})</div>
+    <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+        <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">FCR (THIS {{ $periodLabel }})</div>
         <div class="flex items-center gap-3">
-            <div class="text-3xl tracking-tight text-[#333333]">
+            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">
                 {{ $fcrCurrent !== null ? number_format($fcrCurrent, 2) : 'N/A' }}
             </div>
             @if($summaryStatus !== 'na')
@@ -43,14 +43,14 @@
         </div>
         @endif
     </div>
-    <div class="bg-[#F9F9F7] rounded-lg border border-[#D9D9D9] p-4">
-        <div class="text-xs tracking-wider text-[#6B7280] mb-1">FEED CONSUMED</div>
-        <div class="text-3xl tracking-tight text-[#333333]">{{ number_format($fcrTimeline->sum('feed_kg'), 1) }} <span class="text-xl">kg</span></div>
+    <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+        <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">FEED CONSUMED</div>
+        <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ number_format($fcrTimeline->sum('feed_kg'), 1) }} <span class="text-xs">kg</span></div>
         <div class="text-xs text-[#6B7280] mt-1">shown periods</div>
     </div>
-    <div class="bg-[#F9F9F7] rounded-lg border border-[#D9D9D9] p-4">
-        <div class="text-xs tracking-wider text-[#6B7280] mb-1">EST. EGG MASS</div>
-        <div class="text-3xl tracking-tight text-[#333333]">{{ number_format($fcrTimeline->sum('egg_mass_kg'), 2) }} <span class="text-xl">kg</span></div>
+    <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+        <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">EST. EGG MASS</div>
+        <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ number_format($fcrTimeline->sum('egg_mass_kg'), 2) }} <span class="text-xs">kg</span></div>
         <div class="text-xs text-[#6B7280] mt-1">egg counts + weights</div>
     </div>
 </div>
@@ -62,7 +62,7 @@
 <div class="overflow-x-auto">
     <table class="w-full">
         <thead>
-            <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
+            <tr class="border-b border-[#D9D9D9] bg-white">
                 <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Period</th>
                 <th class="text-right text-xs text-[#6B7280] px-5 py-3 font-medium">Feed (kg)</th>
                 <th class="text-right text-xs text-[#6B7280] px-5 py-3 font-medium">Egg Mass (kg)</th>

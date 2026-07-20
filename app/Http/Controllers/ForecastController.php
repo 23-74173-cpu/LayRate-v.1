@@ -52,7 +52,8 @@ class ForecastController extends Controller
         $metrics = session('forecast_metrics');
         $recommendedModel = session('recommended_model');
 
-        $hasEnoughData = $this->hasEnoughForecastData($scope, $cageCode, $breed);
+        $dataSufficiency = $this->checkForecastDataSufficiency($scope, $cageCode, $breed);
+        $hasEnoughData = $dataSufficiency['has_enough'];
 
         if ($scope === 'farm') {
             $historical = $this->farmHistorical();
@@ -60,7 +61,8 @@ class ForecastController extends Controller
                 ->whereNull('cage_id')->whereNull('breed')
                 ->orderBy('target_date')->limit($horizon)->get();
 
-            $viewData = compact('scope', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate');
+            $viewData = compact('scope', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate')
+                + ['forecastDataDays' => $dataSufficiency['current_count']];
 
             if ($request->header('Turbo-Frame') === 'production-calendar') {
                 return view('forecast._calendar', $viewData);
@@ -80,7 +82,8 @@ class ForecastController extends Controller
                 ->whereNull('cage_id')->where('breed', $breed)
                 ->orderBy('target_date')->limit($horizon)->get();
 
-            $viewData = compact('scope', 'cageCode', 'breed', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate');
+            $viewData = compact('scope', 'cageCode', 'breed', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate')
+                + ['forecastDataDays' => $dataSufficiency['current_count']];
 
             if ($request->header('Turbo-Frame') === 'production-calendar') {
                 return view('forecast._calendar', $viewData);
@@ -104,7 +107,8 @@ class ForecastController extends Controller
             ->whereNull('breed')
             ->orderBy('target_date')->limit($horizon)->get();
 
-        $viewData = compact('scope', 'cage', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate');
+        $viewData = compact('scope', 'cage', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate')
+            + ['forecastDataDays' => $dataSufficiency['current_count']];
 
         if ($request->header('Turbo-Frame') === 'production-calendar') {
             return view('forecast._calendar', $viewData);
@@ -218,7 +222,8 @@ class ForecastController extends Controller
             }
         }
 
-        if (!$this->hasEnoughForecastData($scope, $cageCode, $breed)) {
+        $dataSufficiency = $this->checkForecastDataSufficiency($scope, $cageCode, $breed);
+        if (!$dataSufficiency['has_enough']) {
             return redirect()->back()
                 ->with('error', 'The forecast input table must contain at least 90 days of production records before generating a forecast.')
                 ->withInput();
@@ -228,8 +233,10 @@ class ForecastController extends Controller
             if ($scope === 'farm') {
                 $historical = $this->farmHistorical();
 
-                Forecast::whereNull('cage_id')->whereNull('breed')
-                    ->where('forecast_date', now()->toDateString())->delete();
+                if (!$startDate) {
+                    Forecast::whereNull('cage_id')->whereNull('breed')
+                        ->where('forecast_date', now()->toDateString())->delete();
+                }
 
                 $result = $this->generateForecast(null, 'ALL', null, $historical, $horizon, true, $startDate);
 
@@ -245,8 +252,10 @@ class ForecastController extends Controller
             if ($scope === 'breed' && $breed) {
                 $historical = $this->breedHistorical($breed);
 
-                Forecast::whereNull('cage_id')->where('breed', $breed)
-                    ->where('forecast_date', now()->toDateString())->delete();
+                if (!$startDate) {
+                    Forecast::whereNull('cage_id')->where('breed', $breed)
+                        ->where('forecast_date', now()->toDateString())->delete();
+                }
 
                 $result = $this->generateForecast(null, 'ALL', $breed, $historical, $horizon, true, $startDate);
 
@@ -263,12 +272,14 @@ class ForecastController extends Controller
 
             $historical = $this->cageHistorical($cageCode);
 
-            $forecastQuery = Forecast::whereNull('breed')
-                ->where('forecast_date', now()->toDateString());
-            if ($cage) {
-                $forecastQuery->where('cage_id', $cage->id)->delete();
-            } else {
-                $forecastQuery->whereNull('cage_id')->delete();
+            if (!$startDate) {
+                $forecastQuery = Forecast::whereNull('breed')
+                    ->where('forecast_date', now()->toDateString());
+                if ($cage) {
+                    $forecastQuery->where('cage_id', $cage->id)->delete();
+                } else {
+                    $forecastQuery->whereNull('cage_id')->delete();
+                }
             }
 
             $result = $this->generateForecast($cage, $cageCode, null, $historical, $horizon, true, $startDate);
@@ -578,22 +589,23 @@ class ForecastController extends Controller
      * Whole farm needs at least 90 distinct dates. Per-cage / per-breed need
      * at least 90 rows for the selected cage or breed.
      */
-    private function hasEnoughForecastData(string $scope, ?string $cageCode = null, ?string $breed = null): bool
+    private function checkForecastDataSufficiency(string $scope, ?string $cageCode = null, ?string $breed = null): array
     {
         $query = DB::table('forecast_input_records')
             ->whereNotNull('date')
             ->whereNotNull('cage_code')
             ->whereRaw("TRIM(cage_code) != ''");
 
-        if ($scope === 'cage' && $cageCode) {
-            return $query->where('cage_code', $cageCode)->count() >= 90;
-        }
+        $currentCount = match (true) {
+            $scope === 'cage' && $cageCode => (int) $query->where('cage_code', $cageCode)->count(),
+            $scope === 'breed' && $breed   => (int) $query->where('breed', $breed)->count(),
+            default                        => (int) $query->distinct()->count('date'),
+        };
 
-        if ($scope === 'breed' && $breed) {
-            return $query->where('breed', $breed)->count() >= 90;
-        }
-
-        return $query->distinct()->count('date') >= 90;
+        return [
+            'has_enough'    => $currentCount >= 90,
+            'current_count' => $currentCount,
+        ];
     }
 
     /**
@@ -807,7 +819,8 @@ class ForecastController extends Controller
             $breed = $allBreeds->first();
         }
 
-        $hasEnoughData = $this->hasEnoughForecastData($scope, $cageCode, $breed);
+        $dataSufficiency = $this->checkForecastDataSufficiency($scope, $cageCode, $breed);
+        $hasEnoughData = $dataSufficiency['has_enough'];
 
         $historical = collect();
         $forecasts = collect();
@@ -820,7 +833,8 @@ class ForecastController extends Controller
                 ->whereNull('cage_id')->whereNull('breed')
                 ->orderBy('target_date')->limit($horizon)->get();
 
-            return compact('scope', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate');
+            return compact('scope', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate')
+                + ['forecastDataDays' => $dataSufficiency['current_count']];
         }
 
         if ($scope === 'breed' && $breed) {
@@ -829,7 +843,8 @@ class ForecastController extends Controller
                 ->whereNull('cage_id')->where('breed', $breed)
                 ->orderBy('target_date')->limit($horizon)->get();
 
-            return compact('scope', 'cageCode', 'breed', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate');
+            return compact('scope', 'cageCode', 'breed', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate')
+                + ['forecastDataDays' => $dataSufficiency['current_count']];
         }
 
         $cage = Cage::where('cage_code', $cageCode)->first();
@@ -841,6 +856,7 @@ class ForecastController extends Controller
             ->whereNull('breed')
             ->orderBy('target_date')->limit($horizon)->get();
 
-        return compact('scope', 'cage', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate');
+        return compact('scope', 'cage', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate')
+            + ['forecastDataDays' => $dataSufficiency['current_count']];
     }
 }
