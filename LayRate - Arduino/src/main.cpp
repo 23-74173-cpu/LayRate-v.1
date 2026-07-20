@@ -28,7 +28,7 @@ bool lastBeamState  = false;
 unsigned int objectCount = 0;
 unsigned long lastIRDebounce = 0;
 bool debouncedBeamState = false;
-const unsigned long IR_DEBOUNCE_MS = 200; // ms of stability required before counting
+const unsigned long IR_DEBOUNCE_MS = 50; // ms of stability required before counting
 
 // -- DHT data --
 unsigned long lastDHTRead = 0;
@@ -71,6 +71,8 @@ void printBlock() {
 
   Serial.print("Beam: ");
   Serial.println(beamBroken ? "BROKEN" : "UNBROKEN");
+  Serial.print("Pin: ");
+  Serial.println(digitalRead(IR_PIN) ? "HIGH" : "LOW");
 
   // Temperature line — show value, error message, or placeholder
   Serial.print("Temp: ");
@@ -196,7 +198,7 @@ void loop() {
   // ----------------------------------------------------
   // 2) IR Break Beam — debounced check
   // ----------------------------------------------------
-  bool rawReading = (digitalRead(IR_PIN) == LOW);
+  bool rawReading = (digitalRead(IR_PIN) == HIGH);
 
   if (rawReading != debouncedBeamState) {
     lastIRDebounce = now;
