@@ -43,6 +43,47 @@ function switchEnvTab(tab) {
         btn.className = 'pb-2 text-sm font-medium border-b-2 -mb-px transition-colors ' +
             (isActive ? 'border-[#002D5E] text-[#002D5E]' : 'border-transparent text-[#6B7280] hover:text-[#333]');
     });
+    if (tab === 'live') startLivePolling();
+    else stopLivePolling();
 }
+
+var _livePollTimer = null;
+
+function startLivePolling() {
+    stopLivePolling();
+    _livePollTimer = setInterval(function() {
+        var frame = document.getElementById('environment-live-data');
+        if (!frame) return;
+        var src = frame.getAttribute('src');
+        if (!src) return;
+        fetch(src)
+            .then(function(r) { return r.text(); })
+            .then(function(html) {
+                var parser = new DOMParser();
+                var doc = parser.parseFromString(html, 'text/html');
+                var newFrame = doc.querySelector('turbo-frame#environment-live-data');
+                if (!newFrame) return;
+                frame.innerHTML = newFrame.innerHTML;
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+                if (typeof initEnvCharts === 'function') initEnvCharts();
+            })
+            .catch(function() {});
+    }, 10000);
+}
+
+function stopLivePolling() {
+    if (_livePollTimer) {
+        clearInterval(_livePollTimer);
+        _livePollTimer = null;
+    }
+}
+
+document.addEventListener('turbo:load', function() {
+    var livePanel = document.getElementById('panelLiveData');
+    if (livePanel && !livePanel.classList.contains('hidden')) {
+        startLivePolling();
+    }
+});
+document.addEventListener('turbo:before-cache', stopLivePolling);
 </script>
 @endpush
