@@ -159,7 +159,7 @@
                                 class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]">
                             <option value="">Select cage…</option>
                             @foreach($cages as $c)
-                            <option value="{{ $c->id }}">{{ $c->cage_code }} — {{ $c->formatted_location }}</option>
+                            <option value="{{ $c->id }}" {{ $preselectedCageId === $c->id ? 'selected' : '' }}>{{ $c->cage_code }} — {{ $c->formatted_location }}</option>
                             @endforeach
                         </select>
                     </div>

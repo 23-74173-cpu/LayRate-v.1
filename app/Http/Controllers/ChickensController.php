@@ -24,6 +24,7 @@ class ChickensController extends Controller
         $isActive = $request->query('status', 'all');
         $search = $request->query('search');
         $sort = $request->query('sort', '');
+        $preselectedCageId = (int) $request->query('cage_id');
 
         $cages = Cage::with('cageSlots')->orderBy('cage_code')->get();
         $breeds = Hen::distinct()->pluck('breed')->filter()->sort()->values();
@@ -40,7 +41,7 @@ class ChickensController extends Controller
 
         return view('chickens.index', compact(
             'cages', 'breeds', 'todayTotal', 'todayByCage', 'tab',
-            'cageId', 'breed', 'isActive', 'search', 'sort'
+            'cageId', 'breed', 'isActive', 'search', 'sort', 'preselectedCageId'
         ));
     }
 

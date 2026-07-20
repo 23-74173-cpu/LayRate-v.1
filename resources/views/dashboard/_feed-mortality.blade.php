@@ -44,7 +44,7 @@
         <div class="kpi-card rounded-xl border p-6 cursor-pointer transition-shadow hover:shadow-md"
              style="background-color: #ffffff; border-color: #e6e6e6;"
              role="link" tabindex="0" aria-label="Go to Mortality"
-             data-nav="{{ route('mortality.index') }}">
+             data-nav="{{ route('chickens.index', ['tab' => 'mortality']) }}">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.5px]" style="color: #1f1f1f;">Mortality Today</h3>
                 <x-status-badge :status="$mortalityTodayTotal > 0 ? 'Alert' : 'Normal'" type="general" />
@@ -57,7 +57,7 @@
                     $mCount = $mortalityToday[$cage->cage_code] ?? 0;
                 @endphp
                 <div class="flex items-center justify-between py-2 border-b rounded-lg -mx-1 px-1 hover:bg-black/[0.03] transition-colors" style="border-color: #e6e6e6;"
-                     data-row-nav="{{ route('mortality.index') }}?cage_id={{ $cage->id }}">
+                     data-row-nav="{{ route('chickens.index', ['tab' => 'mortality', 'cage_id' => $cage->id]) }}">
                     <div class="flex items-center gap-2">
                         <div class="w-2 h-2 rounded-full" style="background-color: {{ $fColor }};"></div>
                         <span class="text-sm" style="color: #31302e;">{{ $cage->cage_code }}</span>
@@ -74,7 +74,7 @@
             <div class="text-xs text-center pt-1.5" style="color: #a39e98;">+{{ $mortalityCount - 5 }} more cage{{ $mortalityCount - 5 !== 1 ? 's' : '' }}</div>
             @endif
             <div class="pt-3 mt-2">
-                <a href="{{ route('mortality.index') }}" data-turbo-frame="_top" class="text-sm font-medium hover:underline" style="color: #0075de;" onclick="event.stopPropagation()">View full mortality log →</a>
+                <a href="{{ route('chickens.index', ['tab' => 'mortality']) }}" data-turbo-frame="_top" class="text-sm font-medium hover:underline" style="color: #0075de;" onclick="event.stopPropagation()">View full mortality log →</a>
             </div>
         </div>
     </div>
