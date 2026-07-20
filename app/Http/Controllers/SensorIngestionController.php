@@ -107,6 +107,17 @@ class SensorIngestionController extends Controller
                     $reportedCount = (int) $reading['count'];
                     $actualOccupancy = $slot->current_occupancy;
 
+                    if ($actualOccupancy === 1) {
+                        $lastReading = SensorOccupancyReading::where('hardware_item_id', $hardwareItem->id)
+                            ->latest('recorded_at')
+                            ->first();
+
+                        if ($lastReading && $lastReading->recorded_at->gt(now()->subHours(22))) {
+                            $errors[] = "Reading {$index}: slot has 1 hen — rate-limited (last reading was {$lastReading->recorded_at->diffForHumans()}).";
+                            continue;
+                        }
+                    }
+
                     SensorOccupancyReading::updateOrCreate(
                         [
                             'hardware_item_id' => $hardwareItem->id,
