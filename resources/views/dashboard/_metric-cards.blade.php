@@ -11,7 +11,7 @@
             </button>
             <div class="text-xs font-semibold tracking-[0.125px] uppercase mb-2" style="color: #615d59;">Total Hens</div>
             <div class="text-4xl font-bold leading-none tracking-[-0.5px]" style="color: #1f1f1f;">{{ number_format($totalHens) }}</div>
-            <div class="text-xs mt-2" style="color: #a39e98;">across {{ $cages->count() }} cages</div>
+            <div class="text-xs mt-2" style="color: #a39e98;">across {{ $cages->count() }} {{ Str::plural('cage', $cages->count()) }}</div>
         </div>
 
         {{-- HDEP --}}

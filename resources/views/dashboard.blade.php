@@ -37,6 +37,24 @@
     </div>
     @endif
 
+    {{-- ── Cage Filter Tabs ── --}}
+    <div class="flex items-center gap-0 border-b overflow-x-auto" style="border-color: #e6e6e6;">
+        <button type="button" onclick="filterDashboard('all')" class="dashboard-tab px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
+                data-tab="all"
+                style="border-bottom-color: #0075de; color: #1f1f1f;">
+            All
+            <span class="ml-1 text-xs" style="color: #a39e98;">({{ $cages->count() }})</span>
+        </button>
+        @foreach($cages as $cage)
+        <button type="button" onclick="filterDashboard('{{ $cage->cage_code }}')" class="dashboard-tab px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
+                data-tab="{{ $cage->cage_code }}"
+                style="border-bottom-color: transparent; color: #615d59;">
+            <span class="inline-block w-2 h-2 rounded-full mr-1.5" style="background-color: {{ $cage->color }};"></span>
+            {{ $cage->cage_code }}
+        </button>
+        @endforeach
+    </div>
+
     {{-- ── Metric Cards (lazy) ── --}}
     <turbo-frame id="dashboard-stats" src="{{ route('dashboard.stats') }}" loading="lazy" class="mb-8 block">
         @include('dashboard._metric-cards-skeleton')
@@ -216,6 +234,33 @@
         if (window.__dashboardClockTimer) clearInterval(window.__dashboardClockTimer);
         window.__dashboardClockTimer = setInterval(tick, 1000);
     })();
+
+    // ── Cage filter: reloads Turbo Frames with ?cage=CODE ──
+    var dashboardCageColors = @json(\App\Models\Cage::getColorMap());
+
+    window.filterDashboard = function(code) {
+        document.querySelectorAll('.dashboard-tab').forEach(function(tab) {
+            if (tab.dataset.tab === code) {
+                tab.style.borderBottomColor = code === 'all' ? '#0075de' : (dashboardCageColors[code] || '#0075de');
+                tab.style.color = '#1f1f1f';
+            } else {
+                tab.style.borderBottomColor = 'transparent';
+                tab.style.color = '#615d59';
+            }
+        });
+
+        var statsUrl = '{{ route('dashboard.stats') }}';
+        var feedUrl  = '{{ route('dashboard.feed-mortality') }}';
+        if (code !== 'all') {
+            statsUrl += '?cage=' + encodeURIComponent(code);
+            feedUrl  += '?cage=' + encodeURIComponent(code);
+        }
+
+        var statsFrame = document.getElementById('dashboard-stats');
+        var feedFrame  = document.getElementById('dashboard-feed-mortality');
+        if (statsFrame) { statsFrame.src = statsUrl; statsFrame.reload(); }
+        if (feedFrame)  { feedFrame.src  = feedUrl;  feedFrame.reload();  }
+    };
     </script>
 
 </div>
