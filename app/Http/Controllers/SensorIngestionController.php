@@ -154,7 +154,7 @@ class SensorIngestionController extends Controller
 
                         if (! $existingLog || $existingLog->logged_via === 'sensor') {
                             $henCount = $slot->active_hen_count;
-                            $log = ProductionLog::updateOrCreate(
+                            ProductionLog::updateOrCreate(
                                 ['cage_slot_id' => $slot->id, 'log_date' => $logDate],
                                 [
                                     'egg_count' => $reportedCount,
@@ -164,10 +164,6 @@ class SensorIngestionController extends Controller
                                     'notes' => 'Sensor reading',
                                 ]
                             );
-                            if ($log->wasRecentlyCreated || $log->wasChanged()) {
-                                $log->recorded_by = null;
-                                $log->save();
-                            }
                         }
                     }
 
