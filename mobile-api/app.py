@@ -262,6 +262,19 @@ def list_alerts():
     return jsonify({"alerts": alerts, "total": total}), 200
 
 
+@app.route("/api/alerts/<int:alert_id>/read", methods=["PUT"])
+@require_auth
+def mark_alert_read(alert_id):
+    """Mark a single alert as read."""
+    conn = get_mysql()
+    with conn.cursor() as cursor:
+        cursor.execute("UPDATE alerts SET is_read = 1 WHERE id = %s", (alert_id,))
+        conn.commit()
+        if cursor.rowcount == 0:
+            return jsonify({"message": "Alert not found"}), 404
+    return jsonify({"message": "Alert marked as read"}), 200
+
+
 @app.route("/api/dashboard/status", methods=["GET"])
 @require_auth
 def dashboard_status():
