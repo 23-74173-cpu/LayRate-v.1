@@ -254,10 +254,30 @@
                     <span class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-alert-text text-white text-xs rounded-full flex items-center justify-center font-bold">{{ $globalAlertCount }}</span>
                     @endif
                 </a>
-                <div class="flex items-center gap-2 pl-2 border-l border-hairline">
-                    <div class="text-right hidden sm:block">
-                        <div class="text-xs text-ink leading-tight">{{ auth()->user()->name }}</div>
-                        <div class="text-xs text-ink-muted uppercase tracking-wider">{{ auth()->user()->role }}</div>
+                <div class="relative pl-2 border-l border-hairline">
+                    <button id="profileMenuBtn" type="button"
+                            class="flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-black/5 transition-colors"
+                            aria-haspopup="true" aria-expanded="false" aria-label="Account menu">
+                        <div class="text-right hidden sm:block">
+                            <div class="text-xs text-ink leading-tight">{{ auth()->user()->name }}</div>
+                            <div class="text-xs text-ink-muted uppercase tracking-wider">{{ auth()->user()->role }}</div>
+                        </div>
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-ink-muted"></i>
+                    </button>
+                    <div id="profileMenu" class="hidden absolute right-0 top-full mt-2 w-44 rounded-lg border border-hairline bg-surface shadow-soft py-1 z-50">
+                        <a href="{{ route('profile') }}" class="flex items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/5 transition-colors">
+                            <i data-lucide="user" class="w-4 h-4"></i> Profile
+                        </a>
+                        <a href="{{ route('profile', ['tab' => 'settings']) }}" class="flex items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/5 transition-colors">
+                            <i data-lucide="settings" class="w-4 h-4"></i> Settings
+                        </a>
+                        <div class="my-1 border-t border-hairline"></div>
+                        <form action="{{ route('logout') }}" method="POST" data-turbo="false">
+                            @csrf
+                            <button type="submit" class="w-full flex items-center gap-2 px-3 py-2 text-sm text-alert-text hover:bg-black/5 transition-colors">
+                                <i data-lucide="log-out" class="w-4 h-4"></i> Sign out
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -446,6 +466,39 @@
             navLinks.forEach(function(link) {
                 link.addEventListener('click', closeMobile);
             });
+
+            // ── Header profile dropdown ──
+            var profileBtn = document.getElementById('profileMenuBtn');
+            var profileMenu = document.getElementById('profileMenu');
+            if (profileBtn && profileMenu) {
+                profileBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var isOpen = !profileMenu.classList.contains('hidden');
+                    profileMenu.classList.toggle('hidden', isOpen);
+                    profileBtn.setAttribute('aria-expanded', String(!isOpen));
+                });
+                document.body.addEventListener('click', function(e) {
+                    if (!e.target.closest('#profileMenu') && !e.target.closest('#profileMenuBtn')) {
+                        profileMenu.classList.add('hidden');
+                        profileBtn.setAttribute('aria-expanded', 'false');
+                    }
+                });
+                // Close immediately on selecting an item — otherwise the menu
+                // stays visibly open (header persists across Turbo visits)
+                // when the user lands back on this page later.
+                profileMenu.querySelectorAll('a, button').forEach(function(el) {
+                    el.addEventListener('click', function() {
+                        profileMenu.classList.add('hidden');
+                        profileBtn.setAttribute('aria-expanded', 'false');
+                    });
+                });
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        profileMenu.classList.add('hidden');
+                        profileBtn.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            }
         }
 
         // ── Initialize icons ──
