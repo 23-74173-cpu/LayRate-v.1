@@ -22,13 +22,12 @@
 // -- DHT22 instance (Adafruit library) --
 DHT dht(DHT_PIN, DHT_TYPE);
 
-// -- IR beam state (values updated via debounce) --
+// -- IR beam state (cooldown-based counting) --
 bool beamBroken     = false;
 bool lastBeamState  = false;
 unsigned int objectCount = 0;
-unsigned long lastIRDebounce = 0;
-bool debouncedBeamState = false;
-const unsigned long IR_DEBOUNCE_MS = 50; // ms of stability required before counting
+unsigned long lastIRCooldown = 0;
+const unsigned long IR_COOLDOWN_MS = 1000; // lockout after a count to prevent noise re-trigger
 
 // -- DHT data --
 unsigned long lastDHTRead = 0;
@@ -196,26 +195,22 @@ void loop() {
   }
 
   // ----------------------------------------------------
-  // 2) IR Break Beam — debounced check
+  // 2) IR Break Beam — counts on BREAKING edge with cooldown
   // ----------------------------------------------------
-  bool rawReading = (digitalRead(IR_PIN) == HIGH);
+  beamBroken = (digitalRead(IR_PIN) == HIGH);
 
-  if (rawReading != debouncedBeamState) {
-    lastIRDebounce = now;
-    debouncedBeamState = rawReading;
+  if (beamBroken && !lastBeamState && (now - lastIRCooldown) > IR_COOLDOWN_MS) {
+    lastBeamState = true;
+    lastIRCooldown = now;
+    objectCount++;
+    digitalWrite(LED_PIN, HIGH);
+    printBlock();
+    syncPrintedValues();
   }
 
-  if ((now - lastIRDebounce) > IR_DEBOUNCE_MS && rawReading != lastBeamState) {
-    lastBeamState = rawReading;
-    beamBroken = rawReading;
-
-    if (rawReading) {
-      objectCount++;
-      digitalWrite(LED_PIN, HIGH);
-    } else {
-      digitalWrite(LED_PIN, LOW);
-    }
-
+  if (!beamBroken && lastBeamState) {
+    lastBeamState = false;
+    digitalWrite(LED_PIN, LOW);
     printBlock();
     syncPrintedValues();
   }
