@@ -155,7 +155,7 @@
             $sensorCount = $cage->cageSlots->filter(fn($s) => $s->hasBreakbeam())->count();
             $occupiedCount = $cage->cageSlots->where('current_occupancy', '>', 0)->count();
             $primaryHen = $cage->hens->first();
-            $cardMinWidth = max(240, $cage->slots_per_row * 30 + 40);
+            $cardMinWidth = max(240, ($cage->slots_per_row ?? 3) * 30 + 40);
         @endphp
         <div class="cage-card rounded-xl border overflow-hidden transition-all flex-grow"
              data-cage-code="{{ $cage->cage_code }}"
@@ -183,7 +183,7 @@
                             class="p-1.5 rounded hover:bg-black/5 transition-colors reorder-toggle" style="color: #615d59;" aria-label="Renumber slots">
                         <i data-lucide="list-ordered" class="w-3.5 h-3.5"></i>
                     </button>
-                    <button onclick="openEditModal({{ $cage->id }}, '{{ $cage->cage_code }}', {{ is_null($cage->location_row) ? 'null' : $cage->location_row }}, {{ is_null($cage->location_column) ? 'null' : $cage->location_column }}, {{ $cage->rows }}, {{ $cage->slots_per_row }}, {{ $cage->max_chickens_per_slot }}, {{ $cage->is_active ? 1 : 0 }})"
+                     <button onclick="openEditModal({{ $cage->id }}, '{{ $cage->cage_code }}', {{ is_null($cage->location_row) ? 'null' : $cage->location_row }}, {{ is_null($cage->location_column) ? 'null' : $cage->location_column }}, {{ $cage->rows ?? 0 }}, {{ $cage->slots_per_row ?? 0 }}, {{ $cage->max_chickens_per_slot ?? 0 }}, {{ $cage->is_active ? 1 : 0 }})"
                             class="p-1.5 rounded hover:bg-black/5 transition-colors" style="color: #615d59;" aria-label="Edit cage">
                         <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                     </button>
@@ -197,8 +197,8 @@
 
             {{-- Meta strip --}}
             <div class="flex items-center gap-4 px-4 pb-2 text-xs" style="color: #615d59;">
-                <span>{{ $cage->rows }}×{{ $cage->slots_per_row }}</span>
-                <span>{{ $cage->total_capacity }} capacity</span>
+                <span>{{ $cage->rows ?? '?' }}×{{ $cage->slots_per_row ?? '?' }}</span>
+                <span>{{ $cage->total_capacity ?? '?' }} capacity</span>
                 <span>{{ $occupiedCount }} occupied</span>
                 @if($sensorCount > 0)
                 <span>{{ $sensorCount }} sensor{{ $sensorCount > 1 ? 's' : '' }}</span>
@@ -210,7 +210,7 @@
 
             {{-- Mini Slot Grid --}}
             <div class="px-4 pb-3">
-                <div class="grid gap-1 slot-grid-{{ $cage->id }}" style="grid-template-columns: repeat({{ $cage->slots_per_row }}, 1fr);">
+                <div class="grid gap-1 slot-grid-{{ $cage->id }}" style="grid-template-columns: repeat({{ $cage->slots_per_row ?? 3 }}, 1fr);">
                     @foreach($cage->cageSlots as $slot)
                     @php
                         $isSensor = $slot->hasBreakbeam();
@@ -1567,9 +1567,9 @@ if (!window.__cagesAutoEditBound) {
             '{{ $editCage->cage_code }}',
             {{ is_null($editCage->location_row) ? 'null' : $editCage->location_row }},
             {{ is_null($editCage->location_column) ? 'null' : $editCage->location_column }},
-            {{ $editCage->rows }},
-            {{ $editCage->slots_per_row }},
-            {{ $editCage->max_chickens_per_slot }},
+            {{ $editCage->rows ?? 0 }},
+            {{ $editCage->slots_per_row ?? 0 }},
+            {{ $editCage->max_chickens_per_slot ?? 0 }},
             {{ $editCage->is_active ? 1 : 0 }}
         );
         @if(session('errors') && session('errors')->has('resize'))
