@@ -109,35 +109,24 @@ class SensorIngestionController extends Controller
                     $actualOccupancy = $slot->current_occupancy;
 
                     /*
-                     * DESIGN DECISION — rate-limit based on slot design capacity,
-                     * not current occupancy.
+                     * RATE LIMIT DISABLED FOR TESTING — uncomment to re-enable.
                      *
-                     * The cooldown is derived from max_chickens_per_slot (the slot's
-                     * design capacity) so that occupancy never enters the equation.
-                     * This lets the operator stock any number of hens per slot without
-                     * affecting sensor behavior — the rate limit is purely a function
-                     * of the hardware design.
-                     *
-                     * Cooldown = 22 / max_chickens_per_slot (min 1h). For a 4-cap slot
-                     * this yields ~5.5h — enough headroom for 4 eggs/day while still
-                     * blocking runaway sensors. Underfilled slots (e.g. 1 hen in a
-                     * 4-cap slot) get a wider window than strictly necessary, accepting
-                     * occasional false positives over missed real readings.
-                     *
-                     * Previously the condition checked current_occupancy, which meant
-                     * a 4-cap slot with 1 hen was rate-limited to 1 reading per 22h
-                     * (effectively blocking the sensor for that cage).
+                     * DESIGN (for reference):
+                     * Cooldown = 22 / max_chickens_per_slot (min 1h) so occupancy
+                     * never enters the equation. Underfilled slots get a wider
+                     * window, accepting occasional false positives over missed
+                     * real readings.
                      */
-                    $cooldownHours = max(1, 22 / $slot->cage->max_chickens_per_slot);
-
-                    $lastReading = SensorOccupancyReading::where('hardware_item_id', $hardwareItem->id)
-                        ->latest('recorded_at')
-                        ->first();
-
-                    if ($lastReading && $lastReading->recorded_at->gt(now()->subHours($cooldownHours))) {
-                        $errors[] = "Reading {$index}: rate-limited (cooldown {$cooldownHours}h for {$slot->cage->max_chickens_per_slot}-hen slot). Last reading was {$lastReading->recorded_at->diffForHumans()}.";
-                        continue;
-                    }
+                    // $cooldownHours = max(1, 22 / $slot->cage->max_chickens_per_slot);
+                    //
+                    // $lastReading = SensorOccupancyReading::where('hardware_item_id', $hardwareItem->id)
+                    //     ->latest('recorded_at')
+                    //     ->first();
+                    //
+                    // if ($lastReading && $lastReading->recorded_at->gt(now()->subHours($cooldownHours))) {
+                    //     $errors[] = "Reading {$index}: rate-limited (cooldown {$cooldownHours}h for {$slot->cage->max_chickens_per_slot}-hen slot). Last reading was {$lastReading->recorded_at->diffForHumans()}.";
+                    //     continue;
+                    // }
 
                     SensorOccupancyReading::updateOrCreate(
                         [
