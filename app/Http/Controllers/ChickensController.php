@@ -116,7 +116,6 @@ class ChickensController extends Controller
     {
         $data = $request->validate([
             'breed'              => 'required|string|in:ISA Brown,Lohmann Brown-Classic,Dekalb White,Hy-Line Brown,Novogen Brown',
-            'sex'                => 'required|in:hen,cockerel,unknown',
             'source'             => 'nullable|string|max:200',
             'date_acquired'      => 'required|date',
             'age_at_placement_weeks' => 'required|integer|min:0|max:200',
@@ -124,6 +123,7 @@ class ChickensController extends Controller
             'notes'              => 'nullable|string|max:1000',
             'quantity'           => 'required|integer|min:1|max:100',
         ]);
+        $data['sex'] = 'hen';
 
         $quantity = (int) $data['quantity'];
         $year = now()->format('Y');
@@ -162,6 +162,8 @@ class ChickensController extends Controller
 
         [$created, $firstId, $lastId] = $hens;
         $count = count($created);
+
+        session()->forget('show_no_chickens_modal');
 
         if ($count === 1) {
             return redirect()->back()->with('success', "1 hen registered: CHK-{$year}-" . str_pad($firstId, 5, '0', STR_PAD_LEFT) . ".");

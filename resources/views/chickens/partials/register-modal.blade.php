@@ -40,18 +40,6 @@
                     <x-input-error name="breed" />
                 </div>
 
-                {{-- Sex --}}
-                <div>
-                    <label class="block text-xs font-medium text-[#6B7280] mb-1">Sex <span class="text-red-500">*</span></label>
-                    <select name="sex" required
-                            class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
-                        <option value="hen" {{ old('sex') === 'hen' ? 'selected' : '' }}>Hen</option>
-                        <option value="cockerel" {{ old('sex') === 'cockerel' ? 'selected' : '' }}>Cockerel</option>
-                        <option value="unknown" {{ old('sex') === 'unknown' ? 'selected' : '' }}>Unknown</option>
-                    </select>
-                    <x-input-error name="sex" />
-                </div>
-
                 {{-- Source/Origin --}}
                 <div>
                     <label class="block text-xs font-medium text-[#6B7280] mb-1">Source / Origin</label>
