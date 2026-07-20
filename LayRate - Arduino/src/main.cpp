@@ -22,10 +22,13 @@
 // -- DHT22 instance (Adafruit library) --
 DHT dht(DHT_PIN, DHT_TYPE);
 
-// -- IR beam state --
+// -- IR beam state (values updated via debounce) --
 bool beamBroken     = false;
 bool lastBeamState  = false;
 unsigned int objectCount = 0;
+unsigned long lastIRDebounce = 0;
+bool debouncedBeamState = false;
+const unsigned long IR_DEBOUNCE_MS = 200; // ms of stability required before counting
 
 // -- DHT data --
 unsigned long lastDHTRead = 0;
@@ -191,14 +194,20 @@ void loop() {
   }
 
   // ----------------------------------------------------
-  // 2) IR Break Beam — check every loop iteration
+  // 2) IR Break Beam — debounced check
   // ----------------------------------------------------
-  beamBroken = (digitalRead(IR_PIN) == LOW);
+  bool rawReading = (digitalRead(IR_PIN) == LOW);
 
-  if (beamBroken != lastBeamState) {
-    lastBeamState = beamBroken;
+  if (rawReading != debouncedBeamState) {
+    lastIRDebounce = now;
+    debouncedBeamState = rawReading;
+  }
 
-    if (beamBroken) {
+  if ((now - lastIRDebounce) > IR_DEBOUNCE_MS && rawReading != lastBeamState) {
+    lastBeamState = rawReading;
+    beamBroken = rawReading;
+
+    if (rawReading) {
       objectCount++;
       digitalWrite(LED_PIN, HIGH);
     } else {
