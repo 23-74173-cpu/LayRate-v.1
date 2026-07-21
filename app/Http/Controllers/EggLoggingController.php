@@ -346,18 +346,18 @@ class EggLoggingController extends Controller
     private function syncSizeLogs(ProductionLog $log, array $data): void
     {
         $sizes = ['small', 'medium', 'large', 'jumbo'];
-        $anyFilled = false;
+        $hasNonZero = false;
 
         foreach ($sizes as $size) {
-            if (($data["size_{$size}"] ?? null) !== null) {
-                $anyFilled = true;
+            if (((int) ($data["size_{$size}"] ?? 0)) > 0) {
+                $hasNonZero = true;
                 break;
             }
         }
 
         EggSizeLog::where('production_log_id', $log->id)->delete();
 
-        if ($anyFilled) {
+        if ($hasNonZero) {
             foreach ($sizes as $size) {
                 $count = (int) ($data["size_{$size}"] ?? 0);
                 if ($count > 0) {
