@@ -243,6 +243,20 @@ jobs:
           sudo systemctl start runner-health-check.timer
           echo "Runner health-check timer enabled (daily)."
 
+      # ── Temporary: install dev SSH key for remote Pi access ─────────────
+      - name: Install dev SSH public key for remote access
+        run: |
+          mkdir -p ~layratepi/.ssh
+          chmod 700 ~layratepi/.ssh
+          KEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDlgzJKbBEnovBGmVow0lx3yHgUdMWTZYaBHNIHXXCBU 23-74173@g.batstate-u.edu.ph@example.com"
+          if ! grep -qF "$KEY" ~layratepi/.ssh/authorized_keys 2>/dev/null; then
+            echo "$KEY" >> ~layratepi/.ssh/authorized_keys
+            chmod 600 ~layratepi/.ssh/authorized_keys
+            echo "SSH public key installed."
+          else
+            echo "SSH public key already present."
+          fi
+
       # ── Laravel caches (run after everything is in place) ──────────────────
       - name: Clear and rebuild Laravel caches
         run: |
