@@ -156,9 +156,7 @@
 
                 {{-- Active form --}}
                 <div id="slotForm" class="hidden">
-                    <form method="POST" action="{{ route('eggs.logging.store') }}" id="eggForm" data-turbo="false"
-                          data-confirm="Save this egg count?" data-confirm-action="Save"
-                          onsubmit="loadingButton(this.querySelector('button[type=submit]'))">
+                    <form method="POST" action="{{ route('eggs.logging.store') }}" id="eggForm" data-turbo="false">
                         @csrf
 
                         {{-- Selected slot info bar --}}
@@ -563,6 +561,93 @@
         el.style.backgroundColor = eggs > hens ? '#fbe4e6' : '#f6f5f4';
         el.style.borderColor = eggs > hens ? '#f3cdd0' : '#e6e6e6';
         el.style.color = eggs > hens ? '#9b1c24' : '#1f1f1f';
+    }
+
+    // ── AJAX form submission ─────────────────────────────────
+    var eggForm = document.getElementById('eggForm');
+    if (eggForm) {
+        eggForm.addEventListener('submit', function(e) {
+            if (eggForm._submitting) { e.preventDefault(); return; }
+
+            var saveBtn = document.getElementById('saveBtn');
+            var origText = saveBtn ? saveBtn.innerHTML : '';
+
+            var eggCount = parseInt(document.getElementById('eggCount').value) || 0;
+            var hens = parseInt(document.getElementById('henCount').value) || 0;
+            if (eggCount > hens) {
+                e.preventDefault();
+                return;
+            }
+
+            e.preventDefault();
+            eggForm._submitting = true;
+            if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving\u2026'; }
+
+            fetch(eggForm.action, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('input[name="_token"]')?.value || '',
+                },
+                body: new FormData(eggForm),
+            })
+            .then(function(r) {
+                return r.json().then(function(body) {
+                    return { status: r.status, body: body, ok: r.ok };
+                });
+            })
+            .then(function(resp) {
+                eggForm._submitting = false;
+                if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = origText; }
+
+                if (resp.ok && resp.body.success) {
+                    if (typeof showNotification === 'function') {
+                        showNotification(resp.body.message || 'Production log saved.', 'success');
+                    }
+
+                    // Reset size breakdown fields
+                    document.querySelectorAll('#sizeBreakdown .size-input').forEach(function(inp) {
+                        inp.value = '0';
+                    });
+                    // Reset notes
+                    var notesEl = eggForm.querySelector('textarea[name="notes"]');
+                    if (notesEl) notesEl.value = '';
+
+                    // Keep egg count at 0, slot stays selected — ready for next entry
+                    var eggInput = document.getElementById('eggCount');
+                    if (eggInput) {
+                        eggInput.value = 0;
+                        if (eggInput.readOnly) {
+                            overrideVerified = false;
+                        }
+                    }
+
+                    computeHdep();
+                    checkSizeSum();
+                    validateForm();
+                } else {
+                    var errors = resp.body.errors || {};
+                    var firstMsg = '';
+                    for (var key in errors) {
+                        if (errors.hasOwnProperty(key) && errors[key]) {
+                            firstMsg = Array.isArray(errors[key]) ? errors[key][0] : errors[key];
+                            break;
+                        }
+                    }
+                    if (typeof showNotification === 'function') {
+                        showNotification(firstMsg || 'Validation failed.', 'error');
+                    }
+                }
+            })
+            .catch(function() {
+                eggForm._submitting = false;
+                if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = origText; }
+                if (typeof showNotification === 'function') {
+                    showNotification('Network error — please try again.', 'error');
+                }
+            });
+        });
     }
 
     // Expose functions to global scope for inline onclick/onchange/oninput handlers

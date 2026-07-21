@@ -164,7 +164,9 @@ class EggLoggingController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
+        $isAjax = $request->wantsJson() || $request->ajax();
+
+        $validator = Validator::make($request->all(), [
             'log_date' => 'required|date|before_or_equal:'.now()->toDateString(),
             'cage_slot_id' => 'required|exists:cage_slots,id',
             'egg_count' => 'required|integer|min:0',
@@ -174,6 +176,15 @@ class EggLoggingController extends Controller
             'size_large' => 'nullable|integer|min:0',
             'size_jumbo' => 'nullable|integer|min:0',
         ]);
+
+        if ($validator->fails()) {
+            if ($isAjax) {
+                return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+            }
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        $data = $validator->validated();
 
         $sizeSum = (int) ($data['size_small'] ?? 0)
                  + (int) ($data['size_medium'] ?? 0)
@@ -186,6 +197,9 @@ class EggLoggingController extends Controller
                       || ($data['size_jumbo'] ?? 0) > 0;
 
         if ($anySizeFilled && $sizeSum !== (int) $data['egg_count']) {
+            if ($isAjax) {
+                return response()->json(['success' => false, 'errors' => ['size_breakdown' => "Size breakdown sum ({$sizeSum}) must equal total eggs ({$data['egg_count']})."]], 422);
+            }
             return redirect()->back()
                 ->withErrors(['size_breakdown' => "Size breakdown sum ({$sizeSum}) must equal total eggs ({$data['egg_count']})."])
                 ->withInput();
@@ -193,10 +207,6 @@ class EggLoggingController extends Controller
 
         $slot = CageSlot::with('cage')->findOrFail($data['cage_slot_id']);
 
-        // Snapshot hen count as of the START of log_date — hens that died today
-        // were alive when today's eggs were laid. This avoids the mortality-same-day
-        // inflation bug where a mid-day death would undercount the hens that laid
-        // the eggs.
         $diedToday = DB::table('mortality_logs')
             ->join('mortality_log_hens', 'mortality_logs.id', '=', 'mortality_log_hens.mortality_log_id')
             ->where('mortality_logs.cage_id', $slot->cage_id)
@@ -204,7 +214,6 @@ class EggLoggingController extends Controller
             ->distinct()
             ->count('mortality_log_hens.hen_id');
 
-        // Fallback for legacy mortality records without per-hen pivot rows
         if ($diedToday === 0) {
             $diedToday = (int) MortalityLog::where('cage_id', $slot->cage_id)
                 ->where('log_date', $data['log_date'])
@@ -214,12 +223,18 @@ class EggLoggingController extends Controller
         $henCount = $slot->active_hen_count + $diedToday;
 
         if ($henCount === 0) {
+            if ($isAjax) {
+                return response()->json(['success' => false, 'errors' => ['cage_slot_id' => 'This slot has no hens assigned.']], 422);
+            }
             return redirect()->back()
                 ->withErrors(['cage_slot_id' => 'This slot has no hens assigned. Cannot log egg production for an empty slot.'])
                 ->withInput();
         }
 
         if ($data['egg_count'] > $henCount) {
+            if ($isAjax) {
+                return response()->json(['success' => false, 'errors' => ['egg_count' => "Egg count ({$data['egg_count']}) cannot exceed hen count ({$henCount})."]], 422);
+            }
             return redirect()->back()
                 ->withErrors(['egg_count' => "Egg count ({$data['egg_count']}) cannot exceed hen count ({$henCount})."])
                 ->withInput();
@@ -235,13 +250,26 @@ class EggLoggingController extends Controller
             'hen_count' => $henCount,
             'hdep' => round(($data['egg_count'] / $henCount) * 100, 2),
             'notes' => $data['notes'] ?? 'Manual entry',
-            // Web form submissions are always manual. Future sensor ingestion must
-            // create ProductionLog records with logged_via = 'sensor' explicitly.
             'logged_via' => $data['logged_via'] ?? 'manual',
         ]);
         $log->save();
 
         $this->syncSizeLogs($log, $data);
+
+        if ($isAjax) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Production log saved.',
+                'log' => [
+                    'id' => $log->id,
+                    'cage_slot_id' => $log->cage_slot_id,
+                    'egg_count' => $log->egg_count,
+                    'hen_count' => $log->hen_count,
+                    'hdep' => $log->hdep,
+                    'log_date' => $log->log_date->toDateString(),
+                ],
+            ]);
+        }
 
         return redirect()->route('eggs.logging')->with('success', 'Production log saved.');
     }
