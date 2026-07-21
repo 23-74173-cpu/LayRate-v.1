@@ -455,6 +455,7 @@ document.addEventListener('turbo:load', function() {
             if (classifySection) classifySection.classList.add('hidden');
             return;
         }
+        if (addBtn) addBtn.disabled = false;
         var avail = parseInt(opt.getAttribute('data-available') || '0');
         if (avail < 1) {
             poolHint.textContent = 'No eggs available for this size yet — stock will be validated against production records.';
