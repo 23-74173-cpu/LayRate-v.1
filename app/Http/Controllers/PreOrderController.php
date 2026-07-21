@@ -108,7 +108,9 @@ class PreOrderController extends Controller
         $sizes = ['small', 'medium', 'large', 'jumbo'];
         $pools = [];
         foreach ($sizes as $size) {
-            $pools[$size] = EggStockBatch::getAvailablePoolForSize($size);
+            $stocked = EggStockBatch::where('egg_size', $size)->sum('count');
+            $committed = PreOrder::where('egg_size', $size)->where('status', 'pending')->sum('egg_count');
+            $pools[$size] = $stocked - $committed;
         }
         return response()->json(['pools' => $pools]);
     }

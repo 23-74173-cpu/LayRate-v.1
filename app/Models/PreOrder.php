@@ -59,18 +59,20 @@ class PreOrder extends Model
 
     /**
      * Create a pre-order inside a DB transaction with row locking,
-     * ensuring it doesn't over-commit the shared pool with stock batches.
+     * ensuring it doesn't over-commit available stock.
      *
-     * @throws \OverflowException if requested egg_count exceeds available pool
+     * @throws \OverflowException if requested egg_count exceeds available stock
      */
     public static function createWithinPool(array $data): self
     {
         return DB::transaction(function () use ($data) {
-            $available = EggStockBatch::getAvailablePoolForSize($data['egg_size'], lockForUpdate: true);
+            $stocked = EggStockBatch::where('egg_size', $data['egg_size'])->sum('count');
+            $committed = self::where('egg_size', $data['egg_size'])->where('status', 'pending')->sum('egg_count');
+            $available = $stocked - $committed;
 
             if (($data['egg_count'] ?? 0) > $available) {
                 throw new \OverflowException(
-                    "Only {$available} {$data['egg_size']} egg(s) available (production minus stocked and other pending pre-orders)."
+                    "Only {$available} {$data['egg_size']} egg(s) available in stock (inventory minus other pending pre-orders)."
                 );
             }
 
@@ -99,6 +101,7 @@ class PreOrder extends Model
                 return;
             }
 
+            // If releasing reservation (fulfilling/cancelling a pending order), no stock check
             if ($wasPending && (!$isPending || $newSize !== $oldSize)) {
                 if (!$isPending) {
                     $this->update($data);
@@ -106,10 +109,13 @@ class PreOrder extends Model
                 }
             }
 
-            $available = EggStockBatch::getAvailablePoolForSize($newSize, lockForUpdate: true);
+            $stocked = EggStockBatch::where('egg_size', $newSize)->sum('count');
+            $committed = self::where('egg_size', $newSize)->where('status', 'pending')->sum('egg_count');
+            $available = $stocked - $committed;
+
             if ($newCount > $available) {
                 throw new \OverflowException(
-                    "Only {$available} {$newSize} egg(s) available (production minus stocked and other pending pre-orders)."
+                    "Only {$available} {$newSize} egg(s) available in stock (inventory minus other pending pre-orders)."
                 );
             }
 
