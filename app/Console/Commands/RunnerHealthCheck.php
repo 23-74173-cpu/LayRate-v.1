@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Alert;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Process;
 
 class RunnerHealthCheck extends Command
 {
@@ -15,11 +16,8 @@ class RunnerHealthCheck extends Command
     {
         $serviceName = 'actions.runner.23-74173-cpu-LayRate-v.1.LayRatePI.service';
 
-        $output = [];
-        $exitCode = 0;
-        exec("systemctl is-active {$serviceName} 2>/dev/null", $output, $exitCode);
-
-        $status = trim(implode('', $output));
+        $result = Process::run("systemctl is-active {$serviceName} 2>/dev/null");
+        $status = trim($result->output());
 
         if ($status === 'active') {
             $this->info("Runner service {$serviceName} is active.");
