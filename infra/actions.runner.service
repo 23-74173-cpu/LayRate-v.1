@@ -1,0 +1,16 @@
+[Unit]
+Description=GitHub Actions Runner (23-74173-cpu-LayRate-v.1.LayRatePI)
+After=network-online.target
+
+[Service]
+ExecStart=/home/layratepi/actions-runner/runsvc.sh
+User=layratepi
+WorkingDirectory=/home/layratepi/actions-runner
+KillMode=process
+KillSignal=SIGTERM
+TimeoutStopSec=5min
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

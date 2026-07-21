@@ -180,6 +180,69 @@ jobs:
           echo "No serial-bridge files changed in this deploy — skipping dependency install,"
           echo "systemd unit update, and service restart to avoid unnecessary Arduino reset."
 
+      # ── Runner infrastructure ───────────────────────────────────────────────
+      - name: Install / update GitHub Actions runner service unit
+        run: |
+          SRC="${{ env.LARAVEL_DIR }}/infra/actions.runner.service"
+          DST="/etc/systemd/system/actions.runner.23-74173-cpu-LayRate-v.1.LayRatePI.service"
+          CHANGED=0
+          if [ ! -f "$DST" ]; then
+            echo "Installing runner service unit (first time)..."
+            sudo cp "$SRC" "$DST"
+            CHANGED=1
+          elif ! diff -q "$SRC" "$DST" >/dev/null 2>&1; then
+            echo "Runner service unit changed — updating..."
+            sudo cp "$SRC" "$DST"
+            CHANGED=1
+          else
+            echo "Runner service unit is unchanged."
+          fi
+          if [ "$CHANGED" = "1" ]; then
+            sudo systemctl daemon-reload
+            echo "Restart=on-failure now in effect (will apply on next runner start/crash)."
+          fi
+          echo "NOT restarting runner — this deploy depends on the current session."
+
+      - name: Install / update weekly runner restart timer
+        run: |
+          for UNIT in runner-weekly-restart.service runner-weekly-restart.timer; do
+            SRC="${{ env.LARAVEL_DIR }}/infra/$UNIT"
+            DST="/etc/systemd/system/$UNIT"
+            if [ ! -f "$DST" ]; then
+              echo "Installing $UNIT (first time)..."
+              sudo cp "$SRC" "$DST"
+            elif ! diff -q "$SRC" "$DST" >/dev/null 2>&1; then
+              echo "Updating $UNIT..."
+              sudo cp "$SRC" "$DST"
+            else
+              echo "$UNIT is unchanged."
+            fi
+          done
+          sudo systemctl daemon-reload
+          sudo systemctl enable runner-weekly-restart.timer
+          sudo systemctl start runner-weekly-restart.timer
+          echo "Weekly runner restart timer enabled (Sunday 3am)."
+
+      - name: Install / update runner health-check timer
+        run: |
+          for UNIT in runner-health-check.service runner-health-check.timer; do
+            SRC="${{ env.LARAVEL_DIR }}/infra/$UNIT"
+            DST="/etc/systemd/system/$UNIT"
+            if [ ! -f "$DST" ]; then
+              echo "Installing $UNIT (first time)..."
+              sudo cp "$SRC" "$DST"
+            elif ! diff -q "$SRC" "$DST" >/dev/null 2>&1; then
+              echo "Updating $UNIT..."
+              sudo cp "$SRC" "$DST"
+            else
+              echo "$UNIT is unchanged."
+            fi
+          done
+          sudo systemctl daemon-reload
+          sudo systemctl enable runner-health-check.timer
+          sudo systemctl start runner-health-check.timer
+          echo "Runner health-check timer enabled (daily)."
+
       # ── Laravel caches (run after everything is in place) ──────────────────
       - name: Clear and rebuild Laravel caches
         run: |

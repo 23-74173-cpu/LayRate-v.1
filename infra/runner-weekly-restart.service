@@ -1,0 +1,6 @@
+[Unit]
+Description=Weekly restart of GitHub Actions runner (belt-and-suspenders keepalive)
+
+[Service]
+Type=oneshot
+ExecStart=systemctl try-restart actions.runner.23-74173-cpu-LayRate-v.1.LayRatePI.service
