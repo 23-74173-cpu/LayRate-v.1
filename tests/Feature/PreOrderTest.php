@@ -272,7 +272,7 @@ class PreOrderTest extends TestCase
     }
 
     /** @test */
-    public function requested_date_must_not_be_in_past()
+    public function requested_date_allows_past_dates()
     {
         $this->createLog(50);
 
@@ -285,7 +285,8 @@ class PreOrderTest extends TestCase
             'requested_date' => now()->subDay()->toDateString(),
         ]);
 
-        $response->assertSessionHasErrors('requested_date');
+        $response->assertSessionHasNoErrors();
+        $this->assertEquals(1, PreOrder::count());
     }
 
     /** @test */
