@@ -139,6 +139,13 @@ class EggStockController extends Controller
             return $this->storeClassified($data);
         }
 
+        if ($data['egg_size'] !== 'unsorted' && !$request->boolean('classify')) {
+            $available = EggStockBatch::getAvailablePoolForSize($data['egg_size'], cageId: $data['cage_id'] ?? null);
+            if (($data['count'] ?? 0) > $available) {
+                return $this->stockWithAutoReclassify($data);
+            }
+        }
+
         try {
             $batch = EggStockBatch::createWithinPool($data);
         } catch (\OverflowException $e) {
@@ -172,6 +179,67 @@ class EggStockController extends Controller
             'totals' => $newTotals,
             'trayTotals' => array_map(fn($t) => (int) ceil($t / 30), $newTotals),
         ])->header('Content-Type', 'application/json');
+    }
+
+    private function stockWithAutoReclassify(array $data): \Illuminate\Http\JsonResponse
+    {
+        try {
+            DB::transaction(function () use ($data) {
+                $size = $data['egg_size'];
+                $count = (int) $data['count'];
+                $cageId = $data['cage_id'] ?? null;
+
+                $unsortedQuery = EggSizeLog::where('egg_size', 'unsorted')
+                    ->where('count', '>', 0);
+                if ($cageId) {
+                    $unsortedQuery->whereHas('productionLog.cageSlot', fn($q) => $q->where('cage_id', $cageId));
+                }
+                $unsortedRecords = $unsortedQuery->lockForUpdate()->orderBy('id')->get();
+
+                $remaining = $count;
+                $sourceLogId = null;
+                foreach ($unsortedRecords as $record) {
+                    if ($remaining <= 0) break;
+                    $deduct = min($remaining, $record->count);
+                    $record->decrement('count', $deduct);
+                    $remaining -= $deduct;
+                    if ($sourceLogId === null) {
+                        $sourceLogId = $record->production_log_id;
+                    }
+                }
+
+                if ($remaining > 0) {
+                    throw new \OverflowException(
+                        "Not enough unsorted eggs available. Only " . ($count - $remaining) . " could be reclassified."
+                    );
+                }
+
+                EggSizeLog::create([
+                    'production_log_id' => $sourceLogId,
+                    'egg_size' => $size,
+                    'count' => $count,
+                ]);
+
+                EggStockBatch::create([
+                    'egg_size' => $size,
+                    'count' => $count,
+                    'harvested_date' => $data['harvested_date'],
+                    'cage_id' => $cageId,
+                    'cage_slot_id' => $data['cage_slot_id'] ?? null,
+                    'source_production_log_id' => $data['source_production_log_id'] ?? $sourceLogId,
+                ]);
+            });
+        } catch (\OverflowException $e) {
+            return response()->json([
+                'success' => false,
+                'errors' => ['count' => [$e->getMessage()]],
+            ], 422);
+        }
+
+        EggStockBatch::checkLowStock();
+
+        return response()->json(['success' => true])
+            ->header('Content-Type', 'application/json');
     }
 
     private function storeClassified(array $data): \Illuminate\Http\JsonResponse
