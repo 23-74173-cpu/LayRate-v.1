@@ -208,17 +208,15 @@ class EggStockController extends Controller
                     }
                 }
 
-                if ($remaining > 0) {
-                    throw new \OverflowException(
-                        "Not enough unsorted eggs available. Only " . ($count - $remaining) . " could be reclassified."
-                    );
-                }
+                $reclassified = $count - $remaining;
 
-                EggSizeLog::create([
-                    'production_log_id' => $sourceLogId,
-                    'egg_size' => $size,
-                    'count' => $count,
-                ]);
+                if ($reclassified > 0) {
+                    EggSizeLog::create([
+                        'production_log_id' => $sourceLogId,
+                        'egg_size' => $size,
+                        'count' => $reclassified,
+                    ]);
+                }
 
                 EggStockBatch::create([
                     'egg_size' => $size,
