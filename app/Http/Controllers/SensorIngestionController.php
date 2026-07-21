@@ -153,6 +153,29 @@ class SensorIngestionController extends Controller
                             ->first();
 
                         if (! $existingLog || $existingLog->logged_via === 'sensor') {
+                            /*
+                             * INVARIANT GUARD — IR break-beam counts are
+                             * physically monotonic within a day.  If an
+                             * existing sensor-created log already records
+                             * a HIGHER egg_count, the sensor likely reset
+                             * (e.g. Arduino rebooted).  Do NOT overwrite.
+                             */
+                            if ($existingLog && $existingLog->logged_via === 'sensor' && $reportedCount < $existingLog->egg_count) {
+                                logger()->warning('Sensor count regression detected', [
+                                    'cage_slot_id' => $slot->id,
+                                    'log_date' => $logDate,
+                                    'previous_count' => $existingLog->egg_count,
+                                    'reported_count' => $reportedCount,
+                                    'hardware_item_id' => $hardwareItem->id,
+                                    'serial_number' => $serial,
+                                ]);
+
+                                self::createSensorResetAlert($slot, $existingLog->egg_count, $reportedCount);
+
+                                $errors[] = "Reading {$index}: count {$reportedCount} dropped from {$existingLog->egg_count} for slot {$slot->id} on {$logDate}. Sensor reset suspected.";
+                                continue;
+                            }
+
                             $henCount = $slot->active_hen_count;
                             ProductionLog::updateOrCreate(
                                 ['cage_slot_id' => $slot->id, 'log_date' => $logDate],
@@ -215,6 +238,30 @@ class SensorIngestionController extends Controller
                 'error' => config('app.debug') ? $e->getMessage() : 'Internal server error.',
             ], 500);
         }
+    }
+
+    private static function createSensorResetAlert($slot, int $previousCount, int $reportedCount): void
+    {
+        $cage = $slot->cage;
+        $cageCode = $cage?->cage_code ?? 'Unknown';
+
+        $exists = Alert::where('cage_id', $cage?->id)
+            ->where('alert_type', 'sensor_reset')
+            ->where('is_read', 0)
+            ->whereDate('triggered_at', today())
+            ->exists();
+
+        if ($exists) {
+            return;
+        }
+
+        Alert::create([
+            'cage_id' => $cage?->id,
+            'alert_type' => 'sensor_reset',
+            'message' => "IR sensor in {$cageCode} slot {$slot->row_number}-{$slot->column_number} likely reset: count dropped from {$previousCount} to {$reportedCount}",
+            'is_read' => 0,
+            'triggered_at' => now(),
+        ]);
     }
 
     private static function createOccupancyMismatchAlert($slot, int $reportedCount, int $actualOccupancy, string $recordedAt): void

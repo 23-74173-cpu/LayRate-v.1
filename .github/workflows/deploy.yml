@@ -20,6 +20,25 @@ jobs:
           cd ${{ env.LARAVEL_DIR }}
           git pull origin main
 
+      - name: Check for serial-bridge changes
+        id: check-serial-bridge
+        run: |
+          cd ${{ env.LARAVEL_DIR }}
+          if git rev-parse --verify ORIG_HEAD >/dev/null 2>&1; then
+            CHANGED_FILES=$(git diff --name-only ORIG_HEAD HEAD -- serial-bridge/ 2>/dev/null || true)
+            if [ -n "$CHANGED_FILES" ]; then
+              echo "Serial-bridge files changed:"
+              echo "$CHANGED_FILES"
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "No changes in serial-bridge/ since last deploy."
+              echo "changed=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "ORIG_HEAD unavailable (first deploy) — treating as changed."
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
       # ── PHP ────────────────────────────────────────────────────────────────
       - name: Install PHP dependencies
         run: |
@@ -113,12 +132,15 @@ jobs:
 
       # ── Serial bridge ────────────────────────────────────────────────────
       - name: Install serial-bridge dependencies
+        if: steps.check-serial-bridge.outputs.changed == 'true'
         run: |
+          echo "Serial-bridge files changed — reinstalling dependencies."
           python3 -m venv ${{ env.SERIAL_BRIDGE_VENV }}
           ${{ env.SERIAL_BRIDGE_VENV }}/bin/pip install --upgrade pip
           ${{ env.SERIAL_BRIDGE_VENV }}/bin/pip install -r ${{ env.LARAVEL_DIR }}/serial-bridge/requirements.txt
 
       - name: Install / update serial-bridge systemd unit
+        if: steps.check-serial-bridge.outputs.changed == 'true'
         run: |
           SRC="${{ env.LARAVEL_DIR }}/serial-bridge/layrate-serial.service"
           DST="/etc/systemd/system/layrate-serial.service"
@@ -139,9 +161,17 @@ jobs:
           fi
 
       - name: Enable and restart serial-bridge service
+        if: steps.check-serial-bridge.outputs.changed == 'true'
         run: |
+          echo "Serial-bridge files changed — restarting service."
           sudo systemctl enable layrate-serial
           sudo systemctl restart layrate-serial
+
+      - name: Skip serial-bridge update (no changes detected)
+        if: steps.check-serial-bridge.outputs.changed != 'true'
+        run: |
+          echo "No serial-bridge files changed in this deploy — skipping dependency install,"
+          echo "systemd unit update, and service restart to avoid unnecessary Arduino reset."
 
       # ── Laravel caches (run after everything is in place) ──────────────────
       - name: Clear and rebuild Laravel caches

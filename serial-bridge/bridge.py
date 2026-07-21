@@ -179,11 +179,30 @@ def run_loop(args):
             with serial.Serial(port, args.baud, timeout=1) as ser:
                 ser.reset_input_buffer()
                 log.info("Serial connection opened on %s", port)
+
+                # ── Settling period ────────────────────────────────────────
+                # Discard all output for the first N seconds after opening
+                # the port.  The Arduino Uno resets on DTR toggle, then
+                # runs setup() which prints Count: 0 and potentially stale
+                # sensor values before valid readings begin.
+                settling_end = time.monotonic() + args.settle_seconds
+                log.info("Settling for %d seconds (discarding Arduino boot output)...",
+                         args.settle_seconds)
+
                 while True:
+                    if settling_end is not None and time.monotonic() >= settling_end:
+                        log.info("Settling period complete — forwarding readings.")
+                        settling_end = None
+
                     if ser.in_waiting:
                         data = ser.read(ser.in_waiting).decode("utf-8", errors="replace")
                         blocks = parser.feed(data)
                         for parsed in blocks:
+                            if settling_end is not None:
+                                log.debug("Settling: discarding block (count=%s, temp=%s, hum=%s)",
+                                          parsed.get("count"), parsed.get("temp"), parsed.get("humidity"))
+                                continue
+
                             log.debug("Parsed: count=%s  temp=%s  hum=%s",
                                       parsed["count"], parsed["temp"], parsed["humidity"])
                             payload = build_payload(parsed, args.dht_serial, args.ir_serial)
@@ -232,6 +251,8 @@ def main():
     parser.add_argument("--dht-serial", default=None, help="DHT22 sensor serial number")
     parser.add_argument("--ir-serial", default=None, help="IR breakbeam sensor serial number")
     parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"])
+    parser.add_argument("--settle-seconds", type=float, default=5.0,
+                        help="Seconds of Arduino output to discard after serial open (DTR reset compensation)")
     parser.add_argument("--auto-port", action="store_true", help="Auto-detect Arduino port")
     args = parser.parse_args()
 
