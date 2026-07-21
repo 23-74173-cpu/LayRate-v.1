@@ -1,0 +1,27 @@
+# LayRate — Persistent symlink for Arduino Uno R3
+#
+# Ensures the Arduino always appears at /dev/ttyArduino regardless of
+# USB enumeration order, so the serial bridge never loses the device
+# when the Arduino is unplugged and replugged.
+#
+# Install:
+#   sudo cp 99-arduino.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules
+#   sudo udevadm trigger
+#
+# Common Arduino Uno R3 vendor/product IDs:
+#   2341:0043 — Arduino SA (official)
+#   2a03:0043 — Arduino SA (alternative)
+#   2341:0001 — Arduino SA (older revisions)
+
+# Arduino Uno R3 — official VID
+SUBSYSTEM=="tty", ATTRS{idVendor}=="2341", ATTRS{idProduct}=="0043", SYMLINK+="ttyArduino"
+
+# Arduino Uno R3 — alternative VID
+SUBSYSTEM=="tty", ATTRS{idVendor}=="2a03", ATTRS{idProduct}=="0043", SYMLINK+="ttyArduino"
+
+# Arduino Uno R3 — older revision
+SUBSYSTEM=="tty", ATTRS{idVendor}=="2341", ATTRS{idProduct}=="0001", SYMLINK+="ttyArduino"
+
+# Arduino-compatible boards (e.g. clones using CH340G)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", SYMLINK+="ttyArduino"

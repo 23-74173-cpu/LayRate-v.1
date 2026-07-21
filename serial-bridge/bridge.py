@@ -58,7 +58,7 @@ def resolve_port(port_arg, auto_flag):
     env_port = os.getenv(f"{ENV_KEY_PREFIX}SERIAL_PORT")
     if env_port:
         return env_port
-    return "/dev/ttyACM0"
+    return "/dev/ttyArduino"
 
 
 class BlockParser:

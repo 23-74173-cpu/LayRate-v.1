@@ -195,6 +195,9 @@
                                        oninput="computeHdep(); checkSizeSum(); validateForm()"
                                        class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                                        style="border-color: #e6e6e6; color: #1f1f1f;">
+                                @error('egg_count')
+                                <p class="text-xs mt-1" style="color: #9b1c24;">{{ $message }}</p>
+                                @enderror
                                 <button type="button" id="overrideLabel" onclick="event.preventDefault(); openOverrideModal()"
                                         class="hidden mt-1.5 text-xs flex items-center gap-1" style="color: #8a5a00;">
                                     <i data-lucide="lock" class="w-3 h-3"></i> Sensor reading — click to override

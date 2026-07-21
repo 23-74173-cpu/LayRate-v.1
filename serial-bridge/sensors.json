@@ -1,5 +1,5 @@
 {
-  "port": "/dev/ttyACM0",
+  "port": "/dev/ttyArduino",
   "baud": 9600,
   "device_key": "layrate-pi-dev-key-2026",
   "api_url": "http://localhost/api/sensor-readings",

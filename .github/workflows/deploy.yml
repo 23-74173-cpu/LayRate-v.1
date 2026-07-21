@@ -138,6 +138,21 @@ jobs:
           echo "mobile-api is healthy."
 
       # ── Serial bridge ────────────────────────────────────────────────────
+      - name: Install / update udev rule for persistent Arduino port
+        if: steps.check-serial-bridge.outputs.changed == 'true'
+        run: |
+          SRC="${{ env.LARAVEL_DIR }}/serial-bridge/99-arduino.rules"
+          DST="/etc/udev/rules.d/99-arduino.rules"
+          if [ ! -f "$DST" ] || ! diff -q "$SRC" "$DST" >/dev/null 2>&1; then
+            echo "Installing / updating udev rule..."
+            sudo cp "$SRC" "$DST"
+            sudo udevadm control --reload-rules
+            sudo udevadm trigger
+            echo "Done — Arduino will always appear at /dev/ttyArduino."
+          else
+            echo "udev rule is already up to date."
+          fi
+
       - name: Install serial-bridge dependencies
         if: steps.check-serial-bridge.outputs.changed == 'true'
         run: |
