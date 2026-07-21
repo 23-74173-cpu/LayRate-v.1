@@ -20,7 +20,16 @@ use App\Http\Controllers\NoteController;
 use App\Http\Controllers\PreOrderController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsController;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+
+// ─── Public landing page ───────────────────────────────────────
+Route::get('/', function () {
+    if (Auth::check()) {
+        return redirect()->route('dashboard');
+    }
+    return view('landing');
+})->name('landing');
 
 // ─── Guest routes ─────────────────────────────────────────────
 Route::middleware('guest')->group(function () {
@@ -41,7 +50,7 @@ Route::get('/_reset-opcache', function () {
 // ─── Authenticated routes ──────────────────────────────────────
 Route::middleware('auth')->group(function () {
 
-    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/stats', [DashboardController::class, 'stats'])->name('dashboard.stats');
     Route::get('/dashboard/feed-mortality', [DashboardController::class, 'feedMortality'])->name('dashboard.feed-mortality');
     Route::post('/settings/farm-layout', [SettingsController::class, 'storeFarmLayout'])->name('settings.farm-layout');

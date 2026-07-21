@@ -13,12 +13,32 @@
     <style>
         body { background-color: #f6f5f4; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
         :focus-visible { outline: 2px solid #0075de; outline-offset: 2px; border-radius: 4px; }
+
+        /* Reverse of the landing page's circle-wipe: this page loads already
+           covered, then wipes away to reveal the form — continuing the same
+           transition that started on the landing page. Pure CSS start state,
+           so it works even if JS never runs (just stays covered momentarily
+           then the fallback below force-removes it). */
+        #page-wipe {
+            position: fixed; inset: 0; z-index: 9999; pointer-events: none;
+            background: linear-gradient(135deg, #213183, #1a2342);
+            clip-path: circle(150% at 50% 50%);
+            transition: clip-path 0.65s cubic-bezier(.76,0,.24,1);
+        }
+        .login-enter { opacity: 0; transform: translateY(16px); }
+        .login-enter.in { opacity: 1; transform: translateY(0); transition: opacity 0.5s ease-out 0.3s, transform 0.5s ease-out 0.3s; }
+        @media (prefers-reduced-motion: reduce) {
+            #page-wipe { display: none; }
+            .login-enter { opacity: 1; transform: none; }
+        }
     </style>
     <link rel="stylesheet" href="{{ asset('css/inter.css') }}">
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
 
-    <div class="w-full max-w-sm">
+    <div id="page-wipe"></div>
+
+    <div class="w-full max-w-sm login-enter">
 
         {{-- Login Error Banner --}}
         @if($errors->any())
@@ -84,6 +104,22 @@
         </p>
     </div>
 
-    <script>lucide.createIcons();</script>
+    <script>
+        lucide.createIcons();
+        document.addEventListener('DOMContentLoaded', function () {
+            var wipe = document.getElementById('page-wipe');
+            var card = document.querySelector('.login-enter');
+            requestAnimationFrame(function () {
+                if (wipe) wipe.style.clipPath = 'circle(0% at 50% 50%)';
+                if (card) card.classList.add('in');
+            });
+            // Safety net: if the transition never fires for any reason, don't
+            // leave the page permanently covered.
+            setTimeout(function () {
+                if (wipe) wipe.style.display = 'none';
+                if (card) card.classList.add('in');
+            }, 1500);
+        });
+    </script>
 </body>
 </html>
