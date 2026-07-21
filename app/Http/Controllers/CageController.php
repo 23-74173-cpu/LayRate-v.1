@@ -6,6 +6,7 @@ use App\Models\Alert;
 use App\Models\Cage;
 use App\Models\CageSlot;
 use App\Models\CageTransfer;
+use App\Models\EggStockBatch;
 use App\Models\EnvironmentalLog;
 use App\Models\FeedConsumptionLog;
 use App\Models\HardwareItem;
@@ -39,6 +40,12 @@ class CageController extends Controller
             ->groupBy('device_type')
             ->pluck('c', 'device_type');
 
+        $eggSizeByCage = EggStockBatch::selectRaw('cage_id, egg_size, SUM(count) as total')
+            ->whereNotNull('cage_id')
+            ->groupBy('cage_id', 'egg_size')
+            ->get()
+            ->groupBy('cage_id');
+
         $editCage = null;
         if ($editCageId = session('edit_cage_id')) {
             $editCage = Cage::with([
@@ -47,7 +54,7 @@ class CageController extends Controller
             ])->find($editCageId);
         }
 
-        return view('cages.index', compact('cages', 'nextCageCode', 'gridRows', 'gridCols', 'spareCounts', 'editCage'));
+        return view('cages.index', compact('cages', 'nextCageCode', 'gridRows', 'gridCols', 'spareCounts', 'editCage', 'eggSizeByCage'));
     }
 
     public function store(Request $request)

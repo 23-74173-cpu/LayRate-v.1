@@ -208,6 +208,30 @@
                 @endif
             </div>
 
+            @php
+                $sizeColors = [
+                    'small'    => ['bg' => '#d6f0e3', 'txt' => '#2D7D46'],
+                    'medium'   => ['bg' => '#dcebfa', 'txt' => '#1D4E8F'],
+                    'large'    => ['bg' => '#fae3d0', 'txt' => '#C2703E'],
+                    'jumbo'    => ['bg' => '#e9e0f5', 'txt' => '#6B4C8A'],
+                    'unsorted' => ['bg' => '#f0f0f0', 'txt' => '#6B7280'],
+                ];
+                $cageSizes = $eggSizeByCage->get($cage->id, collect());
+            @endphp
+            @if($cageSizes->isNotEmpty())
+            <div class="flex items-center gap-2 px-4 pb-2">
+                @foreach(['small', 'medium', 'large', 'jumbo', 'unsorted'] as $sz)
+                    @php $entry = $cageSizes->firstWhere('egg_size', $sz); @endphp
+                    @if($entry && $entry->total > 0)
+                    <span class="px-2 py-0.5 rounded-full text-xs font-semibold"
+                          style="background:{{ $sizeColors[$sz]['bg'] }};color:{{ $sizeColors[$sz]['txt'] }};">
+                        {{ ucfirst($sz) }} {{ number_format($entry->total) }}
+                    </span>
+                    @endif
+                @endforeach
+            </div>
+            @endif
+
             {{-- Mini Slot Grid --}}
             <div class="px-4 pb-3">
                 <div class="grid gap-1 slot-grid-{{ $cage->id }}" style="grid-template-columns: repeat({{ $cage->slots_per_row ?? 3 }}, 1fr);">
