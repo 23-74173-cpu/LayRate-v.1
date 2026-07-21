@@ -187,10 +187,10 @@
                         <option value="">Select size…</option>
                         @foreach(['small','medium','large','jumbo','unsorted'] as $sz)
                         @php $pool = $availablePools[$sz] ?? 0; $label = $sz === 'unsorted' ? 'Unsorted' : ucfirst($sz); @endphp
-                        <option value="{{ $sz }}" data-available="{{ $pool }}" {{ $pool < 1 ? 'disabled' : '' }}>{{ $label }} ({{ number_format($pool) }} avail.)</option>
+                        <option value="{{ $sz }}" data-available="{{ $pool }}">{{ $label }} ({{ number_format($pool) }} avail.)</option>
                         @endforeach
                     </select>
-                    <p id="addStockPoolNote" class="text-xs mt-1" style="color: #9CA3AF;">Pool shown for selected Source Cage below.</p>
+                    <p id="addStockPoolNote" class="text-xs mt-1" style="color: #9CA3AF;">Pool reflects logged minus stocked eggs. Any size can be selected — server validates against pool on save.</p>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG COUNT</label>
@@ -433,7 +433,6 @@ document.addEventListener('turbo:load', function() {
             var avail = pools[opt.value] || 0;
             opt.setAttribute('data-available', avail);
             opt.textContent = (opt.value === 'unsorted' ? 'Unsorted' : ucfirst(opt.value)) + ' (' + numberFormat(avail) + ' avail.)';
-            opt.disabled = avail < 1;
         }
         updateAddStockHint();
     }
@@ -458,16 +457,14 @@ document.addEventListener('turbo:load', function() {
         }
         var avail = parseInt(opt.getAttribute('data-available') || '0');
         if (avail < 1) {
-            poolHint.textContent = 'No eggs available to stock for this size (pool exhausted).';
-            if (addBtn) addBtn.disabled = true;
-            if (countInput) countInput.disabled = true;
+            poolHint.textContent = 'No eggs available for this size yet — stock will be validated against production records.';
         } else {
             poolHint.textContent = avail + ' egg(s) available to stock for this size.';
-            if (countInput) countInput.disabled = false;
         }
+        if (countInput) countInput.disabled = false;
 
         if (classifySection) {
-            if (opt.value === 'unsorted' && avail > 0) {
+            if (opt.value === 'unsorted') {
                 classifySection.classList.remove('hidden');
             } else {
                 classifySection.classList.add('hidden');
@@ -484,13 +481,11 @@ document.addEventListener('turbo:load', function() {
         var avail = opt && opt.value ? parseInt(opt.getAttribute('data-available') || '0') : 0;
         var entered = parseInt(countInput.value) || 0;
 
-        if (opt && opt.value && avail >= 1 && entered > avail) {
-            warningEl.textContent = 'Only ' + avail + ' egg(s) available for this size — cannot stock ' + entered + '.';
+        if (opt && opt.value && entered > avail && avail >= 0) {
+            warningEl.textContent = 'Only ' + avail + ' egg(s) available — stocking ' + entered + ' may exceed pool.';
             warningEl.classList.remove('hidden');
-            addBtn.disabled = true;
         } else {
             warningEl.classList.add('hidden');
-            if (opt && opt.value && avail >= 1) addBtn.disabled = false;
         }
     }
 
