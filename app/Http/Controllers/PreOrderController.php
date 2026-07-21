@@ -103,6 +103,16 @@ class PreOrderController extends Controller
         ]);
     }
 
+    public function poolData(Request $request)
+    {
+        $sizes = ['small', 'medium', 'large', 'jumbo'];
+        $pools = [];
+        foreach ($sizes as $size) {
+            $pools[$size] = EggStockBatch::getAvailablePoolForSize($size);
+        }
+        return response()->json(['pools' => $pools]);
+    }
+
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -110,7 +120,7 @@ class PreOrderController extends Controller
             'customer_reference' => 'nullable|string|max:100',
             'egg_size' => 'required|in:small,medium,large,jumbo',
             'egg_count' => 'required|integer|min:1',
-            'requested_date' => 'required|date',
+            'requested_date' => 'required|date|after_or_equal:today',
             'fulfillment_date' => 'nullable|date|after_or_equal:requested_date',
             'notes' => 'nullable|string',
         ]);

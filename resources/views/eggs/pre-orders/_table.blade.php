@@ -7,7 +7,7 @@
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">REFERENCE</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">SIZE</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">EGGS</th>
-                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">TRAYS</th>
+                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">QTY</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">REQUESTED</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">FULFILLED</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">STATUS</th>
@@ -40,7 +40,7 @@
                         </span>
                     </td>
                     <td class="px-5 py-3.5 text-sm font-medium text-[#333333]">{{ number_format($order->egg_count) }}</td>
-                    <td class="px-5 py-3.5 text-sm text-[#6B7280]">{{ $order->tray_count }}</td>
+                    <td class="px-5 py-3.5 text-sm text-[#6B7280]">{{ $order->egg_label }}</td>
                     <td class="px-5 py-3.5 text-sm font-mono text-[#333333]">{{ $order->requested_date->format('Y-m-d') }}</td>
                     <td class="px-5 py-3.5 text-sm font-mono text-[#6B7280]">
                         {{ $order->fulfillment_date ? $order->fulfillment_date->format('Y-m-d') : 'Pending' }}

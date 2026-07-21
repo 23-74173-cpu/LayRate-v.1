@@ -115,6 +115,18 @@
               onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Adding\u2026')">
             @csrf
             <div class="space-y-4">
+
+                {{-- ── Live Stock Summary ── --}}
+                <div id="preorderStockSummary" class="rounded-lg p-3 text-xs space-y-1" style="background-color: #f6f5f4; border: 1px solid #e6e6e6;">
+                    <div class="font-semibold uppercase tracking-[0.05em] mb-1.5" style="color: #615d59;">Available Stock</div>
+                    <div id="preorderStockSummaryContent" class="grid grid-cols-2 gap-x-3 gap-y-1" style="color: #6B7280;">
+                        <span>Small: <strong id="stockSmall" style="color: #333333;">—</strong></span>
+                        <span>Medium: <strong id="stockMedium" style="color: #333333;">—</strong></span>
+                        <span>Large: <strong id="stockLarge" style="color: #333333;">—</strong></span>
+                        <span>Jumbo: <strong id="stockJumbo" style="color: #333333;">—</strong></span>
+                    </div>
+                </div>
+
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">CUSTOMER NAME</label>
                     <input type="text" name="customer_name" value="{{ old('customer_name') }}" required
@@ -130,7 +142,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG SIZE</label>
-                    <select name="egg_size" required
+                    <select name="egg_size" id="orderEggSize" required onchange="onOrderSizeChange()"
                             class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select size…</option>
@@ -140,17 +152,17 @@
                         <option value="jumbo" {{ old('egg_size') === 'jumbo' ? 'selected' : '' }}>Jumbo</option>
                     </select>
                     <x-input-error name="egg_size" />
+                    <div id="orderSizeSuggestion" class="hidden mt-1.5 text-xs" style="color: #8a5a00;"></div>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG COUNT</label>
                     <input type="number" name="egg_count" id="orderEggCount" min="1" value="{{ old('egg_count') }}" required
-                           oninput="updateOrderTrays()"
+                           oninput="onOrderCountChange()"
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                     <x-input-error name="egg_count" />
-                    <div class="mt-1 text-xs" style="color: #6B7280;">
-                        <span id="orderTrayDisplay">0</span> trays
-                    </div>
+                    <div id="orderTrayLabel" class="mt-1 text-xs" style="color: #6B7280;"></div>
+                    <div id="orderRemainingIndicator" class="hidden mt-1 text-xs"></div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -179,8 +191,8 @@
             <div class="flex gap-3 mt-5">
                 <button type="button" onclick="closeAddOrderModal()"
                         class="flex-1 border border-[#D9D9D9] text-[#6B7280] py-2.5 rounded-lg text-sm">Cancel</button>
-                <button type="submit"
-                        class="flex-1 bg-[#002D5E] text-white py-2.5 rounded-lg text-sm">Add Pre-Order</button>
+                <button type="submit" id="addOrderSubmitBtn"
+                        class="flex-1 bg-[#002D5E] text-white py-2.5 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed">Add Pre-Order</button>
             </div>
         </form>
     </div>
@@ -254,13 +266,128 @@
 
 @push('scripts')
 <script>
-function closeAddOrderModal() {
-    document.getElementById('addOrderModal').style.display = 'none';
+var _preorderPools = {};
+
+function eggCountLabel(count) {
+    if (count === 0) return '0 eggs';
+    if (count === 1) return '1 egg';
+    if (count === 12) return '1 dozen';
+    if (count === 15) return 'half tray';
+    if (count % 30 === 0) {
+        var t = count / 30;
+        return t + ' ' + (t === 1 ? 'tray' : 'trays');
+    }
+    if (count > 30 && count % 15 === 0) {
+        return (count / 15 / 2) + ' trays';
+    }
+    var trays = (count / 30).toFixed(1);
+    return count.toLocaleString() + ' eggs (' + trays + ' trays)';
 }
 
-function updateOrderTrays() {
+function fetchPreorderPools(callback) {
+    var url = '{{ route("eggs.preorders.pool-data") }}';
+    fetch(url)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.pools) {
+                _preorderPools = data.pools;
+                if (callback) callback(data.pools);
+            }
+        })
+        .catch(function() { console.warn('fetchPreorderPools failed'); });
+}
+
+function updateStockSummary(pools) {
+    var sizes = ['small', 'medium', 'large', 'jumbo'];
+    sizes.forEach(function(s) {
+        var el = document.getElementById('stock' + s.charAt(0).toUpperCase() + s.slice(1));
+        if (el) el.textContent = (pools[s] !== undefined ? pools[s].toLocaleString() : '—');
+    });
+}
+
+function getAvailableForSize(size) {
+    return _preorderPools[size] !== undefined ? _preorderPools[size] : 0;
+}
+
+function onOrderSizeChange() {
+    var select = document.getElementById('orderEggSize');
+    var selected = select ? select.value : '';
+    var suggestion = document.getElementById('orderSizeSuggestion');
+
+    if (!selected) {
+        if (suggestion) suggestion.classList.add('hidden');
+        onOrderCountChange();
+        return;
+    }
+
+    var avail = getAvailableForSize(selected);
+    if (avail < 1) {
+        var bestSize = '';
+        var bestAvail = 0;
+        ['small', 'medium', 'large', 'jumbo'].forEach(function(s) {
+            var a = getAvailableForSize(s);
+            if (a > bestAvail) { bestAvail = a; bestSize = s; }
+        });
+        if (suggestion && bestSize) {
+            suggestion.textContent = 'No ' + selected + ' eggs available. ' +
+                bestAvail.toLocaleString() + ' ' + bestSize + ' eggs available instead.';
+            suggestion.classList.remove('hidden');
+        }
+    } else {
+        if (suggestion) suggestion.classList.add('hidden');
+    }
+
+    onOrderCountChange();
+}
+
+function onOrderCountChange() {
     var count = parseInt(document.getElementById('orderEggCount').value) || 0;
-    document.getElementById('orderTrayDisplay').textContent = Math.ceil(count / 30);
+    var select = document.getElementById('orderEggSize');
+    var selected = select ? select.value : '';
+    var trayLabel = document.getElementById('orderTrayLabel');
+    var remainingEl = document.getElementById('orderRemainingIndicator');
+    var submitBtn = document.getElementById('addOrderSubmitBtn');
+
+    if (count < 1 || !selected) {
+        trayLabel.textContent = selected ? 'Enter a count.' : 'Select a size first.';
+        if (remainingEl) remainingEl.classList.add('hidden');
+        if (submitBtn) submitBtn.disabled = true;
+        return;
+    }
+
+    trayLabel.textContent = eggCountLabel(count);
+
+    var avail = getAvailableForSize(selected);
+    if (avail < 1) {
+        if (remainingEl) {
+            remainingEl.textContent = 'No ' + selected + ' eggs available for this size.';
+            remainingEl.style.color = '#9b1c24';
+            remainingEl.classList.remove('hidden');
+        }
+        if (submitBtn) submitBtn.disabled = true;
+        return;
+    }
+
+    var remaining = avail - count;
+    if (remaining < 0) {
+        if (remainingEl) {
+            remainingEl.textContent = 'Only ' + avail.toLocaleString() + ' ' + selected + ' eggs available — cannot order ' + count.toLocaleString() + '.';
+            remainingEl.style.color = '#9b1c24';
+            remainingEl.classList.remove('hidden');
+        }
+        if (submitBtn) submitBtn.disabled = true;
+    } else {
+        if (remainingEl) {
+            remainingEl.textContent = 'Remaining after this order: ' + remaining.toLocaleString() + ' ' + selected + ' eggs';
+            remainingEl.style.color = '#1f6b3a';
+            remainingEl.classList.remove('hidden');
+        }
+        if (submitBtn) submitBtn.disabled = false;
+    }
+}
+
+function closeAddOrderModal() {
+    document.getElementById('addOrderModal').style.display = 'none';
 }
 
 function openEditStatus(id, currentStatus, fulfillmentDate) {
@@ -283,7 +410,25 @@ function toggleEditFulfillmentDate() {
 }
 
 document.addEventListener('turbo:load', function() {
-    updateOrderTrays();
+    fetchPreorderPools(function(pools) {
+        updateStockSummary(pools);
+        onOrderSizeChange();
+    });
 });
+
+// Also re-fetch when the modal opens, in case stock changed
+var _addOrderObserver = new MutationObserver(function() {
+    var modal = document.getElementById('addOrderModal');
+    if (modal && modal.style.display !== 'none') {
+        fetchPreorderPools(function(pools) {
+            updateStockSummary(pools);
+            onOrderSizeChange();
+        });
+    }
+});
+var _addOrderModalEl = document.getElementById('addOrderModal');
+if (_addOrderModalEl) {
+    _addOrderObserver.observe(_addOrderModalEl, { attributes: true, attributeFilter: ['style'] });
+}
 </script>
 @endpush

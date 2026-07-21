@@ -29,6 +29,34 @@ class PreOrder extends Model
         return (int) ceil($this->egg_count / 30);
     }
 
+    public static function eggLabel(int $count): string
+    {
+        if ($count === 0) return '0 eggs';
+        if ($count === 1) return '1 egg';
+
+        if ($count === 12) return '1 dozen';
+
+        if ($count === 15) return 'half tray';
+
+        if ($count % 30 === 0) {
+            $trays = $count / 30;
+            return $trays . ' ' . ($trays === 1 ? 'tray' : 'trays');
+        }
+
+        if ($count > 30 && $count % 15 === 0) {
+            $halfTrays = $count / 15;
+            return ($halfTrays / 2) . ' trays';
+        }
+
+        $trays = round($count / 30, 1);
+        return number_format($count) . ' eggs (' . $trays . ' trays)';
+    }
+
+    public function getEggLabelAttribute(): string
+    {
+        return self::eggLabel($this->egg_count);
+    }
+
     /**
      * Create a pre-order inside a DB transaction with row locking,
      * ensuring it doesn't over-commit the shared pool with stock batches.

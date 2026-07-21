@@ -117,6 +117,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/eggs/pre-orders',                     [PreOrderController::class, 'index'])->name('eggs.preorders');
     Route::get('/eggs/pre-orders/table',                [PreOrderController::class, 'table'])->name('eggs.preorders.table');
+    Route::get('/eggs/pre-orders/pool-data',            [PreOrderController::class, 'poolData'])->name('eggs.preorders.pool-data');
     Route::post('/eggs/pre-orders',                    [PreOrderController::class, 'store'])->name('eggs.preorders.store');
     Route::patch('/eggs/pre-orders/{order}',           [PreOrderController::class, 'update'])->name('eggs.preorders.update');
     Route::delete('/eggs/pre-orders/{order}',          [PreOrderController::class, 'destroy'])->name('eggs.preorders.destroy')->middleware('admin');
