@@ -14,10 +14,14 @@ The server binds to 0.0.0.0:8000. Set environment variables to override:
 
 import os
 import secrets
+import socket
 import sqlite3
+import atexit
 from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
+
+from zeroconf import Zeroconf, ServiceInfo
 
 import bcrypt
 import pymysql
@@ -323,6 +327,37 @@ def internal_error(error):
     return jsonify({"message": "Internal server error"}), 500
 
 
+# ── mDNS service discovery ─────────────────────────────────────────────────
+
+def _get_local_ip() -> str:
+    """Get the LAN IP address of this machine."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("10.254.254.254", 1))
+        ip = s.getsockname()[0]
+    except Exception:
+        ip = "127.0.0.1"
+    finally:
+        s.close()
+    return ip
+
+
+def _start_mdns(port: int) -> Zeroconf:
+    """Register this server on the LAN via mDNS so the mobile app can discover it."""
+    ip = _get_local_ip()
+    info = ServiceInfo(
+        "_http._tcp.local.",
+        f"Layrate Server._http._tcp.local.",
+        addresses=[socket.inet_aton(ip)],
+        port=port,
+        properties={"path": "/"},
+    )
+    zc = Zeroconf()
+    zc.register_service(info)
+    print(f"  mDNS: Layrate Server advertised at http://{ip}:{port}")
+    return zc
+
+
 # ── Main entry point ───────────────────────────────────────────────────────
 
 if __name__ == "__main__":
@@ -330,4 +365,9 @@ if __name__ == "__main__":
     host = os.getenv("FLASK_HOST", "0.0.0.0")
     port = int(os.getenv("FLASK_PORT", "5000"))
     debug = os.getenv("FLASK_DEBUG", "0") == "1"
+
+    if not host.startswith("127."):
+        zc = _start_mdns(port)
+        atexit.register(lambda: zc.close())
+
     app.run(host=host, port=port, debug=debug)
