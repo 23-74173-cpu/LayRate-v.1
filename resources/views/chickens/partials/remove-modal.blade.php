@@ -49,18 +49,19 @@
                 <div id="mortalityFields" class="space-y-3">
                     <div>
                         <label class="block text-xs font-medium text-[#6B7280] mb-1">Reason</label>
-                        <select name="reason" id="removeReason"
-                                class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
-                            <option value="">Select reason...</option>
-                            @foreach(['Disease', 'Heat Stress', 'Injury', 'Predator', 'Unknown', 'Other'] as $reason)
-                            <option value="{{ $reason }}">{{ $reason }}</option>
-                            @endforeach
-                        </select>
+                    <select name="reason" id="removeReason"
+                            class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
+                        <option value="">Select reason...</option>
+                        @foreach(['Disease', 'Heat Stress', 'Injury', 'Predator', 'Unknown', 'Other'] as $reason)
+                        <option value="{{ $reason }}" {{ old('reason') === $reason ? 'selected' : '' }}>{{ $reason }}</option>
+                        @endforeach
+                    </select>
+                    <x-input-error name="reason" />
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-[#6B7280] mb-1">Notes (optional)</label>
                         <textarea name="notes" id="removeNotes" rows="2" placeholder="Additional details..."
-                                  class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E] resize-none"></textarea>
+                                  class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E] resize-none">{{ old('notes') }}</textarea>
                     </div>
                 </div>
 

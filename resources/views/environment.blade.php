@@ -67,7 +67,7 @@ function startLivePolling() {
                 if (typeof lucide !== 'undefined') lucide.createIcons();
                 if (typeof initEnvCharts === 'function') initEnvCharts();
             })
-            .catch(function() {});
+            .catch(function() { console.warn('Live poll fetch failed'); });
     }, 10000);
 }
 

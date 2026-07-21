@@ -17,6 +17,7 @@
                     <input type="date" name="log_date" id="editLogDate" required
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
+                    <x-input-error name="log_date" />
                 </div>
 
                 <div>
@@ -25,6 +26,7 @@
                            oninput="editComputeHdep(); editCheckSizeSum()"
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
+                    <x-input-error name="egg_count" />
                 </div>
 
                 <div>
@@ -33,6 +35,7 @@
                            oninput="editComputeHdep()"
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
+                    <x-input-error name="hen_count" />
                     <div id="editHdepDisplay" class="mt-2 inline-block border rounded-lg px-3 py-1.5 text-sm font-mono" style="background-color: #f6f5f4; border-color: #e6e6e6; color: #1f1f1f;">
                         HDEP: —
                     </div>
@@ -82,6 +85,7 @@
                         </div>
                     </div>
                     <div id="editSizeSumMsg" class="mt-2 text-xs" style="color: #a39e98;">Sum: 0</div>
+                    <x-input-error name="size_breakdown" />
                 </div>
             </div>
 

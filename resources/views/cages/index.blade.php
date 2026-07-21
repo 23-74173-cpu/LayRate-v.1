@@ -303,24 +303,27 @@
                     <div class="grid grid-cols-3 gap-4">
                         <div>
                             <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Rows</label>
-                            <input type="number" name="rows" id="addRows" value="3" min="1" max="10"
+                            <input type="number" name="rows" id="addRows" value="{{ old('rows', 3) }}" min="1" max="10"
                                    oninput="updateAddPreview()"
                                    class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
+                            <x-input-error name="rows" />
                         </div>
                         <div>
                             <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Slots</label>
-                            <input type="number" name="slots_per_row" id="addSlotsPerRow" value="5" min="1" max="100"
+                            <input type="number" name="slots_per_row" id="addSlotsPerRow" value="{{ old('slots_per_row', 5) }}" min="1" max="100"
                                    oninput="updateAddPreview()"
                                    class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
+                            <x-input-error name="slots_per_row" />
                         </div>
                         <div>
                             <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Max/Slot</label>
-                            <input type="number" name="max_chickens_per_slot" id="addMaxPerSlot" value="4" min="1" max="10"
+                            <input type="number" name="max_chickens_per_slot" id="addMaxPerSlot" value="{{ old('max_chickens_per_slot', 4) }}" min="1" max="10"
                                    oninput="updateAddPreview()"
                                    class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
+                            <x-input-error name="max_chickens_per_slot" />
                         </div>
                     </div>
 
@@ -362,6 +365,12 @@
             </form>
         </div>
     </div>
+
+@if(session('reopen_add_cage'))
+<x-modal-reopen modal-id="addCageModal" session-key="reopen_add_cage" guard="addCage">
+    openAddModal();
+</x-modal-reopen>
+@endif
 
     {{-- ── No Unplaced Chickens Modal ────────────────────── --}}
     <div id="noChickensModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" style="display: none;">
@@ -416,6 +425,18 @@
                     </div>
                 </div>
 
+                @if($errors->has('rows') || $errors->has('slots_per_row') || $errors->has('max_chickens_per_slot') || $errors->has('is_active') || $errors->has('slots') || $errors->has('dht22_count') || $errors->has('resize'))
+                <div class="mb-4 rounded-lg p-3" style="background-color: #fbe4e6; border: 1px solid #f3cdd0;">
+                    <div class="space-y-1 text-sm" style="color: #9b1c24;">
+                        @foreach(['rows','slots_per_row','max_chickens_per_slot','is_active','slots','dht22_count','resize'] as $errKey)
+                        @error($errKey)
+                        <p>{{ $message }}</p>
+                        @enderror
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+
                 <div class="space-y-4">
                     <div class="rounded-lg p-3" style="background-color: #f6f5f4;">
                         <div class="text-xs font-semibold tracking-[0.05em] uppercase mb-1" style="color: #615d59;">Canvas Position</div>
@@ -424,25 +445,25 @@
                     <div class="grid grid-cols-3 gap-4">
                         <div>
                             <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Rows</label>
-                            <input type="number" name="rows" id="editRows" value="3" min="1" max="10"
+                            <input type="number" name="rows" id="editRows" value="{{ old('rows', 3) }}" min="1" max="10"
                                    class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Slots</label>
-                            <input type="number" name="slots_per_row" id="editSlotsPerRow" value="5" min="1" max="100"
+                            <input type="number" name="slots_per_row" id="editSlotsPerRow" value="{{ old('slots_per_row', 5) }}" min="1" max="100"
                                    class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Max/Slot</label>
-                            <input type="number" name="max_chickens_per_slot" id="editMaxPerSlot" value="4" min="1" max="10"
+                            <input type="number" name="max_chickens_per_slot" id="editMaxPerSlot" value="{{ old('max_chickens_per_slot', 4) }}" min="1" max="10"
                                    class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <input id="editActive" name="is_active" type="checkbox" value="1" class="w-4 h-4 rounded" style="accent-color: #0075de;">
+                        <input id="editActive" name="is_active" type="checkbox" value="1" class="w-4 h-4 rounded" style="accent-color: #0075de;" {{ old('is_active', true) ? 'checked' : '' }}>
                         <label for="editActive" class="text-sm" style="color: #31302e;">Active</label>
                     </div>
 

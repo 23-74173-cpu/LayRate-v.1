@@ -18,7 +18,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-[#6B7280] mb-1">Cull Date <span class="text-red-500">*</span></label>
-                    <input type="date" name="cull_date" required value="{{ today()->toDateString() }}"
+                    <input type="date" name="cull_date" required value="{{ old('cull_date', today()->toDateString()) }}"
                            class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
                     <x-input-error name="cull_date" />
                 </div>
@@ -27,18 +27,18 @@
                     <select name="reason" required
                             class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
                         <option value="">Select reason...</option>
-                        <option value="low_production">Low Production</option>
-                        <option value="illness">Illness</option>
-                        <option value="aggression">Aggression</option>
-                        <option value="age">Age</option>
-                        <option value="other">Other</option>
+                        <option value="low_production" {{ old('reason') === 'low_production' ? 'selected' : '' }}>Low Production</option>
+                        <option value="illness" {{ old('reason') === 'illness' ? 'selected' : '' }}>Illness</option>
+                        <option value="aggression" {{ old('reason') === 'aggression' ? 'selected' : '' }}>Aggression</option>
+                        <option value="age" {{ old('reason') === 'age' ? 'selected' : '' }}>Age</option>
+                        <option value="other" {{ old('reason') === 'other' ? 'selected' : '' }}>Other</option>
                     </select>
                     <x-input-error name="reason" />
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-[#6B7280] mb-1">Notes</label>
                     <textarea name="notes" rows="2" placeholder="Optional..."
-                              class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E] resize-none"></textarea>
+                              class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E] resize-none">{{ old('notes') }}</textarea>
                     <x-input-error name="notes" />
                 </div>
                 <input type="hidden" name="hen_id" id="cullHenId" value="">

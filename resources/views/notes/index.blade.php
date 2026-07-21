@@ -95,13 +95,14 @@
                 @method('PUT')
                 <textarea name="body" id="noteEditBody" rows="4" required maxlength="2000"
                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1 resize-y mb-3"
-                          style="border-color: #e6e6e6; color: #1f1f1f;"></textarea>
+                          style="border-color: #e6e6e6; color: #1f1f1f;">{{ old('body') }}</textarea>
+                <x-input-error name="body" />
                 <select name="cage_id" id="noteEditCage"
                         class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1 mb-4"
                         style="border-color: #e6e6e6; color: #1f1f1f;">
                     <option value="">No cage tag</option>
                     @foreach($cages as $cage)
-                    <option value="{{ $cage->id }}">{{ $cage->cage_code }}</option>
+                    <option value="{{ $cage->id }}" @selected(old('cage_id') == $cage->id)>{{ $cage->cage_code }}</option>
                     @endforeach
                 </select>
                 <div class="flex items-center justify-end gap-3">
@@ -119,6 +120,19 @@
             </form>
         </div>
     </div>
+
+@if(session('reopen_edit_note'))
+@php $editNote = \App\Models\Note::find(session('reopen_edit_note')); @endphp
+@if($editNote)
+<x-modal-reopen modal-id="noteEditModal" session-key="reopen_edit_note" guard="editNote">
+    openNoteEdit(
+        {{ $editNote->id }},
+        {{ Js::from($editNote->body) }},
+        {{ $editNote->cage_id ?? 'null' }}
+    );
+</x-modal-reopen>
+@endif
+@endif
 
 </div>
 

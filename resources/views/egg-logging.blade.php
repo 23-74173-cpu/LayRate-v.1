@@ -284,6 +284,24 @@
 
     @include('egg-logging._edit-modal')
 
+    @if(isset($editLog) && $editLog)
+    <x-modal-reopen modal-id="editLogModal" session-key="reopen_edit_log" guard="editLog">
+        @php $sizes = $editLog->eggSizeLogs->keyBy('egg_size'); @endphp
+        openEditLog(
+            {{ $editLog->id }},
+            '{{ $editLog->log_date->format('Y-m-d') }}',
+            {{ $editLog->egg_count }},
+            {{ $editLog->hen_count }},
+            '{{ addslashes($editLog->notes ?? '') }}',
+            {{ $editLog->cage_slot_id }},
+            {{ $sizes->get('small')?->count ?? 0 }},
+            {{ $sizes->get('medium')?->count ?? 0 }},
+            {{ $sizes->get('large')?->count ?? 0 }},
+            {{ $sizes->get('jumbo')?->count ?? 0 }}
+        );
+    </x-modal-reopen>
+    @endif
+
     {{-- ── Sensor Override Modal ── --}}
     <div id="overrideModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" style="display: none;" role="dialog" aria-modal="true">
         <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeOverrideModal()"></div>
@@ -506,6 +524,9 @@
                 document.getElementById('overridePinSection').classList.toggle('hidden', noPinYet);
                 document.getElementById('overridePasswordSection').classList.toggle('hidden', !noPinYet);
             }
+        })
+        .catch(function() {
+            showNotification('Network error — please try again.', 'error');
         });
     }
 

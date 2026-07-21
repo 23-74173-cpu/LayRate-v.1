@@ -143,12 +143,14 @@
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">DATE</label>
                     <input type="date" name="log_date" id="editMortDate" required
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                    <x-input-error name="log_date" />
                 </div>
 
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">NUMBER OF DEATHS</label>
                     <input type="number" name="count" id="editMortCount" min="1" required
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                    <x-input-error name="count" />
                 </div>
 
                 <div>
@@ -160,12 +162,13 @@
                         <option value="{{ $reason }}">{{ $reason }}</option>
                         @endforeach
                     </select>
+                    <x-input-error name="reason" />
                 </div>
 
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">ADDITIONAL NOTES</label>
                     <textarea name="notes" id="editMortNotes" rows="3"
-                              class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] resize-none focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]"></textarea>
+                              class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] resize-none focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">{{ old('notes') }}</textarea>
                 </div>
             </div>
 
@@ -188,6 +191,22 @@
         </form>
     </div>
 </div>
+
+@if(session('reopen_edit_mortality'))
+@php $editMortality = \App\Models\MortalityLog::find(session('reopen_edit_mortality')); @endphp
+@if($editMortality)
+<x-modal-reopen modal-id="editMortalityModal" session-key="reopen_edit_mortality" guard="editMortality">
+    openEditMortality(
+        {{ $editMortality->id }},
+        '{{ $editMortality->log_date->format('Y-m-d') }}',
+        {{ $editMortality->count }},
+        '{{ $editMortality->reason }}',
+        '{{ addslashes($editMortality->notes ?? '') }}'
+    );
+</x-modal-reopen>
+@endif
+@endif
+
 @push('scripts')
 <script>
 function openEditMortality(id, date, count, reason, notes) {

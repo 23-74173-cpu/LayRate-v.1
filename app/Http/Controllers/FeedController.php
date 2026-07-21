@@ -10,12 +10,31 @@ use App\Models\FeedConsumptionLog;
 use App\Services\FcrCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class FeedController extends Controller
 {
     public function index()
     {
         return view('feed', ['preselectedCageId' => (int) request('cage_id') ?: null]);
+    }
+
+    public function batchSessionData()
+    {
+        $batchId = session('reopen_edit_batch');
+        return $batchId ? FeedBatch::find($batchId) : null;
+    }
+
+    public function consumptionSessionData()
+    {
+        $logId = session('reopen_edit_consumption');
+        return $logId ? FeedConsumptionLog::with(['cage', 'feedBatch'])->find($logId) : null;
+    }
+
+    public function farmEntrySessionData()
+    {
+        $entryId = session('reopen_edit_farm_entry');
+        return $entryId ? FarmFeedEntry::find($entryId) : null;
     }
 
     public function liveData()
@@ -139,9 +158,9 @@ class FeedController extends Controller
         ];
     }
 
-    public function storeBatch(Request $request)
+    private function batchRules(): array
     {
-        $data = $request->validate([
+        return [
             'brand' => 'nullable|string|max:100',
             'crude_protein' => 'required|numeric|min:0|max:100',
             'total_quantity_kg' => 'nullable|numeric|min:0',
@@ -149,8 +168,21 @@ class FeedController extends Controller
             'date_received' => 'required|date',
             'low_stock_threshold' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
-        ]);
+        ];
+    }
 
+    public function storeBatch(Request $request)
+    {
+        $validator = Validator::make($request->all(), $this->batchRules());
+
+        if ($validator->fails()) {
+            return redirect()->route('feed')
+                ->with('reopen_add_batch', true)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
         $batch = FeedBatch::create($data);
 
         return redirect()->route('feed')
@@ -159,29 +191,44 @@ class FeedController extends Controller
 
     public function updateBatch(Request $request, FeedBatch $feedBatch)
     {
-        $data = $request->validate([
-            'brand' => 'nullable|string|max:100',
-            'crude_protein' => 'required|numeric|min:0|max:100',
-            'total_quantity_kg' => 'nullable|numeric|min:0',
-            'unit_cost' => 'nullable|numeric|min:0',
-            'low_stock_threshold' => 'nullable|numeric|min:0',
-            'notes' => 'nullable|string',
-        ]);
+        $validator = Validator::make($request->all(), $this->batchRules());
 
+        if ($validator->fails()) {
+            return redirect()->route('feed')
+                ->with('reopen_edit_batch', $feedBatch->id)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
         $feedBatch->update($data);
 
         return redirect()->route('feed')->with('success', 'Feed batch updated.');
     }
 
-    public function storeConsumption(Request $request)
+    private function consumptionRules(): array
     {
-        $data = $request->validate([
+        return [
             'cage_id' => 'required|exists:cages,id',
             'feed_batch_id' => 'required|exists:feed_batches,id',
             'log_date' => 'required|date',
             'log_time' => 'nullable|date_format:H:i',
             'feed_consumed_kg' => 'required|numeric|min:0',
-        ]);
+        ];
+    }
+
+    public function storeConsumption(Request $request)
+    {
+        $validator = Validator::make($request->all(), $this->consumptionRules());
+
+        if ($validator->fails()) {
+            return redirect()->route('feed')
+                ->with('reopen_add_consumption', true)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
 
         $log = FeedConsumptionLog::create(array_merge($data, [
             'source' => 'direct',
@@ -200,13 +247,16 @@ class FeedController extends Controller
             return redirect()->back()->with('error', 'Distributed entries can only be edited via the whole-farm entry.');
         }
 
-        $data = $request->validate([
-            'cage_id' => 'required|exists:cages,id',
-            'feed_batch_id' => 'required|exists:feed_batches,id',
-            'log_date' => 'required|date',
-            'log_time' => 'nullable|date_format:H:i',
-            'feed_consumed_kg' => 'required|numeric|min:0',
-        ]);
+        $validator = Validator::make($request->all(), $this->consumptionRules());
+
+        if ($validator->fails()) {
+            return redirect()->route('feed')
+                ->with('reopen_edit_consumption', $feedConsumptionLog->id)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
 
         $feedConsumptionLog->update(array_merge($data, [
             'source' => 'direct',
@@ -229,15 +279,29 @@ class FeedController extends Controller
         return redirect()->route('feed')->with('success', 'Consumption log deleted.');
     }
 
-    public function storeFarmFeedEntry(Request $request)
+    private function farmEntryRules(): array
     {
-        $data = $request->validate([
+        return [
             'feed_batch_id' => 'required|exists:feed_batches,id',
             'log_date' => 'required|date',
             'log_time' => 'nullable|date_format:H:i',
             'total_kg' => 'required|numeric|min:0',
             'unit_cost' => 'nullable|numeric|min:0',
-        ]);
+        ];
+    }
+
+    public function storeFarmFeedEntry(Request $request)
+    {
+        $validator = Validator::make($request->all(), $this->farmEntryRules());
+
+        if ($validator->fails()) {
+            return redirect()->route('feed')
+                ->with('reopen_add_farm_entry', true)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
 
         $batch = FeedBatch::find($data['feed_batch_id']);
 
@@ -258,13 +322,16 @@ class FeedController extends Controller
 
     public function updateFarmFeedEntry(Request $request, FarmFeedEntry $farmFeedEntry)
     {
-        $data = $request->validate([
-            'feed_batch_id' => 'required|exists:feed_batches,id',
-            'log_date' => 'required|date',
-            'log_time' => 'nullable|date_format:H:i',
-            'total_kg' => 'required|numeric|min:0',
-            'unit_cost' => 'nullable|numeric|min:0',
-        ]);
+        $validator = Validator::make($request->all(), $this->farmEntryRules());
+
+        if ($validator->fails()) {
+            return redirect()->route('feed')
+                ->with('reopen_edit_farm_entry', $farmFeedEntry->id)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
 
         $batch = FeedBatch::find($data['feed_batch_id']);
 

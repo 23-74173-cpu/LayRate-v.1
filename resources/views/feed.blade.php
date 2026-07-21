@@ -36,37 +36,39 @@
             <p class="text-xs text-[#6B7280] mb-4">Batch code is auto-generated (e.g. F-2026-001).</p>
 
             <label class="block text-sm text-[#333333] mb-1.5">Brand</label>
-            <input name="brand" placeholder="e.g. Purina, Nutrena"
+            <input name="brand" value="{{ old('brand') }}" placeholder="e.g. Purina, Nutrena"
                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
 
             <label class="block text-sm text-[#333333] mb-1.5">Crude Protein % <span class="text-[#9B1C24]">*</span></label>
-            <input name="crude_protein" type="number" step="0.1" min="0" max="100" required
+            <input name="crude_protein" type="number" step="0.1" min="0" max="100" value="{{ old('crude_protein') }}" required
                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+            <x-input-error name="crude_protein" />
 
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-sm text-[#333333] mb-1.5">Total Quantity (kg)</label>
-                    <input name="total_quantity_kg" type="number" step="0.01" min="0"
+                    <input name="total_quantity_kg" type="number" step="0.01" min="0" value="{{ old('total_quantity_kg') }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
                 </div>
                 <div>
                     <label class="block text-sm text-[#333333] mb-1.5">Unit Cost (per kg)</label>
-                    <input name="unit_cost" type="number" step="0.01" min="0"
+                    <input name="unit_cost" type="number" step="0.01" min="0" value="{{ old('unit_cost') }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
                 </div>
             </div>
 
             <label class="block text-sm text-[#333333] mb-1.5">Date Received <span class="text-[#9B1C24]">*</span></label>
-            <input name="date_received" type="date" value="{{ now()->toDateString() }}" required
+            <input name="date_received" type="date" value="{{ old('date_received', now()->toDateString()) }}" required
                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+            <x-input-error name="date_received" />
 
             <label class="block text-sm text-[#333333] mb-1.5">Low Stock Threshold (kg)</label>
-            <input name="low_stock_threshold" type="number" step="0.01" min="0" placeholder="e.g. 100"
+            <input name="low_stock_threshold" type="number" step="0.01" min="0" value="{{ old('low_stock_threshold') }}" placeholder="e.g. 100"
                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
 
             <label class="block text-sm text-[#333333] mb-1.5">Notes</label>
             <textarea name="notes" rows="2"
-                      class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-5 focus:outline-none focus:border-[#002D5E]"></textarea>
+                      class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-5 focus:outline-none focus:border-[#002D5E]">{{ old('notes') }}</textarea>
 
             <div class="flex gap-3 mt-5">
                 <button type="button" onclick="closeAddBatchModal()"
@@ -79,6 +81,13 @@
         </form>
     </div>
 </div>
+
+@if(session('reopen_add_batch'))
+<x-modal-reopen modal-id="addBatchModal" session-key="reopen_add_batch" guard="addBatch">
+    document.getElementById('addBatchModal').classList.remove('hidden');
+    document.getElementById('addBatchModal').classList.add('flex');
+</x-modal-reopen>
+@endif
 
 {{-- Edit Batch Modal --}}
 <div id="editBatchModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] items-center justify-center p-4" role="dialog" aria-modal="true">
@@ -94,33 +103,34 @@
             @csrf @method('PUT')
 
             <label class="block text-sm text-[#333333] mb-1.5">Brand</label>
-            <input id="editBrand" name="brand"
+            <input id="editBrand" name="brand" value="{{ old('brand') }}"
                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
 
             <label class="block text-sm text-[#333333] mb-1.5">Crude Protein % <span class="text-[#9B1C24]">*</span></label>
-            <input id="editCp" name="crude_protein" type="number" step="0.1"
+            <input id="editCp" name="crude_protein" type="number" step="0.1" value="{{ old('crude_protein') }}"
                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+            <x-input-error name="crude_protein" />
 
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-sm text-[#333333] mb-1.5">Total Quantity (kg)</label>
-                    <input id="editQty" name="total_quantity_kg" type="number" step="0.01" min="0"
+                    <input id="editQty" name="total_quantity_kg" type="number" step="0.01" min="0" value="{{ old('total_quantity_kg') }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
                 </div>
                 <div>
                     <label class="block text-sm text-[#333333] mb-1.5">Unit Cost (per kg)</label>
-                    <input id="editCost" name="unit_cost" type="number" step="0.01" min="0"
+                    <input id="editCost" name="unit_cost" type="number" step="0.01" min="0" value="{{ old('unit_cost') }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
                 </div>
             </div>
 
             <label class="block text-sm text-[#333333] mb-1.5">Low Stock Threshold (kg)</label>
-            <input id="editThreshold" name="low_stock_threshold" type="number" step="0.01" min="0"
+            <input id="editThreshold" name="low_stock_threshold" type="number" step="0.01" min="0" value="{{ old('low_stock_threshold') }}"
                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
 
             <label class="block text-sm text-[#333333] mb-1.5">Notes</label>
             <textarea id="editNotes" name="notes" rows="2"
-                      class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-5 focus:outline-none focus:border-[#002D5E]"></textarea>
+                      class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-5 focus:outline-none focus:border-[#002D5E]">{{ old('notes') }}</textarea>
 
             <div class="flex gap-3 mt-5">
                 <button type="button" onclick="closeEditBatchModal()"
@@ -133,6 +143,23 @@
         </form>
     </div>
 </div>
+
+@if(session('reopen_edit_batch'))
+@php $editBatch = app(\App\Http\Controllers\FeedController::class)->batchSessionData(); @endphp
+@if($editBatch)
+<x-modal-reopen modal-id="editBatchModal" session-key="reopen_edit_batch" guard="editBatch">
+    openEditBatch(
+        {{ $editBatch->id }},
+        '{{ addslashes($editBatch->brand ?? '') }}',
+        {{ $editBatch->crude_protein }},
+        {{ $editBatch->total_quantity_kg ?? 'null' }},
+        {{ $editBatch->unit_cost ?? 'null' }},
+        {{ $editBatch->low_stock_threshold ?? 'null' }},
+        '{{ addslashes($editBatch->notes ?? '') }}'
+    );
+</x-modal-reopen>
+@endif
+@endif
 
 {{-- Add/Edit Consumption Modal --}}
 <div id="consumptionModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] items-center justify-center p-4" role="dialog" aria-modal="true">
@@ -153,29 +180,33 @@
                     class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
                 <option value="">Select cage...</option>
             </select>
+            <x-input-error name="cage_id" />
 
             <label class="block text-sm text-[#333333] mb-1.5">Feed Batch <span class="text-[#9B1C24]">*</span></label>
             <select name="feed_batch_id" required
                     class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
                 <option value="">Select batch...</option>
             </select>
+            <x-input-error name="feed_batch_id" />
 
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-sm text-[#333333] mb-1.5">Date <span class="text-[#9B1C24]">*</span></label>
-                    <input name="log_date" type="date" value="{{ now()->toDateString() }}" required
+                    <input name="log_date" type="date" value="{{ old('log_date', now()->toDateString()) }}" required
                            class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                    <x-input-error name="log_date" />
                 </div>
                 <div>
                     <label class="block text-sm text-[#333333] mb-1.5">Time</label>
-                    <input name="log_time" type="time"
+                    <input name="log_time" type="time" value="{{ old('log_time') }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
                 </div>
             </div>
 
             <label class="block text-sm text-[#333333] mb-1.5">Consumed (kg) <span class="text-[#9B1C24]">*</span></label>
-            <input name="feed_consumed_kg" type="number" step="0.01" min="0" required id="consumptionKgInput"
+            <input name="feed_consumed_kg" type="number" step="0.01" min="0" required id="consumptionKgInput" value="{{ old('feed_consumed_kg') }}"
                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-1 focus:outline-none focus:border-[#002D5E]">
+            <x-input-error name="feed_consumed_kg" />
             <p id="consumptionExceedsWarning" class="hidden text-xs text-[#9B1C24] mb-4"></p>
 
             <div class="flex gap-3 mt-5">
@@ -189,6 +220,29 @@
         </form>
     </div>
 </div>
+
+@if(session('reopen_add_consumption'))
+<x-modal-reopen modal-id="consumptionModal" session-key="reopen_add_consumption" guard="addConsumption">
+    document.getElementById('consumptionModal').classList.remove('hidden');
+    document.getElementById('consumptionModal').classList.add('flex');
+</x-modal-reopen>
+@endif
+
+@if(session('reopen_edit_consumption'))
+@php $editLog = app(\App\Http\Controllers\FeedController::class)->consumptionSessionData(); @endphp
+@if($editLog)
+<x-modal-reopen modal-id="consumptionModal" session-key="reopen_edit_consumption" guard="editConsumption">
+    openConsumptionModal(
+        {{ $editLog->cage_id }},
+        {{ $editLog->feed_batch_id }},
+        '{{ $editLog->log_date->format('Y-m-d') }}',
+        '{{ $editLog->log_time?->format('H:i') ?? '' }}',
+        {{ $editLog->feed_consumed_kg }},
+        {{ $editLog->id }}
+    );
+</x-modal-reopen>
+@endif
+@endif
 
 {{-- Whole-Farm Entry Modal --}}
 <div id="farmEntryModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] items-center justify-center p-4" role="dialog" aria-modal="true">
@@ -209,27 +263,30 @@
                     class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
                 <option value="">Select batch...</option>
             </select>
+            <x-input-error name="feed_batch_id" />
 
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-sm text-[#333333] mb-1.5">Date <span class="text-[#9B1C24]">*</span></label>
-                    <input name="log_date" type="date" value="{{ now()->toDateString() }}" required
+                    <input name="log_date" type="date" value="{{ old('log_date', now()->toDateString()) }}" required
                            class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                    <x-input-error name="log_date" />
                 </div>
                 <div>
                     <label class="block text-sm text-[#333333] mb-1.5">Time</label>
-                    <input name="log_time" type="time"
+                    <input name="log_time" type="time" value="{{ old('log_time') }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
                 </div>
             </div>
 
             <label class="block text-sm text-[#333333] mb-1.5">Total Fed (kg) <span class="text-[#9B1C24]">*</span></label>
-            <input name="total_kg" type="number" step="0.01" min="0" required id="farmKgInput"
+            <input name="total_kg" type="number" step="0.01" min="0" required id="farmKgInput" value="{{ old('total_kg') }}"
                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-1 focus:outline-none focus:border-[#002D5E]">
+            <x-input-error name="total_kg" />
             <p id="farmExceedsWarning" class="hidden text-xs text-[#9B1C24] mb-4"></p>
 
             <label class="block text-sm text-[#333333] mb-1.5">Unit Cost (per kg)</label>
-            <input name="unit_cost" type="number" step="0.01" min="0"
+            <input name="unit_cost" type="number" step="0.01" min="0" value="{{ old('unit_cost') }}"
                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-5 focus:outline-none focus:border-[#002D5E]">
 
             <p class="text-xs text-[#6B7280] mb-5">
@@ -247,6 +304,32 @@
         </form>
     </div>
 </div>
+
+@if(session('reopen_add_farm_entry'))
+<x-modal-reopen modal-id="farmEntryModal" session-key="reopen_add_farm_entry" guard="addFarmEntry">
+    document.getElementById('farmEntryModal').classList.remove('hidden');
+    document.getElementById('farmEntryModal').classList.add('flex');
+</x-modal-reopen>
+@endif
+
+@if(session('reopen_edit_farm_entry'))
+@php $editFarmEntry = app(\App\Http\Controllers\FeedController::class)->farmEntrySessionData(); @endphp
+@if($editFarmEntry)
+@php
+    $fb = $editFarmEntry->feedBatch;
+@endphp
+<x-modal-reopen modal-id="farmEntryModal" session-key="reopen_edit_farm_entry" guard="editFarmEntry">
+    openFarmEntryModal(
+        {{ $editFarmEntry->id }},
+        {{ $editFarmEntry->feed_batch_id }},
+        '{{ $editFarmEntry->log_date->format('Y-m-d') }}',
+        '{{ $editFarmEntry->log_time?->format('H:i') ?? '' }}',
+        {{ $editFarmEntry->total_kg }},
+        {{ $editFarmEntry->unit_cost ?? 'null' }}
+    );
+</x-modal-reopen>
+@endif
+@endif
 
 @endsection
 

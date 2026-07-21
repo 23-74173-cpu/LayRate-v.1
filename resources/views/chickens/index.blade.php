@@ -229,6 +229,12 @@
 @include('chickens.partials.weight-check-modal')
 @include('chickens.partials.cull-modal')
 @include('chickens.partials.removal-modal')
+
+@if(session('reopen_register'))
+<x-modal-reopen modal-id="registerModal" session-key="reopen_register" guard="registerHens">
+    openRegisterModal();
+</x-modal-reopen>
+@endif
 @endsection
 
 @push('scripts')

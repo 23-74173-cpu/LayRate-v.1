@@ -11,6 +11,7 @@ use App\Models\ProductionLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 
 class EggLoggingController extends Controller
 {
@@ -53,8 +54,13 @@ class EggLoggingController extends Controller
 
         $selectedCage = $cageFilter ? $cages->firstWhere('id', $cageFilter) : null;
 
+        $editLog = null;
+        if ($editLogId = session('reopen_edit_log')) {
+            $editLog = ProductionLog::with('eggSizeLogs')->find($editLogId);
+        }
+
         return view('egg-logging', compact(
-            'cageSlots', 'cages', 'cageFilter', 'todayTotal', 'todayByCage', 'todayLoggedCountByCage', 'selectedCage'
+            'cageSlots', 'cages', 'cageFilter', 'todayTotal', 'todayByCage', 'todayLoggedCountByCage', 'selectedCage', 'editLog'
         ));
     }
 
@@ -242,7 +248,7 @@ class EggLoggingController extends Controller
 
     public function update(Request $request, ProductionLog $productionLog)
     {
-        $data = $request->validate([
+        $validator = Validator::make($request->all(), [
             'log_date' => 'required|date|before_or_equal:'.now()->toDateString(),
             'egg_count' => 'required|integer|min:0',
             'hen_count' => 'nullable|integer|min:0',
@@ -252,6 +258,15 @@ class EggLoggingController extends Controller
             'size_large' => 'nullable|integer|min:0',
             'size_jumbo' => 'nullable|integer|min:0',
         ]);
+
+        if ($validator->fails()) {
+            return redirect()->route('eggs.logging')
+                ->with('reopen_edit_log', $productionLog->id)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
 
         $sizeSum = (int) ($data['size_small'] ?? 0)
                  + (int) ($data['size_medium'] ?? 0)
@@ -264,7 +279,8 @@ class EggLoggingController extends Controller
                       || ($data['size_jumbo'] ?? 0) > 0;
 
         if ($anySizeFilled && $sizeSum !== (int) $data['egg_count']) {
-            return redirect()->back()
+            return redirect()->route('eggs.logging')
+                ->with('reopen_edit_log', $productionLog->id)
                 ->withErrors(['size_breakdown' => "Size breakdown sum ({$sizeSum}) must equal total eggs ({$data['egg_count']})."])
                 ->withInput();
         }
@@ -273,13 +289,15 @@ class EggLoggingController extends Controller
         $henCount = $data['hen_count'] !== null ? (int) $data['hen_count'] : $productionLog->hen_count;
 
         if ($henCount === 0) {
-            return redirect()->back()
+            return redirect()->route('eggs.logging')
+                ->with('reopen_edit_log', $productionLog->id)
                 ->withErrors(['hen_count' => 'Hen count cannot be zero.'])
                 ->withInput();
         }
 
         if ($data['egg_count'] > $henCount) {
-            return redirect()->back()
+            return redirect()->route('eggs.logging')
+                ->with('reopen_edit_log', $productionLog->id)
                 ->withErrors(['egg_count' => "Egg count ({$data['egg_count']}) cannot exceed hen count ({$henCount})."])
                 ->withInput();
         }

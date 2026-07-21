@@ -9,6 +9,7 @@ use App\Models\ProductionLog;
 use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class EggStockController extends Controller
 {
@@ -97,8 +98,14 @@ class EggStockController extends Controller
 
         $eggWeights = Setting::eggWeights();
 
+        $editBatch = null;
+        if ($editBatchId = session('reopen_edit_stock')) {
+            $editBatch = EggStockBatch::find($editBatchId);
+        }
+
         return view('eggs.stocks', [
             'activeTab' => 'stocks',
+            'editBatch' => $editBatch,
             'batches' => $batches,
             'totals' => $totals,
             'trayTotals' => $trayTotals,
@@ -250,20 +257,28 @@ class EggStockController extends Controller
 
     public function update(Request $request, EggStockBatch $batch)
     {
-        $data = $request->validate([
+        $validator = Validator::make($request->all(), [
             'egg_size' => 'required|in:small,medium,large,jumbo,unsorted',
             'count' => 'required|integer|min:1',
             'harvested_date' => 'required|date',
         ]);
 
+        if ($validator->fails()) {
+            return redirect()->route('eggs.stocks')
+                ->with('reopen_edit_stock', $batch->id)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
+
         try {
             $batch->updateWithinPool($data);
         } catch (\OverflowException $e) {
-            $message = $e->getMessage();
-            if ($request->expectsJson() || $request->ajax()) {
-                return response()->json(['success' => false, 'errors' => ['count' => [$message]]], 422);
-            }
-            return back()->withErrors(['count' => $message])->withInput();
+            return redirect()->route('eggs.stocks')
+                ->with('reopen_edit_stock', $batch->id)
+                ->withErrors(['count' => $e->getMessage()])
+                ->withInput();
         }
 
         $batch->refresh();

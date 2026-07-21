@@ -74,22 +74,22 @@
                 <p class="text-xs mb-3" style="color: #6B7280;">Check the types of records you want to keep (FKeys will be nulled, records themselves are preserved).</p>
                 <div class="space-y-2">
                     <label class="flex items-center gap-2 text-sm cursor-pointer">
-                        <input type="checkbox" name="preserve_production" value="1" checked
+                        <input type="checkbox" name="preserve_production" value="1" {{ old('preserve_production', true) ? 'checked' : '' }}
                                class="rounded border-gray-300 text-[#0075de] focus:ring-[#0075de]">
                         <span style="color: #1f1f1f;">Preserve production logs ({{ $productionLogCount }})</span>
                     </label>
                     <label class="flex items-center gap-2 text-sm cursor-pointer">
-                        <input type="checkbox" name="preserve_mortality" value="1" checked
+                        <input type="checkbox" name="preserve_mortality" value="1" {{ old('preserve_mortality', true) ? 'checked' : '' }}
                                class="rounded border-gray-300 text-[#0075de] focus:ring-[#0075de]">
                         <span style="color: #1f1f1f;">Preserve mortality records ({{ $mortalityCount }})</span>
                     </label>
                     <label class="flex items-center gap-2 text-sm cursor-pointer">
-                        <input type="checkbox" name="preserve_feed" value="1" checked
+                        <input type="checkbox" name="preserve_feed" value="1" {{ old('preserve_feed', true) ? 'checked' : '' }}
                                class="rounded border-gray-300 text-[#0075de] focus:ring-[#0075de]">
                         <span style="color: #1f1f1f;">Preserve feed consumption logs ({{ $feedLogCount }})</span>
                     </label>
                     <label class="flex items-center gap-2 text-sm cursor-pointer">
-                        <input type="checkbox" name="preserve_environment" value="1" checked
+                        <input type="checkbox" name="preserve_environment" value="1" {{ old('preserve_environment', true) ? 'checked' : '' }}
                                class="rounded border-gray-300 text-[#0075de] focus:ring-[#0075de]">
                         <span style="color: #1f1f1f;">Preserve environmental logs ({{ $envLogCount }})</span>
                     </label>
@@ -101,12 +101,12 @@
                 <p class="text-sm font-semibold mb-2" style="color: #1f1f1f;">Active hens ({{ $henCount }})</p>
                 <div class="space-y-2">
                     <label class="flex items-center gap-2 text-sm cursor-pointer">
-                        <input type="radio" name="hens_action" value="move" checked
+                        <input type="radio" name="hens_action" value="move" {{ old('hens_action', 'move') === 'move' ? 'checked' : '' }}
                                class="border-gray-300 text-[#0075de] focus:ring-[#0075de]">
                         <span style="color: #1f1f1f;">Detach hens (null out cage_slot_id, keep hen records)</span>
                     </label>
                     <label class="flex items-center gap-2 text-sm cursor-pointer">
-                        <input type="radio" name="hens_action" value="delete"
+                        <input type="radio" name="hens_action" value="delete" {{ old('hens_action') === 'delete' ? 'checked' : '' }}
                                class="border-gray-300 text-[#9b1c24] focus:ring-[#9b1c24]">
                         <span style="color: #9b1c24;">Delete all hen records permanently</span>
                     </label>
@@ -116,7 +116,7 @@
             {{-- Return sensors --}}
             <div class="mb-5">
                 <label class="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="checkbox" name="return_sensors" value="1" checked
+                    <input type="checkbox" name="return_sensors" value="1" {{ old('return_sensors', true) ? 'checked' : '' }}
                            class="rounded border-gray-300 text-[#0075de] focus:ring-[#0075de]">
                     <span style="color: #1f1f1f;">Return sensors to spare inventory</span>
                 </label>
@@ -127,11 +127,12 @@
                 <label class="block text-sm font-semibold mb-1.5" style="color: #1f1f1f;">
                     Type <span class="font-mono font-bold text-red-600">{{ $cage->cage_code }}</span> to confirm
                 </label>
-                <input type="text" name="confirmation" id="confirmationInput" autocomplete="off" required
+                <input type="text" name="confirmation" id="confirmationInput" value="{{ old('confirmation') }}" autocomplete="off" required
                        oninput="document.getElementById('deleteBtn').disabled = (this.value !== '{{ $cage->cage_code }}')"
                        class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
                        style="border-color: #e6e6e6; color: #1f1f1f;"
                        placeholder="Type {{ $cage->cage_code }} here...">
+                <x-input-error name="confirmation" />
             </div>
 
             <div class="flex gap-3">

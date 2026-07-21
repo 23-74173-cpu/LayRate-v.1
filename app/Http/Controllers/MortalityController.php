@@ -11,6 +11,7 @@ use App\Models\MortalityLogHen;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 class MortalityController extends Controller
@@ -117,13 +118,21 @@ class MortalityController extends Controller
 
     public function update(Request $request, MortalityLog $mortalityLog)
     {
-        $data = $request->validate([
+        $validator = Validator::make($request->all(), [
             'log_date' => 'required|date',
             'count'    => 'required|integer|min:1',
             'reason'   => 'required|in:' . implode(',', MortalityLog::REASONS),
             'notes'    => 'nullable|string|max:1000',
         ]);
 
+        if ($validator->fails()) {
+            return redirect()->route('mortality.index')
+                ->with('reopen_edit_mortality', $mortalityLog->id)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
         $oldCount = $mortalityLog->count;
         $newCount = (int) $data['count'];
 
@@ -145,9 +154,11 @@ class MortalityController extends Controller
                 ->values();
 
             if ($activeHens->count() < $diff) {
-                return back()->withErrors([
-                    'count' => "Only {$activeHens->count()} remaining active hen(s) available in " . ($mortalityLog->cage?->cage_code ?? 'Deleted Cage') . ", but {$diff} additional deaths recorded.",
-                ])->withInput();
+                return redirect()->route('mortality.index')
+                    ->with('reopen_edit_mortality', $mortalityLog->id)
+                    ->withErrors([
+                        'count' => "Only {$activeHens->count()} remaining active hen(s) available in " . ($mortalityLog->cage?->cage_code ?? 'Deleted Cage') . ", but {$diff} additional deaths recorded.",
+                    ])->withInput();
             }
 
             $hensToDeactivate = $activeHens->take($diff);

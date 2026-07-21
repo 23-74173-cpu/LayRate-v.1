@@ -56,17 +56,19 @@
                             class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select type…</option>
-                        <option value="IR_breakbeam">IR Breakbeam</option>
-                        <option value="DHT22">DHT22 Temp/Humidity</option>
-                        <option value="relay">Relay</option>
-                        <option value="other">Other</option>
+                        <option value="IR_breakbeam" {{ old('device_type') === 'IR_breakbeam' ? 'selected' : '' }}>IR Breakbeam</option>
+                        <option value="DHT22" {{ old('device_type') === 'DHT22' ? 'selected' : '' }}>DHT22 Temp/Humidity</option>
+                        <option value="relay" {{ old('device_type') === 'relay' ? 'selected' : '' }}>Relay</option>
+                        <option value="other" {{ old('device_type') === 'other' ? 'selected' : '' }}>Other</option>
                     </select>
+                    <x-input-error name="device_type" />
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Serial Number</label>
-                    <input type="text" name="serial_number" required maxlength="100"
+                    <input type="text" name="serial_number" value="{{ old('serial_number') }}" required maxlength="100"
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
+                    <x-input-error name="serial_number" />
                 </div>
                 <div id="addCageSlotGroup" class="hidden">
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Cage Slot</label>
@@ -75,9 +77,10 @@
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select slot…</option>
                         @foreach($cageSlots as $slot)
-                        <option value="{{ $slot->id }}">{{ $slot->cage->cage_code }} · Slot {{ $slot->row_number }}-{{ $slot->column_number }}</option>
+                        <option value="{{ $slot->id }}" {{ old('cage_slot_id') == $slot->id ? 'selected' : '' }}>{{ $slot->cage->cage_code }} · Slot {{ $slot->row_number }}-{{ $slot->column_number }}</option>
                         @endforeach
                     </select>
+                    <x-input-error name="cage_slot_id" />
                 </div>
                 <div id="addCageGroup" class="hidden">
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Cage</label>
@@ -86,30 +89,32 @@
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select cage…</option>
                         @foreach($cages as $cage)
-                        <option value="{{ $cage->id }}">{{ $cage->cage_code }} — {{ $cage->formatted_location }}</option>
+                        <option value="{{ $cage->id }}" {{ old('cage_id') == $cage->id ? 'selected' : '' }}>{{ $cage->cage_code }} — {{ $cage->formatted_location }}</option>
                         @endforeach
                     </select>
+                    <x-input-error name="cage_id" />
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Status</label>
                     <select name="status" required
                             class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
-                        <option value="active">Active</option>
-                        <option value="spare">Spare</option>
-                        <option value="faulty">Faulty</option>
-                        <option value="removed">Removed</option>
+                        <option value="active" {{ old('status') === 'active' ? 'selected' : '' }}>Active</option>
+                        <option value="spare" {{ old('status') === 'spare' ? 'selected' : '' }}>Spare</option>
+                        <option value="faulty" {{ old('status') === 'faulty' ? 'selected' : '' }}>Faulty</option>
+                        <option value="removed" {{ old('status') === 'removed' ? 'selected' : '' }}>Removed</option>
                     </select>
+                    <x-input-error name="status" />
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Installation Date <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
-                    <input type="date" name="installation_date"
+                    <input type="date" name="installation_date" value="{{ old('installation_date') }}"
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Last Calibration <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
-                    <input type="date" name="last_calibration_date"
+                    <input type="date" name="last_calibration_date" value="{{ old('last_calibration_date') }}"
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                 </div>
@@ -130,6 +135,12 @@
         </form>
     </div>
 </div>
+
+@if(session('reopen_add_hardware'))
+<x-modal-reopen modal-id="addModal" session-key="reopen_add_hardware" guard="addHardware">
+    openAddModal();
+</x-modal-reopen>
+@endif
 
 {{-- Edit Modal --}}
 <div id="editModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" style="display: none;" role="dialog" aria-modal="true">
@@ -155,12 +166,14 @@
                         <option value="relay">Relay</option>
                         <option value="other">Other</option>
                     </select>
+                    <x-input-error name="device_type" />
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Serial Number</label>
-                    <input type="text" name="serial_number" id="editSerial" required maxlength="100"
+                    <input type="text" name="serial_number" id="editSerial" value="{{ old('serial_number', $editItem->serial_number ?? '') }}" required maxlength="100"
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
+                    <x-input-error name="serial_number" />
                 </div>
                 <div id="editCageSlotGroup" class="hidden">
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Cage Slot</label>
@@ -169,9 +182,10 @@
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select slot…</option>
                         @foreach($cageSlots as $slot)
-                        <option value="{{ $slot->id }}">{{ $slot->cage->cage_code }} · Slot {{ $slot->row_number }}-{{ $slot->column_number }}</option>
+                        <option value="{{ $slot->id }}" {{ old('cage_slot_id', $editItem->cage_slot_id ?? '') == $slot->id ? 'selected' : '' }}>{{ $slot->cage->cage_code }} · Slot {{ $slot->row_number }}-{{ $slot->column_number }}</option>
                         @endforeach
                     </select>
+                    <x-input-error name="cage_slot_id" />
                 </div>
                 <div id="editCageGroup" class="hidden">
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Cage</label>
@@ -180,30 +194,32 @@
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select cage…</option>
                         @foreach($cages as $cage)
-                        <option value="{{ $cage->id }}">{{ $cage->cage_code }} — {{ $cage->formatted_location }}</option>
+                        <option value="{{ $cage->id }}" {{ old('cage_id', $editItem->cage_id ?? '') == $cage->id ? 'selected' : '' }}>{{ $cage->cage_code }} — {{ $cage->formatted_location }}</option>
                         @endforeach
                     </select>
+                    <x-input-error name="cage_id" />
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Status</label>
                     <select name="status" id="editStatus" required onchange="onEditStatusChange()"
                             class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
-                        <option value="active">Active</option>
-                        <option value="spare">Spare</option>
-                        <option value="faulty">Faulty</option>
-                        <option value="removed">Removed</option>
+                        <option value="active" {{ old('status', $editItem->status ?? '') === 'active' ? 'selected' : '' }}>Active</option>
+                        <option value="spare" {{ old('status', $editItem->status ?? '') === 'spare' ? 'selected' : '' }}>Spare</option>
+                        <option value="faulty" {{ old('status', $editItem->status ?? '') === 'faulty' ? 'selected' : '' }}>Faulty</option>
+                        <option value="removed" {{ old('status', $editItem->status ?? '') === 'removed' ? 'selected' : '' }}>Removed</option>
                     </select>
+                    <x-input-error name="status" />
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Installation Date <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
-                    <input type="date" name="installation_date" id="editInstallDate"
+                    <input type="date" name="installation_date" id="editInstallDate" value="{{ old('installation_date', $editItem->installation_date ?? '') }}"
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Last Calibration <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
-                    <input type="date" name="last_calibration_date" id="editCalDate"
+                    <input type="date" name="last_calibration_date" id="editCalDate" value="{{ old('last_calibration_date', $editItem->last_calibration_date ?? '') }}"
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                 </div>
@@ -224,6 +240,21 @@
         </form>
     </div>
 </div>
+
+@if(isset($editItem))
+<x-modal-reopen modal-id="editModal" session-key="reopen_edit_hardware" guard="editHardware">
+    openEditModal(
+        {{ $editItem->id }},
+        '{{ $editItem->device_type }}',
+        '{{ $editItem->serial_number }}',
+        {{ $editItem->cage_id ?: 'null' }},
+        {{ $editItem->cage_slot_id ?: 'null' }},
+        '{{ $editItem->installation_date ?? '' }}',
+        '{{ $editItem->status }}',
+        '{{ $editItem->last_calibration_date ?? '' }}'
+    );
+</x-modal-reopen>
+@endif
 
 @endsection
 

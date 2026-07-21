@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Cage;
 use App\Models\Note;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class NoteController extends Controller
 {
@@ -22,24 +23,37 @@ class NoteController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
+        $validator = Validator::make($request->all(), [
             'body'    => 'required|string|max:2000',
             'cage_id' => 'nullable|exists:cages,id',
         ]);
 
-        Note::create($data);
+        if ($validator->fails()) {
+            return redirect()->route('notes.index')
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        Note::create($validator->validated());
 
         return redirect()->route('notes.index')->with('success', 'Note added.');
     }
 
     public function update(Request $request, Note $note)
     {
-        $data = $request->validate([
+        $validator = Validator::make($request->all(), [
             'body'    => 'required|string|max:2000',
             'cage_id' => 'nullable|exists:cages,id',
         ]);
 
-        $note->update($data);
+        if ($validator->fails()) {
+            return redirect()->route('notes.index')
+                ->with('reopen_edit_note', $note->id)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $note->update($validator->validated());
 
         return redirect()->route('notes.index')->with('success', 'Note updated.');
     }

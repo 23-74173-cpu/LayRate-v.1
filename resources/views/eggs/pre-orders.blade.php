@@ -117,13 +117,14 @@
             <div class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">CUSTOMER NAME</label>
-                    <input type="text" name="customer_name" required
+                    <input type="text" name="customer_name" value="{{ old('customer_name') }}" required
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
+                    <x-input-error name="customer_name" />
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">REFERENCE <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
-                    <input type="text" name="customer_reference"
+                    <input type="text" name="customer_reference" value="{{ old('customer_reference') }}"
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                 </div>
@@ -133,18 +134,20 @@
                             class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select size…</option>
-                        <option value="small">Small</option>
-                        <option value="medium">Medium</option>
-                        <option value="large">Large</option>
-                        <option value="jumbo">Jumbo</option>
+                        <option value="small" {{ old('egg_size') === 'small' ? 'selected' : '' }}>Small</option>
+                        <option value="medium" {{ old('egg_size') === 'medium' ? 'selected' : '' }}>Medium</option>
+                        <option value="large" {{ old('egg_size') === 'large' ? 'selected' : '' }}>Large</option>
+                        <option value="jumbo" {{ old('egg_size') === 'jumbo' ? 'selected' : '' }}>Jumbo</option>
                     </select>
+                    <x-input-error name="egg_size" />
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG COUNT</label>
-                    <input type="number" name="egg_count" id="orderEggCount" min="1" required
+                    <input type="number" name="egg_count" id="orderEggCount" min="1" value="{{ old('egg_count') }}" required
                            oninput="updateOrderTrays()"
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
+                    <x-input-error name="egg_count" />
                     <div class="mt-1 text-xs" style="color: #6B7280;">
                         <span id="orderTrayDisplay">0</span> trays
                     </div>
@@ -152,22 +155,24 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">REQUESTED DATE</label>
-                        <input type="date" name="requested_date" value="{{ now()->toDateString() }}" required
+                        <input type="date" name="requested_date" value="{{ old('requested_date', now()->toDateString()) }}" required
                                class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                                style="border-color: #e6e6e6; color: #1f1f1f;">
+                        <x-input-error name="requested_date" />
                     </div>
                     <div>
                         <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">FULFILLMENT DATE <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
-                        <input type="date" name="fulfillment_date"
+                        <input type="date" name="fulfillment_date" value="{{ old('fulfillment_date') }}"
                                class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                                style="border-color: #e6e6e6; color: #1f1f1f;">
+                        <x-input-error name="fulfillment_date" />
                     </div>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">NOTES <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
                     <textarea name="notes" rows="2"
                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1 resize-y"
-                              style="border-color: #e6e6e6; color: #1f1f1f;"></textarea>
+                              style="border-color: #e6e6e6; color: #1f1f1f;">{{ old('notes') }}</textarea>
                 </div>
             </div>
 
@@ -180,6 +185,13 @@
         </form>
     </div>
 </div>
+
+@if(session('reopen_add_order'))
+<x-modal-reopen modal-id="addOrderModal" session-key="reopen_add_order" guard="addOrder">
+    lucide.createIcons();
+    updateOrderTrays();
+</x-modal-reopen>
+@endif
 
 {{-- Edit Status Modal --}}
 <div id="editStatusModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" style="display: none;">
@@ -208,12 +220,14 @@
                         <option value="fulfilled">Fulfilled</option>
                         <option value="cancelled">Cancelled</option>
                     </select>
+                    <x-input-error name="status" />
                 </div>
                 <div id="editFulfillmentDateWrap" class="hidden">
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">FULFILLMENT DATE</label>
                     <input type="date" name="fulfillment_date" id="editFulfillmentDate"
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
+                    <x-input-error name="fulfillment_date" />
                 </div>
             </div>
 
@@ -226,6 +240,16 @@
         </form>
     </div>
 </div>
+
+@if(isset($editOrder) && $editOrder)
+<x-modal-reopen modal-id="editStatusModal" session-key="reopen_edit_order" guard="editOrder">
+    openEditStatus(
+        {{ $editOrder->id }},
+        '{{ $editOrder->status }}',
+        '{{ $editOrder->fulfillment_date?->toDateString() ?? '' }}'
+    );
+</x-modal-reopen>
+@endif
 @endsection
 
 @push('scripts')

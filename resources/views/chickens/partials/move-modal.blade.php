@@ -77,6 +77,7 @@
                             class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E] disabled:bg-[#F5F6F8] disabled:text-[#9CA3AF]">
                         <option value="">Select cage first...</option>
                     </select>
+                    <x-input-error name="destination_slot_id" />
                     <div id="moveNoSlots" class="hidden mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-700">
                         No slots with enough space available.
                     </div>
@@ -89,13 +90,15 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-medium text-[#6B7280] mb-1">Transfer Date</label>
-                        <input type="date" name="transfer_date" id="moveTransferDate" value="{{ today()->toDateString() }}"
+                        <input type="date" name="transfer_date" id="moveTransferDate" value="{{ old('transfer_date', today()->toDateString()) }}"
                                class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
+                        <x-input-error name="transfer_date" />
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-[#6B7280] mb-1">Reason</label>
-                        <input type="text" name="transfer_reason" placeholder="e.g. Rebalancing"
+                        <input type="text" name="transfer_reason" value="{{ old('transfer_reason') }}" placeholder="e.g. Rebalancing"
                                class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
+                        <x-input-error name="transfer_reason" />
                     </div>
                 </div>
 

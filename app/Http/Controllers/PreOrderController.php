@@ -8,6 +8,7 @@ use App\Models\Hen;
 use App\Models\PreOrder;
 use App\Models\ProductionLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class PreOrderController extends Controller
 {
@@ -83,10 +84,16 @@ class PreOrderController extends Controller
 
         $this->runDepletionCheck($summary);
 
+        $editOrder = null;
+        if ($editOrderId = session('reopen_edit_order')) {
+            $editOrder = PreOrder::find($editOrderId);
+        }
+
         return view('eggs.pre-orders', [
             'activeTab' => 'preorders',
             'orders' => $orders,
             'summary' => $summary,
+            'editOrder' => $editOrder,
             'filters' => [
                 'status' => $statusFilter ?? 'all',
                 'egg_size' => $sizeFilter ?? 'all',
@@ -98,7 +105,7 @@ class PreOrderController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
+        $validator = Validator::make($request->all(), [
             'customer_name' => 'required|string|max:255',
             'customer_reference' => 'nullable|string|max:100',
             'egg_size' => 'required|in:small,medium,large,jumbo',
@@ -108,10 +115,20 @@ class PreOrderController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+        if ($validator->fails()) {
+            return redirect()->route('eggs.preorders')
+                ->with('reopen_add_order', true)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
+
         try {
             PreOrder::createWithinPool($data);
         } catch (\OverflowException $e) {
-            return redirect()->back()
+            return redirect()->route('eggs.preorders')
+                ->with('reopen_add_order', true)
                 ->withErrors(['egg_count' => $e->getMessage()])
                 ->withInput();
         }
@@ -121,10 +138,21 @@ class PreOrderController extends Controller
 
     public function update(Request $request, PreOrder $order)
     {
-        $data = $request->validate([
+        $validator = Validator::make($request->all(), [
             'status' => 'required|in:pending,fulfilled,cancelled',
             'fulfillment_date' => 'nullable|date',
         ]);
+
+        if ($validator->fails()) {
+            return redirect()->route('eggs.preorders')
+                ->with('reopen_edit_order', $order->id)
+                ->with('edit_order_status', $order->status)
+                ->with('edit_order_fulfillment_date', $order->fulfillment_date?->toDateString())
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
 
         if ($data['status'] === 'fulfilled' && empty($data['fulfillment_date'])) {
             $data['fulfillment_date'] = now()->toDateString();
@@ -133,7 +161,10 @@ class PreOrderController extends Controller
         try {
             $order->updateWithinPool($data);
         } catch (\OverflowException $e) {
-            return redirect()->back()
+            return redirect()->route('eggs.preorders')
+                ->with('reopen_edit_order', $order->id)
+                ->with('edit_order_status', $order->status)
+                ->with('edit_order_fulfillment_date', $order->fulfillment_date?->toDateString())
                 ->withErrors(['egg_count' => $e->getMessage()])
                 ->withInput();
         }

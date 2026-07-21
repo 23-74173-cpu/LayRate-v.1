@@ -17,6 +17,7 @@ use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class CageController extends Controller
 {
@@ -51,12 +52,20 @@ class CageController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
+        $validator = Validator::make($request->all(), [
             'rows' => 'required|integer|min:1|max:10',
             'slots_per_row' => 'required|integer|min:1|max:100',
             'max_chickens_per_slot' => 'required|integer|min:1|max:10',
         ]);
 
+        if ($validator->fails()) {
+            return redirect()->route('cages.index')
+                ->with('reopen_add_cage', true)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
         $cageCode = $this->generateCageCode();
 
         $totalCapacity = (int) $data['rows'] * (int) $data['slots_per_row'] * (int) $data['max_chickens_per_slot'];
@@ -77,7 +86,7 @@ class CageController extends Controller
 
     public function update(Request $request, Cage $cage)
     {
-        $data = $request->validate([
+        $validator = Validator::make($request->all(), [
             'rows' => 'nullable|integer|min:1|max:10',
             'slots_per_row' => 'nullable|integer|min:1|max:100',
             'max_chickens_per_slot' => 'nullable|integer|min:1|max:10',
@@ -87,12 +96,24 @@ class CageController extends Controller
             'dht22_count' => 'nullable|integer|min:0|max:20',
         ]);
 
+        if ($validator->fails()) {
+            return redirect()->route('cages.index')
+                ->with('edit_cage_id', $cage->id)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
+
         if ($cage->is_active && isset($data['is_active']) && ! $data['is_active']) {
             $occupiedSlots = $cage->cageSlots()->where('current_occupancy', '>', 0)->count();
             if ($occupiedSlots > 0) {
-                return back()->withInput()->withErrors([
-                    'is_active' => "Cannot deactivate cage with {$occupiedSlots} occupied slot(s). Rehome or remove hens first.",
-                ]);
+                return redirect()->route('cages.index')
+                    ->with('edit_cage_id', $cage->id)
+                    ->withInput()
+                    ->withErrors([
+                        'is_active' => "Cannot deactivate cage with {$occupiedSlots} occupied slot(s). Rehome or remove hens first.",
+                    ]);
             }
         }
 
@@ -143,9 +164,12 @@ class CageController extends Controller
             if (count($slotsNeedingSensor) > 0) {
                 $spareIr = HardwareItem::where('device_type', 'IR_breakbeam')->availableForAssignment()->count();
                 if (count($slotsNeedingSensor) > $spareIr) {
-                    return back()->withInput()->withErrors([
-                        'slots' => 'Only '.$spareIr.' IR break-beam sensor(s) available in inventory, but '.count($slotsNeedingSensor).' requested.',
-                    ]);
+                    return redirect()->route('cages.index')
+                        ->with('edit_cage_id', $cage->id)
+                        ->withInput()
+                        ->withErrors([
+                            'slots' => 'Only '.$spareIr.' IR break-beam sensor(s) available in inventory, but '.count($slotsNeedingSensor).' requested.',
+                        ]);
                 }
                 foreach ($slotsNeedingSensor as $slot) {
                     $this->assignSpareSensor('IR_breakbeam', null, $slot->id);
@@ -166,9 +190,12 @@ class CageController extends Controller
                 $needed = $target - $current->count();
                 $spareDht = HardwareItem::where('device_type', 'DHT22')->availableForAssignment()->count();
                 if ($needed > $spareDht) {
-                    return back()->withInput()->withErrors([
-                        'dht22_count' => "Only {$spareDht} DHT22 sensor(s) available in inventory, but {$needed} more requested.",
-                    ]);
+                    return redirect()->route('cages.index')
+                        ->with('edit_cage_id', $cage->id)
+                        ->withInput()
+                        ->withErrors([
+                            'dht22_count' => "Only {$spareDht} DHT22 sensor(s) available in inventory, but {$needed} more requested.",
+                        ]);
                 }
                 for ($i = 0; $i < $needed; $i++) {
                     $this->assignSpareSensor('DHT22', $cage->id, null);

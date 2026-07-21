@@ -93,7 +93,7 @@
                     </div>
                 </div>
                 @if($errors->any())
-                <div class="mt-4 text-xs text-red-500">{{ $errors->first() }}</div>
+                <div class="mt-4 text-xs text-red-500 leading-relaxed">{{ implode('<br>', $errors->all()) }}</div>
                 @endif
             </form>
         </div>
@@ -173,6 +173,8 @@
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
         </div>
+
+        <div id="addStockErrors" class="hidden p-3 rounded-lg mb-4 text-xs leading-relaxed" style="background-color: #fbe4e6; border: 1px solid #f3cdd0; color: #9b1c24;"></div>
 
         <form id="addStockForm">
             @csrf
@@ -286,7 +288,7 @@
             </button>
         </div>
 
-        <form id="editStockForm" method="POST" onsubmit="loadingButton(this.querySelector('button[type=submit]'))">
+        <form id="editStockForm" method="POST" action="{{ route('eggs.stocks.update', 0) }}" onsubmit="loadingButton(this.querySelector('button[type=submit]'))">
             @csrf @method('PUT')
 
             <div class="space-y-4">
@@ -301,18 +303,21 @@
                         <option value="jumbo">Jumbo</option>
                         <option value="unsorted">Unsorted</option>
                     </select>
+                    <x-input-error name="egg_size" />
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG COUNT</label>
                     <input type="number" name="count" id="editEggCount" min="1" required
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
-                           style="border-color: #e6e6e6; color: #1f1f1f;">
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            style="border-color: #e6e6e6; color: #1f1f1f;">
+                    <x-input-error name="count" />
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">HARVESTED DATE</label>
                     <input type="date" name="harvested_date" id="editHarvestedDate" required
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
-                           style="border-color: #e6e6e6; color: #1f1f1f;">
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            style="border-color: #e6e6e6; color: #1f1f1f;">
+                    <x-input-error name="harvested_date" />
                 </div>
             </div>
 
@@ -331,6 +336,17 @@
         </form>
     </div>
 </div>
+
+@if(isset($editBatch) && $editBatch)
+<x-modal-reopen modal-id="editStockModal" session-key="reopen_edit_stock" guard="editStock">
+    openEditStock(
+        {{ $editBatch->id }},
+        '{{ $editBatch->egg_size }}',
+        {{ $editBatch->count }},
+        '{{ $editBatch->harvested_date->format('Y-m-d') }}'
+    );
+</x-modal-reopen>
+@endif
 @endsection
 
 @push('scripts')
@@ -405,7 +421,8 @@ document.addEventListener('turbo:load', function() {
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if (data.pools) callback(data.pools);
-            });
+            })
+            .catch(function() { console.warn('fetchPoolForCage failed'); });
     }
 
     function updateOptionsFromPools(pools) {
@@ -591,9 +608,9 @@ document.addEventListener('turbo:load', function() {
                 },
                 body: JSON.stringify(body),
             })
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                if (data.success) {
+            .then(function(r) { return r.json().then(function(d) { return { status: r.status, body: d }; }); })
+            .then(function(res) {
+                if (res.body.success) {
                     closeAddStockModal();
                     form.reset();
                     Turbo.visit(window.location.href, { action: 'replace' });
@@ -601,6 +618,17 @@ document.addEventListener('turbo:load', function() {
                 }
                 btn.disabled = false;
                 btn.textContent = originalLabel;
+                var errEl = document.getElementById('addStockErrors');
+                if (errEl && res.body.errors) {
+                    var msgs = [];
+                    for (var key in res.body.errors) {
+                        if (res.body.errors.hasOwnProperty(key)) {
+                            res.body.errors[key].forEach(function(m) { msgs.push(m); });
+                        }
+                    }
+                    errEl.innerHTML = '<strong class="block mb-1">Could not save:</strong>' + msgs.join('<br>');
+                    errEl.classList.remove('hidden');
+                }
             })
             .catch(function() {
                 btn.disabled = false;

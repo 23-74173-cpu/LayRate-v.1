@@ -14,6 +14,7 @@ use App\Models\HealthEvent;
 use App\Models\WeightCheck;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class ChickensController extends Controller
 {
@@ -115,7 +116,7 @@ class ChickensController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
+        $validator = Validator::make($request->all(), [
             'breed'              => 'required|string|in:ISA Brown,Lohmann Brown-Classic,Dekalb White,Hy-Line Brown,Novogen Brown',
             'source'             => 'nullable|string|max:200',
             'date_acquired'      => 'required|date',
@@ -124,6 +125,15 @@ class ChickensController extends Controller
             'notes'              => 'nullable|string|max:1000',
             'quantity'           => 'required|integer|min:1|max:100',
         ]);
+
+        if ($validator->fails()) {
+            return redirect()->route('chickens.index')
+                ->with('reopen_register', true)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
         $data['sex'] = 'hen';
 
         $quantity = (int) $data['quantity'];

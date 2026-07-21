@@ -23,7 +23,7 @@
 
                 <div>
                     <label class="block text-xs font-medium text-[#6B7280] mb-1">Date <span class="text-red-500">*</span></label>
-                    <input type="date" name="event_date" required value="{{ today()->toDateString() }}"
+                    <input type="date" name="event_date" required value="{{ old('event_date', today()->toDateString()) }}"
                            class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
                     <x-input-error name="event_date" />
                 </div>
@@ -32,16 +32,16 @@
                     <label class="block text-xs font-medium text-[#6B7280] mb-1">Event Type <span class="text-red-500">*</span></label>
                     <select name="event_type" required
                             class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
-                        <option value="sick">Sick</option>
-                        <option value="treated">Treated</option>
-                        <option value="recovered">Recovered</option>
+                        <option value="sick" {{ old('event_type') === 'sick' ? 'selected' : '' }}>Sick</option>
+                        <option value="treated" {{ old('event_type') === 'treated' ? 'selected' : '' }}>Treated</option>
+                        <option value="recovered" {{ old('event_type') === 'recovered' ? 'selected' : '' }}>Recovered</option>
                     </select>
                     <x-input-error name="event_type" />
                 </div>
 
                 <div>
                     <label class="block text-xs font-medium text-[#6B7280] mb-1">Description</label>
-                    <input type="text" name="description" placeholder="e.g. Respiratory symptoms, Antibiotics administered"
+                    <input type="text" name="description" value="{{ old('description') }}" placeholder="e.g. Respiratory symptoms, Antibiotics administered"
                            class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
                     <x-input-error name="description" />
                 </div>
@@ -49,7 +49,7 @@
                 <div>
                     <label class="block text-xs font-medium text-[#6B7280] mb-1">Notes</label>
                     <textarea name="notes" rows="2" placeholder="Optional details..."
-                              class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E] resize-none"></textarea>
+                              class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E] resize-none">{{ old('notes') }}</textarea>
                     <x-input-error name="notes" />
                 </div>
 
