@@ -370,7 +370,9 @@
         document.getElementById('formBreed').textContent = card.dataset.breed || '—';
         document.getElementById('formHenCount').textContent = card.dataset.hens;
         document.getElementById('henCount').value = card.dataset.hens;
-        document.getElementById('eggCount').value = currentHasSensor ? (card.dataset.todayEggs || 0) : '';
+
+        var existingEggs = parseInt(card.dataset.todayEggs) || 0;
+        document.getElementById('eggCount').value = existingEggs > 0 ? existingEggs : (currentHasSensor ? 0 : '');
 
         const eggInput = document.getElementById('eggCount');
         const overrideLabel = document.getElementById('overrideLabel');
@@ -604,6 +606,24 @@
                 if (resp.ok && resp.body.success) {
                     if (typeof showNotification === 'function') {
                         showNotification(resp.body.message || 'Production log saved.', 'success');
+                    }
+
+                    // Update slot card visual to show it's logged
+                    var slotCard = document.querySelector('.slot-card[data-slot-id="' + currentSlotId + '"]');
+                    if (slotCard) {
+                        slotCard.dataset.todayEggs = resp.body.log.egg_count;
+                        slotCard.style.backgroundColor = '#eaf6ee';
+
+                        // Remove existing checkmark if any, then add green check
+                        var existingCheck = slotCard.querySelector('.logged-check');
+                        if (existingCheck) existingCheck.remove();
+
+                        var check = document.createElement('span');
+                        check.className = 'logged-check absolute top-0.5 left-0.5 w-3 h-3 rounded-full flex items-center justify-center';
+                        check.style.backgroundColor = '#1f6b3a';
+                        check.innerHTML = '<svg class="w-2 h-2 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                        slotCard.appendChild(check);
+
                     }
 
                     // Reset size breakdown fields
