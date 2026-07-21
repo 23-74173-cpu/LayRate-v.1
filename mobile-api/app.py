@@ -310,6 +310,12 @@ def dashboard_status():
     ), 200
 
 
+@app.route("/api/ping", methods=["GET"])
+def ping():
+    """Unauthenticated endpoint used by the mobile app for auto-discovery."""
+    return jsonify({"ok": True}), 200
+
+
 # ── Health check ────────────────────────────────────────────────────────────
 
 @app.route("/api/health", methods=["GET"])
