@@ -40,8 +40,7 @@ class DashboardController extends Controller
         $thresholds = Setting::thresholds();
 
         $needsOnboarding = Setting::where('key', 'farm_grid_rows')->doesntExist()
-            || Setting::where('key', 'farm_grid_cols')->doesntExist()
-            || Cage::count() === 0;
+            || Setting::where('key', 'farm_grid_cols')->doesntExist();
 
         $cagesQuery = Cage::with([
             'productionLogs',

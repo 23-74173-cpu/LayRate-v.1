@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Alert;
 use App\Models\Cage;
 use App\Models\CageSlot;
+use App\Models\EggSizeLog;
 use App\Models\EnvironmentalLog;
 use App\Models\FeedBatch;
 use App\Models\FeedConsumptionLog;
@@ -160,6 +161,14 @@ class DemoDataSeeder extends Seeder
                         'logged_via' => $isSensor ? 'sensor' : 'manual',
                     ]);
                     $log->save();
+
+                    if ($eggsPerSlot > 0 && ! EggSizeLog::where('production_log_id', $log->id)->exists()) {
+                        EggSizeLog::create([
+                            'production_log_id' => $log->id,
+                            'egg_size' => 'unsorted',
+                            'count' => $eggsPerSlot,
+                        ]);
+                    }
                 }
             }
         }
