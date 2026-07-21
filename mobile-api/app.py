@@ -365,7 +365,7 @@ def _start_mdns(port: int) -> Zeroconf:
 
 
 # ── Main entry point ───────────────────────────────────────────────────────
-
+# __ TEST COMMENT --------------------
 if __name__ == "__main__":
     init_db()
     host = os.getenv("FLASK_HOST", "0.0.0.0")
