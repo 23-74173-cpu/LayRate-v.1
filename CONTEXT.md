@@ -15,9 +15,9 @@
 | Layer | Technology | Version / Notes |
 |---|---|---|
 | Backend | **Laravel** | `^12.0` (Laravel 12) |
-| Frontend | **Tailwind CSS** | via CDN (`cdn.tailwindcss.com`) |
-| Charts | **Chart.js** | via CDN (`4.4.0`) |
-| Icons | **Lucide** | via CDN (`unpkg.com/lucide`) |
+| Frontend | **Tailwind CSS** | locally compiled (`public/css/tailwind.css`) |
+| Charts | **Chart.js** | locally bundled (`public/js/chart.min.js`) |
+| Icons | **Lucide** | locally bundled (`public/js/lucide.min.js`) |
 | Testing | **PHPUnit** | `^11.5.50` |
 | Code style | **Laravel Pint** | `^1.24` |
 | Faker | **FakerPHP** | `^1.23` |
@@ -356,8 +356,7 @@ VITE_APP_NAME
 - **`dist/`** contains built frontend assets not connected to the Laravel views
 
 ### Outdated/Deprecated Dependencies
-- Tailwind CSS via `latest` CDN — risk of breaking UI changes on auto-update
-- Lucide via `unpkg.com/lucide@latest` — "latest" tag means unpredictable updates
+- None — all frontend assets are locally bundled (Tailwind CSS compiled via `npm run build`, Chart.js and Lucide served from `public/js/`)
 
 ### No Tests
 - `tests/` directory exists with `TestCase.php` but **no test files** of any kind are present

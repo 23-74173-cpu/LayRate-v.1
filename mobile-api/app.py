@@ -381,7 +381,10 @@ if __name__ == "__main__":
     debug = os.getenv("FLASK_DEBUG", "0") == "1"
 
     if not host.startswith("127."):
-        zc = _start_mdns(port)
-        atexit.register(lambda: zc.close())
+        try:
+            zc = _start_mdns(port)
+            atexit.register(lambda: zc.close())
+        except Exception as e:
+            print(f"  mDNS: could not register ({e}) — continuing anyway")
 
     app.run(host=host, port=port, debug=debug)
