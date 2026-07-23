@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign In — LayRate</title>
-    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
-    <link href="{{ asset('css/tailwind.css') }}" rel="stylesheet">
-    <script src="{{ asset('js/lucide.min.js') }}"></script>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link href="/css/tailwind.css" rel="stylesheet">
+    <script src="/js/lucide.min.js"></script>
     <style>
         body { background-color: #f6f5f4; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
         :focus-visible { outline: 2px solid #0075de; outline-offset: 2px; border-radius: 4px; }
@@ -32,7 +32,7 @@
             .login-enter { opacity: 1; transform: none; }
         }
     </style>
-    <link rel="stylesheet" href="{{ asset('css/inter.css') }}">
+    <link rel="stylesheet" href="/css/inter.css">
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
 
@@ -56,7 +56,7 @@
             {{-- Logo — lives inside the card: the PNG has a solid white
                  background, which blends invisibly here but would show as a
                  white box on the page's warm canvas. --}}
-            <img src="{{ asset('images/layrate-logo.png') }}"
+            <img src="/images/layrate-logo.png"
                  alt="LayRate — Egg Counting &amp; Forecasting System"
                  class="w-36 mx-auto -mt-3 -mb-5">
 

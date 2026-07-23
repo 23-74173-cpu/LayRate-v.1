@@ -61,7 +61,7 @@
         </div>
     </div>
 
-    <script src="{{ asset('js/qrcode.min.js') }}"></script>
+    <script src="/js/qrcode.min.js"></script>
     <script>
         var qr = qrcode(0, 'M');
         qr.addData('{{ $qrData }}');

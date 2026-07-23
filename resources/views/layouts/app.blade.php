@@ -9,20 +9,20 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1a2342">
-    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    <link rel="manifest" href="/manifest.json">
     <title>{{ $title ?? 'LayRate' }} — LayRate Farm Monitor</title>
 
     {{-- Favicons --}}
-    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
     {{-- Inter Font (self-hosted) --}}
-    <link rel="stylesheet" href="{{ asset('css/inter.css') }}">
+    <link rel="stylesheet" href="/css/inter.css">
 
     {{-- Tailwind CSS (compiled) --}}
-    <link href="{{ asset('css/tailwind.css') }}" rel="stylesheet">
+    <link href="/css/tailwind.css" rel="stylesheet">
 
     {{-- Prevent white flash while styles load --}}
     <style>
@@ -31,13 +31,13 @@
     </style>
 
     {{-- Chart.js --}}
-    <script src="{{ asset('js/chart.min.js') }}" defer></script>
+    <script src="/js/chart.min.js" defer></script>
 
     {{-- Lucide Icons --}}
-    <script src="{{ asset('js/lucide.min.js') }}" defer></script>
+    <script src="/js/lucide.min.js" defer></script>
 
     {{-- Turbo Drive --}}
-    <script type="module" src="{{ asset('js/turbo.js') }}"></script>
+    <script type="module" src="/js/turbo.js"></script>
 
     <style>
         * { -webkit-tap-highlight-color: transparent; }
@@ -163,7 +163,7 @@
         <div class="flex items-center justify-between px-4 pt-3 pb-1 shrink-0">
             <div class="logo-wrap flex items-center gap-2.5 overflow-hidden">
                 <div class="w-9 h-9 rounded-lg bg-white flex items-center justify-center shrink-0 border border-white/25 overflow-hidden">
-                    <img src="{{ asset('images/layrate-logo-mark.png') }}" alt="LayRate logo" class="w-8 h-8 object-contain">
+                    <img src="/images/layrate-logo-mark.png" alt="LayRate logo" class="w-8 h-8 object-contain">
                 </div>
                 <div class="logo-text overflow-hidden whitespace-nowrap">
                     <div class="text-white text-sm font-semibold">LayRate</div>

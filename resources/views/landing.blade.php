@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LayRate — Smart Poultry Farm Management</title>
 
-    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
-    <link rel="stylesheet" href="{{ asset('css/inter.css') }}">
-    <link href="{{ asset('css/tailwind.css') }}" rel="stylesheet">
-    <script src="{{ asset('js/lucide.min.js') }}" defer></script>
+    <link rel="stylesheet" href="/css/inter.css">
+    <link href="/css/tailwind.css" rel="stylesheet">
+    <script src="/js/lucide.min.js" defer></script>
 
     <style>
         html { scroll-behavior: smooth; }
@@ -105,7 +105,7 @@
     <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <a href="{{ route('landing') }}" class="flex items-center gap-2.5 shrink-0">
             <div class="w-9 h-9 rounded-lg bg-white border border-hairline flex items-center justify-center overflow-hidden shadow-soft">
-                <img src="{{ asset('images/layrate-logo-mark.png') }}" alt="LayRate logo" class="w-8 h-8 object-contain">
+                <img src="/images/layrate-logo-mark.png" alt="LayRate logo" class="w-8 h-8 object-contain">
             </div>
             <span class="text-title text-ink">LayRate</span>
         </a>
@@ -411,7 +411,7 @@
     <div class="max-w-6xl mx-auto px-4 sm:px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div class="flex items-center gap-2.5">
             <div class="w-8 h-8 rounded-lg bg-white border border-hairline flex items-center justify-center overflow-hidden">
-                <img src="{{ asset('images/layrate-logo-mark.png') }}" alt="LayRate logo" class="w-7 h-7 object-contain">
+                <img src="/images/layrate-logo-mark.png" alt="LayRate logo" class="w-7 h-7 object-contain">
             </div>
             <div>
                 <div class="text-body-sm text-ink font-medium leading-tight">LayRate</div>
