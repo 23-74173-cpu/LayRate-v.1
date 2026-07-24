@@ -24,13 +24,23 @@ class CageController extends Controller
 {
     public function index()
     {
-        $gridRows = (int) Setting::get('farm_grid_rows', 4);
-        $gridCols = (int) Setting::get('farm_grid_cols', 4);
-
         $cages = Cage::with([
             'cageSlots.hardwareItems',
             'hens' => fn ($q) => $q->where('is_active', 1)->orderBy('id'),
         ])->orderBy('cage_code')->get();
+
+        // Tile-based grid: min 10×6, auto-expands to fit all placed cages
+        $minCols = 10;
+        $minRows = 6;
+        $gridCols = $minCols;
+        $gridRows = $minRows;
+        foreach ($cages as $cage) {
+            if (is_null($cage->location_row) || is_null($cage->location_column)) continue;
+            $right = $cage->location_column + ($cage->slots_per_row ?? 1);
+            $bottom = $cage->location_row + ($cage->rows ?? 1);
+            if ($right > $gridCols) $gridCols = $right;
+            if ($bottom > $gridRows) $gridRows = $bottom;
+        }
 
         $nextCageCode = $this->generateCageCode();
 
@@ -357,20 +367,40 @@ class CageController extends Controller
         $col = $data['location_column'] ?? null;
 
         if ($row !== null || $col !== null) {
-            $gridRows = (int) Setting::get('farm_grid_rows', 4);
-            $gridCols = (int) Setting::get('farm_grid_cols', 4);
+            $w = $cage->slots_per_row ?? 1;
+            $h = $cage->rows ?? 1;
 
-            if ($row < 0 || $row >= $gridRows || $col < 0 || $col >= $gridCols) {
-                return response()->json(['success' => false, 'message' => 'Position out of bounds'], 422)->header('Content-Type', 'application/json');
+            // Compute grid bounds from all placed cages
+            $allCages = Cage::where('id', '!=', $cage->id)->get();
+            $gridCols = 10; $gridRows = 6;
+            foreach ($allCages as $c) {
+                if (is_null($c->location_row) || is_null($c->location_column)) continue;
+                $r = $c->location_row + ($c->rows ?? 1);
+                $cl = $c->location_column + ($c->slots_per_row ?? 1);
+                if ($r > $gridRows) $gridRows = $r;
+                if ($cl > $gridCols) $gridCols = $cl;
             }
 
-            $occupied = Cage::where('id', '!=', $cage->id)
-                ->where('location_row', $row)
-                ->where('location_column', $col)
-                ->exists();
+            if ($row + $h > $gridRows || $col + $w > $gridCols) {
+                return response()->json(['success' => false, 'message' => 'Position out of bounds'], 422);
+            }
 
-            if ($occupied) {
-                return response()->json(['success' => false, 'message' => 'Cell occupied'], 422)->header('Content-Type', 'application/json');
+            // Tile-level overlap check
+            $overlap = Cage::where('id', '!=', $cage->id)
+                ->whereNotNull('location_row')
+                ->whereNotNull('location_column')
+                ->get()
+                ->contains(function ($other) use ($row, $col, $w, $h) {
+                    $oR = $other->location_row;
+                    $oC = $other->location_column;
+                    $oW = $other->slots_per_row ?? 1;
+                    $oH = $other->rows ?? 1;
+                    return !($col + $w <= $oC || $oC + $oW <= $col ||
+                             $row + $h <= $oR || $oR + $oH <= $row);
+                });
+
+            if ($overlap) {
+                return response()->json(['success' => false, 'message' => 'Tile overlap with existing cage'], 422);
             }
         }
 
@@ -391,14 +421,16 @@ class CageController extends Controller
             'positions.*.location_column' => 'nullable|integer|min:0',
         ]);
 
-        $gridRows = (int) Setting::get('farm_grid_rows', 4);
-        $gridCols = (int) Setting::get('farm_grid_cols', 4);
+        // Tile-based overlap detection — compute bound from all cages, not just moved ones.
+        $allCages = Cage::all()->keyBy('id');
 
-        // Compute the final layout (current positions + requested changes) so
-        // occupancy is checked against the whole batch, not one cage at a time.
-        $final = Cage::query()->get(['id', 'location_row', 'location_column'])
-            ->keyBy('id')
-            ->map(fn ($c) => ['row' => $c->location_row, 'col' => $c->location_column]);
+        // Build final placement for every cage (current + requested changes)
+        $final = $allCages->map(fn ($c) => [
+            'row' => $c->location_row,
+            'col' => $c->location_column,
+            'w'   => $c->slots_per_row ?? 1,
+            'h'   => $c->rows ?? 1,
+        ]);
 
         foreach ($data['positions'] as $entry) {
             $row = $entry['location_row'] ?? null;
@@ -408,28 +440,46 @@ class CageController extends Controller
                 return response()->json(['success' => false, 'message' => 'Row and column must both be set or both be empty'], 422);
             }
 
-            if ($row !== null && ($row >= $gridRows || $col >= $gridCols)) {
-                return response()->json(['success' => false, 'message' => 'Position out of bounds'], 422);
+            $c = $allCages->get($entry['id']);
+            if (!$c) continue;
+            $w = $c->slots_per_row ?? 1;
+            $h = $c->rows ?? 1;
+
+            if ($row !== null) {
+                $gridCols = 0; $gridRows = 0;
+                foreach ($allCages as $cc) {
+                    if (is_null($cc->location_row) || is_null($cc->location_column)) continue;
+                    $r = ($cc->id === $entry['id']) ? $row + $h : $cc->location_row + ($cc->rows ?? 1);
+                    $cl = ($cc->id === $entry['id']) ? $col + $w : $cc->location_column + ($cc->slots_per_row ?? 1);
+                    if ($r > $gridRows) $gridRows = $r;
+                    if ($cl > $gridCols) $gridCols = $cl;
+                }
+                $gridRows = max($gridRows, 6);
+                $gridCols = max($gridCols, 10);
+
+                if ($row + $h > $gridRows || $col + $w > $gridCols) {
+                    return response()->json(['success' => false, 'message' => 'Position out of bounds'], 422);
+                }
             }
 
-            $final[$entry['id']] = ['row' => $row, 'col' => $col];
+            $final[$entry['id']] = ['row' => $row, 'col' => $col, 'w' => $w, 'h' => $h];
         }
 
-        $seen = [];
-        foreach ($final as $pos) {
-            if ($pos['row'] === null) {
-                continue;
+        // Tile-level overlap check — compare every pair of placed cages
+        $placed = $final->filter(fn ($p) => $p['row'] !== null)->values();
+        for ($i = 0; $i < $placed->count(); $i++) {
+            for ($j = $i + 1; $j < $placed->count(); $j++) {
+                $a = $placed[$i];
+                $b = $placed[$j];
+                $overlap = !($a['col'] + $a['w'] <= $b['col'] || $b['col'] + $b['w'] <= $a['col'] ||
+                    $a['row'] + $a['h'] <= $b['row'] || $b['row'] + $b['h'] <= $a['row']);
+                if ($overlap) {
+                    return response()->json(['success' => false, 'message' => 'Two cages would overlap on the grid'], 422);
+                }
             }
-            $key = $pos['row'].'-'.$pos['col'];
-            if (isset($seen[$key])) {
-                return response()->json(['success' => false, 'message' => 'Two cages assigned to the same cell'], 422);
-            }
-            $seen[$key] = true;
         }
 
         DB::transaction(function () use ($data) {
-            // Two-phase apply: vacate every moved cage first so swaps can't
-            // transiently collide on the (location_row, location_column) unique index.
             $ids = array_column($data['positions'], 'id');
             Cage::whereIn('id', $ids)->update(['location_row' => null, 'location_column' => null]);
 

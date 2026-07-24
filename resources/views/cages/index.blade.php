@@ -1,6 +1,19 @@
 @extends('layouts.app')
 @section('title', 'Cage Management')
 
+@push('head')
+<style>
+#canvasContent { position: relative; }
+.tile-bg { transition: background-color 0.1s ease; }
+.cage-overlay { transition: box-shadow 0.15s ease, border-color 0.15s ease; }
+#dragGhost { transition: none; }
+#farmCanvas { overscroll-behavior: contain; }
+#farmCanvas::-webkit-scrollbar { width: 6px; height: 6px; }
+#farmCanvas::-webkit-scrollbar-track { background: transparent; }
+#farmCanvas::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+.staging-tile { user-select: none; }
+</style>
+@endpush
 @section('content')
 @php $isAdmin = auth()->user()->isAdmin(); @endphp
 <div class="space-y-5">
@@ -24,13 +37,12 @@
         </x-slot:actions>
     </x-page-header>
 
-    {{-- ── Farm Layout Canvas (drag-and-drop) ── --}}
+    {{-- ── Farm Layout Canvas (tile-based floor-plan grid) ── --}}
     <div class="rounded-xl border p-6" style="background-color: #ffffff; border-color: #e6e6e6;">
         <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
             <h3 class="text-xs font-semibold tracking-[0.05em] uppercase" style="color: #615d59;">Farm Layout</h3>
             <div class="flex items-center gap-2">
                 <button id="clearFilterBtn" class="hidden text-xs font-medium px-3 py-1 rounded-lg transition-colors" style="color: #0075de; border: 1px solid #0075de;" onclick="clearCanvasFilter()">Show all</button>
-                {{-- Layout flow toggle removed per audit decision --}}
                 @if($isAdmin)
                 <button id="clearAllBtn" onclick="clearAllCages()"
                         class="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
@@ -45,85 +57,45 @@
                 @endif
             </div>
         </div>
-        <div id="farmCanvas" class="relative">
-        <div id="farmSaveOverlay" class="hidden absolute inset-0 z-10 items-center justify-center rounded-lg" style="background-color: rgba(255,255,255,0.7);">
-            <i data-lucide="loader" class="animate-spin w-8 h-8" style="color: #0075de;"></i>
-        </div>
-        <div id="farmGrid" class="grid gap-2" style="grid-template-columns: repeat({{ $gridCols }}, minmax(0, 1fr));">
-            @for($r = 0; $r < $gridRows; $r++)
-                @for($c = 0; $c < $gridCols; $c++)
-                @php
-                    $placedCage = $cages->firstWhere(fn($cg) => $cg->location_row === $r && $cg->location_column === $c);
-                @endphp
-                @if($placedCage)
-                <div class="farm-cell min-h-[5rem] rounded-lg border-2 p-3 flex flex-col justify-between transition-all group relative"
-                     style="border-color: {{ $placedCage->color }}; background-color: {{ $placedCage->colorSoft }};"
-                     data-row="{{ $r }}" data-col="{{ $c }}"
-                     ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, {{ $r }}, {{ $c }})">
-                    @if($isAdmin)
-                    <button onclick="event.stopPropagation(); confirmRemoveCell({{ $r }}, {{ $c }}, '{{ $placedCage->cage_code }}')"
-                            class="remove-cell-btn absolute top-0.5 right-0.5 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            style="background-color: rgba(155,28,36,0.85); color: #fff; font-size: 12px; line-height: 1;"
-                            title="Remove {{ $placedCage->cage_code }} from canvas" aria-label="Remove {{ $placedCage->cage_code }}">
-                        ×
-                    </button>
-                    @endif
-                    <div class="farm-tile {{ $isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer' }}"
-                         draggable="{{ $isAdmin ? 'true' : 'false' }}"
-                         data-cage-id="{{ $placedCage->id }}"
-                         data-cage-code="{{ $placedCage->cage_code }}"
-                         @if($isAdmin) ondragstart="handleDragStart(event, {{ $placedCage->id }})" @endif
-                         onclick="handleTileClick(event, {{ $placedCage->id }}, '{{ $placedCage->cage_code }}')">
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm font-semibold" style="color: {{ $placedCage->color }};">{{ $placedCage->cage_code }}</span>
-                        </div>
-                        <div class="text-xs truncate" style="color: #615d59;">{{ Str::limit($placedCage->hens->first()?->breed ?? '—', 16) }}</div>
-                    </div>
-                </div>
-                @else
-                <div class="farm-cell min-h-[5rem] rounded-lg border p-3 flex items-center justify-center transition-all group relative"
-                     style="border-color: #e6e6e6; background-color: #f9fafb;"
-                     data-row="{{ $r }}" data-col="{{ $c }}"
-                     ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, {{ $r }}, {{ $c }})">
-                    @if($isAdmin)
-                    <button onclick="event.stopPropagation(); confirmRemoveCell({{ $r }}, {{ $c }})"
-                            class="remove-cell-btn absolute top-0.5 right-0.5 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            style="background-color: rgba(155,28,36,0.85); color: #fff; font-size: 12px; line-height: 1;"
-                            title="Remove empty cell" aria-label="Remove empty cell">
-                        ×
-                    </button>
-                    @endif
-                    <span class="text-xs" style="color: #d1d5db;">{{ $r + 1 }}-{{ $c + 1 }}</span>
-                </div>
-                @endif
-                @endfor
-            @endfor
+
+        {{-- Canvas container (tile grid auto-rendered by JS) --}}
+        <div id="farmCanvas" class="relative overflow-auto rounded-lg border select-none" style="border-color: #e6e6e6; background-color: #f9fafb; min-height: 260px; max-height: 600px;">
+            <div id="canvasContent" class="relative inline-block">
+                {{-- Tile background grid --}}
+                <div id="tileGridLayer" class="absolute inset-0" style="pointer-events: none;"></div>
+                {{-- Cage footprint overlays --}}
+                <div id="cageOverlayLayer" class="relative"></div>
+            </div>
+            {{-- Saving overlay --}}
+            <div id="farmSaveOverlay" class="hidden absolute inset-0 z-10 items-center justify-center rounded-lg" style="background-color: rgba(255,255,255,0.7);">
+                <i data-lucide="loader" class="animate-spin w-8 h-8" style="color: #0075de;"></i>
+            </div>
         </div>
 
-        {{-- Staging Area (unplaced cages) — always rendered so tiles can be moved here client-side --}}
+        {{-- Drag ghost (follows cursor during drag) --}}
+        <div id="dragGhost" class="hidden fixed pointer-events-none z-50 rounded-lg border-2 flex items-center justify-center opacity-80 shadow-lg"
+             style="background-color: rgba(255,255,255,0.92);"></div>
+
+        {{-- Staging Area (unplaced cages) --}}
         @php $unplaced = $cages->filter(fn($cg) => is_null($cg->location_row)); @endphp
         <div id="stagingSection" class="mt-4 pt-4 border-t {{ $unplaced->count() > 0 ? '' : 'hidden' }}" style="border-color: #e6e6e6;">
             <h4 class="text-xs font-semibold tracking-[0.05em] uppercase mb-3" style="color: #615d59;">Unplaced Cages — drag to grid</h4>
-            <div id="stagingArea" class="flex flex-wrap gap-3 min-h-[3.5rem]"
-                 ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleStagingDrop(event)">
+            <div id="stagingArea" class="flex flex-wrap gap-3 min-h-[3.5rem]">
                 @foreach($unplaced as $uc)
-                <div class="farm-tile min-h-[3.5rem] rounded-lg border-2 px-4 py-2 flex flex-col justify-center {{ $isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer' }}"
+                <div class="staging-tile rounded-lg border-2 px-4 py-2 flex items-center justify-center {{ $isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer' }}"
                      style="border-color: {{ $uc->color }}; background-color: {{ $uc->colorSoft }};"
                      draggable="{{ $isAdmin ? 'true' : 'false' }}"
                      data-cage-id="{{ $uc->id }}"
                      data-cage-code="{{ $uc->cage_code }}"
-                     @if($isAdmin) ondragstart="handleDragStart(event, {{ $uc->id }})" @endif
-                     onclick="handleTileClick(event, {{ $uc->id }}, '{{ $uc->cage_code }}')">
+                     @if($isAdmin) ondragstart="handleDragStart(event, {{ $uc->id }})" @endif>
                     <span class="text-sm font-semibold" style="color: {{ $uc->color }};">{{ $uc->cage_code }}</span>
                 </div>
                 @endforeach
             </div>
         </div>
-        </div>{{-- /#farmCanvas --}}
 
         {{-- Error Toast --}}
-        <div id="dragErrorToast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-lg px-4 py-2 text-sm font-medium text-white" style="background-color: #9b1c24;">
-        </div>
+        <div id="dragErrorToast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-lg px-4 py-2 text-sm font-medium text-white" style="background-color: #9b1c24;"></div>
     </div>
 
     {{-- ── Tab Bar (Notion underline style) ── --}}
@@ -470,18 +442,21 @@
                         <div>
                             <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Rows</label>
                             <input type="number" name="rows" id="editRows" value="{{ old('rows', 3) }}" min="1" max="10"
+                                   oninput="updateEditPreview()"
                                    class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Slots</label>
                             <input type="number" name="slots_per_row" id="editSlotsPerRow" value="{{ old('slots_per_row', 5) }}" min="1" max="100"
+                                   oninput="updateEditPreview()"
                                    class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Max/Slot</label>
                             <input type="number" name="max_chickens_per_slot" id="editMaxPerSlot" value="{{ old('max_chickens_per_slot', 4) }}" min="1" max="10"
+                                   oninput="updateEditPreview()"
                                    class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
@@ -489,6 +464,28 @@
                     <div class="flex items-center gap-2">
                         <input id="editActive" name="is_active" type="checkbox" value="1" class="w-4 h-4 rounded" style="accent-color: #0075de;" {{ old('is_active', true) ? 'checked' : '' }}>
                         <label for="editActive" class="text-sm" style="color: #31302e;">Active</label>
+                    </div>
+
+                    {{-- Configuration Summary (shared preview component) --}}
+                    <div class="rounded-lg p-3" style="background-color: #f6f5f4;">
+                        <div class="text-xs font-semibold tracking-[0.05em] uppercase mb-2" style="color: #615d59;">Configuration Summary</div>
+                        <div class="flex justify-between text-sm">
+                            <span style="color: #615d59;">Total slots</span>
+                            <span class="font-semibold" style="color: #1f1f1f;" id="editSummarySlots">15</span>
+                        </div>
+                        <div class="flex justify-between text-sm mt-1">
+                            <span style="color: #615d59;">Total capacity</span>
+                            <span class="font-semibold" style="color: #0075de;" id="editSummaryCapacity">60 hens</span>
+                        </div>
+                    </div>
+
+                    {{-- Layout Preview (shared component reused from Add Cage) --}}
+                    <div>
+                        <div class="text-xs font-semibold tracking-[0.05em] uppercase mb-2" style="color: #615d59;">Layout Preview</div>
+                        <div id="editPreviewContainer" class="border rounded-lg p-3 overflow-hidden" style="border-color: #e6e6e6; background-color: #ffffff; max-width: 100%;">
+                            <div class="flex gap-1 mb-1" id="editPreviewColHeaders"></div>
+                            <div id="editPreviewGrid"></div>
+                        </div>
                     </div>
 
                     {{-- Counting sensor (IR break beam) — per slot (items 15, 21, 23, 24) --}}
@@ -740,22 +737,21 @@ function closeNoChickensModal() {
     document.getElementById('noChickensModal').style.display = 'none';
 }
 
-function updateAddPreview() {
-    const rows = parseInt(document.getElementById('addRows').value) || 1;
-    const slotsPerRow = parseInt(document.getElementById('addSlotsPerRow').value) || 1;
-    const maxPerSlot = parseInt(document.getElementById('addMaxPerSlot').value) || 1;
+function renderSlotPreview(prefix) {
+    const rows = parseInt(document.getElementById(prefix + 'Rows').value) || 1;
+    const slotsPerRow = parseInt(document.getElementById(prefix + 'SlotsPerRow').value) || 1;
+    const maxPerSlot = parseInt(document.getElementById(prefix + 'MaxPerSlot').value) || 1;
     const totalSlots = rows * slotsPerRow;
     const totalCapacity = totalSlots * maxPerSlot;
-    document.getElementById('addSummarySlots').textContent = totalSlots;
-    document.getElementById('addSummaryCapacity').textContent = totalCapacity + ' hens';
+    document.getElementById(prefix + 'SummarySlots').textContent = totalSlots;
+    document.getElementById(prefix + 'SummaryCapacity').textContent = totalCapacity + ' hens';
 
-    const container = document.getElementById('addPreviewContainer');
-    const grid = document.getElementById('addPreviewGrid');
-    const colHeaders = document.getElementById('addPreviewColHeaders');
+    const container = document.getElementById(prefix + 'PreviewContainer');
+    const grid = document.getElementById(prefix + 'PreviewGrid');
+    const colHeaders = document.getElementById(prefix + 'PreviewColHeaders');
     const gap = 3;
 
-    // Available width inside container (excl. padding)
-    const containerPad = 24; // p-3 = 12px each side
+    const containerPad = 24;
     const availW = container.clientWidth - containerPad;
     const rowLabelW = 20;
     const totalGaps = (slotsPerRow - 1) * gap;
@@ -780,7 +776,6 @@ function updateAddPreview() {
 
     const axisFontSize = cellSize < 20 ? '8px' : (cellSize < 26 ? '9px' : '11px');
 
-    // Column headers (always visible)
     colHeaders.innerHTML = '';
     colHeaders.style.display = 'flex';
     colHeaders.style.gap = gap + 'px';
@@ -807,7 +802,6 @@ function updateAddPreview() {
         colHeaders.appendChild(d);
     }
 
-    // Grid rows (row labels always visible, per-cell numbers conditional)
     let html = '';
     for (let r = 1; r <= rows; r++) {
         html += '<div style="display: flex; gap: ' + gap + 'px; margin-bottom: ' + gap + 'px;">';
@@ -828,6 +822,9 @@ function updateAddPreview() {
     }
     grid.innerHTML = html;
 }
+
+function updateAddPreview() { renderSlotPreview('add'); }
+function updateEditPreview() { renderSlotPreview('edit'); }
 
 // ── Edit Modal ───────────────────────────────────────────
 function openEditModal(id, cageCode, locationRow, locationCol, rows, slotsPerRow, maxPerSlot, isActive) {
@@ -995,24 +992,446 @@ function closeEditModal() {
     });
 })();
 
-// ── Farm Layout: Drag-and-Drop + Click Filter ────────────
+// ── Tile-based Farm Layout Canvas ──────────────────────────────────
 var IS_ADMIN = {{ $isAdmin ? 'true' : 'false' }};
-var draggedCageId = null;
-var dragMoved = false;
-var activeFilterId = null;
+var GRID_ROWS = {{ $gridRows }};
+var GRID_COLS = {{ $gridCols }};
+var TILE_SIZE = 42;
+var TILE_GAP = 2;
+var GRID_PAD = 10;
 
-// cageId -> { location_row, location_column } (nulls = staging). Applied on Save Layout.
+var draggedCageId = null;
+var draggedFromCanvas = false;
+var selectedCageId = null;
+var activeFilterId = null;
 var pendingMoves = {};
-// Positions persisted this session without a page refresh; overrides the
-// server-rendered values baked into each cage card's edit button.
 var savedPositions = {};
 var cageMeta = {!! $cages->mapWithKeys(fn($c) => [$c->id => [
     'code' => $c->cage_code,
     'color' => $c->color,
     'colorSoft' => $c->colorSoft,
     'breed' => \Illuminate\Support\Str::limit($c->hens->first()?->breed ?? '—', 16),
+    'rows' => (int) ($c->rows ?? 1),
+    'slots_per_row' => (int) ($c->slots_per_row ?? 1),
+    'location_row' => $c->location_row,
+    'location_col' => $c->location_column,
 ]])->toJson(JSON_UNESCAPED_UNICODE) !!};
 
+// ── Initialize placed cages state from server data ──
+var placedCages = {};
+var initialPositions = {};
+Object.keys(cageMeta).forEach(function(id) {
+    var m = cageMeta[id];
+    if (m.location_row !== null && m.location_col !== null) {
+        placedCages[id] = {
+            origin_row: parseInt(m.location_row),
+            origin_col: parseInt(m.location_col),
+            width: m.slots_per_row,
+            height: m.rows,
+            color: m.color,
+            colorSoft: m.colorSoft,
+            code: m.code,
+        };
+        initialPositions[id] = { location_row: m.location_row, location_col: m.location_col };
+    }
+});
+
+// ── Tile coordinate helpers ──
+function tileLeft(col) { return GRID_PAD + col * (TILE_SIZE + TILE_GAP); }
+function tileTop(row) { return GRID_PAD + row * (TILE_SIZE + TILE_GAP); }
+function canvasW() { return GRID_PAD * 2 + GRID_COLS * (TILE_SIZE + TILE_GAP) - TILE_GAP; }
+function canvasH() { return GRID_PAD * 2 + GRID_ROWS * (TILE_SIZE + TILE_GAP) - TILE_GAP; }
+
+// ── Overlap detection ──
+function rectsOverlap(a, b) {
+    return !(a.col + a.w <= b.col || b.col + b.w <= a.col ||
+             a.row + a.h <= b.row || b.row + b.h <= a.row);
+}
+
+function checkPlacement(cageId, originRow, originCol) {
+    var m = cageMeta[cageId];
+    if (!m) return false;
+    var w = m.slots_per_row;
+    var h = m.rows;
+    if (originCol + w > GRID_COLS || originRow + h > GRID_ROWS || originCol < 0 || originRow < 0) return false;
+    var candidate = { col: originCol, row: originRow, w: w, h: h };
+    for (var id in placedCages) {
+        if (parseInt(id) === cageId) continue;
+        var p = placedCages[id];
+        var other = { col: p.origin_col, row: p.origin_row, w: p.width, h: p.height };
+        if (rectsOverlap(candidate, other)) return false;
+    }
+    return true;
+}
+
+function getTilesOccupied(originRow, originCol, width, height) {
+    var tiles = [];
+    for (var r = originRow; r < originRow + height; r++) {
+        for (var c = originCol; c < originCol + width; c++) {
+            tiles.push({ row: r, col: c });
+        }
+    }
+    return tiles;
+}
+
+// ── Canvas Rendering ──
+function renderCanvas() {
+    renderTileGrid();
+    renderCageOverlays();
+    updateCanvasSize();
+    updateStagingVisibility();
+    updateSaveButton();
+}
+
+function renderTileGrid() {
+    var layer = document.getElementById('tileGridLayer');
+    var html = '';
+    for (var r = 0; r < GRID_ROWS; r++) {
+        for (var c = 0; c < GRID_COLS; c++) {
+            var left = tileLeft(c);
+            var top = tileTop(r);
+            html += '<div class="tile-bg absolute rounded-sm" style="left:' + left + 'px;top:' + top + 'px;width:' + TILE_SIZE + 'px;height:' + TILE_SIZE + 'px;background:#f9fafb;border:1px solid #e6e6e6;"></div>';
+        }
+    }
+    layer.innerHTML = html;
+}
+
+function renderCageOverlays() {
+    var layer = document.getElementById('cageOverlayLayer');
+    var html = '';
+    for (var id in placedCages) {
+        var c = placedCages[id];
+        html += cageOverlayHtml(parseInt(id), c);
+    }
+    layer.innerHTML = html;
+    // Re-bind click events for selection
+    layer.querySelectorAll('.cage-overlay').forEach(function(el) {
+        el.addEventListener('click', function(e) {
+            e.stopPropagation();
+            selectCage(parseInt(el.dataset.cageId));
+        });
+    });
+    // Bind remove buttons
+    layer.querySelectorAll('.cage-remove-btn').forEach(function(el) {
+        el.addEventListener('click', function(e) {
+            e.stopPropagation();
+            confirmRemoveCage(parseInt(el.dataset.cageId));
+        });
+    });
+    // Bind drag events
+    layer.querySelectorAll('.cage-drag-handle').forEach(function(el) {
+        el.addEventListener('dragstart', function(e) { handleDragStart(e, parseInt(el.dataset.cageId)); });
+    });
+    updateCanvasSize();
+}
+
+function cageOverlayHtml(cageId, c) {
+    var left = tileLeft(c.origin_col);
+    var top = tileTop(c.origin_row);
+    var w = c.width * (TILE_SIZE + TILE_GAP) - TILE_GAP;
+    var h = c.height * (TILE_SIZE + TILE_GAP) - TILE_GAP;
+    var isSelected = (selectedCageId === cageId);
+    var borderColor = isSelected ? '#002D5E' : c.color;
+    var borderWidth = isSelected ? 3 : 2;
+    var shadow = isSelected ? '0 0 0 2px rgba(0,45,94,0.25)' : 'none';
+    var btns = '';
+    if (isSelected && IS_ADMIN) {
+        var m = cageMeta[cageId];
+        var or = c.origin_row, oc = c.origin_col;
+        btns += '<button class="cage-resize-btn absolute -top-2 -left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white z-10" data-cage-id="' + cageId + '" style="background-color:#0075de;line-height:1;" title="Resize cage">\u2699</button>';
+        btns += '<button class="cage-remove-btn absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white z-10" data-cage-id="' + cageId + '" style="background-color:#9b1c24;line-height:1;" title="Remove from canvas">×</button>';
+    }
+    return '<div class="cage-overlay absolute rounded-lg flex items-center justify-center" data-cage-id="' + cageId + '" style="left:' + left + 'px;top:' + top + 'px;width:' + w + 'px;height:' + h + 'px;border:' + borderWidth + 'px solid ' + borderColor + ';background:' + c.colorSoft + ';box-shadow:' + shadow + ';cursor:pointer;z-index:1;">'
+        + btns
+        + '<div class="cage-drag-handle absolute inset-0 rounded-lg flex flex-col items-center justify-center" draggable="' + IS_ADMIN + '" data-cage-id="' + cageId + '" style="cursor:grab;">'
+        + '<span class="text-sm font-semibold leading-tight" style="color:' + c.color + ';">' + c.code + '</span>'
+        + '<span class="text-xs" style="color:#615d59;">' + c.width + '×' + c.height + '</span>'
+        + '</div>'
+        + '</div>';
+}
+
+function updateCanvasSize() {
+    var content = document.getElementById('canvasContent');
+    if (content) {
+        content.style.width = canvasW() + 'px';
+        content.style.height = canvasH() + 'px';
+    }
+}
+
+// ── Grid extent recomputation (after add/remove) ──
+function recomputeGridExtent() {
+    var maxR = 6;
+    var maxC = 10;
+    for (var id in placedCages) {
+        var c = placedCages[id];
+        var r = c.origin_row + c.height;
+        var cl = c.origin_col + c.width;
+        if (r > maxR) maxR = r;
+        if (cl > maxC) maxC = cl;
+    }
+    GRID_ROWS = maxR;
+    GRID_COLS = maxC;
+}
+
+// ── Selection ──
+function selectCage(cageId) {
+    if (selectedCageId === cageId) { deselectAll(); return; }
+    selectedCageId = cageId;
+    renderCageOverlays();
+}
+
+function deselectAll() {
+    if (selectedCageId === null) return;
+    selectedCageId = null;
+    renderCageOverlays();
+}
+
+// ── Canvas click to deselect ──
+document.addEventListener('click', function(e) {
+    if (selectedCageId !== null && !e.target.closest('.cage-overlay') && !e.target.closest('.staging-tile')) {
+        deselectAll();
+    }
+});
+
+// ── Drag and Drop ──
+function handleDragStart(e, cageId) {
+    if (!IS_ADMIN) return;
+    draggedCageId = cageId;
+    // Transparent drag image
+    var canvas = document.createElement('canvas');
+    canvas.width = 1; canvas.height = 1;
+    e.dataTransfer.setDragImage(canvas, 0, 0);
+    e.dataTransfer.setData('text/plain', String(cageId));
+    e.dataTransfer.effectAllowed = 'move';
+    // Track if dragging from canvas vs staging
+    draggedFromCanvas = e.target.closest('.cage-overlay') !== null || e.target.closest('.cage-drag-handle') !== null;
+    if (draggedFromCanvas) {
+        var overlay = document.querySelector('.cage-overlay[data-cage-id="' + cageId + '"]');
+        if (overlay) overlay.style.opacity = '0.35';
+    }
+    // Show ghost at cursor by binding canvas listeners
+    bindDragListeners();
+}
+
+var dragListenersBound = false;
+function bindDragListeners() {
+    if (dragListenersBound) return;
+    dragListenersBound = true;
+    var canvas = document.getElementById('farmCanvas');
+    document.addEventListener('dragover', function(e) { e.preventDefault(); showGhost(e); });
+    document.addEventListener('dragend', function(e) { hideGhost(); unbindDragListeners(); resetDragState(); });
+    document.addEventListener('drop', function(e) { e.preventDefault(); hideGhost(); handleCanvasDrop(e); });
+}
+
+function unbindDragListeners() {
+    dragListenersBound = false;
+}
+
+function showGhost(e) {
+    var ghost = document.getElementById('dragGhost');
+    if (!ghost) return;
+    var cageId = draggedCageId;
+    if (!cageId || !cageMeta[cageId]) { ghost.classList.add('hidden'); return; }
+    var m = cageMeta[cageId];
+    var w = m.slots_per_row;
+    var h = m.rows;
+
+    // Calculate snapped position relative to canvas
+    var canvas = document.getElementById('farmCanvas');
+    var rect = canvas.getBoundingClientRect();
+    var mx = e.clientX - rect.left - GRID_PAD;
+    var my = e.clientY - rect.top - GRID_PAD;
+    var cellW = TILE_SIZE + TILE_GAP;
+    var cellH = TILE_SIZE + TILE_GAP;
+    var snapCol = Math.round(mx / cellW);
+    var snapRow = Math.round(my / cellH);
+    snapCol = Math.max(0, Math.min(snapCol, GRID_COLS - w));
+    snapRow = Math.max(0, Math.min(snapRow, GRID_ROWS - h));
+
+    // Position the ghost at snapped location relative to viewport
+    var ghostLeft = rect.left + tileLeft(snapCol);
+    var ghostTop = rect.top + tileTop(snapRow);
+    var ghostW = w * (TILE_SIZE + TILE_GAP) - TILE_GAP;
+    var ghostH = h * (TILE_SIZE + TILE_GAP) - TILE_GAP;
+
+    var valid = checkPlacement(cageId, snapRow, snapCol);
+    ghost.style.left = ghostLeft + 'px';
+    ghost.style.top = ghostTop + 'px';
+    ghost.style.width = ghostW + 'px';
+    ghost.style.height = ghostH + 'px';
+    ghost.style.borderColor = valid ? m.color : '#9b1c24';
+    ghost.style.backgroundColor = valid ? m.colorSoft : '#fbe4e6';
+    ghost.innerHTML = '<span class="text-sm font-semibold" style="color:' + (valid ? m.color : '#9b1c24') + ';">' + m.code + '</span>';
+    ghost.classList.remove('hidden');
+
+    // Visual feedback on grid
+    if (typeof window._lastSnap !== 'undefined') {
+        var last = window._lastSnap;
+        if (last.row === snapRow && last.col === snapCol) return;
+    }
+    window._lastSnap = { row: snapRow, col: snapCol };
+    // Highlight target tiles
+    clearGridHighlights();
+    if (valid) {
+        for (var r = snapRow; r < snapRow + h; r++) {
+            for (var c = snapCol; c < snapCol + w; c++) {
+                var idx = r * GRID_COLS + c;
+                var tile = document.querySelectorAll('.tile-bg')[idx];
+                if (tile) tile.style.backgroundColor = '#dcebfa';
+            }
+        }
+    }
+}
+
+function hideGhost() {
+    var ghost = document.getElementById('dragGhost');
+    if (ghost) ghost.classList.add('hidden');
+    clearGridHighlights();
+    window._lastSnap = undefined;
+}
+
+function clearGridHighlights() {
+    document.querySelectorAll('.tile-bg').forEach(function(t) {
+        t.style.backgroundColor = '#f9fafb';
+    });
+}
+
+function handleCanvasDrop(e) {
+    var cageId = draggedCageId;
+    if (!cageId) return;
+    var m = cageMeta[cageId];
+    if (!m) return;
+    // Compute snap position at drop
+    var canvas = document.getElementById('farmCanvas');
+    var rect = canvas.getBoundingClientRect();
+    var mx = e.clientX - rect.left;
+    var my = e.clientY - rect.top;
+    // Only place if cursor is over the canvas (with some tolerance)
+    if (mx < -40 || my < -40 || mx > rect.width + 40 || my > rect.height + 40) return;
+    mx -= GRID_PAD;
+    my -= GRID_PAD;
+    var cellW = TILE_SIZE + TILE_GAP;
+    var cellH = TILE_SIZE + TILE_GAP;
+    var snapCol = Math.round(mx / cellW);
+    var snapRow = Math.round(my / cellH);
+    snapCol = Math.max(0, Math.min(snapCol, GRID_COLS - m.slots_per_row));
+    snapRow = Math.max(0, Math.min(snapRow, GRID_ROWS - m.rows));
+
+    if (!checkPlacement(cageId, snapRow, snapCol)) {
+        showDragError('Cannot place here — tiles overlap with another cage');
+        return;
+    }
+
+    // Place the cage
+    placeCage(cageId, snapRow, snapCol);
+}
+
+function placeCage(cageId, originRow, originCol) {
+    var m = cageMeta[cageId];
+    if (!m) return;
+    // Remove from staging if present
+    removeStagingTile(cageId);
+    // Add to placed map
+    placedCages[cageId] = {
+        origin_row: originRow,
+        origin_col: originCol,
+        width: m.slots_per_row,
+        height: m.rows,
+        color: m.color,
+        colorSoft: m.colorSoft,
+        code: m.code,
+    };
+    pendingMoves[cageId] = { location_row: originRow, location_column: originCol };
+    // Track for edit modal positioning
+    savedPositions[cageId] = { location_row: originRow, location_column: originCol };
+
+    recomputeGridExtent();
+    renderCanvas();
+    selectCage(cageId);
+    updateSaveButton();
+    updateStagingVisibility();
+}
+
+function removeStagingTile(cageId) {
+    var tile = document.querySelector('.staging-tile[data-cage-id="' + cageId + '"]');
+    if (tile) tile.remove();
+}
+
+function resetDragState() {
+    if (draggedFromCanvas && draggedCageId) {
+        var overlay = document.querySelector('.cage-overlay[data-cage-id="' + draggedCageId + '"]');
+        if (overlay) overlay.style.opacity = '1';
+    }
+    draggedCageId = null;
+    draggedFromCanvas = false;
+}
+
+// ── Remove from Canvas ──
+function confirmRemoveCage(cageId) {
+    var m = cageMeta[cageId];
+    if (!m) return;
+    confirmModal(
+        'Remove <strong>' + m.code + '</strong> from this canvas position?<br><br>' +
+        'The cage and all its data (slots, hens, sensors) will remain completely untouched ' +
+        'it will just be moved back to the unplaced area. You must save the layout to persist this change.',
+        { submit: function() { doRemoveCage(cageId); } },
+        'Remove from Canvas'
+    );
+}
+
+function doRemoveCage(cageId) {
+    delete placedCages[cageId];
+    pendingMoves[cageId] = { location_row: null, location_column: null };
+    addStagingTile(cageId);
+    deselectAll();
+    recomputeGridExtent();
+    renderCanvas();
+    updateSaveButton();
+    updateStagingVisibility();
+}
+
+function addStagingTile(cageId) {
+    var m = cageMeta[cageId];
+    if (!m) return;
+    var area = document.getElementById('stagingArea');
+    var tile = document.createElement('div');
+    tile.className = 'staging-tile rounded-lg border-2 px-4 py-2 flex items-center justify-center ' + (IS_ADMIN ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer');
+    tile.draggable = IS_ADMIN;
+    tile.dataset.cageId = cageId;
+    tile.dataset.cageCode = m.code;
+    tile.style.borderColor = m.color;
+    tile.style.backgroundColor = m.colorSoft;
+    tile.innerHTML = '<span class="text-sm font-semibold" style="color:' + m.color + ';">' + m.code + '</span>';
+    tile.addEventListener('dragstart', function(e) { handleDragStart(e, cageId); });
+    area.appendChild(tile);
+}
+
+// ── Clear All ──
+function clearAllCages() {
+    if (Object.keys(placedCages).length === 0) return;
+    confirmModal(
+        'Move all cages back to the staging area? This is not applied until you click Save Layout.',
+        { submit: doClearAll },
+        'Clear All'
+    );
+}
+
+function doClearAll() {
+    var ids = Object.keys(placedCages);
+    ids.forEach(function(id) {
+        var cageId = parseInt(id);
+        addStagingTile(cageId);
+        pendingMoves[cageId] = { location_row: null, location_column: null };
+        delete placedCages[cageId];
+    });
+    deselectAll();
+    recomputeGridExtent();
+    renderCanvas();
+    updateSaveButton();
+    updateStagingVisibility();
+}
+
+// ── Save Layout ──
 function hasPendingChanges() {
     return Object.keys(pendingMoves).length > 0;
 }
@@ -1026,247 +1445,6 @@ function updateStagingVisibility() {
     var section = document.getElementById('stagingSection');
     var area = document.getElementById('stagingArea');
     if (section && area) section.classList.toggle('hidden', area.children.length === 0);
-}
-
-function bindTileEvents(tile, cageId, cageCode) {
-    if (IS_ADMIN) {
-        tile.addEventListener('dragstart', function(e) { handleDragStart(e, cageId); });
-    }
-    tile.addEventListener('click', function(e) { handleTileClick(e, cageId, cageCode); });
-}
-
-function makeGridTile(cageId) {
-    var meta = cageMeta[cageId];
-    var tile = document.createElement('div');
-    tile.className = 'farm-tile ' + (IS_ADMIN ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer');
-    tile.draggable = IS_ADMIN;
-    tile.dataset.cageId = cageId;
-    tile.dataset.cageCode = meta.code;
-    tile.innerHTML =
-        '<div class="flex items-center justify-between">' +
-            '<span class="text-sm font-semibold"></span>' +
-        '</div>' +
-        '<div class="text-xs truncate" style="color: #615d59;"></div>';
-    var code = tile.querySelector('span');
-    code.style.color = meta.color;
-    code.textContent = meta.code;
-    tile.querySelector('.truncate').textContent = meta.breed;
-    bindTileEvents(tile, cageId, meta.code);
-    return tile;
-}
-
-function addTileToStaging(cageId) {
-    var meta = cageMeta[cageId];
-    var tile = document.createElement('div');
-    tile.className = 'farm-tile min-h-[3.5rem] rounded-lg border-2 px-4 py-2 flex flex-col justify-center ' + (IS_ADMIN ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer');
-    tile.draggable = IS_ADMIN;
-    tile.dataset.cageId = cageId;
-    tile.dataset.cageCode = meta.code;
-    tile.style.borderColor = meta.color;
-    tile.style.backgroundColor = meta.colorSoft;
-    tile.innerHTML = '<span class="text-sm font-semibold"></span>';
-    var code = tile.querySelector('span');
-    code.style.color = meta.color;
-    code.textContent = meta.code;
-    bindTileEvents(tile, cageId, meta.code);
-    document.getElementById('stagingArea').appendChild(tile);
-    updateStagingVisibility();
-}
-
-function setCellOccupied(cell, cageId) {
-    var meta = cageMeta[cageId];
-    cell.className = 'farm-cell min-h-[5rem] rounded-lg border-2 p-3 flex flex-col justify-between transition-all group relative';
-    cell.style.borderColor = meta.color;
-    cell.style.backgroundColor = meta.colorSoft;
-    cell.innerHTML = '';
-    cell.appendChild(makeGridTile(cageId));
-    addCellRemoveButton(cell, parseInt(cell.dataset.row), parseInt(cell.dataset.col), meta.code);
-}
-
-function setCellEmpty(cell) {
-    cell.className = 'farm-cell min-h-[5rem] rounded-lg border p-3 flex items-center justify-center transition-all group relative';
-    cell.style.borderColor = '#e6e6e6';
-    cell.style.backgroundColor = '#f9fafb';
-    var r = parseInt(cell.dataset.row), c = parseInt(cell.dataset.col);
-    cell.innerHTML = '<span class="text-xs" style="color: #d1d5db;">' + (r + 1) + '-' + (c + 1) + '</span>';
-    addCellRemoveButton(cell, r, c);
-}
-
-function addCellRemoveButton(cell, row, col, cageCode) {
-    if (!IS_ADMIN) return;
-    var btn = document.createElement('button');
-    btn.innerHTML = '×';
-    btn.className = 'remove-cell-btn absolute top-0.5 right-0.5 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity';
-    btn.style.cssText = 'background-color: rgba(155,28,36,0.85); color: #fff; font-size: 16px; line-height: 1;';
-    btn.title = cageCode ? 'Remove ' + cageCode + ' from canvas' : 'Remove empty cell';
-    btn.setAttribute('aria-label', btn.title);
-    btn.onclick = function(e) {
-        e.stopPropagation();
-        confirmRemoveCell(row, col, cageCode);
-    };
-    cell.appendChild(btn);
-}
-
-function confirmRemoveCell(row, col, cageCode) {
-    if (cageCode) {
-        confirmModal(
-            'Remove <strong>' + cageCode + '</strong> from this canvas position?<br><br>' +
-            'The cage and all its data (slots, hens, sensors) will remain completely untouched — ' +
-            'it will just be moved back to the unplaced area. You must save the layout to persist this change.',
-            { submit: function() { doRemoveCell(row, col); } },
-            'Remove from Canvas'
-        );
-    } else {
-        // Empty cell removal — attempt grid shrink
-        doRemoveCell(row, col);
-    }
-}
-
-function doRemoveCell(row, col) {
-    var cell = document.querySelector('.farm-cell[data-row="' + row + '"][data-col="' + col + '"]');
-    if (!cell) return;
-    var tile = cell.querySelector('.farm-tile');
-
-    if (tile) {
-        var cageId = parseInt(tile.dataset.cageId);
-        tile.remove();
-        setCellEmpty(cell);
-        addTileToStaging(cageId);
-        pendingMoves[cageId] = { location_row: null, location_column: null };
-        updateSaveButton();
-        applyRowSpanning();
-    } else {
-        // Remove empty cell: POST to backend to attempt grid shrink
-        fetch(cagesBase + '/remove-cell', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '',
-            },
-            body: JSON.stringify({ row: row, col: col }),
-        })
-        .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
-        .then(function(res) {
-            if (res.ok && res.data.success) {
-                location.reload();
-            } else {
-                showDragError(res.data.message || 'Cannot remove this cell');
-            }
-        })
-        .catch(function() {
-            showDragError('Failed to remove cell');
-        });
-    }
-}
-
-function handleDragStart(e, cageId) {
-    draggedCageId = cageId;
-    dragMoved = false;
-    e.dataTransfer.setData('text/plain', cageId);
-    e.dataTransfer.effectAllowed = 'move';
-    // Expose every cell as a drop target while dragging (item 18)
-    resetRowSpanning();
-    setTimeout(function() { e.target.style.opacity = '0.4'; }, 0);
-}
-
-function handleDragOver(e) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    e.currentTarget.style.boxShadow = 'inset 0 0 0 2px #0075de';
-}
-
-function handleDragLeave(e) {
-    e.currentTarget.style.boxShadow = '';
-}
-
-function handleDrop(e, row, col) {
-    e.preventDefault();
-    e.stopPropagation();
-    e.currentTarget.style.boxShadow = '';
-    var cageId = parseInt(e.dataTransfer.getData('text/plain'));
-    if (!cageId) return;
-
-    var cell = e.currentTarget;
-    var tile = document.querySelector('.farm-tile[data-cage-id="' + cageId + '"]');
-    if (tile) tile.style.opacity = '1';
-
-    var existing = cell.querySelector('.farm-tile');
-    if (existing) {
-        if (parseInt(existing.dataset.cageId) === cageId) return; // dropped on its own cell
-
-        // ── Swap (item 14): dropping onto an occupied cell swaps the two cages ──
-        var otherId = parseInt(existing.dataset.cageId);
-        var sourceCell = tile ? tile.closest('.farm-cell') : null;
-        if (!sourceCell) {
-            // Dragged from staging onto an occupied cell — nothing to swap into
-            showDragError('Cell occupied — drop on an empty cell');
-            return;
-        }
-        tile.remove();
-        existing.remove();
-        setCellOccupied(cell, cageId);
-        setCellOccupied(sourceCell, otherId);
-        pendingMoves[cageId] = { location_row: row, location_column: col };
-        pendingMoves[otherId] = { location_row: parseInt(sourceCell.dataset.row), location_column: parseInt(sourceCell.dataset.col) };
-        updateSaveButton();
-        applyRowSpanning();
-        return;
-    }
-
-    var sourceCell = tile ? tile.closest('.farm-cell') : null;
-    if (tile) tile.remove();
-    if (sourceCell) setCellEmpty(sourceCell);
-    setCellOccupied(cell, cageId);
-    updateStagingVisibility();
-
-    pendingMoves[cageId] = { location_row: row, location_column: col };
-    updateSaveButton();
-    applyRowSpanning();
-}
-
-function handleStagingDrop(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    e.currentTarget.style.boxShadow = '';
-    var cageId = parseInt(e.dataTransfer.getData('text/plain'));
-    if (!cageId) return;
-
-    var tile = document.querySelector('.farm-tile[data-cage-id="' + cageId + '"]');
-    if (!tile) return;
-    tile.style.opacity = '1';
-
-    var sourceCell = tile.closest('.farm-cell');
-    if (!sourceCell) return; // already in staging
-
-    tile.remove();
-    setCellEmpty(sourceCell);
-    addTileToStaging(cageId);
-
-    pendingMoves[cageId] = { location_row: null, location_column: null };
-    updateSaveButton();
-    applyRowSpanning();
-}
-
-function clearAllCages() {
-    if (document.querySelectorAll('#farmGrid .farm-tile').length === 0) return;
-    confirmModal(
-        'Move all cages back to the staging area? This is not applied until you click Save Layout.',
-        { submit: doClearAll },
-        'Clear All'
-    );
-}
-
-function doClearAll() {
-    document.querySelectorAll('#farmGrid .farm-tile').forEach(function(tile) {
-        var cageId = parseInt(tile.dataset.cageId);
-        var cell = tile.closest('.farm-cell');
-        tile.remove();
-        if (cell) setCellEmpty(cell);
-        addTileToStaging(cageId);
-        pendingMoves[cageId] = { location_row: null, location_column: null };
-    });
-    updateSaveButton();
-    applyRowSpanning();
 }
 
 function setSavingState(saving) {
@@ -1308,8 +1486,6 @@ function saveLayout() {
     })
     .then(function(res) {
         if (res.ok && res.data.success) {
-            // The grid DOM already matches what was saved, so no page refresh
-            // is needed — just remember the persisted positions for the edit modal.
             Object.assign(savedPositions, pendingMoves);
             pendingMoves = {};
             setSavingState(false);
@@ -1317,6 +1493,8 @@ function saveLayout() {
         } else {
             setSavingState(false);
             showDragError(res.data.message || 'Failed to save layout');
+            // Reload to restore server state
+            location.reload();
         }
     })
     .catch(function() {
@@ -1325,21 +1503,31 @@ function saveLayout() {
     });
 }
 
-function handleTileClick(e, cageId, cageCode) {
-    if (dragMoved) { dragMoved = false; return; }
-    e.stopPropagation();
+// ── Toast ──
+function showToast(msg, isSuccess) {
+    var toast = document.getElementById('dragErrorToast');
+    toast.textContent = msg;
+    toast.style.backgroundColor = isSuccess ? '#1f6b3a' : '#9b1c24';
+    toast.classList.remove('hidden');
+    setTimeout(function() { toast.classList.add('hidden'); }, 3000);
+}
 
+function showDragError(msg) {
+    showToast(msg, false);
+}
+
+// ── Filter / Tab (kept from original) ──
+function handleTileClick(e, cageId, cageCode) {
+    e.stopPropagation();
     if (activeFilterId === cageId) {
         clearCanvasFilter();
         return;
     }
-
     activeFilterId = cageId;
     document.querySelectorAll('.cage-card').forEach(function(card) {
         card.style.display = card.dataset.cageCode === cageCode ? '' : 'none';
     });
     document.getElementById('clearFilterBtn').classList.remove('hidden');
-
     document.querySelectorAll('.cage-tab').forEach(function(tab) {
         if (tab.dataset.tab === cageCode) {
             tab.style.borderBottomColor = '#0075de';
@@ -1360,45 +1548,8 @@ function clearCanvasFilter() {
     filterCage('all');
 }
 
-function showToast(msg, isSuccess) {
-    var toast = document.getElementById('dragErrorToast');
-    toast.textContent = msg;
-    toast.style.backgroundColor = isSuccess ? '#1f6b3a' : '#9b1c24';
-    toast.classList.remove('hidden');
-    setTimeout(function() { toast.classList.add('hidden'); }, 3000);
-}
-
-function showDragError(msg) {
-    showToast(msg, false);
-}
-
-(function() {
-    if (window.__cagesDragendBound) return;
-    window.__cagesDragendBound = true;
-    document.addEventListener('dragend', function(e) {
-        if (e.target.classList && e.target.classList.contains('farm-tile')) {
-            e.target.style.opacity = '1';
-        }
-        dragMoved = true;
-        // Re-apply full-row spanning once the drag interaction ends (item 18)
-        if (typeof applyRowSpanning === 'function') applyRowSpanning();
-    });
-})();
-
-// ── Row-spanning removed per audit (Item 1): lone cages no longer stretch.
-// All cells always render at their normal width; empty placeholders visible.
-function applyRowSpanning() {
-    resetRowSpanning();
-}
-
-function resetRowSpanning() {
-    document.querySelectorAll('#farmGrid .farm-cell').forEach(function(c) {
-        c.style.gridColumn = '';
-        c.style.display = '';
-    });
-}
-
-applyRowSpanning();
+// ── Init ──
+renderCanvas();
 
 // ── Delete Cage Modal (items 19 + 20) ─────────────────────
 var deleteTargetId = null;

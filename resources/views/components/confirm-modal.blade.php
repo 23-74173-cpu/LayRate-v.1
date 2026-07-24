@@ -83,7 +83,7 @@
 
     window.confirmModal = function(message, form, actionLabel) {
         pendingForm = form;
-        document.getElementById('confirm-modal-message').textContent = message;
+        document.getElementById('confirm-modal-message').innerHTML = message;
         document.getElementById('confirm-modal-action').textContent = actionLabel || 'Confirm';
         document.getElementById('confirm-modal').classList.remove('hidden');
         document.getElementById('confirm-modal').classList.add('flex');
