@@ -86,19 +86,16 @@
                     Generate Report
                 </x-button>
                 @if($rows->isNotEmpty())
-                <a href="{{ route('reports.csv', request()->query()) }}"
-                   class="flex items-center gap-1.5 border border-[#D9D9D9] text-[#6B7280] px-4 py-2 rounded-lg text-sm hover:bg-[#F5F6F8] transition-colors">
+                <x-button variant="secondary" :href="route('reports.csv', request()->query())">
                     <i data-lucide="download" class="w-4 h-4"></i> Export CSV
-                </a>
+                </x-button>
                 @if($full)
-                <a href="{{ route('reports', request()->except('full')) }}"
-                   class="flex items-center gap-1.5 border border-[#D9D9D9] text-[#6B7280] px-4 py-2 rounded-lg text-sm hover:bg-[#F5F6F8] transition-colors">
+                <x-button variant="secondary" :href="route('reports', request()->except('full'))">
                     <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Preview
-                </a>
-                <button type="button" onclick="window.print()"
-                        class="flex items-center gap-1.5 border border-[#D9D9D9] text-[#6B7280] px-3 py-2 rounded-lg text-sm hover:bg-[#F5F6F8] transition-colors">
+                </x-button>
+                <x-button variant="secondary" type="button" onclick="window.print()">
                     <i data-lucide="printer" class="w-4 h-4"></i>
-                </button>
+                </x-button>
                 @endif
                 @endif
             </form>
@@ -113,13 +110,12 @@
             <div>
                 <h2 class="text-sm font-semibold text-[#333333]">Report Preview</h2>
                 <p class="text-xs text-[#6B7280] mt-0.5">
-                    {{ ucfirst(str_replace('_', ' ', $type)) }} &middot; {{ $from && $to ? "{$from} — {$to}" : 'All time' }} &middot; {{ $cageId === 'all' ? 'All Cages' : $cageId }} &middot; {{ $rows->count() }} record(s)
+                    {{ ucfirst(str_replace('_', ' ', $type)) }} &middot; {{ $from && $to ? "{$from} — {$to}" : 'All time' }} &middot; {{ $cageId === 'all' ? 'All Cages' : $cageId }} &middot; {{ $rows->total() }} record(s)
                 </p>
             </div>
-            <a href="{{ route('reports', array_merge(request()->query(), ['full' => 1])) }}"
-               class="inline-flex items-center gap-2 bg-[#002D5E] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#001F42] transition-colors">
+            <x-button :href="route('reports', array_merge(request()->query(), ['full' => 1]))">
                 <i data-lucide="file-text" class="w-4 h-4"></i> View Printable Report
-            </a>
+            </x-button>
         </div>
         <div class="p-5">
             @include('reports._summary-pills')
@@ -148,6 +144,7 @@
                 </table>
             </div>
         </div>
+        <x-paginator :paginator="$rows" />
     </div>
     @else
     {{-- ── Report Document ── --}}

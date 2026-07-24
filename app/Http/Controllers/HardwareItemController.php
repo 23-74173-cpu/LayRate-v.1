@@ -77,17 +77,22 @@ class HardwareItemController extends Controller
         return $validator;
     }
 
-    public function liveData()
+    public function liveData(Request $request)
     {
-        $items = HardwareItem::with(['cage', 'cageSlot.cage', 'device'])
+        $query = HardwareItem::query();
+
+        // Summary counts must reflect every hardware item, not just the
+        // current page — computed before pagination narrows the query.
+        $breakbeamCount = (clone $query)->where('device_type', 'IR_breakbeam')->where('status', 'active')->count();
+        $dht22Count = (clone $query)->where('device_type', 'DHT22')->where('status', 'active')->count();
+        $activeCount = (clone $query)->where('status', 'active')->count();
+        $faultyCount = (clone $query)->where('status', 'faulty')->count();
+
+        $items = $query->with(['cage.latestEnvironmentLog', 'cageSlot.cage', 'device', 'latestOccupancyReading'])
             ->orderBy('status')
             ->orderBy('serial_number')
-            ->get();
-
-        $breakbeamCount = $items->where('device_type', 'IR_breakbeam')->where('status', 'active')->count();
-        $dht22Count = $items->where('device_type', 'DHT22')->where('status', 'active')->count();
-        $activeCount = $items->where('status', 'active')->count();
-        $faultyCount = $items->where('status', 'faulty')->count();
+            ->paginate(20)
+            ->withQueryString();
 
         return view('hardware._live-data', compact(
             'items', 'breakbeamCount', 'dht22Count', 'activeCount', 'faultyCount'

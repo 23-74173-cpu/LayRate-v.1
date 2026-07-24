@@ -105,7 +105,7 @@
     <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <a href="{{ route('landing') }}" class="flex items-center gap-2.5 shrink-0">
             <div class="w-9 h-9 rounded-lg bg-white border border-hairline flex items-center justify-center overflow-hidden shadow-soft">
-                <img src="/images/layrate-logo-mark.png" alt="LayRate logo" class="w-8 h-8 object-contain">
+                <img src="/images/layrate-logo-mark.png" alt="LayRate logo" class="w-8 h-8 object-contain" loading="lazy">
             </div>
             <span class="text-title text-ink">LayRate</span>
         </a>
@@ -411,7 +411,7 @@
     <div class="max-w-6xl mx-auto px-4 sm:px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div class="flex items-center gap-2.5">
             <div class="w-8 h-8 rounded-lg bg-white border border-hairline flex items-center justify-center overflow-hidden">
-                <img src="/images/layrate-logo-mark.png" alt="LayRate logo" class="w-7 h-7 object-contain">
+                <img src="/images/layrate-logo-mark.png" alt="LayRate logo" class="w-7 h-7 object-contain" loading="lazy">
             </div>
             <div>
                 <div class="text-body-sm text-ink font-medium leading-tight">LayRate</div>

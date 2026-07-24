@@ -17,11 +17,12 @@ class AlertController extends Controller
         return view('notifications.index', compact('alerts'));
     }
 
-    public function table()
+    public function table(Request $request)
     {
-        $alerts = Alert::with('cage')
+        $alertsPaginator = Alert::with('cage')
             ->orderByDesc('triggered_at')
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
 
         $groups = [
             'Eggs'        => collect(),
@@ -34,7 +35,9 @@ class AlertController extends Controller
         $tempTypes = ['temperature_low', 'temperature_high'];
         $humTypes = ['humidity_low', 'humidity_high'];
 
-        foreach ($alerts as $alert) {
+        // Group by category within the current page — the paginator itself
+        // still tracks total/prev/next across the full, ungrouped result set.
+        foreach ($alertsPaginator as $alert) {
             $type = $alert->alert_type;
             if (in_array($type, $eggTypes)) {
                 $groups['Eggs']->push($alert);
@@ -49,7 +52,7 @@ class AlertController extends Controller
 
         $groups = array_filter($groups, fn($g) => $g->isNotEmpty());
 
-        return view('notifications._table', compact('groups'));
+        return view('notifications._table', ['groups' => $groups, 'alertsPaginator' => $alertsPaginator]);
     }
 
     public function acknowledgeModal(Request $request)

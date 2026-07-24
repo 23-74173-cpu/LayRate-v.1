@@ -6,7 +6,7 @@
             @include('chickens._unplaced-list')
         @endif
 
-        @forelse($hensByCage as $cageId => $hensGroup)
+        @forelse($cageGroups as $hensGroup)
             @php
                 $cage = $hensGroup->first()->cage;
                 $slotsInCage = $hensGroup->groupBy(fn($h) => $h->cageSlot?->id)->filter()->sortBy(fn($g) => $g->first()->cageSlot?->slot_number);
@@ -69,16 +69,10 @@
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <span class="text-xs text-[#9CA3AF]">slot actions:</span>
-                                    <button type="button"
-                                            onclick="event.stopPropagation(); openMoveModal('{{ $slotHens->pluck('id')->join(',') }}', {{ $slotHens->count() }}, '{{ $cage->cage_code }} slot {{ $slot->slot_number }}', '{{ $slotHens->first()->breed ?? '' }}')"
-                                            class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Move all">
-                                        <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-                                    </button>
-                                    <button type="button"
-                                            onclick="event.stopPropagation(); openRemoveModal('{{ $slotHens->pluck('id')->join(',') }}', {{ $slotHens->count() }}, '{{ $cage->cage_code }} slot {{ $slot->slot_number }}', '{{ $slotHens->first()->breed ?? '' }}')"
-                                            class="p-1.5 rounded-full hover:bg-red-50 transition-colors" style="color: #a39e98;" aria-label="Remove all">
-                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                                    </button>
+                                    <x-icon-button icon="arrow-right" label="Move all" color="neutral"
+                                        onclick="event.stopPropagation(); openMoveModal('{{ $slotHens->pluck('id')->join(',') }}', {{ $slotHens->count() }}, '{{ $cage->cage_code }} slot {{ $slot->slot_number }}', '{{ $slotHens->first()->breed ?? '' }}')" />
+                                    <x-icon-button icon="trash-2" label="Remove all" color="red"
+                                        onclick="event.stopPropagation(); openRemoveModal('{{ $slotHens->pluck('id')->join(',') }}', {{ $slotHens->count() }}, '{{ $cage->cage_code }} slot {{ $slot->slot_number }}', '{{ $slotHens->first()->breed ?? '' }}')" />
                                     <i data-lucide="chevron-down" class="w-3 h-3 text-[#9CA3AF] slot-chevron transition-transform"></i>
                                 </div>
                             </div>
@@ -86,67 +80,45 @@
                             {{-- Individual Hens --}}
                             <div class="slot-hens hidden">
                                 {{-- Column headers --}}
-                                <div class="flex items-center gap-3 px-4 py-1.5 border-t border-[#F0F0F0] bg-[#F5F6F8] text-xs font-semibold uppercase tracking-wider text-[#6B7280]">
+                                <div class="flex flex-wrap items-center gap-3 px-4 py-1.5 border-t border-[#F0F0F0] bg-[#F5F6F8] text-xs font-semibold uppercase tracking-wider text-[#6B7280]">
                                     <label class="flex items-center gap-1 cursor-pointer" title="Select all in this slot">
                                         <input type="checkbox" onchange="toggleAllInSlot(this)"
                                                class="w-3 h-3 rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]">
                                     </label>
                                     <span data-col="id" class="w-28 shrink-0 whitespace-nowrap col-toggle">Chicken ID</span>
-                                    <span data-col="breed" class="w-32 shrink-0 whitespace-nowrap col-toggle">Breed</span>
-                                    <span data-col="age" class="w-12 shrink-0 col-toggle">Age</span>
-                                    <span data-col="flock" class="w-16 shrink-0 col-toggle">Flock</span>
+                                    <span data-col="breed" class="w-32 shrink-0 whitespace-nowrap col-toggle hidden sm:inline">Breed</span>
+                                    <span data-col="age" class="w-12 shrink-0 col-toggle hidden sm:inline">Age</span>
+                                    <span data-col="flock" class="w-16 shrink-0 col-toggle hidden sm:inline">Flock</span>
                                     <span data-col="status" class="flex-1 col-toggle">Status</span>
-                                    <span data-col="actions" class="col-toggle">Actions</span>
+                                    <span data-col="actions" class="col-toggle w-full sm:w-auto">Actions</span>
                                 </div>
                                 @foreach($slotHens as $hen)
-                                <div class="flex items-center gap-3 px-4 py-2 border-t border-[#F5F5F5] hover:bg-[#FAFAFA] text-xs">
+                                <div class="flex flex-wrap items-center gap-3 px-4 py-2 border-t border-[#F5F5F5] hover:bg-[#FAFAFA] text-xs">
                                     <input type="checkbox" class="hen-checkbox w-3.5 h-3.5 rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]"
                                            value="{{ $hen->id }}"
                                            onclick="updateBulkBar()">
                                     <span data-col="id" class="w-28 shrink-0 whitespace-nowrap font-mono text-[#6B7280] col-toggle">{{ $hen->tag_code ?? $hen->chicken_id ?? '—' }}</span>
-                                    <span data-col="breed" class="w-32 shrink-0 whitespace-nowrap text-[#333] col-toggle">{{ $hen->breed }}</span>
-                                    <span data-col="age" class="w-12 shrink-0 text-[#6B7280] col-toggle">{{ $hen->current_age_weeks }}w</span>
-                                    <span data-col="flock" class="w-16 shrink-0 text-[#6B7280] col-toggle">flock {{ $hen->flock_age_weeks }}w</span>
+                                    <span data-col="breed" class="w-32 shrink-0 whitespace-nowrap text-[#333] col-toggle hidden sm:inline">{{ $hen->breed }}</span>
+                                    <span data-col="age" class="w-12 shrink-0 text-[#6B7280] col-toggle hidden sm:inline">{{ $hen->current_age_weeks }}w</span>
+                                    <span data-col="flock" class="w-16 shrink-0 text-[#6B7280] col-toggle hidden sm:inline">flock {{ $hen->flock_age_weeks }}w</span>
                                     <span data-col="status" class="flex-1 col-toggle">
-                                        @if($hen->is_active)
-                                        <span class="text-xs px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Active</span>
-                                        @else
-                                        <span class="text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">Inactive</span>
-                                        @endif
+                                        <x-status-badge :status="$hen->is_active ? 'Active' : 'Inactive'" type="general" />
                                     </span>
-                                    <div data-col="actions" class="flex items-center gap-1 col-toggle">
-                                        <button type="button"
-                                                onclick="openWeightCheckModal('{{ $hen->id }}', '{{ $hen->tag_code ?? $hen->chicken_id }} ({{ $cage->cage_code }} slot {{ $slot->slot_number }})')"
-                                                class="p-1.5 rounded-full hover:bg-blue-50 transition-colors" style="color: #a39e98;" aria-label="Record weight">
-                                            <i data-lucide="scale" class="w-3.5 h-3.5"></i>
-                                        </button>
-                                        <button type="button"
-                                                onclick="openHealthEventModal('{{ $hen->id }}', '{{ $hen->tag_code ?? $hen->chicken_id }} ({{ $cage->cage_code }} slot {{ $slot->slot_number }})')"
-                                                class="p-1.5 rounded-full hover:bg-green-50 transition-colors" style="color: #a39e98;" aria-label="Log health event">
-                                            <i data-lucide="heart" class="w-3.5 h-3.5"></i>
-                                        </button>
+                                    <div data-col="actions" class="flex items-center gap-1 col-toggle w-full sm:w-auto justify-end sm:justify-start pt-1 sm:pt-0 border-t border-[#F5F5F5] sm:border-t-0">
+                                        <x-icon-button icon="scale" label="Record weight" color="blue"
+                                            onclick="openWeightCheckModal('{{ $hen->id }}', '{{ $hen->tag_code ?? $hen->chicken_id }} ({{ $cage->cage_code }} slot {{ $slot->slot_number }})')" />
+                                        <x-icon-button icon="heart" label="Log health event" color="green"
+                                            onclick="openHealthEventModal('{{ $hen->id }}', '{{ $hen->tag_code ?? $hen->chicken_id }} ({{ $cage->cage_code }} slot {{ $slot->slot_number }})')" />
                                         @if($hen->is_active)
-                                        <button type="button"
-                                                 onclick="openCullModal('{{ $hen->id }}', '{{ $hen->tag_code ?? $hen->chicken_id }} ({{ $cage->cage_code }} slot {{ $slot->slot_number }})')"
-                                                 class="p-1.5 rounded-full hover:bg-orange-50 transition-colors" style="color: #a39e98;" aria-label="Cull hen">
-                                            <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
-                                        </button>
-                                        <button type="button"
-                                                 onclick="openRemovalModal('{{ $hen->id }}', '{{ $hen->tag_code ?? $hen->chicken_id }} ({{ $cage->cage_code }} slot {{ $slot->slot_number }})')"
-                                                 class="p-1.5 rounded-full hover:bg-purple-50 transition-colors" style="color: #a39e98;" aria-label="Remove/sell hen">
-                                            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
-                                        </button>
+                                        <x-icon-button icon="crosshair" label="Cull hen" color="orange"
+                                            onclick="openCullModal('{{ $hen->id }}', '{{ $hen->tag_code ?? $hen->chicken_id }} ({{ $cage->cage_code }} slot {{ $slot->slot_number }})')" />
+                                        <x-icon-button icon="log-out" label="Remove/sell hen" color="purple"
+                                            onclick="openRemovalModal('{{ $hen->id }}', '{{ $hen->tag_code ?? $hen->chicken_id }} ({{ $cage->cage_code }} slot {{ $slot->slot_number }})')" />
                                         @endif
-                                        <button type="button"
-                                                 onclick="openMoveModal('{{ $hen->id }}', 1, '{{ $cage->cage_code }} slot {{ $slot->slot_number }}', '{{ $hen->breed }}')"
-                                                 class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Move hen">
-                                            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-                                        </button>
-                                        <button type="button"
-                                                onclick="openRemoveModal('{{ $hen->id }}', 1, '{{ $cage->cage_code }} slot {{ $slot->slot_number }}', '{{ $hen->breed }}')"
-                                                class="p-1.5 rounded-full hover:bg-red-50 transition-colors" style="color: #a39e98;" aria-label="Remove hen">
-                                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                                        </button>
+                                        <x-icon-button icon="arrow-right" label="Move hen" color="neutral"
+                                            onclick="openMoveModal('{{ $hen->id }}', 1, '{{ $cage->cage_code }} slot {{ $slot->slot_number }}', '{{ $hen->breed }}')" />
+                                        <x-icon-button icon="trash-2" label="Remove hen" color="red"
+                                            onclick="openRemoveModal('{{ $hen->id }}', 1, '{{ $cage->cage_code }} slot {{ $slot->slot_number }}', '{{ $hen->breed }}')" />
                                     </div>
                                 </div>
                                 @endforeach
@@ -163,6 +135,8 @@
             @endif
         @endforelse
     </div>
+
+    <x-paginator :paginator="$cageGroups" />
 
     {{-- Total count --}}
     @php

@@ -3,6 +3,7 @@
         <div class="px-5 py-3 border-b border-[#D9D9D9]">
             <div class="text-xs tracking-wider text-[#6B7280]">ENVIRONMENT LOG HISTORY</div>
         </div>
+        <div class="overflow-x-auto">
         <table class="w-full">
             <thead>
                 <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
@@ -16,15 +17,13 @@
                 @forelse($summaryLogs as $log)
                 @php
                     $s = \App\Services\EnvironmentStatusService::summary($log->avg_temp, $log->avg_hum, $thresholds);
-                    $sBg  = $s === 'Normal' ? '#D5E8D4' : ($s === 'Watch' ? '#FFF3CD' : '#F8D7DA');
-                    $sTxt = $s === 'Normal' ? '#2D6A4F'  : ($s === 'Watch' ? '#856404' : '#721C24');
                 @endphp
                 <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
                     <td class="px-5 py-3.5 text-sm text-[#333333] font-mono">{{ $log->time_slot }}</td>
                     <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $log->avg_temp }}°C</td>
                     <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $log->avg_hum }}%</td>
                     <td class="px-5 py-3">
-                        <span class="text-xs px-2.5 py-1 rounded" style="background:{{ $sBg }};color:{{ $sTxt }}">{{ $s }}</span>
+                        <x-status-badge :status="$s" type="sensor" />
                     </td>
                 </tr>
                 @empty
@@ -32,5 +31,6 @@
                 @endforelse
             </tbody>
         </table>
+        </div>
     </div>
 </turbo-frame>

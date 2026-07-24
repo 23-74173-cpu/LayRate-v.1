@@ -39,7 +39,13 @@ class FeedController extends Controller
 
     public function liveData()
     {
-        $batches = FeedBatch::orderByDesc('date_received')->get();
+        // Full, unpaginated list — needed for the avg CP% stat and to populate
+        // the consumption/farm-entry modal <select> dropdowns with every batch,
+        // not just whichever page the table happens to be on.
+        $allBatches = FeedBatch::orderByDesc('date_received')->get();
+        $avgCp = $allBatches->avg('crude_protein');
+
+        $batches = FeedBatch::orderByDesc('date_received')->paginate(15)->withQueryString();
 
         $preselectedCageId = (int) request('cage_id') ?: null;
 
@@ -49,8 +55,6 @@ class FeedController extends Controller
             ->orderBy('log_time')
             ->paginate(20)
             ->withQueryString();
-
-        $avgCp = $batches->avg('crude_protein');
 
         $totalFeedWeek = FeedConsumptionLog::where('log_date', '>=', now()->subDays(7))
             ->sum('feed_consumed_kg');
@@ -83,7 +87,7 @@ class FeedController extends Controller
         $fcrData = $this->computeFcrData($fcrCageId, $fcrGroupBy);
 
         return view('feed._live-data', array_merge(
-            compact('batches', 'consumptionLogs', 'avgCp', 'totalFeedWeek', 'avgFeedPerCage',
+            compact('batches', 'allBatches', 'consumptionLogs', 'avgCp', 'totalFeedWeek', 'avgFeedPerCage',
                      'totalFeedCostMonth', 'cages', 'preselectedCageId'),
             $fcrData
         ));
@@ -176,7 +180,7 @@ class FeedController extends Controller
         $validator = Validator::make($request->all(), $this->batchRules());
 
         if ($validator->fails()) {
-            return redirect()->route('feed')
+            return redirect()->back()
                 ->with('reopen_add_batch', true)
                 ->withErrors($validator)
                 ->withInput();
@@ -185,7 +189,7 @@ class FeedController extends Controller
         $data = $validator->validated();
         $batch = FeedBatch::create($data);
 
-        return redirect()->route('feed')
+        return redirect()->back()
             ->with('success', "Feed batch {$batch->batch_code} added.");
     }
 
@@ -194,7 +198,7 @@ class FeedController extends Controller
         $validator = Validator::make($request->all(), $this->batchRules());
 
         if ($validator->fails()) {
-            return redirect()->route('feed')
+            return redirect()->back()
                 ->with('reopen_edit_batch', $feedBatch->id)
                 ->withErrors($validator)
                 ->withInput();
@@ -203,7 +207,7 @@ class FeedController extends Controller
         $data = $validator->validated();
         $feedBatch->update($data);
 
-        return redirect()->route('feed')->with('success', 'Feed batch updated.');
+        return redirect()->back()->with('success', 'Feed batch updated.');
     }
 
     private function consumptionRules(): array
@@ -222,7 +226,7 @@ class FeedController extends Controller
         $validator = Validator::make($request->all(), $this->consumptionRules());
 
         if ($validator->fails()) {
-            return redirect()->route('feed')
+            return redirect()->back()
                 ->with('reopen_add_consumption', true)
                 ->withErrors($validator)
                 ->withInput();
@@ -237,7 +241,7 @@ class FeedController extends Controller
 
         $this->checkLowStock($data['feed_batch_id']);
 
-        return redirect()->route('feed')
+        return redirect()->back()
             ->with('success', "Feed consumption logged for Cage " . Cage::find($data['cage_id'])->cage_code . ".");
     }
 
@@ -250,7 +254,7 @@ class FeedController extends Controller
         $validator = Validator::make($request->all(), $this->consumptionRules());
 
         if ($validator->fails()) {
-            return redirect()->route('feed')
+            return redirect()->back()
                 ->with('reopen_edit_consumption', $feedConsumptionLog->id)
                 ->withErrors($validator)
                 ->withInput();
@@ -264,7 +268,7 @@ class FeedController extends Controller
 
         $this->checkLowStock($data['feed_batch_id']);
 
-        return redirect()->route('feed')
+        return redirect()->back()
             ->with('success', "Feed consumption updated for Cage " . Cage::find($data['cage_id'])->cage_code . ".");
     }
 
@@ -276,7 +280,7 @@ class FeedController extends Controller
 
         $feedConsumptionLog->delete();
 
-        return redirect()->route('feed')->with('success', 'Consumption log deleted.');
+        return redirect()->back()->with('success', 'Consumption log deleted.');
     }
 
     private function farmEntryRules(): array
@@ -295,7 +299,7 @@ class FeedController extends Controller
         $validator = Validator::make($request->all(), $this->farmEntryRules());
 
         if ($validator->fails()) {
-            return redirect()->route('feed')
+            return redirect()->back()
                 ->with('reopen_add_farm_entry', true)
                 ->withErrors($validator)
                 ->withInput();
@@ -316,7 +320,7 @@ class FeedController extends Controller
         $this->distributeFarmFeedEntry($entry);
         $this->checkLowStock($entry->feed_batch_id);
 
-        return redirect()->route('feed')
+        return redirect()->back()
             ->with('success', "Whole-farm feeding logged ({$entry->total_kg} kg distributed across active cages).");
     }
 
@@ -325,7 +329,7 @@ class FeedController extends Controller
         $validator = Validator::make($request->all(), $this->farmEntryRules());
 
         if ($validator->fails()) {
-            return redirect()->route('feed')
+            return redirect()->back()
                 ->with('reopen_edit_farm_entry', $farmFeedEntry->id)
                 ->withErrors($validator)
                 ->withInput();
@@ -348,7 +352,7 @@ class FeedController extends Controller
         $this->distributeFarmFeedEntry($farmFeedEntry);
         $this->checkLowStock($farmFeedEntry->feed_batch_id);
 
-        return redirect()->route('feed')
+        return redirect()->back()
             ->with('success', 'Whole-farm feeding updated and redistributed.');
     }
 
@@ -356,7 +360,7 @@ class FeedController extends Controller
     {
         $farmFeedEntry->delete();
 
-        return redirect()->route('feed')->with('success', 'Whole-farm feeding entry deleted.');
+        return redirect()->back()->with('success', 'Whole-farm feeding entry deleted.');
     }
 
     /**
@@ -434,7 +438,7 @@ class FeedController extends Controller
 
         $feedBatch->delete();
 
-        return redirect()->route('feed')->with('success', 'Feed batch deleted.');
+        return redirect()->back()->with('success', 'Feed batch deleted.');
     }
 
     protected function checkLowStock(int $feedBatchId): void

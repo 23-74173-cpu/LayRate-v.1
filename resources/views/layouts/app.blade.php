@@ -163,7 +163,7 @@
         <div class="flex items-center justify-between px-4 pt-3 pb-1 shrink-0">
             <div class="logo-wrap flex items-center gap-2.5 overflow-hidden">
                 <div class="w-9 h-9 rounded-lg bg-white flex items-center justify-center shrink-0 border border-white/25 overflow-hidden">
-                    <img src="/images/layrate-logo-mark.png" alt="LayRate logo" class="w-8 h-8 object-contain">
+                    <img src="/images/layrate-logo-mark.png" alt="LayRate logo" class="w-8 h-8 object-contain" loading="lazy">
                 </div>
                 <div class="logo-text overflow-hidden whitespace-nowrap">
                     <div class="text-white text-sm font-semibold">LayRate</div>
@@ -215,7 +215,8 @@
                 <i data-lucide="user" class="w-[19px] h-[19px] shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"></i>
                 <span class="sidebar-label text-sm font-medium whitespace-nowrap overflow-hidden">Profile</span>
             </a>
-            <form action="{{ route('logout') }}" method="POST" data-turbo="false">
+            <form action="{{ route('logout') }}" method="POST" data-turbo="false"
+                  data-confirm="Sign out of LayRate?" data-confirm-action="Sign out">
                 @csrf
                 <button type="submit"
                         class="nav-link group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors"
@@ -272,7 +273,8 @@
                             <i data-lucide="settings" class="w-4 h-4"></i> Settings
                         </a>
                         <div class="my-1 border-t border-hairline"></div>
-                        <form action="{{ route('logout') }}" method="POST" data-turbo="false">
+                        <form action="{{ route('logout') }}" method="POST" data-turbo="false"
+                              data-confirm="Sign out of LayRate?" data-confirm-action="Sign out">
                             @csrf
                             <button type="submit" class="w-full flex items-center gap-2 px-3 py-2 text-sm text-alert-text hover:bg-black/5 transition-colors">
                                 <i data-lucide="log-out" class="w-4 h-4"></i> Sign out
@@ -359,6 +361,22 @@
 
     var SIDEBAR_INITIALIZED = false;
 
+    // ── Scroll-position preservation across form-submit navigations ──
+    // Many action forms (record mortality, add consumption, add note, ...)
+    // redirect()->back() after saving, which — whether Turbo Drive treats it
+    // as a full "advance" Visit or a classic reload — rebuilds <main> from
+    // scratch and naturally lands at scrollTop 0. Save the scroll position
+    // just before any such submit, keyed by path, and restore it once on the
+    // next load. Bound once, at the document level, so it survives regardless
+    // of how the next page arrives (Turbo visit or classic navigation).
+    document.addEventListener('submit', function(e) {
+        var mainEl = document.querySelector('.page-wrapper');
+        if (!mainEl) return;
+        try {
+            sessionStorage.setItem('scrollPos:' + location.pathname, String(mainEl.scrollTop));
+        } catch (err) { /* sessionStorage unavailable — degrade to no-op */ }
+    }, true);
+
     document.addEventListener('turbo:load', function() {
         var sidebar  = document.getElementById('sidebar');
         var toggleBtn = document.getElementById('sidebar-toggle');
@@ -373,6 +391,21 @@
             mainContent.classList.remove('turbo-loaded');
             void mainContent.offsetWidth;
             mainContent.classList.add('turbo-loaded');
+        }
+
+        // ── Restore scroll position saved just before the submit that led here ──
+        // Re-applied on every turbo:frame-load below too: a lazy-loaded frame
+        // (e.g. a "Recent Records" list) can expand the page's scrollHeight
+        // well after this first attempt, which would otherwise clamp the
+        // restore to whatever little height existed at this exact instant.
+        // The saved value itself is only cleared on the next navigation.
+        if (mainContent) {
+            try {
+                var savedScroll = sessionStorage.getItem('scrollPos:' + location.pathname);
+                if (savedScroll !== null) {
+                    mainContent.scrollTop = parseInt(savedScroll, 10) || 0;
+                }
+            } catch (err) { /* sessionStorage unavailable — degrade to no-op */ }
         }
 
         // ── Desktop collapse toggle ──
@@ -536,7 +569,25 @@
     // ── Re-initialize Lucide icons when turbo-frame content loads ──
     document.addEventListener('turbo:frame-load', function() {
         lucide.createIcons();
+
+        // Re-apply any pending scroll restore — a lazy frame finishing load
+        // can grow the page after the initial turbo:load attempt clamped short.
+        var mainEl = document.querySelector('.page-wrapper');
+        if (mainEl) {
+            try {
+                var savedScroll = sessionStorage.getItem('scrollPos:' + location.pathname);
+                if (savedScroll !== null) {
+                    mainEl.scrollTop = parseInt(savedScroll, 10) || 0;
+                }
+            } catch (err) { /* sessionStorage unavailable — degrade to no-op */ }
+        }
     });
+
+    // Note: deliberately NOT clearing the saved scroll value on turbo:before-visit —
+    // that event also fires for the very redirect-following visit this value is
+    // meant to be consumed by (redirect()->back() lands on the same path), which
+    // would wipe it before turbo:load ever gets to read it. Any stale leftover
+    // value is harmless: it's just overwritten by the next real submit on that path.
 
     // ── Prevent right-click context menu (bind once) ──
     document.addEventListener('contextmenu', function(e) {

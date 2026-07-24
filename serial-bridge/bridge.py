@@ -210,9 +210,21 @@ def run_loop(args):
                                 continue
                             try:
                                 resp = session.post(args.api_url, json=payload, timeout=10)
-                                if resp.status_code in (200, 207):
-                                    log.info("Sent %d reading(s) to %s (HTTP %d)",
-                                             len(payload["readings"]), args.api_url, resp.status_code)
+                                if resp.status_code == 200:
+                                    log.info("Sent %d reading(s) to %s (HTTP 200)",
+                                             len(payload["readings"]), args.api_url)
+                                elif resp.status_code == 207:
+                                    # Partial success — the server accepted some readings and
+                                    # rejected others (bad serial, missing fields, sensor-reset
+                                    # guard, ...). Previously this logged identically to a clean
+                                    # 200, so a reading silently failing server-side was
+                                    # invisible here. Surface the per-reading errors instead.
+                                    try:
+                                        body = resp.json()
+                                    except ValueError:
+                                        body = {}
+                                    log.warning("Partial failure sending to %s (HTTP 207): %s",
+                                                args.api_url, body.get("errors", body))
                                 else:
                                     log.warning("API HTTP %d: %s", resp.status_code, resp.text[:200])
                             except requests.RequestException as e:

@@ -45,10 +45,7 @@
             </div>
             <div class="flex gap-3 mt-5">
                 <button type="button" onclick="closeCullModal()"
-                        class="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors"
-                        style="color: #1f1f1f; border: 1px solid #e6e6e6;"
-                        onmouseover="this.style.backgroundColor='#f6f5f4'"
-                        onmouseout="this.style.backgroundColor='transparent'">Cancel</button>
+                        class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">Cancel</button>
                 <x-button type="submit" class="flex-1 py-2.5">
                     Confirm Cull
                 </x-button>

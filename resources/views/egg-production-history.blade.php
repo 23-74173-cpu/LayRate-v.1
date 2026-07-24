@@ -18,7 +18,7 @@
 
         <x-card>
             <div class="text-xs font-semibold tracking-[0.125px] uppercase mb-1 text-[#6B7280]">Timeline Records</div>
-            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ number_format($timeline->sum('records')) }}</div>
+            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ number_format($timelineRecordsTotal) }}</div>
             <div class="text-xs mt-2 text-[#6B7280]">{{ ucfirst($groupBy) }} aggregates</div>
         </x-card>
 
@@ -64,22 +64,17 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @php
-                        $cumulative = $lifetimeEggs;
-                    @endphp
                     @foreach($timeline as $row)
                     <tr class="border-b hover:bg-black/[0.02] transition-colors" style="border-color: #e6e6e6;">
                         <td class="px-5 py-3.5 text-sm" style="color: #1f1f1f;">{{ $row['label'] }}</td>
                         <td class="px-5 py-3.5 text-sm text-right font-mono" style="color: #1f1f1f;">{{ number_format($row['records']) }}</td>
                         <td class="px-5 py-3.5 text-sm text-right font-mono" style="color: #1f1f1f;">{{ number_format($row['total_eggs']) }}</td>
-                        <td class="px-5 py-3.5 text-sm text-right font-mono" style="color: #615d59;">{{ number_format($cumulative) }}</td>
+                        <td class="px-5 py-3.5 text-sm text-right font-mono" style="color: #615d59;">{{ number_format($row['cumulative']) }}</td>
                     </tr>
-                    @php
-                        $cumulative -= $row['total_eggs'];
-                    @endphp
                     @endforeach
                 </tbody>
             </table>
+            <x-paginator :paginator="$timeline" />
         </div>
         @endif
     </x-card>

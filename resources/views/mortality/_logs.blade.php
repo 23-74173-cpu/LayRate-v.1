@@ -5,7 +5,7 @@
     <div class="overflow-x-auto">
         <table class="w-full text-xs">
             <thead>
-                <tr class="border-b border-[#D9D9D9]">
+                <tr class="border-b border-[#D9D9D9] bg-white">
                     <th class="text-left py-2 pr-3 text-xs tracking-wider text-[#6B7280] font-medium">DATE</th>
                     <th class="text-left py-2 pr-3 text-xs tracking-wider text-[#6B7280] font-medium">CAGE</th>
                     <th class="text-left py-2 pr-3 text-xs tracking-wider text-[#6B7280] font-medium">COUNT</th>

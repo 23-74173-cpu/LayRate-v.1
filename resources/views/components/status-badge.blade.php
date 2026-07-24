@@ -5,15 +5,17 @@
 
     Props:
       - status (string, required) — the status value to display
-      - type (string, default 'sensor') — context: sensor | hdep | mortality | slot | general
+      - type (string, default 'sensor') — context: sensor | hdep | mortality | culling | freshness | slot | general
       - class (string, default '') — additional classes on the wrapper
 
     Status mappings:
-      sensor:    Normal → OK, Watch → Watch, Alert → Alert
-      hdep:      numeric — >70 OK, 40–70 Watch, <40 Alert
-      mortality: Disease/Heat Stress/etc → mapped to appropriate tone
-      slot:      empty/occupied/sensor/full → mapped colors
-      general:   ok/watch/alert (lowercase) → direct mapping
+      sensor:     Normal → OK, Watch → Watch, Alert → Alert
+      hdep:       numeric — >70 OK, 40–70 Watch, <40 Alert
+      mortality:  Disease/Heat Stress/etc → mapped to appropriate tone
+      culling:    illness/aggression/low_production/age/other → mapped tone
+      freshness:  fresh → OK, aging → Watch, old → Alert
+      slot:       empty/occupied/sensor/full → mapped colors
+      general:    ok/watch/alert (lowercase) → direct mapping
 --}}
 @props(['status', 'type' => 'sensor', 'class' => ''])
 
@@ -26,7 +28,7 @@
 
     match ($type) {
         'sensor' => $bucket = match ($statusLower) {
-            'normal', 'ok', 'good' => 'ok',
+            'normal', 'ok', 'good', 'in range', 'live' => 'ok',
             'watch', 'warning', 'caution' => 'watch',
             'alert', 'critical', 'danger', 'error' => 'alert',
             default => 'neutral',
@@ -43,6 +45,18 @@
             'other' => 'neutral',
             default => 'neutral',
         },
+        'culling' => $bucket = match ($statusLower) {
+            'illness' => 'alert',
+            'aggression', 'low_production' => 'watch',
+            'age', 'other' => 'neutral',
+            default => 'neutral',
+        },
+        'freshness' => $bucket = match ($statusLower) {
+            'fresh' => 'ok',
+            'aging' => 'watch',
+            'old' => 'alert',
+            default => 'neutral',
+        },
         'slot' => $bucket = match ($statusLower) {
             'empty' => 'neutral',
             'occupied', 'manual' => 'ok',
@@ -51,9 +65,9 @@
             default => 'neutral',
         },
         'general' => $bucket = match ($statusLower) {
-            'ok', 'active', 'healthy', 'yes', 'true', 'on', 'enabled' => 'ok',
-            'watch', 'pending', 'partial', 'paused' => 'watch',
-            'alert', 'inactive', 'dead', 'no', 'false', 'off', 'disabled', 'error' => 'alert',
+            'ok', 'active', 'healthy', 'yes', 'true', 'on', 'enabled', 'fulfilled' => 'ok',
+            'watch', 'pending', 'partial', 'paused', 'low' => 'watch',
+            'alert', 'inactive', 'dead', 'no', 'false', 'off', 'disabled', 'error', 'faulty' => 'alert',
             default => 'neutral',
         },
         default => 'neutral',
@@ -77,17 +91,21 @@
         ['sensor', 'caution'] => 'Watch',
         ['sensor', 'alert'] => 'Alert',
         ['sensor', 'critical'] => 'Alert',
+        ['sensor', 'in range'] => 'In Range',
+        ['sensor', 'live'] => 'Live',
         ['slot', 'empty'] => 'Empty',
         ['slot', 'occupied'] => 'Occupied',
         ['slot', 'manual'] => 'Manual',
         ['slot', 'sensor'] => 'Sensor',
         ['slot', 'full'] => 'Full',
-        default => ucfirst($statusLower),
+        ['mortality', 'heat stress'] => 'Heat Stress',
+        ['culling', 'low_production'] => 'Low Production',
+        default => ucfirst(str_replace('_', ' ', $statusLower)),
     };
 @endphp
 
 <span
-    class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold leading-none {{ $class }}"
+    class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold leading-none whitespace-nowrap {{ $class }}"
     style="background-color: {{ $colors['bg'] }}; color: {{ $colors['text'] }}; border: 1px solid {{ $colors['border'] }};"
 >
     {{ $label }}

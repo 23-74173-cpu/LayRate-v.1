@@ -634,10 +634,12 @@
                     var notesEl = eggForm.querySelector('textarea[name="notes"]');
                     if (notesEl) notesEl.value = '';
 
-                    // Keep egg count at 0, slot stays selected — ready for next entry
+                    // Show the value that was actually saved (not a hardcoded 0) — the slot
+                    // stays selected, but the field must reflect what's now persisted, or a
+                    // save looks indistinguishable from the field silently resetting/failing.
                     var eggInput = document.getElementById('eggCount');
                     if (eggInput) {
-                        eggInput.value = 0;
+                        eggInput.value = resp.body.log.egg_count;
                         if (eggInput.readOnly) {
                             overrideVerified = false;
                         }

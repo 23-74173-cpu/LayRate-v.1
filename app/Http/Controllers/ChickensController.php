@@ -13,6 +13,7 @@ use App\Models\Removal;
 use App\Models\HealthEvent;
 use App\Models\WeightCheck;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
@@ -96,11 +97,27 @@ class ChickensController extends Controller
 
         $unplacedCount = $unplacedHens->count();
 
+        // Paginate by CAGE, not by individual hen — a flat paginate() would risk
+        // splitting one cage's slots across two pages. Unplaced hens are always
+        // shown in full above the grid since they're a small, actionable bucket.
+        $cageGroups = $this->paginateCageGroups($hensByCage->values(), $request);
+
         return response()
-            ->view('chickens._inventory-list', compact('hensByCage', 'unplacedHens', 'unplacedCount'))
+            ->view('chickens._inventory-list', compact('cageGroups', 'hensByCage', 'unplacedHens', 'unplacedCount'))
             ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
             ->header('Pragma', 'no-cache')
             ->header('Expires', '0');
+    }
+
+    private function paginateCageGroups($groups, Request $request, int $perPage = 6): LengthAwarePaginator
+    {
+        $page  = LengthAwarePaginator::resolveCurrentPage();
+        $slice = $groups->slice(($page - 1) * $perPage, $perPage)->values();
+
+        return new LengthAwarePaginator($slice, $groups->count(), $perPage, $page, [
+            'path'  => LengthAwarePaginator::resolveCurrentPath(),
+            'query' => $request->query(),
+        ]);
     }
 
     public function mortalityRecords(Request $request)
@@ -127,7 +144,7 @@ class ChickensController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return redirect()->route('chickens.index')
+            return redirect()->back()
                 ->with('reopen_register', true)
                 ->withErrors($validator)
                 ->withInput();

@@ -112,7 +112,7 @@ class MortalityController extends Controller
 
         $this->checkMortalitySpike($data['cage_id'], $data['log_date']);
 
-        return redirect()->route('mortality.index')
+        return redirect()->back()
             ->with('success', 'Mortality record saved.');
     }
 
@@ -126,7 +126,7 @@ class MortalityController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return redirect()->route('mortality.index')
+            return redirect()->back()
                 ->with('reopen_edit_mortality', $mortalityLog->id)
                 ->withErrors($validator)
                 ->withInput();
@@ -154,7 +154,7 @@ class MortalityController extends Controller
                 ->values();
 
             if ($activeHens->count() < $diff) {
-                return redirect()->route('mortality.index')
+                return redirect()->back()
                     ->with('reopen_edit_mortality', $mortalityLog->id)
                     ->withErrors([
                         'count' => "Only {$activeHens->count()} remaining active hen(s) available in " . ($mortalityLog->cage?->cage_code ?? 'Deleted Cage') . ", but {$diff} additional deaths recorded.",
@@ -208,7 +208,7 @@ class MortalityController extends Controller
 
         $this->checkMortalitySpike($mortalityLog->cage_id, $data['log_date']);
 
-        return redirect()->route('mortality.index')
+        return redirect()->back()
             ->with('success', 'Mortality record updated.');
     }
 
@@ -236,7 +236,7 @@ class MortalityController extends Controller
             $mortalityLog->delete();
         });
 
-        return redirect()->route('mortality.index')
+        return redirect()->back()
             ->with('success', 'Record deleted.');
     }
 

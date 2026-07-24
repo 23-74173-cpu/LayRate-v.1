@@ -16,7 +16,7 @@
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 mb-0.5">
                             @if($alert->cage)
-                            <span class="text-xs font-medium" style="color: #31302e;">{{ $alert->cage->cage_code }}</span>
+                            <a href="{{ route('cages.index') }}" class="text-xs font-medium hover:underline" style="color: #31302e;">{{ $alert->cage->cage_code }}</a>
                             @else
                             <span class="text-xs font-medium" style="color: #31302e;">Farm-wide</span>
                             @endif
@@ -44,5 +44,6 @@
         </div>
         @endforeach
     </div>
+    <x-paginator :paginator="$alertsPaginator" class="mt-4" />
     @endif
 </turbo-frame>

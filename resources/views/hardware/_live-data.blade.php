@@ -28,6 +28,7 @@
                         <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-5 py-3" style="color: #615d59;">Device</th>
                         <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-5 py-3" style="color: #615d59;">Serial #</th>
                         <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-5 py-3" style="color: #615d59;">Assigned To</th>
+                        <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-5 py-3" style="color: #615d59;">Last Reading</th>
                         <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-5 py-3" style="color: #615d59;">Status</th>
                         <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-5 py-3" style="color: #615d59;">Installed</th>
                         <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-5 py-3" style="color: #615d59;">Last Cal</th>
@@ -45,13 +46,6 @@
                         ];
                         [$tColor, $tSoft] = $typeColors[$item->device_type] ?? ['#6B7280', '#f0f0f0'];
 
-                        $statusAttrs = match ($item->status) {
-                            'active'  => ['label' => 'Active',  'class' => 'bg-emerald-50 text-emerald-700 border-emerald-200'],
-                            'spare'   => ['label' => 'Spare',   'class' => 'bg-gray-50 text-gray-500 border-gray-200'],
-                            'faulty'  => ['label' => 'Faulty',  'class' => 'bg-red-50 text-red-700 border-red-200'],
-                            'removed' => ['label' => 'Removed', 'class' => 'bg-gray-100 text-gray-400 border-gray-200'],
-                        };
-
                         if ($item->cageSlot) {
                             $assignedTo = $item->cageSlot->cage?->cage_code . ' · Slot ' . $item->cageSlot->row_number . '-' . $item->cageSlot->column_number;
                         } elseif ($item->cage) {
@@ -60,45 +54,64 @@
                             $assignedTo = '—';
                         }
 
+                        // "Last Reading" — DHT22 reads through its assigned cage's latest
+                        // environmental log; IR break-beam reads through its own latest
+                        // occupancy reading. Stale (>30 min old) is flagged so a quiet
+                        // sensor doesn't look identical to a fresh one.
+                        $lastReadingAt = match ($item->device_type) {
+                            'DHT22' => $item->cage?->latestEnvironmentLog?->recorded_at,
+                            'IR_breakbeam' => $item->latestOccupancyReading?->recorded_at,
+                            default => null,
+                        };
+                        $isStale = $lastReadingAt && $lastReadingAt->lt(now()->subMinutes(30));
                     @endphp
                     <tr class="border-b hover:bg-black/[0.02] transition-colors" style="border-color: #e6e6e6;">
                         <td class="px-5 py-3.5">
-                            <span class="text-xs font-semibold px-2.5 py-1 rounded-full" style="background:{{ $tSoft }};color:{{ $tColor }};border:1px solid {{ $tColor }}40;">
+                            <span class="text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap" style="background:{{ $tSoft }};color:{{ $tColor }};border:1px solid {{ $tColor }}40;">
                                 {{ str_replace('_', ' ', $item->device_type) }}
                             </span>
                         </td>
                         <td class="px-5 py-3.5 text-sm font-mono" style="color: #1f1f1f;">{{ $item->serial_number }}</td>
                         <td class="px-5 py-3.5 text-sm" style="color: #31302e;">{{ $assignedTo }}</td>
                         <td class="px-5 py-3.5">
-                            <span class="text-xs px-2 py-0.5 rounded-full border font-medium {{ $statusAttrs['class'] }}">
-                                {{ $statusAttrs['label'] }}
+                            @if($lastReadingAt)
+                            <div class="text-sm font-mono" style="color: {{ $isStale ? '#9b1c24' : '#31302e' }};">
+                                {{ $lastReadingAt->diffForHumans() }}
+                            </div>
+                            @if($isStale)
+                            <div class="text-xs" style="color: #9b1c24;">Stale</div>
+                            @endif
+                            @else
+                            <span class="text-sm" style="color: #a39e98;">
+                                {{ in_array($item->device_type, ['DHT22', 'IR_breakbeam']) ? 'No readings yet' : '—' }}
                             </span>
+                            @endif
+                        </td>
+                        <td class="px-5 py-3.5">
+                            <x-status-badge :status="$item->status" type="general" />
                         </td>
                         <td class="px-5 py-3.5 text-sm font-mono" style="color: #615d59;">{{ $item->installation_date?->format('Y-m-d') ?? '—' }}</td>
                         <td class="px-5 py-3.5 text-sm font-mono" style="color: #615d59;">{{ $item->last_calibration_date?->format('Y-m-d') ?? '—' }}</td>
                         <td class="px-5 py-3.5">
                             <div class="flex items-center gap-1">
-                                <button onclick="openEditModal({{ $item->id }}, '{{ $item->device_type }}', '{{ addslashes($item->serial_number) }}', {{ $item->cage_id ?? 'null' }}, {{ $item->cage_slot_id ?? 'null' }}, '{{ $item->installation_date?->format('Y-m-d') ?? '' }}', '{{ $item->status }}', '{{ $item->last_calibration_date?->format('Y-m-d') ?? '' }}')"
-                                        class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Edit device">
-                                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                                </button>
+                                <x-icon-button icon="pencil" label="Edit device" color="neutral"
+                                    onclick="openEditModal({{ $item->id }}, '{{ $item->device_type }}', '{{ addslashes($item->serial_number) }}', {{ $item->cage_id ?? 'null' }}, {{ $item->cage_slot_id ?? 'null' }}, '{{ $item->installation_date?->format('Y-m-d') ?? '' }}', '{{ $item->status }}', '{{ $item->last_calibration_date?->format('Y-m-d') ?? '' }}')" />
                                 @can('admin')
                                 <form method="POST" action="{{ route('hardware.destroy', $item) }}"
                                       data-confirm="Remove this hardware item?" data-confirm-action="Remove">
                                     @csrf @method('DELETE')
-                                    <button type="submit" class="p-1.5 rounded-full hover:bg-red-50 transition-colors" style="color: #a39e98;" aria-label="Delete device">
-                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                                    </button>
+                                    <x-icon-button type="submit" icon="trash-2" label="Delete device" color="red" />
                                 </form>
                                 @endcan
                             </div>
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="7" class="px-5 py-10 text-center text-sm" style="color: #a39e98;">No hardware items yet. Click "Add Device" to register the first one.</td></tr>
+                    <tr><td colspan="8" class="px-5 py-10 text-center text-sm" style="color: #a39e98;">No hardware items yet. Click "Add Device" to register the first one.</td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
+        <x-paginator :paginator="$items" />
     </div>
 </turbo-frame>

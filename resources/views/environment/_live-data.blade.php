@@ -5,7 +5,7 @@
             <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">COOP AVG TEMPERATURE</div>
             <div class="flex items-end gap-2 mb-1">
                 <span class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $avgTemp ? number_format($avgTemp,1) . '°C' : '—' }}</span>
-                <span class="text-xs bg-[#D5E8D4] text-[#2D6A4F] px-2 py-0.5 rounded mb-1">In Range</span>
+                <x-status-badge status="In Range" type="sensor" class="mb-1" />
             </div>
             <div class="text-xs text-[#6B7280] mt-1">Spread across sensors: 1.3°C</div>
         </div>
@@ -13,7 +13,7 @@
             <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">COOP AVG HUMIDITY</div>
             <div class="flex items-end gap-2 mb-1">
                 <span class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $avgHum ? number_format($avgHum,1) . '%' : '—' }}</span>
-                <span class="text-xs bg-[#D5E8D4] text-[#2D6A4F] px-2 py-0.5 rounded mb-1">In Range</span>
+                <x-status-badge status="In Range" type="sensor" class="mb-1" />
             </div>
             <div class="text-xs text-[#6B7280] mt-1">Spread across sensors: 4.4%</div>
         </div>
@@ -21,7 +21,7 @@
             <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">ACTIVE SENSORS</div>
             <div class="flex items-end gap-2 mb-1">
                 <span class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $latestPerCage->count() }}</span>
-                <span class="text-xs bg-[#D5E8D4] text-[#2D6A4F] px-2 py-0.5 rounded mb-1">Live</span>
+                <x-status-badge status="Live" type="sensor" class="mb-1" />
             </div>
             <div class="text-xs text-[#6B7280] mt-1">One sensor node mapped per cage.</div>
         </div>
@@ -75,20 +75,29 @@
         @php
             $color = $r->cage->color;
             $sensorId = 'S-0' . $loop->iteration;
-            $statusBg  = $r->status === 'Normal' ? '#D5E8D4' : ($r->status === 'Watch' ? '#FFF3CD' : '#F8D7DA');
-            $statusTxt = $r->status === 'Normal' ? '#2D6A4F' : ($r->status === 'Watch' ? '#856404' : '#721C24');
-            $tBg  = $r->tempStatus === 'OK' ? '#D5E8D4' : ($r->tempStatus === 'Watch' ? '#FFF3CD' : '#F8D7DA');
-            $tTxt = $r->tempStatus === 'OK' ? '#2D6A4F' : ($r->tempStatus === 'Watch' ? '#856404' : '#721C24');
-            $hBg  = $r->humStatus  === 'OK' ? '#D5E8D4' : ($r->humStatus  === 'Watch' ? '#FFF3CD' : '#F8D7DA');
-            $hTxt = $r->humStatus  === 'OK' ? '#2D6A4F' : ($r->humStatus  === 'Watch' ? '#856404' : '#721C24');
+            // Canonical ok/watch/alert palette from DESIGN-SYSTEM.md §2.4 (matches <x-status-badge>) —
+            // previously this used a second, incompatible hex palette (#D5E8D4/#FFF3CD/#F8D7DA).
+            $toneColors = fn (string $tone) => match ($tone) {
+                'Normal', 'OK' => ['#e8f5ec', '#1f6b3a'],
+                'Watch'        => ['#fdf3e0', '#8a5a00'],
+                default        => ['#fbe4e6', '#9b1c24'],
+            };
+            [$statusBg, $statusTxt] = $toneColors($r->status);
+            [$tBg, $tTxt] = $toneColors($r->tempStatus);
+            [$hBg, $hTxt] = $toneColors($r->humStatus);
+            // A stale-but-present reading previously rendered identically to a
+            // fresh one — no timestamp or staleness signal existed anywhere here.
+            $isStale = $r->env->recorded_at?->lt(now()->subMinutes(30)) ?? false;
         @endphp
-        <div class="bg-white rounded-lg border-2 overflow-hidden" style="border-color:{{ $color }}">
+        <div class="bg-white rounded-lg border-2 overflow-hidden" style="border-color:{{ $isStale ? '#9b1c24' : $color }}">
             <div class="px-5 py-3 flex items-center justify-between" style="background:{{ $color }}22">
                 <div class="flex items-center gap-2">
                     <span class="w-2.5 h-2.5 rounded-full" style="background:{{ $color }}"></span>
                     <span class="text-sm font-medium text-[#333333]">{{ $r->cage->cage_code }}</span>
                 </div>
-                <span class="text-xs text-[#6B7280]">{{ $sensorId }}</span>
+                <span class="text-xs" style="color: {{ $isStale ? '#9b1c24' : '#6B7280' }};" title="{{ $r->env->recorded_at }}">
+                    {{ $isStale ? 'Stale · ' : '' }}{{ $r->env->recorded_at?->diffForHumans() ?? $sensorId }}
+                </span>
             </div>
             <div class="px-4 py-3 space-y-2">
                 <div class="flex justify-between text-sm">
@@ -137,10 +146,12 @@
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
             <div class="text-xs tracking-wider text-[#6B7280] mb-3">TEMPERATURE TREND (COOP + PER CAGE)</div>
             <canvas id="envTempChart" height="160"></canvas>
+            <div id="envTempChartEmpty" class="hidden h-[160px] flex items-center justify-center text-sm" style="color: #a39e98;">No temperature readings in this window.</div>
         </div>
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
             <div class="text-xs tracking-wider text-[#6B7280] mb-3">HUMIDITY TREND (COOP + PER CAGE)</div>
             <canvas id="envHumChart" height="160"></canvas>
+            <div id="envHumChartEmpty" class="hidden h-[160px] flex items-center justify-center text-sm" style="color: #a39e98;">No humidity readings in this window.</div>
         </div>
     </div>
 
@@ -149,22 +160,24 @@
     <script>
     (function() {
         window.initEnvCharts = function initEnvCharts() {
-            const cageColors  = ['#2D7D46','#1D4E8F','#C2703E','#6B4C8A','#6B7280'];
+            // Looked up per cage code from the canonical Cage color accessor —
+            // previously a positional array assigned colors by iteration order,
+            // which only happened to line up with A/B/C/D by coincidence.
+            const cageColors  = @json($cages->pluck('color', 'id'));
             const trendData   = @json($trendData);
             const cagesMap    = @json($cages->pluck('cage_code','id'));
             const labels = ['14:00','16:00','18:00','20:00','22:00','00:00','02:00','04:00','06:00','08:00','10:00','12:00'];
+            const hasAnyData = Object.values(trendData).some(rows => rows.length > 0);
 
             function buildDatasets(field) {
                 const sets = [];
-                let i = 0;
                 for (const [cageId, rows] of Object.entries(trendData)) {
                     const name = cagesMap[cageId] || 'Cage '+cageId;
                     const data = labels.map(l => {
                         const r = rows.find(r => r.hour === l);
                         return r ? r[field] : null;
                     });
-                    sets.push({ label: name, data, borderColor: cageColors[i%cageColors.length], tension: 0.3, pointRadius: 3, borderWidth: 1.5, fill: false });
-                    i++;
+                    sets.push({ label: name, data, borderColor: cageColors[cageId] || '#6B7280', tension: 0.3, pointRadius: 3, borderWidth: 1.5, fill: false });
                 }
                 return sets;
             }
@@ -173,26 +186,36 @@
                 responsive: true,
                 plugins: { legend: { display: true, labels: { boxWidth: 10, font: { size: 10 } } } },
                 scales: {
-                    x: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } } },
+                    x: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 }, autoSkip: true, maxRotation: 45, minRotation: 0 } },
                     y: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } } },
                 }
             };
 
             const tempCanvas = document.getElementById('envTempChart');
             const humCanvas  = document.getElementById('envHumChart');
+            const tempEmpty  = document.getElementById('envTempChartEmpty');
+            const humEmpty   = document.getElementById('envHumChartEmpty');
             if (!tempCanvas || !humCanvas) return;
+
+            tempCanvas.classList.toggle('hidden', !hasAnyData);
+            humCanvas.classList.toggle('hidden', !hasAnyData);
+            if (tempEmpty) tempEmpty.classList.toggle('hidden', hasAnyData);
+            if (humEmpty) humEmpty.classList.toggle('hidden', hasAnyData);
+            if (!hasAnyData) return;
 
             if (window.envTempChart && typeof window.envTempChart.destroy === 'function') {
                 window.envTempChart.destroy();
                 window.envTempChart = null;
             }
-            window.envTempChart = new Chart(tempCanvas, { type:'line', data:{ labels, datasets: buildDatasets('avg_temp') }, options: {...chartOpts, scales:{...chartOpts.scales, y:{...chartOpts.scales.y, min:24,max:32}}} });
+            // No hardcoded min/max — a fixed 24-32 band clipped any real outlier
+            // (equipment fault, heatwave) clean off the chart instead of showing it.
+            window.envTempChart = new Chart(tempCanvas, { type:'line', data:{ labels, datasets: buildDatasets('avg_temp') }, options: chartOpts });
 
             if (window.envHumChart && typeof window.envHumChart.destroy === 'function') {
                 window.envHumChart.destroy();
                 window.envHumChart = null;
             }
-            window.envHumChart = new Chart(humCanvas, { type:'line', data:{ labels, datasets: buildDatasets('avg_hum')  }, options: {...chartOpts, scales:{...chartOpts.scales, y:{...chartOpts.scales.y, min:50,max:80}}} });
+            window.envHumChart = new Chart(humCanvas, { type:'line', data:{ labels, datasets: buildDatasets('avg_hum')  }, options: chartOpts });
         }
 
         if (!window.__envChartsLifecycleBound) {

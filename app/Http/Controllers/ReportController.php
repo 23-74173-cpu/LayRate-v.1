@@ -11,6 +11,7 @@ use App\Models\MortalityLog;
 use App\Models\ProductionLog;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class ReportController extends Controller
 {
@@ -33,7 +34,24 @@ class ReportController extends Controller
         $rows    = $this->buildReport($type, $from, $to, $cageId, $reason, $allCages);
         $summary = $this->buildSummary($type, $from, $to, $cageId, $reason, $allCages);
 
+        // The preview table is paginated; the printable document (?full=1) and
+        // the CSV export both need every row, so pagination only applies here.
+        if (!$full) {
+            $rows = $this->paginateCollection($rows, $request);
+        }
+
         return view('reports', compact('type', 'from', 'to', 'cageId', 'reason', 'allCages', 'rows', 'summary', 'full'));
+    }
+
+    private function paginateCollection($items, Request $request, int $perPage = 20): LengthAwarePaginator
+    {
+        $page  = LengthAwarePaginator::resolveCurrentPage();
+        $slice = $items->slice(($page - 1) * $perPage, $perPage)->values();
+
+        return new LengthAwarePaginator($slice, $items->count(), $perPage, $page, [
+            'path'  => LengthAwarePaginator::resolveCurrentPath(),
+            'query' => $request->query(),
+        ]);
     }
 
     private function buildReport($type, $from, $to, $cageId, $reason, $allCages)

@@ -13,21 +13,25 @@ use Illuminate\Support\Facades\Validator;
 
 class EggStockController extends Controller
 {
-    public function liveData()
+    public function liveData(Request $request)
     {
-        $batches = EggStockBatch::with(['cage', 'cageSlot', 'sourceProductionLog.cageSlot.cage'])
-            ->orderByDesc('harvested_date')
-            ->orderByDesc('created_at')
-            ->get();
-
+        // Totals/tray counts must reflect every batch, not just the current
+        // page — computed from a separate unpaginated query.
+        $allBatches = EggStockBatch::query();
         $sizes = ['small', 'medium', 'large', 'jumbo', 'unsorted'];
 
         $totals = [];
         $trayTotals = [];
         foreach ($sizes as $size) {
-            $totals[$size] = $batches->where('egg_size', $size)->sum('count');
+            $totals[$size] = (clone $allBatches)->where('egg_size', $size)->sum('count');
             $trayTotals[$size] = (int) ceil($totals[$size] / 30);
         }
+
+        $batches = EggStockBatch::with(['cage', 'cageSlot', 'sourceProductionLog.cageSlot.cage'])
+            ->orderByDesc('harvested_date')
+            ->orderByDesc('created_at')
+            ->paginate(20)
+            ->withQueryString();
 
         $availablePools = EggStockBatch::getAvailablePools();
 

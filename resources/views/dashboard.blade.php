@@ -4,7 +4,7 @@
 @section('content')
 <div class="space-y-5">
 
-    <x-page-header title="Dashboard" subtitle="{{ now()->format('l, F j') }} — {{ now()->format('g:i A') }}" subtitle-id="dashboardClock" />
+    <x-page-header title="Dashboard" subtitle="{{ now()->format('l, F j') }} — {{ now()->format('g:i A') }}" subtitle-id="dashboardClock" subtitle-class="whitespace-nowrap text-xs sm:text-sm" />
 
     {{-- Onboarding Modal --}}
     @if($needsOnboarding)

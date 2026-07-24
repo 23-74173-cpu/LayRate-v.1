@@ -1,6 +1,7 @@
 <turbo-frame id="eggs-stocks-live-data">
     {{-- Batch Table --}}
     <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
+        <div class="overflow-x-auto">
         <table class="w-full">
             <thead>
                 <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
@@ -16,12 +17,6 @@
             <tbody id="batchTableBody">
                 @forelse($batches as $batch)
                 @php
-                    $freshnessColors = [
-                        'fresh' => ['#e8f5ec', '#1f6b3a', '#cfe8d6'],
-                        'aging' => ['#fdf3e0', '#8a5a00', '#f3e3bf'],
-                        'old'   => ['#fbe4e6', '#9b1c24', '#f3cdd0'],
-                    ];
-                    [$fBg, $fTxt, $fBorder] = $freshnessColors[$batch->freshness_status];
                     $cageCode = $batch->cage?->cage_code ?? '—';
                     $cageColor = $batch->cage?->color ?? '#6B7280';
                     $cageSoft = $batch->cage?->color_soft ?? '#f0f0f0';
@@ -45,16 +40,12 @@
                     <td class="px-5 py-3.5 text-sm font-mono text-[#333333]">{{ $batch->harvested_date->format('Y-m-d') }}</td>
                     <td class="px-5 py-3.5 text-sm font-medium" style="color:{{ $cageColor }}">{{ $cageCode }}</td>
                     <td class="px-5 py-3.5">
-                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold" style="background:{{ $fBg }};color:{{ $fTxt }};border:1px solid {{ $fBorder }}">
-                            {{ ucfirst($batch->freshness_status) }}
-                        </span>
+                        <x-status-badge :status="$batch->freshness_status" type="freshness" />
                     </td>
                     <td class="px-5 py-3.5">
                         <div class="flex items-center gap-2">
-                            <button onclick="openEditStock({{ $batch->id }}, '{{ $batch->egg_size }}', {{ $batch->count }}, '{{ $batch->harvested_date->format('Y-m-d') }}')"
-                                    class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Edit stock">
-                                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                            </button>
+                            <x-icon-button icon="pencil" label="Edit stock" color="neutral"
+                                onclick="openEditStock({{ $batch->id }}, '{{ $batch->egg_size }}', {{ $batch->count }}, '{{ $batch->harvested_date->format('Y-m-d') }}')" />
                             <a href="{{ route('eggs.stocks.qr', $batch) }}" target="_blank"
                                class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="View QR code">
                                 <i data-lucide="qr-code" class="w-3.5 h-3.5"></i>
@@ -62,9 +53,7 @@
                             <form method="POST" action="{{ route('eggs.stocks.destroy', $batch) }}"
                                   data-confirm="Delete this stock batch?" data-confirm-action="Delete">
                                 @csrf @method('DELETE')
-                                <button type="submit" class="p-1.5 rounded-full hover:bg-red-50 transition-colors" style="color: #a39e98;" aria-label="Delete stock">
-                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                                </button>
+                                <x-icon-button type="submit" icon="trash-2" label="Delete stock" color="red" />
                             </form>
                         </div>
                     </td>
@@ -74,5 +63,7 @@
                 @endforelse
             </tbody>
         </table>
+        </div>
+        <x-paginator :paginator="$batches" />
     </div>
 </turbo-frame>

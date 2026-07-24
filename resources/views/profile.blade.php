@@ -270,7 +270,7 @@
                 <h2 class="text-base font-medium text-[#333333] mb-4">Staff Override PIN Status</h2>
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-[#D9D9D9]">
+                        <tr class="border-b border-[#D9D9D9] bg-white">
                             <th class="text-left text-xs text-[#6B7280] py-2 font-medium">Name</th>
                             <th class="text-left text-xs text-[#6B7280] py-2 font-medium">Role</th>
                             <th class="text-left text-xs text-[#6B7280] py-2 font-medium">PIN Set?</th>

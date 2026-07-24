@@ -31,7 +31,7 @@
             <div class="flex items-center justify-between mb-2">
                 <span class="text-xs font-semibold tracking-[0.125px] uppercase" style="color: {{ $color }}">{{ $label }}</span>
                 @if($isLowStock)
-                <span class="text-xs px-1.5 py-0.5 rounded-full font-semibold" style="background:#fdf3e0;color:#8a5a00;border:1px solid #f3e3bf;">Low</span>
+                <x-status-badge status="Low" type="general" />
                 @endif
             </div>
             <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ number_format($total) }}</div>
@@ -43,118 +43,120 @@
         @endforeach
     </div>
 
-    {{-- ── Egg Weight Configuration (used for FCR) ── --}}
-    <x-card>
-        <div class="p-1">
-            <h3 class="text-xs font-semibold tracking-[0.05em] uppercase mb-4" style="color: #615d59;">Egg Weight Configuration</h3>
-            <p class="text-xs text-[#6B7280] mb-5">Average weights used to estimate egg mass for Feed Conversion Ratio calculations.</p>
-            <form action="{{ route('eggs.stocks.egg-weights') }}" method="POST">
-                @csrf
-                <div class="flex flex-wrap items-end gap-4">
-                    <div>
-                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">SMALL (g)</label>
-                        <input type="number" name="egg_weight_small" step="0.1" min="1" max="500"
-                               value="{{ $eggWeights['small'] }}"
-                               class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                    </div>
-                    <div>
-                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">MEDIUM (g)</label>
-                        <input type="number" name="egg_weight_medium" step="0.1" min="1" max="500"
-                               value="{{ $eggWeights['medium'] }}"
-                               class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                    </div>
-                    <div>
-                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">LARGE (g)</label>
-                        <input type="number" name="egg_weight_large" step="0.1" min="1" max="500"
-                               value="{{ $eggWeights['large'] }}"
-                               class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                    </div>
-                    <div>
-                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">JUMBO (g)</label>
-                        <input type="number" name="egg_weight_jumbo" step="0.1" min="1" max="500"
-                               value="{{ $eggWeights['jumbo'] }}"
-                               class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                    </div>
-                    <div>
-                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">FALLBACK (g)</label>
-                        <input type="number" name="egg_weight_fallback" step="0.1" min="1" max="500"
-                               value="{{ $eggWeights['fallback'] }}"
-                               class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                    </div>
-                    <div class="flex items-end gap-3">
+    {{-- ── Add Stock — always-visible primary action, not buried in settings ── --}}
+    <div class="flex justify-end">
+        <x-button onclick="document.getElementById('addStockModal').style.display = 'flex'">
+            <i data-lucide="plus" class="w-4 h-4"></i> Add Stock
+        </x-button>
+    </div>
+
+    {{-- ── Settings (Egg Weight Config + Low-Stock/Freshness Thresholds) — collapsed by default ── --}}
+    <details class="bg-white rounded-lg border border-[#D9D9D9] group [&_summary::-webkit-details-marker]:hidden">
+        <summary class="p-4 cursor-pointer list-none flex items-center justify-between select-none">
+            <span class="text-sm font-medium text-[#333333]">Egg Weight &amp; Stock Settings</span>
+            <i data-lucide="chevron-down" class="w-4 h-4 text-[#6B7280] transition-transform group-open:rotate-180"></i>
+        </summary>
+
+        <div class="px-4 pb-5 pt-1 border-t border-[#F0F0F0] space-y-6">
+            {{-- Egg Weight Configuration --}}
+            <div>
+                <h3 class="text-xs font-semibold tracking-[0.05em] uppercase mb-1 mt-4" style="color: #615d59;">Egg Weight Configuration</h3>
+                <p class="text-xs text-[#6B7280] mb-4">Average weights used to estimate egg mass for Feed Conversion Ratio calculations.</p>
+                <form action="{{ route('eggs.stocks.egg-weights') }}" method="POST">
+                    @csrf
+                    <div class="flex flex-wrap items-end gap-4">
+                        <div>
+                            <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">SMALL (g)</label>
+                            <input type="number" name="egg_weight_small" step="0.1" min="1" max="500"
+                                   value="{{ $eggWeights['small'] }}"
+                                   class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                        </div>
+                        <div>
+                            <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">MEDIUM (g)</label>
+                            <input type="number" name="egg_weight_medium" step="0.1" min="1" max="500"
+                                   value="{{ $eggWeights['medium'] }}"
+                                   class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                        </div>
+                        <div>
+                            <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">LARGE (g)</label>
+                            <input type="number" name="egg_weight_large" step="0.1" min="1" max="500"
+                                   value="{{ $eggWeights['large'] }}"
+                                   class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                        </div>
+                        <div>
+                            <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">JUMBO (g)</label>
+                            <input type="number" name="egg_weight_jumbo" step="0.1" min="1" max="500"
+                                   value="{{ $eggWeights['jumbo'] }}"
+                                   class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                        </div>
+                        <div>
+                            <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">FALLBACK (g)</label>
+                            <input type="number" name="egg_weight_fallback" step="0.1" min="1" max="500"
+                                   value="{{ $eggWeights['fallback'] }}"
+                                   class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                        </div>
                         <x-button type="submit" class="px-5 py-2.5">
                             Save Weights
                         </x-button>
-                        <span class="w-px h-8 bg-[#D9D9D9]"></span>
-                        <button type="button" onclick="document.getElementById('addStockModal').style.display = 'flex'"
-                                class="flex items-center gap-2 bg-[#002D5E] text-white px-4 py-2.5 rounded-lg text-sm hover:bg-[#001F42] transition-colors">
-                            <i data-lucide="plus" class="w-4 h-4"></i> Add Stock
-                        </button>
                     </div>
-                </div>
-                @if($errors->any())
-                <div class="mt-4 text-xs text-red-500 leading-relaxed">{{ implode('<br>', $errors->all()) }}</div>
-                @endif
-            </form>
-        </div>
-    </x-card>
-
-    {{-- ── Configuration ── --}}
-    <x-card>
-        <div class="p-1">
-            <div class="flex items-center gap-4 mb-5">
-                <h3 class="text-xs font-semibold tracking-[0.05em] uppercase" style="color: #615d59;">Configuration</h3>
-                <span class="w-px h-4 bg-[#D9D9D9]"></span>
-                <span class="text-xs" style="color: #a39e98;">Low-stock alerts &amp; freshness thresholds</span>
+                    @if($errors->any())
+                    <div class="mt-4 text-xs text-red-500 leading-relaxed">{{ implode('<br>', $errors->all()) }}</div>
+                    @endif
+                </form>
             </div>
 
-            <form action="{{ route('eggs.stocks.thresholds') }}" method="POST">
-                @csrf
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div>
-                        <h4 class="text-xs font-medium tracking-[0.05em] uppercase mb-3" style="color: #615d59;">Low-Stock Thresholds</h4>
-                        <p class="text-xs text-[#6B7280] mb-4">Minimum available pool per size before alert triggers. Set to 0 to disable.</p>
-                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                            @foreach(['small' => '#2D7D46', 'medium' => '#1D4E8F', 'large' => '#C2703E', 'jumbo' => '#6B4C8A', 'unsorted' => '#6B7280'] as $sz => $szColor)
-                            @php $key = "egg_low_stock_threshold_{$sz}"; $label = $sz === 'unsorted' ? 'Unsorted' : ucfirst($sz); @endphp
-                            <div>
-                                <label class="block text-xs tracking-wider mb-1.5" style="color: {{ $szColor }}">{{ $label }}</label>
-                                <input type="number" name="{{ $key }}" min="0" placeholder="0"
-                                       value="{{ $eggStockThresholds[$sz] ?? 0 }}"
-                                       class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+            {{-- Low-Stock / Freshness Thresholds --}}
+            <div class="pt-2 border-t border-[#F0F0F0]">
+                <h3 class="text-xs font-semibold tracking-[0.05em] uppercase mb-4 mt-4" style="color: #615d59;">Low-Stock &amp; Freshness Thresholds</h3>
+
+                <form action="{{ route('eggs.stocks.thresholds') }}" method="POST">
+                    @csrf
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div>
+                            <h4 class="text-xs font-medium tracking-[0.05em] uppercase mb-3" style="color: #615d59;">Low-Stock Thresholds</h4>
+                            <p class="text-xs text-[#6B7280] mb-4">Minimum available pool per size before alert triggers. Set to 0 to disable.</p>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                @foreach(['small' => '#2D7D46', 'medium' => '#1D4E8F', 'large' => '#C2703E', 'jumbo' => '#6B4C8A', 'unsorted' => '#6B7280'] as $sz => $szColor)
+                                @php $key = "egg_low_stock_threshold_{$sz}"; $label = $sz === 'unsorted' ? 'Unsorted' : ucfirst($sz); @endphp
+                                <div>
+                                    <label class="block text-xs tracking-wider mb-1.5" style="color: {{ $szColor }}">{{ $label }}</label>
+                                    <input type="number" name="{{ $key }}" min="0" placeholder="0"
+                                           value="{{ $eggStockThresholds[$sz] ?? 0 }}"
+                                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                                </div>
+                                @endforeach
                             </div>
-                            @endforeach
+                        </div>
+
+                        <div>
+                            <h4 class="text-xs font-medium tracking-[0.05em] uppercase mb-3" style="color: #615d59;">Freshness Thresholds</h4>
+                            <p class="text-xs text-[#6B7280] mb-4">Day boundaries for freshness status (Fresh → Aging → Old).</p>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs tracking-wider text-[#1f6b3a] mb-1.5">Fresh (≤ days)</label>
+                                    <input type="number" name="egg_freshness_fresh_days" min="1" placeholder="7"
+                                           value="{{ $freshnessThresholds['fresh_days'] }}"
+                                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                                </div>
+                                <div>
+                                    <label class="block text-xs tracking-wider text-[#8a5a00] mb-1.5">Aging (≤ days)</label>
+                                    <input type="number" name="egg_freshness_aging_days" min="1" placeholder="14"
+                                           value="{{ $freshnessThresholds['aging_days'] }}"
+                                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div>
-                        <h4 class="text-xs font-medium tracking-[0.05em] uppercase mb-3" style="color: #615d59;">Freshness Thresholds</h4>
-                        <p class="text-xs text-[#6B7280] mb-4">Day boundaries for freshness status (Fresh → Aging → Old).</p>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs tracking-wider text-[#1f6b3a] mb-1.5">Fresh (≤ days)</label>
-                                <input type="number" name="egg_freshness_fresh_days" min="1" placeholder="7"
-                                       value="{{ $freshnessThresholds['fresh_days'] }}"
-                                       class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                            </div>
-                            <div>
-                                <label class="block text-xs tracking-wider text-[#8a5a00] mb-1.5">Aging (≤ days)</label>
-                                <input type="number" name="egg_freshness_aging_days" min="1" placeholder="14"
-                                       value="{{ $freshnessThresholds['aging_days'] }}"
-                                       class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                            </div>
-                        </div>
+                    <div class="mt-5 pt-4 border-t flex" style="border-color: #e6e6e6;">
+                        <x-button type="submit" class="px-5 py-2.5">
+                            Save Configuration
+                        </x-button>
                     </div>
-                </div>
-
-                <div class="mt-5 pt-4 border-t flex" style="border-color: #e6e6e6;">
-                    <x-button type="submit" class="px-5 py-2.5">
-                        Save Configuration
-                    </x-button>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
-    </x-card>
+    </details>
 
     {{-- ── Stock Table ── --}}
     <turbo-frame id="eggs-stocks-live-data" src="{{ route('eggs.stocks.live-data') }}" loading="lazy" target="_top">
@@ -270,9 +272,9 @@
 
             <div class="flex gap-3 mt-5">
                 <button type="button" onclick="closeAddStockModal()"
-                        class="flex-1 border border-[#D9D9D9] text-[#6B7280] py-2.5 rounded-lg text-sm">Cancel</button>
+                        class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">Cancel</button>
                 <button type="submit" id="addStockBtn"
-                        class="flex-1 bg-[#002D5E] text-white py-2.5 rounded-lg text-sm">Add Stock</button>
+                        class="flex-1 py-2.5 text-sm font-medium rounded-lg bg-[#002D5E] text-white hover:bg-[#001F42] transition-colors">Add Stock</button>
             </div>
         </form>
     </div>
@@ -323,10 +325,7 @@
 
             <div class="flex gap-3 mt-5">
                 <button type="button" onclick="closeEditStockModal()"
-                        class="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors"
-                        style="color: #1f1f1f; border: 1px solid #e6e6e6;"
-                        onmouseover="this.style.backgroundColor='#f6f5f4'"
-                        onmouseout="this.style.backgroundColor='transparent'">
+                        class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">
                     Cancel
                 </button>
                 <x-button type="submit" class="flex-1 py-2.5">

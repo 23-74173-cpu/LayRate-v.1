@@ -28,15 +28,14 @@
 <turbo-frame id="production-calendar">
 <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
     {{-- Month / Year header with navigation --}}
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-        <div>
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Production Calendar</div>
-            <div class="text-xl font-semibold text-[#333333]">{{ $calendarMonth->format('F Y') }}</div>
-        </div>
+    <div class="mb-5">
+        <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Production Calendar</div>
 
-        <div class="flex items-center gap-2">
-            {{-- Month selector --}}
-            <form method="GET" action="{{ route('forecast') }}" class="flex items-center gap-2" data-turbo-frame="production-calendar" data-turbo-action="advance">
+        {{-- Row 1: month/year (the select IS the display — tapping it opens the
+             picker directly, no separate static label duplicating the same text)
+             + Prev/Next, right-aligned, same row. --}}
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <form method="GET" action="{{ route('forecast') }}" class="flex items-center gap-1" data-turbo-frame="production-calendar" data-turbo-action="advance">
                 @foreach(request()->except(['month','year']) as $key => $value)
                     @if(is_array($value))
                         @foreach($value as $v)
@@ -46,46 +45,51 @@
                     <input type="hidden" name="{{ $key }}" value="{{ $value }}">
                     @endif
                 @endforeach
-                <select name="month" onchange="this.form.submit()"
-                        class="border border-[#D9D9D9] rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
+                <select name="month" onchange="this.form.submit()" aria-label="Select month"
+                        class="appearance-none bg-transparent border-none cursor-pointer text-xl font-semibold text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 rounded px-1 -ml-1">
                     @foreach($months as $index => $monthName)
                     <option value="{{ $index + 1 }}" {{ $calendarMonth->month == $index + 1 ? 'selected' : '' }}>{{ $monthName }}</option>
                     @endforeach
                 </select>
-                <select name="year" onchange="this.form.submit()"
-                        class="border border-[#D9D9D9] rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
+                <select name="year" onchange="this.form.submit()" aria-label="Select year"
+                        class="appearance-none bg-transparent border-none cursor-pointer text-xl font-semibold text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 rounded px-1">
                     @for($y = now()->year - 5; $y <= now()->year + 5; $y++)
                     <option value="{{ $y }}" {{ $calendarMonth->year == $y ? 'selected' : '' }}>{{ $y }}</option>
                     @endfor
                 </select>
             </form>
 
-            {{-- Prev / Next arrows --}}
+            <div class="flex items-center gap-2">
                 <a href="{{ $prevUrl }}" data-turbo-frame="production-calendar" data-turbo-action="advance" class="w-8 h-8 flex items-center justify-center rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
                     <i data-lucide="chevron-left" class="w-4 h-4"></i>
                 </a>
                 <a href="{{ $nextUrl }}" data-turbo-frame="production-calendar" data-turbo-action="advance" class="w-8 h-8 flex items-center justify-center rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
                     <i data-lucide="chevron-right" class="w-4 h-4"></i>
                 </a>
-                <a href="{{ $todayUrl }}" data-turbo-frame="production-calendar" data-turbo-action="advance" class="text-xs px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
-                    Today
-                </a>
+            </div>
+        </div>
 
-                @can('admin')
-                <form method="POST" action="{{ route('forecast.clear') }}" class="inline" data-confirm="Clear all forecast badges from the calendar for the current selection?" data-confirm-action="Clear">
-                    @csrf
-                    <input type="hidden" name="scope" value="{{ $scope }}">
-                    @if($scope === 'cage')
-                    <input type="hidden" name="cage" value="{{ $cageCode }}">
-                    @elseif($scope === 'breed')
-                    <input type="hidden" name="breed" value="{{ $breed }}">
-                    @endif
-                    <button type="submit" class="text-xs px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors flex items-center gap-1.5">
-                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                        Clear
-                    </button>
-                </form>
-                @endcan
+        {{-- Row 2: Today + Clear Forecast, directly beneath the month/year/prev/next row. --}}
+        <div class="flex items-center gap-2 mt-3">
+            <a href="{{ $todayUrl }}" data-turbo-frame="production-calendar" data-turbo-action="advance" class="text-xs px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
+                Today
+            </a>
+
+            @can('admin')
+            <form method="POST" action="{{ route('forecast.clear') }}" class="inline" data-confirm="Clear all forecast badges from the calendar for the current selection?" data-confirm-action="Clear">
+                @csrf
+                <input type="hidden" name="scope" value="{{ $scope }}">
+                @if($scope === 'cage')
+                <input type="hidden" name="cage" value="{{ $cageCode }}">
+                @elseif($scope === 'breed')
+                <input type="hidden" name="breed" value="{{ $breed }}">
+                @endif
+                <button type="submit" class="text-xs px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors flex items-center gap-1.5">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    Clear Forecast
+                </button>
+            </form>
+            @endcan
         </div>
     </div>
 
@@ -194,11 +198,11 @@
                              data-date="{{ $cell['dateString'] }}"
                              data-selectable="{{ $isSelectable ? 'true' : 'false' }}"
                              onclick="window.handleForecastDayClick('{{ $cell['dateString'] }}', {{ $isSelectable ? 'true' : 'false' }})">
+                            {{-- No separate "Today" badge here — the cell's own border,
+                                 background tint, and bold day-number already mark today
+                                 unambiguously; a fourth label repeated the same signal. --}}
                             <div class="flex items-center gap-1">
                                 <span class="{{ $dayNumberClasses }}">{{ $cell['day'] }}</span>
-                                @if($cell['isToday'])
-                                <span class="text-xs font-bold text-[#002D5E] bg-[#002D5E]/10 px-1 py-0.5 rounded">Today</span>
-                                @endif
                             </div>
                             @if($cell['forecast'])
                             <i data-lucide="egg" class="absolute top-1 right-1 w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#2D7D46]" title="Forecast: {{ number_format($cell['forecast']->predicted_egg_count, 0) }} eggs"></i>

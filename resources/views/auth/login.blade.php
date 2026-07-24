@@ -58,7 +58,7 @@
                  white box on the page's warm canvas. --}}
             <img src="/images/layrate-logo.png"
                  alt="LayRate — Egg Counting &amp; Forecasting System"
-                 class="w-36 mx-auto -mt-3 -mb-5">
+                 class="w-36 mx-auto -mt-3 -mb-5" loading="lazy">
 
             <h1 class="text-base font-semibold text-[#333333] mb-1 text-center">Sign in</h1>
             <p class="text-xs text-[#6B7280] mb-6 text-center">Enter your credentials to access the dashboard.</p>

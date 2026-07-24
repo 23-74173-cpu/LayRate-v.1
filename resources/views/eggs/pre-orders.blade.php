@@ -77,19 +77,17 @@
                 <x-button type="submit">
                     Apply Filters
                 </x-button>
-                <a href="{{ route('eggs.preorders') }}"
-                   class="flex items-center gap-1.5 border border-[#D9D9D9] text-[#6B7280] px-4 py-2 rounded-lg text-sm hover:bg-[#F5F6F8] transition-colors">
+                <x-button variant="secondary" :href="route('eggs.preorders')">
                     Reset
-                </a>
+                </x-button>
             </form>
         </x-card>
 
     {{-- ── Header ── --}}
     <div class="flex items-center justify-between">
-        <button onclick="document.getElementById('addOrderModal').style.display = 'flex'"
-                class="flex items-center gap-2 bg-[#002D5E] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#001F42] transition-colors">
+        <x-button onclick="document.getElementById('addOrderModal').style.display = 'flex'">
             <i data-lucide="plus" class="w-4 h-4"></i> Add Pre-Order
-        </button>
+        </x-button>
     </div>
 
     {{-- ── Orders Table ── --}}

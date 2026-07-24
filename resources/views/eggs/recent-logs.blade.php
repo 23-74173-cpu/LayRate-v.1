@@ -72,14 +72,9 @@
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <button type="submit"
-                            class="px-4 py-1.5 text-sm font-medium rounded-lg text-white transition-opacity"
-                            style="background-color: #0075de;">
-                        Filter
-                    </button>
+                    <x-button type="submit" size="sm">Filter</x-button>
                     <a href="{{ route('eggs.recent-logs') }}"
-                       class="px-4 py-1.5 text-sm font-medium rounded-lg transition-colors"
-                       style="color: #1f1f1f; border: 1px solid #e6e6e6;">
+                       class="px-3 py-1.5 text-xs font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">
                         Reset
                     </a>
                 </div>

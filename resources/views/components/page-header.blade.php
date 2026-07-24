@@ -1,11 +1,11 @@
 {{-- Page Header — consistent boxed two-tier header across all sections --}}
-@props(['title', 'subtitle' => null, 'subtitleId' => null])
+@props(['title', 'subtitle' => null, 'subtitleId' => null, 'subtitleClass' => ''])
 
 <div class="bg-white rounded-lg border border-[#D9D9D9] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
     <div>
         <h1 class="text-xl font-bold text-[#333333]">{{ $title }}</h1>
         @if($subtitle)
-        <p @if($subtitleId) id="{{ $subtitleId }}" @endif class="text-sm text-[#6B7280] mt-1">{{ $subtitle }}</p>
+        <p @if($subtitleId) id="{{ $subtitleId }}" @endif class="text-sm text-[#6B7280] mt-1 {{ $subtitleClass }}">{{ $subtitle }}</p>
         @endif
     </div>
     @if(isset($actions))

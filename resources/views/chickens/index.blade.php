@@ -6,10 +6,9 @@
 
     <x-page-header title="Chickens" subtitle="Manage hen inventory, movements, and mortality records">
         <x-slot:actions>
-            <button type="button" onclick="openRegisterModal()"
-                    class="px-3 py-1.5 text-xs bg-[#002D5E] text-white rounded hover:bg-[#001F42] transition-colors">
+            <x-button size="sm" onclick="openRegisterModal()">
                 <i data-lucide="plus" class="w-3 h-3 inline"></i> Register New Chickens
-            </button>
+            </x-button>
         </x-slot:actions>
     </x-page-header>
 
@@ -31,71 +30,74 @@
         {{-- Filter Bar --}}
         <div id="inventoryFilters" class="mb-5">
             <x-card padding="p-4">
-            <div class="flex flex-wrap items-end gap-3">
+            <div class="flex flex-col gap-3">
 
-                {{-- Status Toggle --}}
-                <div class="flex items-center gap-1 border border-[#D9D9D9] rounded overflow-hidden">
-                    @foreach(['all' => 'All', 'active' => 'Active', 'inactive' => 'Inactive'] as $val => $label)
-                    <label class="status-pill px-3 py-1.5 text-xs cursor-pointer transition-colors {{ $isActive === $val ? 'bg-[#002D5E] text-white' : 'bg-white text-[#6B7280] hover:bg-[#F5F6F8]' }}">
-                        <input type="radio" name="status" value="{{ $val }}" class="hidden" onchange="filterInventory()" {{ $isActive === $val ? 'checked' : '' }}>
-                        {{ $label }}
-                    </label>
-                    @endforeach
-                </div>
-
-                {{-- Cage Filter --}}
+                {{-- Row 1: Status --}}
                 <div>
-                    <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Cage</label>
-                    <select name="cage_id" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="filterInventory()">
-                        <option value="">All Cages</option>
-                        @foreach($cages as $c)
-                        <option value="{{ $c->id }}" {{ $cageId == $c->id ? 'selected' : '' }}>{{ $c->cage_code }}</option>
+                    <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Status</label>
+                    <div class="flex items-center gap-1 border border-[#D9D9D9] rounded overflow-hidden w-fit">
+                        @foreach(['all' => 'All', 'active' => 'Active', 'inactive' => 'Inactive'] as $val => $label)
+                        <label class="status-pill px-3 py-1.5 text-xs cursor-pointer transition-colors {{ $isActive === $val ? 'bg-[#002D5E] text-white' : 'bg-white text-[#6B7280] hover:bg-[#F5F6F8]' }}">
+                            <input type="radio" name="status" value="{{ $val }}" class="hidden" onchange="filterInventory()" {{ $isActive === $val ? 'checked' : '' }}>
+                            {{ $label }}
+                        </label>
                         @endforeach
-                    </select>
-                </div>
-
-                {{-- Breed Filter --}}
-                <div>
-                    <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Breed</label>
-                    <select name="breed" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="filterInventory()">
-                        <option value="">All Breeds</option>
-                        @foreach($breeds as $b)
-                        <option value="{{ $b }}" {{ $breed == $b ? 'selected' : '' }}>{{ $b }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- Sort --}}
-                <div>
-                    <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Sort</label>
-                    <select name="sort" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="filterInventory()">
-                        <option value="" {{ $sort === '' ? 'selected' : '' }}>Chicken ID (A-Z)</option>
-                        <option value="chicken_id_desc" {{ $sort === 'chicken_id_desc' ? 'selected' : '' }}>Chicken ID (Z-A)</option>
-                        <option value="age_asc" {{ $sort === 'age_asc' ? 'selected' : '' }}>Age (Youngest)</option>
-                        <option value="age_desc" {{ $sort === 'age_desc' ? 'selected' : '' }}>Age (Oldest)</option>
-                        <option value="breed_asc" {{ $sort === 'breed_asc' ? 'selected' : '' }}>Breed (A-Z)</option>
-                        <option value="breed_desc" {{ $sort === 'breed_desc' ? 'selected' : '' }}>Breed (Z-A)</option>
-                        <option value="date_asc" {{ $sort === 'date_asc' ? 'selected' : '' }}>Date Acquired (Oldest)</option>
-                        <option value="date_desc" {{ $sort === 'date_desc' ? 'selected' : '' }}>Date Acquired (Newest)</option>
-                    </select>
-                </div>
-
-                {{-- Search --}}
-                <div>
-                    <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Tag Code</label>
-                    <div class="flex gap-1">
-                        <input type="text" name="search" value="{{ $search }}" placeholder="Search tag..."
-                               class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-36 focus:outline-none focus:ring-1 focus:ring-[#002D5E]"
-                               id="tagSearchInput"
-                               onkeydown="if(event.key==='Enter'){ event.preventDefault(); filterInventory(); }">
-                        <button type="button" onclick="filterInventory()" class="px-2 py-1.5 bg-[#002D5E] text-white rounded text-xs hover:bg-[#001F42]">
-                            <i data-lucide="search" class="w-3 h-3"></i>
-                        </button>
                     </div>
                 </div>
 
-                <a href="#" onclick="clearFilters(); return false;"
-                   class="px-2 py-1.5 text-xs border border-[#D9D9D9] rounded text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">Clear filters</a>
+                {{-- Row 2: Search + Clear filters --}}
+                <div class="flex flex-wrap items-end gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Tag Code</label>
+                        <div class="flex gap-1">
+                            <input type="text" name="search" value="{{ $search }}" placeholder="Search tag..."
+                                   class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-36 focus:outline-none focus:ring-1 focus:ring-[#002D5E]"
+                                   id="tagSearchInput"
+                                   onkeydown="if(event.key==='Enter'){ event.preventDefault(); filterInventory(); }">
+                            <x-button size="sm" onclick="filterInventory()">
+                                <i data-lucide="search" class="w-3 h-3"></i>
+                            </x-button>
+                        </div>
+                    </div>
+                    <x-button variant="secondary" size="sm" onclick="clearFilters()">Clear filters</x-button>
+                </div>
+
+                {{-- Row 3: Cage, Breed, Sort --}}
+                <div class="flex flex-wrap items-end gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Cage</label>
+                        <select name="cage_id" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="filterInventory()">
+                            <option value="">All Cages</option>
+                            @foreach($cages as $c)
+                            <option value="{{ $c->id }}" {{ $cageId == $c->id ? 'selected' : '' }}>{{ $c->cage_code }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Breed</label>
+                        <select name="breed" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="filterInventory()">
+                            <option value="">All Breeds</option>
+                            @foreach($breeds as $b)
+                            <option value="{{ $b }}" {{ $breed == $b ? 'selected' : '' }}>{{ $b }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Sort</label>
+                        <select name="sort" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="filterInventory()">
+                            <option value="" {{ $sort === '' ? 'selected' : '' }}>Chicken ID (A-Z)</option>
+                            <option value="chicken_id_desc" {{ $sort === 'chicken_id_desc' ? 'selected' : '' }}>Chicken ID (Z-A)</option>
+                            <option value="age_asc" {{ $sort === 'age_asc' ? 'selected' : '' }}>Age (Youngest)</option>
+                            <option value="age_desc" {{ $sort === 'age_desc' ? 'selected' : '' }}>Age (Oldest)</option>
+                            <option value="breed_asc" {{ $sort === 'breed_asc' ? 'selected' : '' }}>Breed (A-Z)</option>
+                            <option value="breed_desc" {{ $sort === 'breed_desc' ? 'selected' : '' }}>Breed (Z-A)</option>
+                            <option value="date_asc" {{ $sort === 'date_asc' ? 'selected' : '' }}>Date Acquired (Oldest)</option>
+                            <option value="date_desc" {{ $sort === 'date_desc' ? 'selected' : '' }}>Date Acquired (Newest)</option>
+                        </select>
+                    </div>
+                </div>
             </div>
             </x-card>
         </div>
@@ -106,18 +108,15 @@
                 <strong id="bulkCount" class="text-[#002D5E]">0</strong> hen(s) selected
             </span>
             <div class="flex items-center gap-2">
-                <button type="button" onclick="bulkMove()"
-                        class="px-3 py-1.5 text-xs border border-[#002D5E] text-[#002D5E] rounded hover:bg-[#002D5E]/5">
+                <x-button variant="outline-primary" size="sm" onclick="bulkMove()">
                     <i data-lucide="arrow-right" class="w-3 h-3 inline"></i> Move
-                </button>
-                <button type="button" onclick="bulkCull()"
-                        class="px-3 py-1.5 text-xs border border-orange-400 text-orange-600 rounded hover:bg-orange-50">
+                </x-button>
+                <x-button variant="outline-warning" size="sm" onclick="bulkCull()">
                     <i data-lucide="crosshair" class="w-3 h-3 inline"></i> Cull
-                </button>
-                <button type="button" onclick="bulkRemove()"
-                        class="px-3 py-1.5 text-xs border border-red-400 text-red-500 rounded hover:bg-red-50">
+                </x-button>
+                <x-button variant="outline-danger" size="sm" onclick="bulkRemove()">
                     <i data-lucide="log-out" class="w-3 h-3 inline"></i> Remove
-                </button>
+                </x-button>
             </div>
         </div>
 
@@ -303,6 +302,13 @@ function switchTab(tab) {
     document.getElementById('panelMortality').classList.toggle('hidden', tab !== 'mortality');
     document.getElementById('panelCulling').classList.toggle('hidden', tab !== 'culling');
     document.getElementById('panelRemoval').classList.toggle('hidden', tab !== 'removal');
+
+    // Keep the URL's ?tab= in sync so redirect()->back() after a form submit
+    // (record mortality, register a chicken, etc.) returns to the tab the
+    // user was actually on, instead of always bouncing to Inventory.
+    const url = new URL(window.location);
+    url.searchParams.set('tab', tab);
+    window.history.replaceState({}, '', url);
 
     const nav = document.getElementById('chickens-tabs-nav');
     if (nav) {

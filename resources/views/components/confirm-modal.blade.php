@@ -61,20 +61,14 @@
             <button
                 type="button"
                 onclick="confirmModalClose()"
-                class="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
-                style="color: #1f1f1f; border: 1px solid #e6e6e6;"
-                onmouseover="this.style.backgroundColor='#f6f5f4'"
-                onmouseout="this.style.backgroundColor='transparent'"
+                class="px-4 py-2 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors"
             >
                 Cancel
             </button>
             <button
                 id="confirm-modal-action"
                 type="button"
-                class="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
-                style="background-color: #9b1c24; color: #ffffff;"
-                onmouseover="this.style.backgroundColor='#7a161d'"
-                onmouseout="this.style.backgroundColor='#9b1c24'"
+                class="px-4 py-2 text-sm font-medium rounded-full bg-[#9b1c24] text-white hover:bg-[#7a161d] transition-colors"
             >
                 Delete
             </button>

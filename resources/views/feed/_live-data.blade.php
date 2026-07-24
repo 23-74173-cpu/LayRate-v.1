@@ -42,6 +42,13 @@
             var panel = document.getElementById('tab-'+tab);
             if (panel) panel.classList.remove('hidden');
 
+            // Keep the URL's ?tab= in sync so a form submit's redirect back
+            // to this page (e.g. Add Consumption) returns to the same tab
+            // instead of always bouncing to Feed Batches.
+            const url = new URL(window.location);
+            url.searchParams.set('tab', tab);
+            window.history.replaceState({}, '', url);
+
             const nav = document.querySelector('#feed-tabs-nav');
             if (nav) {
                 nav.querySelectorAll('button').forEach(btn => {
@@ -226,10 +233,8 @@
                         <td class="px-5 py-3.5 text-sm text-[#6B7280] max-w-[160px] truncate">{{ $batch->notes ?? '—' }}</td>
                         <td class="px-5 py-3.5">
                             <div class="flex items-center gap-1.5">
-                                <button onclick="openEditBatch({{ $batch->id }}, '{{ addslashes($batch->brand ?? '') }}', {{ $batch->crude_protein }}, {{ $batch->total_quantity_kg ?? 'null' }}, {{ $batch->unit_cost ?? 'null' }}, {{ $batch->low_stock_threshold ?? 'null' }}, '{{ addslashes($batch->notes ?? '') }}')"
-                                        class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Edit batch">
-                                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                                </button>
+                                <x-icon-button icon="pencil" label="Edit batch" color="neutral"
+                                    onclick="openEditBatch({{ $batch->id }}, '{{ addslashes($batch->brand ?? '') }}', {{ $batch->crude_protein }}, {{ $batch->total_quantity_kg ?? 'null' }}, {{ $batch->unit_cost ?? 'null' }}, {{ $batch->low_stock_threshold ?? 'null' }}, '{{ addslashes($batch->notes ?? '') }}')" />
                                 @can('admin')
                                 <button onclick="deleteBatch({{ $batch->id }})"
                                         class="flex items-center gap-1 text-xs border border-[#D9D9D9] px-2.5 py-1.5 rounded hover:bg-red-50 text-[#6B7280]"
@@ -245,20 +250,22 @@
                     @endforelse
                 </tbody>
             </table>
+            <x-paginator :paginator="$batches" />
         </div>
     </div>
 
     {{-- Daily Consumption Panel --}}
     <div id="tab-consumption" class="tab-panel hidden">
-        <div class="flex items-center justify-end gap-2 mb-3">
-            <button onclick="openFarmEntryModal(null, null, '{{ now()->toDateString() }}', null, null, null)"
-                    class="flex items-center gap-1.5 text-xs border border-[#D9D9D9] px-3 py-1.5 rounded-lg hover:bg-[#F5F6F8] transition-colors text-[#6B7280]">
-                <i data-lucide="scale" class="w-3.5 h-3.5"></i> Log Whole-Farm Feeding
-            </button>
-            <button onclick="openConsumptionModal(null, null, '{{ now()->toDateString() }}', null, null, null)"
-                    class="flex items-center gap-1.5 text-xs border border-[#D9D9D9] px-3 py-1.5 rounded-lg hover:bg-[#F5F6F8] transition-colors text-[#6B7280]">
-                <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Consumption
-            </button>
+        {{-- Primary actions — these are the two things operators do most on this
+             tab, so they're full-size primary buttons up top, not small/muted
+             secondary ones a barn worker could miss on a tablet. --}}
+        <div class="flex flex-wrap items-center justify-end gap-3 mb-4">
+            <x-button onclick="openFarmEntryModal(null, null, '{{ now()->toDateString() }}', null, null, null)">
+                <i data-lucide="scale" class="w-4 h-4"></i> Log Whole-Farm Feeding
+            </x-button>
+            <x-button onclick="openConsumptionModal(null, null, '{{ now()->toDateString() }}', null, null, null)">
+                <i data-lucide="plus" class="w-4 h-4"></i> Add Consumption
+            </x-button>
         </div>
         <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-x-auto">
             <table class="w-full">
@@ -299,22 +306,16 @@
                         <td class="px-5 py-3.5">
                             <div class="flex items-center gap-1">
                                 @if($isDistributed)
-                                    <button onclick="openFarmEntryModal({{ $log->farm_feed_entry_id }}, {{ $log->feed_batch_id }}, '{{ $log->log_date->format('Y-m-d') }}', '{{ $log->log_time?->format('H:i') ?? '' }}', {{ $log->farmFeedEntry?->total_kg ?? 'null' }}, {{ $log->farmFeedEntry?->unit_cost ?? 'null' }})"
-                                            class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Edit whole-farm entry">
-                                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                                    </button>
+                                    <x-icon-button icon="pencil" label="Edit whole-farm entry" color="neutral"
+                                        onclick="openFarmEntryModal({{ $log->farm_feed_entry_id }}, {{ $log->feed_batch_id }}, '{{ $log->log_date->format('Y-m-d') }}', '{{ $log->log_time?->format('H:i') ?? '' }}', {{ $log->farmFeedEntry?->total_kg ?? 'null' }}, {{ $log->farmFeedEntry?->unit_cost ?? 'null' }})" />
                                 @else
-                                    <button onclick="openConsumptionModal({{ $log->cage_id }}, {{ $log->feed_batch_id }}, '{{ $log->log_date->format('Y-m-d') }}', '{{ $log->log_time?->format('H:i') ?? '' }}', {{ $log->feed_consumed_kg }}, {{ $log->id }})"
-                                            class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Edit consumption">
-                                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                                    </button>
+                                    <x-icon-button icon="pencil" label="Edit consumption" color="neutral"
+                                        onclick="openConsumptionModal({{ $log->cage_id }}, {{ $log->feed_batch_id }}, '{{ $log->log_date->format('Y-m-d') }}', '{{ $log->log_time?->format('H:i') ?? '' }}', {{ $log->feed_consumed_kg }}, {{ $log->id }})" />
                                     @can('admin')
                                     <form method="POST" action="{{ route('feed.consumption.destroy', $log) }}"
                                           data-confirm="Delete this consumption record?" data-confirm-action="Delete">
                                         @csrf @method('DELETE')
-                                        <button type="submit" class="p-1.5 rounded-full hover:bg-red-50 transition-colors" style="color: #a39e98;" aria-label="Delete consumption log">
-                                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                                        </button>
+                                        <x-icon-button type="submit" icon="trash-2" label="Delete consumption log" color="red" />
                                     </form>
                                     @endcan
                                 @endif
@@ -326,30 +327,7 @@
                     @endforelse
                 </tbody>
             </table>
-            @if($consumptionLogs->hasPages())
-            <div class="px-5 py-3 border-t border-[#D9D9D9] flex items-center justify-between text-xs text-[#6B7280]">
-                <span>Showing {{ $consumptionLogs->firstItem() }}-{{ $consumptionLogs->lastItem() }} of {{ $consumptionLogs->total() }}</span>
-                <div class="flex items-center gap-1">
-                    @if($consumptionLogs->onFirstPage())
-                    <span class="px-2 py-1 text-[#9CA3AF]">‹ Prev</span>
-                    @else
-                    <a href="{{ $consumptionLogs->previousPageUrl() }}" class="px-2 py-1 hover:text-[#002D5E]">‹ Prev</a>
-                    @endif
-                    @foreach($consumptionLogs->getUrlRange(1, $consumptionLogs->lastPage()) as $page => $url)
-                        @if($page == $consumptionLogs->currentPage())
-                        <span class="px-2 py-1 font-medium text-[#002D5E]">{{ $page }}</span>
-                        @elseif($page >= $consumptionLogs->currentPage() - 1 && $page <= $consumptionLogs->currentPage() + 1)
-                        <a href="{{ $url }}" class="px-2 py-1 hover:text-[#002D5E]">{{ $page }}</a>
-                        @endif
-                    @endforeach
-                    @if($consumptionLogs->hasMorePages())
-                    <a href="{{ $consumptionLogs->nextPageUrl() }}" class="px-2 py-1 hover:text-[#002D5E]">Next ›</a>
-                    @else
-                    <span class="px-2 py-1 text-[#9CA3AF]">Next ›</span>
-                    @endif
-                </div>
-            </div>
-            @endif
+            <x-paginator :paginator="$consumptionLogs" />
         </div>
     </div>
 
@@ -406,10 +384,9 @@
                     <i data-lucide="alert-triangle" class="inline-block w-4 h-4 align-text-bottom"></i>
                     Failed to load FCR data.
                 </p>
-                <button type="button" onclick="fcrLoad()"
-                        class="text-xs px-4 py-2 rounded-lg border border-[#D9D9D9] text-[#333333] hover:bg-[#F5F6F8] transition-colors">
+                <x-button variant="secondary" size="sm" type="button" onclick="fcrLoad()">
                     Retry
-                </button>
+                </x-button>
             </div>
 
             {{-- Content (initially server-rendered) --}}
@@ -429,9 +406,7 @@
                 <div class="relative w-full max-w-md rounded-2xl p-6 overflow-y-auto max-h-[90vh]" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
                     <div class="flex items-center justify-between mb-5">
                         <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Understanding FCR</h2>
-                        <button type="button" onclick="closeFcrGuideModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
-                            <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
-                        </button>
+                        <x-icon-button icon="x" label="Close" color="neutral" iconSize="w-5 h-5" onclick="closeFcrGuideModal()" />
                     </div>
                     <div class="text-sm leading-relaxed" style="color: #4B5563;">
                         <p class="mb-4">
@@ -476,7 +451,7 @@
             var cages = @json($cages->map(fn($c) => ['id' => $c->id, 'code' => $c->cage_code]));
             // remaining_kg is null for batches with no total_quantity_kg set (unlimited/untracked) —
             // the exceeds-check below treats null as "no limit to check against".
-            var batches = @json($batches->map(fn($b) => ['id' => $b->id, 'code' => $b->batch_code, 'remaining' => $b->remaining_kg]));
+            var batches = @json($allBatches->map(fn($b) => ['id' => $b->id, 'code' => $b->batch_code, 'remaining' => $b->remaining_kg]));
 
             if (cageSelect && cageSelect.options.length <= 1) {
                 cages.forEach(function(c) {
