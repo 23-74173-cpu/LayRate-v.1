@@ -42,9 +42,9 @@
     <style>
         * { -webkit-tap-highlight-color: transparent; }
         html { height: 100%; height: -webkit-fill-available; }
-        body { background-color: #F5F6F8; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; height: 100%; height: -webkit-fill-available; overflow: hidden; }
+        body { background-color: #F5F6F8; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; height: 100%; height: -webkit-fill-available; overflow: hidden; overscroll-behavior: none; }
         .nav-active { background: rgba(255,255,255,.2); box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
-        .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+        .scrollbar-thin::-webkit-scrollbar { width: 4px; height: 4px; }
         .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
         .scrollbar-thin::-webkit-scrollbar-thumb { background: #D9D9D9; border-radius: 9999px; }
         [x-cloak] { display: none !important; }
@@ -300,7 +300,7 @@
         @endif
 
         {{-- SCROLLABLE PAGE CONTENT --}}
-        <main class="page-wrapper flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-4 lg:px-6 py-4 scrollbar-thin">
+        <main class="page-wrapper flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-4 lg:px-6 py-4 scrollbar-thin" style="overscroll-behavior: none;">
             @yield('content')
         </main>
     </div>

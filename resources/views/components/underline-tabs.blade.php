@@ -4,7 +4,7 @@
      scroll horizontally instead of wrapping to a second line or silently
      overflowing — there is no wrap fallback here on purpose. --}}
 <div class="border-b border-[#D9D9D9]">
-    <nav class="flex gap-6 overflow-x-auto scrollbar-thin">
+    <nav class="flex gap-6 overflow-x-auto overflow-y-hidden scrollbar-thin">
         @foreach($tabs as $key => $tab)
             @php
                 $isActive = $key === $active;
