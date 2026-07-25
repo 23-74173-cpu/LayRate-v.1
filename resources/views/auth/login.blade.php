@@ -11,7 +11,7 @@
     <link href="/css/tailwind.css" rel="stylesheet">
     <script src="/js/lucide.min.js"></script>
     <style>
-        body { background-color: #f6f5f4; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+        body { background-color: #f6f5f4; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; overscroll-behavior: none; }
         :focus-visible { outline: 2px solid #0075de; outline-offset: 2px; border-radius: 4px; }
 
         /* Reverse of the landing page's circle-wipe: this page loads already

@@ -157,6 +157,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics');
     Route::get('/analytics/charts', [AnalyticsController::class, 'charts'])->name('analytics.charts');
+    Route::get('/analytics/data', [AnalyticsController::class, 'data'])->name('analytics.data');
 
     Route::get('/forecast',             [ForecastController::class, 'index'])->name('forecast');
     Route::post('/forecast/generate',   [ForecastController::class, 'generate'])->name('forecast.generate')->middleware('admin');

@@ -18,13 +18,13 @@
                 <div class="grid grid-cols-2 gap-4 mb-4">
                     <div>
                         <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Rows</label>
-                        <input type="number" name="rows" value="4" min="1" max="10" required
+                        <input type="number" name="rows" value="4" min="1" max="50" required
                                class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                                style="border-color: #e6e6e6; color: #1f1f1f;">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Columns</label>
-                        <input type="number" name="cols" value="4" min="1" max="10" required
+                        <input type="number" name="cols" value="4" min="1" max="50" required
                                class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                                style="border-color: #e6e6e6; color: #1f1f1f;">
                     </div>

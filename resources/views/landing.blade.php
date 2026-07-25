@@ -16,7 +16,7 @@
 
     <style>
         html { scroll-behavior: smooth; }
-        body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; background-color: #f6f5f4; }
+        body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; background-color: #f6f5f4; overscroll-behavior: none; }
         :focus-visible { outline: 2px solid #0075de; outline-offset: 2px; border-radius: 4px; }
         #features, #how-it-works, #tech { scroll-margin-top: 4.5rem; }
 

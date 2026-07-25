@@ -29,11 +29,11 @@ class CageController extends Controller
             'hens' => fn ($q) => $q->where('is_active', 1)->orderBy('id'),
         ])->orderBy('cage_code')->get();
 
-        // Tile-based grid: min 10×6, auto-expands to fit all placed cages
-        $minCols = 10;
-        $minRows = 6;
-        $gridCols = $minCols;
-        $gridRows = $minRows;
+        // Tile-based grid: respects stored settings as minimum, auto-expands to fit all placed cages
+        $storedRows = (int) Setting::get('farm_grid_rows', 6);
+        $storedCols = (int) Setting::get('farm_grid_cols', 10);
+        $gridCols = max($storedCols, 10);
+        $gridRows = max($storedRows, 6);
         foreach ($cages as $cage) {
             if (is_null($cage->location_row) || is_null($cage->location_column)) continue;
             $right = $cage->location_column + ($cage->slots_per_row ?? 1);

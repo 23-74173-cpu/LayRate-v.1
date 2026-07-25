@@ -47,8 +47,8 @@
 
     <script>
     (function() {
-        const historical = @json($historical->map(fn($l) => ['date'=> is_object($l->log_date) ? $l->log_date->format('Y-m-d') : $l->log_date,'hdep'=>$l->hdep]));
-        const forecasts  = @json($forecasts->map(fn($f) => ['date'=> is_object($f->target_date) ? $f->target_date->format('Y-m-d') : $f->target_date,'hdep'=>$f->predicted_hdep]));
+        const historical = @json($historical->map(fn($l) => ['date'=> is_object($l->log_date) ? $l->log_date->format('Y-m-d') : $l->log_date,'hdep'=>(float)$l->hdep]));
+        const forecasts  = @json($forecasts->map(fn($f) => ['date'=> is_object($f->target_date) ? $f->target_date->format('Y-m-d') : $f->target_date,'hdep'=>(float)$f->predicted_hdep]));
         const cageColor  = '{{ $cageColor }}';
 
         const histLabels = historical.map((h, i) => 'H-' + (historical.length - i));
