@@ -281,24 +281,17 @@
     }
 
     function initForecastChart() {
-        const canvas = document.getElementById('forecastChart');
-        if (!canvas) {
-            console.warn('[ForecastChart] Canvas element not found.');
-            return;
-        }
-
         if (typeof Chart === 'undefined') {
             console.warn('[ForecastChart] Chart.js not loaded yet.');
             return;
         }
 
-        if (window.forecastChartInstance && typeof window.forecastChartInstance.destroy === 'function') {
-            window.forecastChartInstance.destroy();
-            window.forecastChartInstance = null;
+        if (!document.getElementById('forecastChart')) {
+            console.warn('[ForecastChart] Canvas element not found.');
+            return;
         }
 
         if (!recentHistorical || recentHistorical.length === 0) {
-            console.warn('[ForecastChart] No historical data available.', historical);
             setChartError('No historical data to display.');
             return;
         }
@@ -331,32 +324,24 @@
             });
         }
 
-        console.log('[ForecastChart] Initializing with labels:', allLabels, 'datasets:', datasets);
-
-        try {
-            window.forecastChartInstance = new Chart(canvas, {
-                type: 'line',
-                data: {
-                    labels: allLabels,
-                    datasets: datasets
+        LayRateChart.create('forecastChart', {
+            type: 'line',
+            data: {
+                labels: allLabels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, labels: { boxWidth: 10, font: { size: 10 } } }
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: true, labels: { boxWidth: 10, font: { size: 10 } } }
-                    },
-                    scales: {
-                        x: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 45 } },
-                        y: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } }, min: 0, beginAtZero: true },
-                    }
+                scales: {
+                    x: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 45 } },
+                    y: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } }, min: 0, beginAtZero: true },
                 }
-            });
-            console.log('[ForecastChart] Chart initialized successfully.');
-        } catch (e) {
-            console.error('[ForecastChart] Failed to initialize chart:', e);
-            setChartError('Chart failed to render.');
-        }
+            }
+        });
     }
 
     function ensureForecastChart() {

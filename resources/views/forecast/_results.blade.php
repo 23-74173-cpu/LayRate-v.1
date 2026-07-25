@@ -59,13 +59,8 @@
         const fcData   = [...Array(histLabels.length).fill(null), ...forecasts.map(f => f.hdep)];
 
         function initForecastChart() {
-            const canvas = document.getElementById('forecastChart');
-            if (!canvas) return;
-            if (window.forecastChart && typeof window.forecastChart.destroy === 'function') {
-                window.forecastChart.destroy();
-                window.forecastChart = null;
-            }
-            window.forecastChart = new Chart(canvas, {
+            if (!document.getElementById('forecastChart')) return;
+            LayRateChart.create('forecastChart', {
                 type: 'line',
                 data: {
                     labels: allLabels,

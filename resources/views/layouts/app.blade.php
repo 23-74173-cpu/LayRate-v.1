@@ -604,8 +604,52 @@ if (typeof Chart !== 'undefined') {
     Chart.defaults.plugins.legend.labels.padding = 16;
     Chart.defaults.elements.bar.borderRadius = 4;
     Chart.defaults.scale.grid = { color: 'rgba(0,0,0,0.06)' };
+    Chart.defaults.layout = { padding: { top: 10, bottom: 10, left: 10, right: 10 } };
     window.CAGE_COLORS = @json(\App\Models\Cage::getColorMap());
 }
+
+// ── Shared chart lifecycle manager ──
+// Every chart on every page routes through this helper so that:
+//   • instances are properly destroyed before recreation (no "goes blank" bug)
+//   • all charts are torn down on turbo:before-cache (no stale canvas errors)
+//   • consistent defaults (padding, legend, grid) apply globally
+window.LayRateChart = {
+    _instances: {},
+    _lifecycleBound: false,
+
+    create(id, config) {
+        this.destroy(id);
+        const canvas = document.getElementById(id);
+        if (!canvas) return null;
+        try {
+            const instance = new Chart(canvas, config);
+            this._instances[id] = instance;
+            return instance;
+        } catch (e) {
+            console.error('[LayRateChart] Failed to create chart "' + id + '":', e);
+            return null;
+        }
+    },
+
+    destroy(id) {
+        const inst = this._instances[id];
+        if (inst) {
+            try { inst.destroy(); } catch (e) {}
+            delete this._instances[id];
+        }
+    },
+
+    destroyAll() {
+        Object.keys(this._instances).forEach(id => this.destroy(id));
+    },
+
+    _bindLifecycle() {
+        if (this._lifecycleBound) return;
+        this._lifecycleBound = true;
+        document.addEventListener('turbo:before-cache', () => this.destroyAll());
+    }
+};
+LayRateChart._bindLifecycle();
 
 // ── Reusable loading-button helper for form submissions ──
 function loadingButton(btn, label) {

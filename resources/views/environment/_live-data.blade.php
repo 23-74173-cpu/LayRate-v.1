@@ -203,34 +203,13 @@
             if (humEmpty) humEmpty.classList.toggle('hidden', hasAnyData);
             if (!hasAnyData) return;
 
-            if (window.envTempChart && typeof window.envTempChart.destroy === 'function') {
-                window.envTempChart.destroy();
-                window.envTempChart = null;
-            }
-            // No hardcoded min/max — a fixed 24-32 band clipped any real outlier
-            // (equipment fault, heatwave) clean off the chart instead of showing it.
-            window.envTempChart = new Chart(tempCanvas, { type:'line', data:{ labels, datasets: buildDatasets('avg_temp') }, options: chartOpts });
-
-            if (window.envHumChart && typeof window.envHumChart.destroy === 'function') {
-                window.envHumChart.destroy();
-                window.envHumChart = null;
-            }
-            window.envHumChart = new Chart(humCanvas, { type:'line', data:{ labels, datasets: buildDatasets('avg_hum')  }, options: chartOpts });
+            LayRateChart.create('envTempChart', { type:'line', data:{ labels, datasets: buildDatasets('avg_temp') }, options: chartOpts });
+            LayRateChart.create('envHumChart', { type:'line', data:{ labels, datasets: buildDatasets('avg_hum')  }, options: chartOpts });
         }
 
         if (!window.__envChartsLifecycleBound) {
             window.__envChartsLifecycleBound = true;
             document.addEventListener('turbo:load', initEnvCharts);
-            document.addEventListener('turbo:before-cache', function () {
-                if (window.envTempChart && typeof window.envTempChart.destroy === 'function') {
-                    window.envTempChart.destroy();
-                    window.envTempChart = null;
-                }
-                if (window.envHumChart && typeof window.envHumChart.destroy === 'function') {
-                    window.envHumChart.destroy();
-                    window.envHumChart = null;
-                }
-            });
         }
 
         if (document.readyState === 'loading') {
