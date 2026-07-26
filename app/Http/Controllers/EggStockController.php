@@ -168,6 +168,8 @@ class EggStockController extends Controller
             $newTotals[$size] = $allBatches->where('egg_size', $size)->sum('count');
         }
 
+        $availablePools = EggStockBatch::getAvailablePools();
+
         return response()->json([
             'success' => true,
             'batch' => [
@@ -182,6 +184,7 @@ class EggStockController extends Controller
             ],
             'totals' => $newTotals,
             'trayTotals' => array_map(fn($t) => (int) ceil($t / 30), $newTotals),
+            'availablePools' => $availablePools,
         ])->header('Content-Type', 'application/json');
     }
 

@@ -633,6 +633,34 @@ if (!window.__eggStocksBound) {
                     if (res.body.success) {
                         closeAddStockModal();
                         form.reset();
+
+                        var totals = res.body.totals;
+                        var trayTotals = res.body.trayTotals;
+                        var pools = res.body.availablePools;
+                        if (totals) {
+                            document.querySelectorAll('#summaryCards [data-size]').forEach(function(card) {
+                                var size = card.dataset.size;
+                                var total = totals[size] || 0;
+                                var trays = trayTotals[size] || 0;
+                                var pool = pools[size] || 0;
+
+                                var totalEl = card.querySelector('.text-2xl');
+                                if (totalEl) totalEl.textContent = numberFormat(total);
+
+                                var trayEl = card.querySelector('.text-xs.mt-1');
+                                if (trayEl) trayEl.textContent = trays + ' ' + (trays === 1 ? 'tray' : 'trays');
+
+                                var poolEl = card.querySelector('.font-medium');
+                                if (poolEl) poolEl.textContent = numberFormat(pool);
+                            });
+                        }
+
+                        var liveFrame = document.getElementById('eggs-stocks-live-data');
+                        if (liveFrame) {
+                            var src = liveFrame.getAttribute('src');
+                            if (src) liveFrame.setAttribute('src', src);
+                        }
+
                         return;
                     }
                     btn.disabled = false;
