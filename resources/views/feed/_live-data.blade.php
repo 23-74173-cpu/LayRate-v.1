@@ -38,6 +38,9 @@
     <script>
     (function() {
         function feedSwitchTab(tab) {
+            if (window.__feedActiveTab === tab) return;
+            window.__feedActiveTab = tab;
+
             document.querySelectorAll('.tab-panel').forEach(el => el.classList.add('hidden'));
             var panel = document.getElementById('tab-'+tab);
             if (panel) panel.classList.remove('hidden');
@@ -170,6 +173,7 @@
 
     {{-- Feed Batches Panel --}}
     <div id="tab-batches" class="tab-panel">
+        <turbo-frame id="tab-batches-frame">
         <div class="flex items-center gap-4 text-xs mb-3" style="color: #615d59;">
             <span class="flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full" style="background:#1f6b3a"></span> Optimal (16–18%)
@@ -252,10 +256,12 @@
             </table>
             <x-paginator :paginator="$batches" />
         </div>
+    </turbo-frame>
     </div>
 
     {{-- Daily Consumption Panel --}}
     <div id="tab-consumption" class="tab-panel hidden">
+        <turbo-frame id="tab-consumption-frame">
         {{-- Primary actions — these are the two things operators do most on this
              tab, so they're full-size primary buttons up top, not small/muted
              secondary ones a barn worker could miss on a tablet. --}}
@@ -312,11 +318,8 @@
                                     <x-icon-button icon="pencil" label="Edit consumption" color="neutral"
                                         onclick="openConsumptionModal({{ $log->cage_id }}, {{ $log->feed_batch_id }}, '{{ $log->log_date->format('Y-m-d') }}', '{{ $log->log_time?->format('H:i') ?? '' }}', {{ $log->feed_consumed_kg }}, {{ $log->id }})" />
                                     @can('admin')
-                                    <form method="POST" action="{{ route('feed.consumption.destroy', $log) }}"
-                                          data-confirm="Delete this consumption record?" data-confirm-action="Delete">
-                                        @csrf @method('DELETE')
-                                        <x-icon-button type="submit" icon="trash-2" label="Delete consumption log" color="red" />
-                                    </form>
+                                    <x-icon-button icon="trash-2" label="Delete consumption log" color="red"
+                                        onclick="confirmModal('Delete this consumption record?', { submit: function() { deleteConsumption({{ $log->id }}); } }, 'Delete')" />
                                     @endcan
                                 @endif
                             </div>
@@ -329,6 +332,7 @@
             </table>
             <x-paginator :paginator="$consumptionLogs" />
         </div>
+    </turbo-frame>
     </div>
 
     {{-- FCR Panel --}}

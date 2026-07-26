@@ -12,5 +12,9 @@
     <div class="shrink-0">
         {{ $actions }}
     </div>
+    @elseif(isset($slot) && trim($slot))
+    <div class="shrink-0">
+        {{ $slot }}
+    </div>
     @endif
 </div>

@@ -1,12 +1,14 @@
 @extends('layouts.app')
-@section('title', 'Egg Logging')
+@section('title', 'Egg Management')
 
 @section('content')
 <div class="space-y-5">
 
-    <x-page-header title="Egg Logging" subtitle="Log daily egg production per cage slot" />
+    <x-page-header title="Egg Management" subtitle="Log daily egg production per cage slot" />
 
     @include('eggs._tabs', ['activeTab' => 'logging'])
+
+    <turbo-frame id="egg-content">
 
     {{-- ── Stacked Layout: Cage Overview row above Log Entry ── --}}
     <div class="space-y-6">
@@ -332,12 +334,10 @@
         </div>
     </div>
 
-</div>
-@endsection
-
-@push('scripts')
 <script>
 (function() {
+    if (window.__eggLoggingBound) return;
+    window.__eggLoggingBound = true;
     let currentSlotId = null;
     let currentHasSensor = false;
     let overrideVerified = false;
@@ -703,4 +703,6 @@
     }
 })();
 </script>
-@endpush
+</turbo-frame>
+</div>
+@endsection

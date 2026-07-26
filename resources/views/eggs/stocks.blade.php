@@ -1,12 +1,25 @@
 @extends('layouts.app')
-@section('title', 'Egg Stocks')
+@section('title', 'Egg Management')
 
 @section('content')
 <div class="space-y-5">
 
-    <x-page-header title="Egg Stocks" subtitle="Track harvested egg inventory by size and freshness" />
+    <x-page-header title="Egg Management" subtitle="Track harvested egg inventory by size and freshness">
+        <x-slot:actions>
+            <div class="flex items-center gap-2">
+                <x-button variant="secondary" onclick="openEggWeightsModal()">
+                    <i data-lucide="weight" class="w-4 h-4"></i> Egg Weights
+                </x-button>
+                <x-button variant="secondary" onclick="openThresholdsModal()">
+                    <i data-lucide="sliders" class="w-4 h-4"></i> Thresholds
+                </x-button>
+            </div>
+        </x-slot:actions>
+    </x-page-header>
 
     @include('eggs._tabs', ['activeTab' => 'stocks'])
+
+    <turbo-frame id="egg-content">
 
     {{-- ── Summary Cards ── --}}
     <div class="grid grid-cols-2 lg:grid-cols-5 gap-4" id="summaryCards">
@@ -43,127 +56,16 @@
         @endforeach
     </div>
 
-    {{-- ── Add Stock — always-visible primary action, not buried in settings ── --}}
-    <div class="flex justify-end">
+    <div class="flex justify-end mt-4">
         <x-button onclick="document.getElementById('addStockModal').style.display = 'flex'">
             <i data-lucide="plus" class="w-4 h-4"></i> Add Stock
         </x-button>
     </div>
 
-    {{-- ── Settings (Egg Weight Config + Low-Stock/Freshness Thresholds) — collapsed by default ── --}}
-    <details class="bg-white rounded-lg border border-[#D9D9D9] group [&_summary::-webkit-details-marker]:hidden">
-        <summary class="p-4 cursor-pointer list-none flex items-center justify-between select-none">
-            <span class="text-sm font-medium text-[#333333]">Egg Weight &amp; Stock Settings</span>
-            <i data-lucide="chevron-down" class="w-4 h-4 text-[#6B7280] transition-transform group-open:rotate-180"></i>
-        </summary>
-
-        <div class="px-4 pb-5 pt-1 border-t border-[#F0F0F0] space-y-6">
-            {{-- Egg Weight Configuration --}}
-            <div>
-                <h3 class="text-xs font-semibold tracking-[0.05em] uppercase mb-1 mt-4" style="color: #615d59;">Egg Weight Configuration</h3>
-                <p class="text-xs text-[#6B7280] mb-4">Average weights used to estimate egg mass for Feed Conversion Ratio calculations.</p>
-                <form action="{{ route('eggs.stocks.egg-weights') }}" method="POST">
-                    @csrf
-                    <div class="flex flex-wrap items-end gap-4">
-                        <div>
-                            <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">SMALL (g)</label>
-                            <input type="number" name="egg_weight_small" step="0.1" min="1" max="500"
-                                   value="{{ $eggWeights['small'] }}"
-                                   class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                        </div>
-                        <div>
-                            <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">MEDIUM (g)</label>
-                            <input type="number" name="egg_weight_medium" step="0.1" min="1" max="500"
-                                   value="{{ $eggWeights['medium'] }}"
-                                   class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                        </div>
-                        <div>
-                            <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">LARGE (g)</label>
-                            <input type="number" name="egg_weight_large" step="0.1" min="1" max="500"
-                                   value="{{ $eggWeights['large'] }}"
-                                   class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                        </div>
-                        <div>
-                            <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">JUMBO (g)</label>
-                            <input type="number" name="egg_weight_jumbo" step="0.1" min="1" max="500"
-                                   value="{{ $eggWeights['jumbo'] }}"
-                                   class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                        </div>
-                        <div>
-                            <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">FALLBACK (g)</label>
-                            <input type="number" name="egg_weight_fallback" step="0.1" min="1" max="500"
-                                   value="{{ $eggWeights['fallback'] }}"
-                                   class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                        </div>
-                        <x-button type="submit" class="px-5 py-2.5">
-                            Save Weights
-                        </x-button>
-                    </div>
-                    @if($errors->any())
-                    <div class="mt-4 text-xs text-red-500 leading-relaxed">{{ implode('<br>', $errors->all()) }}</div>
-                    @endif
-                </form>
-            </div>
-
-            {{-- Low-Stock / Freshness Thresholds --}}
-            <div class="pt-2 border-t border-[#F0F0F0]">
-                <h3 class="text-xs font-semibold tracking-[0.05em] uppercase mb-4 mt-4" style="color: #615d59;">Low-Stock &amp; Freshness Thresholds</h3>
-
-                <form action="{{ route('eggs.stocks.thresholds') }}" method="POST">
-                    @csrf
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div>
-                            <h4 class="text-xs font-medium tracking-[0.05em] uppercase mb-3" style="color: #615d59;">Low-Stock Thresholds</h4>
-                            <p class="text-xs text-[#6B7280] mb-4">Minimum available pool per size before alert triggers. Set to 0 to disable.</p>
-                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                @foreach(['small' => '#2D7D46', 'medium' => '#1D4E8F', 'large' => '#C2703E', 'jumbo' => '#6B4C8A', 'unsorted' => '#6B7280'] as $sz => $szColor)
-                                @php $key = "egg_low_stock_threshold_{$sz}"; $label = $sz === 'unsorted' ? 'Unsorted' : ucfirst($sz); @endphp
-                                <div>
-                                    <label class="block text-xs tracking-wider mb-1.5" style="color: {{ $szColor }}">{{ $label }}</label>
-                                    <input type="number" name="{{ $key }}" min="0" placeholder="0"
-                                           value="{{ $eggStockThresholds[$sz] ?? 0 }}"
-                                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                                </div>
-                                @endforeach
-                            </div>
-                        </div>
-
-                        <div>
-                            <h4 class="text-xs font-medium tracking-[0.05em] uppercase mb-3" style="color: #615d59;">Freshness Thresholds</h4>
-                            <p class="text-xs text-[#6B7280] mb-4">Day boundaries for freshness status (Fresh → Aging → Old).</p>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-xs tracking-wider text-[#1f6b3a] mb-1.5">Fresh (≤ days)</label>
-                                    <input type="number" name="egg_freshness_fresh_days" min="1" placeholder="7"
-                                           value="{{ $freshnessThresholds['fresh_days'] }}"
-                                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                                </div>
-                                <div>
-                                    <label class="block text-xs tracking-wider text-[#8a5a00] mb-1.5">Aging (≤ days)</label>
-                                    <input type="number" name="egg_freshness_aging_days" min="1" placeholder="14"
-                                           value="{{ $freshnessThresholds['aging_days'] }}"
-                                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mt-5 pt-4 border-t flex" style="border-color: #e6e6e6;">
-                        <x-button type="submit" class="px-5 py-2.5">
-                            Save Configuration
-                        </x-button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </details>
-
     {{-- ── Stock Table ── --}}
-    <turbo-frame id="eggs-stocks-live-data" src="{{ route('eggs.stocks.live-data') }}" loading="lazy" target="_top">
+    <turbo-frame id="eggs-stocks-live-data" src="{{ route('eggs.stocks.live-data') }}" loading="lazy" target="_top" class="block">
         @include('eggs.stocks._live-data-skeleton')
     </turbo-frame>
-
-</div>
 
 {{-- Add Stock Modal --}}
 <div id="addStockModal" style="display: none;" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
@@ -334,21 +236,131 @@
             </div>
         </form>
     </div>
+
+{{-- Egg Weights Modal --}}
+<div id="eggWeightsModal" style="display: none;" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEggWeightsModal()"></div>
+    <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+        <div class="flex items-center justify-between mb-5">
+            <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Egg Weights</h2>
+            <button onclick="closeEggWeightsModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+            </button>
+        </div>
+
+        <p class="text-xs text-[#6B7280] mb-4">Average weights used to estimate egg mass for Feed Conversion Ratio calculations.</p>
+
+        <form action="{{ route('eggs.stocks.egg-weights') }}" method="POST">
+            @csrf
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">SMALL (g)</label>
+                    <input type="number" name="egg_weight_small" step="0.1" min="1" max="500"
+                           value="{{ $eggWeights['small'] }}"
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                </div>
+                <div>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">MEDIUM (g)</label>
+                    <input type="number" name="egg_weight_medium" step="0.1" min="1" max="500"
+                           value="{{ $eggWeights['medium'] }}"
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                </div>
+                <div>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">LARGE (g)</label>
+                    <input type="number" name="egg_weight_large" step="0.1" min="1" max="500"
+                           value="{{ $eggWeights['large'] }}"
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                </div>
+                <div>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">JUMBO (g)</label>
+                    <input type="number" name="egg_weight_jumbo" step="0.1" min="1" max="500"
+                           value="{{ $eggWeights['jumbo'] }}"
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                </div>
+                <div>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">FALLBACK (g)</label>
+                    <input type="number" name="egg_weight_fallback" step="0.1" min="1" max="500"
+                           value="{{ $eggWeights['fallback'] }}"
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                </div>
+            </div>
+
+            @if($errors->any())
+            <div class="mt-4 text-xs text-red-500 leading-relaxed">{{ implode('<br>', $errors->all()) }}</div>
+            @endif
+
+            <div class="flex gap-3 mt-5">
+                <button type="button" onclick="closeEggWeightsModal()"
+                        class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">Cancel</button>
+                <x-button type="submit" class="flex-1 py-2.5">
+                    Save Weights
+                </x-button>
+            </div>
+        </form>
+    </div>
 </div>
 
-@if(isset($editBatch) && $editBatch)
-<x-modal-reopen modal-id="editStockModal" session-key="reopen_edit_stock" guard="editStock">
-    openEditStock(
-        {{ $editBatch->id }},
-        '{{ $editBatch->egg_size }}',
-        {{ $editBatch->count }},
-        '{{ $editBatch->harvested_date->format('Y-m-d') }}'
-    );
-</x-modal-reopen>
-@endif
-@endsection
+{{-- Thresholds Modal --}}
+<div id="thresholdsModal" style="display: none;" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeThresholdsModal()"></div>
+    <div class="relative w-full max-w-lg rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+        <div class="flex items-center justify-between mb-5">
+            <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Thresholds</h2>
+            <button onclick="closeThresholdsModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+            </button>
+        </div>
 
-@push('scripts')
+        <form action="{{ route('eggs.stocks.thresholds') }}" method="POST">
+            @csrf
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="text-xs font-medium tracking-[0.05em] uppercase mb-3" style="color: #615d59;">Low-Stock Thresholds</h3>
+                    <p class="text-xs text-[#6B7280] mb-4">Minimum available pool per size before alert triggers. Set to 0 to disable.</p>
+                    <div class="grid grid-cols-2 gap-4">
+                        @foreach(['small' => '#2D7D46', 'medium' => '#1D4E8F', 'large' => '#C2703E', 'jumbo' => '#6B4C8A', 'unsorted' => '#6B7280'] as $sz => $szColor)
+                        @php $key = "egg_low_stock_threshold_{$sz}"; $label = $sz === 'unsorted' ? 'Unsorted' : ucfirst($sz); @endphp
+                        <div>
+                            <label class="block text-xs tracking-wider mb-1.5" style="color: {{ $szColor }}">{{ $label }}</label>
+                            <input type="number" name="{{ $key }}" min="0" placeholder="0"
+                                   value="{{ $eggStockThresholds[$sz] ?? 0 }}"
+                                   class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-xs font-medium tracking-[0.05em] uppercase mb-3" style="color: #615d59;">Freshness Thresholds</h3>
+                    <p class="text-xs text-[#6B7280] mb-4">Day boundaries for freshness status (Fresh → Aging → Old).</p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs tracking-wider text-[#1f6b3a] mb-1.5">Fresh (≤ days)</label>
+                            <input type="number" name="egg_freshness_fresh_days" min="1" placeholder="7"
+                                   value="{{ $freshnessThresholds['fresh_days'] }}"
+                                   class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                        </div>
+                        <div>
+                            <label class="block text-xs tracking-wider text-[#8a5a00] mb-1.5">Aging (≤ days)</label>
+                            <input type="number" name="egg_freshness_aging_days" min="1" placeholder="14"
+                                   value="{{ $freshnessThresholds['aging_days'] }}"
+                                   class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-5">
+                <button type="button" onclick="closeThresholdsModal()"
+                        class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">Cancel</button>
+                <x-button type="submit" class="flex-1 py-2.5">
+                    Save Configuration
+                </x-button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 @php
     $cageLogsJson = $productionLogs->map(function($logs) {
@@ -380,9 +392,27 @@ function closeEditStockModal() {
     document.getElementById('editStockModal').style.display = 'none';
 }
 
+function openEggWeightsModal() {
+    document.getElementById('eggWeightsModal').style.display = 'flex';
+    lucide.createIcons();
+}
+
+function closeEggWeightsModal() {
+    document.getElementById('eggWeightsModal').style.display = 'none';
+}
+
+function openThresholdsModal() {
+    document.getElementById('thresholdsModal').style.display = 'flex';
+    lucide.createIcons();
+}
+
+function closeThresholdsModal() {
+    document.getElementById('thresholdsModal').style.display = 'none';
+}
+
 function updateLogSelect(cageId) {
     var select = document.getElementById('stockLogSelect');
-    select.innerHTML = '<option value="">Select log…</option>';
+    select.innerHTML = '<option value="">Select log\u2026</option>';
     if (!cageId || !cageLogs[cageId]) return;
     cageLogs[cageId].forEach(function(log) {
         var opt = document.createElement('option');
@@ -392,250 +422,263 @@ function updateLogSelect(cageId) {
     });
 }
 
-document.addEventListener('turbo:load', function() {
-    var cageSelect = document.getElementById('stockCageSelect');
-    if (cageSelect) {
-        cageSelect.addEventListener('change', function() {
-            updateLogSelect(this.value);
-        });
-    }
-
-    var sizeSelect = document.getElementById('addStockEggSize');
-    var poolHint = document.getElementById('addStockPoolHint');
-    var addBtn = document.getElementById('addStockBtn');
-    var countInput = document.getElementById('addStockCount');
-    var cageSelect = document.getElementById('stockCageSelect');
-    var classifySection = document.getElementById('classifySection');
-    var classifyInputs = document.querySelectorAll('.classify-input');
-    var classifySumHint = document.getElementById('classifySumHint');
-    var classifyRemainingCount = document.getElementById('classifyRemainingCount');
-
-    // Absolute "/eggs/stocks" breaks under a subfolder deployment (e.g.
-    // XAMPP's /LayRate/public) — build every fetch from this base instead.
-    var eggsStocksBase = '{{ url('eggs/stocks') }}';
-
-    function fetchPoolForCage(cageId, callback) {
-        var url = eggsStocksBase + '/pool-data?cage_id=' + (cageId || 0);
-        fetch(url)
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                if (data.pools) callback(data.pools);
-            })
-            .catch(function() { console.warn('fetchPoolForCage failed'); });
-    }
-
-    function updateOptionsFromPools(pools) {
-        if (!sizeSelect) return;
-        for (var i = 0; i < sizeSelect.options.length; i++) {
-            var opt = sizeSelect.options[i];
-            if (!opt.value) continue;
-            var avail = pools[opt.value] || 0;
-            opt.setAttribute('data-available', avail);
-            opt.textContent = (opt.value === 'unsorted' ? 'Unsorted' : ucfirst(opt.value)) + ' (' + numberFormat(avail) + ' avail.)';
+if (!window.__eggStocksBound) {
+    window.__eggStocksBound = true;
+    document.addEventListener('turbo:load', function() {
+        var cageSelect = document.getElementById('stockCageSelect');
+        if (cageSelect) {
+            cageSelect.addEventListener('change', function() {
+                updateLogSelect(this.value);
+            });
         }
-        updateAddStockHint();
-    }
 
-    function ucfirst(str) {
-        return str.charAt(0).toUpperCase() + str.slice(1);
-    }
+        var sizeSelect = document.getElementById('addStockEggSize');
+        var poolHint = document.getElementById('addStockPoolHint');
+        var addBtn = document.getElementById('addStockBtn');
+        var countInput = document.getElementById('addStockCount');
+        var cageSelect = document.getElementById('stockCageSelect');
+        var classifySection = document.getElementById('classifySection');
+        var classifyInputs = document.querySelectorAll('.classify-input');
+        var classifySumHint = document.getElementById('classifySumHint');
+        var classifyRemainingCount = document.getElementById('classifyRemainingCount');
 
-    function numberFormat(n) {
-        return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    }
+        var eggsStocksBase = '{{ url('eggs/stocks') }}';
 
-    function updateAddStockHint() {
-        if (!sizeSelect || !poolHint) return;
-        var opt = sizeSelect.options[sizeSelect.selectedIndex];
-        if (!opt || !opt.value) {
-            poolHint.textContent = 'Select a size to see available pool.';
-            if (addBtn) addBtn.disabled = true;
-            if (countInput) countInput.disabled = true;
-            if (classifySection) classifySection.classList.add('hidden');
-            return;
+        function fetchPoolForCage(cageId, callback) {
+            var url = eggsStocksBase + '/pool-data?cage_id=' + (cageId || 0);
+            fetch(url)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.pools) callback(data.pools);
+                })
+                .catch(function() { console.warn('fetchPoolForCage failed'); });
         }
-        if (addBtn) addBtn.disabled = false;
-        var avail = parseInt(opt.getAttribute('data-available') || '0');
-        if (avail < 1) {
-            poolHint.textContent = 'No eggs available for this size yet — stock will be validated against production records.';
-        } else {
-            poolHint.textContent = avail + ' egg(s) available to stock for this size.';
-        }
-        if (countInput) countInput.disabled = false;
 
-        if (classifySection) {
-            if (opt.value === 'unsorted') {
-                classifySection.classList.remove('hidden');
+        function updateOptionsFromPools(pools) {
+            if (!sizeSelect) return;
+            for (var i = 0; i < sizeSelect.options.length; i++) {
+                var opt = sizeSelect.options[i];
+                if (!opt.value) continue;
+                var avail = pools[opt.value] || 0;
+                opt.setAttribute('data-available', avail);
+                opt.textContent = (opt.value === 'unsorted' ? 'Unsorted' : ucfirst(opt.value)) + ' (' + numberFormat(avail) + ' avail.)';
+            }
+            updateAddStockHint();
+        }
+
+        function ucfirst(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+
+        function numberFormat(n) {
+            return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+
+        function updateAddStockHint() {
+            if (!sizeSelect || !poolHint) return;
+            var opt = sizeSelect.options[sizeSelect.selectedIndex];
+            if (!opt || !opt.value) {
+                poolHint.textContent = 'Select a size to see available pool.';
+                if (addBtn) addBtn.disabled = true;
+                if (countInput) countInput.disabled = true;
+                if (classifySection) classifySection.classList.add('hidden');
+                return;
+            }
+            if (addBtn) addBtn.disabled = false;
+            var avail = parseInt(opt.getAttribute('data-available') || '0');
+            if (avail < 1) {
+                poolHint.textContent = 'No eggs available for this size yet \u2014 stock will be validated against production records.';
             } else {
-                classifySection.classList.add('hidden');
+                poolHint.textContent = avail + ' egg(s) available to stock for this size.';
+            }
+            if (countInput) countInput.disabled = false;
+
+            if (classifySection) {
+                if (opt.value === 'unsorted') {
+                    classifySection.classList.remove('hidden');
+                } else {
+                    classifySection.classList.add('hidden');
+                }
+            }
+
+            checkCountExceedsPool();
+        }
+
+        function checkCountExceedsPool() {
+            var warningEl = document.getElementById('addStockExceedsWarning');
+            if (!warningEl || !sizeSelect || !countInput || !addBtn) return;
+            var opt = sizeSelect.options[sizeSelect.selectedIndex];
+            var avail = opt && opt.value ? parseInt(opt.getAttribute('data-available') || '0') : 0;
+            var entered = parseInt(countInput.value) || 0;
+
+            if (opt && opt.value && entered > avail && avail >= 0) {
+                warningEl.textContent = 'Only ' + avail + ' egg(s) available \u2014 stocking ' + entered + ' may exceed pool.';
+                warningEl.classList.remove('hidden');
+            } else {
+                warningEl.classList.add('hidden');
             }
         }
 
-        checkCountExceedsPool();
-    }
+        function updateClassifyStatus() {
+            var count = parseInt(countInput ? countInput.value : 0) || 0;
+            var sum = 0;
+            classifyInputs.forEach(function(inp) { sum += parseInt(inp.value || 0); });
+            var remaining = count - sum;
 
-    function checkCountExceedsPool() {
-        var warningEl = document.getElementById('addStockExceedsWarning');
-        if (!warningEl || !sizeSelect || !countInput || !addBtn) return;
-        var opt = sizeSelect.options[sizeSelect.selectedIndex];
-        var avail = opt && opt.value ? parseInt(opt.getAttribute('data-available') || '0') : 0;
-        var entered = parseInt(countInput.value) || 0;
+            if (classifyRemainingCount) {
+                classifyRemainingCount.textContent = Math.max(0, remaining);
+            }
 
-        if (opt && opt.value && entered > avail && avail >= 0) {
-            warningEl.textContent = 'Only ' + avail + ' egg(s) available — stocking ' + entered + ' may exceed pool.';
-            warningEl.classList.remove('hidden');
-        } else {
-            warningEl.classList.add('hidden');
-        }
-    }
+            var remainingEl = document.getElementById('classifyRemaining');
+            if (!remainingEl) return;
 
-    function updateClassifyStatus() {
-        var count = parseInt(countInput ? countInput.value : 0) || 0;
-        var sum = 0;
-        classifyInputs.forEach(function(inp) { sum += parseInt(inp.value || 0); });
-        var remaining = count - sum;
-
-        if (classifyRemainingCount) {
-            classifyRemainingCount.textContent = Math.max(0, remaining);
-        }
-
-        var remainingEl = document.getElementById('classifyRemaining');
-        if (!remainingEl) return;
-
-        if (sum > 0 || count > 0) {
-            remainingEl.style.display = 'flex';
-            if (remaining === 0 && sum > 0) {
-                remainingEl.style.color = '#2D7D46';
-                remainingEl.innerHTML = '<span>\u2713 All ' + sum + ' eggs classified.</span>';
-                if (classifySumHint) { classifySumHint.classList.add('hidden'); }
-            } else if (remaining < 0) {
-                remainingEl.style.color = '#DC2626';
-                remainingEl.innerHTML = '<span>Over-allocated by ' + Math.abs(remaining) + ' egg(s).</span>';
-                if (classifySumHint) {
-                    classifySumHint.classList.remove('hidden');
-                    classifySumHint.textContent = 'Reduce classification amounts to match egg count (' + count + '), or leave blank to stock as Unsorted.';
-                    classifySumHint.style.color = '#DC2626';
-                }
-            } else {
-                remainingEl.style.color = '#6B7280';
-                remainingEl.innerHTML = '<span>Remaining to classify: <strong>' + remaining + '</strong></span>';
-                if (classifySumHint) {
-                    if (sum > 0) {
+            if (sum > 0 || count > 0) {
+                remainingEl.style.display = 'flex';
+                if (remaining === 0 && sum > 0) {
+                    remainingEl.style.color = '#2D7D46';
+                    remainingEl.innerHTML = '<span>\u2713 All ' + sum + ' eggs classified.</span>';
+                    if (classifySumHint) { classifySumHint.classList.add('hidden'); }
+                } else if (remaining < 0) {
+                    remainingEl.style.color = '#DC2626';
+                    remainingEl.innerHTML = '<span>Over-allocated by ' + Math.abs(remaining) + ' egg(s).</span>';
+                    if (classifySumHint) {
                         classifySumHint.classList.remove('hidden');
-                        classifySumHint.textContent = 'Classification sum (' + sum + ') is less than egg count (' + count + ').';
-                        classifySumHint.style.color = '#C2703E';
-                    } else {
-                        classifySumHint.classList.add('hidden');
+                        classifySumHint.textContent = 'Reduce classification amounts to match egg count (' + count + '), or leave blank to stock as Unsorted.';
+                        classifySumHint.style.color = '#DC2626';
                     }
-                }
-            }
-        } else {
-            remainingEl.style.display = 'none';
-            if (classifySumHint) classifySumHint.classList.add('hidden');
-        }
-    }
-
-    if (cageSelect) {
-        cageSelect.addEventListener('change', function() {
-            var cageId = this.value || null;
-            fetchPoolForCage(cageId, function(pools) {
-                updateOptionsFromPools(pools);
-            });
-        });
-    }
-
-    if (sizeSelect) {
-        sizeSelect.addEventListener('change', updateAddStockHint);
-        updateAddStockHint();
-    }
-
-    if (countInput) {
-        countInput.addEventListener('input', updateClassifyStatus);
-        countInput.addEventListener('input', checkCountExceedsPool);
-    }
-    classifyInputs.forEach(function(inp) {
-        inp.addEventListener('input', updateClassifyStatus);
-    });
-
-    var form = document.getElementById('addStockForm');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            // This form submits via a bespoke fetch() call rather than a
-            // native POST, so the declarative data-confirm/console-log
-            // auto-wiring (which listen for real form submissions) can't see
-            // it \u2014 gate manually through the same confirmModal() used
-            // elsewhere, matching the deleteBatch() pattern in feed.blade.php.
-            confirmModal('Add this stock batch?', { submit: performAddStock }, 'Add Batch');
-        });
-    }
-
-    function performAddStock() {
-            var btn = document.getElementById('addStockBtn');
-            var originalLabel = btn.textContent;
-            loadingButton(btn, 'Adding\u2026');
-
-            var csrf = document.querySelector('meta[name="csrf-token"]').content;
-            var formData = new FormData(form);
-            var body = {};
-            formData.forEach(function(val, key) { body[key] = val; });
-
-            if (body['cage_id'] === '') {
-                delete body['cage_id'];
-            }
-
-            var eggSize = document.getElementById('addStockEggSize').value;
-            var classifySum = 0;
-            document.querySelectorAll('.classify-input').forEach(function(inp) {
-                classifySum += parseInt(inp.value || 0);
-            });
-            if (eggSize === 'unsorted' && classifySum > 0) {
-                body['classify'] = '1';
-            }
-
-            console.log('[Transaction] POST /eggs/stocks', body);
-
-            fetch(eggsStocksBase, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrf,
-                },
-                body: JSON.stringify(body),
-            })
-            .then(function(r) { return r.json().then(function(d) { return { status: r.status, body: d }; }); })
-            .then(function(res) {
-                if (res.body.success) {
-                    closeAddStockModal();
-                    form.reset();
-                    Turbo.visit(window.location.href, { action: 'replace' });
-                    return;
-                }
-                btn.disabled = false;
-                btn.textContent = originalLabel;
-                var errEl = document.getElementById('addStockErrors');
-                if (errEl && res.body.errors) {
-                    var msgs = [];
-                    for (var key in res.body.errors) {
-                        if (res.body.errors.hasOwnProperty(key)) {
-                            res.body.errors[key].forEach(function(m) { msgs.push(m); });
+                } else {
+                    remainingEl.style.color = '#6B7280';
+                    remainingEl.innerHTML = '<span>Remaining to classify: <strong>' + remaining + '</strong></span>';
+                    if (classifySumHint) {
+                        if (sum > 0) {
+                            classifySumHint.classList.remove('hidden');
+                            classifySumHint.textContent = 'Classification sum (' + sum + ') is less than egg count (' + count + ').';
+                            classifySumHint.style.color = '#C2703E';
+                        } else {
+                            classifySumHint.classList.add('hidden');
                         }
                     }
-                    errEl.innerHTML = '<strong class="block mb-1">Could not save:</strong>' + msgs.join('<br>');
-                    errEl.classList.remove('hidden');
                 }
-            })
-            .catch(function() {
-                btn.disabled = false;
-                btn.textContent = originalLabel;
-            });
-    }
-});
+            } else {
+                remainingEl.style.display = 'none';
+                if (classifySumHint) classifySumHint.classList.add('hidden');
+            }
+        }
 
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeEditStockModal();
-    }
-});
+        if (cageSelect) {
+            cageSelect.addEventListener('change', function() {
+                var cageId = this.value || null;
+                fetchPoolForCage(cageId, function(pools) {
+                    updateOptionsFromPools(pools);
+                });
+            });
+        }
+
+        if (sizeSelect) {
+            sizeSelect.addEventListener('change', updateAddStockHint);
+            updateAddStockHint();
+        }
+
+        if (countInput) {
+            countInput.addEventListener('input', updateClassifyStatus);
+            countInput.addEventListener('input', checkCountExceedsPool);
+        }
+        classifyInputs.forEach(function(inp) {
+            inp.addEventListener('input', updateClassifyStatus);
+        });
+
+        var form = document.getElementById('addStockForm');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                confirmModal('Add this stock batch?', { submit: performAddStock }, 'Add Batch');
+            });
+        }
+
+        function performAddStock() {
+                var btn = document.getElementById('addStockBtn');
+                var originalLabel = btn.textContent;
+                loadingButton(btn, 'Adding\u2026');
+
+                var csrf = document.querySelector('meta[name="csrf-token"]').content;
+                var formData = new FormData(form);
+                var body = {};
+                formData.forEach(function(val, key) { body[key] = val; });
+
+                if (body['cage_id'] === '') {
+                    delete body['cage_id'];
+                }
+
+                var eggSize = document.getElementById('addStockEggSize').value;
+                var classifySum = 0;
+                document.querySelectorAll('.classify-input').forEach(function(inp) {
+                    classifySum += parseInt(inp.value || 0);
+                });
+                if (eggSize === 'unsorted' && classifySum > 0) {
+                    body['classify'] = '1';
+                }
+
+                console.log('[Transaction] POST /eggs/stocks', body);
+
+                fetch(eggsStocksBase, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrf,
+                    },
+                    body: JSON.stringify(body),
+                })
+                .then(function(r) { return r.json().then(function(d) { return { status: r.status, body: d }; }); })
+                .then(function(res) {
+                    if (res.body.success) {
+                        closeAddStockModal();
+                        form.reset();
+                        return;
+                    }
+                    btn.disabled = false;
+                    btn.textContent = originalLabel;
+                    var errEl = document.getElementById('addStockErrors');
+                    if (errEl && res.body.errors) {
+                        var msgs = [];
+                        for (var key in res.body.errors) {
+                            if (res.body.errors.hasOwnProperty(key)) {
+                                res.body.errors[key].forEach(function(m) { msgs.push(m); });
+                            }
+                        }
+                        errEl.innerHTML = '<strong class="block mb-1">Could not save:</strong>' + msgs.join('<br>');
+                        errEl.classList.remove('hidden');
+                    }
+                })
+                .catch(function() {
+                    btn.disabled = false;
+                    btn.textContent = originalLabel;
+                });
+        }
+    });
+}
+
+if (!window.__eggStocksEscapeBound) {
+    window.__eggStocksEscapeBound = true;
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeEditStockModal();
+            closeEggWeightsModal();
+            closeThresholdsModal();
+        }
+    });
+}
 </script>
-@endpush
+</turbo-frame>
+</div>
+@if(isset($editBatch) && $editBatch)
+<x-modal-reopen modal-id="editStockModal" session-key="reopen_edit_stock" guard="editStock">
+    openEditStock(
+        {{ $editBatch->id }},
+        '{{ $editBatch->egg_size }}',
+        {{ $editBatch->count }},
+        '{{ $editBatch->harvested_date->format('Y-m-d') }}'
+    );
+</x-modal-reopen>
+@endif
+@endsection
+

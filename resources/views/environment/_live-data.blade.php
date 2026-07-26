@@ -27,48 +27,6 @@
         </div>
     </div>
 
-    {{-- ── Alert Threshold Configuration ── --}}
-    <x-card>
-        <h3 class="text-xs font-semibold tracking-[0.05em] uppercase mb-4" style="color: #615d59;">Alert Threshold Configuration</h3>
-        <form action="{{ route('environment.thresholds') }}" method="POST">
-            @csrf
-            <div class="flex flex-wrap items-end gap-4">
-                <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TEMP MIN (°C)</label>
-                    <input type="number" name="temp_min" step="0.5"
-                           value="{{ $thresholds['temp_min'] }}"
-                           class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                </div>
-                <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TEMP MAX (°C)</label>
-                    <input type="number" name="temp_max" step="0.5"
-                           value="{{ $thresholds['temp_max'] }}"
-                           class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                </div>
-                <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">HUMIDITY MIN (%)</label>
-                    <input type="number" name="hum_min" step="1"
-                           value="{{ $thresholds['hum_min'] }}"
-                           class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                </div>
-                <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">HUMIDITY MAX (%)</label>
-                    <input type="number" name="hum_max" step="1"
-                           value="{{ $thresholds['hum_max'] }}"
-                           class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                </div>
-                <x-button type="submit">
-                    Save Thresholds
-                </x-button>
-            </div>
-            @if($errors->any())
-            <div class="mt-3 text-xs text-red-500">{{ $errors->first() }}</div>
-            @endif
-        </form>
-    </x-card>
-
-
-
     {{-- ── Per-cage Sensor Cards ── --}}
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mt-5 mb-8">
         @foreach($latestPerCage as $r)
@@ -203,8 +161,8 @@
             if (humEmpty) humEmpty.classList.toggle('hidden', hasAnyData);
             if (!hasAnyData) return;
 
-            LayRateChart.create('envTempChart', { type:'line', data:{ labels, datasets: buildDatasets('avg_temp') }, options: chartOpts });
-            LayRateChart.create('envHumChart', { type:'line', data:{ labels, datasets: buildDatasets('avg_hum')  }, options: chartOpts });
+            LayRateChart.update('envTempChart', { type:'line', data:{ labels, datasets: buildDatasets('avg_temp') }, options: chartOpts });
+            LayRateChart.update('envHumChart', { type:'line', data:{ labels, datasets: buildDatasets('avg_hum')  }, options: chartOpts });
         }
 
         if (!window.__envChartsLifecycleBound) {
@@ -218,5 +176,6 @@
             initEnvCharts();
         }
     })();
+
     </script>
 </turbo-frame>

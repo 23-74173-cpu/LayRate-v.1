@@ -60,11 +60,15 @@
     {{-- ── Period Selector ── --}}
     <div class="flex items-center gap-0 border-b overflow-x-auto scrollbar-thin" style="border-color: #e6e6e6;">
         @foreach(['week'=>'Week','month'=>'Month','3months'=>'3 Months'] as $key => $label)
-        @php $isP = $period === $key; @endphp
+        @php
+            $isP = $period === $key;
+            $icon = match($key) { 'week' => 'calendar-days', 'month' => 'calendar', '3months' => 'calendar-range', default => 'calendar' };
+        @endphp
         <a href="{{ route('analytics', ['cage'=>$cageCode,'period'=>$key]) }}"
            data-period-tab="{{ $key }}"
            class="period-tab px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0"
            style="border-bottom-color: {{ $isP ? '#002D5E' : 'transparent' }}; color: {{ $isP ? '#1f1f1f' : '#6B7280' }};">
+            <i data-lucide="{{ $icon }}" class="w-3.5 h-3.5 inline-block mr-1.5"></i>
             {{ $label }}
         </a>
         @endforeach
@@ -233,14 +237,15 @@ function analyticsFetch(fetchUrl, url, afterUpdate) {
 }
 
 // ── Period tab switcher (AJAX) ──
+var __analyticsPeriod = (new URLSearchParams(window.location.search)).get('period') || 'week';
 document.addEventListener('click', function(e) {
     var tab = e.target.closest('[data-period-tab]');
     if (!tab) return;
     if (!document.getElementById('hdepChart')) return;
-    if (tab.style.borderBottomColor === 'rgb(0, 45, 94)') return;
     e.preventDefault();
-
     var period = tab.dataset.periodTab;
+    if (period === __analyticsPeriod) return;
+    __analyticsPeriod = period;
     var params = new URLSearchParams(window.location.search);
     var cage = params.get('cage') || 'all';
     // Build URL dynamically — tab href is stale after AJAX cage switches
@@ -257,17 +262,24 @@ document.addEventListener('click', function(e) {
         var dayCount = period === 'week' ? '7' : (period === 'month' ? '30' : '90');
         var titleEl = document.getElementById('chart-title-period');
         if (titleEl) titleEl.textContent = dayCount;
-
-        // Update Turbo frame src so future frame reloads fetch correct scope
-        var frame = document.querySelector('turbo-frame#analytics-charts');
-        if (frame) {
-            var baseSrc = frame.getAttribute('src') || '';
-            var srcUrl = new URL(baseSrc, window.location.origin);
-            srcUrl.searchParams.set('cage', cage);
-            srcUrl.searchParams.set('period', period);
-            frame.setAttribute('src', srcUrl.pathname + srcUrl.search);
-        }
     });
+});
+
+// ── Reconcile frame src with URL on page restore (back/forward navigation) ──
+document.addEventListener('turbo:load', function() {
+    var frame = document.querySelector('turbo-frame#analytics-charts');
+    if (!frame) return;
+    var frameSrc = frame.getAttribute('src');
+    if (!frameSrc) return;
+    var params = new URLSearchParams(window.location.search);
+    var urlCage = params.get('cage') || 'all';
+    var urlPeriod = params.get('period') || 'week';
+    var frameUrl = new URL(frameSrc, window.location.origin);
+    if (frameUrl.searchParams.get('cage') !== urlCage || frameUrl.searchParams.get('period') !== urlPeriod) {
+        frameUrl.searchParams.set('cage', urlCage);
+        frameUrl.searchParams.set('period', urlPeriod);
+        frame.setAttribute('src', frameUrl.pathname + frameUrl.search);
+    }
 });
 
 // ── Cage scope tab switcher (AJAX) ──
@@ -275,10 +287,10 @@ document.addEventListener('click', function(e) {
     var tab = e.target.closest('[data-cage-tab]');
     if (!tab) return;
     if (!document.getElementById('hdepChart')) return;
+    e.preventDefault();
     var params = new URLSearchParams(window.location.search);
     var currentCage = params.get('cage') || 'all';
     if (tab.dataset.cageTab === currentCage) return;
-    e.preventDefault();
 
     var cage = tab.dataset.cageTab;
     var period = params.get('period') || 'week';
@@ -311,18 +323,6 @@ document.addEventListener('click', function(e) {
         if (eggsTitle) eggsTitle.textContent = label;
         var feedTitle = document.getElementById('chart-title-label-feed');
         if (feedTitle) feedTitle.textContent = label;
-
-        // Update Turbo frame src so future frame reloads fetch correct scope
-        var frame = document.querySelector('turbo-frame#analytics-charts');
-        if (frame) {
-            var baseSrc = frame.getAttribute('src') || '';
-            var srcUrl = new URL(baseSrc, window.location.origin);
-            // Only update src params if this was a cage switch (not a period switch handled by period tab)
-            var newPeriod = data.period || 'week';
-            srcUrl.searchParams.set('cage', cage);
-            srcUrl.searchParams.set('period', newPeriod);
-            frame.setAttribute('src', srcUrl.pathname + srcUrl.search);
-        }
     });
 });
 </script>

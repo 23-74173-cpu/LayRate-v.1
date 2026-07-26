@@ -176,6 +176,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/account/pin',      [AccountController::class, 'updatePin'])->name('account.pin');
 
     Route::get('/reports',     [ReportController::class, 'index'])->name('reports');
+    Route::get('/reports/data', [ReportController::class, 'data'])->name('reports.data');
     Route::get('/reports/csv', [ReportController::class, 'exportCsv'])->name('reports.csv');
 
     Route::get('/notifications',                    [AlertController::class, 'index'])->name('notifications.index');

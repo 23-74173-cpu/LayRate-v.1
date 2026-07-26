@@ -4,12 +4,16 @@
 @section('content')
 <div class="space-y-5">
 
-    <x-page-header title="Environment" subtitle="Monitor coop temperature, humidity, and alert thresholds" />
+    <x-page-header title="Environment" subtitle="Monitor coop temperature, humidity, and alert thresholds">
+        <x-button variant="secondary" onclick="openEnvThresholdsModal()">
+            <i data-lucide="sliders" class="w-4 h-4"></i> Configure Thresholds
+        </x-button>
+    </x-page-header>
 
     {{-- Page-level tabs: Live Data / Log History --}}
     <x-underline-tabs :tabs="[
-        'live' => ['label' => 'Live Data', 'onclick' => 'switchEnvTab(\'live\')'],
-        'logs'  => ['label' => 'Log History', 'onclick' => 'switchEnvTab(\'logs\')'],
+        'live' => ['label' => 'Live Data',  'icon' => 'activity', 'onclick' => 'switchEnvTab(\'live\')'],
+        'logs'  => ['label' => 'Log History', 'icon' => 'clock',   'onclick' => 'switchEnvTab(\'logs\')'],
     ]" active="{{ $envTab ?? 'live' }}" />
 
     {{-- ── LIVE DATA TAB ── --}}
@@ -30,21 +34,115 @@
     </div>
 
 </div>
+
+{{-- ── Alert Threshold Configuration Modal (outside tab panels so always in DOM) ── --}}
+<div id="envThresholdsModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEnvThresholdsModal()"></div>
+    <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+        <div class="flex items-center justify-between mb-5">
+            <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Alert Thresholds</h2>
+            <button onclick="closeEnvThresholdsModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+            </button>
+        </div>
+
+        <form action="{{ route('environment.thresholds') }}" method="POST" id="threshold-form">
+            @csrf
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TEMP MIN (°C)</label>
+                    <input type="number" name="temp_min" step="0.5"
+                           value="{{ $thresholds['temp_min'] }}"
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                </div>
+                <div>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TEMP MAX (°C)</label>
+                    <input type="number" name="temp_max" step="0.5"
+                           value="{{ $thresholds['temp_max'] }}"
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                </div>
+                <div>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">HUMIDITY MIN (%)</label>
+                    <input type="number" name="hum_min" step="1"
+                           value="{{ $thresholds['hum_min'] }}"
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                </div>
+                <div>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">HUMIDITY MAX (%)</label>
+                    <input type="number" name="hum_max" step="1"
+                           value="{{ $thresholds['hum_max'] }}"
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-5">
+                <button type="button" onclick="closeEnvThresholdsModal()"
+                        class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">Cancel</button>
+                <x-button type="submit" id="save-thresholds-btn" class="flex-1 py-2.5">
+                    Save Thresholds
+                </x-button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
 <script>
 function switchEnvTab(tab) {
+    if (window.__envActiveTab === tab) return;
+    window.__envActiveTab = tab;
+
     document.getElementById('panelLiveData').classList.toggle('hidden', tab !== 'live');
     document.getElementById('panelLogHistory').classList.toggle('hidden', tab !== 'logs');
     document.querySelectorAll('[onclick^="switchEnvTab"]').forEach(function(btn) {
         var key = btn.getAttribute('onclick').match(/'(\w+)'/)?.[1];
         var isActive = key === tab;
-        btn.className = 'pb-2 text-sm font-medium border-b-2 -mb-px transition-colors ' +
+        btn.className = 'pb-2 text-sm font-medium border-b-2 transition-colors ' +
             (isActive ? 'border-[#002D5E] text-[#002D5E]' : 'border-transparent text-[#6B7280] hover:text-[#333]');
     });
-    if (tab === 'live') startLivePolling();
-    else stopLivePolling();
+    if (tab === 'live') {
+        startLivePolling();
+        envRefreshNow();
+    } else {
+        stopLivePolling();
+    }
+}
+
+// ── Threshold Config Modal ──
+function openEnvThresholdsModal() {
+    var modal = document.getElementById('envThresholdsModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    stopLivePolling();
+}
+
+function closeEnvThresholdsModal() {
+    var modal = document.getElementById('envThresholdsModal');
+    if (!modal) return;
+    modal.style.display = 'none';
+    startLivePolling();
+}
+
+function envRefreshNow() {
+    var frame = document.getElementById('environment-live-data');
+    if (!frame) return;
+    var src = frame.getAttribute('src');
+    if (!src) return;
+    fetch(src)
+        .then(function(r) { return r.text(); })
+        .then(function(html) {
+            var parser = new DOMParser();
+            var doc = parser.parseFromString(html, 'text/html');
+            var newFrame = doc.querySelector('turbo-frame#environment-live-data');
+            if (!newFrame) return;
+            frame.innerHTML = newFrame.innerHTML;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            if (typeof initEnvCharts === 'function') initEnvCharts();
+        })
+        .catch(function() { /* silent — polling will retry */ });
 }
 
 var _livePollTimer = null;
@@ -85,5 +183,62 @@ document.addEventListener('turbo:load', function() {
     }
 });
 document.addEventListener('turbo:before-cache', stopLivePolling);
+
+// Escape key closes threshold modal
+if (!window.__envThresholdsEscapeBound) {
+    window.__envThresholdsEscapeBound = true;
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeEnvThresholdsModal();
+        }
+    });
+}
+
+// ── Threshold save handler (AJAX, on form directly since modal is outside Turbo Frame) ──
+(function() {
+    var form = document.getElementById('threshold-form');
+    if (!form) return;
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var btn = document.getElementById('save-thresholds-btn');
+        if (!btn) return;
+        var originalText = btn.textContent;
+        btn.textContent = 'Saving\u2026';
+        btn.disabled = true;
+
+        fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: { 'Accept': 'application/json' },
+        })
+        .then(function(r) {
+            if (r.ok || r.redirected) {
+                envRefreshNow();
+                if (typeof showNotification === 'function') {
+                    showNotification('Thresholds saved successfully.', 'success');
+                }
+            } else if (r.status === 422) {
+                return r.json().then(function(data) {
+                    var msg = Object.values(data.errors)[0]?.[0] || 'Validation failed.';
+                    if (typeof showNotification === 'function') {
+                        showNotification(msg, 'error');
+                    }
+                });
+            } else {
+                throw new Error('Server returned ' + r.status);
+            }
+        })
+        .catch(function(err) {
+            if (typeof showNotification === 'function') {
+                showNotification('Failed to save thresholds: ' + err.message, 'error');
+            }
+        })
+        .finally(function() {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        });
+    });
+})();
 </script>
 @endpush

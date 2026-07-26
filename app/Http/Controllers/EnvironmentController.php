@@ -101,6 +101,10 @@ class EnvironmentController extends Controller
             Setting::set($key, $value);
         }
 
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
+
         return redirect()->route('environment')
             ->with('success', 'Thresholds saved.');
     }

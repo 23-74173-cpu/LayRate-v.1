@@ -1,12 +1,14 @@
 @extends('layouts.app')
-@section('title', 'Egg Production History')
+@section('title', 'Egg Management')
 
 @section('content')
 <div class="space-y-5">
 
-    <x-page-header title="Egg Production History" subtitle="Full timeline of eggs logged since day 1" />
+    <x-page-header title="Egg Management" subtitle="Full timeline of eggs logged since day 1" />
 
     @include('eggs._tabs', ['activeTab' => 'history'])
+
+    <turbo-frame id="egg-content">
 
     {{-- Summary cards --}}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -41,6 +43,7 @@
             <span class="text-xs" style="color: #615d59;">Group by:</span>
             @foreach(['day' => 'Day', 'week' => 'Week', 'month' => 'Month'] as $value => $label)
             <a href="{{ route('egg-production-history', ['group_by' => $value]) }}"
+               data-turbo-frame="egg-content"
                class="text-xs px-3 py-1 rounded-full border transition-colors {{ $groupBy === $value ? 'font-semibold text-white' : '' }}"
                style="{{ $groupBy === $value ? 'background-color: #0075de; border-color: #0075de;' : 'background-color: #ffffff; border-color: #e6e6e6; color: #31302e;' }}">
                 {{ $label }}
@@ -120,5 +123,6 @@
         </x-card>
     </div>
 
+</turbo-frame>
 </div>
 @endsection

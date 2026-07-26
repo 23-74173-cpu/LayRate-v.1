@@ -169,7 +169,7 @@ class FeedController extends Controller
             'crude_protein' => 'required|numeric|min:0|max:100',
             'total_quantity_kg' => 'nullable|numeric|min:0',
             'unit_cost' => 'nullable|numeric|min:0',
-            'date_received' => 'required|date',
+            'date_received' => 'sometimes|required|date',
             'low_stock_threshold' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
         ];
@@ -180,6 +180,9 @@ class FeedController extends Controller
         $validator = Validator::make($request->all(), $this->batchRules());
 
         if ($validator->fails()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+            }
             return redirect()->back()
                 ->with('reopen_add_batch', true)
                 ->withErrors($validator)
@@ -188,6 +191,10 @@ class FeedController extends Controller
 
         $data = $validator->validated();
         $batch = FeedBatch::create($data);
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'batch_code' => $batch->batch_code]);
+        }
 
         return redirect()->back()
             ->with('success', "Feed batch {$batch->batch_code} added.");
@@ -198,6 +205,9 @@ class FeedController extends Controller
         $validator = Validator::make($request->all(), $this->batchRules());
 
         if ($validator->fails()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+            }
             return redirect()->back()
                 ->with('reopen_edit_batch', $feedBatch->id)
                 ->withErrors($validator)
@@ -206,6 +216,10 @@ class FeedController extends Controller
 
         $data = $validator->validated();
         $feedBatch->update($data);
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
 
         return redirect()->back()->with('success', 'Feed batch updated.');
     }
@@ -226,6 +240,9 @@ class FeedController extends Controller
         $validator = Validator::make($request->all(), $this->consumptionRules());
 
         if ($validator->fails()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+            }
             return redirect()->back()
                 ->with('reopen_add_consumption', true)
                 ->withErrors($validator)
@@ -241,6 +258,10 @@ class FeedController extends Controller
 
         $this->checkLowStock($data['feed_batch_id']);
 
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+
         return redirect()->back()
             ->with('success', "Feed consumption logged for Cage " . Cage::find($data['cage_id'])->cage_code . ".");
     }
@@ -248,12 +269,18 @@ class FeedController extends Controller
     public function updateConsumption(Request $request, FeedConsumptionLog $feedConsumptionLog)
     {
         if ($feedConsumptionLog->source !== 'direct') {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => ['source' => 'Distributed entries can only be edited via the whole-farm entry.']], 422);
+            }
             return redirect()->back()->with('error', 'Distributed entries can only be edited via the whole-farm entry.');
         }
 
         $validator = Validator::make($request->all(), $this->consumptionRules());
 
         if ($validator->fails()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+            }
             return redirect()->back()
                 ->with('reopen_edit_consumption', $feedConsumptionLog->id)
                 ->withErrors($validator)
@@ -268,6 +295,10 @@ class FeedController extends Controller
 
         $this->checkLowStock($data['feed_batch_id']);
 
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+
         return redirect()->back()
             ->with('success', "Feed consumption updated for Cage " . Cage::find($data['cage_id'])->cage_code . ".");
     }
@@ -275,10 +306,17 @@ class FeedController extends Controller
     public function destroyConsumption(FeedConsumptionLog $feedConsumptionLog)
     {
         if ($feedConsumptionLog->source !== 'direct') {
+            if (request()->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => ['source' => 'Distributed entries can only be removed by deleting the whole-farm entry.']], 422);
+            }
             return redirect()->back()->with('error', 'Distributed entries can only be removed by deleting the whole-farm entry.');
         }
 
         $feedConsumptionLog->delete();
+
+        if (request()->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
 
         return redirect()->back()->with('success', 'Consumption log deleted.');
     }
@@ -299,6 +337,9 @@ class FeedController extends Controller
         $validator = Validator::make($request->all(), $this->farmEntryRules());
 
         if ($validator->fails()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+            }
             return redirect()->back()
                 ->with('reopen_add_farm_entry', true)
                 ->withErrors($validator)
@@ -320,6 +361,10 @@ class FeedController extends Controller
         $this->distributeFarmFeedEntry($entry);
         $this->checkLowStock($entry->feed_batch_id);
 
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+
         return redirect()->back()
             ->with('success', "Whole-farm feeding logged ({$entry->total_kg} kg distributed across active cages).");
     }
@@ -329,6 +374,9 @@ class FeedController extends Controller
         $validator = Validator::make($request->all(), $this->farmEntryRules());
 
         if ($validator->fails()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+            }
             return redirect()->back()
                 ->with('reopen_edit_farm_entry', $farmFeedEntry->id)
                 ->withErrors($validator)
@@ -352,6 +400,10 @@ class FeedController extends Controller
         $this->distributeFarmFeedEntry($farmFeedEntry);
         $this->checkLowStock($farmFeedEntry->feed_batch_id);
 
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+
         return redirect()->back()
             ->with('success', 'Whole-farm feeding updated and redistributed.');
     }
@@ -359,6 +411,10 @@ class FeedController extends Controller
     public function destroyFarmFeedEntry(FarmFeedEntry $farmFeedEntry)
     {
         $farmFeedEntry->delete();
+
+        if (request()->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
 
         return redirect()->back()->with('success', 'Whole-farm feeding entry deleted.');
     }
@@ -433,10 +489,18 @@ class FeedController extends Controller
         if ($feedBatch->consumptionLogs()->exists()) {
             $count = $feedBatch->consumptionLogs()->count();
 
+            if (request()->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => ['batch' => "Cannot delete this batch — {$count} consumption log(s) reference it."]], 422);
+            }
+
             return redirect()->back()->with('error', "Cannot delete this batch — {$count} consumption log(s) reference it. Remove those records first.");
         }
 
         $feedBatch->delete();
+
+        if (request()->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
 
         return redirect()->back()->with('success', 'Feed batch deleted.');
     }

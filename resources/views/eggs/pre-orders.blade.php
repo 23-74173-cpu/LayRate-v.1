@@ -1,14 +1,17 @@
 @extends('layouts.app')
-@section('title', 'Pre-Orders')
+@section('title', 'Egg Management')
 
 @section('content')
 <div class="space-y-5">
 
-    <x-page-header title="Pre-Orders" subtitle="Customer orders and fulfillment tracking" />
+    <x-page-header title="Egg Management" subtitle="Customer orders and fulfillment tracking" />
 
     @include('eggs._tabs', ['activeTab' => 'preorders'])
 
+    <turbo-frame id="egg-content">
+
     {{-- ── Supply Summary ── --}}
+    <h2 class="sr-only">Pre-Orders Overview</h2>
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         @foreach($summary as $size => $data)
         @php
@@ -42,10 +45,10 @@
 
     {{-- ── Filters ── --}}
     <x-card padding="p-4">
-        <form method="GET" action="{{ route('eggs.preorders') }}" class="flex flex-wrap items-end gap-4">
+        <form id="preOrdersForm" onsubmit="return false" class="flex flex-wrap items-end gap-4">
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">STATUS</label>
-                    <select name="status"
+                    <select name="status" onchange="preOrdersFilter()"
                             class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                         <option value="all" {{ $filters['status'] === 'all' ? 'selected' : '' }}>All Statuses</option>
                         <option value="pending" {{ $filters['status'] === 'pending' ? 'selected' : '' }}>Pending</option>
@@ -55,7 +58,7 @@
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">EGG SIZE</label>
-                    <select name="egg_size"
+                    <select name="egg_size" onchange="preOrdersFilter()"
                             class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                         <option value="all" {{ $filters['egg_size'] === 'all' ? 'selected' : '' }}>All Sizes</option>
                         <option value="small" {{ $filters['egg_size'] === 'small' ? 'selected' : '' }}>Small</option>
@@ -66,32 +69,28 @@
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">FROM</label>
-                    <input type="date" name="from" value="{{ $filters['from'] }}"
+                    <input type="date" name="from" value="{{ $filters['from'] }}" onchange="preOrdersFilter()"
                            class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TO</label>
-                    <input type="date" name="to" value="{{ $filters['to'] }}"
+                    <input type="date" name="to" value="{{ $filters['to'] }}" onchange="preOrdersFilter()"
                            class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                 </div>
-                <x-button type="submit">
-                    Apply Filters
-                </x-button>
-                <x-button variant="secondary" :href="route('eggs.preorders')">
-                    Reset
-                </x-button>
+                <div class="flex items-center gap-4">
+                    <a href="{{ route('eggs.preorders') }}"
+                       class="px-4 py-2 text-xs font-medium rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">
+                        Reset
+                    </a>
+                    <x-button onclick="document.getElementById('addOrderModal').style.display = 'flex'">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Add Pre-Order
+                    </x-button>
+                </div>
             </form>
         </x-card>
 
-    {{-- ── Header ── --}}
-    <div class="flex items-center justify-between">
-        <x-button onclick="document.getElementById('addOrderModal').style.display = 'flex'">
-            <i data-lucide="plus" class="w-4 h-4"></i> Add Pre-Order
-        </x-button>
-    </div>
-
     {{-- ── Orders Table ── --}}
-    <turbo-frame id="eggs-preorders-table" src="{{ route('eggs.preorders.table', request()->query()) }}" loading="lazy" target="_top">
+    <turbo-frame id="eggs-preorders-table" src="{{ route('eggs.preorders.table', request()->query()) }}" loading="lazy">
         @include('eggs.pre-orders._table-skeleton')
     </turbo-frame>
 
@@ -249,21 +248,16 @@
             </div>
         </form>
     </div>
-</div>
 
-@if(isset($editOrder) && $editOrder)
-<x-modal-reopen modal-id="editStatusModal" session-key="reopen_edit_order" guard="editOrder">
-    openEditStatus(
-        {{ $editOrder->id }},
-        '{{ $editOrder->status }}',
-        '{{ $editOrder->fulfillment_date?->toDateString() ?? '' }}'
-    );
-</x-modal-reopen>
-@endif
-@endsection
-
-@push('scripts')
 <script>
+function preOrdersFilter() {
+    var form = document.getElementById('preOrdersForm');
+    if (!form) return;
+    var params = new URLSearchParams(new FormData(form));
+    var frame = document.querySelector('turbo-frame#eggs-preorders-table');
+    if (frame) frame.setAttribute('src', '/eggs/pre-orders/table?' + params.toString());
+}
+
 var _preorderPools = {};
 
 function eggCountLabel(count) {
@@ -407,26 +401,41 @@ function toggleEditFulfillmentDate() {
     wrap.classList.toggle('hidden', status !== 'fulfilled');
 }
 
-document.addEventListener('turbo:load', function() {
-    fetchPreorderPools(function(pools) {
-        updateStockSummary(pools);
-        onOrderSizeChange();
-    });
-});
-
-// Also re-fetch when the modal opens, in case stock changed
-var _addOrderObserver = new MutationObserver(function() {
-    var modal = document.getElementById('addOrderModal');
-    if (modal && modal.style.display !== 'none') {
+if (!window.__eggPreordersBound) {
+    window.__eggPreordersBound = true;
+    document.addEventListener('turbo:load', function() {
         fetchPreorderPools(function(pools) {
             updateStockSummary(pools);
             onOrderSizeChange();
         });
+    });
+
+    var _addOrderObserver = new MutationObserver(function() {
+        var modal = document.getElementById('addOrderModal');
+        if (modal && modal.style.display !== 'none') {
+            fetchPreorderPools(function(pools) {
+                updateStockSummary(pools);
+                onOrderSizeChange();
+            });
+        }
+    });
+    var _addOrderModalEl = document.getElementById('addOrderModal');
+    if (_addOrderModalEl) {
+        _addOrderObserver.observe(_addOrderModalEl, { attributes: true, attributeFilter: ['style'] });
     }
-});
-var _addOrderModalEl = document.getElementById('addOrderModal');
-if (_addOrderModalEl) {
-    _addOrderObserver.observe(_addOrderModalEl, { attributes: true, attributeFilter: ['style'] });
 }
 </script>
-@endpush
+</turbo-frame>
+</div>
+
+@if(isset($editOrder) && $editOrder)
+<x-modal-reopen modal-id="editStatusModal" session-key="reopen_edit_order" guard="editOrder">
+    openEditStatus(
+        {{ $editOrder->id }},
+        '{{ $editOrder->status }}',
+        '{{ $editOrder->fulfillment_date?->toDateString() ?? '' }}'
+    );
+</x-modal-reopen>
+@endif
+@endsection
+

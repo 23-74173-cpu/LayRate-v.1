@@ -30,8 +30,7 @@
             </button>
         </div>
         <form method="POST" action="{{ route('feed.batch.store') }}"
-              data-confirm="Add this feed batch?" data-confirm-action="Add Batch"
-              onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Adding\u2026')">
+              data-feed-ajax="tab-batches-frame">
             @csrf
             <p class="text-xs text-[#6B7280] mb-4">Batch code is auto-generated (e.g. F-2026-001).</p>
 
@@ -99,7 +98,7 @@
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
         </div>
-        <form id="editBatchForm" method="POST" onsubmit="loadingButton(this.querySelector('button[type=submit]'))">
+        <form id="editBatchForm" method="POST" data-feed-ajax="tab-batches-frame">
             @csrf @method('PUT')
 
             <label class="block text-sm text-[#333333] mb-1.5">Brand</label>
@@ -171,7 +170,7 @@
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
         </div>
-        <form id="consumptionForm" method="POST" action="{{ route('feed.consumption.store') }}" onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Saving\u2026')">
+        <form id="consumptionForm" method="POST" action="{{ route('feed.consumption.store') }}" data-feed-ajax="tab-consumption-frame">
             @csrf
             <input type="hidden" name="_method" id="consumptionMethod" value="POST">
 
@@ -254,7 +253,7 @@
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
         </div>
-        <form id="farmEntryForm" method="POST" action="{{ route('feed.farm-entry.store') }}" onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Saving\u2026')">
+        <form id="farmEntryForm" method="POST" action="{{ route('feed.farm-entry.store') }}" data-feed-ajax="tab-consumption-frame">
             @csrf
             <input type="hidden" name="_method" id="farmEntryMethod" value="POST">
 
@@ -335,6 +334,72 @@
 
 @push('scripts')
 <script>
+function feedAjaxSubmit(form) {
+    var submitBtn = form.querySelector('[type="submit"]');
+    var btnText = submitBtn ? submitBtn.textContent : '';
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Saving\u2026'; }
+
+    var data = {};
+    (new FormData(form)).forEach(function(v, k) { data[k] = v; });
+
+    var methodEl = form.querySelector('[name="_method"]');
+    var method = methodEl ? methodEl.value : 'POST';
+    var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).getAttribute('content') || '';
+
+    form.querySelectorAll('.feed-error').forEach(function(el) { el.remove(); });
+    form.querySelectorAll('input, select, textarea').forEach(function(el) { el.classList.remove('border-[#9b1c24]', 'ring-1', 'ring-[#f3cdd0]'); });
+
+    function reEnable() {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = btnText; }
+    }
+
+    fetch(form.action, {
+        method: method.toUpperCase(),
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+        body: JSON.stringify(data),
+    })
+    .then(function(r) { return r.json().then(function(d) { return { status: r.status, body: d }; }); })
+    .then(function(res) {
+        if (res.body.success) {
+            closeAllFeedModals();
+            feedReloadLiveData();
+            showNotification('Saved successfully.', 'success');
+            reEnable();
+        } else {
+            if (res.body.errors) {
+                Object.keys(res.body.errors).forEach(function(key) {
+                    var input = form.querySelector('[name="' + key + '"]');
+                    if (input) {
+                        input.classList.add('border-[#9b1c24]', 'ring-1', 'ring-[#f3cdd0]');
+                        var wrapper = document.createElement('div');
+                        wrapper.className = 'feed-error flex items-center gap-1 mt-1';
+                        wrapper.innerHTML = '<i data-lucide="alert-circle" class="w-3 h-3 shrink-0" style="color: #9b1c24;"></i><p class="text-xs" style="color: #9b1c24;">' + res.body.errors[key][0].replace(/"/g, '&quot;') + '</p>';
+                        input.parentNode.appendChild(wrapper);
+                        if (window.lucide) lucide.createIcons();
+                    }
+                });
+            }
+            reEnable();
+        }
+    })
+    .catch(function() {
+        reEnable();
+        showNotification('An error occurred. Please try again.', 'error');
+    });
+}
+
+function closeAllFeedModals() {
+    closeAddBatchModal();
+    closeEditBatchModal();
+    closeConsumptionModal();
+    closeFarmEntryModal();
+}
+
+function feedReloadLiveData() {
+    var frame = document.getElementById('feed-live-data');
+    if (frame && frame.src) frame.src = frame.src;
+}
+
 function openEditBatch(id, brand, cp, qty, cost, threshold, notes) {
     document.getElementById('editBatchForm').action = '/feed/batch/' + id;
     document.getElementById('editBrand').value     = brand || '';
@@ -428,38 +493,55 @@ function closeFarmEntryModal() {
     document.getElementById('farmEntryModal').classList.remove('flex');
 }
 
-    (function() {
-        if (window.__feedModalEscapeBound) return;
-        window.__feedModalEscapeBound = true;
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                closeAddBatchModal();
-                closeEditBatchModal();
-                closeConsumptionModal();
-                closeFarmEntryModal();
-            }
+(function() {
+    if (window.__feedModalEscapeBound) return;
+    window.__feedModalEscapeBound = true;
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeAllFeedModals();
+        }
+    });
+
+    // Wire AJAX submit handlers directly on each form
+    function bindFeedAjax() {
+        document.querySelectorAll('[data-feed-ajax]').forEach(function(form) {
+            if (form.dataset.feedAjaxBound) return;
+            form.dataset.feedAjaxBound = 'true';
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                feedAjaxSubmit(form);
+            });
         });
-    })();
+    }
+    bindFeedAjax();
+    document.addEventListener('turbo:frame-load', bindFeedAjax);
+    document.addEventListener('turbo:load', bindFeedAjax);
+})();
 
 function deleteBatch(id) {
-    // url() keeps this working under both artisan serve and the XAMPP subfolder
     fetch('{{ url('feed/batch') }}/' + id + '/delete-check')
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.can_delete) {
-                var form = document.getElementById('delete-batch-form-' + id);
-                if (!form) {
-                    form = document.createElement('form');
-                    form.id = 'delete-batch-form-' + id;
-                    form.method = 'POST';
-                    form.action = '{{ url('feed/batch') }}/' + id;
-                    form.style.display = 'none';
-                    var meta = document.querySelector('meta[name="csrf-token"]');
-                    var csrf = meta ? meta.getAttribute('content') : '';
-                    form.innerHTML = '<input type="hidden" name="_token" value="' + csrf + '"><input type="hidden" name="_method" value="DELETE">';
-                    document.body.appendChild(form);
-                }
-                confirmModal('Delete this feed batch? All associated data will be permanently removed.', form, 'Delete');
+                confirmModal('Delete this feed batch? All associated data will be permanently removed.', { submit: function() {
+                    fetch('{{ url('feed/batch') }}/' + id, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') || {}).getAttribute('content') || '',
+                            'Accept': 'application/json',
+                        },
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function(res) {
+                        if (res.success) {
+                            feedReloadLiveData();
+                            showNotification('Feed batch deleted.', 'success');
+                        } else {
+                            showNotification('Delete failed.', 'error');
+                        }
+                    })
+                    .catch(function() { showNotification('Delete failed.', 'error'); });
+                }}, 'Delete');
             } else {
                 confirmModal('This batch has ' + data.count + ' recorded consumption log(s) and cannot be deleted. Remove those records first.', null, 'Got it');
             }
@@ -467,6 +549,46 @@ function deleteBatch(id) {
         .catch(function() {
             showNotification('Could not check batch status. Please try again.', 'error');
         });
+}
+
+function deleteConsumption(id) {
+    fetch('{{ url('feed/consumption') }}/' + id, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') || {}).getAttribute('content') || '',
+            'Accept': 'application/json',
+        },
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+        if (res.success) {
+            feedReloadLiveData();
+            showNotification('Consumption log deleted.', 'success');
+        } else {
+            showNotification('Delete failed.', 'error');
+        }
+    })
+    .catch(function() { showNotification('Delete failed.', 'error'); });
+}
+
+function deleteFarmEntry(id) {
+    fetch('{{ url('feed/farm-entry') }}/' + id, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') || {}).getAttribute('content') || '',
+            'Accept': 'application/json',
+        },
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+        if (res.success) {
+            feedReloadLiveData();
+            showNotification('Whole-farm entry deleted.', 'success');
+        } else {
+            showNotification('Delete failed.', 'error');
+        }
+    })
+    .catch(function() { showNotification('Delete failed.', 'error'); });
 }
 </script>
 @endpush

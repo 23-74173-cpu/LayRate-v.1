@@ -238,6 +238,52 @@ class ReportController extends Controller
             ]);
     }
 
+    public function data(Request $request)
+    {
+        $type   = $request->get('type', 'production');
+        $from   = $request->get('from') ?: null;
+        $to     = $request->get('to') ?: null;
+        $cageId = $request->get('cage', 'all');
+        $reason = $request->get('reason', 'all');
+        $page   = (int) $request->get('page', 1);
+
+        $allCages = Cage::orderBy('cage_code')->get();
+        $rows     = $this->buildReport($type, $from, $to, $cageId, $reason, $allCages);
+        $summary  = $this->buildSummary($type, $from, $to, $cageId, $reason, $allCages);
+
+        $perPage = 20;
+        $total   = $rows->count();
+        $paginator = new LengthAwarePaginator(
+            $rows->slice(($page - 1) * $perPage, $perPage)->values(),
+            $total,
+            $perPage,
+            $page,
+            ['path' => route('reports'), 'query' => $request->query()],
+        );
+
+        $previewHtml = view('reports._preview', [
+            'type'     => $type,
+            'from'     => $from,
+            'to'       => $to,
+            'cageId'   => $cageId,
+            'reason'   => $reason,
+            'allCages' => $allCages,
+            'rows'     => $paginator,
+            'summary'  => $summary,
+        ])->render();
+
+        return response()->json([
+            'html' => $previewHtml,
+            'meta' => [
+                'total'  => $total,
+                'type'   => $type,
+                'cageId' => $cageId,
+                'from'   => $from,
+                'to'     => $to,
+            ],
+        ]);
+    }
+
     public function exportCsv(Request $request)
     {
         $type   = $request->get('type', 'production');

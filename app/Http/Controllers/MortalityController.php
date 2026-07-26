@@ -107,10 +107,17 @@ class MortalityController extends Controller
         });
 
         if ($error) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => ['count' => [$error]]], 422);
+            }
             return back()->withErrors(['count' => $error])->withInput();
         }
 
         $this->checkMortalitySpike($data['cage_id'], $data['log_date']);
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'cage_code' => $cageCode, 'count' => $data['count']]);
+        }
 
         return redirect()->back()
             ->with('success', 'Mortality record saved.');
@@ -254,7 +261,9 @@ class MortalityController extends Controller
         }
 
         foreach ($slotCounts as $slotId => $decrement) {
-            CageSlot::where('id', $slotId)->decrement('current_occupancy', $decrement);
+            CageSlot::where('id', $slotId)
+                ->where('current_occupancy', '>', 0)
+                ->decrement('current_occupancy', $decrement);
         }
     }
 

@@ -1,20 +1,22 @@
 @extends('layouts.app')
-@section('title', 'Recent Logs')
+@section('title', 'Egg Management')
 
 @section('content')
 <div class="space-y-5">
 
-    <x-page-header title="Recent Logs" subtitle="Review and manage egg production records" />
+    <x-page-header title="Egg Management" subtitle="Review and manage egg production records" />
 
     @include('eggs._tabs', ['activeTab' => 'recent-logs'])
 
+    <turbo-frame id="egg-content">
+
     <x-card header="Production Logs">
-        <form method="GET" action="{{ route('eggs.recent-logs') }}" class="mb-4">
+        <form id="recentLogsForm" onsubmit="return false" class="mb-4">
             <div class="flex flex-wrap items-end gap-4">
                 {{-- Cage filter --}}
                 <div>
                     <label class="block text-xs mb-1" style="color: #615d59;">Cage</label>
-                    <select name="cage_id"
+                    <select name="cage_id" onchange="recentLogsFilter()"
                             class="border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">All Cages</option>
@@ -29,7 +31,7 @@
                 {{-- Slot filter --}}
                 <div>
                     <label class="block text-xs mb-1" style="color: #615d59;">Slot</label>
-                    <select name="cage_slot_id"
+                    <select name="cage_slot_id" onchange="recentLogsFilter()"
                             class="border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">All Slots</option>
@@ -44,7 +46,7 @@
                 {{-- Breed filter --}}
                 <div>
                     <label class="block text-xs mb-1" style="color: #615d59;">Breed</label>
-                    <select name="breed"
+                    <select name="breed" onchange="recentLogsFilter()"
                             class="border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">All Breeds</option>
@@ -62,7 +64,7 @@
                     <div class="flex items-center gap-3">
                         @foreach(['manual' => 'Manual', 'sensor' => 'Sensor', 'unknown' => 'Unknown'] as $value => $label)
                         <label class="inline-flex items-center gap-1.5 text-sm cursor-pointer" style="color: #31302e;">
-                            <input type="checkbox" name="logged_via[]" value="{{ $value }}"
+                            <input type="checkbox" name="logged_via[]" value="{{ $value }}" onchange="recentLogsFilter()"
                                    {{ in_array($value, (array) $filters['logged_via']) ? 'checked' : '' }}
                                    class="rounded border-gray-300 text-[#0075de] focus:ring-[#0075de]">
                             {{ $label }}
@@ -72,7 +74,6 @@
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <x-button type="submit" size="sm">Filter</x-button>
                     <a href="{{ route('eggs.recent-logs') }}"
                        class="px-3 py-1.5 text-xs font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">
                         Reset
@@ -88,11 +89,15 @@
 
     @include('egg-logging._edit-modal')
 
-</div>
-@endsection
-
-@push('scripts')
 <script>
+function recentLogsFilter() {
+    var form = document.getElementById('recentLogsForm');
+    if (!form) return;
+    var params = new URLSearchParams(new FormData(form));
+    var frame = document.querySelector('turbo-frame#egg-logs-list');
+    if (frame) frame.setAttribute('src', '/eggs/logging/logs?' + params.toString());
+}
+
 function openEditLog(id, date, eggCount, henCount, notes, cageSlotId, sizeSmall, sizeMedium, sizeLarge, sizeJumbo) {
     document.getElementById('editLogForm').action = '/eggs/logging/' + id;
     document.getElementById('editLogDate').value = date;
@@ -135,4 +140,6 @@ function editComputeHdep() {
     });
 })();
 </script>
-@endpush
+</turbo-frame>
+</div>
+@endsection

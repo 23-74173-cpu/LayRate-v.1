@@ -35,9 +35,7 @@
     {{-- ── Filters ── --}}
     <div class="no-print">
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <form method="GET" action="{{ route('reports') }}" class="flex flex-wrap items-end gap-4" id="reportForm"
-                  data-loading="Gathering records for the selected filters..."
-                  data-loading-title="Generating Report">
+            <form method="GET" action="{{ route('reports') }}" class="flex flex-wrap items-end gap-4" id="reportForm" data-turbo="false">
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">REPORT TYPE</label>
                     <select name="type" id="reportType"
@@ -85,8 +83,7 @@
                 <x-button type="submit">
                     Generate Report
                 </x-button>
-                @if($rows->isNotEmpty())
-                <x-button variant="secondary" :href="route('reports.csv', request()->query())">
+                <x-button variant="secondary" :href="route('reports.csv', request()->query())" id="reportCsvBtn">
                     <i data-lucide="download" class="w-4 h-4"></i> Export CSV
                 </x-button>
                 @if($full)
@@ -97,62 +94,16 @@
                     <i data-lucide="printer" class="w-4 h-4"></i>
                 </x-button>
                 @endif
-                @endif
             </form>
         </div>
     </div>
 
-    @if($rows->isNotEmpty())
-    @if(!$full)
-    {{-- ── Preview table (item #84) — the printable document is an explicit second step ── --}}
-    <div class="bg-white rounded-lg border border-[#D9D9D9]">
-        <div class="px-5 py-4 border-b border-[#D9D9D9] flex flex-wrap items-center justify-between gap-3">
-            <div>
-                <h2 class="text-sm font-semibold text-[#333333]">Report Preview</h2>
-                <p class="text-xs text-[#6B7280] mt-0.5">
-                    {{ ucfirst(str_replace('_', ' ', $type)) }} &middot; {{ $from && $to ? "{$from} — {$to}" : 'All time' }} &middot; {{ $cageId === 'all' ? 'All Cages' : $cageId }} &middot; {{ $rows->total() }} record(s)
-                </p>
-            </div>
-            <x-button :href="route('reports', array_merge(request()->query(), ['full' => 1]))">
-                <i data-lucide="file-text" class="w-4 h-4"></i> View Printable Report
-            </x-button>
-        </div>
-        <div class="p-5">
-            @include('reports._summary-pills')
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead>
-                        <tr class="border-b border-[#e6e6e6] bg-[#f9f9f7]">
-                            @foreach(array_keys((array) $rows->first()) as $col)
-                            <th class="px-5 py-3 text-left text-xs tracking-wider text-[#6B7280] uppercase font-medium whitespace-nowrap">
-                                {{ strtoupper(str_replace('_', ' ', $col)) }}
-                            </th>
-                            @endforeach
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($rows as $row)
-                        <tr class="border-b border-[#F0F0F0]">
-                            @foreach((array) $row as $key => $val)
-                            <td class="px-5 py-3 text-sm text-[#333333] {{ in_array($key, ['date','datetime']) ? 'font-mono' : '' }}">
-                                {{ $val }}
-                            </td>
-                            @endforeach
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        <x-paginator :paginator="$rows" />
-    </div>
-    @else
-    {{-- ── Report Document ── --}}
+    @if($full)
+    {{-- ── Report Document (full-page printable) ── --}}
     <div id="report-doc" class="bg-white rounded-lg border border-[#D9D9D9] p-8 max-w-5xl mx-auto shadow-sm">
 
         {{-- 1. Letterhead --}}
         <div class="flex items-start justify-between mb-1">
-            {{-- Left: brand --}}
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 bg-[#102A4C] rounded-lg flex items-center justify-center shrink-0">
                     <i data-lucide="feather" class="w-5 h-5 text-white"></i>
@@ -162,7 +113,6 @@
                     <div class="text-xs text-[#6B7280]">Farm Monitor System</div>
                 </div>
             </div>
-            {{-- Right: report title + date range --}}
             <div class="text-right">
                 <div class="text-sm font-bold text-[#102A4C] uppercase tracking-widest">{{ ucfirst($type) }} Report</div>
                 <div class="text-xs text-[#6B7280] mt-0.5">{{ $from && $to ? "{$from} — {$to}" : 'All time' }}</div>
@@ -172,44 +122,25 @@
 
         {{-- 2. Metadata strip --}}
         <div class="grid grid-cols-4 gap-4 mb-6 text-xs text-[#6B7280]">
-            <div>
-                <span class="font-medium text-[#333333]">Cage:</span>
-                {{ $cageId === 'all' ? 'All Cages' : $cageId }}
-            </div>
-            <div>
-                <span class="font-medium text-[#333333]">Generated:</span>
-                {{ now()->format('F j, Y  H:i') }}
-            </div>
-            <div>
-                <span class="font-medium text-[#333333]">Prepared by:</span>
-                {{ auth()->user()->name }}
-            </div>
-            <div>
-                <span class="font-medium text-[#333333]">Records:</span>
-                {{ $rows->count() }}
-            </div>
+            <div><span class="font-medium text-[#333333]">Cage:</span> {{ $cageId === 'all' ? 'All Cages' : $cageId }}</div>
+            <div><span class="font-medium text-[#333333]">Generated:</span> {{ now()->format('F j, Y  H:i') }}</div>
+            <div><span class="font-medium text-[#333333]">Prepared by:</span> {{ auth()->user()->name }}</div>
+            <div><span class="font-medium text-[#333333]">Records:</span> {{ $rows->count() }}</div>
         </div>
 
-        {{-- 3. Summary pills (shared with the preview via partial) --}}
+        {{-- 3. Summary pills --}}
         @include('reports._summary-pills')
 
         {{-- 4. Data table --}}
         @php
-        $reasonColors = [
-            'Disease'     => '#721C24',
-            'Heat Stress' => '#856404',
-            'Injury'      => '#856404',
-            'Predator'    => '#721C24',
-        ];
+        $reasonColors = ['Disease' => '#721C24', 'Heat Stress' => '#856404', 'Injury' => '#856404', 'Predator' => '#721C24'];
         @endphp
         <div class="overflow-x-auto mb-2">
             <table class="w-full" style="border-collapse:collapse">
                 <thead>
                     <tr style="background:#102A4C;color:#ffffff;">
                         @foreach(array_keys((array) $rows->first()) as $col)
-                        <th class="px-5 py-3 text-left text-xs tracking-widest uppercase font-medium whitespace-nowrap">
-                            {{ strtoupper(str_replace('_', ' ', $col)) }}
-                        </th>
+                        <th class="px-5 py-3 text-left text-xs tracking-widest uppercase font-medium whitespace-nowrap">{{ strtoupper(str_replace('_', ' ', $col)) }}</th>
                         @endforeach
                     </tr>
                 </thead>
@@ -219,15 +150,12 @@
                     <tr class="{{ $loop->even ? 'bg-[#F9F9F7]' : 'bg-white' }}">
                         @foreach($arr as $key => $val)
                         @php
-                            $cageColor   = $key === 'cage' ? ($cageColorMap[$val] ?? null) : null;
-                            $reasonColor = $key === 'reason' ? ($reasonColors[$val] ?? null) : null;
-                            $style = $cageColor ? "color:{$cageColor};font-weight:600"
-                                   : ($reasonColor ? "color:{$reasonColor}" : '');
+                            $cC = $key === 'cage' ? ($cageColorMap[$val] ?? null) : null;
+                            $rC = $key === 'reason' ? ($reasonColors[$val] ?? null) : null;
+                            $style = $cC ? "color:{$cC};font-weight:600" : ($rC ? "color:{$rC}" : '');
                         @endphp
                         <td class="px-5 py-3.5 text-sm {{ in_array($key, ['date','datetime']) ? 'font-mono' : '' }}"
-                            style="{{ $style }}">
-                            {{ $val }}
-                        </td>
+                            style="{{ $style }}">{{ $val }}</td>
                         @endforeach
                     </tr>
                     @endforeach
@@ -237,25 +165,14 @@
 
         {{-- 5. Signature block --}}
         <div class="signature-block mt-12 pt-6 border-t border-[#D9D9D9] grid grid-cols-2 gap-16">
-            <div>
-                <div class="text-xs text-[#6B7280] mb-8">Prepared by:</div>
-                <div class="border-b border-[#333333] mb-1.5"></div>
-                <div class="text-xs text-[#6B7280]">{{ auth()->user()->name }}</div>
-                <div class="text-xs text-[#6B7280]">Signature / Date</div>
-            </div>
-            <div>
-                <div class="text-xs text-[#6B7280] mb-8">Noted by:</div>
-                <div class="border-b border-[#333333] mb-1.5"></div>
-                <div class="text-xs text-[#6B7280]">Name / Position</div>
-                <div class="text-xs text-[#6B7280]">Signature / Date</div>
-            </div>
+            <div><div class="text-xs text-[#6B7280] mb-8">Prepared by:</div><div class="border-b border-[#333333] mb-1.5"></div><div class="text-xs text-[#6B7280]">{{ auth()->user()->name }}</div><div class="text-xs text-[#6B7280]">Signature / Date</div></div>
+            <div><div class="text-xs text-[#6B7280] mb-8">Noted by:</div><div class="border-b border-[#333333] mb-1.5"></div><div class="text-xs text-[#6B7280]">Name / Position</div><div class="text-xs text-[#6B7280]">Signature / Date</div></div>
         </div>
-
     </div>
-    @endif
-    @elseif($rows->isEmpty())
-    <div class="bg-white rounded-lg border border-[#D9D9D9] p-10 text-center text-sm text-[#6B7280]">
-        No data found for the selected filters.
+    @else
+    {{-- ── Preview (AJAX-updatable) ── --}}
+    <div id="report-preview-container">
+        @include('reports._preview')
     </div>
     @endif
 
@@ -263,14 +180,122 @@
 @endsection
 
 @push('scripts')
+<style>
+#report-preview-container.loading { position: relative; }
+#report-preview-container.loading::after {
+    content: ''; position: absolute; inset: 0; z-index: 10;
+    background: rgba(255,255,255,0.6);
+    pointer-events: none;
+}
+</style>
 <script>
-document.addEventListener('turbo:load', function() {
-    var el = document.getElementById('reportType');
-    if (el) {
-        el.addEventListener('change', function() {
-            document.getElementById('reasonFilter').classList.toggle('hidden', this.value !== 'mortality');
-        });
+// ── Build query string from filter form ──
+function reportQuery(page) {
+    var f = document.getElementById('reportForm');
+    if (!f) return '';
+    var params = new URLSearchParams();
+    ['type','from','to','cage','reason'].forEach(function(k) {
+        var el = f.elements[k];
+        if (el && el.value) params.set(k, el.value);
+    });
+    if (page) params.set('page', page);
+    return params.toString();
+}
+
+// ── Update CSV export button href ──
+function updateCsvHref() {
+    var btn = document.getElementById('reportCsvBtn');
+    if (btn) {
+        btn.href = '/reports/csv?' + reportQuery();
     }
+}
+
+// ── Render report results ──
+window.renderReportResults = function(data) {
+    var container = document.getElementById('report-preview-container');
+    if (!container) return;
+    container.innerHTML = data.html;
+    // Re-run lucide icons on new content
+    if (window.lucide) lucide.createIcons();
+    updateCsvHref();
+    // Update URL to reflect current filter state (for history/bookmark)
+    var qs = reportQuery();
+    var url = qs ? '/reports?' + qs : '/reports';
+    if (window._reportPopstate) {
+        history.replaceState({}, '', url);
+        window._reportPopstate = false;
+    } else {
+        history.pushState({}, '', url);
+    }
+};
+
+window._reportPopstate = false;
+
+// ── Fetch report data ──
+function reportFetch(page) {
+    var container = document.getElementById('report-preview-container');
+    if (container) container.classList.add('loading');
+
+    fetch('/reports/data?' + reportQuery(page || null))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            window.renderReportResults(data);
+            if (container) container.classList.remove('loading');
+        })
+        .catch(function(err) {
+            console.error('Report update failed:', err);
+            if (container) container.classList.remove('loading');
+        });
+}
+
+// ── Form submit handler (override full-page GET) ──
+document.addEventListener('submit', function(e) {
+    if (e.target.id !== 'reportForm') return;
+    e.preventDefault();
+    reportFetch();
+});
+
+// ── Filter change handlers ──
+document.addEventListener('change', function(e) {
+    var form = e.target.closest('#reportForm');
+    if (!form) return;
+    // Reason filter visibility
+    if (e.target.name === 'type') {
+        document.getElementById('reasonFilter').classList.toggle('hidden', e.target.value !== 'mortality');
+    }
+    reportFetch();
+});
+
+// ── Pagination click handler ──
+document.addEventListener('click', function(e) {
+    var link = e.target.closest('#report-preview-container a[href]');
+    if (!link) return;
+    var href = link.getAttribute('href');
+    if (!href) return;
+    // Only intercept paginator links (contain 'page=' param)
+    var url = new URL(href, window.location.origin);
+    var page = url.searchParams.get('page');
+    if (!page) return;
+    e.preventDefault();
+    reportFetch(page);
+});
+
+// ── Back/forward navigation ──
+window.addEventListener('popstate', function() {
+    window._reportPopstate = true;
+    var params = new URLSearchParams(window.location.search);
+    var f = document.getElementById('reportForm');
+    if (f) {
+        ['type','from','to','cage','reason'].forEach(function(k) {
+            var el = f.elements[k];
+            if (el && params.has(k)) el.value = params.get(k);
+        });
+        var rt = document.getElementById('reasonFilter');
+        if (rt) {
+            rt.classList.toggle('hidden', f.elements['type'].value !== 'mortality');
+        }
+    }
+    reportFetch();
 });
 </script>
 @endpush

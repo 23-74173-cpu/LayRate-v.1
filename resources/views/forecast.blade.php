@@ -655,6 +655,17 @@
             initForecastLoading();
         }
     });
+
+    // ── Prevent unnecessary frame navigation when clicking the already-active scope ──
+    document.addEventListener('click', function(e) {
+        var link = e.target.closest('[data-turbo-frame="forecast-workspace"][href]');
+        if (!link) return;
+        var linkUrl = new URL(link.href, window.location.origin);
+        var currentUrl = new URL(window.location.href);
+        if (linkUrl.pathname + linkUrl.search === currentUrl.pathname + currentUrl.search) {
+            e.preventDefault();
+        }
+    });
 })();
 </script>
 @endpush

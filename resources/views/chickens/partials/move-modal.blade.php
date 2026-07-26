@@ -4,7 +4,7 @@
 
     {{-- Card --}}
     <div class="relative w-full max-w-md rounded-2xl p-6 overflow-hidden" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
-        <form id="moveForm" method="POST" action="{{ route('chickens.move') }}" onsubmit="return sliceMoveHenIds()">
+        <form id="moveForm" method="POST" action="{{ route('chickens.move') }}">
             @csrf
 
             {{-- Header --}}
@@ -112,7 +112,7 @@
                         class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">
                     Cancel
                 </button>
-                <x-button type="submit" id="moveSubmitBtn" disabled class="flex-1 py-2.5">
+                <x-button type="button" id="moveSubmitBtn" disabled onclick="submitMove(this.form)" class="flex-1 py-2.5">
                     Move Chickens
                 </x-button>
             </div>
@@ -125,13 +125,13 @@
 @push('scripts')
 <script>
 function getToMove() {
-    const input = document.getElementById('moveCountInput');
+    var input = document.getElementById('moveCountInput');
     return Math.max(1, parseInt(input?.value) || 1);
 }
 
 function onMoveCountChange() {
-    const input = document.getElementById('moveCountInput');
-    const total = parseInt(document.getElementById('moveCount').textContent) || 0;
+    var input = document.getElementById('moveCountInput');
+    var total = parseInt(document.getElementById('moveCount').textContent) || 0;
     if (input.value < 1) input.value = 1;
     if (input.value > total) input.value = total;
     loadDestSlots();
@@ -140,7 +140,7 @@ function onMoveCountChange() {
 function openMoveModal(henIds, count, sourceInfo, breed) {
     document.getElementById('moveCount').textContent = count;
     document.getElementById('moveHenIds').value = henIds;
-    const input = document.getElementById('moveCountInput');
+    var input = document.getElementById('moveCountInput');
     input.value = count;
     input.max = count;
 
@@ -158,7 +158,7 @@ function openMoveModal(henIds, count, sourceInfo, breed) {
     document.getElementById('moveAvailability').classList.add('hidden');
     document.getElementById('moveError').classList.add('hidden');
     document.getElementById('moveSubmitBtn').disabled = true;
-    const noSlots = document.getElementById('moveNoSlots');
+    var noSlots = document.getElementById('moveNoSlots');
     if (noSlots) noSlots.classList.add('hidden');
 
     document.getElementById('moveModal').style.display = 'flex';
@@ -168,19 +168,19 @@ function closeMoveModal() {
 }
 
 function loadDestSlots() {
-    const cageSelect = document.getElementById('destCageSelect');
-    const slotSelect = document.getElementById('destSlotSelect');
-    const availabilityEl = document.getElementById('moveAvailability');
-    const submitBtn = document.getElementById('moveSubmitBtn');
-    const errorEl = document.getElementById('moveError');
-    const noSlotsEl = document.getElementById('moveNoSlots');
-    const option = cageSelect.options[cageSelect.selectedIndex];
-    const toMove = getToMove();
+    var cageSelect = document.getElementById('destCageSelect');
+    var slotSelect = document.getElementById('destSlotSelect');
+    var availabilityEl = document.getElementById('moveAvailability');
+    var submitBtn = document.getElementById('moveSubmitBtn');
+    var errorEl = document.getElementById('moveError');
+    var noSlotsEl = document.getElementById('moveNoSlots');
+    var option = cageSelect.options[cageSelect.selectedIndex];
+    var toMove = getToMove();
 
     slotSelect.innerHTML = '<option value="">Loading...</option>';
     slotSelect.disabled = true;
     availabilityEl.classList.add('hidden');
-    noSlotsEl?.classList.add('hidden');
+    if (noSlotsEl) noSlotsEl.classList.add('hidden');
     submitBtn.disabled = true;
     errorEl.classList.add('hidden');
 
@@ -189,13 +189,13 @@ function loadDestSlots() {
         return;
     }
 
-    const cageId = cageSelect.value;
-    const maxPerSlot = parseInt(option.dataset.max) || 0;
-    fetch(`/cages/${cageId}/slots-json`)
-        .then(r => r.json())
-        .then(slots => {
-            const available = slots.filter(slot => {
-                const remaining = maxPerSlot - (slot.current_occupancy ?? 0);
+    var cageId = cageSelect.value;
+    var maxPerSlot = parseInt(option.dataset.max) || 0;
+    fetch('/cages/' + cageId + '/slots-json')
+        .then(function(r) { return r.json(); })
+        .then(function(slots) {
+            var available = slots.filter(function(slot) {
+                var remaining = maxPerSlot - (slot.current_occupancy ?? 0);
                 return remaining >= toMove;
             });
 
@@ -206,34 +206,34 @@ function loadDestSlots() {
                 if (noSlotsEl) {
                     noSlotsEl.classList.remove('hidden');
                     noSlotsEl.textContent = toMove > 1
-                        ? `No slots with ${toMove} spaces available.`
+                        ? 'No slots with ' + toMove + ' spaces available.'
                         : 'No empty slots available.';
                 }
                 return;
             }
 
-            let html = '<option value="">Select slot...</option>';
-            available.forEach(slot => {
-                const remaining = maxPerSlot - (slot.current_occupancy ?? 0);
-                html += `<option value="${slot.id}" data-remaining="${remaining}">
-                    Slot ${slot.row_number}-${slot.column_number} (#${slot.slot_number}) — ${remaining} space${remaining !== 1 ? 's' : ''}
-                </option>`;
+            var html = '<option value="">Select slot...</option>';
+            available.forEach(function(slot) {
+                var remaining = maxPerSlot - (slot.current_occupancy ?? 0);
+                html += '<option value="' + slot.id + '" data-remaining="' + remaining + '">'
+                    + 'Slot ' + slot.row_number + '-' + slot.column_number + ' (#' + slot.slot_number + ') \u2014 ' + remaining + ' space' + (remaining !== 1 ? 's' : '')
+                    + '</option>';
             });
             slotSelect.innerHTML = html;
             slotSelect.disabled = false;
             slotSelect.onchange = checkMoveAvailability;
         })
-        .catch(() => {
+        .catch(function() {
             slotSelect.innerHTML = '<option value="">Failed to load slots</option>';
         });
 }
 
 function checkMoveAvailability() {
-    const slotSelect = document.getElementById('destSlotSelect');
-    const option = slotSelect.options[slotSelect.selectedIndex];
-    const availabilityEl = document.getElementById('moveAvailability');
-    const submitBtn = document.getElementById('moveSubmitBtn');
-    const errorEl = document.getElementById('moveError');
+    var slotSelect = document.getElementById('destSlotSelect');
+    var option = slotSelect.options[slotSelect.selectedIndex];
+    var availabilityEl = document.getElementById('moveAvailability');
+    var submitBtn = document.getElementById('moveSubmitBtn');
+    var errorEl = document.getElementById('moveError');
 
     availabilityEl.classList.add('hidden');
     errorEl.classList.add('hidden');
@@ -243,34 +243,116 @@ function checkMoveAvailability() {
         return;
     }
 
-    const remaining = parseInt(option.dataset.remaining) || 0;
-    const toMove = getToMove();
+    var remaining = parseInt(option.dataset.remaining) || 0;
+    var toMove = getToMove();
 
     if (remaining >= toMove) {
         availabilityEl.classList.remove('hidden');
         availabilityEl.className = 'text-xs font-medium text-green-600';
-        availabilityEl.textContent = `${remaining} space${remaining !== 1 ? 's' : ''} available — ready to move.`;
+        availabilityEl.textContent = remaining + ' space' + (remaining !== 1 ? 's' : '') + ' available \u2014 ready to move.';
         submitBtn.disabled = false;
     } else {
         availabilityEl.classList.remove('hidden');
         availabilityEl.className = 'text-xs font-medium text-red-500';
-        availabilityEl.textContent = `Insufficient capacity. Only ${remaining} space${remaining !== 1 ? 's' : ''} available but ${toMove} needed.`;
+        availabilityEl.textContent = 'Insufficient capacity. Only ' + remaining + ' space' + (remaining !== 1 ? 's' : '') + ' available but ' + toMove + ' needed.';
         submitBtn.disabled = true;
     }
 }
 
 function sliceMoveHenIds() {
-    const toMove = getToMove();
-    const allIds = document.getElementById('moveHenIds').value;
-    const sliced = allIds.split(',').slice(0, toMove).join(',');
+    var toMove = getToMove();
+    var allIds = document.getElementById('moveHenIds').value;
+    var sliced = allIds.split(',').slice(0, toMove).join(',');
     document.getElementById('moveHenIds').value = sliced;
-    return true;
+    return sliced;
+}
+
+function submitMove(form) {
+    var toMove = getToMove();
+    var destSelect = document.getElementById('destSlotSelect');
+    var destOption = destSelect.options[destSelect.selectedIndex];
+    var destText = destOption ? destOption.text : 'selected slot';
+    var cageSelect = document.getElementById('destCageSelect');
+    var cageText = cageSelect.options[cageSelect.selectedIndex]?.text?.split(' \u2014')[0] || 'selected cage';
+    var sourceText = document.getElementById('moveSourceText').textContent || 'source';
+
+    confirmModal(
+        'Move ' + toMove + ' hen(s) from ' + sourceText + ' to ' + cageText + ' ' + destText + '?',
+        { submit: function() {
+            sliceMoveHenIds();
+            ajaxMove(form);
+        } },
+        'Move'
+    );
+}
+
+function ajaxMove(form) {
+    form.querySelectorAll('.move-error').forEach(function(el) { el.remove(); });
+    form.querySelectorAll('.has-move-error').forEach(function(el) {
+        el.classList.remove('has-move-error');
+    });
+
+    var formData = new FormData(form);
+    var data = {};
+    formData.forEach(function(v, k) { data[k] = v; });
+
+    fetch(form.action, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify(data)
+    }).then(function(r) {
+        return r.json().then(function(j) { return { ok: r.ok, json: j }; });
+    }).then(function(result) {
+        if (result.ok) {
+            closeMoveModal();
+            if (typeof showNotification === 'function') {
+                showNotification(result.json.message, 'success');
+            }
+            var frame = document.getElementById('chickens-inventory-list');
+            if (frame) {
+                var src = frame.src;
+                frame.src = '';
+                frame.src = src;
+            }
+        } else {
+            var errors = result.json.errors || {};
+            Object.keys(errors).forEach(function(field) {
+                var input = form.querySelector('[name="' + field + '"]');
+                if (!input) {
+                    var errEl = document.getElementById('moveError');
+                    if (errEl && errors[field] && errors[field][0]) {
+                        errEl.textContent = errors[field][0];
+                        errEl.classList.remove('hidden');
+                    }
+                    return;
+                }
+                var wrapper = input.closest('div');
+                if (!wrapper) return;
+                wrapper.classList.add('has-move-error');
+                input.style.borderColor = '#9b1c24';
+                input.classList.add('ring-1');
+                input.style.setProperty('--tw-ring-color', '#f3cdd0');
+                var msg = errors[field][0];
+                var errorEl = document.createElement('p');
+                errorEl.className = 'move-error flex items-center gap-1.5 text-sm mt-1';
+                errorEl.style.color = '#9b1c24';
+                errorEl.innerHTML = '<i data-lucide="alert-circle" class="w-4 h-4" style="color: #9b1c24; min-width: 16px;"></i> ' + msg;
+                wrapper.appendChild(errorEl);
+            });
+            if (window.lucide) lucide.createIcons();
+        }
+    }).catch(function() {
+        form.submit();
+    });
 }
 
 window.openMoveModal = openMoveModal;
 window.closeMoveModal = closeMoveModal;
 
-// Escape key closes modal
 (function() {
     if (window.__moveModalEscapeBound) return;
     window.__moveModalEscapeBound = true;

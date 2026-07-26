@@ -595,6 +595,8 @@
     });
 })();
 
+window.CAGE_COLORS = @json(\App\Models\Cage::getColorMap());
+
 if (typeof Chart !== 'undefined') {
     Chart.defaults.color = '#31302e';
     Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
@@ -605,7 +607,6 @@ if (typeof Chart !== 'undefined') {
     Chart.defaults.elements.bar.borderRadius = 4;
     Chart.defaults.scale.grid = { color: 'rgba(0,0,0,0.06)' };
     Chart.defaults.layout = { padding: { top: 10, bottom: 10, left: 10, right: 10 } };
-    window.CAGE_COLORS = @json(\App\Models\Cage::getColorMap());
 }
 
 // ── Shared chart lifecycle manager ──
@@ -629,6 +630,24 @@ window.LayRateChart = {
             console.error('[LayRateChart] Failed to create chart "' + id + '":', e);
             return null;
         }
+    },
+
+    update(id, config) {
+        const inst = this._instances[id];
+        if (inst) {
+            try {
+                if (config.data) inst.data = config.data;
+                if (config.options) {
+                    if (config.options.scales) inst.options.scales = config.options.scales;
+                    if (config.options.plugins) inst.options.plugins = config.options.plugins;
+                }
+                inst.update('none');
+                return inst;
+            } catch (e) {
+                console.warn('[LayRateChart] Update failed for "' + id + '", falling back to recreate:', e);
+            }
+        }
+        return this.create(id, config);
     },
 
     destroy(id) {

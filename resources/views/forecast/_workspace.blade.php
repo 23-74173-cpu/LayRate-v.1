@@ -40,7 +40,7 @@
 
                 @if($scope === 'cage')
                 <label class="block text-sm text-[#333333] mb-2">Select Cage</label>
-                <select name="cage" onchange="this.form.submit()"
+                <select name="cage" onchange="document.querySelector('turbo-frame#forecast-workspace').setAttribute('src', '/forecast?scope=cage&cage=' + encodeURIComponent(this.value) + '&horizon={{ $horizon }}')"
                         class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white mb-4 focus:outline-none focus:border-[#002D5E]">
                     @foreach($allCages as $c)
                     <option value="{{ $c }}" {{ $c === $cageCode ? 'selected' : '' }}>{{ $c }}</option>
@@ -50,7 +50,7 @@
 
                 @elseif($scope === 'breed')
                 <label class="block text-sm text-[#333333] mb-2">Select Breed</label>
-                <select name="breed" onchange="this.form.submit()"
+                <select name="breed" onchange="document.querySelector('turbo-frame#forecast-workspace').setAttribute('src', '/forecast?scope=breed&breed=' + encodeURIComponent(this.value) + '&horizon={{ $horizon }}')"
                         class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white mb-4 focus:outline-none focus:border-[#002D5E]">
                     @foreach($allBreeds as $b)
                     <option value="{{ $b }}" {{ $breed === $b ? 'selected' : '' }}>{{ $b }}</option>

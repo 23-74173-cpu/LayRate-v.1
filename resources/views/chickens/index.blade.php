@@ -128,16 +128,16 @@
     <div id="panelMortality" class="{{ $tab !== 'mortality' ? 'hidden' : '' }}">
 
         {{-- Today's Summary Cards --}}
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5" id="mortality-summary">
             <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
                 <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Deaths Today</div>
-                <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $todayTotal }}</div>
+                <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]" data-mortality-total>{{ $todayTotal }}</div>
             </div>
             @foreach($cages as $c)
             @php $count = $todayByCage->get($c->cage_code, 0); @endphp
-            <div class="bg-white rounded-lg border border-[#D9D9D9] p-4 {{ $count > 0 ? 'bg-red-50 border-red-200' : '' }}">
+            <div class="bg-white rounded-lg border border-[#D9D9D9] p-4 {{ $count > 0 ? 'bg-red-50 border-red-200' : '' }}" data-mortality-cage="{{ $c->cage_code }}">
                 <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">{{ $c->cage_code }}</div>
-                <div class="text-2xl font-bold leading-none tracking-[-0.5px] {{ $count > 0 ? 'text-red-600' : 'text-[#333333]' }}">{{ $count }}</div>
+                <div class="text-2xl font-bold leading-none tracking-[-0.5px] {{ $count > 0 ? 'text-red-600' : 'text-[#333333]' }}" data-mortality-cage-count="{{ $c->cage_code }}">{{ $count }}</div>
             </div>
             @endforeach
         </div>
@@ -183,7 +183,7 @@
                         <textarea name="notes" rows="2" placeholder="Optional details…"
                                   class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] resize-none focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]"></textarea>
                     </div>
-                    <x-button type="submit" class="w-full py-2.5">
+                    <x-button type="button" onclick="submitMortality(this.form)" class="w-full py-2.5">
                         Save Record
                     </x-button>
                 </form>
@@ -300,6 +300,10 @@ function debounceFilter() {
 }
 
 function switchTab(tab) {
+    var currentTab = window.__chickensActiveTab || 'inventory';
+    if (tab === currentTab) return;
+    window.__chickensActiveTab = tab;
+
     document.getElementById('panelInventory').classList.toggle('hidden', tab !== 'inventory');
     document.getElementById('panelMortality').classList.toggle('hidden', tab !== 'mortality');
     document.getElementById('panelCulling').classList.toggle('hidden', tab !== 'culling');
@@ -400,6 +404,93 @@ function toggleColumns(btn) {
     const anyHidden = Array.from(hidden).some(el => el.style.display === 'none');
     hidden.forEach(el => el.style.display = anyHidden ? '' : 'none');
     btn.querySelector('i').dataset.toggled = anyHidden ? '' : '1';
+}
+
+function submitMortality(form) {
+    var cageSelect = form.querySelector('select[name="cage_id"]');
+    var countInput = form.querySelector('input[name="count"]');
+    var cageCode = 'selected cage';
+    if (cageSelect && cageSelect.selectedIndex > 0) {
+        cageCode = cageSelect.options[cageSelect.selectedIndex].text.split('\u2014')[0].trim();
+    }
+    var count = countInput && countInput.value ? countInput.value : '(?)';
+
+    confirmModal(
+        'Record mortality: ' + count + ' hen(s) in ' + cageCode + '? The affected hen(s) will be deactivated and slot occupancy updated.',
+        { submit: function() { mortalityAjaxSubmit(form); } },
+        'Record'
+    );
+}
+
+function mortalityAjaxSubmit(form) {
+    var formData = new FormData(form);
+    var data = {};
+    formData.forEach(function(value, key) { data[key] = value; });
+
+    form.querySelectorAll('.mortality-error').forEach(function(el) { el.remove(); });
+    form.querySelectorAll('.has-mortality-error').forEach(function(el) {
+        el.classList.remove('has-mortality-error');
+    });
+
+    fetch(form.action, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify(data)
+    }).then(function(r) {
+        return r.json().then(function(j) { return { ok: r.ok, json: j }; });
+    }).then(function(result) {
+        if (result.ok) {
+            var frame = document.getElementById('chickens-mortality-records');
+            if (frame) frame.src = frame.src;
+
+            var totalEl = document.querySelector('[data-mortality-total]');
+            if (totalEl) totalEl.textContent = parseInt(totalEl.textContent) + result.json.count;
+
+            var cageCard = document.querySelector('[data-mortality-cage="' + result.json.cage_code + '"]');
+            if (cageCard) {
+                var countEl = cageCard.querySelector('[data-mortality-cage-count]');
+                if (countEl) {
+                    var newVal = parseInt(countEl.textContent) + result.json.count;
+                    countEl.textContent = newVal;
+                    if (newVal > 0) {
+                        cageCard.classList.add('bg-red-50', 'border-red-200');
+                        countEl.classList.remove('text-[#333333]');
+                        countEl.classList.add('text-red-600');
+                    }
+                }
+            }
+
+            form.reset();
+            var dateInput = form.querySelector('input[type="date"]');
+            if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+        } else {
+            var errors = result.json.errors || {};
+            Object.keys(errors).forEach(function(field) {
+                var input = form.querySelector('[name="' + field + '"]');
+                if (!input) return;
+                var wrapper = input.closest('div');
+                if (!wrapper) return;
+                wrapper.classList.add('has-mortality-error');
+                input.style.borderColor = '#9b1c24';
+                input.classList.add('ring-1');
+                input.style.setProperty('--tw-ring-color', '#f3cdd0');
+
+                var msg = errors[field][0];
+                var errorEl = document.createElement('p');
+                errorEl.className = 'mortality-error flex items-center gap-1.5 text-sm mt-1';
+                errorEl.style.color = '#9b1c24';
+                errorEl.innerHTML = '<i data-lucide="alert-circle" class="w-4 h-4" style="color: #9b1c24; min-width: 16px;"></i> ' + msg;
+                wrapper.appendChild(errorEl);
+            });
+            if (window.lucide) lucide.createIcons();
+        }
+    }).catch(function() {
+        form.submit();
+    });
 }
 </script>
 @endpush

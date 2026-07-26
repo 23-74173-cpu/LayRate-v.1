@@ -174,14 +174,14 @@
 
     {{-- ── Tab Bar (Notion underline style) ── --}}
     <div class="flex items-center gap-0 border-b overflow-x-auto" style="border-color: #e6e6e6;">
-        <button type="button" onclick="filterCage('all')" class="cage-tab px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
+        <button type="button" onclick="filterCage('all')" class="cage-tab px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap cursor-pointer"
                 data-tab="all"
-                style="border-bottom-color: #0075de; color: #1f1f1f;">
+                style="border-bottom-color: #002D5E; color: #1f1f1f;">
             All
             <span class="ml-1 text-xs" style="color: #a39e98;">({{ $cages->count() }})</span>
         </button>
         @foreach($cages as $cage)
-        <button type="button" onclick="filterCage('{{ $cage->cage_code }}')" class="cage-tab px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
+        <button type="button" onclick="filterCage('{{ $cage->cage_code }}')" class="cage-tab px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap cursor-pointer"
                 data-tab="{{ $cage->cage_code }}"
                 style="border-bottom-color: transparent; color: #615d59;">
             <span class="inline-block w-2 h-2 rounded-full mr-1.5" style="background-color: {{ $cage->color }};"></span>
@@ -794,10 +794,13 @@ var cagesBase = '{{ url('cages') }}';
 
 // ── Tab Filter ────────────────────────────────────────────
 function filterCage(code) {
+    if (window.__cagesActiveTab === code) return;
+    window.__cagesActiveTab = code;
+
     const cageColors = @json(\App\Models\Cage::getColorMap());
     document.querySelectorAll('.cage-tab').forEach(tab => {
         if (tab.dataset.tab === code) {
-            tab.style.borderBottomColor = code === 'all' ? '#0075de' : (cageColors[code] || '#0075de');
+            tab.style.borderBottomColor = code === 'all' ? '#002D5E' : (cageColors[code] || '#002D5E');
             tab.style.color = '#1f1f1f';
         } else {
             tab.style.borderBottomColor = 'transparent';
@@ -1864,7 +1867,7 @@ function handleTileClick(e, cageId, cageCode) {
     document.getElementById('clearFilterBtn').classList.remove('hidden');
     document.querySelectorAll('.cage-tab').forEach(function(tab) {
         if (tab.dataset.tab === cageCode) {
-            tab.style.borderBottomColor = '#0075de';
+            tab.style.borderBottomColor = '#002D5E';
             tab.style.color = '#1f1f1f';
         } else {
             tab.style.borderBottomColor = 'transparent';
