@@ -4,7 +4,7 @@
 @section('content')
 <div class="space-y-5">
 
-    <x-page-header title="Egg Management" subtitle="Track harvested egg inventory by size and freshness">
+    <x-page-header title="Egg Management" subtitle="Track harvested egg inventory by size and freshness" subtitle-id="egg-header-subtitle" actions-id="egg-header-actions">
         <x-slot:actions>
             <div class="flex items-center gap-2">
                 <x-button variant="secondary" onclick="openEggWeightsModal()">
@@ -13,6 +13,9 @@
                 <x-button variant="secondary" onclick="openThresholdsModal()">
                     <i data-lucide="sliders" class="w-4 h-4"></i> Thresholds
                 </x-button>
+                <x-button onclick="document.getElementById('addStockModal').style.display = 'flex'">
+                    <i data-lucide="plus" class="w-4 h-4"></i> Add Stock
+                </x-button>
             </div>
         </x-slot:actions>
     </x-page-header>
@@ -20,6 +23,7 @@
     @include('eggs._tabs', ['activeTab' => 'stocks'])
 
     <turbo-frame id="egg-content">
+    <div class="space-y-5">
 
     {{-- ── Summary Cards ── --}}
     <div class="grid grid-cols-2 lg:grid-cols-5 gap-4" id="summaryCards">
@@ -56,16 +60,12 @@
         @endforeach
     </div>
 
-    <div class="flex justify-end mt-4">
-        <x-button onclick="document.getElementById('addStockModal').style.display = 'flex'">
-            <i data-lucide="plus" class="w-4 h-4"></i> Add Stock
-        </x-button>
-    </div>
-
     {{-- ── Stock Table ── --}}
     <turbo-frame id="eggs-stocks-live-data" src="{{ route('eggs.stocks.live-data') }}" loading="lazy" target="_top" class="block">
         @include('eggs.stocks._live-data-skeleton')
     </turbo-frame>
+
+    </div>
 
 {{-- Add Stock Modal --}}
 <div id="addStockModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
@@ -236,6 +236,7 @@
             </div>
         </form>
     </div>
+</div>
 
 {{-- Egg Weights Modal --}}
 <div id="eggWeightsModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
@@ -422,9 +423,19 @@ function updateLogSelect(cageId) {
     });
 }
 
-if (!window.__eggStocksBound) {
-    window.__eggStocksBound = true;
-    document.addEventListener('turbo:load', function() {
+{
+    // This whole <script> block lives inside turbo-frame#egg-content, so Turbo
+    // re-evaluates it (registers everything again) on every tab round-trip —
+    // it is NOT just innerHTML-replaced. That means the *binding logic* must
+    // re-run on every render (old fix), but the *document-level listeners
+    // that call it* must be registered exactly once — otherwise each round
+    // trip stacks another 'turbo:frame-load' listener on `document` (which
+    // persists across renders), and N stacked listeners then call the
+    // binding logic N times for a single real event. Reassigning
+    // window.__bindEggStocks is harmless (it only does fresh DOM queries
+    // internally, no captured element state), so exactly one persistent
+    // listener always invoking "whichever version is current" is correct.
+    window.__bindEggStocks = function() {
         var cageSelect = document.getElementById('stockCageSelect');
         if (cageSelect) {
             cageSelect.addEventListener('change', function() {
@@ -682,7 +693,15 @@ if (!window.__eggStocksBound) {
                     btn.textContent = originalLabel;
                 });
         }
-    });
+    };
+
+    if (!window.__eggStocksListenersRegistered) {
+        window.__eggStocksListenersRegistered = true;
+        document.addEventListener('turbo:load', function() { window.__bindEggStocks(); });
+        document.addEventListener('turbo:frame-load', function(e) {
+            if (e.target && e.target.id === 'egg-content') window.__bindEggStocks();
+        });
+    }
 }
 
 if (!window.__eggStocksEscapeBound) {

@@ -105,8 +105,26 @@ function ajaxCull(form) {
             if (typeof showNotification === 'function') {
                 showNotification(result.json.message, 'success');
             }
-            var frame = document.getElementById('chickens-culling-records');
-            if (frame) frame.src = frame.src;
+            // Reload both frames a cull affects: the culling-records tab
+            // (where the new record now appears) and the inventory list
+            // (where the culled hen's status flips to Inactive) — Move and
+            // Remove already reload inventory for the same reason; this was
+            // the one of the three left out. Also fixed: `frame.src = frame.src`
+            // is a no-op in most browsers (no attribute change to react to),
+            // so even the culling-records reload wasn't reliably firing —
+            // clear-then-reset like Move/Remove do to force a real reload.
+            var cullingFrame = document.getElementById('chickens-culling-records');
+            if (cullingFrame) {
+                var cullingSrc = cullingFrame.src;
+                cullingFrame.src = '';
+                cullingFrame.src = cullingSrc;
+            }
+            var inventoryFrame = document.getElementById('chickens-inventory-list');
+            if (inventoryFrame) {
+                var inventorySrc = inventoryFrame.src;
+                inventoryFrame.src = '';
+                inventoryFrame.src = inventorySrc;
+            }
         } else {
             var errors = result.json.errors || {};
             Object.keys(errors).forEach(function(field) {

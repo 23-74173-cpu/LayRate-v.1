@@ -4,11 +4,20 @@
 @section('content')
 <div class="space-y-5">
 
-    <x-page-header title="Egg Management" subtitle="Customer orders and fulfillment tracking" />
+    <x-page-header title="Egg Management" subtitle="Customer orders and fulfillment tracking" subtitle-id="egg-header-subtitle" actions-id="egg-header-actions">
+        <x-slot:actions>
+            <div class="flex items-center gap-2">
+                <x-button onclick="document.getElementById('addOrderModal').style.display = 'flex'">
+                    <i data-lucide="plus" class="w-4 h-4"></i> Add Pre-Order
+                </x-button>
+            </div>
+        </x-slot:actions>
+    </x-page-header>
 
     @include('eggs._tabs', ['activeTab' => 'preorders'])
 
     <turbo-frame id="egg-content">
+    <div class="space-y-5">
 
     {{-- ── Supply Summary ── --}}
     <h2 class="sr-only">Pre-Orders Overview</h2>
@@ -77,14 +86,11 @@
                     <input type="date" name="to" value="{{ $filters['to'] }}" onchange="preOrdersFilter()"
                            class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                 </div>
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
                     <a href="{{ route('eggs.preorders') }}"
                        class="px-4 py-2 text-xs font-medium rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">
                         Reset
                     </a>
-                    <x-button onclick="document.getElementById('addOrderModal').style.display = 'flex'">
-                        <i data-lucide="plus" class="w-4 h-4"></i> Add Pre-Order
-                    </x-button>
                 </div>
             </form>
         </x-card>
@@ -94,7 +100,7 @@
         @include('eggs.pre-orders._table-skeleton')
     </turbo-frame>
 
-</div>
+    </div>
 
 {{-- Add Pre-Order Modal --}}
 <div id="addOrderModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" style="display: none;">
@@ -248,6 +254,7 @@
             </div>
         </form>
     </div>
+</div>
 
 <script>
 function preOrdersFilter() {
@@ -401,27 +408,46 @@ function toggleEditFulfillmentDate() {
     wrap.classList.toggle('hidden', status !== 'fulfilled');
 }
 
-if (!window.__eggPreordersBound) {
-    window.__eggPreordersBound = true;
-    document.addEventListener('turbo:load', function() {
+{
+    // This whole <script> block lives inside turbo-frame#egg-content, so Turbo
+    // re-evaluates it (registers everything again) on every tab round-trip —
+    // it is NOT just innerHTML-replaced. #addOrderModal gets recreated fresh
+    // each time too, so the *binding logic* must re-run on every render (old
+    // fix), but the *document-level listeners that call it* must be
+    // registered exactly once — otherwise each round trip stacks another
+    // 'turbo:frame-load' listener on `document` (which persists across
+    // renders), and N stacked listeners then run the binding logic N times
+    // for a single real event, each creating its own MutationObserver.
+    // Reassigning window.__bindPreorders is harmless (fresh DOM queries
+    // internally, no captured element state), so exactly one persistent
+    // listener always invoking "whichever version is current" is correct.
+    window.__bindPreorders = function() {
         fetchPreorderPools(function(pools) {
             updateStockSummary(pools);
             onOrderSizeChange();
         });
-    });
 
-    var _addOrderObserver = new MutationObserver(function() {
-        var modal = document.getElementById('addOrderModal');
-        if (modal && modal.style.display !== 'none') {
-            fetchPreorderPools(function(pools) {
-                updateStockSummary(pools);
-                onOrderSizeChange();
-            });
+        var _addOrderObserver = new MutationObserver(function() {
+            var modal = document.getElementById('addOrderModal');
+            if (modal && modal.style.display !== 'none') {
+                fetchPreorderPools(function(pools) {
+                    updateStockSummary(pools);
+                    onOrderSizeChange();
+                });
+            }
+        });
+        var _addOrderModalEl = document.getElementById('addOrderModal');
+        if (_addOrderModalEl) {
+            _addOrderObserver.observe(_addOrderModalEl, { attributes: true, attributeFilter: ['style'] });
         }
-    });
-    var _addOrderModalEl = document.getElementById('addOrderModal');
-    if (_addOrderModalEl) {
-        _addOrderObserver.observe(_addOrderModalEl, { attributes: true, attributeFilter: ['style'] });
+    };
+
+    if (!window.__eggPreordersListenersRegistered) {
+        window.__eggPreordersListenersRegistered = true;
+        document.addEventListener('turbo:load', function() { window.__bindPreorders(); });
+        document.addEventListener('turbo:frame-load', function(e) {
+            if (e.target && e.target.id === 'egg-content') window.__bindPreorders();
+        });
     }
 }
 </script>

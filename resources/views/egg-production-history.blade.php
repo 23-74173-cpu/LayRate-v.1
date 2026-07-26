@@ -4,11 +4,12 @@
 @section('content')
 <div class="space-y-5">
 
-    <x-page-header title="Egg Management" subtitle="Full timeline of eggs logged since day 1" />
+    <x-page-header title="Egg Management" subtitle="Full timeline of eggs logged since day 1" subtitle-id="egg-header-subtitle" actions-id="egg-header-actions" />
 
     @include('eggs._tabs', ['activeTab' => 'history'])
 
     <turbo-frame id="egg-content">
+    <div class="space-y-5">
 
     {{-- Summary cards --}}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -123,6 +124,7 @@
         </x-card>
     </div>
 
+    </div>
 </turbo-frame>
 </div>
 @endsection

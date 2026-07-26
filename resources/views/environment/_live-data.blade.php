@@ -161,8 +161,13 @@
             if (humEmpty) humEmpty.classList.toggle('hidden', hasAnyData);
             if (!hasAnyData) return;
 
-            LayRateChart.update('envTempChart', { type:'line', data:{ labels, datasets: buildDatasets('avg_temp') }, options: chartOpts });
-            LayRateChart.update('envHumChart', { type:'line', data:{ labels, datasets: buildDatasets('avg_hum')  }, options: chartOpts });
+            // create(), not update(): this page's 10s poll replaces the canvas DOM
+            // nodes wholesale via innerHTML=, so any existing chart instance is
+            // already bound to a detached canvas by the time this runs. update()
+            // would silently redraw onto that invisible old node instead of the
+            // new one — create() always re-queries the live canvas by id.
+            LayRateChart.create('envTempChart', { type:'line', data:{ labels, datasets: buildDatasets('avg_temp') }, options: chartOpts });
+            LayRateChart.create('envHumChart', { type:'line', data:{ labels, datasets: buildDatasets('avg_hum')  }, options: chartOpts });
         }
 
         if (!window.__envChartsLifecycleBound) {
