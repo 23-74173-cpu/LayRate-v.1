@@ -2111,13 +2111,20 @@ if (!window.__cagesAutoEditBound) {
 @endif
 
 // ── Auto-open no-chickens modal ───────────────────────────
+// Use DOMContentLoaded (not a persistent turbo:load listener) so the
+// modal only opens on the initial page load when the session flag is
+// set, not on subsequent Turbo navigations where the flag may be gone.
 @if(session('show_no_chickens_modal'))
-if (!window.__cagesNoChickensBound) {
-    window.__cagesNoChickensBound = true;
-    document.addEventListener('turbo:load', function() {
-        openNoChickensModal();
-    });
-}
+(function() {
+    if (window.__cagesNoChickensFired) return;
+    window.__cagesNoChickensFired = true;
+    var f = function() { openNoChickensModal(); };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', f);
+    } else {
+        f();
+    }
+})();
 @endif
 
 </script>
