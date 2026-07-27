@@ -138,6 +138,47 @@ function editComputeHdep() {
             if (modal && !modal.classList.contains('hidden')) closeEditLogModal();
         }
     });
+
+    var logsSource = null;
+    var lastKnownId = 0;
+
+    function connectLogsSSE() {
+        if (logsSource) logsSource.close();
+        logsSource = new EventSource('/eggs/logging/live-logs?since=' + lastKnownId);
+
+        logsSource.addEventListener('log_update', function(e) {
+            try {
+                var data = JSON.parse(e.data);
+                if (data.latest_id > lastKnownId) {
+                    lastKnownId = data.latest_id;
+                    var frame = document.querySelector('turbo-frame#egg-logs-list');
+                    if (frame) {
+                        var src = frame.getAttribute('src');
+                        var url = new URL(src, window.location.origin);
+                        url.searchParams.set('_', Date.now());
+                        frame.setAttribute('src', url.toString());
+                    }
+                }
+            } catch(err) {}
+        });
+
+        logsSource.onerror = function() {
+            if (logsSource && logsSource.readyState === EventSource.CLOSED) {
+                setTimeout(connectLogsSSE, 3000);
+            }
+        };
+    }
+
+    document.addEventListener('turbo:load', function() {
+        if (logsSource) logsSource.close();
+        setTimeout(connectLogsSSE, 500);
+    });
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', connectLogsSSE);
+    } else {
+        connectLogsSSE();
+    }
 })();
 </script>
 </turbo-frame>

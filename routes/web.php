@@ -8,7 +8,9 @@ use App\Http\Controllers\CageController;
 use App\Http\Controllers\ChickensController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeviceController;
+use App\Http\Controllers\EggCountSseController;
 use App\Http\Controllers\EggLoggingController;
+use App\Http\Controllers\EggLogsSseController;
 use App\Http\Controllers\EggProductionHistoryController;
 use App\Http\Controllers\EggStockController;
 use App\Http\Controllers\EnvironmentController;
@@ -108,6 +110,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/eggs/logging/{productionLog}/reset',  [EggLoggingController::class, 'resetCount'])->name('eggs.logging.reset');
     Route::delete('/eggs/logging/{productionLog}',     [EggLoggingController::class, 'destroy'])->name('eggs.logging.destroy')->middleware('admin');
     Route::get('/eggs/logging/live-count',             [EggCountSseController::class, 'stream'])->name('eggs.logging.live-count');
+    Route::get('/eggs/logging/live-logs',              [EggLogsSseController::class, 'stream'])->name('eggs.logging.live-logs');
 
     Route::get('/eggs/stocks',                         [EggStockController::class, 'index'])->name('eggs.stocks');
     Route::get('/eggs/stocks/live-data',                [EggStockController::class, 'liveData'])->name('eggs.stocks.live-data');
