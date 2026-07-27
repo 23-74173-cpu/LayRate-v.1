@@ -1,7 +1,7 @@
 <turbo-frame id="environment-logs">
     <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
         <div class="px-5 py-3 border-b border-[#D9D9D9]">
-            <div class="text-xs tracking-wider text-[#6B7280]">ENVIRONMENT LOG HISTORY</div>
+            <div class="text-xs tracking-wider text-[#6B7280]">ENVIRONMENT LOG HISTORY — DAILY AVERAGES</div>
         </div>
 
         {{-- Filters --}}
@@ -36,9 +36,12 @@
         <table class="w-full">
             <thead>
                 <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
-                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Time</th>
+                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Date</th>
+                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Cage</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Avg Temp</th>
+                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Min–Max</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Avg Humidity</th>
+                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Readings</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Status</th>
                 </tr>
             </thead>
@@ -46,17 +49,21 @@
                 @forelse($summaryLogs as $log)
                 @php
                     $s = \App\Services\EnvironmentStatusService::summary($log->avg_temp, $log->avg_hum, $thresholds);
+                    $cageCode = $cages[$log->cage_id] ?? 'Cage #'.$log->cage_id;
                 @endphp
                 <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
-                    <td class="px-5 py-3.5 text-sm text-[#333333] font-mono">{{ $log->time_slot }}</td>
+                    <td class="px-5 py-3.5 text-sm text-[#333333] font-mono">{{ $log->log_date }}</td>
+                    <td class="px-5 py-3.5 text-sm font-medium text-[#333333]">{{ $cageCode }}</td>
                     <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $log->avg_temp }}°C</td>
+                    <td class="px-5 py-3.5 text-sm text-[#6B7280]">{{ $log->min_temp }}–{{ $log->max_temp }}°C</td>
                     <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $log->avg_hum }}%</td>
+                    <td class="px-5 py-3.5 text-sm text-[#6B7280]">{{ $log->reading_count }}</td>
                     <td class="px-5 py-3">
                         <x-status-badge :status="$s" type="sensor" />
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="4" class="px-5 py-10 text-center text-sm text-[#6B7280]">No environmental data recorded yet.</td></tr>
+                <tr><td colspan="7" class="px-5 py-10 text-center text-sm text-[#6B7280]">No environmental data recorded yet.</td></tr>
                 @endforelse
             </tbody>
         </table>

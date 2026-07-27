@@ -21,3 +21,10 @@ Schedule::command('alerts:check-environment')
     ->everyFifteenMinutes()
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/alerts-check-environment.log'));
+
+// Compute daily average environmental readings (runs early morning for previous day).
+Schedule::command('environment:compute-daily-averages')
+    ->daily()
+    ->at('03:00')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/environment-daily-averages.log'));

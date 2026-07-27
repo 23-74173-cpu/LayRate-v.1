@@ -85,17 +85,22 @@ class EnvironmentController extends Controller
         $cages = Cage::orderBy('cage_code')->pluck('cage_code', 'id');
 
         $query = EnvironmentalLog::selectRaw("
-                DATE_FORMAT(recorded_at, '%Y-%m-%d %H:00') as time_slot,
+                cage_id,
+                DATE(recorded_at) as log_date,
                 ROUND(AVG(temperature_c), 1) as avg_temp,
-                ROUND(AVG(humidity_pct), 0) as avg_hum
+                ROUND(AVG(humidity_pct), 0) as avg_hum,
+                ROUND(MIN(temperature_c), 1) as min_temp,
+                ROUND(MAX(temperature_c), 1) as max_temp,
+                ROUND(MIN(humidity_pct), 0) as min_hum,
+                ROUND(MAX(humidity_pct), 0) as max_hum,
+                COUNT(*) as reading_count
             ")
-            ->groupBy('time_slot')
-            ->orderByDesc('time_slot');
+            ->groupBy('cage_id', 'log_date')
+            ->orderByDesc('log_date')
+            ->orderBy('cage_id');
 
         if ($request->filled('date_from')) {
             $query->where('recorded_at', '>=', $request->date_from);
-        } else {
-            $query->where('recorded_at', '>=', now()->subHours(24));
         }
 
         if ($request->filled('date_to')) {
