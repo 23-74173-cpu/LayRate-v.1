@@ -126,6 +126,22 @@ function closeEnvThresholdsModal() {
     startLivePolling();
 }
 
+function getLiveDataSrc() {
+    var frame = document.getElementById('environment-live-data');
+    if (!frame) return '{{ route("environment.live-data") }}';
+    return frame.getAttribute('src') || '{{ route("environment.live-data") }}';
+}
+
+function changeTrendRange(range) {
+    var base = '{{ route("environment.live-data") }}';
+    var url = base + '?range=' + range;
+    var frame = document.getElementById('environment-live-data');
+    if (frame) {
+        frame.setAttribute('src', url);
+        frame.reload();
+    }
+}
+
 function envRefreshNow() {
     var frame = document.getElementById('environment-live-data');
     if (!frame) return;

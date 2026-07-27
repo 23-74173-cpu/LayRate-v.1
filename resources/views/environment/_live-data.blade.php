@@ -100,6 +100,15 @@
     </div>
 
     {{-- ── Trend Charts ── --}}
+    <div class="flex items-center justify-between mb-3">
+        <span class="text-xs tracking-wider text-[#6B7280]">TREND CHARTS</span>
+        <select id="trendRange" onchange="changeTrendRange(this.value)"
+                class="text-xs border border-[#D9D9D9] rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30">
+            <option value="24h" {{ ($range ?? '24h') === '24h' ? 'selected' : '' }}>24 Hours</option>
+            <option value="week" {{ ($range ?? '24h') === 'week' ? 'selected' : '' }}>Week</option>
+            <option value="month" {{ ($range ?? '24h') === 'month' ? 'selected' : '' }}>Month</option>
+        </select>
+    </div>
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
             <div class="text-xs tracking-wider text-[#6B7280] mb-3">TEMPERATURE TREND (COOP + PER CAGE)</div>
@@ -130,7 +139,7 @@
             const cagesMap    = @json($cages->pluck('cage_code','id'));
             const allHours = new Set();
             for (const rows of Object.values(trendData)) {
-                rows.forEach(function(r) { allHours.add(r.hour); });
+                rows.forEach(function(r) { allHours.add(r.period); });
             }
             const labels = Array.from(allHours).sort();
             const hasAnyData = Object.values(trendData).some(rows => rows.length > 0);
@@ -140,7 +149,7 @@
                 for (const [cageId, rows] of Object.entries(trendData)) {
                     const name = cagesMap[cageId] || 'Cage '+cageId;
                     const data = labels.map(l => {
-                        const r = rows.find(r => r.hour === l);
+                        const r = rows.find(r => r.period === l);
                         return r ? r[field] : null;
                     });
                     sets.push({ label: name, data, borderColor: cageColors[cageId] || '#6B7280', tension: 0.3, pointRadius: 3, borderWidth: 1.5, fill: false });

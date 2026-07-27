@@ -19,10 +19,19 @@ class EnvironmentController extends Controller
         return view('environment', compact('thresholds', 'envTab'));
     }
 
-    public function liveData()
+    public function liveData(Request $request)
     {
         $thresholds = Setting::thresholds();
         $cages = Cage::with(['latestEnvironmentLog'])->orderBy('cage_code')->get();
+
+        $range = $request->query('range', '24h');
+
+        $trendDateFormats = [
+            '24h' => ["%H:00", now()->subHours(24)],
+            'week' => ["%a %d", now()->subWeek()],
+            'month' => ["%b %d", now()->subMonth()],
+        ];
+        [$dateFormat, $since] = $trendDateFormats[$range] ?? $trendDateFormats['24h'];
 
         $latestPerCage = $cages->map(function ($cage) use ($thresholds) {
             $env = $cage->latestEnvironmentLog;
@@ -39,23 +48,23 @@ class EnvironmentController extends Controller
         })->filter();
 
         $trendData = EnvironmentalLog::select(
-                DB::raw("DATE_FORMAT(recorded_at, '%H:00') as hour"),
+                DB::raw("DATE_FORMAT(recorded_at, '{$dateFormat}') as period"),
                 'cage_id',
                 DB::raw('ROUND(AVG(temperature_c),1) as avg_temp'),
                 DB::raw('ROUND(AVG(humidity_pct),1) as avg_hum')
             )
-            ->where('recorded_at', '>=', now()->subHours(24))
-            ->groupBy('hour', 'cage_id')
-            ->orderBy('hour')
+            ->where('recorded_at', '>=', $since)
+            ->groupBy('period', 'cage_id')
+            ->orderBy('period')
             ->get()
             ->groupBy('cage_id');
 
         $summaryLogs = EnvironmentalLog::select(
-                DB::raw("DATE_FORMAT(recorded_at, '%H:00') as time_slot"),
+                DB::raw("DATE_FORMAT(recorded_at, '{$dateFormat}') as time_slot"),
                 DB::raw('ROUND(AVG(temperature_c),1) as avg_temp'),
                 DB::raw('ROUND(AVG(humidity_pct),1) as avg_hum')
             )
-            ->where('recorded_at', '>=', now()->subHours(24))
+            ->where('recorded_at', '>=', $since)
             ->groupBy('time_slot')
             ->orderByDesc('time_slot')
             ->limit(10)
@@ -66,7 +75,7 @@ class EnvironmentController extends Controller
 
         return view('environment._live-data', compact(
             'cages', 'latestPerCage', 'trendData', 'summaryLogs',
-            'avgTemp', 'avgHum', 'thresholds'
+            'avgTemp', 'avgHum', 'thresholds', 'range'
         ));
     }
 
