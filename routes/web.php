@@ -125,6 +125,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/environment',        [EnvironmentController::class, 'index'])->name('environment');
     Route::get('/environment/live-data', [EnvironmentController::class, 'liveData'])->name('environment.live-data');
     Route::get('/environment/logs',      [EnvironmentController::class, 'logs'])->name('environment.logs');
+    Route::put('/environment/logs/{cageId}/{date}', [EnvironmentController::class, 'updateLog'])->name('environment.logs.update');
     Route::post('/environment/thresholds', [EnvironmentController::class, 'saveThresholds'])->name('environment.thresholds');
     Route::post('/eggs/stocks/egg-weights', [EggStockController::class, 'saveEggWeights'])->name('eggs.stocks.egg-weights');
     Route::post('/eggs/stocks/thresholds', [EggStockController::class, 'saveThresholds'])->name('eggs.stocks.thresholds');

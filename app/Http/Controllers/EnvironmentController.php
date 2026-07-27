@@ -15,8 +15,9 @@ class EnvironmentController extends Controller
     {
         $thresholds = Setting::thresholds();
         $envTab = $request->query('envTab', 'live');
+        $cages = \App\Models\Cage::orderBy('cage_code')->pluck('cage_code', 'id');
 
-        return view('environment', compact('thresholds', 'envTab'));
+        return view('environment', compact('thresholds', 'envTab', 'cages'));
     }
 
     public function liveData(Request $request)
@@ -114,6 +115,34 @@ class EnvironmentController extends Controller
         $summaryLogs = $query->paginate(20);
 
         return view('environment._logs', compact('summaryLogs', 'thresholds', 'cages'));
+    }
+
+    public function updateLog(Request $request, int $cageId, string $date)
+    {
+        $validated = $request->validate([
+            'temperature_c' => 'required|numeric|min:-10|max:60',
+            'humidity_pct' => 'required|numeric|min:0|max:100',
+        ]);
+
+        $recordedAt = \Carbon\Carbon::parse($date)->setHour(12)->setMinute(0)->setSecond(0);
+
+        EnvironmentalLog::updateOrCreate(
+            [
+                'cage_id' => $cageId,
+                'recorded_at' => $recordedAt,
+            ],
+            [
+                'temperature_c' => $validated['temperature_c'],
+                'humidity_pct' => $validated['humidity_pct'],
+            ]
+        );
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->route('environment', ['envTab' => 'logs'])
+            ->with('success', "Environment log for Cage #{$cageId} on {$date} updated.");
     }
 
     public function saveThresholds(Request $request)

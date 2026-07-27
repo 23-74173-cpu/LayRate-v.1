@@ -86,6 +86,46 @@
     </div>
 </div>
 
+{{-- ── Environment Log Override Modal ── --}}
+<div id="envLogOverrideModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEnvLogOverride()"></div>
+    <div class="relative w-full max-w-sm rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+        <div class="flex items-center justify-between mb-5">
+            <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Override Environment Log</h2>
+            <button onclick="closeEnvLogOverride()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+            </button>
+        </div>
+
+        <form id="envLogOverrideForm" method="POST">
+            @csrf @method('PUT')
+            <div class="space-y-4">
+                <p class="text-sm text-[#6B7280]">Replace the daily average for <strong id="envLogOverrideCageLabel">—</strong> on <strong id="envLogOverrideDateLabel">—</strong>.</p>
+                <div>
+                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Temperature (°C)</label>
+                    <input type="number" name="temperature_c" id="envOverrideTemp" step="0.1" required
+                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                           style="border-color: #e6e6e6; color: #1f1f1f;">
+                    <x-input-error name="temperature_c" />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Humidity (%)</label>
+                    <input type="number" name="humidity_pct" id="envOverrideHum" step="1" required
+                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                           style="border-color: #e6e6e6; color: #1f1f1f;">
+                    <x-input-error name="humidity_pct" />
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-5">
+                <button type="button" onclick="closeEnvLogOverride()"
+                        class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">Cancel</button>
+                <x-button type="submit" class="flex-1 py-2.5">Save Override</x-button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
@@ -200,12 +240,32 @@ document.addEventListener('turbo:load', function() {
 });
 document.addEventListener('turbo:before-cache', stopLivePolling);
 
-// Escape key closes threshold modal
+// ── Environment Log Override ──
+function openEnvLogOverride(cageId, date, currentTemp, currentHum, cageCode) {
+    var form = document.getElementById('envLogOverrideForm');
+    if (!form) return;
+    form.action = '/environment/logs/' + cageId + '/' + date;
+
+    document.getElementById('envOverrideTemp').value = currentTemp;
+    document.getElementById('envOverrideHum').value = currentHum;
+    document.getElementById('envLogOverrideCageLabel').textContent = cageCode || 'Cage #' + cageId;
+    document.getElementById('envLogOverrideDateLabel').textContent = date;
+    document.getElementById('envLogOverrideModal').style.display = 'flex';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeEnvLogOverride() {
+    var modal = document.getElementById('envLogOverrideModal');
+    if (modal) modal.style.display = 'none';
+}
+
+// Escape key closes modals
 if (!window.__envThresholdsEscapeBound) {
     window.__envThresholdsEscapeBound = true;
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closeEnvThresholdsModal();
+            closeEnvLogOverride();
         }
     });
 }

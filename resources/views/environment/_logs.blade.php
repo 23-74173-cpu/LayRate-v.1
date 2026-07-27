@@ -43,6 +43,7 @@
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Avg Humidity</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Readings</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Status</th>
+                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -61,9 +62,15 @@
                     <td class="px-5 py-3">
                         <x-status-badge :status="$s" type="sensor" />
                     </td>
+                    <td class="px-5 py-3.5">
+                        <button type="button" onclick="openEnvLogOverride({{ $log->cage_id }}, '{{ $log->log_date }}', {{ $log->avg_temp }}, {{ $log->avg_hum }}, '{{ $cageCode }}')"
+                                class="text-xs px-2.5 py-1 rounded border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">
+                            Override
+                        </button>
+                    </td>
                 </tr>
                 @empty
-                <tr><td colspan="7" class="px-5 py-10 text-center text-sm text-[#6B7280]">No environmental data recorded yet.</td></tr>
+                <tr><td colspan="8" class="px-5 py-10 text-center text-sm text-[#6B7280]">No environmental data recorded yet.</td></tr>
                 @endforelse
             </tbody>
         </table>
