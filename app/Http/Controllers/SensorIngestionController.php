@@ -93,7 +93,7 @@ class SensorIngestionController extends Controller
                         'type' => 'environment',
                         'cage_id' => $hardwareItem->cage_id,
                     ];
-                } elseif ($hardwareItem->device_type === 'IR_breakbeam') {
+                } else            if ($hardwareItem->device_type === 'IR_breakbeam') {
                     if (! isset($reading['count'])) {
                         $errors[] = "Reading {$index}: IR breakbeam reading requires count.";
                         continue;
@@ -109,24 +109,25 @@ class SensorIngestionController extends Controller
                     $actualOccupancy = $slot->current_occupancy;
 
                     /*
-                     * RATE LIMIT DISABLED FOR TESTING — uncomment to re-enable.
+                     * DEBOUNCE — skip if the same count was already recorded
+                     * within the last 5 seconds. The Arduino firmware already
+                     * has a 1-second IR_COOLDOWN_MS, so 5 seconds on the
+                     * server side catches any duplicate blocks sent by the
+                     * Python bridge (e.g. due to curl retry or TCP re-send).
                      *
-                     * DESIGN (for reference):
-                     * Cooldown = 22 / max_chickens_per_slot (min 1h) so occupancy
-                     * never enters the equation. Underfilled slots get a wider
-                     * window, accepting occasional false positives over missed
-                     * real readings.
+                     * This replaces the old rate-limit design which used a
+                     * formula of 22 / max_chickens_per_slot hours (min 1h)
+                     * — far too aggressive for live updates.
                      */
-                    // $cooldownHours = max(1, 22 / $slot->cage->max_chickens_per_slot);
-                    //
-                    // $lastReading = SensorOccupancyReading::where('hardware_item_id', $hardwareItem->id)
-                    //     ->latest('recorded_at')
-                    //     ->first();
-                    //
-                    // if ($lastReading && $lastReading->recorded_at->gt(now()->subHours($cooldownHours))) {
-                    //     $errors[] = "Reading {$index}: rate-limited (cooldown {$cooldownHours}h for {$slot->cage->max_chickens_per_slot}-hen slot). Last reading was {$lastReading->recorded_at->diffForHumans()}.";
-                    //     continue;
-                    // }
+                    $lastReading = SensorOccupancyReading::where('hardware_item_id', $hardwareItem->id)
+                        ->latest('recorded_at')
+                        ->first();
+
+                    if ($lastReading
+                        && (int) $lastReading->reported_count === $reportedCount
+                        && $lastReading->recorded_at->gt(now()->subSeconds(5))) {
+                        continue;
+                    }
 
                     SensorOccupancyReading::updateOrCreate(
                         [

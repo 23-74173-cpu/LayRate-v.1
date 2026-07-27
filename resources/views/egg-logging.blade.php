@@ -701,6 +701,86 @@
             }
         });
     }
+
+    // ── Live SSE egg count for CAGE-T ───────────
+    var cageTCode = 'CAGE-T';
+    var cageTSelect = document.querySelector('#cageSelect option[value]');
+
+    function findCageTSlotCards() {
+        return document.querySelectorAll('.slot-card[data-cage-code="' + cageTCode + '"]');
+    }
+
+    function updateCageTCount(count) {
+        var cards = findCageTSlotCards();
+        cards.forEach(function(card) {
+            var prev = parseInt(card.dataset.todayEggs) || 0;
+            if (count !== prev) {
+                card.dataset.todayEggs = count;
+                card.style.backgroundColor = count > 0 ? '#eaf6ee' : '#ffffff';
+
+                if (count > 0 && prev === 0) {
+                    var check = document.createElement('span');
+                    check.className = 'logged-check absolute top-0.5 left-0.5 w-3 h-3 rounded-full flex items-center justify-center';
+                    check.style.backgroundColor = '#1f6b3a';
+                    check.innerHTML = '<svg class="w-2 h-2 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                    card.appendChild(check);
+                }
+
+                if (currentSlotId && card.dataset.slotId == currentSlotId) {
+                    var eggInput = document.getElementById('eggCount');
+                    if (eggInput && eggInput.readOnly) {
+                        eggInput.value = count;
+                        computeHdep();
+                        checkSizeSum();
+                        validateForm();
+                    }
+                }
+            }
+        });
+    }
+
+    var eggCountSource = null;
+
+    function connectEggCountSSE() {
+        if (eggCountSource) {
+            eggCountSource.close();
+        }
+
+        var url = '{{ route("eggs.logging.live-count") }}?cage_code=' + cageTCode;
+        eggCountSource = new EventSource(url);
+
+        eggCountSource.addEventListener('count', function(e) {
+            try {
+                var data = JSON.parse(e.data);
+                if (data.counts) {
+                    for (var slotId in data.counts) {
+                        if (data.counts.hasOwnProperty(slotId)) {
+                            updateCageTCount(data.counts[slotId].egg_count);
+                        }
+                    }
+                }
+            } catch(err) {
+                // ignore parse errors on reconnect
+            }
+        });
+
+        eggCountSource.onerror = function() {
+            if (eggCountSource && eggCountSource.readyState === EventSource.CLOSED) {
+                setTimeout(connectEggCountSSE, 3000);
+            }
+        };
+    }
+
+    document.addEventListener('turbo:load', function() {
+        if (eggCountSource) eggCountSource.close();
+        setTimeout(connectEggCountSSE, 500);
+    });
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', connectEggCountSSE);
+    } else {
+        connectEggCountSSE();
+    }
 })();
 </script>
 </turbo-frame>
