@@ -124,25 +124,30 @@ class EnvironmentController extends Controller
             'humidity_pct' => 'required|numeric|min:0|max:100',
         ]);
 
-        $recordedAt = \Carbon\Carbon::parse($date)->setHour(12)->setMinute(0)->setSecond(0);
+        $dateStart = \Carbon\Carbon::parse($date)->startOfDay();
+        $dateEnd = \Carbon\Carbon::parse($date)->endOfDay();
+        $noon = $dateStart->copy()->setHour(12);
 
-        EnvironmentalLog::updateOrCreate(
-            [
-                'cage_id' => $cageId,
-                'recorded_at' => $recordedAt,
-            ],
-            [
-                'temperature_c' => $validated['temperature_c'],
-                'humidity_pct' => $validated['humidity_pct'],
-            ]
-        );
+        // Delete all raw readings for this cage/date so the override row
+        // is the only row — the on-the-fly AVG in logs() and the nightly
+        // aggregation will both produce the override value.
+        EnvironmentalLog::where('cage_id', $cageId)
+            ->whereBetween('recorded_at', [$dateStart, $dateEnd])
+            ->delete();
+
+        EnvironmentalLog::create([
+            'cage_id' => $cageId,
+            'recorded_at' => $noon,
+            'temperature_c' => $validated['temperature_c'],
+            'humidity_pct' => $validated['humidity_pct'],
+        ]);
 
         if ($request->wantsJson()) {
             return response()->json(['success' => true]);
         }
 
         return redirect()->route('environment', ['envTab' => 'logs'])
-            ->with('success', "Environment log for Cage #{$cageId} on {$date} updated.");
+            ->with('success', "Environment log for Cage #{$cageId} on {$date} overridden.");
     }
 
     public function saveThresholds(Request $request)
