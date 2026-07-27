@@ -96,7 +96,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Status</label>
-                    <select name="status" required
+                    <select name="status" id="addStatus" required onchange="onAddStatusChange()"
                             class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="active" {{ old('status') === 'active' ? 'selected' : '' }}>Active</option>
@@ -264,9 +264,28 @@ function updateAddAssignment() {
     var type = document.getElementById('addDeviceType').value;
     var slotGroup = document.getElementById('addCageSlotGroup');
     var cageGroup = document.getElementById('addCageGroup');
+    var status = document.getElementById('addStatus').value;
 
+    if (status === 'spare') {
+        slotGroup.classList.add('hidden');
+        cageGroup.classList.add('hidden');
+        return;
+    }
     slotGroup.classList.toggle('hidden', type !== 'IR_breakbeam');
     cageGroup.classList.toggle('hidden', type !== 'DHT22' && type !== 'relay');
+}
+
+function onAddStatusChange() {
+    var status = document.getElementById('addStatus').value;
+    var slotGroup = document.getElementById('addCageSlotGroup');
+    var cageGroup = document.getElementById('addCageGroup');
+
+    if (status === 'spare') {
+        slotGroup.classList.add('hidden');
+        cageGroup.classList.add('hidden');
+    } else {
+        updateAddAssignment();
+    }
 }
 
 function updateEditAssignment() {
@@ -310,7 +329,7 @@ function openEditModal(id, deviceType, serial, cageId, cageSlotId, installDate, 
 
 function openAddModal() {
     document.getElementById('addModal').style.display = 'flex';
-    updateAddAssignment();
+    onAddStatusChange();
     lucide.createIcons();
 }
 

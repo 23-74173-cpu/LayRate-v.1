@@ -76,7 +76,7 @@
             </a>
 
             @can('admin')
-            <form method="POST" action="{{ route('forecast.clear') }}" class="inline" data-turbo="false" data-confirm="Clear all forecast badges from the calendar for the current selection?" data-confirm-action="Clear" data-confirm-severity="neutral">
+            <form method="POST" action="{{ route('forecast.clear') }}" class="inline" data-confirm="Clear all forecast badges from the calendar for the current selection?" data-confirm-action="Clear" data-confirm-severity="neutral">
                 @csrf
                 <input type="hidden" name="scope" value="{{ $scope }}">
                 @if($scope === 'cage')
