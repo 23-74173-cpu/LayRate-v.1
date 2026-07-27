@@ -94,24 +94,27 @@
         document.getElementById('confirm-modal-action').textContent = actionLabel || 'Confirm';
 
         var iconWrap = document.getElementById('confirm-modal-icon');
-        var icon     = iconWrap.querySelector('i');
         var cancelBtn  = document.getElementById('confirm-modal-cancel');
         var actionBtn  = document.getElementById('confirm-modal-action');
         var actionsRow = document.getElementById('confirm-modal-actions');
 
+        // Recreate icon element — Lucide may have already replaced the
+        // initial <i> with <svg>, so querySelector('i') would return null.
+        // By rebuilding via innerHTML we avoid that null reference entirely.
+        var lucideIcon, bgColor, iconColor;
         if (severity === 'destructive') {
-            iconWrap.style.backgroundColor = '#fbe4e6';
-            icon.setAttribute('data-lucide', 'alert-triangle');
-            icon.style.color = '#9b1c24';
+            lucideIcon = 'alert-triangle';
+            bgColor = '#fbe4e6';
+            iconColor = '#9b1c24';
             actionBtn.style.backgroundColor = '#9b1c24';
             actionBtn.className = 'px-4 py-2 text-sm font-medium rounded-full bg-[#9b1c24] text-white hover:bg-[#7a161d] transition-colors';
             cancelBtn.classList.remove('hidden');
             actionsRow.classList.remove('flex-col');
             actionsRow.classList.add('flex');
         } else if (severity === 'info') {
-            iconWrap.style.backgroundColor = '#dbeafe';
-            icon.setAttribute('data-lucide', 'circle-info');
-            icon.style.color = '#1D4E8F';
+            lucideIcon = 'circle-info';
+            bgColor = '#dbeafe';
+            iconColor = '#1D4E8F';
             actionBtn.style.backgroundColor = '#1D4E8F';
             actionBtn.className = 'px-4 py-2 text-sm font-medium rounded-lg bg-[#1D4E8F] text-white hover:bg-[#163d73] transition-colors';
             cancelBtn.classList.add('hidden');
@@ -120,15 +123,18 @@
             actionBtn.classList.add('w-full');
         } else {
             // neutral (default)
-            iconWrap.style.backgroundColor = '#e8ecf4';
-            icon.setAttribute('data-lucide', 'circle-check');
-            icon.style.color = '#213183';
+            lucideIcon = 'circle-check';
+            bgColor = '#e8ecf4';
+            iconColor = '#213183';
             actionBtn.className = 'px-4 py-2 text-sm font-medium rounded-full text-white transition-colors';
             actionBtn.style.backgroundColor = '#213183';
             cancelBtn.classList.remove('hidden');
             actionsRow.classList.remove('flex-col');
             actionsRow.classList.add('flex');
         }
+
+        iconWrap.style.backgroundColor = bgColor;
+        iconWrap.innerHTML = '<i data-lucide="' + lucideIcon + '" class="w-5 h-5" style="color: ' + iconColor + ';"></i>';
 
         // Remove hidden from the modal itself
         document.getElementById('confirm-modal').classList.remove('hidden');

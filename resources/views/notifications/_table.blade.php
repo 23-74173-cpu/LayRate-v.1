@@ -29,7 +29,7 @@
                         <div class="flex items-center gap-2 mt-1.5">
                             <span class="text-xs px-2 py-0.5 rounded" style="background-color: #F0F0EC; color: #6B7280;">{{ $alert->alert_type }}</span>
                             @if(!$alert->is_read)
-                            <form method="POST" action="{{ route('alerts.read', $alert) }}" class="inline">
+                            <form method="POST" action="{{ route('alerts.read', $alert) }}" class="inline" data-turbo="false">
                                 @csrf
                                 <button type="submit" class="text-xs font-medium hover:underline" style="color: #0075de;">Mark read</button>
                             </form>

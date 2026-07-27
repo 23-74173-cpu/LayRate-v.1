@@ -191,12 +191,15 @@
     // Pre-select hens from deep-link
     updateHenSelection();
 
-    document.addEventListener('turbo:load', function() {
-        var cageSelect = document.getElementById('cageSelect');
-        if (cageSelect && cageSelect.value) {
-            loadCageSlots();
-        }
-    });
+    if (!window.__bulkAddTurboLoadBound) {
+        window.__bulkAddTurboLoadBound = true;
+        document.addEventListener('turbo:load', function() {
+            var cageSelect = document.getElementById('cageSelect');
+            if (cageSelect && cageSelect.value) {
+                loadCageSlots();
+            }
+        });
+    }
 
     // ── Hen Selection ────────────────────────────────────
     function toggleSelectAll() {
@@ -355,6 +358,11 @@
             el.addEventListener('mousedown', onMouseDown);
             el.addEventListener('mouseenter', onMouseEnter);
         });
+    }
+
+    // Register mouseup once — not inside renderGrid which runs multiple times
+    if (!window.__bulkAddMouseUpBound) {
+        window.__bulkAddMouseUpBound = true;
         document.addEventListener('mouseup', onMouseUp);
     }
 

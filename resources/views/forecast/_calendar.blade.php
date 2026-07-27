@@ -76,7 +76,7 @@
             </a>
 
             @can('admin')
-            <form method="POST" action="{{ route('forecast.clear') }}" class="inline" data-confirm="Clear all forecast badges from the calendar for the current selection?" data-confirm-action="Clear" data-confirm-severity="neutral">
+            <form method="POST" action="{{ route('forecast.clear') }}" class="inline" data-turbo="false" data-confirm="Clear all forecast badges from the calendar for the current selection?" data-confirm-action="Clear" data-confirm-severity="neutral">
                 @csrf
                 <input type="hidden" name="scope" value="{{ $scope }}">
                 @if($scope === 'cage')
@@ -243,7 +243,7 @@
                 (<span class="font-medium text-[#333333]">{{ $scope === 'farm' ? 'Whole Farm' : ($scope === 'breed' ? $breed : $cageCode) }}</span>).
             </p>
             @can('admin')
-            <form method="POST" action="{{ route('forecast.generate') }}" id="forecastDayForm" data-turbo-stream>
+            <form method="POST" action="{{ route('forecast.generate') }}" id="forecastDayForm" data-turbo="false">
                 @csrf
                 <input type="hidden" name="scope" value="{{ $scope }}">
                 <input type="hidden" name="horizon" value="1">
@@ -335,6 +335,15 @@
         if (modal) {
             modal.addEventListener('click', function(e) {
                 if (e.target === modal) closeModal();
+            });
+        }
+
+        // Wire loading overlay for specific-date forecast form
+        var dayForm = document.getElementById('forecastDayForm');
+        var loadingOverlay = document.getElementById('forecastLoadingOverlay');
+        if (dayForm && loadingOverlay) {
+            dayForm.addEventListener('submit', function() {
+                loadingOverlay.style.display = 'flex';
             });
         }
     })();

@@ -6,7 +6,7 @@
 
     <x-page-header title="Notifications" subtitle="All system alerts and warnings">
         <x-slot:actions>
-            <form method="POST" action="{{ route('alerts.read-all') }}">
+            <form method="POST" action="{{ route('alerts.read-all') }}" data-turbo="false">
                 @csrf
                 <button type="submit" class="flex items-center gap-2 bg-[#002D5E] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#001F42] transition-colors">
                     <i data-lucide="check-check" class="w-4 h-4"></i> Mark all read
