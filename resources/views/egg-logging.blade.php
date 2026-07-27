@@ -615,9 +615,15 @@
 
                     // Update slot card visual to show it's logged
                     var slotCard = document.querySelector('.slot-card[data-slot-id="' + currentSlotId + '"]');
+                    var savedEggs = parseInt(resp.body.log.egg_count) || 0;
+                    var cageId = null;
+                    var eggDelta = savedEggs;
                     if (slotCard) {
-                        slotCard.dataset.todayEggs = resp.body.log.egg_count;
+                        var prevEggs = parseInt(slotCard.dataset.todayEggs) || 0;
+                        eggDelta = savedEggs - prevEggs;
+                        slotCard.dataset.todayEggs = savedEggs;
                         slotCard.style.backgroundColor = '#eaf6ee';
+                        cageId = parseInt(slotCard.dataset.cageId);
 
                         // Remove existing checkmark if any, then add green check
                         var existingCheck = slotCard.querySelector('.logged-check');
@@ -628,7 +634,35 @@
                         check.style.backgroundColor = '#1f6b3a';
                         check.innerHTML = '<svg class="w-2 h-2 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><polyline points="20 6 9 17 4 12"></polyline></svg>';
                         slotCard.appendChild(check);
+                    }
 
+                    // Update overview card for this cage
+                    if (cageId) {
+                        var card = document.querySelector('.cage-overview-card[data-cage-id="' + cageId + '"]');
+                        if (card) {
+                            var totalSlots = parseInt(card.dataset.totalSlots) || 0;
+                            var loggedCount = document.querySelectorAll('.slot-card[data-cage-id="' + cageId + '"] .logged-check').length;
+                            if (loggedCount > totalSlots) loggedCount = totalSlots;
+                            var loggedEl = document.getElementById('cage-logged-' + cageId);
+                            var completeEl = document.getElementById('cage-complete-' + cageId);
+                            if (loggedEl) {
+                                loggedEl.textContent = loggedCount + '/' + totalSlots;
+                                loggedEl.style.color = loggedCount >= totalSlots ? '#1f6b3a' : '#1f1f1f';
+                            }
+                            if (completeEl) {
+                                completeEl.style.display = loggedCount >= totalSlots ? 'inline' : 'none';
+                            }
+                            var eggsEl = document.getElementById('cage-eggs-' + cageId);
+                            if (eggsEl) {
+                                var currentEggs = parseInt(eggsEl.textContent.replace(/[^0-9]/g, '')) || 0;
+                                eggsEl.textContent = (currentEggs + eggDelta).toLocaleString() + ' eggs';
+                            }
+                        }
+                        var totalEl = document.getElementById('todayTotalEggs');
+                        if (totalEl) {
+                            var currentTotal = parseInt(totalEl.textContent.replace(/[^0-9]/g, '')) || 0;
+                            totalEl.textContent = (currentTotal + eggDelta).toLocaleString();
+                        }
                     }
 
                     // Reset size breakdown fields
