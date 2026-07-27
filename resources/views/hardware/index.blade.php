@@ -46,7 +46,7 @@
         </div>
 
         <form method="POST" action="{{ route('hardware.store') }}"
-              data-confirm="Add this hardware item?" data-confirm-action="Add Item"
+              data-confirm="Add this hardware item?" data-confirm-action="Add Item" data-confirm-severity="neutral"
               onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Adding\u2026')">
             @csrf
             <div class="space-y-4">

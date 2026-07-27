@@ -602,7 +602,7 @@ function updateLogSelect(cageId) {
         if (form) {
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
-                confirmModal('Add this stock batch?', { submit: performAddStock }, 'Add Batch');
+                performAddStock();
             });
         }
 

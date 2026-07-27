@@ -249,8 +249,9 @@
                             </button>
                             @if($member->id !== auth()->id())
                             <form method="POST" action="{{ route('settings.users.toggle-active', $member->id) }}"
-                                  data-confirm="{{ $member->is_active ? 'Deactivate '.$member->name.'? They will be signed out and unable to log in until reactivated.' : 'Reactivate '.$member->name.'?' }}"
-                                  data-confirm-action="{{ $member->is_active ? 'Deactivate' : 'Reactivate' }}">
+                                   data-confirm="{{ $member->is_active ? 'Deactivate '.$member->name.'? They will be signed out and unable to log in until reactivated.' : 'Reactivate '.$member->name.'?' }}"
+                                   data-confirm-action="{{ $member->is_active ? 'Deactivate' : 'Reactivate' }}"
+                                   data-confirm-severity="{{ $member->is_active ? 'destructive' : 'neutral' }}">
                                 @csrf
                                 <button type="submit" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="{{ $member->is_active ? 'Deactivate' : 'Reactivate' }} {{ $member->name }}">
                                     <i data-lucide="{{ $member->is_active ? 'user-x' : 'user-check' }}" class="w-4 h-4 text-[#6B7280]"></i>

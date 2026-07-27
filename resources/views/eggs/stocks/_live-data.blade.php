@@ -51,7 +51,7 @@
                                 <i data-lucide="qr-code" class="w-3.5 h-3.5"></i>
                             </a>
                             <form method="POST" action="{{ route('eggs.stocks.destroy', $batch) }}"
-                                  data-confirm="Delete this stock batch?" data-confirm-action="Delete">
+                                  data-confirm="Delete this stock batch?" data-confirm-action="Delete" data-confirm-severity="destructive">
                                 @csrf @method('DELETE')
                                 <x-icon-button type="submit" icon="trash-2" label="Delete stock" color="red" />
                             </form>

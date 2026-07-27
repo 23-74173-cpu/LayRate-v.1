@@ -28,7 +28,7 @@
                         @can('admin')
                         <td class="px-3 py-2">
                             <form method="POST" action="{{ route('mortality.destroy', $log) }}"
-                                  data-confirm="Delete this mortality record?" data-confirm-action="Delete">
+                                  data-confirm="Delete this mortality record?" data-confirm-action="Delete" data-confirm-severity="destructive">
                                 @csrf @method('DELETE')
                                 <button type="submit" class="text-red-400 hover:text-red-600" aria-label="Delete record">
                                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>

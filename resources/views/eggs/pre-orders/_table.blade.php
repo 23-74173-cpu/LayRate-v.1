@@ -49,7 +49,7 @@
                                 onclick="openEditStatus({{ $order->id }}, '{{ $order->status }}', '{{ $order->fulfillment_date?->toDateString() ?? '' }}')" />
                             @can('admin')
                             <form action="{{ route('eggs.preorders.destroy', $order) }}" method="POST"
-                                  data-confirm="Cancel this pre-order?" data-confirm-action="Delete">
+                                  data-confirm="Cancel this pre-order?" data-confirm-action="Cancel" data-confirm-severity="destructive">
                                 @csrf @method('DELETE')
                                 <x-icon-button type="submit" icon="trash-2" label="Cancel pre-order" color="red" />
                             </form>

@@ -541,9 +541,9 @@ function deleteBatch(id) {
                         }
                     })
                     .catch(function() { showNotification('Delete failed.', 'error'); });
-                }}, 'Delete');
+                }}, 'Delete', 'destructive');
             } else {
-                confirmModal('This batch has ' + data.count + ' recorded consumption log(s) and cannot be deleted. Remove those records first.', null, 'Got it');
+                confirmModal('This batch has ' + data.count + ' recorded consumption log(s) and cannot be deleted. Remove those records first.', null, 'Got it', 'info');
             }
         })
         .catch(function() {

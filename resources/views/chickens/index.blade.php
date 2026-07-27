@@ -418,7 +418,7 @@ function submitMortality(form) {
     confirmModal(
         'Record mortality: ' + count + ' hen(s) in ' + cageCode + '? The affected hen(s) will be deactivated and slot occupancy updated.',
         { submit: function() { mortalityAjaxSubmit(form); } },
-        'Record'
+        'Record', 'destructive'
     );
 }
 

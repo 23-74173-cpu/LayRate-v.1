@@ -131,7 +131,7 @@ function submitRemove(form) {
     confirmModal(
         msg,
         { submit: function() { ajaxRemove(form); } },
-        'Remove'
+        'Remove', 'destructive'
     );
 }
 

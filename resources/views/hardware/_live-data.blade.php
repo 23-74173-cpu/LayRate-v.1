@@ -98,7 +98,7 @@
                                     onclick="openEditModal({{ $item->id }}, '{{ $item->device_type }}', '{{ addslashes($item->serial_number) }}', {{ $item->cage_id ?? 'null' }}, {{ $item->cage_slot_id ?? 'null' }}, '{{ $item->installation_date?->format('Y-m-d') ?? '' }}', '{{ $item->status }}', '{{ $item->last_calibration_date?->format('Y-m-d') ?? '' }}')" />
                                 @can('admin')
                                 <form method="POST" action="{{ route('hardware.destroy', $item) }}"
-                                      data-confirm="Remove this hardware item?" data-confirm-action="Remove">
+                                      data-confirm="Delete this hardware item?" data-confirm-action="Delete" data-confirm-severity="destructive">
                                     @csrf @method('DELETE')
                                     <x-icon-button type="submit" icon="trash-2" label="Delete device" color="red" />
                                 </form>

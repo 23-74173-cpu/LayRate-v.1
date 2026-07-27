@@ -319,7 +319,7 @@
                                         onclick="openConsumptionModal({{ $log->cage_id }}, {{ $log->feed_batch_id }}, '{{ $log->log_date->format('Y-m-d') }}', '{{ $log->log_time?->format('H:i') ?? '' }}', {{ $log->feed_consumed_kg }}, {{ $log->id }})" />
                                     @can('admin')
                                     <x-icon-button icon="trash-2" label="Delete consumption log" color="red"
-                                        onclick="confirmModal('Delete this consumption record?', { submit: function() { deleteConsumption({{ $log->id }}); } }, 'Delete')" />
+                                        onclick="confirmModal('Delete this consumption record?', { submit: function() { deleteConsumption({{ $log->id }}); } }, 'Delete', 'destructive')" />
                                     @endcan
                                 @endif
                             </div>

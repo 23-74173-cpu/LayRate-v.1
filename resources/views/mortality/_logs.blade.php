@@ -11,7 +11,7 @@
                     <th class="text-left py-2 pr-3 text-xs tracking-wider text-[#6B7280] font-medium">COUNT</th>
                     <th class="text-left py-2 pr-3 text-xs tracking-wider text-[#6B7280] font-medium">REASON</th>
                     <th class="text-left py-2 pr-3 text-xs tracking-wider text-[#6B7280] font-medium">NOTES</th>
-                    <th class="py-2 text-xs tracking-wider text-[#6B7280] font-medium"></th>
+                    @can('admin')<th class="py-2 text-xs tracking-wider text-[#6B7280] font-medium"></th>@endcan
                 </tr>
             </thead>
             <tbody class="divide-y divide-[#F5F6F8]">
@@ -41,6 +41,7 @@
                     <td class="py-2.5 pr-3 text-[#6B7280] max-w-[200px] truncate">
                         {{ $log->notes ?: '—' }}
                     </td>
+                    @can('admin')
                     <td class="py-2.5 text-right">
                         <div class="flex items-center justify-end gap-1">
                             <button onclick="openEditMortality({{ $log->id }}, '{{ $log->log_date->format('Y-m-d') }}', {{ $log->count }}, '{{ addslashes($log->reason) }}', '{{ addslashes($log->notes ?? '') }}')"
@@ -48,7 +49,7 @@
                                 <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                             </button>
                             <form action="{{ route('mortality.destroy', $log) }}" method="POST"
-                                  data-confirm="Delete this mortality record?" data-confirm-action="Delete">
+                                  data-confirm="Delete this mortality record?" data-confirm-action="Delete" data-confirm-severity="destructive">
                                 @csrf @method('DELETE')
                                 <button type="submit" class="p-1.5 hover:bg-red-50 rounded-full transition-colors" style="color: #a39e98;" aria-label="Delete record">
                                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -56,6 +57,7 @@
                             </form>
                         </div>
                     </td>
+                    @endcan
                 </tr>
                 @endforeach
             </tbody>

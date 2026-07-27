@@ -67,9 +67,12 @@
                         onmouseout="this.style.backgroundColor='transparent'">
                     Clear All Cages
                 </button>
-                <x-button id="saveLayoutBtn" onclick="saveLayout()" disabled class="text-xs px-4 py-1.5">
-                    Save Layout
-                </x-button>
+                <div class="relative inline-flex items-center">
+                    <x-button id="saveLayoutBtn" onclick="saveLayout()" disabled class="text-xs px-4 py-1.5">
+                        Save Layout
+                    </x-button>
+                    <span id="unsavedDot" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full" style="background-color: #f59e0b; border: 2px solid #ffffff;"></span>
+                </div>
                 @endif
             </div>
         </div>
@@ -435,7 +438,6 @@
             </div>
 
             <form method="POST" action="{{ route('cages.store') }}" id="addCageForm" data-turbo="false"
-                  data-confirm="Add this cage?" data-confirm-action="Add Cage"
                   onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Adding\u2026')">
                 @csrf
                 <div class="space-y-4">
@@ -694,94 +696,6 @@
                     </x-button>
                 </div>
             </form>
-        </div>
-    </div>
-
-    {{-- ── Delete Cage Modal (items 19 + 20) ── --}}
-    <div id="deleteCageModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="display: none;" role="dialog" aria-modal="true">
-        <div class="absolute inset-0" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeDeleteModal()"></div>
-        <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
-            <div class="mb-4 flex items-center justify-center w-10 h-10 rounded-full" style="background-color: #fbe4e6;">
-                <i data-lucide="trash-2" class="w-5 h-5" style="color: #9b1c24;"></i>
-            </div>
-            <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Delete <span id="deleteCageCode"></span>?</h2>
-            <p class="mt-1 text-sm mb-4" style="color: #615d59;">Choose what the deletion includes:</p>
-
-            <div class="space-y-3 text-sm">
-                {{-- Hens --}}
-                <div class="rounded-lg p-3" style="background-color: #f6f5f4;">
-                    <div class="font-medium mb-2" style="color: #31302e;">Hens in this cage (<span id="delHenCount">0</span> active)</div>
-                    <label class="flex items-center gap-2 cursor-pointer mb-1.5">
-                        <input type="radio" name="delHensAction" value="move" checked class="w-4 h-4" style="accent-color: #0075de;">
-                        <span style="color: #615d59;">Move to unplaced (return to chicken inventory)</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="delHensAction" value="delete" class="w-4 h-4" style="accent-color: #9b1c24;">
-                        <span style="color: #615d59;">Delete permanently</span>
-                    </label>
-                </div>
-
-                {{-- Sensors --}}
-                <div class="rounded-lg p-3" style="background-color: #f6f5f4;">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" id="delReturnSensors" checked class="w-4 h-4 rounded" style="accent-color: #0075de;">
-                        <span style="color: #615d59;">Return <span id="delSensorCount">0</span> assigned sensor(s) to inventory</span>
-                    </label>
-                    <p class="text-xs mt-1 ml-6" style="color: #a39e98;">If unchecked, the sensors are deleted with the cage.</p>
-                </div>
-
-                {{-- Historical records — per-type preservation checkboxes --}}
-                <div class="rounded-lg p-3" style="background-color: #f6f5f4;">
-                    <div class="font-medium mb-2" style="color: #31302e;">Preserve historical records</div>
-                    <p class="text-xs mb-2" style="color: #a39e98;">Checked records survive deletion (FK removed). Unchecked ones are permanently deleted.</p>
-                    <label class="flex items-center gap-2 cursor-pointer mb-1.5">
-                        <input type="checkbox" id="delPreserveProduction" checked class="w-4 h-4 rounded" style="accent-color: #0075de;">
-                        <span style="color: #615d59;">Egg production logs (<span class="del-log-count" data-type="production">0</span>)</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer mb-1.5">
-                        <input type="checkbox" id="delPreserveMortality" checked class="w-4 h-4 rounded" style="accent-color: #0075de;">
-                        <span style="color: #615d59;">Mortality records (<span class="del-log-count" data-type="mortality">0</span>)</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer mb-1.5">
-                        <input type="checkbox" id="delPreserveFeed" checked class="w-4 h-4 rounded" style="accent-color: #0075de;">
-                        <span style="color: #615d59;">Feed consumption logs (<span class="del-log-count" data-type="feed">0</span>)</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" id="delPreserveEnvironment" checked class="w-4 h-4 rounded" style="accent-color: #0075de;">
-                        <span style="color: #615d59;">Environment logs (<span class="del-log-count" data-type="env">0</span>)</span>
-                    </label>
-                </div>
-
-                {{-- Delete Permanently (no salvage) — admin-only destructive path --}}
-                @if($isAdmin)
-                <div class="border-t border-dashed pt-3 mt-1" style="border-color: #e6e6e6;">
-                    <a href="#" id="delPermanentLink"
-                       class="text-xs font-medium transition-colors"
-                       style="color: #9b1c24;"
-                       onmouseover="this.style.color='#7a161d'"
-                       onmouseout="this.style.color='#9b1c24'">
-                        Delete Permanently (no salvage) →
-                    </a>
-                </div>
-                @endif
-            </div>
-
-            <div class="flex items-center justify-end gap-3 mt-5">
-                <button type="button" onclick="closeDeleteModal()"
-                        class="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
-                        style="color: #1f1f1f; border: 1px solid #e6e6e6;"
-                        onmouseover="this.style.backgroundColor='#f6f5f4'"
-                        onmouseout="this.style.backgroundColor='transparent'">
-                    Cancel
-                </button>
-                <button type="button" id="confirmDeleteCageBtn" onclick="confirmCageDelete()"
-                        class="px-5 py-2 text-sm font-medium rounded-lg text-white transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
-                        style="background-color: #9b1c24;"
-                        onmouseover="if(!this.disabled)this.style.backgroundColor='#7a161d'"
-                        onmouseout="this.style.backgroundColor='#9b1c24'">
-                    Delete Cage
-                </button>
-            </div>
         </div>
     </div>
 
@@ -1643,7 +1557,7 @@ function confirmRemoveCage(cageId) {
         'The cage and all its data (slots, hens, sensors) will remain completely untouched ' +
         'it will just be moved back to the unplaced area. You must save the layout to persist this change.',
         { submit: function() { doRemoveCage(cageId); } },
-        'Remove from Canvas'
+        'Remove from Canvas', 'neutral'
     );
 }
 
@@ -1680,7 +1594,7 @@ function clearAllCages() {
     confirmModal(
         'Move all cages back to the staging area? This is not applied until you click Save Layout.',
         { submit: doClearAll },
-        'Clear All'
+        'Clear All', 'neutral'
     );
 }
 
@@ -1706,8 +1620,19 @@ function hasPendingChanges() {
 
 function updateSaveButton() {
     var btn = document.getElementById('saveLayoutBtn');
-    if (btn) btn.disabled = !hasPendingChanges();
+    var dot = document.getElementById('unsavedDot');
+    var dirty = hasPendingChanges();
+    if (btn) btn.disabled = !dirty;
+    if (dot) dot.classList.toggle('hidden', !dirty);
 }
+
+// Warn before leaving with unsaved canvas changes
+window.addEventListener('beforeunload', function(e) {
+    if (hasPendingChanges()) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
 
 function updateStagingVisibility() {
     var section = document.getElementById('stagingSection');
@@ -1888,82 +1813,101 @@ function clearCanvasFilter() {
 // ── Init ──
 renderCanvas();
 
-// ── Delete Cage Modal (items 19 + 20) ─────────────────────
+// ── Delete Cage (uses shared confirmModal) ─────────────────
 var deleteTargetId = null;
 
 function openDeleteModal(id, code) {
     deleteTargetId = id;
-    document.getElementById('deleteCageCode').textContent = code;
-    document.getElementById('delHenCount').textContent = '…';
-    document.getElementById('delSensorCount').textContent = '…';
-    document.querySelector('input[name="delHensAction"][value="move"]').checked = true;
-    document.getElementById('delReturnSensors').checked = true;
-    document.querySelectorAll('#deleteCageModal .del-log-count').forEach(function(el) { el.textContent = '…'; });
-    document.getElementById('deleteCageModal').style.display = 'flex';
-    lucide.createIcons();
-
-    var link = document.getElementById('delPermanentLink');
-    if (link) link.href = cagesBase + '/' + id + '/confirm-delete';
+    var form = {
+        submit: function() {
+            if (!deleteTargetId) return;
+            var data = {};
+            document.querySelectorAll('#del-options input, #del-options select').forEach(function(el) {
+                if (el.type === 'radio') { if (el.checked) data[el.name] = el.value; }
+                else if (el.type === 'checkbox') { data[el.id] = el.checked; }
+                else { data[el.name || el.id] = el.value; }
+            });
+            fetch(cagesBase + '/' + deleteTargetId, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                },
+                body: JSON.stringify({
+                    hens_action: data.delHensAction || 'delete',
+                    return_sensors: !!data.delReturnSensors,
+                    preserve_production: !!data.delPreserveProduction,
+                    preserve_mortality: !!data.delPreserveMortality,
+                    preserve_feed: !!data.delPreserveFeed,
+                    preserve_environment: !!data.delPreserveEnvironment,
+                }),
+            })
+            .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+            .then(function(res) {
+                deleteTargetId = null;
+                if (res.ok && res.data.success) {
+                    showToast(res.data.message || 'Cage deleted', true);
+                    Turbo.visit(window.location.href, { action: 'replace' });
+                } else {
+                    showDragError(res.data.message || 'Failed to delete cage');
+                }
+            })
+            .catch(function() {
+                deleteTargetId = null;
+                showDragError('Failed to delete cage');
+            });
+        }
+    };
+    var msg = '<strong>Delete ' + code + '?</strong><br><br>' +
+        '<div id="del-options">' +
+        '<div style="background:#f6f5f4;border-radius:8px;padding:12px;margin-bottom:12px;">' +
+        '<div style="font-weight:500;margin-bottom:8px;color:#31302e;">Hens in this cage (<span id="delHenCount">…</span> active)</div>' +
+        '<label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;color:#615d59;">' +
+        '<input type="radio" name="delHensAction" value="move" checked style="accent-color:#0075de;">' +
+        'Move to unplaced (return to chicken inventory)</label>' +
+        '<label style="display:flex;align-items:center;gap:8px;color:#615d59;">' +
+        '<input type="radio" name="delHensAction" value="delete" style="accent-color:#9b1c24;">' +
+        'Delete permanently</label>' +
+        '</div>' +
+        '<div style="background:#f6f5f4;border-radius:8px;padding:12px;margin-bottom:12px;">' +
+        '<label style="display:flex;align-items:center;gap:8px;color:#615d59;">' +
+        '<input type="checkbox" id="delReturnSensors" checked style="accent-color:#0075de;">' +
+        'Return <span id="delSensorCount">…</span> sensor(s) to inventory</label>' +
+        '<p style="font-size:12px;margin-top:4px;margin-left:24px;color:#a39e98;">If unchecked, sensors are deleted with the cage.</p>' +
+        '</div>' +
+        '<div style="background:#f6f5f4;border-radius:8px;padding:12px;margin-bottom:12px;">' +
+        '<div style="font-weight:500;margin-bottom:8px;color:#31302e;">Preserve historical records</div>' +
+        '<p style="font-size:12px;margin-bottom:8px;color:#a39e98;">Checked records survive deletion (FK removed). Unchecked are permanently deleted.</p>' +
+        '<label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;color:#615d59;">' +
+        '<input type="checkbox" id="delPreserveProduction" checked style="accent-color:#0075de;">' +
+        'Egg production logs (<span class="del-log-count" data-type="production">…</span>)</label>' +
+        '<label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;color:#615d59;">' +
+        '<input type="checkbox" id="delPreserveMortality" checked style="accent-color:#0075de;">' +
+        'Mortality records (<span class="del-log-count" data-type="mortality">…</span>)</label>' +
+        '<label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;color:#615d59;">' +
+        '<input type="checkbox" id="delPreserveFeed" checked style="accent-color:#0075de;">' +
+        'Feed consumption logs (<span class="del-log-count" data-type="feed">…</span>)</label>' +
+        '<label style="display:flex;align-items:center;gap:8px;color:#615d59;">' +
+        '<input type="checkbox" id="delPreserveEnvironment" checked style="accent-color:#0075de;">' +
+        'Environment logs (<span class="del-log-count" data-type="env">…</span>)</label>' +
+        '</div></div>';
+    confirmModal(msg, form, 'Delete', 'destructive');
 
     fetch(cagesBase + '/' + id + '/delete-info')
         .then(function(r) { return r.json(); })
         .then(function(info) {
-            document.getElementById('delHenCount').textContent = info.hens;
-            document.getElementById('delSensorCount').textContent = info.sensors;
+            var el;
+            el = document.getElementById('delHenCount'); if (el) el.textContent = info.hens;
+            el = document.getElementById('delSensorCount'); if (el) el.textContent = info.sensors;
             var typeMap = { production: info.production_logs, mortality: info.mortality_logs, feed: info.feed_logs, env: info.env_logs };
-            document.querySelectorAll('#deleteCageModal .del-log-count').forEach(function(el) {
+            document.querySelectorAll('#del-options .del-log-count').forEach(function(el) {
                 el.textContent = typeMap[el.dataset.type] || 0;
             });
         })
         .catch(function() {
-            document.querySelectorAll('#deleteCageModal .del-log-count').forEach(function(el) {
-                el.textContent = '?';
-            });
+            document.querySelectorAll('#del-options .del-log-count').forEach(function(el) { el.textContent = '?'; });
         });
-}
-
-function closeDeleteModal() {
-    deleteTargetId = null;
-    document.getElementById('deleteCageModal').style.display = 'none';
-}
-
-function confirmCageDelete() {
-    if (!deleteTargetId) return;
-    var btn = document.getElementById('confirmDeleteCageBtn');
-    btn.disabled = true;
-
-    fetch(cagesBase + '/' + deleteTargetId, {
-        method: 'DELETE',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-        },
-        body: JSON.stringify({
-            hens_action: document.querySelector('input[name="delHensAction"]:checked')?.value ?? 'delete',
-            return_sensors: document.getElementById('delReturnSensors').checked,
-            preserve_production: document.getElementById('delPreserveProduction').checked,
-            preserve_mortality: document.getElementById('delPreserveMortality').checked,
-            preserve_feed: document.getElementById('delPreserveFeed').checked,
-            preserve_environment: document.getElementById('delPreserveEnvironment').checked,
-        }),
-    })
-    .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
-    .then(function(res) {
-        btn.disabled = false;
-        if (res.ok && res.data.success) {
-            closeDeleteModal();
-            showToast(res.data.message || 'Cage deleted', true);
-            // Refresh the cage list in place — never navigates away (item 19)
-            Turbo.visit(window.location.href, { action: 'replace' });
-        } else {
-            showDragError(res.data.message || 'Failed to delete cage');
-        }
-    })
-    .catch(function() {
-        btn.disabled = false;
-        showDragError('Failed to delete cage');
-    });
 }
 
 // ── Slot Reorder (Item 1: drag-and-drop renumbering) ────

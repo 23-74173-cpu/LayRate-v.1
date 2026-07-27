@@ -75,7 +75,7 @@ function submitCull(form) {
     confirmModal(
         'Cull ' + henCount + ' hen(s)? This permanently deactivates them and cannot be undone.',
         { submit: function() { ajaxCull(form); } },
-        'Cull'
+        'Cull', 'destructive'
     );
 }
 

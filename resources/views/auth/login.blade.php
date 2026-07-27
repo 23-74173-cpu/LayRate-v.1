@@ -96,6 +96,13 @@
                 <x-button type="submit" class="w-full py-2.5 mt-2">
                     Sign In
                 </x-button>
+
+                <div class="text-center mt-4 pt-4 border-t border-[#D9D9D9]">
+                    <a href="{{ route('landing') }}"
+                       class="text-xs text-[#6B7280] hover:text-[#102A4C] transition-colors">
+                        What is LayRate?
+                    </a>
+                </div>
             </form>
         </div>
 

@@ -162,8 +162,8 @@
         {{-- TOP: Brand + Arrow (mobile close / desktop unused) --}}
         <div class="flex items-center justify-between px-4 pt-3 pb-1 shrink-0">
             <div class="logo-wrap flex items-center gap-2.5 overflow-hidden">
-                <div class="w-9 h-9 rounded-lg bg-white flex items-center justify-center shrink-0 border border-white/25 overflow-hidden">
-                    <img src="/images/layrate-logo-mark.png" alt="LayRate logo" class="w-8 h-8 object-contain" loading="lazy">
+                <div class="w-11 h-11 rounded-lg bg-white flex items-center justify-center shrink-0 p-1 shadow-sm">
+                    <img src="/images/layrate-logo-white.png" alt="LayRate logo" class="w-full h-full object-contain" loading="lazy">
                 </div>
                 <div class="logo-text overflow-hidden whitespace-nowrap">
                     <div class="text-white text-sm font-semibold">LayRate</div>
@@ -216,7 +216,7 @@
                 <span class="sidebar-label text-sm font-medium whitespace-nowrap overflow-hidden">Profile</span>
             </a>
             <form action="{{ route('logout') }}" method="POST" data-turbo="false"
-                  data-confirm="Sign out of LayRate?" data-confirm-action="Sign out">
+                  data-confirm="Sign out of LayRate?" data-confirm-action="Sign out" data-confirm-severity="neutral">
                 @csrf
                 <button type="submit"
                         class="nav-link group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors"
@@ -274,7 +274,7 @@
                         </a>
                         <div class="my-1 border-t border-hairline"></div>
                         <form action="{{ route('logout') }}" method="POST" data-turbo="false"
-                              data-confirm="Sign out of LayRate?" data-confirm-action="Sign out">
+                              data-confirm="Sign out of LayRate?" data-confirm-action="Sign out" data-confirm-severity="neutral">
                             @csrf
                             <button type="submit" class="w-full flex items-center gap-2 px-3 py-2 text-sm text-alert-text hover:bg-black/5 transition-colors">
                                 <i data-lucide="log-out" class="w-4 h-4"></i> Sign out

@@ -74,7 +74,7 @@ function submitRemoval(form) {
     confirmModal(
         'Remove / sell ' + henCount + ' hen(s) from the flock? This permanently deactivates them and cannot be undone.',
         { submit: function() { ajaxRemoval(form); } },
-        'Remove'
+        'Remove', 'destructive'
     );
 }
 

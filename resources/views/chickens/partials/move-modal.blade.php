@@ -282,7 +282,7 @@ function submitMove(form) {
             sliceMoveHenIds();
             ajaxMove(form);
         } },
-        'Move'
+        'Move', 'neutral'
     );
 }
 

@@ -8,8 +8,7 @@
 
     {{-- ── Add Note ── --}}
     <div class="rounded-xl border p-6" style="background-color: #ffffff; border-color: #e6e6e6;">
-        <form method="POST" action="{{ route('notes.store') }}"
-              data-confirm="Add this note?" data-confirm-action="Add Note">
+        <form method="POST" action="{{ route('notes.store') }}">
             @csrf
             <div class="flex flex-col sm:flex-row gap-3">
                 <div class="flex-1">
@@ -62,7 +61,7 @@
                     <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                 </button>
                 <form method="POST" action="{{ route('notes.destroy', $note) }}"
-                      data-confirm="Delete this note?" data-confirm-action="Delete">
+                      data-confirm="Delete this note?" data-confirm-action="Delete" data-confirm-severity="destructive">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="p-1.5 rounded hover:bg-red-50 transition-colors" style="color: #a39e98;" aria-label="Delete note">
