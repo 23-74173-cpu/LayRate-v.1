@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cage;
+use App\Models\CageSlot;
 use App\Models\ProductionLog;
 use Illuminate\Http\Request;
 
@@ -25,6 +26,9 @@ class EggCountSseController extends Controller
         }
 
         $lastCounts = [];
+        $lastCageStats = null;
+
+        $allSlotIds = CageSlot::pluck('id', 'cage_id');
 
         header('Content-Type: text/event-stream');
         header('Cache-Control: no-cache');
@@ -63,6 +67,35 @@ class EggCountSseController extends Controller
             if ($changed) {
                 echo "event: count\n";
                 echo "data: " . json_encode(['counts' => $lastCounts]) . "\n\n";
+                ob_flush();
+                flush();
+            }
+
+            $todayLogs = ProductionLog::where('log_date', $today)->get();
+            $cageStats = [];
+
+            foreach ($todayLogs as $log) {
+                $cageId = $allSlotIds[$log->cage_slot_id] ?? null;
+                if (! $cageId) continue;
+
+                if (! isset($cageStats[$cageId])) {
+                    $cageStats[$cageId] = ['total_eggs' => 0, 'logged_slots' => []];
+                }
+                $cageStats[$cageId]['total_eggs'] += $log->egg_count;
+                $cageStats[$cageId]['logged_slots'][$log->cage_slot_id] = true;
+            }
+
+            foreach ($cageStats as $cageId => &$stats) {
+                $stats['logged_count'] = count($stats['logged_slots']);
+                unset($stats['logged_slots']);
+            }
+            unset($stats);
+
+            $statsJson = json_encode($cageStats);
+            if ($statsJson !== $lastCageStats) {
+                $lastCageStats = $statsJson;
+                echo "event: cage_stats\n";
+                echo "data: $statsJson\n\n";
                 ob_flush();
                 flush();
             }

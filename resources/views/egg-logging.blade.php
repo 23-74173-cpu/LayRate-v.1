@@ -22,7 +22,7 @@
                         <p class="text-sm" style="color: #6B7280;">Overview of all cages</p>
                     </div>
                     <span class="text-sm font-medium whitespace-nowrap" style="color: #31302e;">
-                        Today: <strong style="color: #1f1f1f;">{{ number_format($todayTotal) }}</strong> eggs
+                        Today: <strong id="todayTotalEggs" style="color: #1f1f1f;">{{ number_format($todayTotal) }}</strong> eggs
                     </span>
                 </div>
             </x-slot:headerSlot>
@@ -34,7 +34,8 @@
                     $loggedCount = $todayLoggedCountByCage[$cage->cage_code] ?? 0;
                     $allLogged = $loggedCount >= $slotCount;
                 @endphp
-                <div class="rounded-xl border p-4 flex flex-col gap-2 min-h-[7rem]"
+                <div class="rounded-xl border p-4 flex flex-col gap-2 min-h-[7rem] cage-overview-card"
+                     data-cage-id="{{ $cage->id }}" data-total-slots="{{ $slotCount }}"
                      style="background-color: #ffffff; border-color: #e6e6e6;">
                     <div class="flex items-center justify-between gap-2">
                         <x-cage-color :cage="$cage" />
@@ -46,12 +47,12 @@
                     <span class="text-xs truncate" style="color: #615d59;">{{ $cage->formatted_location }}</span>
                     <div class="flex items-center gap-2 text-xs mt-auto" style="color: #a39e98;">
                         <span>Logged:</span>
-                        <span class="font-semibold whitespace-nowrap" style="color: {{ $allLogged ? '#1f6b3a' : '#1f1f1f' }};">
+                        <span class="font-semibold whitespace-nowrap cage-logged-count" id="cage-logged-{{ $cage->id }}"
+                              style="color: {{ $allLogged ? '#1f6b3a' : '#1f1f1f' }};">
                             {{ $loggedCount }}/{{ $slotCount }}
                         </span>
-                        @if($allLogged)
-                        <span class="text-xs font-medium whitespace-nowrap" style="color: #1f6b3a;">Complete</span>
-                        @endif
+                        <span class="text-xs font-medium whitespace-nowrap cage-complete-badge" id="cage-complete-{{ $cage->id }}"
+                              style="color: #1f6b3a; display: {{ $allLogged ? 'inline' : 'none' }};">Complete</span>
                     </div>
                 </div>
                 @endforeach
@@ -762,6 +763,33 @@
             } catch(err) {
                 // ignore parse errors on reconnect
             }
+        });
+
+        eggCountSource.addEventListener('cage_stats', function(e) {
+            try {
+                var cageStats = JSON.parse(e.data);
+                var grandTotal = 0;
+                for (var cageId in cageStats) {
+                    if (!cageStats.hasOwnProperty(cageId)) continue;
+                    var stat = cageStats[cageId];
+                    var card = document.querySelector('.cage-overview-card[data-cage-id="' + cageId + '"]');
+                    if (!card) continue;
+                    var totalSlots = parseInt(card.dataset.totalSlots) || 0;
+                    var loggedCount = stat.logged_count || 0;
+                    var loggedEl = document.getElementById('cage-logged-' + cageId);
+                    var completeEl = document.getElementById('cage-complete-' + cageId);
+                    if (loggedEl) {
+                        loggedEl.textContent = loggedCount + '/' + totalSlots;
+                        loggedEl.style.color = loggedCount >= totalSlots ? '#1f6b3a' : '#1f1f1f';
+                    }
+                    if (completeEl) {
+                        completeEl.style.display = loggedCount >= totalSlots ? 'inline' : 'none';
+                    }
+                    grandTotal += stat.total_eggs || 0;
+                }
+                var totalEl = document.getElementById('todayTotalEggs');
+                if (totalEl) totalEl.textContent = grandTotal.toLocaleString();
+            } catch(err) {}
         });
 
         eggCountSource.onerror = function() {
