@@ -12,9 +12,10 @@ use App\Models\Hen;
 use App\Models\MortalityLog;
 use App\Models\ProductionLog;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ReportController extends Controller
@@ -556,15 +557,29 @@ class ReportController extends Controller
         $rangeLabel = ($from && $to) ? "{$from}_to_{$to}" : 'all_time';
         $filename = "layrate_{$type}_{$rangeLabel}.xlsx";
 
-        if ($type === 'all') {
-            $sections = $this->buildSections($from, $to, $cageId, $reason, $allCages, false);
+        $chartTempFiles = [];
 
-            return Excel::download(new AllReportsExport($sections), $filename);
+        try {
+            $chartTempFiles = $this->decodeChartImages($request->input('chart_images', []));
+
+            if ($type === 'all') {
+                $sections = $this->buildSections($from, $to, $cageId, $reason, $allCages, false);
+
+                return Excel::download(new AllReportsExport($sections, $chartTempFiles), $filename);
+            }
+
+            $rows = $this->buildReport($type, $from, $to, $cageId, $reason, $allCages);
+
+            return Excel::download(new ReportSheetExport($this->typeLabel($type), $rows, $chartTempFiles), $filename);
+        } finally {
+            if (!empty($chartTempFiles)) {
+                register_shutdown_function(function () use ($chartTempFiles) {
+                    foreach ($chartTempFiles as $path) {
+                        file_exists($path) && @unlink($path);
+                    }
+                });
+            }
         }
-
-        $rows = $this->buildReport($type, $from, $to, $cageId, $reason, $allCages);
-
-        return Excel::download(new ReportSheetExport($this->typeLabel($type), $rows), $filename);
     }
 
     public function exportPdf(Request $request)
@@ -572,6 +587,8 @@ class ReportController extends Controller
         [$type, $from, $to, $cageId, $reason, $allCages] = $this->filtersFromRequest($request);
         $rangeLabel = ($from && $to) ? "{$from}_to_{$to}" : 'all_time';
         $filename = "layrate_{$type}_{$rangeLabel}.pdf";
+
+        $chartImages = $this->validateChartImages($request->input('chart_images', []));
 
         if ($type === 'all') {
             $sections = $this->buildSections($from, $to, $cageId, $reason, $allCages, false);
@@ -585,13 +602,63 @@ class ReportController extends Controller
         }
 
         $pdf = Pdf::loadView('reports.pdf', [
-            'sections' => $sections,
-            'type'     => $type,
-            'from'     => $from,
-            'to'       => $to,
-            'cageId'   => $cageId,
+            'sections'    => $sections,
+            'type'        => $type,
+            'from'        => $from,
+            'to'          => $to,
+            'cageId'      => $cageId,
+            'chartImages' => $chartImages,
         ])->setPaper('a4', 'portrait');
 
         return $pdf->download($filename);
+    }
+
+    private function validateChartImages(array $rawImages): array
+    {
+        $valid = [];
+        foreach ($rawImages as $type => $dataUrl) {
+            if (!is_string($dataUrl)) continue;
+            if (!preg_match('/^data:image\\/png;base64,[A-Za-z0-9+\/=]+$/', $dataUrl)) {
+                Log::warning("Report export: invalid chart image format for [{$type}], skipping");
+                continue;
+            }
+            $valid[$type] = $dataUrl;
+        }
+        return $valid;
+    }
+
+    private function decodeChartImages(array $rawImages): array
+    {
+        $tempFiles = [];
+        foreach ($rawImages as $type => $dataUrl) {
+            if (!is_string($dataUrl)) continue;
+            if (!preg_match('/^data:image\\/png;base64,[A-Za-z0-9+\/=]+$/', $dataUrl)) {
+                Log::warning("Report export: invalid chart image format for [{$type}], skipping");
+                continue;
+            }
+            $encoded = explode(',', $dataUrl, 2)[1] ?? '';
+            $decoded = base64_decode($encoded, true);
+            if ($decoded === false) {
+                Log::warning("Report export: base64 decode failed for [{$type}], skipping");
+                continue;
+            }
+            if (strlen($decoded) > 5 * 1024 * 1024) {
+                Log::warning("Report export: chart image [{$type}] exceeds 5 MB limit, skipping");
+                continue;
+            }
+            $tmp = @tempnam(sys_get_temp_dir(), 'lre_chart_');
+            if ($tmp === false) {
+                Log::warning("Report export: failed to create temp file for [{$type}], skipping");
+                continue;
+            }
+            $written = @file_put_contents($tmp, $decoded);
+            if ($written === false) {
+                Log::warning("Report export: failed to write temp file for [{$type}], skipping");
+                @unlink($tmp);
+                continue;
+            }
+            $tempFiles[$type] = $tmp;
+        }
+        return $tempFiles;
     }
 }

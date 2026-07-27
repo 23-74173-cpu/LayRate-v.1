@@ -118,7 +118,7 @@
                 <x-button variant="secondary" :href="route('reports', request()->except('full'))">
                     <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Preview
                 </x-button>
-                <x-button variant="secondary" type="button" onclick="window.print()">
+                <x-button variant="secondary" type="button" onclick="printReport()">
                     <i data-lucide="printer" class="w-4 h-4"></i>
                 </x-button>
                 @endif
@@ -391,6 +391,13 @@ function reportChartConfig(chart) {
 }
 
 var REPORT_CHART_TYPES = ['production', 'feed', 'environment', 'mortality', 'egg_stock'];
+var _chartsReady = false;
+var _chartsReadyCallbacks = [];
+
+function onChartsReady(fn) {
+    if (_chartsReady) { fn(); return; }
+    _chartsReadyCallbacks.push(fn);
+}
 
 function chartHasData(chart) {
     return !!chart && Array.isArray(chart.labels) && chart.labels.length > 0;
@@ -401,6 +408,7 @@ function chartHasData(chart) {
 // off, or a single-type page missing the other four) are skipped.
 window.renderReportCharts = function(charts) {
     charts = charts || {};
+    _chartsReady = false;
     REPORT_CHART_TYPES.forEach(function(type) {
         var canvas = document.getElementById('chart-' + type);
         if (!canvas) return;
@@ -418,7 +426,21 @@ window.renderReportCharts = function(charts) {
             if (window.LayRateChart) window.LayRateChart.destroy('chart-' + type);
         }
     });
+    // Allow charts to paint their first frame before resolving ready.
+    requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+            _chartsReady = true;
+            _chartsReadyCallbacks.splice(0).forEach(function(fn) { fn(); });
+        });
+    });
 };
+
+// ── Print guard: ensure charts are rendered before opening print dialog ──
+function printReport() {
+    onChartsReady(function() {
+        window.print();
+    });
+}
 
 // ── Print-safety: swap live canvases for static images right before printing ──
 window.addEventListener('beforeprint', function() {
@@ -433,6 +455,72 @@ window.addEventListener('beforeprint', function() {
         }
     });
 });
+
+// ── Export with chart images (PDF / Excel) ──
+function exportReportWithCharts(format) {
+    onChartsReady(function() {
+        var params = {};
+        var f = document.getElementById('reportForm');
+        if (f) {
+            ['type','from','to','cage','reason'].forEach(function(k) {
+                var el = f.elements[k];
+                if (el && el.value) params[k] = el.value;
+            });
+        }
+
+        var chartImages = {};
+        var chartsCheckbox = f && f.elements['charts'];
+        var hasCharts = chartsCheckbox && chartsCheckbox.checked;
+        if (hasCharts) {
+            REPORT_CHART_TYPES.forEach(function(type) {
+                var canvas = document.getElementById('chart-' + type);
+                if (!canvas) return;
+                var wrap = document.getElementById('chart-' + type + '-wrap');
+                if (wrap && wrap.style.display === 'none') return;
+                try {
+                    chartImages[type] = canvas.toDataURL('image/png');
+                } catch (e) {
+                    console.warn('Failed to capture chart image for ' + type + ':', e);
+                }
+            });
+        }
+
+        if (Object.keys(chartImages).length > 0) {
+            params.chart_images = chartImages;
+        }
+
+        var token = document.querySelector('meta[name="csrf-token"]');
+        fetch('/reports/' + format, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': token ? token.getAttribute('content') : '',
+                'Accept': 'application/octet-stream'
+            },
+            body: JSON.stringify(params)
+        })
+        .then(function(r) {
+            if (!r.ok) throw new Error('Export failed (' + r.status + ')');
+            var disposition = r.headers.get('Content-Disposition') || '';
+            var match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+            var filename = match ? match[1].replace(/['"]/g, '') : 'layrate_export.' + format;
+            return r.blob().then(function(blob) { return { blob: blob, filename: filename }; });
+        })
+        .then(function(result) {
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(result.blob);
+            a.download = decodeURIComponent(result.filename);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+        })
+        .catch(function(err) {
+            console.error('Export failed:', err);
+            alert('Export failed. Please try again.');
+        });
+    });
+}
 
 // ── Render report results ──
 window.renderReportResults = function(data) {
@@ -566,6 +654,15 @@ window.addEventListener('popstate', function() {
         }
     });
 })();
+
+// ── Export link interceptors: PDF and Excel capture chart images before navigating ──
+document.addEventListener('click', function(e) {
+    var exportLink = e.target.closest('#exportExcelLink, #exportPdfLink');
+    if (!exportLink) return;
+    e.preventDefault();
+    var format = exportLink.id === 'exportExcelLink' ? 'excel' : 'pdf';
+    exportReportWithCharts(format);
+});
 
 // ── On-screen pagination for the printable (?full=1) document ──
 // Purely client-side, over rows already rendered in the DOM: printing must

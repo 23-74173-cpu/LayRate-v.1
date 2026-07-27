@@ -80,6 +80,10 @@
         </table>
         @endif
 
+        @if(!empty($chartImages) && isset($chartImages[$section['type']]))
+        <img src="{{ $chartImages[$section['type']] }}" style="width:100%;height:auto;margin-bottom:12px;">
+        @endif
+
         @if($section['rows']->isNotEmpty())
         <table class="data">
             <thead>
