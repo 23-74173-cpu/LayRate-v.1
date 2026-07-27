@@ -134,7 +134,7 @@ window.renderAnalyticsCharts = function(logs, feedLogs, cageColor, isAll, cageCo
                         plugins: { legend: { display: false } },
                         scales: {
                             x: { grid: { color: gridColor }, ticks: { font: { size: 10 }, autoSkip: true, autoSkipPadding: 12, maxRotation: 45, minRotation: 0 } },
-                            y: { grid: { color: gridColor }, ticks: { font: { size: 10 } }, min: 0, max: 100 },
+                            y: { grid: { color: gridColor }, ticks: { font: { size: 10 } }, suggestedMin: 0 },
                         }
                     };
                 })()
@@ -156,6 +156,7 @@ window.renderAnalyticsCharts = function(logs, feedLogs, cageColor, isAll, cageCo
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: { padding: { top: 4, bottom: 4, left: 4, right: 4 } },
                     plugins: { legend: { display: false } },
                     scales: {
                         x: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 }, autoSkip: true, autoSkipPadding: 12, maxRotation: 45, minRotation: 0 } },
@@ -182,16 +183,18 @@ window.renderAnalyticsCharts = function(logs, feedLogs, cageColor, isAll, cageCo
                     scatter.push({ x: feedMap[d], y: Math.round(byDate[d].hdepSum / byDate[d].hdepCount * 10) / 10 });
                 }
             });
+            var maxHdep = scatter.length > 0 ? Math.max(...scatter.map(function(p) { return p.y; })) : 0;
             LayRateChart.create('feedHdepChart', {
                 type: 'scatter',
                 data: { datasets: [{ data: scatter, backgroundColor: cageColor, pointRadius: 6 }] },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: { padding: { top: 4, bottom: 4, left: 4, right: 4 } },
                     plugins: { legend: { display: false } },
                     scales: {
                         x: { type: 'linear', grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } }, title: { display: true, text: 'kg', font: { size: 10 } } },
-                        y: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } }, title: { display: true, text: '%', font: { size: 10 } }, min: 0, max: 100 },
+                        y: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } }, title: { display: true, text: '%', font: { size: 10 } }, suggestedMin: 0, suggestedMax: Math.ceil(maxHdep / 10) * 10 + 10 },
                     }
                 }
             });
