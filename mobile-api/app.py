@@ -16,6 +16,7 @@ import os
 import secrets
 import socket
 import sqlite3
+import subprocess  # nosec — used for authorized nftables updates only
 import atexit
 from datetime import datetime, timezone
 from functools import wraps
@@ -141,6 +142,31 @@ def require_auth(f):
     return decorated
 
 
+# ── nftables client authorization ─────────────────────────────────────────
+
+def authorize_client_ip():
+    """Add the requesting client's IP to the nftables authenticated_clients set.
+
+    This allows the client through the walled garden for services that
+    have no auth layer of their own (e.g. ICMP ping). Flask's own
+    Bearer-token-protected endpoints are already open via the
+    unconditional port 5000 accept rule.
+
+    This is called after successful login/registration to make the
+    nftables state consistent even though Flask is already open.
+    """
+    client_ip = request.remote_addr
+    if client_ip and client_ip not in ("127.0.0.1", "::1"):
+        try:
+            subprocess.run(
+                ["sudo", "/usr/local/bin/layrate-auth-client", client_ip],
+                capture_output=True,
+                timeout=5,
+            )
+        except Exception:
+            pass  # Non-critical — auth still works via Bearer token
+
+
 # ── Routes ─────────────────────────────────────────────────────────────────
 
 @app.route("/api/register", methods=["POST"])
@@ -176,6 +202,8 @@ def register():
         (user_id, name, email, token, now_iso()),
     )
     db.commit()
+
+    authorize_client_ip()
 
     return jsonify({"token": token, "user": {"id": user_id, "email": email, "name": name}}), 201
 
@@ -214,6 +242,8 @@ def login():
         (user["id"], user["name"], user["email"], token, now_iso()),
     )
     db.commit()
+
+    authorize_client_ip()
 
     return jsonify(
         {

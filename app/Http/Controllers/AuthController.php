@@ -31,6 +31,13 @@ class AuthController extends Controller
             }
 
             $request->session()->regenerate();
+
+            // Authorize client IP in the nftables walled garden
+            $clientIp = $request->ip();
+            if ($clientIp && $clientIp !== '127.0.0.1' && $clientIp !== '::1') {
+                exec('sudo /usr/local/bin/layrate-auth-client ' . escapeshellarg($clientIp) . ' 2>/dev/null &');
+            }
+
             return redirect()->intended(route('dashboard'));
         }
 
