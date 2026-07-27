@@ -1,7 +1,7 @@
 @props(['variant' => 'primary', 'type' => 'button', 'disabled' => false, 'size' => 'md', 'href' => null])
 
 @php
-    $baseClasses = 'inline-flex items-center justify-center gap-2 font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed';
+    $baseClasses = 'inline-flex items-center justify-center gap-2 font-medium transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed';
 
     $sizeClasses = [
         'md' => 'px-4 py-2 text-sm',

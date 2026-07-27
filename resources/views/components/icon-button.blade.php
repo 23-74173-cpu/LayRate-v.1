@@ -24,7 +24,7 @@
         'red'     => 'hover:bg-red-50',
     ];
 
-    $classes = 'p-1.5 rounded-full transition-colors ' . ($colorClasses[$color] ?? $colorClasses['neutral']);
+    $classes = 'p-1.5 rounded-full transition-colors cursor-pointer ' . ($colorClasses[$color] ?? $colorClasses['neutral']);
 @endphp
 
 <button type="{{ $type }}" {{ $attributes->merge(['class' => $classes]) }} style="color: #a39e98;" aria-label="{{ $label }}">
