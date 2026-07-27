@@ -53,6 +53,10 @@
                         </span>
                         <span class="text-xs font-medium whitespace-nowrap cage-complete-badge" id="cage-complete-{{ $cage->id }}"
                               style="color: #1f6b3a; display: {{ $allLogged ? 'inline' : 'none' }};">Complete</span>
+                        <span class="ml-auto font-semibold whitespace-nowrap cage-egg-count" id="cage-eggs-{{ $cage->id }}"
+                              style="color: #1f1f1f;">
+                            {{ number_format($todayByCage[$cage->cage_code] ?? 0) }} eggs
+                        </span>
                     </div>
                 </div>
                 @endforeach
@@ -784,6 +788,10 @@
                     }
                     if (completeEl) {
                         completeEl.style.display = loggedCount >= totalSlots ? 'inline' : 'none';
+                    }
+                    var eggsEl = document.getElementById('cage-eggs-' + cageId);
+                    if (eggsEl) {
+                        eggsEl.textContent = (stat.total_eggs || 0).toLocaleString() + ' eggs';
                     }
                     grandTotal += stat.total_eggs || 0;
                 }
