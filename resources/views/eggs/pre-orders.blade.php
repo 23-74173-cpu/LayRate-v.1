@@ -136,12 +136,7 @@
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                     <x-input-error name="customer_name" />
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">REFERENCE <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
-                    <input type="text" name="customer_reference" value="{{ old('customer_reference') }}"
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
-                           style="border-color: #e6e6e6; color: #1f1f1f;">
-                </div>
+
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG SIZE</label>
                     <select name="egg_size" id="orderEggSize" required onchange="onOrderSizeChange()"
@@ -229,12 +224,6 @@
                     <x-input-error name="customer_name" />
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">REFERENCE <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
-                    <input type="text" name="customer_reference" id="editCustomerReference"
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
-                           style="border-color: #e6e6e6; color: #1f1f1f;">
-                </div>
-                <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG SIZE</label>
                     <select name="egg_size" id="editEggSize" required
                             class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
@@ -310,7 +299,7 @@ function preOrdersFilter() {
 var _preorderPools = {};
 
 function eggCountLabel(count) {
-    if (count === 0) return '0 eggs';
+    if (count < 1) return '';
     if (count === 1) return '1 egg';
     if (count === 12) return '1 dozen';
     if (count === 15) return 'half tray';
@@ -390,8 +379,19 @@ function onOrderCountChange() {
     var submitBtn = document.getElementById('addOrderSubmitBtn');
 
     if (count < 1 || !selected) {
-        trayLabel.textContent = selected ? 'Enter a count.' : 'Select a size first.';
+        trayLabel.textContent = selected ? 'Enter a count (multiples of 15 for halves/whole trays).' : 'Select a size first.';
         if (remainingEl) remainingEl.classList.add('hidden');
+        if (submitBtn) submitBtn.disabled = true;
+        return;
+    }
+
+    if (count % 15 !== 0) {
+        trayLabel.textContent = eggCountLabel(count) || count + ' eggs';
+        if (remainingEl) {
+            remainingEl.textContent = 'Orders must be in multiples of 15 (half-tray = 15, whole tray = 30).';
+            remainingEl.style.color = '#9b1c24';
+            remainingEl.classList.remove('hidden');
+        }
         if (submitBtn) submitBtn.disabled = true;
         return;
     }
@@ -431,10 +431,9 @@ function closeAddOrderModal() {
     document.getElementById('addOrderModal').style.display = 'none';
 }
 
-function openEditStatus(id, currentStatus, fulfillmentDate, customerName, customerReference, eggSize, eggCount, requestedDate, notes) {
+function openEditStatus(id, currentStatus, fulfillmentDate, customerName, eggSize, eggCount, requestedDate, notes) {
     document.getElementById('editStatusForm').action = '/eggs/pre-orders/' + id;
     document.getElementById('editCustomerName').value = customerName || '';
-    document.getElementById('editCustomerReference').value = customerReference || '';
     document.getElementById('editEggSize').value = eggSize || 'medium';
     document.getElementById('editEggCount').value = eggCount || 0;
     document.getElementById('editRequestedDate').value = requestedDate || '';
@@ -501,7 +500,6 @@ function closeEditStatusModal() {
         '{{ $editOrder->status }}',
         '{{ $editOrder->fulfillment_date?->toDateString() ?? '' }}',
         '{{ addslashes($editOrder->customer_name) }}',
-        '{{ addslashes($editOrder->customer_reference ?? '') }}',
         '{{ $editOrder->egg_size }}',
         {{ $editOrder->egg_count }},
         '{{ $editOrder->requested_date->toDateString() }}',

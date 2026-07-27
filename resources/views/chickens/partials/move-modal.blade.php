@@ -4,7 +4,7 @@
 
     {{-- Card --}}
     <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
-        <form id="moveForm" method="POST" action="{{ route('chickens.move') }}">
+        <form id="moveForm" method="POST" action="{{ route('chickens.move') }}" data-turbo="false">
             @csrf
 
             {{-- Header --}}
@@ -73,10 +73,15 @@
                 {{-- Destination Slot --}}
                 <div>
                     <label class="block text-xs font-medium text-[#6B7280] mb-1">Destination Slot <span class="text-red-500">*</span></label>
-                    <select name="destination_slot_id" id="destSlotSelect" required disabled
-                            class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E] disabled:bg-[#F5F6F8] disabled:text-[#9CA3AF]">
-                        <option value="">Select cage first...</option>
-                    </select>
+                    <div class="flex gap-2">
+                        <select name="destination_slot_id" id="destSlotSelect" required disabled
+                                class="flex-1 border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E] disabled:bg-[#F5F6F8] disabled:text-[#9CA3AF]">
+                            <option value="">Select cage first...</option>
+                        </select>
+                        <button type="button" id="autoAssignBtn" onclick="autoAssignSlot()" disabled
+                                class="text-xs px-3 py-2 rounded-lg font-medium text-white transition-colors disabled:opacity-50"
+                                style="background-color:#0075de;" title="Auto-assign to best available slot">Auto</button>
+                    </div>
                     <x-input-error name="destination_slot_id" />
                     <div id="moveNoSlots" class="hidden mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-700">
                         No slots with enough space available.
@@ -183,6 +188,7 @@ function loadDestSlots() {
     if (noSlotsEl) noSlotsEl.classList.add('hidden');
     submitBtn.disabled = true;
     errorEl.classList.add('hidden');
+    document.getElementById('autoAssignBtn').disabled = true;
 
     if (!cageSelect.value) {
         slotSelect.innerHTML = '<option value="">Select cage first...</option>';
@@ -222,6 +228,7 @@ function loadDestSlots() {
             slotSelect.innerHTML = html;
             slotSelect.disabled = false;
             slotSelect.onchange = checkMoveAvailability;
+            document.getElementById('autoAssignBtn').disabled = false;
         })
         .catch(function() {
             slotSelect.innerHTML = '<option value="">Failed to load slots</option>';
@@ -256,6 +263,24 @@ function checkMoveAvailability() {
         availabilityEl.className = 'text-xs font-medium text-red-500';
         availabilityEl.textContent = 'Insufficient capacity. Only ' + remaining + ' space' + (remaining !== 1 ? 's' : '') + ' available but ' + toMove + ' needed.';
         submitBtn.disabled = true;
+    }
+}
+
+function autoAssignSlot() {
+    var slotSelect = document.getElementById('destSlotSelect');
+    var options = slotSelect.options;
+    var bestIdx = -1;
+    var bestRemaining = -1;
+    for (var i = 1; i < options.length; i++) {
+        var rem = parseInt(options[i].dataset.remaining) || 0;
+        if (rem > bestRemaining) {
+            bestRemaining = rem;
+            bestIdx = i;
+        }
+    }
+    if (bestIdx > 0) {
+        slotSelect.selectedIndex = bestIdx;
+        checkMoveAvailability();
     }
 }
 

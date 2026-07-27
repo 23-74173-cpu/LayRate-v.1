@@ -5,7 +5,6 @@
             <thead>
                 <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">CUSTOMER</th>
-                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">REFERENCE</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">SIZE</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">EGGS</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">QTY</th>
@@ -28,7 +27,6 @@
                 @endphp
                 <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
                     <td class="px-5 py-3.5 text-sm font-medium text-[#333333]">{{ $order->customer_name }}</td>
-                    <td class="px-5 py-3.5 text-sm text-[#6B7280]">{{ $order->customer_reference ?: '—' }}</td>
                     <td class="px-5 py-3.5">
                         <span class="px-2.5 py-1 rounded-full text-xs font-semibold" style="background:{{ $szBg }};color:{{ $szTxt }};border:1px solid {{ $szBorder }}">
                             {{ ucfirst($order->egg_size) }}
@@ -46,9 +44,9 @@
                     <td class="px-5 py-3.5">
                         <div class="flex items-center gap-2">
                             <x-icon-button icon="pencil" label="Edit pre-order" color="neutral"
-                                onclick="openEditStatus({{ $order->id }}, '{{ $order->status }}', '{{ $order->fulfillment_date?->toDateString() ?? '' }}', '{{ addslashes($order->customer_name) }}', '{{ addslashes($order->customer_reference ?? '') }}', '{{ $order->egg_size }}', {{ $order->egg_count }}, '{{ $order->requested_date->toDateString() }}', '{{ addslashes($order->notes ?? '') }}')" />
+                                onclick="openEditStatus({{ $order->id }}, '{{ $order->status }}', '{{ $order->fulfillment_date?->toDateString() ?? '' }}', '{{ addslashes($order->customer_name) }}', '{{ $order->egg_size }}', {{ $order->egg_count }}, '{{ $order->requested_date->toDateString() }}', '{{ addslashes($order->notes ?? '') }}')" />
                             @can('admin')
-                            <form action="{{ route('eggs.preorders.destroy', $order) }}" method="POST"
+                            <form action="{{ route('eggs.preorders.destroy', $order) }}" method="POST" data-turbo="false"
                                   data-confirm="Cancel this pre-order?" data-confirm-action="Cancel" data-confirm-severity="destructive">
                                 @csrf @method('DELETE')
                                 <x-icon-button type="submit" icon="trash-2" label="Cancel pre-order" color="red" />
@@ -58,7 +56,7 @@
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="9" class="px-5 py-10 text-center text-sm text-[#6B7280]">No pre-orders yet.</td></tr>
+                <tr><td colspan="8" class="px-5 py-10 text-center text-sm text-[#6B7280]">No pre-orders yet.</td></tr>
                 @endforelse
             </tbody>
         </table>

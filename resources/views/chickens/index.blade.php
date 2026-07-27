@@ -110,7 +110,7 @@
                 <x-button variant="outline-warning" size="sm" onclick="bulkCull()">
                     <i data-lucide="crosshair" class="w-3 h-3 inline"></i> Cull
                 </x-button>
-                <x-button variant="outline-danger" size="sm" onclick="bulkRemove()">
+                <x-button variant="outline-danger" size="sm" onclick="bulkRemoval()">
                     <i data-lucide="log-out" class="w-3 h-3 inline"></i> Remove
                 </x-button>
             </div>
@@ -219,7 +219,6 @@
 {{-- Modals --}}
 @include('chickens.partials.register-modal')
 @include('chickens.partials.move-modal')
-@include('chickens.partials.remove-modal')
 @include('chickens.partials.health-event-modal')
 @include('chickens.partials.weight-check-modal')
 @include('chickens.partials.cull-modal')
@@ -378,10 +377,10 @@ function bulkMove() {
     openMoveModal(ids, count, null, null);
 }
 
-function bulkRemove() {
+function bulkRemoval() {
     const ids = getCheckedHenIds();
     const count = document.querySelectorAll('.hen-checkbox:checked').length;
-    openRemoveModal(ids, count, null, null);
+    openRemovalModal(ids, count + ' selected hen' + (count > 1 ? 's' : ''));
 }
 
 function bulkCull() {

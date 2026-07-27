@@ -127,6 +127,13 @@ class PreOrderController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+        $validator->after(function ($v) {
+            $count = $v->validated()['egg_count'] ?? 0;
+            if ($count % 15 !== 0) {
+                $v->errors()->add('egg_count', 'Order must be in multiples of 15 (half-tray = 15, whole tray = 30).');
+            }
+        });
+
         if ($validator->fails()) {
             return redirect()->route('eggs.preorders')
                 ->with('reopen_add_order', true)
@@ -160,6 +167,13 @@ class PreOrderController extends Controller
             'notes' => 'nullable|string',
             'status' => 'required|in:pending,fulfilled,cancelled',
         ]);
+
+        $validator->after(function ($v) {
+            $count = $v->validated()['egg_count'] ?? 0;
+            if ($count % 15 !== 0) {
+                $v->errors()->add('egg_count', 'Order must be in multiples of 15 (half-tray = 15, whole tray = 30).');
+            }
+        });
 
         if ($validator->fails()) {
             return redirect()->route('eggs.preorders')

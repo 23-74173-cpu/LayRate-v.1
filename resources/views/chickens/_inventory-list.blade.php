@@ -112,13 +112,11 @@
                                         @if($hen->is_active)
                                         <x-icon-button icon="crosshair" label="Cull hen" color="orange"
                                             onclick="openCullModal('{{ $hen->id }}', '{{ $hen->tag_code ?? $hen->chicken_id }} ({{ $cage->cage_code }} slot {{ $slot->slot_number }})')" />
-                                        <x-icon-button icon="log-out" label="Remove/sell hen" color="purple"
+                                        <x-icon-button icon="log-out" label="Remove hen" color="purple"
                                             onclick="openRemovalModal('{{ $hen->id }}', '{{ $hen->tag_code ?? $hen->chicken_id }} ({{ $cage->cage_code }} slot {{ $slot->slot_number }})')" />
                                         @endif
                                         <x-icon-button icon="arrow-right" label="Move hen" color="neutral"
                                             onclick="openMoveModal('{{ $hen->id }}', 1, '{{ $cage->cage_code }} slot {{ $slot->slot_number }}', '{{ $hen->breed }}')" />
-                                        <x-icon-button icon="trash-2" label="Remove hen" color="red"
-                                            onclick="openRemoveModal('{{ $hen->id }}', 1, '{{ $cage->cage_code }} slot {{ $slot->slot_number }}', '{{ $hen->breed }}')" />
                                     </div>
                                 </div>
                                 @endforeach

@@ -47,11 +47,9 @@
                 @if($hen->is_active)
                 <x-icon-button icon="crosshair" label="Cull hen" color="orange"
                     onclick="openCullModal('{{ $hen->id }}', '{{ $hen->chicken_id }} (unplaced)')" />
-                <x-icon-button icon="log-out" label="Remove/sell hen" color="purple"
+                <x-icon-button icon="log-out" label="Remove hen" color="purple"
                     onclick="openRemovalModal('{{ $hen->id }}', '{{ $hen->chicken_id }} (unplaced)')" />
                 @endif
-                <x-icon-button icon="trash-2" label="Remove hen" color="red"
-                    onclick="openRemoveModal('{{ $hen->id }}', 1, 'unplaced', '{{ $hen->breed }}')" />
             </div>
         </div>
         @endforeach
