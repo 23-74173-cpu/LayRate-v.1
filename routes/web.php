@@ -105,6 +105,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/eggs/logging',                       [EggLoggingController::class, 'store'])->name('eggs.logging.store');
     Route::post('/eggs/logging/verify-override',       [EggLoggingController::class, 'verifyOverride'])->name('eggs.logging.verify-override')->middleware('throttle:6,1');
     Route::put('/eggs/logging/{productionLog}',        [EggLoggingController::class, 'update'])->name('eggs.logging.update');
+    Route::put('/eggs/logging/{productionLog}/reset',  [EggLoggingController::class, 'resetCount'])->name('eggs.logging.reset');
     Route::delete('/eggs/logging/{productionLog}',     [EggLoggingController::class, 'destroy'])->name('eggs.logging.destroy')->middleware('admin');
     Route::get('/eggs/logging/live-count',             [EggCountSseController::class, 'stream'])->name('eggs.logging.live-count');
 

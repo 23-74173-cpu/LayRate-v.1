@@ -375,6 +375,25 @@ class EggLoggingController extends Controller
         }
     }
 
+    public function resetCount(ProductionLog $productionLog)
+    {
+        $productionLog->update([
+            'egg_count' => 0,
+            'hdep' => 0,
+            'notes' => $productionLog->notes
+                ? $productionLog->notes . ' | Reset to 0'
+                : 'Reset to 0',
+        ]);
+
+        $productionLog->eggSizeLogs()->delete();
+
+        if (request()->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->route('eggs.logging')->with('success', 'Egg count reset to 0.');
+    }
+
     public function destroy(ProductionLog $productionLog)
     {
         $productionLog->delete();

@@ -54,9 +54,18 @@
                                     class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Edit log">
                                 <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                             </button>
+                            <form method="POST" action="{{ route('eggs.logging.reset', $log) }}"
+                                  data-confirm="Reset egg count for this log to 0? This action preserves the log entry but clears the count and size breakdown."
+                                  data-confirm-action="Reset" data-confirm-severity="destructive">
+                                @csrf @method('PUT')
+                                <button type="submit" class="p-1.5 rounded-full hover:bg-amber-50 transition-colors" style="color: #a39e98;" aria-label="Reset count">
+                                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </form>
                             @if(auth()->user()->role === 'admin')
                             <form method="POST" action="{{ route('eggs.logging.destroy', $log) }}"
-                                  data-confirm="Delete this log?" data-confirm-action="Delete" data-confirm-severity="destructive">
+                                  data-confirm="Delete this production log permanently? Data loss includes egg count, size breakdown, and stock batch references will be unlinked."
+                                  data-confirm-action="Delete" data-confirm-severity="destructive">
                                 @csrf @method('DELETE')
                                 <button type="submit" class="p-1.5 rounded-full hover:bg-red-50 transition-colors" style="color: #a39e98;" aria-label="Delete log">
                                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
