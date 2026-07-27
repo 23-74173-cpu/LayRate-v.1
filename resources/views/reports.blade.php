@@ -438,6 +438,20 @@ window.addEventListener('beforeprint', function() {
 window.renderReportResults = function(data) {
     var container = document.getElementById('report-preview-container');
     if (!container) return;
+    // Destroy all live chart instances BEFORE replacing innerHTML. If we replace
+    // first, the old canvases are detached and Chart.js's internal ResizeObserver
+    // fires on them asynchronously — calling chart.resize() → chart.fit() on a
+    // canvas with no parent layout → "Cannot convert object to primitive value"
+    // error. That error escapes the destroy() try/catch because it originates from
+    // the async ResizeObserver callback, producing infinite repeating errors. The
+    // stale PointElement (canvas gone, options undefined) then also throws on every
+    // inRange/hitRadius check. Destroying while canvases are still in the DOM avoids
+    // both errors entirely.
+    if (window.LayRateChart) {
+        REPORT_CHART_TYPES.forEach(function(type) {
+            LayRateChart.destroy('chart-' + type);
+        });
+    }
     container.innerHTML = data.html;
     // Re-run lucide icons on new content
     if (window.lucide) lucide.createIcons();
