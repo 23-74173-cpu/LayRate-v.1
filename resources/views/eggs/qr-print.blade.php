@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR — {{ $batch->egg_size }} Batch #{{ $batch->id }}</title>
+    <title>QR — {{ ucfirst($batch->egg_size) }} {{ $batch->harvested_date->format('Y-m-d') }}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #f5f6f8; }
