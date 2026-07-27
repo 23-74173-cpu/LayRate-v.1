@@ -73,6 +73,7 @@
                     </x-button>
                     <span id="unsavedDot" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full" style="background-color: #f59e0b; border: 2px solid #ffffff;"></span>
                 </div>
+                <span id="clearAllMsg" class="hidden text-xs whitespace-nowrap" style="color: #c2703e;">Cages cleared — click Save Layout</span>
                 @endif
             </div>
         </div>
@@ -1299,8 +1300,8 @@ window.addEventListener('resize', function() {
 
 // ── Grid extent recomputation (after add/remove) ──
 function recomputeGridExtent() {
-    var maxR = STORED_GRID_ROWS;
-    var maxC = STORED_GRID_COLS;
+    var maxR = GRID_ROWS;
+    var maxC = GRID_COLS;
     for (var id in placedCages) {
         var c = placedCages[id];
         var r = c.origin_row + c.height;
@@ -1532,6 +1533,7 @@ function placeCage(cageId, originRow, originCol) {
     selectCage(cageId);
     updateSaveButton();
     updateStagingVisibility();
+    document.getElementById('clearAllMsg').classList.add('hidden');
 }
 
 function removeStagingTile(cageId) {
@@ -1611,6 +1613,7 @@ function doClearAll() {
     renderCanvas();
     updateSaveButton();
     updateStagingVisibility();
+    document.getElementById('clearAllMsg').classList.remove('hidden');
 }
 
 // ── Save Layout ──
@@ -1682,6 +1685,7 @@ function saveLayout() {
             Object.assign(savedPositions, pendingMoves);
             pendingMoves = {};
             setSavingState(false);
+            document.getElementById('clearAllMsg').classList.add('hidden');
             showToast('Layout saved', true);
         } else {
             setSavingState(false);
@@ -1711,8 +1715,8 @@ function showDragError(msg) {
 
 // ── Grid Settings (post-onboarding canvas resize) ─────────
 function openGridSettings() {
-    document.getElementById('gridSettingsRows').value = STORED_GRID_ROWS;
-    document.getElementById('gridSettingsCols').value = STORED_GRID_COLS;
+    document.getElementById('gridSettingsRows').value = GRID_ROWS;
+    document.getElementById('gridSettingsCols').value = GRID_COLS;
     document.getElementById('gridSettingsWarning').classList.add('hidden');
     document.getElementById('gridSettingsModal').style.display = 'flex';
     lucide.createIcons();

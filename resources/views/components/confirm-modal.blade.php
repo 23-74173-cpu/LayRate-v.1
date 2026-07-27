@@ -151,15 +151,11 @@
         confirmModalClose();
         if (!form) return;
         if (form instanceof HTMLFormElement) {
-            // Flag lets the data-confirm submit interceptor pass this
-            // submission through — without it, requestSubmit() re-fires the
-            // intercepted submit event and the form never actually submits.
-            form.dataset.confirmed = 'true';
-            if (typeof form.requestSubmit === 'function') {
-                form.requestSubmit();
-            } else {
-                form.submit();
-            }
+            // Use submit() not requestSubmit() to bypass Turbo's submit-event
+            // interception entirely. At this point the user has already
+            // confirmed the action, so re-dispatching a submit event — and
+            // risking Turbo hijacking the navigation — is unnecessary.
+            form.submit();
         } else if (typeof form.submit === 'function') {
             // JS-path pseudo-form ({ submit: callback }) — e.g. Clear All Cages.
             form.submit();
