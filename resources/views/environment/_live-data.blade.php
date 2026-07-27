@@ -103,12 +103,16 @@
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
             <div class="text-xs tracking-wider text-[#6B7280] mb-3">TEMPERATURE TREND (COOP + PER CAGE)</div>
-            <canvas id="envTempChart" height="160"></canvas>
+            <div id="envTempChartWrap" class="relative w-full h-[160px]">
+                <canvas id="envTempChart" style="width: 100%; height: 100%; display: block;"></canvas>
+            </div>
             <div id="envTempChartEmpty" class="hidden h-[160px] flex items-center justify-center text-sm" style="color: #a39e98;">No temperature readings in this window.</div>
         </div>
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
             <div class="text-xs tracking-wider text-[#6B7280] mb-3">HUMIDITY TREND (COOP + PER CAGE)</div>
-            <canvas id="envHumChart" height="160"></canvas>
+            <div id="envHumChartWrap" class="relative w-full h-[160px]">
+                <canvas id="envHumChart" style="width: 100%; height: 100%; display: block;"></canvas>
+            </div>
             <div id="envHumChartEmpty" class="hidden h-[160px] flex items-center justify-center text-sm" style="color: #a39e98;">No humidity readings in this window.</div>
         </div>
     </div>
@@ -142,6 +146,7 @@
 
             const chartOpts = {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: { legend: { display: true, labels: { boxWidth: 10, font: { size: 10 } } } },
                 scales: {
                     x: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 }, autoSkip: true, maxRotation: 45, minRotation: 0 } },
@@ -149,14 +154,14 @@
                 }
             };
 
-            const tempCanvas = document.getElementById('envTempChart');
-            const humCanvas  = document.getElementById('envHumChart');
-            const tempEmpty  = document.getElementById('envTempChartEmpty');
-            const humEmpty   = document.getElementById('envHumChartEmpty');
-            if (!tempCanvas || !humCanvas) return;
+            const tempWrap  = document.getElementById('envTempChartWrap');
+            const humWrap   = document.getElementById('envHumChartWrap');
+            const tempEmpty = document.getElementById('envTempChartEmpty');
+            const humEmpty  = document.getElementById('envHumChartEmpty');
+            if (!tempWrap || !humWrap) return;
 
-            tempCanvas.classList.toggle('hidden', !hasAnyData);
-            humCanvas.classList.toggle('hidden', !hasAnyData);
+            tempWrap.classList.toggle('hidden', !hasAnyData);
+            humWrap.classList.toggle('hidden', !hasAnyData);
             if (tempEmpty) tempEmpty.classList.toggle('hidden', hasAnyData);
             if (humEmpty) humEmpty.classList.toggle('hidden', hasAnyData);
             if (!hasAnyData) return;

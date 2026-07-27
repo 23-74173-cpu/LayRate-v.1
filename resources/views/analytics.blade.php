@@ -114,10 +114,10 @@ window.renderAnalyticsCharts = function(logs, feedLogs, cageColor, isAll, cageCo
     var hasLogs = logs.length > 0;
     var hasFeedOverlap = hasLogs && feedLogs.some(function(f) { return logs.some(function(l) { return l.date === f.date; }); });
 
-    var hdepCvs = document.getElementById('hdepChart');
+    var hdepWrap = document.getElementById('hdepChartWrap');
     var hdepEmp = document.getElementById('hdepChartEmpty');
-    if (hdepCvs && hdepEmp) {
-        hdepCvs.style.display = hasLogs ? '' : 'none';
+    if (hdepWrap && hdepEmp) {
+        hdepWrap.style.display = hasLogs ? '' : 'none';
         hdepEmp.style.display = hasLogs ? 'none' : '';
         if (hasLogs) {
             LayRateChart.create('hdepChart', {
@@ -130,6 +130,7 @@ window.renderAnalyticsCharts = function(logs, feedLogs, cageColor, isAll, cageCo
                     var gridColor = '#F0F0EC';
                     return {
                         responsive: true,
+                        maintainAspectRatio: false,
                         plugins: { legend: { display: false } },
                         scales: {
                             x: { grid: { color: gridColor }, ticks: { font: { size: 10 }, autoSkip: true, autoSkipPadding: 12, maxRotation: 45, minRotation: 0 } },
@@ -143,10 +144,10 @@ window.renderAnalyticsCharts = function(logs, feedLogs, cageColor, isAll, cageCo
         }
     }
 
-    var eggsCvs = document.getElementById('eggsChart');
+    var eggsWrap = document.getElementById('eggsChartWrap');
     var eggsEmp = document.getElementById('eggsChartEmpty');
-    if (eggsCvs && eggsEmp) {
-        eggsCvs.style.display = hasLogs ? '' : 'none';
+    if (eggsWrap && eggsEmp) {
+        eggsWrap.style.display = hasLogs ? '' : 'none';
         eggsEmp.style.display = hasLogs ? 'none' : '';
         if (hasLogs) {
             LayRateChart.create('eggsChart', {
@@ -154,6 +155,7 @@ window.renderAnalyticsCharts = function(logs, feedLogs, cageColor, isAll, cageCo
                 data: { labels: labels, datasets: [{ data: eggs, backgroundColor: cageColor, borderRadius: 3 }] },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
                         x: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 }, autoSkip: true, autoSkipPadding: 12, maxRotation: 45, minRotation: 0 } },
@@ -166,10 +168,10 @@ window.renderAnalyticsCharts = function(logs, feedLogs, cageColor, isAll, cageCo
         }
     }
 
-    var scatCvs = document.getElementById('feedHdepChart');
+    var scatWrap = document.getElementById('feedHdepChartWrap');
     var scatEmp = document.getElementById('feedHdepChartEmpty');
-    if (scatCvs && scatEmp) {
-        scatCvs.style.display = hasFeedOverlap ? '' : 'none';
+    if (scatWrap && scatEmp) {
+        scatWrap.style.display = hasFeedOverlap ? '' : 'none';
         scatEmp.style.display = hasFeedOverlap ? 'none' : '';
         if (hasFeedOverlap) {
             var feedMap = {};
@@ -185,6 +187,7 @@ window.renderAnalyticsCharts = function(logs, feedLogs, cageColor, isAll, cageCo
                 data: { datasets: [{ data: scatter, backgroundColor: cageColor, pointRadius: 6 }] },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
                         x: { type: 'linear', grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } }, title: { display: true, text: 'kg', font: { size: 10 } } },
@@ -199,13 +202,23 @@ window.renderAnalyticsCharts = function(logs, feedLogs, cageColor, isAll, cageCo
 };
 
 // ── Shared fetch-and-render helper ──
+// Guards against out-of-order responses: rapidly clicking multiple tabs fires
+// multiple concurrent fetches, and without sequencing, whichever happens to
+// resolve *last* wins the DOM update even if it's not the most recently
+// requested tab — producing charts/labels that don't match the active tab
+// (or a destroyed chart, if the stale response's period has no data).
+var __analyticsRequestSeq = 0;
 function analyticsFetch(fetchUrl, url, afterUpdate) {
     var container = document.getElementById('analytics-charts-container');
     if (container) container.classList.add('loading');
 
+    var seq = ++__analyticsRequestSeq;
+
     fetch(fetchUrl)
         .then(function(r) { return r.json(); })
         .then(function(data) {
+            if (seq !== __analyticsRequestSeq) return; // a newer request superseded this one
+
             // Update KPI cards
             var el = document.getElementById('kpi-avg-hdep');
             if (el) el.textContent = data.kpi.avgHdep === '-' ? '-' : data.kpi.avgHdep + '%';
@@ -218,113 +231,183 @@ function analyticsFetch(fetchUrl, url, afterUpdate) {
             el = document.getElementById('kpi-flock-age');
             if (el) el.textContent = data.kpi.flockAge;
 
-            // Update charts
-            window.renderAnalyticsCharts(data.charts.logs, data.charts.feedLogs, data.cageColor, data.isAll, data.cageCode);
+            // Update charts — every switch rebuilds from a clean Chart.js module first,
+            // not just when a chart is detected broken. Requested directly: refresh on
+            // every tab change (cage, period), not a conditional self-heal.
+            var finishRender = function() {
+                if (seq !== __analyticsRequestSeq) return; // superseded while we were reloading
+                window.renderAnalyticsCharts(data.charts.logs, data.charts.feedLogs, data.cageColor, data.isAll, data.cageCode);
 
-            // Tab-specific updates
-            if (typeof afterUpdate === 'function') afterUpdate(data);
+                // Tab-specific updates
+                if (typeof afterUpdate === 'function') afterUpdate(data);
 
-            // Update URL
-            history.replaceState({}, '', url);
+                // Update URL
+                history.replaceState({}, '', url);
 
-            // Remove loading overlay
-            if (container) container.classList.remove('loading');
+                // Remove loading overlay
+                if (container) container.classList.remove('loading');
+            };
+            if (window.LayRateChart && typeof window.LayRateChart.prepareForRender === 'function') {
+                window.LayRateChart.prepareForRender().then(finishRender);
+            } else {
+                finishRender();
+            }
         })
         .catch(function(err) {
+            if (seq !== __analyticsRequestSeq) return;
             console.error('Analytics update failed:', err);
             if (container) container.classList.remove('loading');
         });
 }
 
-// ── Period tab switcher (AJAX) ──
-var __analyticsPeriod = (new URLSearchParams(window.location.search)).get('period') || 'week';
-document.addEventListener('click', function(e) {
-    var tab = e.target.closest('[data-period-tab]');
-    if (!tab) return;
-    if (!document.getElementById('hdepChart')) return;
-    e.preventDefault();
-    var period = tab.dataset.periodTab;
-    if (period === __analyticsPeriod) return;
-    __analyticsPeriod = period;
-    var params = new URLSearchParams(window.location.search);
-    var cage = params.get('cage') || 'all';
-    // Build URL dynamically — tab href is stale after AJAX cage switches
-    var url = window.location.pathname + '?cage=' + encodeURIComponent(cage) + '&period=' + encodeURIComponent(period);
-
-    // Update active tab styling immediately
-    document.querySelectorAll('[data-period-tab]').forEach(function(t) {
-        var act = t.dataset.periodTab === period;
-        t.style.borderBottomColor = act ? '#002D5E' : 'transparent';
-        t.style.color = act ? '#1f1f1f' : '#6B7280';
-    });
-
-    analyticsFetch('/analytics/data?cage=' + encodeURIComponent(cage) + '&period=' + encodeURIComponent(period), url, function(data) {
-        var dayCount = period === 'week' ? '7' : (period === 'month' ? '30' : '90');
-        var titleEl = document.getElementById('chart-title-period');
-        if (titleEl) titleEl.textContent = dayCount;
-    });
-});
-
-// ── Reconcile frame src with URL on page restore (back/forward navigation) ──
-document.addEventListener('turbo:load', function() {
+// ── Wait for the lazy charts frame's first load before firing an AJAX update ──
+// Tab clicks used to gate on document.getElementById('hdepChart') existing as a
+// proxy for "charts frame has loaded" — if a tab was clicked before that lazy
+// frame finished its initial fetch (very easy to do: click a tab the instant
+// you land on the page), the canvas didn't exist yet, the guard bailed out
+// *before* calling e.preventDefault(), and the click fell through to the tab's
+// raw href — a full page reload instead of the intended instant AJAX swap.
+// Waiting for the frame's own 'complete' state (or its turbo:frame-load event
+// if it's still loading) fixes the race without ever giving up preventDefault.
+function whenAnalyticsFrameReady(cb) {
     var frame = document.querySelector('turbo-frame#analytics-charts');
-    if (!frame) return;
-    var frameSrc = frame.getAttribute('src');
-    if (!frameSrc) return;
-    var params = new URLSearchParams(window.location.search);
-    var urlCage = params.get('cage') || 'all';
-    var urlPeriod = params.get('period') || 'week';
-    var frameUrl = new URL(frameSrc, window.location.origin);
-    if (frameUrl.searchParams.get('cage') !== urlCage || frameUrl.searchParams.get('period') !== urlPeriod) {
-        frameUrl.searchParams.set('cage', urlCage);
-        frameUrl.searchParams.set('period', urlPeriod);
-        frame.setAttribute('src', frameUrl.pathname + frameUrl.search);
-    }
-});
-
-// ── Cage scope tab switcher (AJAX) ──
-document.addEventListener('click', function(e) {
-    var tab = e.target.closest('[data-cage-tab]');
-    if (!tab) return;
-    if (!document.getElementById('hdepChart')) return;
-    e.preventDefault();
-    var params = new URLSearchParams(window.location.search);
-    var currentCage = params.get('cage') || 'all';
-    if (tab.dataset.cageTab === currentCage) return;
-
-    var cage = tab.dataset.cageTab;
-    var period = params.get('period') || 'week';
-    var cageColors = window.CAGE_COLORS || {};
-
-    // Build URL preserving current period
-    var url = window.location.pathname + '?cage=' + encodeURIComponent(cage) + '&period=' + encodeURIComponent(period);
-
-    // Update cage tab styling immediately
-    document.querySelectorAll('[data-cage-tab]').forEach(function(t) {
-        var act = t.dataset.cageTab === cage;
-        var color = t.dataset.cageTab === 'all' ? '#333333' : (cageColors[t.dataset.cageTab] || '#6B7280');
-        t.style.borderBottomColor = act ? color : 'transparent';
-        t.style.color = act ? '#1f1f1f' : '#6B7280';
-    });
-
-    analyticsFetch('/analytics/data?cage=' + encodeURIComponent(cage) + '&period=' + encodeURIComponent(period), url, function(data) {
-        // Update cage name KPI
-        var kpiCage = document.getElementById('kpi-cage');
-        if (kpiCage) {
-            kpiCage.textContent = data.isAll ? 'All Cages' : data.cageCode;
-            kpiCage.style.color = data.cageColor;
+    if (frame && frame.hasAttribute('complete')) { cb(); return; }
+    document.addEventListener('turbo:frame-load', function handler(e) {
+        if (e.target && e.target.id === 'analytics-charts') {
+            document.removeEventListener('turbo:frame-load', handler);
+            cb();
         }
-
-        // Update all three chart title display labels
-        var label = data.isAll ? 'FARM' : data.cageCode;
-        var hdepTitle = document.getElementById('chart-title-label-hdep');
-        if (hdepTitle) hdepTitle.textContent = label;
-        var eggsTitle = document.getElementById('chart-title-label-eggs');
-        if (eggsTitle) eggsTitle.textContent = label;
-        var feedTitle = document.getElementById('chart-title-label-feed');
-        if (feedTitle) feedTitle.textContent = label;
     });
-});
+}
+
+// ── Period tab switcher (AJAX) ──
+// __analyticsPeriod/__analyticsCage are the source of truth for "what's currently
+// selected" — updated synchronously the instant a tab is clicked. Reading
+// window.location.search instead (as this used to) is a real, live-confirmed bug:
+// the URL is only updated via history.replaceState() *after* analyticsFetch's
+// response comes back, so clicking a second tab before the first request resolves
+// (very easy to hit — this dev server processes requests one at a time, so a
+// single request can take seconds) reads the *stale* pre-click URL and silently
+// falls back to the 'all'/'week' defaults instead of the just-selected tab. Root
+// cause of "clicked CAGE-A then Month, ended up rendering All Cages' data".
+var __analyticsPeriod = (new URLSearchParams(window.location.search)).get('period') || 'week';
+var __analyticsCage = (new URLSearchParams(window.location.search)).get('cage') || 'all';
+
+// Lets LayRateChart's self-heal (layouts/app.blade.php) recover a chart that failed
+// to paint by re-running the exact same path a manual tab click would. Live-tested
+// two versions of this: calling analyticsFetch() directly did NOT reliably clear the
+// stuck-paint state, but dispatching a real .click() on the tab element — going
+// through the actual handler, tab-styling DOM updates included — did, consistently.
+// Bypasses the "already active" guard with a throwaway sentinel value so the click
+// isn't a no-op just because the cage/period didn't change.
+// Re-registered every script run (not just once) so it always closes over the
+// current __analyticsCage, not a stale one from a prior render.
+if (window.LayRateChart) {
+    window.LayRateChart.registerRecoveryHook(function() {
+        var cageTab = document.querySelector('[data-cage-tab="' + __analyticsCage + '"]');
+        if (!cageTab) return;
+        __analyticsCage = '__layratechart_recovery__';
+        cageTab.click();
+    });
+}
+
+// This whole script re-executes on every full Turbo Drive visit to /analytics
+// (sidebar nav away-and-back, browser back/forward) — confirmed live: without this
+// guard, document.addEventListener() below stacks a fresh listener on every visit,
+// so a single tab click fires one AJAX request per stacked listener (observed 2x
+// after just one sidebar round-trip). Same one-time-bind convention already used
+// throughout this codebase (see eggs/stocks.blade.php's __eggStocksListenersRegistered).
+if (!window.__analyticsListenersBound) {
+    window.__analyticsListenersBound = true;
+
+    document.addEventListener('click', function(e) {
+        var tab = e.target.closest('[data-period-tab]');
+        if (!tab) return;
+        e.preventDefault();
+        var period = tab.dataset.periodTab;
+        if (period === __analyticsPeriod) return;
+        __analyticsPeriod = period;
+        var cage = __analyticsCage;
+        // Build URL dynamically — tab href is stale after AJAX cage switches
+        var url = window.location.pathname + '?cage=' + encodeURIComponent(cage) + '&period=' + encodeURIComponent(period);
+
+        // Update active tab styling immediately
+        document.querySelectorAll('[data-period-tab]').forEach(function(t) {
+            var act = t.dataset.periodTab === period;
+            t.style.borderBottomColor = act ? '#002D5E' : 'transparent';
+            t.style.color = act ? '#1f1f1f' : '#6B7280';
+        });
+
+        whenAnalyticsFrameReady(function() {
+            analyticsFetch('/analytics/data?cage=' + encodeURIComponent(cage) + '&period=' + encodeURIComponent(period), url, function(data) {
+                var dayCount = period === 'week' ? '7' : (period === 'month' ? '30' : '90');
+                var titleEl = document.getElementById('chart-title-period');
+                if (titleEl) titleEl.textContent = dayCount;
+            });
+        });
+    });
+
+    // ── Reconcile frame src with URL on page restore (back/forward navigation) ──
+    document.addEventListener('turbo:load', function() {
+        var frame = document.querySelector('turbo-frame#analytics-charts');
+        if (!frame) return;
+        var frameSrc = frame.getAttribute('src');
+        if (!frameSrc) return;
+        var params = new URLSearchParams(window.location.search);
+        var urlCage = params.get('cage') || 'all';
+        var urlPeriod = params.get('period') || 'week';
+        var frameUrl = new URL(frameSrc, window.location.origin);
+        if (frameUrl.searchParams.get('cage') !== urlCage || frameUrl.searchParams.get('period') !== urlPeriod) {
+            frameUrl.searchParams.set('cage', urlCage);
+            frameUrl.searchParams.set('period', urlPeriod);
+            frame.setAttribute('src', frameUrl.pathname + frameUrl.search);
+        }
+    });
+
+    // ── Cage scope tab switcher (AJAX) ──
+    document.addEventListener('click', function(e) {
+        var tab = e.target.closest('[data-cage-tab]');
+        if (!tab) return;
+        e.preventDefault();
+        if (tab.dataset.cageTab === __analyticsCage) return;
+
+        var cage = tab.dataset.cageTab;
+        __analyticsCage = cage;
+        var period = __analyticsPeriod;
+        var cageColors = window.CAGE_COLORS || {};
+
+        // Build URL preserving current period
+        var url = window.location.pathname + '?cage=' + encodeURIComponent(cage) + '&period=' + encodeURIComponent(period);
+
+        // Update cage tab styling immediately
+        document.querySelectorAll('[data-cage-tab]').forEach(function(t) {
+            var act = t.dataset.cageTab === cage;
+            var color = t.dataset.cageTab === 'all' ? '#333333' : (cageColors[t.dataset.cageTab] || '#6B7280');
+            t.style.borderBottomColor = act ? color : 'transparent';
+            t.style.color = act ? '#1f1f1f' : '#6B7280';
+        });
+
+        whenAnalyticsFrameReady(function() {
+            analyticsFetch('/analytics/data?cage=' + encodeURIComponent(cage) + '&period=' + encodeURIComponent(period), url, function(data) {
+                // Update cage name KPI
+                var kpiCage = document.getElementById('kpi-cage');
+                if (kpiCage) {
+                    kpiCage.textContent = data.isAll ? 'All Cages' : data.cageCode;
+                    kpiCage.style.color = data.cageColor;
+                }
+
+                // Update all three chart title display labels
+                var label = data.isAll ? 'FARM' : data.cageCode;
+                var hdepTitle = document.getElementById('chart-title-label-hdep');
+                if (hdepTitle) hdepTitle.textContent = label;
+                var eggsTitle = document.getElementById('chart-title-label-eggs');
+                if (eggsTitle) eggsTitle.textContent = label;
+                var feedTitle = document.getElementById('chart-title-label-feed');
+                if (feedTitle) feedTitle.textContent = label;
+            });
+        });
+    });
+}
 </script>
 @endpush
 @endsection

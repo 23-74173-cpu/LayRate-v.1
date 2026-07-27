@@ -597,7 +597,22 @@
 
 window.CAGE_COLORS = @json(\App\Models\Cage::getColorMap());
 
-if (typeof Chart !== 'undefined') {
+// Factored out so it can be re-applied after a Chart.js library reload
+// (see LayRateChart._reloadChartJsLibrary below) — a fresh Chart module starts
+// with library defaults, not this app's.
+//
+// `full` (default true) applies everything, including scale.grid/layout. LayRateChart's
+// self-heal calls this with `full: false` after reloading the library: confirmed live
+// that reassigning scale.grid/layout in that specific situation (a Chart module that's
+// only just finished loading) is what leaves bar charts unable to paint — merging into
+// the existing objects instead of replacing them avoids that, but Chart.js's own
+// internal scale-defaults routing silently doesn't persist a merge for scale.grid
+// specifically, so the safest fix is to just skip both in that one path. The visual
+// difference (library default grid shade/padding instead of this app's) only shows up
+// in the rare case a chart needed this recovery at all, which is an acceptable
+// trade-off against the chart staying blank.
+window.__applyChartDefaults = function(full) {
+    if (typeof Chart === 'undefined') return;
     Chart.defaults.color = '#31302e';
     Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
     Chart.defaults.set('plugins.legend.labels.font.size', 12);
@@ -605,9 +620,12 @@ if (typeof Chart !== 'undefined') {
     Chart.defaults.plugins.legend.labels.pointStyle = 'circle';
     Chart.defaults.plugins.legend.labels.padding = 16;
     Chart.defaults.elements.bar.borderRadius = 4;
-    Chart.defaults.scale.grid = { color: 'rgba(0,0,0,0.06)' };
-    Chart.defaults.layout = { padding: { top: 10, bottom: 10, left: 10, right: 10 } };
-}
+    if (full !== false) {
+        Chart.defaults.scale.grid = { color: 'rgba(0,0,0,0.06)' };
+        Chart.defaults.layout = { padding: { top: 10, bottom: 10, left: 10, right: 10 } };
+    }
+};
+window.__applyChartDefaults();
 
 // ── Shared chart lifecycle manager ──
 // Every chart on every page routes through this helper so that:
@@ -616,20 +634,147 @@ if (typeof Chart !== 'undefined') {
 //   • consistent defaults (padding, legend, grid) apply globally
 window.LayRateChart = {
     _instances: {},
+    _configs: {},
     _lifecycleBound: false,
+    _recoveryHook: null,
+    _recovering: false,
+    _generation: 0,
 
-    create(id, config) {
+    // A page can register how to "re-render everything I currently show" (e.g.
+    // Analytics re-runs its normal AJAX fetch for the active cage/period). The
+    // self-heal path below calls this instead of trying to rebuild charts generically
+    // from cached configs — confirmed live that rebuilding from a config directly
+    // (even a config identical in every way, deep-cloned) does *not* reliably clear
+    // the stuck-paint state, but re-entering the page's own real fetch/render flow
+    // does, every time tested. Re-registered on every call, so it always points at
+    // the current page's live closures, not stale ones from a previous render.
+    registerRecoveryHook(fn) {
+        this._recoveryHook = fn;
+    },
+
+    // Unconditionally rebuilds from a clean Chart.js module before rendering — call
+    // this on every tab/cage/period switch, not just when a chart is detected broken.
+    // Returns a Promise; render inside its .then(). Heavier than the detect-then-heal
+    // approach this replaced, but guaranteed correct every time instead of depending on
+    // a check that can itself race.
+    prepareForRender() {
+        this._generation++;
+        Object.keys(this._instances).forEach(id => this.destroy(id));
+        return this._reloadChartJsLibrary();
+    },
+
+    create(id, config, _retryCount) {
+        _retryCount = _retryCount || 0;
         this.destroy(id);
+        this._configs[id] = config;
         const canvas = document.getElementById(id);
         if (!canvas) return null;
         try {
             const instance = new Chart(canvas, config);
             this._instances[id] = instance;
+            // Defensive self-heal: intermittently (observed live, root cause not fully
+            // pinned down despite extensive investigation — ruled out stale scale/data,
+            // canvas reuse, animation timing, ResizeObserver loops, and font-loading races
+            // as the trigger) a bar chart's dataset elements never get a valid pixel
+            // geometry (base stays null) even though data/scale are correct, so nothing
+            // paints. Confirmed live: the corruption lives inside Chart.js's own shared
+            // module state, not the DOM — neither a fresh canvas+chart instance nor a full
+            // turbo-frame reload clears it, but forcing the Chart.js <script> itself to
+            // re-execute (a fresh module, no page navigation) reliably does. Only bar
+            // charts have been observed affected; harmless no-op otherwise since the check
+            // is bar-geometry-specific.
+            // Suppressed while a recovery is already in flight (see _verifyBarPainted):
+            // the recovery hook itself creates fresh bar charts as part of re-rendering,
+            // and letting those schedule their own independent verification/retry chains
+            // caused overlapping recoveries to race each other — confirmed live, this is
+            // what was reintroducing the earlier stale-cage/period bug via multiple
+            // concurrent recovery-triggered tab "clicks".
+            if (config.type === 'bar' && _retryCount < 3 && !this._recovering) {
+                setTimeout(() => this._verifyBarPainted(id, config, canvas, instance, _retryCount), 1100);
+            }
             return instance;
         } catch (e) {
             console.error('[LayRateChart] Failed to create chart "' + id + '":', e);
             return null;
         }
+    },
+
+    _verifyBarPainted(id, config, canvas, instance, retryCount) {
+        if (this._instances[id] !== instance) return; // superseded by a newer render already
+        const meta = instance.getDatasetMeta(0);
+        const stuck = meta.data.length > 0 && meta.data.every(el => el.base == null || !isFinite(el.base));
+        if (!stuck) return;
+
+        if (retryCount === 0) {
+            console.warn('[LayRateChart] "' + id + '" failed to paint, rebuilding once');
+            const fresh = document.createElement('canvas');
+            fresh.id = id;
+            fresh.className = canvas.className;
+            fresh.style.cssText = canvas.style.cssText;
+            canvas.replaceWith(fresh);
+            this.create(id, config, 1);
+        } else if (retryCount === 1) {
+            console.warn('[LayRateChart] "' + id + '" still stuck — reloading the Chart.js library (graph-only recovery, no page navigation) and re-rendering');
+            // Confirmed live: reloading the library while *other* charts built on the old
+            // module are still alive doesn't clear it, and neither does rebuilding from a
+            // cached config directly (even an exact deep-cloned copy) — only re-entering
+            // the page's own real fetch/render flow does. So every currently-live chart is
+            // torn down, the library is reloaded, and the page's registered hook re-runs
+            // its normal render path (which is what a manual tab re-click already does).
+            this._recovering = true;
+            const gen = this._generation; // if this changes, the page navigated away — abort
+            Object.keys(this._instances).forEach(otherId => this.destroy(otherId));
+            this._reloadChartJsLibrary()
+                .then(() => {
+                    if (gen !== this._generation) return; // navigated away mid-recovery
+                    if (typeof this._recoveryHook === 'function') {
+                        this._recoveryHook();
+                    } else {
+                        // No page hook registered — best effort, may not clear it (see above).
+                        this.create(id, config, 2);
+                    }
+                    // Give the recovery's own fetch/render (triggered above) time to finish
+                    // before allowing verification to run again.
+                    setTimeout(() => {
+                        if (gen === this._generation) this._recovering = false;
+                    }, 2000);
+                })
+                .catch(() => {
+                    if (gen !== this._generation) return; // navigated away mid-recovery
+                    this._recovering = false;
+                    window.location.reload();
+                });
+        } else {
+            console.error('[LayRateChart] "' + id + '" still failed to paint after a Chart.js library reload — falling back to a full page reload');
+            window.location.reload();
+        }
+    },
+
+    // Forces Chart.js to fully re-initialize (fresh Animator, fresh registries) by
+    // re-executing its <script> tag, without touching the rest of the page. Existing
+    // chart instances built against the old module keep working (their own destroy()/
+    // update() stay bound to their own instance), but new ones after this point use the
+    // fresh module — which is what actually clears the stuck-paint state.
+    _reloadChartJsLibrary() {
+        return new Promise((resolve, reject) => {
+            const old = document.querySelector('script[src*="chart.min.js"]');
+            if (!old) { reject(new Error('chart.min.js script tag not found')); return; }
+            const fresh = document.createElement('script');
+            fresh.src = old.src.split('?')[0] + '?r=' + Date.now();
+            fresh.onload = () => {
+                if (typeof window.__applyChartDefaults === 'function') window.__applyChartDefaults(false);
+                // The fresh module isn't actually ready to build a working chart the
+                // instant its script finishes executing — confirmed live: rebuilding
+                // immediately on load still failed every time, but the exact same rebuild
+                // succeeded reliably once a short delay was inserted first. Likely some
+                // async part of Chart.js's own init (its animator's first scheduling tick)
+                // that onload doesn't wait for.
+                setTimeout(resolve, 300);
+            };
+            fresh.onerror = () => reject(new Error('Failed to reload chart.min.js'));
+            old.remove();
+            document.head.appendChild(fresh);
+        });
     },
 
     update(id, config) {
@@ -659,6 +804,13 @@ window.LayRateChart = {
     },
 
     destroyAll() {
+        // Invalidates any in-flight self-heal recovery (see _verifyBarPainted) — without
+        // this, navigating away mid-recovery left its pending .then() callback to fire
+        // later against whatever the *next* page happened to render, clicking tabs and
+        // creating charts that had nothing to do with the page the user was now on.
+        // Confirmed live: repeated fast navigation reliably corrupted state without this.
+        this._generation++;
+        this._recovering = false;
         Object.keys(this._instances).forEach(id => this.destroy(id));
     },
 
