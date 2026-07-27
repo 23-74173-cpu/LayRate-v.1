@@ -7,7 +7,7 @@
     <x-page-header title="Chickens" subtitle="Manage hen inventory, movements, and mortality records">
         <x-slot:actions>
             <x-button size="sm" onclick="openRegisterModal()">
-                <i data-lucide="plus" class="w-3 h-3 inline"></i> Register New Chickens
+                <i data-lucide="plus" class="w-3 h-3 inline"></i> Register New Hens
             </x-button>
         </x-slot:actions>
     </x-page-header>
@@ -401,9 +401,9 @@ function toggleAllInSlot(checkbox) {
 function toggleColumns(btn) {
     const card = btn.closest('.rounded-lg');
     const hidden = card.querySelectorAll('.col-toggle');
-    const anyHidden = Array.from(hidden).some(el => el.style.display === 'none');
-    hidden.forEach(el => el.style.display = anyHidden ? '' : 'none');
-    btn.querySelector('i').dataset.toggled = anyHidden ? '' : '1';
+    const isToggled = btn.querySelector('i').dataset.toggled === '1';
+    hidden.forEach(el => el.classList.toggle('hidden', !isToggled));
+    btn.querySelector('i').dataset.toggled = isToggled ? '' : '1';
 }
 
 function submitMortality(form) {

@@ -17,7 +17,7 @@
 
     @if($unplacedHens->isEmpty())
     <div class="bg-white rounded-lg border border-[#D9D9D9] p-10 text-center text-sm text-[#9CA3AF]">
-        No unplaced hens available. <a href="{{ route('chickens.index') }}" class="text-[#002D5E] underline">Register new chickens</a> first.
+        No unplaced hens available. <a href="{{ route('chickens.index') }}" class="text-[#002D5E] underline">Register new hens</a> first.
     </div>
     @else
 
@@ -34,10 +34,10 @@
 
     {{-- Form --}}
     <form id="placementForm" method="POST" action="{{ route('cages.bulk-add.store') }}" class="space-y-5"
-          data-confirm="Place the selected chickens into their assigned slots?"
-          data-confirm-action="Place Chickens" data-confirm-severity="neutral"
-          data-loading="Placing chickens and updating slot occupancy..."
-          data-loading-title="Placing Chickens">
+          data-confirm="Place the selected hens into their assigned slots?"
+          data-confirm-action="Place Hens" data-confirm-severity="neutral"
+          data-loading="Placing hens and updating slot occupancy..."
+          data-loading-title="Placing Hens">
         @csrf
 
         {{-- Hidden inputs --}}
