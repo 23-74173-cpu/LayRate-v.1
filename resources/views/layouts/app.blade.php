@@ -88,6 +88,22 @@
         .turbo-loaded { animation: turboFade 120ms ease-out; }
     </style>
 
+    {{-- Print: the root flex row and main column are both pinned to a fixed
+         viewport height with overflow:hidden on screen (so only the sidebar's
+         own nav scrolls) — during print that clips everything to page 1. Only
+         these two structural wrappers need overriding; a page's own
+         @media print rules (pushed via @stack('head') below) handle content
+         specifics like hiding the sidebar or resetting a printable doc's own
+         layout. --}}
+    <style>
+        @media print {
+            html, body { height: auto !important; overflow: visible !important; }
+            .flex.overflow-hidden { height: auto !important; overflow: visible !important; }
+            .flex.flex-col.flex-1.overflow-hidden { height: auto !important; overflow: visible !important; }
+            main.page-wrapper { overflow: visible !important; }
+        }
+    </style>
+
     @stack('head')
 </head>
 <body class="h-screen overflow-hidden bg-[#F5F6F8] select-none">

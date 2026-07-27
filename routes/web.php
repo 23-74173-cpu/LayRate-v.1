@@ -178,6 +178,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/reports',     [ReportController::class, 'index'])->name('reports');
     Route::get('/reports/data', [ReportController::class, 'data'])->name('reports.data');
     Route::get('/reports/csv', [ReportController::class, 'exportCsv'])->name('reports.csv');
+    Route::get('/reports/excel', [ReportController::class, 'exportExcel'])->name('reports.excel');
+    Route::get('/reports/pdf', [ReportController::class, 'exportPdf'])->name('reports.pdf');
 
     Route::get('/notifications',                    [AlertController::class, 'index'])->name('notifications.index');
     Route::get('/notifications/table',              [AlertController::class, 'table'])->name('notifications.table');

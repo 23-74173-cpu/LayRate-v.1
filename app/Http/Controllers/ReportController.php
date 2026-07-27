@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\AllReportsExport;
+use App\Exports\ReportSheetExport;
 use App\Models\Cage;
 use App\Models\EggStockBatch;
 use App\Models\EnvironmentalLog;
@@ -9,13 +11,55 @@ use App\Models\FeedConsumptionLog;
 use App\Models\Hen;
 use App\Models\MortalityLog;
 use App\Models\ProductionLog;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ReportController extends Controller
 {
+    private const ALL_TYPES = ['production', 'feed', 'environment', 'mortality', 'egg_stock'];
+
     public function index(Request $request)
+    {
+        [$type, $from, $to, $cageId, $reason, $allCages] = $this->filtersFromRequest($request);
+        $charts = $request->boolean('charts');
+        // Item #84: results land on a preview table first; the printable
+        // letterhead document is an explicit second step (?full=1).
+        $full = $request->boolean('full');
+
+        if ($type === 'all') {
+            $sections = $this->buildSections($from, $to, $cageId, $reason, $allCages, $charts);
+
+            if (!$full) {
+                foreach ($sections as &$section) {
+                    $section['rows'] = $this->paginateSection($section['rows'], $request, "page_{$section['type']}");
+                }
+                unset($section);
+            }
+
+            $chartsPayload = collect($sections)->pluck('chart', 'type')->all();
+
+            return view('reports', compact('type', 'from', 'to', 'cageId', 'reason', 'allCages', 'sections', 'full', 'charts', 'chartsPayload'));
+        }
+
+        $rows    = $this->buildReport($type, $from, $to, $cageId, $reason, $allCages);
+        $summary = $this->buildSummary($type, $from, $to, $cageId, $reason, $allCages);
+        $chart   = $charts ? $this->buildChartData($type, $from, $to, $cageId, $reason, $allCages) : null;
+
+        // The preview table is paginated; the printable document (?full=1) and
+        // the CSV export both need every row, so pagination only applies here.
+        if (!$full) {
+            $rows = $this->paginateCollection($rows, $request);
+        }
+
+        $chartsPayload = $chart ? [$type => $chart] : [];
+
+        return view('reports', compact('type', 'from', 'to', 'cageId', 'reason', 'allCages', 'rows', 'summary', 'full', 'charts', 'chart', 'chartsPayload'));
+    }
+
+    private function filtersFromRequest(Request $request): array
     {
         $type   = $request->get('type', 'production');
         // No date filter means "all time", not "nothing" — a first page load
@@ -25,22 +69,9 @@ class ReportController extends Controller
         $to     = $request->get('to') ?: null;
         $cageId = $request->get('cage', 'all');
         $reason = $request->get('reason', 'all');
-
         $allCages = Cage::orderBy('cage_code')->get();
-        // Item #84: results land on a preview table first; the printable
-        // letterhead document is an explicit second step (?full=1).
-        $full    = $request->boolean('full');
 
-        $rows    = $this->buildReport($type, $from, $to, $cageId, $reason, $allCages);
-        $summary = $this->buildSummary($type, $from, $to, $cageId, $reason, $allCages);
-
-        // The preview table is paginated; the printable document (?full=1) and
-        // the CSV export both need every row, so pagination only applies here.
-        if (!$full) {
-            $rows = $this->paginateCollection($rows, $request);
-        }
-
-        return view('reports', compact('type', 'from', 'to', 'cageId', 'reason', 'allCages', 'rows', 'summary', 'full'));
+        return [$type, $from, $to, $cageId, $reason, $allCages];
     }
 
     private function paginateCollection($items, Request $request, int $perPage = 20): LengthAwarePaginator
@@ -54,11 +85,65 @@ class ReportController extends Controller
         ]);
     }
 
-    private function buildReport($type, $from, $to, $cageId, $reason, $allCages)
+    // Used for each "All Reports" section, which needs its own page state
+    // (page_production, page_feed, ...) independent of the other sections —
+    // unlike paginateCollection() above (single-type, untouched), the path is
+    // pinned to route('reports') because this is also called from data()
+    // (GET /reports/data), where the current request path would be wrong.
+    private function paginateSection($rows, Request $request, string $pageName, int $perPage = 20): LengthAwarePaginator
     {
-        $cageIds = $cageId === 'all'
+        $page  = (int) $request->get($pageName, 1);
+        $total = $rows->count();
+
+        return new LengthAwarePaginator(
+            $rows->slice(($page - 1) * $perPage, $perPage)->values(),
+            $total,
+            $perPage,
+            $page,
+            ['path' => route('reports'), 'query' => $request->query(), 'pageName' => $pageName]
+        );
+    }
+
+    private function typeLabel(string $type): string
+    {
+        return match ($type) {
+            'production'  => 'Production Report',
+            'feed'        => 'Feed Report',
+            'environment' => 'Environment Report',
+            'mortality'   => 'Mortality Report',
+            'egg_stock'   => 'Egg Stock Report',
+            default       => ucfirst($type) . ' Report',
+        };
+    }
+
+    private function resolveCageIds($cageId, $allCages)
+    {
+        return $cageId === 'all'
             ? $allCages->pluck('id')
             : [$allCages->where('cage_code', $cageId)->first()?->id];
+    }
+
+    // Builds all five report types as independent sections for type=all.
+    // The mortality `reason` filter is scoped to only the mortality section —
+    // the other four always run unfiltered by reason.
+    private function buildSections($from, $to, $cageId, $reason, $allCages, bool $charts): array
+    {
+        return collect(self::ALL_TYPES)->map(function ($t) use ($from, $to, $cageId, $reason, $allCages, $charts) {
+            $sectionReason = $t === 'mortality' ? $reason : 'all';
+
+            return [
+                'type'    => $t,
+                'label'   => $this->typeLabel($t),
+                'rows'    => $this->buildReport($t, $from, $to, $cageId, $sectionReason, $allCages),
+                'summary' => $this->buildSummary($t, $from, $to, $cageId, $sectionReason, $allCages),
+                'chart'   => $charts ? $this->buildChartData($t, $from, $to, $cageId, $sectionReason, $allCages) : null,
+            ];
+        })->all();
+    }
+
+    private function buildReport($type, $from, $to, $cageId, $reason, $allCages)
+    {
+        $cageIds = $this->resolveCageIds($cageId, $allCages);
 
         return match($type) {
             'feed'        => $this->feedReport($from, $to, $cageIds),
@@ -71,9 +156,7 @@ class ReportController extends Controller
 
     private function buildSummary($type, $from, $to, $cageId, $reason, $allCages): ?object
     {
-        $cageIds = $cageId === 'all'
-            ? $allCages->pluck('id')
-            : [$allCages->where('cage_code', $cageId)->first()?->id];
+        $cageIds = $this->resolveCageIds($cageId, $allCages);
 
         $hasRange = $from && $to;
 
@@ -238,18 +321,150 @@ class ReportController extends Controller
             ]);
     }
 
+    // ── Chart data (only built when the "Include Graphs" checkbox is on) ──
+
+    private function buildChartData(string $type, $from, $to, $cageId, $reason, $allCages): ?array
+    {
+        $cageIds = $this->resolveCageIds($cageId, $allCages);
+
+        return match ($type) {
+            'production'  => $this->productionChart($from, $to, $cageIds),
+            'feed'        => $this->feedChart($from, $to, $cageIds),
+            'environment' => $this->environmentChart($from, $to, $cageIds),
+            'mortality'   => $this->mortalityChart($from, $to, $cageIds, $reason),
+            'egg_stock'   => $this->eggStockChart($from, $to, $cageIds, $cageId),
+            default       => null,
+        };
+    }
+
+    private function productionChart($from, $to, $cageIds): array
+    {
+        $hasRange = $from && $to;
+        $rows = ProductionLog::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))
+            ->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))
+            ->selectRaw('log_date, SUM(egg_count) as eggs, AVG(hdep) as hdep')
+            ->groupBy('log_date')
+            ->orderBy('log_date')
+            ->get();
+
+        return [
+            'kind'   => 'production',
+            'labels' => $rows->map(fn($r) => $r->log_date->format('Y-m-d'))->all(),
+            'eggs'   => $rows->map(fn($r) => (int) $r->eggs)->all(),
+            'hdep'   => $rows->map(fn($r) => round((float) $r->hdep, 1))->all(),
+        ];
+    }
+
+    private function feedChart($from, $to, $cageIds): array
+    {
+        $hasRange = $from && $to;
+        $rows = FeedConsumptionLog::whereIn('cage_id', $cageIds)
+            ->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))
+            ->selectRaw('log_date, SUM(feed_consumed_kg) as kg')
+            ->groupBy('log_date')
+            ->orderBy('log_date')
+            ->get();
+
+        return [
+            'kind'   => 'feed',
+            'labels' => $rows->map(fn($r) => $r->log_date->format('Y-m-d'))->all(),
+            'kg'     => $rows->map(fn($r) => round((float) $r->kg, 1))->all(),
+        ];
+    }
+
+    private function environmentChart($from, $to, $cageIds): array
+    {
+        $hasRange = $from && $to;
+        $rows = EnvironmentalLog::whereIn('cage_id', $cageIds)
+            ->when($hasRange, fn($q) => $q->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59']))
+            ->selectRaw('DATE(recorded_at) as log_date, AVG(temperature_c) as avg_temp, AVG(humidity_pct) as avg_hum')
+            ->groupBy(DB::raw('DATE(recorded_at)'))
+            ->orderBy('log_date')
+            ->get();
+
+        return [
+            'kind'     => 'environment',
+            'labels'   => $rows->pluck('log_date')->all(),
+            'temp'     => $rows->map(fn($r) => round((float) $r->avg_temp, 1))->all(),
+            'humidity' => $rows->map(fn($r) => round((float) $r->avg_hum, 1))->all(),
+        ];
+    }
+
+    private function mortalityChart($from, $to, $cageIds, $reason): array
+    {
+        $hasRange = $from && $to;
+        $query = MortalityLog::whereIn('cage_id', $cageIds)
+            ->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]));
+
+        if ($reason !== 'all') {
+            $query->where('reason', $reason);
+        }
+
+        $rows = $query->selectRaw('reason, SUM(count) as total')
+            ->groupBy('reason')
+            ->orderByDesc('total')
+            ->get();
+
+        return [
+            'kind'   => 'mortality',
+            'labels' => $rows->pluck('reason')->all(),
+            'counts' => $rows->map(fn($r) => (int) $r->total)->all(),
+        ];
+    }
+
+    private function eggStockChart($from, $to, $cageIds, $cageId): array
+    {
+        $rows = $this->eggStockQuery($from, $to, $cageIds, $cageId)
+            ->selectRaw('egg_size, SUM(`count`) as total')
+            ->groupBy('egg_size')
+            ->orderByDesc('total')
+            ->get();
+
+        return [
+            'kind'   => 'egg_stock',
+            'labels' => $rows->map(fn($r) => ucfirst($r->egg_size))->all(),
+            'counts' => $rows->map(fn($r) => (int) $r->total)->all(),
+        ];
+    }
+
     public function data(Request $request)
     {
-        $type   = $request->get('type', 'production');
-        $from   = $request->get('from') ?: null;
-        $to     = $request->get('to') ?: null;
-        $cageId = $request->get('cage', 'all');
-        $reason = $request->get('reason', 'all');
-        $page   = (int) $request->get('page', 1);
+        [$type, $from, $to, $cageId, $reason, $allCages] = $this->filtersFromRequest($request);
+        $charts = $request->boolean('charts');
 
-        $allCages = Cage::orderBy('cage_code')->get();
+        if ($type === 'all') {
+            $sections = $this->buildSections($from, $to, $cageId, $reason, $allCages, $charts);
+            $total = 0;
+            foreach ($sections as &$section) {
+                $total += $section['rows']->count();
+                $section['rows'] = $this->paginateSection($section['rows'], $request, "page_{$section['type']}");
+            }
+            unset($section);
+
+            $chartsPayload = collect($sections)->pluck('chart', 'type')->all();
+
+            $previewHtml = view('reports._preview', [
+                'type'     => $type,
+                'from'     => $from,
+                'to'       => $to,
+                'cageId'   => $cageId,
+                'reason'   => $reason,
+                'allCages' => $allCages,
+                'sections' => $sections,
+                'charts'   => $charts,
+            ])->render();
+
+            return response()->json([
+                'html'   => $previewHtml,
+                'charts' => $chartsPayload,
+                'meta'   => ['total' => $total, 'type' => $type, 'cageId' => $cageId, 'from' => $from, 'to' => $to],
+            ]);
+        }
+
+        $page = (int) $request->get('page', 1);
         $rows     = $this->buildReport($type, $from, $to, $cageId, $reason, $allCages);
         $summary  = $this->buildSummary($type, $from, $to, $cageId, $reason, $allCages);
+        $chart    = $charts ? $this->buildChartData($type, $from, $to, $cageId, $reason, $allCages) : null;
 
         $perPage = 20;
         $total   = $rows->count();
@@ -270,11 +485,14 @@ class ReportController extends Controller
             'allCages' => $allCages,
             'rows'     => $paginator,
             'summary'  => $summary,
+            'charts'   => $charts,
+            'chart'    => $chart,
         ])->render();
 
         return response()->json([
-            'html' => $previewHtml,
-            'meta' => [
+            'html'   => $previewHtml,
+            'charts' => $chart ? [$type => $chart] : [],
+            'meta'   => [
                 'total'  => $total,
                 'type'   => $type,
                 'cageId' => $cageId,
@@ -286,18 +504,37 @@ class ReportController extends Controller
 
     public function exportCsv(Request $request)
     {
-        $type   = $request->get('type', 'production');
-        $from   = $request->get('from') ?: null;
-        $to     = $request->get('to') ?: null;
-        $cageId = $request->get('cage', 'all');
-        $reason = $request->get('reason', 'all');
-
-        $allCages = Cage::orderBy('cage_code')->get();
-        $rows = $this->buildReport($type, $from, $to, $cageId, $reason, $allCages);
+        [$type, $from, $to, $cageId, $reason, $allCages] = $this->filtersFromRequest($request);
 
         $rangeLabel = ($from && $to) ? "{$from}_to_{$to}" : 'all_time';
         $filename = "layrate_{$type}_{$rangeLabel}.csv";
         $headers  = ['Content-Type' => 'text/csv', 'Content-Disposition' => "attachment; filename={$filename}"];
+
+        if ($type === 'all') {
+            $sections = $this->buildSections($from, $to, $cageId, $reason, $allCages, false);
+
+            $callback = function () use ($sections) {
+                $out = fopen('php://output', 'w');
+                foreach ($sections as $i => $section) {
+                    if ($i > 0) {
+                        fputcsv($out, []);
+                    }
+                    fputcsv($out, [$section['label']]);
+                    $rows = $section['rows'];
+                    if ($rows->isNotEmpty()) {
+                        fputcsv($out, array_keys((array) $rows->first()));
+                        foreach ($rows as $row) {
+                            fputcsv($out, (array) $row);
+                        }
+                    }
+                }
+                fclose($out);
+            };
+
+            return response()->stream($callback, 200, $headers);
+        }
+
+        $rows = $this->buildReport($type, $from, $to, $cageId, $reason, $allCages);
 
         $callback = function () use ($rows) {
             $out = fopen('php://output', 'w');
@@ -311,5 +548,50 @@ class ReportController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    public function exportExcel(Request $request)
+    {
+        [$type, $from, $to, $cageId, $reason, $allCages] = $this->filtersFromRequest($request);
+        $rangeLabel = ($from && $to) ? "{$from}_to_{$to}" : 'all_time';
+        $filename = "layrate_{$type}_{$rangeLabel}.xlsx";
+
+        if ($type === 'all') {
+            $sections = $this->buildSections($from, $to, $cageId, $reason, $allCages, false);
+
+            return Excel::download(new AllReportsExport($sections), $filename);
+        }
+
+        $rows = $this->buildReport($type, $from, $to, $cageId, $reason, $allCages);
+
+        return Excel::download(new ReportSheetExport($this->typeLabel($type), $rows), $filename);
+    }
+
+    public function exportPdf(Request $request)
+    {
+        [$type, $from, $to, $cageId, $reason, $allCages] = $this->filtersFromRequest($request);
+        $rangeLabel = ($from && $to) ? "{$from}_to_{$to}" : 'all_time';
+        $filename = "layrate_{$type}_{$rangeLabel}.pdf";
+
+        if ($type === 'all') {
+            $sections = $this->buildSections($from, $to, $cageId, $reason, $allCages, false);
+        } else {
+            $sections = [[
+                'type'    => $type,
+                'label'   => $this->typeLabel($type),
+                'rows'    => $this->buildReport($type, $from, $to, $cageId, $reason, $allCages),
+                'summary' => $this->buildSummary($type, $from, $to, $cageId, $reason, $allCages),
+            ]];
+        }
+
+        $pdf = Pdf::loadView('reports.pdf', [
+            'sections' => $sections,
+            'type'     => $type,
+            'from'     => $from,
+            'to'       => $to,
+            'cageId'   => $cageId,
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->download($filename);
     }
 }

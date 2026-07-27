@@ -106,7 +106,22 @@ class ReportControllerTest extends TestCase
         $response = $this->actingAs($this->user)->get(route('reports'));
 
         $response->assertOk();
-        $response->assertSee('Generate Report');
+        $response->assertSee('Reports');
+    }
+
+    /**
+     * Regression test for item #6 (Reports overhaul): every filter change already
+     * triggers a live AJAX update, so the redundant "Generate Report" submit
+     * button was removed — nothing should still render it.
+     *
+     * @test
+     */
+    public function generate_report_button_is_not_rendered()
+    {
+        $response = $this->actingAs($this->user)->get(route('reports'));
+
+        $response->assertOk();
+        $response->assertDontSee('Generate Report');
     }
 
     /** @test */
@@ -292,8 +307,7 @@ class ReportControllerTest extends TestCase
         $response->assertSee('No data found for the selected filters.');
     }
 
-    /** @test */
-    public function every_report_type_returns_200_with_data_present()
+    private function seedAllReportTypes(): void
     {
         $this->createHen($this->slotA1, 'ISA Brown', true, 'A-HEN1');
         $this->createProductionLog($this->slotA1, 4, now()->subDay()->toDateString());
@@ -327,6 +341,12 @@ class ReportControllerTest extends TestCase
         $mortality->save();
 
         EggStockBatch::create(['egg_size' => 'large', 'count' => 30, 'harvested_date' => now()->subDay()->toDateString(), 'cage_id' => $this->cageA->id]);
+    }
+
+    /** @test */
+    public function every_report_type_returns_200_with_data_present()
+    {
+        $this->seedAllReportTypes();
 
         foreach (['production', 'feed', 'environment', 'mortality', 'egg_stock'] as $type) {
             $response = $this->actingAs($this->user)->get(route('reports', [
@@ -338,6 +358,155 @@ class ReportControllerTest extends TestCase
 
             $response->assertOk();
             $response->assertDontSee('No data found for the selected filters.');
+        }
+    }
+
+    /**
+     * Regression test for item #5 (Reports overhaul): type=all renders all
+     * five report types as separate labeled sections on one page.
+     *
+     * @test
+     */
+    public function all_report_type_renders_every_section()
+    {
+        $this->seedAllReportTypes();
+
+        $response = $this->actingAs($this->user)->get(route('reports', [
+            'type' => 'all',
+            'from' => now()->subDays(5)->toDateString(),
+            'to'   => now()->toDateString(),
+            'cage' => 'all',
+        ]));
+
+        $response->assertOk();
+        $response->assertSee('Production Report');
+        $response->assertSee('Feed Report');
+        $response->assertSee('Environment Report');
+        $response->assertSee('Mortality Report');
+        $response->assertSee('Egg Stock Report');
+    }
+
+    /**
+     * Regression test for item #5: the mortality-only `reason` filter must stay
+     * scoped to just the mortality section when type=all — it must not filter
+     * out data in the other four sections.
+     *
+     * @test
+     */
+    public function all_report_type_scopes_reason_filter_to_mortality_section_only()
+    {
+        $this->seedAllReportTypes();
+
+        // 'Predator' matches nothing seeded (seedAllReportTypes uses 'Disease'),
+        // so the mortality section must come back empty while every other
+        // section still shows its data.
+        $response = $this->actingAs($this->user)->get(route('reports', [
+            'type'   => 'all',
+            'from'   => now()->subDays(5)->toDateString(),
+            'to'     => now()->toDateString(),
+            'cage'   => 'all',
+            'reason' => 'Predator',
+        ]));
+
+        $response->assertOk();
+        $response->assertSee('ISA Brown');   // production section unaffected
+        $response->assertSee('12.50 kg');    // feed section unaffected
+    }
+
+    /** @test */
+    public function excel_export_route_returns_a_downloadable_spreadsheet()
+    {
+        $this->seedAllReportTypes();
+
+        $response = $this->actingAs($this->user)->get(route('reports.excel', [
+            'type' => 'production',
+            'from' => now()->subDays(5)->toDateString(),
+            'to'   => now()->toDateString(),
+            'cage' => 'all',
+        ]));
+
+        $response->assertOk();
+        $response->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    }
+
+    /** @test */
+    public function pdf_export_route_returns_a_downloadable_pdf()
+    {
+        $this->seedAllReportTypes();
+
+        $response = $this->actingAs($this->user)->get(route('reports.pdf', [
+            'type' => 'production',
+            'from' => now()->subDays(5)->toDateString(),
+            'to'   => now()->toDateString(),
+            'cage' => 'all',
+        ]));
+
+        $response->assertOk();
+        $response->assertHeader('content-type', 'application/pdf');
+    }
+
+    /** @test */
+    public function all_report_type_excel_export_returns_a_downloadable_spreadsheet()
+    {
+        $this->seedAllReportTypes();
+
+        $response = $this->actingAs($this->user)->get(route('reports.excel', [
+            'type' => 'all',
+            'from' => now()->subDays(5)->toDateString(),
+            'to'   => now()->toDateString(),
+            'cage' => 'all',
+        ]));
+
+        $response->assertOk();
+        $response->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    }
+
+    /**
+     * Regression test for item #4: the "Include Graphs" checkbox (charts=1)
+     * must render a chart canvas for the selected type, and must not blow up
+     * server-side chart-data queries.
+     *
+     * @test
+     */
+    public function charts_checkbox_renders_chart_canvas_for_single_type()
+    {
+        $this->seedAllReportTypes();
+
+        $response = $this->actingAs($this->user)->get(route('reports', [
+            'type'   => 'production',
+            'from'   => now()->subDays(5)->toDateString(),
+            'to'     => now()->toDateString(),
+            'cage'   => 'all',
+            'charts' => 1,
+        ]));
+
+        $response->assertOk();
+        $response->assertSee('id="chart-production"', false);
+    }
+
+    /**
+     * Regression test for items #1, #4, #5 combined: the printable document
+     * for type=all with graphs on must render every section's own chart
+     * canvas without error.
+     *
+     * @test
+     */
+    public function all_report_type_full_view_with_charts_renders_every_chart_canvas()
+    {
+        $this->seedAllReportTypes();
+
+        $response = $this->actingAs($this->user)->get(route('reports', [
+            'type'   => 'all',
+            'from'   => now()->subDays(5)->toDateString(),
+            'to'     => now()->toDateString(),
+            'cage'   => 'all',
+            'full'   => 1,
+            'charts' => 1,
+        ]));
+
+        $response->assertOk();
+        foreach (['production', 'feed', 'environment', 'mortality', 'egg_stock'] as $type) {
+            $response->assertSee('id="chart-' . $type . '"', false);
         }
     }
 }
