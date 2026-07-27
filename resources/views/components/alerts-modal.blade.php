@@ -12,7 +12,7 @@
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="acknowledgeAlertsModal()"></div>
 
     {{-- Card --}}
-    <div class="relative w-full max-w-md rounded-2xl p-6 mx-4" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+    <div class="relative w-full max-w-md rounded-2xl p-6 mx-4 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         {{-- Close X --}}
         <button type="button" onclick="acknowledgeAlertsModal()" class="absolute top-4 right-4 p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
             <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
