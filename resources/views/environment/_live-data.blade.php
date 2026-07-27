@@ -128,7 +128,11 @@
             const cageColors  = @json($cages->pluck('color', 'id'));
             const trendData   = @json($trendData);
             const cagesMap    = @json($cages->pluck('cage_code','id'));
-            const labels = ['14:00','16:00','18:00','20:00','22:00','00:00','02:00','04:00','06:00','08:00','10:00','12:00'];
+            const allHours = new Set();
+            for (const rows of Object.values(trendData)) {
+                rows.forEach(function(r) { allHours.add(r.hour); });
+            }
+            const labels = Array.from(allHours).sort();
             const hasAnyData = Object.values(trendData).some(rows => rows.length > 0);
 
             function buildDatasets(field) {

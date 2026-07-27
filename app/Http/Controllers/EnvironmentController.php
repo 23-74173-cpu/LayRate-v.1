@@ -70,22 +70,36 @@ class EnvironmentController extends Controller
         ));
     }
 
-    public function logs()
+    public function logs(Request $request)
     {
         $thresholds = Setting::thresholds();
+        $cages = Cage::orderBy('cage_code')->pluck('cage_code', 'id');
 
-        $summaryLogs = EnvironmentalLog::selectRaw("
+        $query = EnvironmentalLog::selectRaw("
                 DATE_FORMAT(recorded_at, '%Y-%m-%d %H:00') as time_slot,
                 ROUND(AVG(temperature_c), 1) as avg_temp,
                 ROUND(AVG(humidity_pct), 0) as avg_hum
             ")
-            ->where('recorded_at', '>=', now()->subHours(24))
             ->groupBy('time_slot')
-            ->orderByDesc('time_slot')
-            ->limit(10)
-            ->get();
+            ->orderByDesc('time_slot');
 
-        return view('environment._logs', compact('summaryLogs', 'thresholds'));
+        if ($request->filled('date_from')) {
+            $query->where('recorded_at', '>=', $request->date_from);
+        } else {
+            $query->where('recorded_at', '>=', now()->subHours(24));
+        }
+
+        if ($request->filled('date_to')) {
+            $query->where('recorded_at', '<=', $request->date_to . ' 23:59:59');
+        }
+
+        if ($request->filled('cage_id')) {
+            $query->where('cage_id', $request->cage_id);
+        }
+
+        $summaryLogs = $query->paginate(20);
+
+        return view('environment._logs', compact('summaryLogs', 'thresholds', 'cages'));
     }
 
     public function saveThresholds(Request $request)

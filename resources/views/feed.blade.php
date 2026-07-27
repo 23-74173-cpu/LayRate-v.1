@@ -30,7 +30,7 @@
             </button>
         </div>
         <form method="POST" action="{{ route('feed.batch.store') }}"
-              data-feed-ajax="tab-batches-frame">
+              data-turbo="false" data-feed-ajax="tab-batches-frame">
             @csrf
             <p class="text-xs text-[#6B7280] mb-4">Batch code is auto-generated (e.g. F-2026-001).</p>
 
@@ -98,7 +98,7 @@
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
         </div>
-        <form id="editBatchForm" method="POST" data-feed-ajax="tab-batches-frame">
+        <form id="editBatchForm" method="POST" data-turbo="false" data-feed-ajax="tab-batches-frame">
             @csrf @method('PUT')
 
             <label class="block text-sm text-[#333333] mb-1.5">Brand</label>
@@ -170,7 +170,7 @@
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
         </div>
-        <form id="consumptionForm" method="POST" action="{{ route('feed.consumption.store') }}" data-feed-ajax="tab-consumption-frame">
+        <form id="consumptionForm" method="POST" action="{{ route('feed.consumption.store') }}" data-turbo="false" data-feed-ajax="tab-consumption-frame">
             @csrf
             <input type="hidden" name="_method" id="consumptionMethod" value="POST">
 
@@ -253,7 +253,7 @@
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
         </div>
-        <form id="farmEntryForm" method="POST" action="{{ route('feed.farm-entry.store') }}" data-feed-ajax="tab-consumption-frame">
+        <form id="farmEntryForm" method="POST" action="{{ route('feed.farm-entry.store') }}" data-turbo="false" data-feed-ajax="tab-consumption-frame">
             @csrf
             <input type="hidden" name="_method" id="farmEntryMethod" value="POST">
 

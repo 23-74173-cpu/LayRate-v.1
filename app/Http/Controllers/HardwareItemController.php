@@ -71,6 +71,17 @@ class HardwareItemController extends Controller
                 if ($cageSlotId !== null) {
                     $validator->errors()->add('cage_slot_id', "{$deviceType} devices must not be assigned to a specific slot.");
                 }
+
+                if ($deviceType === 'DHT22' && $cageId && $status !== 'spare') {
+                    $existing = HardwareItem::where('device_type', 'DHT22')
+                        ->where('cage_id', $cageId)
+                        ->where('status', 'active')
+                        ->when($existing, fn ($q) => $q->where('id', '!=', $existing->id))
+                        ->exists();
+                    if ($existing) {
+                        $validator->errors()->add('cage_id', 'This cage already has an active DHT22 sensor. Replace or deactivate the existing one first.');
+                    }
+                }
             }
         });
 
