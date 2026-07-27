@@ -151,15 +151,19 @@ class PreOrderController extends Controller
     public function update(Request $request, PreOrder $order)
     {
         $validator = Validator::make($request->all(), [
+            'customer_name' => 'required|string|max:255',
+            'customer_reference' => 'nullable|string|max:100',
+            'egg_size' => 'required|in:small,medium,large,jumbo',
+            'egg_count' => 'required|integer|min:1',
+            'requested_date' => 'required|date',
+            'fulfillment_date' => 'nullable|date|after_or_equal:requested_date',
+            'notes' => 'nullable|string',
             'status' => 'required|in:pending,fulfilled,cancelled',
-            'fulfillment_date' => 'nullable|date',
         ]);
 
         if ($validator->fails()) {
             return redirect()->route('eggs.preorders')
                 ->with('reopen_edit_order', $order->id)
-                ->with('edit_order_status', $order->status)
-                ->with('edit_order_fulfillment_date', $order->fulfillment_date?->toDateString())
                 ->withErrors($validator)
                 ->withInput();
         }
@@ -175,8 +179,6 @@ class PreOrderController extends Controller
         } catch (\OverflowException $e) {
             return redirect()->route('eggs.preorders')
                 ->with('reopen_edit_order', $order->id)
-                ->with('edit_order_status', $order->status)
-                ->with('edit_order_fulfillment_date', $order->fulfillment_date?->toDateString())
                 ->withErrors(['egg_count' => $e->getMessage()])
                 ->withInput();
         }

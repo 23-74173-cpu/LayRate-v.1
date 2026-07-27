@@ -210,9 +210,9 @@
 {{-- Edit Status Modal --}}
 <div id="editStatusModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" style="display: none;">
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEditStatusModal()"></div>
-    <div class="relative w-full max-w-sm rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+    <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
-            <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Update Status</h2>
+            <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Edit Pre-Order</h2>
             <button onclick="closeEditStatusModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
@@ -222,12 +222,56 @@
             @csrf @method('PATCH')
             <div class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">CURRENT STATUS</label>
-                    <div id="editCurrentStatus" class="text-sm" style="color: #333333;"></div>
+                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">CUSTOMER NAME</label>
+                    <input type="text" name="customer_name" id="editCustomerName" required
+                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                           style="border-color: #e6e6e6; color: #1f1f1f;">
+                    <x-input-error name="customer_name" />
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">NEW STATUS</label>
-                    <select name="status" id="editStatusSelect" required onchange="toggleEditFulfillmentDate()"
+                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">REFERENCE <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
+                    <input type="text" name="customer_reference" id="editCustomerReference"
+                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                           style="border-color: #e6e6e6; color: #1f1f1f;">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG SIZE</label>
+                    <select name="egg_size" id="editEggSize" required
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            style="border-color: #e6e6e6; color: #1f1f1f;">
+                        <option value="small">Small</option>
+                        <option value="medium">Medium</option>
+                        <option value="large">Large</option>
+                        <option value="jumbo">Jumbo</option>
+                    </select>
+                    <x-input-error name="egg_size" />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG COUNT</label>
+                    <input type="number" name="egg_count" id="editEggCount" min="1" required
+                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                           style="border-color: #e6e6e6; color: #1f1f1f;">
+                    <x-input-error name="egg_count" />
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">REQUESTED DATE</label>
+                        <input type="date" name="requested_date" id="editRequestedDate" required
+                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                               style="border-color: #e6e6e6; color: #1f1f1f;">
+                        <x-input-error name="requested_date" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">FULFILLMENT DATE <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
+                        <input type="date" name="fulfillment_date" id="editFulfillmentDate"
+                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                               style="border-color: #e6e6e6; color: #1f1f1f;">
+                        <x-input-error name="fulfillment_date" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">STATUS</label>
+                    <select name="status" id="editStatusSelect" required
                             class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="pending">Pending</option>
@@ -236,12 +280,11 @@
                     </select>
                     <x-input-error name="status" />
                 </div>
-                <div id="editFulfillmentDateWrap" class="hidden">
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">FULFILLMENT DATE</label>
-                    <input type="date" name="fulfillment_date" id="editFulfillmentDate"
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
-                           style="border-color: #e6e6e6; color: #1f1f1f;">
-                    <x-input-error name="fulfillment_date" />
+                <div>
+                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">NOTES <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
+                    <textarea name="notes" id="editNotes" rows="2"
+                              class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1 resize-y"
+                              style="border-color: #e6e6e6; color: #1f1f1f;"></textarea>
                 </div>
             </div>
 
@@ -249,7 +292,7 @@
                 <button type="button" onclick="closeEditStatusModal()"
                         class="flex-1 border border-[#D9D9D9] text-[#6B7280] py-2.5 rounded-lg text-sm">Cancel</button>
                 <button type="submit"
-                        class="flex-1 bg-[#002D5E] text-white py-2.5 rounded-lg text-sm">Update</button>
+                        class="flex-1 bg-[#002D5E] text-white py-2.5 rounded-lg text-sm">Save Changes</button>
             </div>
         </form>
     </div>
@@ -388,23 +431,21 @@ function closeAddOrderModal() {
     document.getElementById('addOrderModal').style.display = 'none';
 }
 
-function openEditStatus(id, currentStatus, fulfillmentDate) {
+function openEditStatus(id, currentStatus, fulfillmentDate, customerName, customerReference, eggSize, eggCount, requestedDate, notes) {
     document.getElementById('editStatusForm').action = '/eggs/pre-orders/' + id;
-    document.getElementById('editCurrentStatus').textContent = currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1);
-    document.getElementById('editStatusSelect').value = currentStatus;
+    document.getElementById('editCustomerName').value = customerName || '';
+    document.getElementById('editCustomerReference').value = customerReference || '';
+    document.getElementById('editEggSize').value = eggSize || 'medium';
+    document.getElementById('editEggCount').value = eggCount || 0;
+    document.getElementById('editRequestedDate').value = requestedDate || '';
     document.getElementById('editFulfillmentDate').value = fulfillmentDate || '';
-    toggleEditFulfillmentDate();
+    document.getElementById('editStatusSelect').value = currentStatus || 'pending';
+    document.getElementById('editNotes').value = notes || '';
     document.getElementById('editStatusModal').style.display = 'flex';
 }
 
 function closeEditStatusModal() {
     document.getElementById('editStatusModal').style.display = 'none';
-}
-
-function toggleEditFulfillmentDate() {
-    var wrap = document.getElementById('editFulfillmentDateWrap');
-    var status = document.getElementById('editStatusSelect').value;
-    wrap.classList.toggle('hidden', status !== 'fulfilled');
 }
 
 {
@@ -458,7 +499,13 @@ function toggleEditFulfillmentDate() {
     openEditStatus(
         {{ $editOrder->id }},
         '{{ $editOrder->status }}',
-        '{{ $editOrder->fulfillment_date?->toDateString() ?? '' }}'
+        '{{ $editOrder->fulfillment_date?->toDateString() ?? '' }}',
+        '{{ addslashes($editOrder->customer_name) }}',
+        '{{ addslashes($editOrder->customer_reference ?? '') }}',
+        '{{ $editOrder->egg_size }}',
+        {{ $editOrder->egg_count }},
+        '{{ $editOrder->requested_date->toDateString() }}',
+        '{{ addslashes($editOrder->notes ?? '') }}'
     );
 </x-modal-reopen>
 @endif

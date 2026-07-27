@@ -45,8 +45,8 @@
                     </td>
                     <td class="px-5 py-3.5">
                         <div class="flex items-center gap-2">
-                            <x-icon-button icon="pencil" label="Edit status" color="neutral"
-                                onclick="openEditStatus({{ $order->id }}, '{{ $order->status }}', '{{ $order->fulfillment_date?->toDateString() ?? '' }}')" />
+                            <x-icon-button icon="pencil" label="Edit pre-order" color="neutral"
+                                onclick="openEditStatus({{ $order->id }}, '{{ $order->status }}', '{{ $order->fulfillment_date?->toDateString() ?? '' }}', '{{ addslashes($order->customer_name) }}', '{{ addslashes($order->customer_reference ?? '') }}', '{{ $order->egg_size }}', {{ $order->egg_count }}, '{{ $order->requested_date->toDateString() }}', '{{ addslashes($order->notes ?? '') }}')" />
                             @can('admin')
                             <form action="{{ route('eggs.preorders.destroy', $order) }}" method="POST"
                                   data-confirm="Cancel this pre-order?" data-confirm-action="Cancel" data-confirm-severity="destructive">
