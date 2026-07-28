@@ -242,7 +242,15 @@ class ReportControllerTest extends TestCase
 
     /**
      * Regression test for item #84 (part 1): generating a report lands on a
-     * preview table first — not the printable letterhead document.
+     * preview first — not straight on the printable/full document — and that
+     * preview is paginated (has its own "View Printable Report" link to reach
+     * the full document) rather than showing every row.
+     *
+     * The preview and the printable document deliberately share the same
+     * letterhead/summary/table/signature markup (see reports/_letterhead.php,
+     * _meta-strip.php, _report-table.php, _signature-block.php) so the two
+     * look identical — pagination is the only real difference — so this no
+     * longer asserts the letterhead/signature block are full-doc-only.
      *
      * @test
      */
@@ -259,12 +267,12 @@ class ReportControllerTest extends TestCase
         ]));
 
         $response->assertOk();
-        $response->assertSee('Report Preview');
         $response->assertSee('View Printable Report');
+        $response->assertDontSee('Back to Preview'); // full-doc-only control
         $response->assertSee('Total Eggs');          // summary pills present in preview
         $response->assertSee('ISA Brown');           // data rows present in preview
-        $response->assertDontSee('Noted by:');       // signature block is full-doc only
-        $response->assertDontSee('LayRate Poultry Farm'); // letterhead is full-doc only
+        $response->assertSee('LayRate Poultry Farm'); // shared letterhead
+        $response->assertSee('Noted by:');            // shared signature block
     }
 
     /**
@@ -290,7 +298,7 @@ class ReportControllerTest extends TestCase
         $response->assertSee('LayRate Poultry Farm'); // letterhead
         $response->assertSee('Noted by:');            // signature block
         $response->assertSee('Back to Preview');
-        $response->assertDontSee('Report Preview');
+        $response->assertDontSee('View Printable Report'); // preview-only control
     }
 
     /** @test */
@@ -443,6 +451,100 @@ class ReportControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertHeader('content-type', 'application/pdf');
+    }
+
+    /**
+     * Regression test: the "Export" dropdown's PDF/Excel links are captured by
+     * exportReportWithCharts() in reports.blade.php, which POSTs the filters as
+     * a JSON body (Content-Type: application/json) instead of a query string —
+     * needed so it can attach chart_images alongside them. filtersFromRequest()
+     * previously read type/from/to/cage/reason via $request->get(), which only
+     * checks route attributes, the query string, and form-urlencoded POST data —
+     * never the JSON body (Illuminate\Http\Request::get() just delegates to
+     * Symfony's, which Laravel's own docblock marks deprecated in favor of
+     * input()). Every JSON POST export silently fell back to the defaults
+     * (type=production, from=to=null i.e. "all time"), regardless of what the
+     * user actually had selected, so the download never matched the preview.
+     *
+     * @test
+     */
+    public function pdf_export_via_json_post_honors_the_posted_filters_not_defaults()
+    {
+        $this->seedAllReportTypes();
+
+        $response = $this->actingAs($this->user)->postJson(route('reports.pdf'), [
+            'type' => 'mortality',
+            'from' => now()->subDays(5)->toDateString(),
+            'to'   => now()->toDateString(),
+            'cage' => 'all',
+        ]);
+
+        $response->assertOk();
+        $response->assertHeader('content-type', 'application/pdf');
+        // The filename embeds $type and the date range — if the JSON body were
+        // ignored (the bug) this would be "layrate_production_all_time.pdf".
+        $disposition = $response->headers->get('content-disposition');
+        $this->assertStringContainsString('layrate_mortality_', $disposition);
+        $this->assertStringNotContainsString('layrate_production_all_time', $disposition);
+    }
+
+    /** @test */
+    public function excel_export_via_json_post_honors_the_posted_filters_not_defaults()
+    {
+        $this->seedAllReportTypes();
+
+        $response = $this->actingAs($this->user)->postJson(route('reports.excel'), [
+            'type' => 'mortality',
+            'from' => now()->subDays(5)->toDateString(),
+            'to'   => now()->toDateString(),
+            'cage' => 'all',
+        ]);
+
+        $response->assertOk();
+        $disposition = $response->headers->get('content-disposition');
+        $this->assertStringContainsString('layrate_mortality_', $disposition);
+        $this->assertStringNotContainsString('layrate_production_all_time', $disposition);
+    }
+
+    /**
+     * Regression test: chart_images sent as a JSON POST body must land in the
+     * type the user actually selected — not silently get dropped because the
+     * export resolved to the wrong (default) type/section, per the bug above.
+     *
+     * @test
+     */
+    public function pdf_export_via_json_post_embeds_the_posted_chart_image()
+    {
+        $this->seedAllReportTypes();
+
+        // 1x1 transparent PNG.
+        $pngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+
+        $withChart = $this->actingAs($this->user)->postJson(route('reports.pdf'), [
+            'type'         => 'mortality',
+            'from'         => now()->subDays(5)->toDateString(),
+            'to'           => now()->toDateString(),
+            'cage'         => 'all',
+            'chart_images' => ['mortality' => 'data:image/png;base64,' . $pngBase64],
+        ]);
+        $withChart->assertOk();
+        $withChart->assertHeader('content-type', 'application/pdf');
+
+        $withoutChart = $this->actingAs($this->user)->postJson(route('reports.pdf'), [
+            'type' => 'mortality',
+            'from' => now()->subDays(5)->toDateString(),
+            'to'   => now()->toDateString(),
+            'cage' => 'all',
+        ]);
+        $withoutChart->assertOk();
+
+        // The letterhead's logo (reports/pdf.blade.php) means every generated
+        // PDF already embeds one "/Image" XObject, so presence alone no longer
+        // proves the chart made it in — compare counts instead: posting a chart
+        // image must add one more "/Image" than the same export without one.
+        $withChartCount    = substr_count($withChart->getContent(), '/Image');
+        $withoutChartCount = substr_count($withoutChart->getContent(), '/Image');
+        $this->assertGreaterThan($withoutChartCount, $withChartCount);
     }
 
     /** @test */

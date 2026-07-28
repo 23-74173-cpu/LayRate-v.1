@@ -3,6 +3,15 @@
 
 @push('head')
 <style>
+/* Chrome (and most Chromium-based browsers) reserve page-margin space for
+   their own default print header/footer (date, page title/URL, page number)
+   — that text isn't part of this document and can't be targeted with a
+   selector to hide it. Zeroing the @page margin removes the space Chrome
+   renders it into, which suppresses it; #report-doc's own 20mm padding below
+   supplies the actual visual margin instead. If a browser still shows it
+   regardless, that's the "Headers and footers" checkbox under the print
+   dialog's "More settings" — a browser preference outside what CSS can force. */
+@page { margin: 0; }
 @media print {
     aside, header, .no-print { display: none !important; }
     body { display: block !important; overflow: visible !important; }
@@ -39,7 +48,9 @@
 
     @php $cageColorMap = \App\Models\Cage::getColorMap(); @endphp
 
-    <x-page-header title="Reports" subtitle="Generate and export production, feed, environment, mortality, and egg stock reports" />
+    <div class="no-print">
+        <x-page-header title="Reports" subtitle="Generate and export production, feed, environment, mortality, and egg stock reports" />
+    </div>
 
     {{-- ── Filters ── --}}
     <div class="no-print">
@@ -115,7 +126,7 @@
                 </div>
 
                 @if($full)
-                <x-button variant="secondary" :href="route('reports', request()->except('full'))">
+                <x-button variant="secondary" :href="route('reports', request()->except('full'))" data-turbo="false">
                     <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Preview
                 </x-button>
                 <x-button variant="secondary" type="button" onclick="printReport()">
@@ -129,23 +140,6 @@
     @if($full)
     {{-- ── Report Document (full-page printable) ── --}}
     <div id="report-doc" class="bg-white rounded-lg border border-[#D9D9D9] p-8 max-w-5xl mx-auto shadow-sm">
-
-        {{-- 1. Letterhead --}}
-        <div class="flex items-start justify-between mb-1">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-[#102A4C] rounded-lg flex items-center justify-center shrink-0">
-                    <i data-lucide="feather" class="w-5 h-5 text-white"></i>
-                </div>
-                <div>
-                    <div class="font-bold text-[#102A4C] leading-tight">LayRate Poultry Farm</div>
-                    <div class="text-xs text-[#6B7280]">Farm Monitor System</div>
-                </div>
-            </div>
-            <div class="text-right">
-                <div class="text-sm font-bold text-[#102A4C] uppercase tracking-widest">{{ $type === 'all' ? 'All Reports' : ucfirst($type) . ' Report' }}</div>
-                <div class="text-xs text-[#6B7280] mt-0.5">{{ $from && $to ? "{$from} — {$to}" : 'All time' }}</div>
-            </div>
-        </div>
 
         {{-- Reports export loading overlay --}}
         <div id="reportsExportLoadingOverlay" class="fixed inset-0 min-h-screen min-h-[100dvh] bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
@@ -164,24 +158,12 @@
             </div>
         </div>
 
-
-
-        <hr style="border:none;border-top:3px solid #102A4C;margin:12px 0">
-
-        {{-- 2. Metadata strip --}}
-        <div class="grid grid-cols-4 gap-4 mb-6 text-xs text-[#6B7280]">
-            <div><span class="font-medium text-[#333333]">Cage:</span> {{ $cageId === 'all' ? 'All Cages' : $cageId }}</div>
-            <div><span class="font-medium text-[#333333]">Generated:</span> {{ now()->format('F j, Y  H:i') }}</div>
-            <div><span class="font-medium text-[#333333]">Prepared by:</span> {{ auth()->user()->name }}</div>
-            <div><span class="font-medium text-[#333333]">Records:</span> {{ $type === 'all' ? collect($sections)->sum(fn($s) => $s['rows']->count()) : $rows->count() }}</div>
-        </div>
-
-        @php
-        $reasonColors = ['Disease' => '#721C24', 'Heat Stress' => '#856404', 'Injury' => '#856404', 'Predator' => '#721C24'];
-        @endphp
+        @include('reports._letterhead', ['type' => $type, 'from' => $from, 'to' => $to])
+        @php $recordCount = $type === 'all' ? collect($sections)->sum(fn($s) => $s['rows']->count()) : $rows->count(); @endphp
+        @include('reports._meta-strip', ['cageId' => $cageId, 'recordCount' => $recordCount])
 
         @if($type === 'all')
-        {{-- 3-4. One labeled section per report type — own heading, pills, chart, table --}}
+        {{-- One labeled section per report type — own heading, pills, chart, table --}}
         @foreach($sections as $section)
         <div class="mb-10 {{ !$loop->first ? 'pt-6 border-t border-[#D9D9D9]' : '' }}">
             <h2 class="text-sm font-bold text-[#102A4C] uppercase tracking-wide mb-4">{{ $section['label'] }}</h2>
@@ -199,33 +181,7 @@
             @endif
 
             @if($section['rows']->isNotEmpty())
-            <div class="overflow-x-auto mb-2">
-                <table class="w-full" style="border-collapse:collapse" data-report-table="{{ $section['type'] }}">
-                    <thead>
-                        <tr style="background:#102A4C;color:#ffffff;">
-                            @foreach(array_keys((array) $section['rows']->first()) as $col)
-                            <th class="px-5 py-3 text-left text-xs tracking-widest uppercase font-medium whitespace-nowrap">{{ strtoupper(str_replace('_', ' ', $col)) }}</th>
-                            @endforeach
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($section['rows'] as $row)
-                        @php $arr = (array) $row; @endphp
-                        <tr class="{{ $loop->even ? 'bg-[#F9F9F7]' : 'bg-white' }}">
-                            @foreach($arr as $key => $val)
-                            @php
-                                $cC = $key === 'cage' ? ($cageColorMap[$val] ?? null) : null;
-                                $rC = $key === 'reason' ? ($reasonColors[$val] ?? null) : null;
-                                $style = $cC ? "color:{$cC};font-weight:600" : ($rC ? "color:{$rC}" : '');
-                            @endphp
-                            <td class="px-5 py-3.5 text-sm {{ in_array($key, ['date','datetime']) ? 'font-mono' : '' }}"
-                                style="{{ $style }}">{{ $val }}</td>
-                            @endforeach
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+            @include('reports._report-table', ['rows' => $section['rows'], 'cageColorMap' => $cageColorMap, 'tableKey' => $section['type']])
             <div class="no-print flex items-center justify-center gap-3 mt-3 text-xs text-[#6B7280]" data-report-pager="{{ $section['type'] }}">
                 <button type="button" data-page-prev class="px-2.5 py-1 rounded border border-[#D9D9D9] hover:bg-black/5 disabled:opacity-40 disabled:cursor-not-allowed" disabled>‹ Prev</button>
                 <span data-page-label>Page 1 of 1</span>
@@ -237,7 +193,6 @@
         </div>
         @endforeach
         @else
-        {{-- 3. Summary pills --}}
         @include('reports._summary-pills')
 
         @if($charts ?? false)
@@ -250,34 +205,7 @@
         </div>
         @endif
 
-        {{-- 4. Data table --}}
-        <div class="overflow-x-auto mb-2">
-            <table class="w-full" style="border-collapse:collapse" data-report-table="{{ $type }}">
-                <thead>
-                    <tr style="background:#102A4C;color:#ffffff;">
-                        @foreach(array_keys((array) $rows->first()) as $col)
-                        <th class="px-5 py-3 text-left text-xs tracking-widest uppercase font-medium whitespace-nowrap">{{ strtoupper(str_replace('_', ' ', $col)) }}</th>
-                        @endforeach
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($rows as $row)
-                    @php $arr = (array) $row; @endphp
-                    <tr class="{{ $loop->even ? 'bg-[#F9F9F7]' : 'bg-white' }}">
-                        @foreach($arr as $key => $val)
-                        @php
-                            $cC = $key === 'cage' ? ($cageColorMap[$val] ?? null) : null;
-                            $rC = $key === 'reason' ? ($reasonColors[$val] ?? null) : null;
-                            $style = $cC ? "color:{$cC};font-weight:600" : ($rC ? "color:{$rC}" : '');
-                        @endphp
-                        <td class="px-5 py-3.5 text-sm {{ in_array($key, ['date','datetime']) ? 'font-mono' : '' }}"
-                            style="{{ $style }}">{{ $val }}</td>
-                        @endforeach
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
+        @include('reports._report-table', ['rows' => $rows, 'cageColorMap' => $cageColorMap, 'tableKey' => $type])
         <div class="no-print flex items-center justify-center gap-3 mt-3 text-xs text-[#6B7280]" data-report-pager="{{ $type }}">
             <button type="button" data-page-prev class="px-2.5 py-1 rounded border border-[#D9D9D9] hover:bg-black/5 disabled:opacity-40 disabled:cursor-not-allowed" disabled>‹ Prev</button>
             <span data-page-label>Page 1 of 1</span>
@@ -285,11 +213,7 @@
         </div>
         @endif
 
-        {{-- 5. Signature block --}}
-        <div class="signature-block mt-12 pt-6 border-t border-[#D9D9D9] grid grid-cols-2 gap-16">
-            <div><div class="text-xs text-[#6B7280] mb-8">Prepared by:</div><div class="border-b border-[#333333] mb-1.5"></div><div class="text-xs text-[#6B7280]">{{ auth()->user()->name }}</div><div class="text-xs text-[#6B7280]">Signature / Date</div></div>
-            <div><div class="text-xs text-[#6B7280] mb-8">Noted by:</div><div class="border-b border-[#333333] mb-1.5"></div><div class="text-xs text-[#6B7280]">Name / Position</div><div class="text-xs text-[#6B7280]">Signature / Date</div></div>
-        </div>
+        @include('reports._signature-block')
     </div>
     @else
     {{-- ── Preview (AJAX-updatable) ── --}}
@@ -411,6 +335,10 @@ function reportChartConfig(chart) {
 }
 
 var REPORT_CHART_TYPES = ['production', 'feed', 'environment', 'mortality', 'egg_stock'];
+// Captured once at server-render time; re-read by both the page-load
+// initializer and the print/export "render fresh" calls below instead of each
+// re-embedding its own copy of the JSON-encoded payload.
+var REPORT_CHARTS_PAYLOAD = @json($chartsPayload ?? []);
 var _chartsReady = false;
 var _chartsReadyCallbacks = [];
 
@@ -423,12 +351,41 @@ function chartHasData(chart) {
     return !!chart && Array.isArray(chart.labels) && chart.labels.length > 0;
 }
 
+// Chart.js loads via a <script src="/js/chart.min.js"> that layouts/app.blade.php
+// places right before @stack('scripts') specifically so inline scripts here can
+// assume `Chart` is already defined. That ordering guarantee holds for a real
+// full page load, but this page is reached via a Turbo Drive link click ("View
+// Printable Report") as often as a hard navigation — Turbo replaces <body> and
+// re-inserts/re-executes its <script> tags itself, and that replay does not
+// reliably preserve the same synchronous, in-order execution a real HTML parse
+// guarantees. When it doesn't, `new Chart(...)` throws "Chart is not defined"
+// inside LayRateChart.create()'s try/catch (silently logged to console only),
+// leaving the canvas's already-reserved wrapper height blank forever — chart
+// missing on the printable page and in anything captured/exported from it, even
+// though the exact same data renders fine via the AJAX preview path (which only
+// ever runs well after the page — and Chart.js — has finished loading). Wait for
+// `Chart` to actually exist before the first render, instead of trusting script
+// tag order.
+function waitForChartJs(fn, deadline) {
+    deadline = deadline || (Date.now() + 3000);
+    // Both Chart (the library global) and window.LayRateChart (this app's
+    // lifecycle wrapper, defined in the same at-risk script region in
+    // layouts/app.blade.php) need to exist — renderReportCharts() silently
+    // no-ops per-chart when either is missing, same blank-canvas symptom.
+    if (typeof Chart !== 'undefined' && window.LayRateChart) { fn(); return; }
+    if (Date.now() >= deadline) { fn(); return; } // give up quietly; failure is now visible via console as before
+    requestAnimationFrame(function() { waitForChartJs(fn, deadline); });
+}
+
 // Renders/destroys each report chart canvas present on the page. Safe to call
 // with a partial or empty payload — types without a matching canvas (charts
 // off, or a single-type page missing the other four) are skipped.
 window.renderReportCharts = function(charts) {
     charts = charts || {};
     _chartsReady = false;
+    var barChartIds = [];
+    var createdIds = [];
+    var paintedIds = {};
     REPORT_CHART_TYPES.forEach(function(type) {
         var canvas = document.getElementById('chart-' + type);
         if (!canvas) return;
@@ -439,46 +396,144 @@ window.renderReportCharts = function(charts) {
             if (wrap) wrap.style.display = '';
             if (empty) empty.style.display = 'none';
             var config = reportChartConfig(chart);
-            if (config && window.LayRateChart) window.LayRateChart.create('chart-' + type, config);
+            if (config && window.LayRateChart) {
+                var chartId = 'chart-' + type;
+                config.options = config.options || {};
+                // Disabled so the full chart exists on the first real paint
+                // instead of animating in over ~1000ms — matters because
+                // printReport() / exportReportWithCharts() capture the canvas
+                // via toDataURL() right after render, not after the user has
+                // had time to watch it finish drawing like on screen.
+                config.options.animation = false;
+                // Chart.js still schedules that one paint via its own internal
+                // requestAnimationFrame regardless of the animation setting —
+                // disabling animation skips the interpolation, not the RAF
+                // scheduling. afterRender is Chart.js's own "this chart has
+                // now actually painted" lifecycle hook; used below (with a
+                // deadline fallback) instead of guessing how many frames that
+                // takes, which is what left captures grabbing a canvas with
+                // zero paints yet.
+                config.plugins = (config.plugins || []).concat([{
+                    id: 'reportsPaintSignal-' + chartId,
+                    afterRender: function() {
+                        paintedIds[chartId] = true;
+                        // Eager sync (see syncChartPrintImage below) — the
+                        // print-ready image is already correct the instant
+                        // this chart paints, regardless of how print later
+                        // gets triggered.
+                        if (typeof syncChartPrintImage === 'function') syncChartPrintImage(chartId);
+                    }
+                }]);
+                window.LayRateChart.create(chartId, config);
+                createdIds.push(chartId);
+                if (config.type === 'bar') barChartIds.push(chartId);
+            }
         } else {
             if (wrap) wrap.style.display = 'none';
             if (empty) empty.style.display = 'flex';
             if (window.LayRateChart) window.LayRateChart.destroy('chart-' + type);
         }
     });
-    // Allow charts to paint their first frame before resolving ready.
-    requestAnimationFrame(function() {
-        requestAnimationFrame(function() {
+    // Bar charts can additionally, intermittently fail their first paint even
+    // once afterRender has fired — see LayRateChart's own self-heal in
+    // layouts/app.blade.php, which detects exactly this (a dataset element
+    // with no valid pixel geometry) and can take up to ~1100ms to rebuild.
+    // Poll that same stuck-paint check too, re-reading LayRateChart._instances
+    // on every attempt so a mid-flight self-heal rebuild (which replaces the
+    // canvas/instance) is picked up automatically.
+    var deadline = Date.now() + 1300;
+    (function waitForPaint() {
+        var allPainted = createdIds.every(function(id) { return paintedIds[id]; });
+        var barsHealthy = barChartIds.every(function(id) {
+            var inst = window.LayRateChart && window.LayRateChart._instances[id];
+            if (!inst) return true;
+            try {
+                var meta = inst.getDatasetMeta(0);
+                return !(meta.data.length > 0 && meta.data.every(function(el) { return el.base == null || !isFinite(el.base); }));
+            } catch (e) {
+                return true;
+            }
+        });
+        if ((allPainted && barsHealthy) || Date.now() >= deadline) {
             _chartsReady = true;
             _chartsReadyCallbacks.splice(0).forEach(function(fn) { fn(); });
-        });
-    });
+        } else {
+            requestAnimationFrame(waitForPaint);
+        }
+    })();
 };
+
+// ── Force a fresh chart render pass and wait for it to actually paint ──
+// Used by both printReport() and exportReportWithCharts() so neither one
+// depends on some earlier initialization having already run on this page
+// view. Re-rendering is safe/idempotent (LayRateChart.create() destroys and
+// recreates), so this works whether charts already painted moments ago or
+// never got the chance to at all — e.g. right after a Turbo Drive navigation
+// (see initReportCharts() below), which this app's other chart pages
+// (Analytics, Environment) already handle by binding to turbo:load instead of
+// trusting a bare top-level script to have already fired by the time the user
+// acts.
+function ensureReportChartsRendered(fn) {
+    waitForChartJs(function() {
+        window.renderReportCharts(REPORT_CHARTS_PAYLOAD);
+        onChartsReady(fn);
+    });
+}
 
 // ── Print guard: ensure charts are rendered before opening print dialog ──
 function printReport() {
-    onChartsReady(function() {
+    ensureReportChartsRendered(function() {
         window.print();
     });
 }
 
-// ── Print-safety: swap live canvases for static images right before printing ──
+// ── Print-safety: keep each chart's static print image in sync with its canvas ──
+// Called eagerly from the afterRender hook in renderReportCharts() — right
+// after a chart genuinely paints, not lazily at print time — plus again here
+// on beforeprint as a refresh/fallback. That's deliberate: printReport()'s
+// "render fresh, then wait, then print" sequence only runs when the user
+// clicks this page's own print icon. The browser's native print (Ctrl+P,
+// right-click → Print, the address-bar/menu print entry) skips all of that
+// entirely and just fires beforeprint on whatever's already on the canvas —
+// so if the swap only happened lazily inside that listener, native print
+// could still grab a blank/incomplete canvas depending on exactly when the
+// user triggered it relative to the chart's own paint. Syncing the image the
+// moment each chart actually paints means it's already correct by the time
+// ANY print path fires, in-app button or native.
+function syncChartPrintImage(canvasId) {
+    var canvas = document.getElementById(canvasId);
+    var img = document.getElementById(canvasId + '-img');
+    if (!canvas || !img) return;
+    try {
+        img.src = canvas.toDataURL('image/png');
+        img.classList.add('has-src');
+        // Setting .src is synchronous; actually decoding those bytes into
+        // paintable pixels is not — even for a data: URI, the browser decodes
+        // asynchronously and the image stays blank until that finishes. This
+        // runs eagerly at chart-paint time (see afterRender above), well
+        // before a human could plausibly react and trigger print, so decode
+        // should already be done by then regardless — but calling decode()
+        // explicitly (rather than just trusting it'll finish in time) means
+        // there's nothing left implicit about it.
+        if (typeof img.decode === 'function') {
+            img.decode().catch(function(e) {
+                console.error('Report chart print image failed to decode for ' + canvasId + ':', e);
+            });
+        }
+    } catch (e) {
+        console.error('Report chart print image failed for ' + canvasId + ':', e);
+    }
+}
+
 window.addEventListener('beforeprint', function() {
     document.querySelectorAll('.report-chart-canvas').forEach(function(canvas) {
-        var img = document.getElementById(canvas.id + '-img');
-        if (!img) return;
-        try {
-            img.src = canvas.toDataURL('image/png');
-            img.classList.add('has-src');
-        } catch (e) {
-            console.error('Report chart print image failed for ' + canvas.id + ':', e);
-        }
+        syncChartPrintImage(canvas.id);
     });
 });
 
 // ── Export with chart images (PDF / Excel) ──
 function exportReportWithCharts(format) {
-    onChartsReady(function() {
+    ensureReportChartsRendered(function() {
         var params = {};
         var f = document.getElementById('reportForm');
         if (f) {
@@ -747,9 +802,34 @@ document.addEventListener('click', function(e) {
         render();
     });
 
-    // Initial chart render on a real page load (full doc or first preview
-    // load) — subsequent AJAX filter changes render via renderReportResults.
-    window.renderReportCharts(@json($chartsPayload ?? []));
 })();
+
+// ── Initial chart render ──
+// Same pattern as environment/_live-data.blade.php's initEnvCharts and
+// analytics.blade.php: bind to turbo:load (fires on every Turbo Drive
+// navigation, including this page's own <script> tag being re-evaluated when
+// reached via a Turbo-driven link elsewhere on this page) rather than
+// relying on a bare top-level call — plain top-level execution only reliably
+// covers the very first hard load. Also call immediately when the DOM is
+// already parsed (covers this same script re-running mid-session) or on
+// DOMContentLoaded otherwise. Subsequent AJAX filter changes render via
+// renderReportResults() instead, which always runs well after Chart.js has
+// long since loaded.
+function initReportCharts() {
+    waitForChartJs(function() {
+        window.renderReportCharts(REPORT_CHARTS_PAYLOAD);
+    });
+}
+
+if (!window.__reportChartsLifecycleBound) {
+    window.__reportChartsLifecycleBound = true;
+    document.addEventListener('turbo:load', initReportCharts);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initReportCharts);
+} else {
+    initReportCharts();
+}
 </script>
 @endpush

@@ -42,7 +42,7 @@ class ReportController extends Controller
 
             $chartsPayload = collect($sections)->pluck('chart', 'type')->all();
 
-            return view('reports', compact('type', 'from', 'to', 'cageId', 'reason', 'allCages', 'sections', 'full', 'charts', 'chartsPayload'));
+            return $this->noStore(view('reports', compact('type', 'from', 'to', 'cageId', 'reason', 'allCages', 'sections', 'full', 'charts', 'chartsPayload')));
         }
 
         $rows    = $this->buildReport($type, $from, $to, $cageId, $reason, $allCages);
@@ -57,7 +57,23 @@ class ReportController extends Controller
 
         $chartsPayload = $chart ? [$type => $chart] : [];
 
-        return view('reports', compact('type', 'from', 'to', 'cageId', 'reason', 'allCages', 'rows', 'summary', 'full', 'charts', 'chart', 'chartsPayload'));
+        return $this->noStore(view('reports', compact('type', 'from', 'to', 'cageId', 'reason', 'allCages', 'rows', 'summary', 'full', 'charts', 'chart', 'chartsPayload')));
+    }
+
+    // Chrome's back-forward cache (bfcache) restores a page from an in-memory
+    // snapshot on back/forward navigation without re-running its scripts —
+    // any JS fix landing after that snapshot was taken (e.g. the chart
+    // print-readiness logic) wouldn't take effect until a real reload.
+    // Cache-Control: no-store is the documented way to opt a page out of
+    // bfcache entirely, so "View Printable Report" / "Back to Preview" always
+    // get a fresh script evaluation — this report page shows live data anyway,
+    // so it shouldn't be cached either way.
+    private function noStore($view)
+    {
+        return response($view)->withHeaders([
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma'        => 'no-cache',
+        ]);
     }
 
     private function filtersFromRequest(Request $request): array
@@ -445,14 +461,15 @@ class ReportController extends Controller
             $chartsPayload = collect($sections)->pluck('chart', 'type')->all();
 
             $previewHtml = view('reports._preview', [
-                'type'     => $type,
-                'from'     => $from,
-                'to'       => $to,
-                'cageId'   => $cageId,
-                'reason'   => $reason,
-                'allCages' => $allCages,
-                'sections' => $sections,
-                'charts'   => $charts,
+                'type'         => $type,
+                'from'         => $from,
+                'to'           => $to,
+                'cageId'       => $cageId,
+                'reason'       => $reason,
+                'allCages'     => $allCages,
+                'sections'     => $sections,
+                'charts'       => $charts,
+                'cageColorMap' => Cage::getColorMap(),
             ])->render();
 
             return response()->json([
@@ -478,16 +495,17 @@ class ReportController extends Controller
         );
 
         $previewHtml = view('reports._preview', [
-            'type'     => $type,
-            'from'     => $from,
-            'to'       => $to,
-            'cageId'   => $cageId,
-            'reason'   => $reason,
-            'allCages' => $allCages,
-            'rows'     => $paginator,
-            'summary'  => $summary,
-            'charts'   => $charts,
-            'chart'    => $chart,
+            'type'         => $type,
+            'from'         => $from,
+            'to'           => $to,
+            'cageId'       => $cageId,
+            'reason'       => $reason,
+            'allCages'     => $allCages,
+            'rows'         => $paginator,
+            'summary'      => $summary,
+            'charts'       => $charts,
+            'chart'        => $chart,
+            'cageColorMap' => Cage::getColorMap(),
         ])->render();
 
         return response()->json([
