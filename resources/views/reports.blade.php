@@ -37,6 +37,12 @@
        static image, which is what actually prints. */
     .report-chart-canvas { display: none !important; }
     .report-chart-img.has-src { display: block !important; width: 100% !important; height: auto !important; }
+    /* type=all: each report-type section (Production, Feed, Environment,
+       Mortality, Egg Stock) starts on its own printed page instead of
+       flowing straight into the next section's heading. Only non-first
+       sections get this class (see the sections loop below in this same
+       file) — the first section already starts at the top of page 1. */
+    .report-section-break { page-break-before: always; break-before: page; }
 }
 .no-screen { display: none; }
 .report-chart-img { display: none; }
@@ -165,7 +171,7 @@
         @if($type === 'all')
         {{-- One labeled section per report type — own heading, pills, chart, table --}}
         @foreach($sections as $section)
-        <div class="mb-10 {{ !$loop->first ? 'pt-6 border-t border-[#D9D9D9]' : '' }}">
+        <div class="mb-10 {{ !$loop->first ? 'pt-6 border-t border-[#D9D9D9] report-section-break' : '' }}">
             <h2 class="text-sm font-bold text-[#102A4C] uppercase tracking-wide mb-4">{{ $section['label'] }}</h2>
 
             @include('reports._summary-pills', ['type' => $section['type'], 'summary' => $section['summary']])

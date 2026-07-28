@@ -21,14 +21,6 @@ class ReportSheetExport implements FromCollection, WithCustomStartCell, WithDraw
     ) {
     }
 
-    /** Cleanup safety net — primary cleanup is register_shutdown_function in controller. */
-    public function __destruct()
-    {
-        foreach ($this->tempFiles as $path) {
-            file_exists($path) && @unlink($path);
-        }
-    }
-
     public function collection(): Collection
     {
         return $this->rows->map(fn($row) => collect((array) $row)->values());

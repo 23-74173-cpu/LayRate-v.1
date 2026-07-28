@@ -564,6 +564,63 @@ class ReportControllerTest extends TestCase
     }
 
     /**
+     * Regression test: type=all with charts produces one ReportSheetExport
+     * per section (5 for the default types), each holding its own temp chart
+     * PNG path. ReportSheetExport used to delete its temp file(s) in its own
+     * __destruct() as a "safety net" — but PhpSpreadsheet's Xlsx writer embeds
+     * every sheet's drawings into [Content_Types].xml as one of the *last*
+     * steps of the whole save(), by which point earlier sheets' export objects
+     * had already been garbage-collected (destructing, deleting their temp
+     * PNG) while the writer still needed to read them, throwing
+     * "File ... does not exist". A single-sheet export (one object, stays
+     * referenced throughout) never hit this, which is why only the "all
+     * reports" combination reproduced it. The fix removed that destructor —
+     * cleanup is the controller's register_shutdown_function only, which
+     * correctly waits for the whole request (including the full write) to
+     * finish. This test loads the real output file back with PhpSpreadsheet
+     * and checks every sheet actually has its drawing, not just that the HTTP
+     * response came back 200.
+     *
+     * @test
+     */
+    public function all_report_type_excel_export_with_charts_embeds_a_drawing_on_every_sheet()
+    {
+        $this->seedAllReportTypes();
+
+        $png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+
+        $response = $this->actingAs($this->user)->postJson(route('reports.excel'), [
+            'type' => 'all',
+            'from' => now()->subDays(5)->toDateString(),
+            'to'   => now()->toDateString(),
+            'cage' => 'all',
+            'chart_images' => [
+                'production'  => $png,
+                'feed'        => $png,
+                'environment' => $png,
+                'mortality'   => $png,
+                'egg_stock'   => $png,
+            ],
+        ]);
+
+        $response->assertOk();
+        $response->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        $tmpPath = tempnam(sys_get_temp_dir(), 'xlsx_test_');
+        file_put_contents($tmpPath, $response->streamedContent());
+
+        try {
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($tmpPath);
+            $this->assertCount(5, $spreadsheet->getAllSheets());
+            foreach ($spreadsheet->getAllSheets() as $sheet) {
+                $this->assertCount(1, $sheet->getDrawingCollection(), "Sheet '{$sheet->getTitle()}' is missing its chart drawing");
+            }
+        } finally {
+            @unlink($tmpPath);
+        }
+    }
+
+    /**
      * Regression test for item #4: the "Include Graphs" checkbox (charts=1)
      * must render a chart canvas for the selected type, and must not blow up
      * server-side chart-data queries.
