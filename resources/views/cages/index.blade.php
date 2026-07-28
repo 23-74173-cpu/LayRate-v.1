@@ -1690,14 +1690,51 @@ function saveLayout() {
         } else {
             setSavingState(false);
             showDragError(res.data.message || 'Failed to save layout');
-            // Reload to restore server state
-            location.reload();
+            resyncPositionsFromServer();
         }
     })
     .catch(function() {
         setSavingState(false);
         showDragError('Failed to save layout');
     });
+}
+
+// Re-sync client-side placement state from savedPositions (last-known-good
+// server state) after a failed save, avoiding a full page reload that would
+// trigger the beforeunload "unsaved changes" dialog.
+function resyncPositionsFromServer() {
+    placedCages = {};
+    Object.keys(savedPositions).forEach(function(id) {
+        var m = cageMeta[id];
+        if (!m) return;
+        var pos = savedPositions[id];
+        if (pos.location_row !== null && pos.location_column !== null) {
+            placedCages[id] = {
+                origin_row: pos.location_row,
+                origin_col: pos.location_column,
+                width: m.slots_per_row,
+                height: m.rows,
+                color: m.color,
+                colorSoft: m.colorSoft,
+                code: m.code,
+            };
+        }
+    });
+
+    pendingMoves = {};
+
+    Object.keys(cageMeta).forEach(function(id) {
+        if (placedCages[id]) {
+            removeStagingTile(id);
+        } else {
+            addStagingTile(id);
+        }
+    });
+
+    recomputeGridExtent();
+    renderCanvas();
+    updateSaveButton();
+    updateStagingVisibility();
 }
 
 // ── Toast ──

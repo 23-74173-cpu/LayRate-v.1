@@ -12,9 +12,9 @@
                 @forelse($feedToday as $cageCode => $feed)
                 @php
                     $fColor = $feed->cage?->color ?? '#6B7280';
-                    $total = 48;
+                    $total = $feed->feed_target_kg;
                     $consumed = $feed->feed_consumed_kg;
-                    $pct = min(100, round(($consumed/$total)*100));
+                    $pct = min(100, round(($total > 0 ? $consumed/$total : 0) * 100));
                 @endphp
                 <div class="mb-4 rounded-lg -mx-1 px-1 hover:bg-black/[0.03] transition-colors"
                      data-row-nav="{{ route('feed') }}?cage_id={{ $feed->cage?->id }}">

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class PreOrder extends Model
 {
@@ -33,19 +34,27 @@ class PreOrder extends Model
     {
         if ($count === 0) return '0 eggs';
         if ($count === 1) return '1 egg';
-
+        if ($count === 6) return 'half-dozen';
         if ($count === 12) return '1 dozen';
 
-        if ($count === 15) return 'half tray';
+        // Half-tray / tray shortcuts (15 / 30) — still valid multiples of 6? No,
+        // 15 is not a multiple of 6, so these won't occur with the new validation.
+        // But keep the logic general in case the constraint changes again.
 
-        if ($count % 30 === 0) {
-            $trays = $count / 30;
-            return $trays . ' ' . ($trays === 1 ? 'tray' : 'trays');
+        if ($count % 12 === 0) {
+            $dozens = $count / 12;
+            return $dozens . ' ' . Str::plural('dozen', $dozens);
         }
 
-        if ($count > 30 && $count % 15 === 0) {
-            $halfTrays = $count / 15;
-            return ($halfTrays / 2) . ' trays';
+        if ($count % 6 === 0) {
+            $halfDozens = $count / 6;
+            if ($halfDozens % 2 === 0) {
+                $dozens = $halfDozens / 2;
+                return $dozens . ' ' . Str::plural('dozen', $dozens);
+            }
+            // Odd number of half-dozens (e.g. 18 = 3 half-dozens = 1.5 dozen)
+            $dozens = $count / 12;
+            return number_format($dozens, 1) . ' dozen';
         }
 
         $trays = round($count / 30, 1);

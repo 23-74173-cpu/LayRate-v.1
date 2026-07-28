@@ -101,14 +101,21 @@ class DashboardController extends Controller
         $avgTemp = $latestEnv->count() ? round($latestEnv->avg('temperature_c'), 1) : null;
         $avgHum = $latestEnv->count() ? round($latestEnv->avg('humidity_pct'), 1) : null;
 
-        // Feed today
+        // Feed today — sum ALL of today's logs per cage (not just the most recent)
+        $feedPerHenKg = (float) Setting::get('feed_per_hen_daily', 0.12);
+
         $feedToday = FeedConsumptionLog::with('cage')
-            ->where(fn ($q) => $q->whereDate('log_date', $today)->orWhereDate('log_date', now()->subDay()->toDateString()))
+            ->whereDate('log_date', $today)
             ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
             ->orderByDesc('log_date')
             ->get()
             ->groupBy(fn ($f) => $f->cage?->cage_code ?? 'Deleted Cage')
-            ->map(fn ($g) => $g->first());
+            ->map(fn ($g) => (object) [
+                'cage' => $g->first()->cage,
+                'feed_consumed_kg' => round($g->sum('feed_consumed_kg'), 2),
+                'hen_count' => $g->first()->cage?->hens->where('is_active', 1)->count() ?? 0,
+                'feed_target_kg' => round($g->first()->cage?->hens->where('is_active', 1)->count() ?? 0, 2) * $feedPerHenKg,
+            ]);
 
         // Mortality today
         $mortalityToday = MortalityLog::with('cage')

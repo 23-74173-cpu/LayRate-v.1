@@ -516,6 +516,21 @@ function closeFarmEntryModal() {
     bindFeedAjax();
     document.addEventListener('turbo:frame-load', bindFeedAjax);
     document.addEventListener('turbo:load', bindFeedAjax);
+
+    // Auto-fill unit cost when Feed Batch is selected in the Whole-Farm Entry modal
+    var farmBatchSelect = document.querySelector('#farmEntryModal select[name="feed_batch_id"]');
+    var farmCostInput = document.querySelector('#farmEntryModal input[name="unit_cost"]');
+    if (farmBatchSelect && farmCostInput && !farmBatchSelect.dataset.costListenerBound) {
+        farmBatchSelect.dataset.costListenerBound = 'true';
+        farmBatchSelect.addEventListener('change', function() {
+            var opt = farmBatchSelect.options[farmBatchSelect.selectedIndex];
+            var cost = opt && opt.dataset.unitCost !== '' && opt.dataset.unitCost !== undefined
+                ? parseFloat(opt.dataset.unitCost) : '';
+            if (!farmCostInput.value || farmCostInput.value === '0') {
+                farmCostInput.value = isNaN(cost) ? '' : cost;
+            }
+        });
+    }
 })();
 
 function deleteBatch(id) {

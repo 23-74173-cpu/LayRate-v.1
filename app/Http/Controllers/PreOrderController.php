@@ -129,8 +129,8 @@ class PreOrderController extends Controller
 
         $validator->after(function ($v) {
             $count = $v->validated()['egg_count'] ?? 0;
-            if ($count % 15 !== 0) {
-                $v->errors()->add('egg_count', 'Order must be in multiples of 15 (half-tray = 15, whole tray = 30).');
+            if ($count % 6 !== 0) {
+                $v->errors()->add('egg_count', 'Order must be in multiples of 6 (half-dozen).');
             }
         });
 
@@ -170,8 +170,8 @@ class PreOrderController extends Controller
 
         $validator->after(function ($v) {
             $count = $v->validated()['egg_count'] ?? 0;
-            if ($count % 15 !== 0) {
-                $v->errors()->add('egg_count', 'Order must be in multiples of 15 (half-tray = 15, whole tray = 30).');
+            if ($count % 6 !== 0) {
+                $v->errors()->add('egg_count', 'Order must be in multiples of 6 (half-dozen).');
             }
         });
 
