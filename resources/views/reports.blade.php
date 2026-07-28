@@ -146,6 +146,26 @@
                 <div class="text-xs text-[#6B7280] mt-0.5">{{ $from && $to ? "{$from} — {$to}" : 'All time' }}</div>
             </div>
         </div>
+
+        {{-- Reports export loading overlay --}}
+        <div id="reportsExportLoadingOverlay" class="fixed inset-0 min-h-screen min-h-[100dvh] bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
+            <div class="bg-white rounded-xl shadow-xl p-8 max-w-sm w-full mx-4 text-center">
+                <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#102A4C]/10 mb-4">
+                    <svg class="animate-spin h-6 w-6 text-[#102A4C]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-semibold text-[#333333] mb-1">Exporting report</h3>
+                <p class="text-sm text-[#6B7280] mb-4">Generating your file...</p>
+                <div class="w-full bg-[#F0F0F0] rounded-full h-2 overflow-hidden">
+                    <div id="reportsProgressBar" class="bg-[#102A4C] h-full rounded-full" style="width: 0%;"></div>
+                </div>
+            </div>
+        </div>
+
+
+
         <hr style="border:none;border-top:3px solid #102A4C;margin:12px 0">
 
         {{-- 2. Metadata strip --}}
@@ -490,6 +510,26 @@ function exportReportWithCharts(format) {
         }
 
         var token = document.querySelector('meta[name="csrf-token"]');
+        var overlay = document.getElementById('reportsExportLoadingOverlay');
+        var progressBar = document.getElementById('reportsProgressBar');
+        if (overlay) overlay.style.display = 'flex';
+        if (progressBar) progressBar.style.width = '0%';
+
+        var EXPORT_DURATION = 3000;
+        var progressStart = Date.now();
+        var progressRaf = null;
+        function stepProgress() {
+            var elapsed = Date.now() - progressStart;
+            var ratio = Math.min(elapsed / EXPORT_DURATION, 1);
+            var eased = 1 - Math.pow(1 - ratio, 3);
+            var pct = eased * 100;
+            if (progressBar) progressBar.style.width = pct + '%';
+            if (ratio < 1) {
+                progressRaf = requestAnimationFrame(stepProgress);
+            }
+        }
+        progressRaf = requestAnimationFrame(stepProgress);
+
         fetch('/reports/' + format, {
             method: 'POST',
             headers: {
@@ -518,6 +558,10 @@ function exportReportWithCharts(format) {
         .catch(function(err) {
             console.error('Export failed:', err);
             alert('Export failed. Please try again.');
+        })
+        .finally(function() {
+            if (progressRaf) cancelAnimationFrame(progressRaf);
+            if (overlay) overlay.style.display = 'none';
         });
     });
 }
