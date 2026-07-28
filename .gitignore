@@ -49,3 +49,11 @@ test-results/
 mobile-api/.venv/
 forecast-api/venv/
 .dev/
+
+# Markdown docs -- tracked only for API reference, delivery scope, and READMEs
+*.md
+!README.md
+!forecast-api/README.md
+!mobile-api/README.md
+!API_ROUTES.md
+!WHAT_WE_CAN_DELIVER.md
