@@ -50,7 +50,7 @@ jobs:
       - name: Install PHP dependencies
         run: |
           cd ${{ env.LARAVEL_DIR }}
-          composer install --no-dev --optimize-autoloader
+          composer install --no-dev --optimize-autoloader --ignore-platform-reqs
 
       - name: Run database migrations
         run: |
