@@ -30,12 +30,6 @@
       body { background-color: #F5F6F8; }
     </style>
 
-    {{-- Chart.js --}}
-    <script src="/js/chart.min.js" defer></script>
-
-    {{-- Lucide Icons --}}
-    <script src="/js/lucide.min.js" defer></script>
-
     {{-- Turbo Drive --}}
     <script type="module" src="/js/turbo.js"></script>
 
@@ -851,6 +845,10 @@ function loadingButton(btn, label) {
 <x-notification-toast />
 <x-loading-modal />
 <x-transaction-logger />
+
+{{-- Libraries needed by inline scripts in @stack('scripts') --}}
+<script src="/js/lucide.min.js"></script>
+<script src="/js/chart.min.js"></script>
 
 @stack('scripts')
 </body>
