@@ -193,7 +193,10 @@
             {{-- Inline import feedback messages --}}
             <div id="importFeedback" class="hidden mb-3 rounded-lg p-3 text-sm">
                 <div class="flex items-start gap-2">
-                    <i data-lucide="" id="importFeedbackIcon" class="w-4 h-4 shrink-0 mt-0.5"></i>
+                    {{-- No data-lucide until showImportFeedback() sets a real icon name —
+                         an empty attribute here gets picked up by the global lucide.createIcons()
+                         scan on every page load and logs "icon name was not found". --}}
+                    <i id="importFeedbackIcon" class="w-4 h-4 shrink-0 mt-0.5"></i>
                     <div class="flex-1 min-w-0">
                         <textarea id="importFeedbackMessage" readonly rows="3"
                             class="w-full bg-transparent border-0 p-0 text-inherit resize-none focus:ring-0 focus:outline-none select-all"
@@ -801,7 +804,17 @@
                 })
             })
             .then(function(response) {
-                if (!response.ok) throw new Error('Export failed');
+                if (!response.ok) {
+                    // The server returns a JSON error (e.g. "no forecast generated
+                    // yet") for a non-2xx here — surface that instead of a blob
+                    // download. Falls back to a generic message if the body isn't
+                    // JSON for some other reason (network error page, etc.).
+                    return response.json()
+                        .catch(function() { return {}; })
+                        .then(function(body) {
+                            throw new Error(body.message || 'Export failed (' + response.status + ').');
+                        });
+                }
                 return response.blob();
             })
             .then(function(blob) {
@@ -816,7 +829,7 @@
             })
             .catch(function(err) {
                 console.error('Forecast export error:', err);
-                alert('Export failed. Please try again.');
+                alert(err.message || 'Export failed. Please try again.');
             })
             .finally(function() {
                 hideExportLoading();

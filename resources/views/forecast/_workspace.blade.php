@@ -366,6 +366,23 @@
         }
     }
 
+    // This whole script re-executes on every Turbo visit that lands on this
+    // page (confirmed behavior — Turbo replays body <script> tags per visit),
+    // and everything above is scoped inside this IIFE with `const`/`let` so
+    // each execution's ensureForecastChart() closure captures that visit's
+    // own freshly-rendered historical/forecast data — unlike reports.blade.php's
+    // equivalent fix, we can't just skip re-registering on repeat executions,
+    // that would permanently freeze the chart on whichever visit happened to
+    // bind first. Instead, swap out the previous visit's 'turbo:load' listener
+    // for this one on every execution, so exactly one is ever attached. Without
+    // this, listeners accumulate across visits (document persists across Turbo
+    // navigations, old listeners are never auto-removed) and on a later
+    // turbo:load multiple stacked listeners each call LayRateChart.create() on
+    // the same #forecastChart canvas, throwing "Canvas is already in use."
+    if (window.__forecastChartTurboLoadHandler) {
+        document.removeEventListener('turbo:load', window.__forecastChartTurboLoadHandler);
+    }
+    window.__forecastChartTurboLoadHandler = ensureForecastChart;
     document.addEventListener('turbo:load', ensureForecastChart);
     document.addEventListener('DOMContentLoaded', ensureForecastChart);
     window.addEventListener('load', ensureForecastChart);

@@ -7,7 +7,7 @@ $reasonColors = ['Disease' => '#721C24', 'Heat Stress' => '#856404', 'Injury' =>
 <div class="overflow-x-auto mb-2">
     <table class="w-full" style="border-collapse:collapse" @if($tableKey ?? null) data-report-table="{{ $tableKey }}" @endif>
         <thead>
-            <tr style="background:#102A4C;color:#ffffff;">
+            <tr style="background:#E5E7EB;color:#000000;">
                 @foreach(array_keys((array) $rows->first()) as $col)
                 <th class="px-5 py-3 text-left text-xs tracking-widest uppercase font-medium whitespace-nowrap">{{ strtoupper(str_replace('_', ' ', $col)) }}</th>
                 @endforeach

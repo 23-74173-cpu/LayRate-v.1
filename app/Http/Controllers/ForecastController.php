@@ -867,7 +867,7 @@ class ForecastController extends Controller
     {
         $data = $this->resolveExportData($request);
         if (!$data) {
-            return redirect()->route('forecast')->with('error', 'No forecast data available for export.');
+            return $this->noForecastToExport();
         }
 
         ['scope' => $scope, 'cageCode' => $cageCode, 'breed' => $breed, 'horizon' => $horizon, 'forecasts' => $forecasts] = $data;
@@ -900,7 +900,7 @@ class ForecastController extends Controller
     {
         $data = $this->resolveExportData($request);
         if (!$data) {
-            return redirect()->route('forecast')->with('error', 'No forecast data available for export.');
+            return $this->noForecastToExport();
         }
 
         ['forecasts' => $forecasts, 'scope' => $scope, 'cageCode' => $cageCode, 'breed' => $breed, 'horizon' => $horizon] = $data;
@@ -932,7 +932,7 @@ class ForecastController extends Controller
     {
         $data = $this->resolveExportData($request);
         if (!$data) {
-            return redirect()->route('forecast')->with('error', 'No forecast data available for export.');
+            return $this->noForecastToExport();
         }
 
         ['forecasts' => $forecasts, 'scope' => $scope, 'cageCode' => $cageCode, 'breed' => $breed, 'horizon' => $horizon] = $data;
@@ -953,6 +953,19 @@ class ForecastController extends Controller
             $pdf = Pdf::loadView('forecast.pdf', compact('forecasts', 'scope', 'cageCode', 'breed', 'horizon') + ['chartImage' => null]);
             return $pdf->download('forecast-' . $scope . '-' . now()->format('Y-m-d') . '.pdf');
         }
+    }
+
+    // Export requests are fired via fetch() with default redirect-following —
+    // a redirect() response here used to be silently followed to GET /forecast,
+    // whose HTML then got downloaded and saved as "forecast-export-pdf-....pdf"
+    // (or .xlsx/.csv), which every PDF/spreadsheet viewer then fails to open.
+    // fetch() only treats non-2xx as a failure it can detect, so this needs to
+    // be a real error status the JS's `!response.ok` check actually catches.
+    private function noForecastToExport()
+    {
+        return response()->json([
+            'message' => 'No forecast has been generated yet for today and this scope/cage/breed — click "Generate Forecast" first, then export.',
+        ], 422);
     }
 
     private function resolveExportData(Request $request): ?array
