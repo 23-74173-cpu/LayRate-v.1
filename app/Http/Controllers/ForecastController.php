@@ -2,14 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\ForecastExport;
 use App\Models\Cage;
 use App\Models\Forecast;
 use App\Models\Hen;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use Maatwebsite\Excel\Facades\Excel;
 use RuntimeException;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
@@ -858,5 +861,132 @@ class ForecastController extends Controller
 
         return compact('scope', 'cage', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate')
             + ['forecastDataDays' => $dataSufficiency['current_count']];
+    }
+
+    public function exportCsv(Request $request)
+    {
+        $data = $this->resolveExportData($request);
+        if (!$data) {
+            return redirect()->route('forecast')->with('error', 'No forecast data available for export.');
+        }
+
+        ['scope' => $scope, 'cageCode' => $cageCode, 'breed' => $breed, 'horizon' => $horizon, 'forecasts' => $forecasts] = $data;
+
+        $filename = 'forecast-' . $scope . '-' . now()->format('Y-m-d') . '.csv';
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function () use ($forecasts, $scope, $cageCode, $breed) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['target_date', 'predicted_egg_count', 'scope', 'cage_code', 'breed']);
+            foreach ($forecasts as $f) {
+                fputcsv($handle, [
+                    $f->target_date,
+                    $f->predicted_egg_count ?? $f->predicted_hdep ?? 0,
+                    $scope,
+                    $cageCode ?? '',
+                    $breed ?? '',
+                ]);
+            }
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function exportExcel(Request $request)
+    {
+        $data = $this->resolveExportData($request);
+        if (!$data) {
+            return redirect()->route('forecast')->with('error', 'No forecast data available for export.');
+        }
+
+        ['forecasts' => $forecasts, 'scope' => $scope, 'cageCode' => $cageCode, 'breed' => $breed, 'horizon' => $horizon] = $data;
+
+        $imagePath = null;
+        $payload = $request->isMethod('POST') ? $request->json()->all() : $request->all();
+        $rawImage = $payload['chart_image'] ?? null;
+        if ($rawImage && preg_match('/^data:image\/png;base64,[A-Za-z0-9+\/=]+$/', $rawImage)
+            && strlen(base64_decode(explode(',', $rawImage, 2)[1], true)) <= 5 * 1024 * 1024) {
+            $imagePath = tempnam(sys_get_temp_dir(), 'lre_fc_');
+            register_shutdown_function(function () use ($imagePath) {
+                file_exists($imagePath) && @unlink($imagePath);
+            });
+            $decoded = base64_decode(explode(',', $rawImage, 2)[1], true);
+            if ($decoded !== false) {
+                file_put_contents($imagePath, $decoded);
+            } else {
+                $imagePath = null;
+            }
+        }
+
+        return Excel::download(
+            new ForecastExport($forecasts, $scope, $cageCode, $breed, $imagePath),
+            'forecast-' . $scope . '-' . now()->format('Y-m-d') . '.xlsx'
+        );
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $data = $this->resolveExportData($request);
+        if (!$data) {
+            return redirect()->route('forecast')->with('error', 'No forecast data available for export.');
+        }
+
+        ['forecasts' => $forecasts, 'scope' => $scope, 'cageCode' => $cageCode, 'breed' => $breed, 'horizon' => $horizon] = $data;
+
+        $chartImage = null;
+        $payload = $request->isMethod('POST') ? $request->json()->all() : $request->all();
+        $rawImage = $payload['chart_image'] ?? null;
+        if ($rawImage && preg_match('/^data:image\/png;base64,[A-Za-z0-9+\/=]+$/', $rawImage)
+            && strlen(base64_decode(explode(',', $rawImage, 2)[1], true)) <= 5 * 1024 * 1024) {
+            $chartImage = $rawImage;
+        }
+
+        try {
+            $pdf = Pdf::loadView('forecast.pdf', compact('forecasts', 'scope', 'cageCode', 'breed', 'horizon', 'chartImage'));
+            return $pdf->download('forecast-' . $scope . '-' . now()->format('Y-m-d') . '.pdf');
+        } catch (\Exception $e) {
+            Log::warning('PDF export failed with chart image, retrying without: ' . $e->getMessage());
+            $pdf = Pdf::loadView('forecast.pdf', compact('forecasts', 'scope', 'cageCode', 'breed', 'horizon') + ['chartImage' => null]);
+            return $pdf->download('forecast-' . $scope . '-' . now()->format('Y-m-d') . '.pdf');
+        }
+    }
+
+    private function resolveExportData(Request $request): ?array
+    {
+        $scope   = $request->input('scope', 'cage');
+        $horizon = (int) $request->input('horizon', 7);
+        $cageCode = $request->input('cage');
+        $breed    = $request->input('breed');
+
+        $historical = collect();
+        if ($scope === 'farm') {
+            $historical = $this->farmHistorical();
+            $forecasts = Forecast::where('forecast_date', now()->toDateString())
+                ->whereNull('cage_id')->whereNull('breed')
+                ->orderBy('target_date')->limit($horizon)->get();
+        } elseif ($scope === 'breed' && $breed) {
+            $historical = $this->breedHistorical($breed);
+            $forecasts = Forecast::where('forecast_date', now()->toDateString())
+                ->whereNull('cage_id')->where('breed', $breed)
+                ->orderBy('target_date')->limit($horizon)->get();
+        } else {
+            $cage = $cageCode ? Cage::where('cage_code', $cageCode)->first() : null;
+            $historical = $this->cageHistorical($cageCode ?? '');
+            $forecasts = Forecast::where('forecast_date', now()->toDateString())
+                ->when($cage, fn($q) => $q->where('cage_id', $cage->id))
+                ->when(!$cage, fn($q) => $q->whereNull('cage_id'))
+                ->whereNull('breed')
+                ->orderBy('target_date')->limit($horizon)->get();
+        }
+
+        if ($forecasts->isEmpty()) {
+            return null;
+        }
+
+        return compact('scope', 'cageCode', 'breed', 'horizon', 'historical', 'forecasts');
     }
 }

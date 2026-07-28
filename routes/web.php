@@ -170,6 +170,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/forecast/clear',      [ForecastController::class, 'clear'])->name('forecast.clear')->middleware('admin');
     Route::get('/forecast/template',    [ForecastController::class, 'downloadTemplate'])->name('forecast.template');
     Route::post('/forecast/import',     [ForecastController::class, 'import'])->name('forecast.import')->middleware('admin');
+    Route::match(['GET', 'POST'], '/forecast/csv',   [ForecastController::class, 'exportCsv'])->name('forecast.csv');
+    Route::match(['GET', 'POST'], '/forecast/excel', [ForecastController::class, 'exportExcel'])->name('forecast.excel');
+    Route::match(['GET', 'POST'], '/forecast/pdf',   [ForecastController::class, 'exportPdf'])->name('forecast.pdf');
 
     Route::get('/profile',                         [AccountController::class, 'profile'])->name('profile');
     Route::post('/profile',                        [AccountController::class, 'updateProfile'])->name('profile.update');

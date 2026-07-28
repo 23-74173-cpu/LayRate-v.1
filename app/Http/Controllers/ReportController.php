@@ -602,6 +602,8 @@ class ReportController extends Controller
 
     public function exportPdf(Request $request)
     {
+        ini_set('memory_limit', '256M');
+
         [$type, $from, $to, $cageId, $reason, $allCages] = $this->filtersFromRequest($request);
         $rangeLabel = ($from && $to) ? "{$from}_to_{$to}" : 'all_time';
         $filename = "layrate_{$type}_{$rangeLabel}.pdf";
@@ -619,16 +621,30 @@ class ReportController extends Controller
             ]];
         }
 
-        $pdf = Pdf::loadView('reports.pdf', [
-            'sections'    => $sections,
-            'type'        => $type,
-            'from'        => $from,
-            'to'          => $to,
-            'cageId'      => $cageId,
-            'chartImages' => $chartImages,
-        ])->setPaper('a4', 'portrait');
+        try {
+            $pdf = Pdf::loadView('reports.pdf', [
+                'sections'    => $sections,
+                'type'        => $type,
+                'from'        => $from,
+                'to'          => $to,
+                'cageId'      => $cageId,
+                'chartImages' => $chartImages,
+            ])->setPaper('a4', 'portrait');
 
-        return $pdf->download($filename);
+            return $pdf->download($filename);
+        } catch (\Exception $e) {
+            Log::warning('Report PDF export failed with chart images, retrying without: ' . $e->getMessage());
+            $pdf = Pdf::loadView('reports.pdf', [
+                'sections'    => $sections,
+                'type'        => $type,
+                'from'        => $from,
+                'to'          => $to,
+                'cageId'      => $cageId,
+                'chartImages' => [],
+            ])->setPaper('a4', 'portrait');
+
+            return $pdf->download($filename);
+        }
     }
 
     private function validateChartImages(array $rawImages): array

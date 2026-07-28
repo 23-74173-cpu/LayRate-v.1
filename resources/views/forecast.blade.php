@@ -151,6 +151,12 @@
                 <i data-lucide="upload" class="w-4 h-4 text-[#2D7D46]"></i>
             </div>
         </button>
+        <button type="button" id="fabExportBtn" class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>Export forecast</span>
+            <div class="w-8 h-8 rounded-full bg-[#6B4C8A]/10 flex items-center justify-center">
+                <i data-lucide="file-down" class="w-4 h-4 text-[#6B4C8A]"></i>
+            </div>
+        </button>
     </div>
 
     {{-- FAB Toggle --}}
@@ -232,6 +238,70 @@
             </form>
             @endcan
         </div>
+    </div>
+</div>
+
+{{-- Export Forecast Modal --}}
+<div id="exportForecastModal" class="fixed inset-0 min-h-screen min-h-[100dvh] bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-auto overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-[#F0F0F0]">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-[#6B4C8A]/10 flex items-center justify-center">
+                    <i data-lucide="file-down" class="w-4 h-4 text-[#6B4C8A]"></i>
+                </div>
+                <h3 class="text-base font-semibold text-[#333333]">Export forecast</h3>
+            </div>
+            <button type="button" id="closeExportForecastModal" class="text-[#6B7280] hover:text-[#333333] transition-colors">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <div class="p-5 space-y-3">
+            <p class="text-sm text-[#6B7280] mb-2">Choose a format to export the forecast data and chart.</p>
+            <button type="button" data-export-format="pdf"
+                class="export-forecast-btn w-full flex items-center gap-3 bg-white border border-[#D9D9D9] rounded-lg px-4 py-3 hover:bg-[#F5F6F8] transition-colors text-left">
+                <div class="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
+                    <i data-lucide="file-text" class="w-4 h-4 text-red-600"></i>
+                </div>
+                <div>
+                    <div class="text-sm font-medium text-[#333333]">PDF</div>
+                    <div class="text-xs text-[#6B7280]">Printable document with calendar + chart</div>
+                </div>
+            </button>
+            <button type="button" data-export-format="excel"
+                class="export-forecast-btn w-full flex items-center gap-3 bg-white border border-[#D9D9D9] rounded-lg px-4 py-3 hover:bg-[#F5F6F8] transition-colors text-left">
+                <div class="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
+                    <i data-lucide="table" class="w-4 h-4 text-green-600"></i>
+                </div>
+                <div>
+                    <div class="text-sm font-medium text-[#333333]">Excel</div>
+                    <div class="text-xs text-[#6B7280]">Spreadsheet with forecast data rows + chart</div>
+                </div>
+            </button>
+            <button type="button" data-export-format="csv"
+                class="export-forecast-btn w-full flex items-center gap-3 bg-white border border-[#D9D9D9] rounded-lg px-4 py-3 hover:bg-[#F5F6F8] transition-colors text-left">
+                <div class="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                    <i data-lucide="file-spreadsheet" class="w-4 h-4 text-blue-600"></i>
+                </div>
+                <div>
+                    <div class="text-sm font-medium text-[#333333]">CSV</div>
+                    <div class="text-xs text-[#6B7280]">Plain-text data table</div>
+                </div>
+            </button>
+        </div>
+    </div>
+</div>
+
+{{-- Export loading overlay --}}
+<div id="forecastExportLoadingOverlay" class="fixed inset-0 min-h-screen min-h-[100dvh] bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
+    <div class="bg-white rounded-xl shadow-xl p-8 max-w-sm w-full mx-4 text-center">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#6B4C8A]/10 mb-4">
+            <svg class="animate-spin h-6 w-6 text-[#6B4C8A]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-[#333333] mb-1">Exporting forecast</h3>
+        <p class="text-sm text-[#6B7280] mb-4">Capturing chart and generating file...</p>
     </div>
 </div>
 
@@ -646,6 +716,119 @@
                 }
             });
         }
+
+        // ── Export Forecast Modal ──
+        const exportModal = document.getElementById('exportForecastModal');
+        const fabExportBtn = document.getElementById('fabExportBtn');
+        const closeExportModalBtn = document.getElementById('closeExportForecastModal');
+        const exportOverlay = document.getElementById('forecastExportLoadingOverlay');
+
+        function openExportModal() {
+            if (exportModal) {
+                exportModal.style.display = 'flex';
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+
+        function closeExportModalFn() {
+            if (exportModal) exportModal.style.display = 'none';
+        }
+
+        if (fabExportBtn) {
+            fabExportBtn.addEventListener('click', function() {
+                openExportModal();
+                toggleFab();
+            });
+        }
+
+        if (closeExportModalBtn) {
+            closeExportModalBtn.addEventListener('click', closeExportModalFn);
+        }
+
+        if (exportModal) {
+            exportModal.addEventListener('click', function(e) {
+                if (e.target === exportModal) closeExportModalFn();
+            });
+        }
+
+        function showExportLoading() {
+            if (exportOverlay) exportOverlay.style.display = 'flex';
+        }
+
+        function hideExportLoading() {
+            if (exportOverlay) exportOverlay.style.display = 'none';
+        }
+
+        function exportForecast(format) {
+            closeExportModalFn();
+            showExportLoading();
+
+            var form = document.getElementById('forecastForm');
+            var scope = form ? (form.querySelector('[name="scope"]') ? form.querySelector('[name="scope"]').value : 'cage') : 'cage';
+            var cage = form ? (form.querySelector('[name="cage"]') ? form.querySelector('[name="cage"]').value : '') : '';
+            var breed = form ? (form.querySelector('[name="breed"]') ? form.querySelector('[name="breed"]').value : '') : '';
+            var horizon = form ? (form.querySelector('[name="horizon"]') ? form.querySelector('[name="horizon"]').value : '7') : '7';
+
+            var extMap = { csv: 'csv', excel: 'xlsx', pdf: 'pdf' };
+            var extension = extMap[format] || format;
+
+            var chartCanvas = document.querySelector('#forecastChart');
+            var chartImage = null;
+
+            if (format !== 'csv' && chartCanvas && typeof chartCanvas.toDataURL === 'function') {
+                chartImage = chartCanvas.toDataURL('image/png');
+            }
+
+            var params = new URLSearchParams();
+            params.set('scope', scope);
+            params.set('horizon', horizon);
+            if (cage) params.set('cage', cage);
+            if (breed) params.set('breed', breed);
+
+            fetch('/forecast/' + format, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/octet-stream'
+                },
+                body: JSON.stringify({
+                    scope: scope,
+                    cage: cage,
+                    breed: breed,
+                    horizon: horizon,
+                    chart_image: chartImage
+                })
+            })
+            .then(function(response) {
+                if (!response.ok) throw new Error('Export failed');
+                return response.blob();
+            })
+            .then(function(blob) {
+                var url = window.URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'forecast-export-' + format + '-' + new Date().toISOString().slice(0,10) + '.' + extension;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            })
+            .catch(function(err) {
+                console.error('Forecast export error:', err);
+                alert('Export failed. Please try again.');
+            })
+            .finally(function() {
+                hideExportLoading();
+            });
+        }
+
+        document.querySelectorAll('.export-forecast-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var format = this.getAttribute('data-export-format');
+                exportForecast(format);
+            });
+        });
 
         initForecastLoading();
     });
