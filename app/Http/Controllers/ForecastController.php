@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exports\ForecastExport;
+use App\Forecast\ForecastRules;
 use App\Models\Cage;
 use App\Models\Forecast;
 use App\Models\Hen;
@@ -230,13 +231,12 @@ class ForecastController extends Controller
 
             try {
                 $parsed = \Carbon\Carbon::parse($startDate);
-                $maxDate = now()->addDays(30);
-                if ($parsed->lt(now()->addDay()->startOfDay())) {
+                if ($parsed->lt(ForecastRules::minStartDate())) {
                     return redirect()->back()
                         ->with('error', 'Forecast date must be at least tomorrow.')
                         ->withInput();
                 }
-                if ($parsed->gt($maxDate->endOfDay())) {
+                if ($parsed->gt(ForecastRules::maxStartDate())) {
                     return redirect()->back()
                         ->with('error', 'Forecast date cannot exceed 30 days from today.')
                         ->withInput();

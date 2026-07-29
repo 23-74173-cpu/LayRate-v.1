@@ -21,8 +21,8 @@
     $nextUrl = request()->fullUrlWithQuery(['month' => $nextMonthDate->month, 'year' => $nextMonthDate->year]);
     $todayUrl = request()->fullUrlWithQuery(['month' => now()->month, 'year' => now()->year]);
 
-    $maxSelectableDate = now()->addDays(30)->format('Y-m-d');
-    $tomorrowDate = now()->addDay()->format('Y-m-d');
+    $maxSelectableDate = \App\Forecast\ForecastRules::maxStartDate()->format('Y-m-d');
+    $tomorrowDate = \App\Forecast\ForecastRules::minStartDate()->format('Y-m-d');
 @endphp
 
 <turbo-frame id="production-calendar">

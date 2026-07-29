@@ -423,49 +423,62 @@
         }
     });
 
+    var _forecastIsSubmitting = false;
+
+    var FORECAST_STORAGE_KEYS = {
+        startTime: 'layrate_forecast_start_time',
+        expectedDuration: 'layrate_forecast_expected_duration_ms',
+    };
+
+    var FORECAST_DEFAULT_DURATIONS = {
+        cage: { 7: 5000, 14: 8000, 30: 12000 },
+        breed: { 7: 6000, 14: 10000, 30: 15000 },
+        farm: { 7: 8000, 14: 14000, 30: 20000 },
+    };
+
+    var FORECAST_MIN_DURATION = 3000;
+    var FORECAST_MAX_DURATION = 280000;
+
+    function resolveForecastDuration(scope, horizon) {
+        var saved = localStorage.getItem(FORECAST_STORAGE_KEYS.expectedDuration);
+        if (saved) {
+            var parsed = parseInt(saved, 10);
+            if (!isNaN(parsed) && parsed > 0) {
+                return Math.max(FORECAST_MIN_DURATION, Math.min(FORECAST_MAX_DURATION, parsed));
+            }
+        }
+        var scopeMap = FORECAST_DEFAULT_DURATIONS[scope] || FORECAST_DEFAULT_DURATIONS.cage;
+        return scopeMap[horizon] || scopeMap[7] || FORECAST_MIN_DURATION;
+    }
+
+    function recordForecastDuration() {
+        var start = sessionStorage.getItem(FORECAST_STORAGE_KEYS.startTime);
+        if (!start) return;
+        var actual = Date.now() - parseInt(start, 10);
+        sessionStorage.removeItem(FORECAST_STORAGE_KEYS.startTime);
+        if (actual > 1000) {
+            localStorage.setItem(FORECAST_STORAGE_KEYS.expectedDuration, actual);
+        }
+    }
+
     function initForecastLoading() {
-        const STORAGE_KEYS = {
-            startTime: 'layrate_forecast_start_time',
-            expectedDuration: 'layrate_forecast_expected_duration_ms',
-        };
+        recordForecastDuration();
+    }
 
-        const DEFAULT_DURATIONS = {
-            cage: { 7: 5000, 14: 8000, 30: 12000 },
-            breed: { 7: 6000, 14: 10000, 30: 15000 },
-            farm: { 7: 8000, 14: 14000, 30: 20000 },
-        };
-
-        const MIN_DURATION = 3000;
-        const MAX_DURATION = 280000;
-
-        function resolveExpectedDuration(scope, horizon) {
-            const saved = localStorage.getItem(STORAGE_KEYS.expectedDuration);
-            if (saved) {
-                const parsed = parseInt(saved, 10);
-                if (!isNaN(parsed) && parsed > 0) {
-                    return Math.max(MIN_DURATION, Math.min(MAX_DURATION, parsed));
-                }
-            }
-
-            const scopeMap = DEFAULT_DURATIONS[scope] || DEFAULT_DURATIONS.cage;
-            return scopeMap[horizon] || scopeMap[7] || MIN_DURATION;
+    // Use document-level delegation for the forecast form submit so it survives
+    // Turbo Frame content replacement (standalone submit handler on the form
+    // element is lost when the frame's innerHTML is swapped).
+    document.addEventListener('submit', function(e) {
+        if (e.target.id !== 'forecastForm') return;
+        if (_forecastIsSubmitting) {
+            e.preventDefault();
+            return;
         }
 
-        function recordActualDuration() {
-            const start = sessionStorage.getItem(STORAGE_KEYS.startTime);
-            if (!start) return;
+        _forecastIsSubmitting = true;
+        e.preventDefault();
 
-            const actual = Date.now() - parseInt(start, 10);
-            sessionStorage.removeItem(STORAGE_KEYS.startTime);
-
-            if (actual > 1000) {
-                localStorage.setItem(STORAGE_KEYS.expectedDuration, actual);
-            }
-        }
-
-        recordActualDuration();
-
-        const form = document.getElementById('forecastForm');
+        const form = e.target;
         const overlay = document.getElementById('forecastLoadingOverlay');
         const progressBar = document.getElementById('forecastProgressBar');
         const progressText = document.getElementById('forecastProgressText');
@@ -473,89 +486,75 @@
         const btn = document.getElementById('generateForecastBtn');
         const btnText = document.getElementById('btnText');
 
-        if (!form || !overlay || !btn) return;
+        if (!overlay || !btn) return;
 
-        // Remove a previously attached handler so we never stack listeners when the frame reloads.
-        if (form._forecastSubmitHandler) {
-            form.removeEventListener('submit', form._forecastSubmitHandler);
+        const scopeInput = form.querySelector('input[name="scope"]');
+        const horizonInput = form.querySelector('input[name="horizon"]:checked');
+        const scope = scopeInput ? scopeInput.value : 'cage';
+        const horizon = horizonInput ? parseInt(horizonInput.value, 10) : 7;
+        const expectedDuration = resolveForecastDuration(scope, horizon);
+
+        overlay.style.display = 'flex';
+        btn.disabled = true;
+        if (btnText) {
+            btnText.textContent = 'Generating...';
         }
 
-        let isSubmitting = false;
+        sessionStorage.setItem('layrate_forecast_start_time', Date.now());
 
-        const handler = function(e) {
-            if (isSubmitting) {
-                e.preventDefault();
-                return;
-            }
+        progressBar.style.width = '0%';
+        progressText.textContent = '0%';
+        if (statusText) {
+            statusText.textContent = 'Loading historical data...';
+        }
 
-            isSubmitting = true;
-            e.preventDefault();
+        const statusMessages = [
+            'Loading historical data...',
+            'Training SARIMA model...',
+            'Training XGBoost model...',
+            'Evaluating model performance...',
+            'Generating predictions...',
+            'Saving forecast results...',
+        ];
 
-            const scopeInput = form.querySelector('input[name="scope"]');
-            const horizonInput = form.querySelector('input[name="horizon"]:checked');
-            const scope = scopeInput ? scopeInput.value : 'cage';
-            const horizon = horizonInput ? parseInt(horizonInput.value, 10) : 7;
-            const expectedDuration = resolveExpectedDuration(scope, horizon);
+        const startTime = Date.now();
 
-            overlay.style.display = 'flex';
-            btn.disabled = true;
-            if (btnText) {
-                btnText.textContent = 'Generating...';
-            }
+        function updateProgress() {
+            const elapsed = Date.now() - startTime;
+            const ratio = Math.min(elapsed / expectedDuration, 1);
+            const eased = 1 - Math.pow(1 - ratio, 3);
+            const progress = Math.min(95, eased * 95);
 
-            sessionStorage.setItem(STORAGE_KEYS.startTime, Date.now());
+            progressBar.style.width = progress + '%';
+            progressText.textContent = Math.round(progress) + '%';
 
-            progressBar.style.width = '0%';
-            progressText.textContent = '0%';
+            const messageIndex = Math.min(
+                statusMessages.length - 1,
+                Math.floor(ratio * statusMessages.length)
+            );
             if (statusText) {
-                statusText.textContent = 'Loading historical data...';
+                statusText.textContent = statusMessages[messageIndex];
             }
 
-            const statusMessages = [
-                'Loading historical data...',
-                'Training SARIMA model...',
-                'Training XGBoost model...',
-                'Evaluating model performance...',
-                'Generating predictions...',
-                'Saving forecast results...',
-            ];
-
-            const startTime = Date.now();
-
-            function updateProgress() {
-                const elapsed = Date.now() - startTime;
-                const ratio = Math.min(elapsed / expectedDuration, 1);
-                const eased = 1 - Math.pow(1 - ratio, 3);
-                const progress = Math.min(95, eased * 95);
-
-                progressBar.style.width = progress + '%';
-                progressText.textContent = Math.round(progress) + '%';
-
-                const messageIndex = Math.min(
-                    statusMessages.length - 1,
-                    Math.floor(ratio * statusMessages.length)
-                );
-                if (statusText) {
-                    statusText.textContent = statusMessages[messageIndex];
-                }
-
-                if (progress < 95) {
-                    requestAnimationFrame(updateProgress);
-                }
+            if (progress < 95) {
+                requestAnimationFrame(updateProgress);
             }
+        }
 
-            requestAnimationFrame(updateProgress);
+        requestAnimationFrame(updateProgress);
 
-            requestAnimationFrame(function() {
-                setTimeout(function() {
-                    form.submit();
-                }, 50);
-            });
-        };
+        requestAnimationFrame(function() {
+            setTimeout(function() {
+                form.submit();
+            }, 50);
+        });
+    });
 
-        form._forecastSubmitHandler = handler;
-        form.addEventListener('submit', handler);
-    }
+    // Reset the submission lock on every page load / frame load so a failed
+    // submission doesn't permanently prevent retries.
+    document.addEventListener('turbo:load', function() { _forecastIsSubmitting = false; });
+    document.addEventListener('turbo:frame-load', function() { _forecastIsSubmitting = false; });
+    document.addEventListener('turbo:before-cache', function() { _forecastIsSubmitting = false; });
 
     document.addEventListener('turbo:load', function() {
         const previewBtn = document.getElementById('previewImportBtn');
