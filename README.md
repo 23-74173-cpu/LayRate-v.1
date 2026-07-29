@@ -30,6 +30,16 @@ Until this is resolved at the system level, use the provided launcher script ins
 
 The script sets `PHP_INI_SCAN_DIR` to include `.dev/php-ext/gd.ini` and `LD_LIBRARY_PATH` to include the bundled shared libraries (`libgd.so.3`, `libXpm.so.4`). These live in `.dev/php-ext/` (git-ignored).
 
+### Worker count
+
+The built-in PHP dev server runs a single worker by default. Since this app uses Server-Sent Events (SSE) endpoints that hold a connection for up to 10 seconds, the single worker can become exhausted if multiple SSE connections are in-flight (e.g. tab-switching in Egg Management). Set `PHP_CLI_SERVER_WORKERS=4` before starting the server to avoid blocking:
+
+```bash
+PHP_CLI_SERVER_WORKERS=4 ./scripts/serve-local.sh --host=0.0.0.0 --port=8000
+```
+
+Requires PHP 8.5+ (the app server is already on 8.5.8).
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

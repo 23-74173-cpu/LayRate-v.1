@@ -16,7 +16,7 @@ class EggLogsSseController extends Controller
         header('Connection: keep-alive');
         header('X-Accel-Buffering: no');
 
-        $maxRuntime = 60;
+        $maxRuntime = 10;
         $start = time();
 
         while (! connection_aborted() && (time() - $start) < $maxRuntime) {

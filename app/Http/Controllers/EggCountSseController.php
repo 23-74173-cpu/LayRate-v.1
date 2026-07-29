@@ -35,7 +35,7 @@ class EggCountSseController extends Controller
         header('Connection: keep-alive');
         header('X-Accel-Buffering: no');
 
-        $maxRuntime = 30;
+        $maxRuntime = 8;
         $start = time();
 
         while (! connection_aborted() && (time() - $start) < $maxRuntime) {
