@@ -259,18 +259,15 @@ class ForecastController extends Controller
             if ($scope === 'farm') {
                 $historical = $this->farmHistorical();
 
-                if (!$startDate) {
-                    Forecast::whereNull('cage_id')->whereNull('breed')
-                        ->where('forecast_date', now()->toDateString())->delete();
-                }
+                Forecast::whereNull('cage_id')->whereNull('breed')
+                    ->where('forecast_date', now()->toDateString())->delete();
 
                 $result = $this->generateForecast(null, 'ALL', null, $historical, $horizon, true, $startDate);
 
                 $successMessage = $startDate ? 'Single-day whole-farm forecast generated.' : 'Whole-farm forecast generated.';
-                $redirectParams = array_merge(
-                    ['scope' => 'farm', 'horizon' => $horizon],
-                    $startDate ? ['start_date' => $startDate] : []
-                );
+                $redirectParams = $startDate
+                    ? ['scope' => 'farm', 'horizon' => $horizon, 'start_date' => $startDate, 'month' => \Carbon\Carbon::parse($startDate)->month, 'year' => \Carbon\Carbon::parse($startDate)->year]
+                    : ['scope' => 'farm', 'horizon' => $horizon];
 
                 return $this->respondAfterGenerate($request, $redirectParams, $successMessage, $result);
             }
@@ -278,18 +275,15 @@ class ForecastController extends Controller
             if ($scope === 'breed' && $breed) {
                 $historical = $this->breedHistorical($breed);
 
-                if (!$startDate) {
-                    Forecast::whereNull('cage_id')->where('breed', $breed)
-                        ->where('forecast_date', now()->toDateString())->delete();
-                }
+                Forecast::whereNull('cage_id')->where('breed', $breed)
+                    ->where('forecast_date', now()->toDateString())->delete();
 
                 $result = $this->generateForecast(null, 'ALL', $breed, $historical, $horizon, true, $startDate);
 
                 $successMessage = $startDate ? "Single-day {$breed} forecast generated." : "{$breed} forecast generated.";
-                $redirectParams = array_merge(
-                    ['scope' => 'breed', 'breed' => $breed, 'horizon' => $horizon],
-                    $startDate ? ['start_date' => $startDate] : []
-                );
+                $redirectParams = $startDate
+                    ? ['scope' => 'breed', 'breed' => $breed, 'horizon' => $horizon, 'start_date' => $startDate, 'month' => \Carbon\Carbon::parse($startDate)->month, 'year' => \Carbon\Carbon::parse($startDate)->year]
+                    : ['scope' => 'breed', 'breed' => $breed, 'horizon' => $horizon];
 
                 return $this->respondAfterGenerate($request, $redirectParams, $successMessage, $result);
             }
@@ -298,23 +292,20 @@ class ForecastController extends Controller
 
             $historical = $this->cageHistorical($cageCode);
 
-            if (!$startDate) {
-                $forecastQuery = Forecast::whereNull('breed')
-                    ->where('forecast_date', now()->toDateString());
-                if ($cage) {
-                    $forecastQuery->where('cage_id', $cage->id)->delete();
-                } else {
-                    $forecastQuery->whereNull('cage_id')->delete();
-                }
+            $forecastQuery = Forecast::whereNull('breed')
+                ->where('forecast_date', now()->toDateString());
+            if ($cage) {
+                $forecastQuery->where('cage_id', $cage->id)->delete();
+            } else {
+                $forecastQuery->whereNull('cage_id')->delete();
             }
 
             $result = $this->generateForecast($cage, $cageCode, null, $historical, $horizon, true, $startDate);
 
             $successMessage = $startDate ? 'Single-day forecast generated.' : 'Forecast generated.';
-            $redirectParams = array_merge(
-                ['scope' => 'cage', 'cage' => $cageCode, 'horizon' => $horizon],
-                $startDate ? ['start_date' => $startDate] : []
-            );
+            $redirectParams = $startDate
+                ? ['scope' => 'cage', 'cage' => $cageCode, 'horizon' => $horizon, 'start_date' => $startDate, 'month' => \Carbon\Carbon::parse($startDate)->month, 'year' => \Carbon\Carbon::parse($startDate)->year]
+                : ['scope' => 'cage', 'cage' => $cageCode, 'horizon' => $horizon];
 
             return $this->respondAfterGenerate($request, $redirectParams, $successMessage, $result);
         } catch (ProcessFailedException $e) {

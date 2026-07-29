@@ -324,7 +324,7 @@
             });
         }
 
-        LayRateChart.create('forecastChart', {
+        const chart = LayRateChart.create('forecastChart', {
             type: 'line',
             data: {
                 labels: allLabels,
@@ -342,6 +342,9 @@
                 }
             }
         });
+        if (!chart) {
+            setChartError('Failed to render chart. Check console for details.');
+        }
     }
 
     function ensureForecastChart() {
