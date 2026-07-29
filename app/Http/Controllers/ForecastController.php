@@ -58,7 +58,7 @@ class ForecastController extends Controller
         $dataSufficiency = $this->checkForecastDataSufficiency($scope, $cageCode, $breed);
         $hasEnoughData = $dataSufficiency['has_enough'];
 
-        Log::debug('Forecast index page load', [
+        Log::info('Forecast index page load', [
             'scope' => $scope,
             'cage_code' => $cageCode,
             'breed' => $breed,
@@ -336,7 +336,7 @@ class ForecastController extends Controller
             $pythonBinary = $this->resolvePythonBinary();
             $scriptPath = base_path('forecast-api/import_forecast_input.py');
 
-            Log::debug('Forecast import (single-phase) starting', [
+            Log::info('Forecast import (single-phase) starting', [
                 'python' => $pythonBinary,
                 'script' => $scriptPath,
                 'file_path' => $fullPath,
@@ -362,7 +362,7 @@ class ForecastController extends Controller
             $process->setEnv($this->processEnv());
             $process->run();
 
-            Log::debug('Forecast import (single-phase) process result', [
+            Log::info('Forecast import (single-phase) process result', [
                 'exit_code' => $process->getExitCode(),
                 'stdout' => trim($process->getOutput()),
                 'stderr' => trim($process->getErrorOutput()),
@@ -456,7 +456,7 @@ class ForecastController extends Controller
             $pythonBinary = $this->resolvePythonBinary();
             $scriptPath   = base_path('forecast-api/import_forecast_input.py');
 
-            Log::debug('Forecast preview starting', [
+            Log::info('Forecast preview starting', [
                 'python' => $pythonBinary,
                 'script' => $scriptPath,
                 'temp_path' => $tempPath,
@@ -544,7 +544,7 @@ class ForecastController extends Controller
                 '--source-file', $sourceFile,
             ];
 
-            Log::debug('Forecast import confirm starting', [
+            Log::info('Forecast import confirm starting', [
                 'python' => $pythonBinary,
                 'script' => $scriptPath,
                 'real_path' => $realPath,
@@ -559,7 +559,7 @@ class ForecastController extends Controller
             $process->setEnv($this->processEnv());
             $process->run();
 
-            Log::debug('Forecast import confirm process result', [
+            Log::info('Forecast import confirm process result', [
                 'exit_code' => $process->getExitCode(),
                 'stdout' => trim($process->getOutput()),
                 'stderr' => trim($process->getErrorOutput()),
@@ -664,7 +664,7 @@ class ForecastController extends Controller
     {
         $result = $this->executePythonForecast($cageCode, $breed, $horizon, $this->collectManualParams(request()), $startDate);
 
-        Log::debug('Forecast generation result', [
+        Log::info('Forecast generation result', [
             'recommended_model' => $result['recommended_model'] ?? null,
             'metrics' => $result['metrics'] ?? [],
             'forecast_values' => array_slice(array_map(fn($f) => [
@@ -764,7 +764,7 @@ class ForecastController extends Controller
 
         $output = trim($process->getOutput());
 
-        Log::debug('Forecast runner output', [
+        Log::info('Forecast runner output', [
             'command' => $command,
             'scope' => request()->get('scope', 'cage'),
             'cage' => request()->get('cage'),
@@ -807,7 +807,7 @@ class ForecastController extends Controller
             default                        => (int) $query->distinct()->count('date'),
         };
 
-        Log::debug('Forecast data sufficiency check', [
+        Log::info('Forecast data sufficiency check', [
             'scope' => $scope,
             'cage_code' => $cageCode,
             'breed' => $breed,
