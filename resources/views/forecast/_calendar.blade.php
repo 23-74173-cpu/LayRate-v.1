@@ -341,9 +341,20 @@
         // Wire loading overlay for specific-date forecast form
         var dayForm = document.getElementById('forecastDayForm');
         var loadingOverlay = document.getElementById('forecastLoadingOverlay');
+        var dayBtn = dayForm ? dayForm.querySelector('button[type="submit"]') : null;
+        var dayBtnText = dayBtn ? dayBtn.querySelector('span') : null;
+        var progressBar = document.getElementById('forecastProgressBar');
+        var progressText = document.getElementById('forecastProgressText');
+        var statusText = document.getElementById('forecastStatusText');
+
         if (dayForm && loadingOverlay) {
             dayForm.addEventListener('submit', function() {
                 loadingOverlay.style.display = 'flex';
+                if (dayBtn) dayBtn.disabled = true;
+                if (dayBtnText) dayBtnText.textContent = 'Generating...';
+                if (progressBar) progressBar.style.width = '50%';
+                if (progressText) progressText.textContent = '50%';
+                if (statusText) statusText.textContent = 'Generating single-day forecast...';
             });
         }
     })();

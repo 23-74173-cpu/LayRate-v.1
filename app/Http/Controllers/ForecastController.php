@@ -199,6 +199,14 @@ class ForecastController extends Controller
         $horizon   = (int) $request->get('horizon', 7);
         $breed     = $request->get('breed');
 
+        Log::info('Forecast generate request', [
+            'scope' => $scope,
+            'cage' => $request->get('cage'),
+            'breed' => $breed,
+            'horizon' => $horizon,
+            'start_date' => $request->input('start_date'),
+        ]);
+
         $cageCode = $request->get('cage', DB::table('forecast_input_records')
             ->whereNotNull('cage_code')
             ->whereRaw("TRIM(cage_code) != ''")
