@@ -58,6 +58,18 @@ class ForecastController extends Controller
         $dataSufficiency = $this->checkForecastDataSufficiency($scope, $cageCode, $breed);
         $hasEnoughData = $dataSufficiency['has_enough'];
 
+        Log::debug('Forecast index page load', [
+            'scope' => $scope,
+            'cage_code' => $cageCode,
+            'breed' => $breed,
+            'has_enough_data' => $hasEnoughData,
+            'forecast_data_days' => $dataSufficiency['current_count'],
+            'all_cages_count' => $allCages->count(),
+            'all_cages' => $allCages->toArray(),
+            'all_breeds' => $allBreeds->toArray(),
+            'horizon' => $horizon,
+        ]);
+
         if ($scope === 'farm') {
             $historical = $this->farmHistorical();
             $forecasts  = Forecast::where('forecast_date', now()->toDateString())
@@ -324,6 +336,15 @@ class ForecastController extends Controller
             $pythonBinary = $this->resolvePythonBinary();
             $scriptPath = base_path('forecast-api/import_forecast_input.py');
 
+            Log::debug('Forecast import (single-phase) starting', [
+                'python' => $pythonBinary,
+                'script' => $scriptPath,
+                'file_path' => $fullPath,
+                'python_exists' => file_exists($pythonBinary),
+                'script_exists' => file_exists($scriptPath),
+                'file_exists' => file_exists($fullPath),
+            ]);
+
             if (!file_exists($scriptPath)) {
                 throw new RuntimeException('Forecast import script not found at: ' . $scriptPath);
             }
@@ -340,6 +361,13 @@ class ForecastController extends Controller
             $process->setTimeout(300);
             $process->setEnv($this->processEnv());
             $process->run();
+
+            Log::debug('Forecast import (single-phase) process result', [
+                'exit_code' => $process->getExitCode(),
+                'stdout' => trim($process->getOutput()),
+                'stderr' => trim($process->getErrorOutput()),
+                'successful' => $process->isSuccessful(),
+            ]);
 
             if (!$process->isSuccessful()) {
                 $errorOutput = trim($process->getErrorOutput());
@@ -428,6 +456,14 @@ class ForecastController extends Controller
             $pythonBinary = $this->resolvePythonBinary();
             $scriptPath   = base_path('forecast-api/import_forecast_input.py');
 
+            Log::debug('Forecast preview starting', [
+                'python' => $pythonBinary,
+                'script' => $scriptPath,
+                'temp_path' => $tempPath,
+                'python_exists' => file_exists($pythonBinary),
+                'script_exists' => file_exists($scriptPath),
+            ]);
+
             if (!file_exists($scriptPath)) {
                 throw new RuntimeException('Forecast import script not found.');
             }
@@ -508,10 +544,27 @@ class ForecastController extends Controller
                 '--source-file', $sourceFile,
             ];
 
+            Log::debug('Forecast import confirm starting', [
+                'python' => $pythonBinary,
+                'script' => $scriptPath,
+                'real_path' => $realPath,
+                'source_file' => $sourceFile,
+                'python_exists' => file_exists($pythonBinary),
+                'script_exists' => file_exists($scriptPath),
+                'file_exists' => file_exists($realPath),
+            ]);
+
             $process = new Process($command, base_path());
             $process->setTimeout(300);
             $process->setEnv($this->processEnv());
             $process->run();
+
+            Log::debug('Forecast import confirm process result', [
+                'exit_code' => $process->getExitCode(),
+                'stdout' => trim($process->getOutput()),
+                'stderr' => trim($process->getErrorOutput()),
+                'successful' => $process->isSuccessful(),
+            ]);
 
             // Clean up temp file regardless of outcome.
             @unlink($realPath);
@@ -742,6 +795,7 @@ class ForecastController extends Controller
      */
     private function checkForecastDataSufficiency(string $scope, ?string $cageCode = null, ?string $breed = null): array
     {
+        $fullCount = DB::table('forecast_input_records')->count();
         $query = DB::table('forecast_input_records')
             ->whereNotNull('date')
             ->whereNotNull('cage_code')
@@ -752,6 +806,16 @@ class ForecastController extends Controller
             $scope === 'breed' && $breed   => (int) $query->where('breed', $breed)->count(),
             default                        => (int) $query->distinct()->count('date'),
         };
+
+        Log::debug('Forecast data sufficiency check', [
+            'scope' => $scope,
+            'cage_code' => $cageCode,
+            'breed' => $breed,
+            'current_count' => $currentCount,
+            'threshold' => 90,
+            'has_enough' => $currentCount >= 90,
+            'forecast_input_records_total' => $fullCount,
+        ]);
 
         return [
             'has_enough'    => $currentCount >= 90,
