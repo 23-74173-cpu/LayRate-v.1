@@ -11,7 +11,7 @@
     $endOffset = (7 - ($totalCells % 7)) % 7;
     $weeksInMonth = ($totalCells + $endOffset) / 7;
 
-    $forecastMap = collect($forecasts ?? [])->keyBy(fn($f) => $f->target_date->format('Y-m-d'));
+    $forecastMap = collect($forecasts ?? [])->keyBy(fn($f) => is_object($f->target_date) ? $f->target_date->format('Y-m-d') : $f->target_date);
     $weekdays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
     $months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 

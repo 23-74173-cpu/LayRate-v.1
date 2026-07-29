@@ -62,6 +62,7 @@ class ForecastController extends Controller
             $historical = $this->farmHistorical();
             $forecasts  = Forecast::where('forecast_date', now()->toDateString())
                 ->whereNull('cage_id')->whereNull('breed')
+                ->whereNotNull('target_date')
                 ->orderBy('target_date')->limit($horizon)->get();
 
             $viewData = compact('scope', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate')
@@ -83,6 +84,7 @@ class ForecastController extends Controller
             $historical = $this->breedHistorical($breed);
             $forecasts  = Forecast::where('forecast_date', now()->toDateString())
                 ->whereNull('cage_id')->where('breed', $breed)
+                ->whereNotNull('target_date')
                 ->orderBy('target_date')->limit($horizon)->get();
 
             $viewData = compact('scope', 'cageCode', 'breed', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate')
@@ -1140,11 +1142,12 @@ class ForecastController extends Controller
         } else {
             $cage = $cageCode ? Cage::where('cage_code', $cageCode)->first() : null;
             $historical = $this->cageHistorical($cageCode ?? '');
-            $forecasts = Forecast::where('forecast_date', now()->toDateString())
-                ->when($cage, fn($q) => $q->where('cage_id', $cage->id))
-                ->when(!$cage, fn($q) => $q->whereNull('cage_id'))
-                ->whereNull('breed')
-                ->orderBy('target_date')->limit($horizon)->get();
+        $forecasts = Forecast::where('forecast_date', now()->toDateString())
+            ->when($cage, fn($q) => $q->where('cage_id', $cage->id))
+            ->when(!$cage, fn($q) => $q->whereNull('cage_id'))
+            ->whereNull('breed')
+            ->whereNotNull('target_date')
+            ->orderBy('target_date')->limit($horizon)->get();
         }
 
         if ($forecasts->isEmpty()) {

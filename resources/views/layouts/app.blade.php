@@ -392,6 +392,7 @@
         var toggleBtn = document.getElementById('sidebar-toggle');
         var arrowBtn = document.getElementById('sidebar-arrow');
         var backdrop = document.getElementById('sidebar-backdrop');
+        if (!sidebar) return;
         var navLinks = sidebar.querySelectorAll('.nav-link');
         var STORAGE_KEY = 'sidebar_state';
 
