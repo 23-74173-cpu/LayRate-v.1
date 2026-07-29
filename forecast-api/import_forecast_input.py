@@ -14,6 +14,24 @@ import pandas as pd
 from sqlalchemy import create_engine, text
 
 
+def load_env():
+    """Load environment variables from .env for standalone debugging."""
+    env_path = Path(__file__).resolve().parent.parent / ".env"
+    if env_path.exists():
+        with open(env_path) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, _, val = line.partition("=")
+                key = key.strip()
+                val = val.strip().strip("\"'")
+                if not os.environ.get(key):
+                    os.environ[key] = val
+
+
+load_env()
+
 REQUIRED_COLUMNS = {"Date", "Cage_Code"}
 
 INSERT_COLUMNS = {
@@ -70,10 +88,8 @@ def parse_forecast_file(file_path: str):
     - date_range: dict with start/end or None
     - missing_columns: list of Excel column names that are entirely absent from the file
     """
-    df_raw = pd.read_excel(file_path, engine="openpyxl", dtype=str)
-    raw_row_count = len(df_raw)
-
     df = pd.read_excel(file_path, engine="openpyxl")
+    raw_row_count = len(df)
     df.columns = [str(c).strip() for c in df.columns]
 
     file_cols = set(df.columns)

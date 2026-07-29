@@ -778,10 +778,12 @@ class ForecastController extends Controller
             return $configured;
         }
 
-        // Look for a project-level virtual environment.
+        // Look for a project-level virtual environment (both .venv/ and venv/).
         $candidates = [
             base_path('forecast-api/.venv/Scripts/python.exe'),
             base_path('forecast-api/.venv/bin/python'),
+            base_path('forecast-api/venv/Scripts/python.exe'),
+            base_path('forecast-api/venv/bin/python'),
             base_path('.venv/Scripts/python.exe'),
             base_path('.venv/bin/python'),
         ];
@@ -982,6 +984,7 @@ class ForecastController extends Controller
             $historical = $this->farmHistorical();
             $forecasts = Forecast::where('forecast_date', now()->toDateString())
                 ->whereNull('cage_id')->whereNull('breed')
+                ->whereNotNull('target_date')
                 ->orderBy('target_date')->limit($horizon)->get();
 
             return compact('scope', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate')
@@ -992,6 +995,7 @@ class ForecastController extends Controller
             $historical = $this->breedHistorical($breed);
             $forecasts = Forecast::where('forecast_date', now()->toDateString())
                 ->whereNull('cage_id')->where('breed', $breed)
+                ->whereNotNull('target_date')
                 ->orderBy('target_date')->limit($horizon)->get();
 
             return compact('scope', 'cageCode', 'breed', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate')
@@ -1005,6 +1009,7 @@ class ForecastController extends Controller
             ->when($cage, fn($q) => $q->where('cage_id', $cage->id))
             ->when(!$cage, fn($q) => $q->whereNull('cage_id'))
             ->whereNull('breed')
+            ->whereNotNull('target_date')
             ->orderBy('target_date')->limit($horizon)->get();
 
         return compact('scope', 'cage', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate')
