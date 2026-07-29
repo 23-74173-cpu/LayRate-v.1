@@ -675,6 +675,30 @@ class FeedBatchManagementTest extends TestCase
         $this->assertContainsEquals(33.34, $distributed->pluck('feed_consumed_kg')->map(fn($v) => round($v, 2))->all());
     }
 
+    public function test_farm_entry_omitting_unit_cost_falls_back_to_batch_cost(): void
+    {
+        $this->isolateWholeFarmTest();
+        $this->createCageWithHens('CAGE-WF', 50);
+
+        $batch = FeedBatch::create([
+            'crude_protein' => 17.0,
+            'unit_cost' => 32.50,
+            'date_received' => today(),
+        ]);
+
+        $this->actingAs($this->user)->post('/feed/farm-entry', [
+            'feed_batch_id' => $batch->id,
+            'log_date' => today()->toDateString(),
+            'total_kg' => 100.0,
+        ]);
+
+        $entry = FarmFeedEntry::first();
+        $this->assertNotNull($entry);
+        $this->assertEquals(32.50, $entry->unit_cost);
+        $this->assertEquals(100.0, $entry->total_kg);
+        $this->assertEquals($batch->id, $entry->feed_batch_id);
+    }
+
     public function test_zero_hen_cage_is_excluded_from_distribution(): void
     {
         $this->isolateWholeFarmTest();

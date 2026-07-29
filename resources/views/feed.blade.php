@@ -284,10 +284,6 @@
             <x-input-error name="total_kg" />
             <p id="farmExceedsWarning" class="hidden text-xs text-[#9B1C24] mb-4"></p>
 
-            <label class="block text-sm text-[#333333] mb-1.5">Unit Cost (per kg)</label>
-            <input name="unit_cost" type="number" step="0.01" min="0" value="{{ old('unit_cost') }}"
-                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-5 focus:outline-none focus:border-[#002D5E]">
-
             <p class="text-xs text-[#6B7280] mb-5">
                 This will proportionally split the total across active cages by hen count. Distributed rows appear as "estimated" in the consumption log.
             </p>
@@ -323,8 +319,7 @@
         {{ $editFarmEntry->feed_batch_id }},
         '{{ $editFarmEntry->log_date->format('Y-m-d') }}',
         '{{ $editFarmEntry->log_time?->format('H:i') ?? '' }}',
-        {{ $editFarmEntry->total_kg }},
-        {{ $editFarmEntry->unit_cost ?? 'null' }}
+        {{ $editFarmEntry->total_kg }}
     );
 </x-modal-reopen>
 @endif
@@ -458,7 +453,7 @@ function closeConsumptionModal() {
     document.getElementById('consumptionModal').classList.remove('flex');
 }
 
-function openFarmEntryModal(entryId, batchId, date, time, totalKg, unitCost) {
+function openFarmEntryModal(entryId, batchId, date, time, totalKg) {
     var title = entryId ? 'Edit Whole-Farm Feeding' : 'Log Whole-Farm Feeding';
     document.getElementById('farmEntryModalTitle').textContent = title;
 
@@ -481,8 +476,6 @@ function openFarmEntryModal(entryId, batchId, date, time, totalKg, unitCost) {
     if (farmTime) farmTime.value = time || '';
     var farmKg = document.querySelector('#farmEntryModal input[name="total_kg"]');
     if (farmKg) farmKg.value = totalKg || '';
-    var farmCost = document.querySelector('#farmEntryModal input[name="unit_cost"]');
-    if (farmCost) farmCost.value = unitCost || '';
 
     document.getElementById('farmEntryModal').classList.remove('hidden');
     document.getElementById('farmEntryModal').classList.add('flex');
@@ -516,21 +509,6 @@ function closeFarmEntryModal() {
     bindFeedAjax();
     document.addEventListener('turbo:frame-load', bindFeedAjax);
     document.addEventListener('turbo:load', bindFeedAjax);
-
-    // Auto-fill unit cost when Feed Batch is selected in the Whole-Farm Entry modal
-    var farmBatchSelect = document.querySelector('#farmEntryModal select[name="feed_batch_id"]');
-    var farmCostInput = document.querySelector('#farmEntryModal input[name="unit_cost"]');
-    if (farmBatchSelect && farmCostInput && !farmBatchSelect.dataset.costListenerBound) {
-        farmBatchSelect.dataset.costListenerBound = 'true';
-        farmBatchSelect.addEventListener('change', function() {
-            var opt = farmBatchSelect.options[farmBatchSelect.selectedIndex];
-            var cost = opt && opt.dataset.unitCost !== '' && opt.dataset.unitCost !== undefined
-                ? parseFloat(opt.dataset.unitCost) : '';
-            if (!farmCostInput.value || farmCostInput.value === '0') {
-                farmCostInput.value = isNaN(cost) ? '' : cost;
-            }
-        });
-    }
 })();
 
 function deleteBatch(id) {

@@ -266,7 +266,7 @@
              tab, so they're full-size primary buttons up top, not small/muted
              secondary ones a barn worker could miss on a tablet. --}}
         <div class="flex flex-wrap items-center justify-end gap-3 mb-4">
-            <x-button onclick="openFarmEntryModal(null, null, '{{ now()->toDateString() }}', null, null, null)">
+            <x-button onclick="openFarmEntryModal(null, null, '{{ now()->toDateString() }}', null, null)">
                 <i data-lucide="scale" class="w-4 h-4"></i> Log Whole-Farm Feeding
             </x-button>
             <x-button onclick="openConsumptionModal(null, null, '{{ now()->toDateString() }}', null, null, null)">
@@ -313,7 +313,7 @@
                             <div class="flex items-center gap-1">
                                 @if($isDistributed)
                                     <x-icon-button icon="pencil" label="Edit whole-farm entry" color="neutral"
-                                        onclick="openFarmEntryModal({{ $log->farm_feed_entry_id }}, {{ $log->feed_batch_id }}, '{{ $log->log_date->format('Y-m-d') }}', '{{ $log->log_time?->format('H:i') ?? '' }}', {{ $log->farmFeedEntry?->total_kg ?? 'null' }}, {{ $log->farmFeedEntry?->unit_cost ?? 'null' }})" />
+                                        onclick="openFarmEntryModal({{ $log->farm_feed_entry_id }}, {{ $log->feed_batch_id }}, '{{ $log->log_date->format('Y-m-d') }}', '{{ $log->log_time?->format('H:i') ?? '' }}', {{ $log->farmFeedEntry?->total_kg ?? 'null' }})"  />
                                 @else
                                     <x-icon-button icon="pencil" label="Edit consumption" color="neutral"
                                         onclick="openConsumptionModal({{ $log->cage_id }}, {{ $log->feed_batch_id }}, '{{ $log->log_date->format('Y-m-d') }}', '{{ $log->log_time?->format('H:i') ?? '' }}', {{ $log->feed_consumed_kg }}, {{ $log->id }})" />
@@ -483,7 +483,6 @@
                     opt.value = b.id;
                     opt.textContent = b.code;
                     opt.dataset.remaining = b.remaining === null ? '' : b.remaining;
-                    opt.dataset.unitCost = b.unit_cost === null ? '' : b.unit_cost;
                     farmBatchSelect.appendChild(opt);
                 });
             }
