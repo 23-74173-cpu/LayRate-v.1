@@ -26,6 +26,9 @@ class DatabaseBackup extends Command
         if (! File::isDirectory($backupDir)) {
             File::makeDirectory($backupDir, 0775, true, true);
         }
+        // Ensure www-data (web server) can write
+        @chmod($backupDir, 0775);
+        @chgrp($backupDir, 'www-data');
 
         $timestamp = now()->format('Y-m-d_His');
         $filename = "layrate_backup_{$timestamp}.sql";
