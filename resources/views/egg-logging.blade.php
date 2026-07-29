@@ -744,6 +744,29 @@
         });
     }
 
+    // ── Close SSE before frame content is replaced (tab switch) ──
+    if (!window.__eggLoggingSseGuard) {
+        window.__eggLoggingSseGuard = true;
+        document.addEventListener('turbo:before-frame-render', function(e) {
+            if (!e.target || e.target.id !== 'egg-content') return;
+            if (window.__eggCountSource) {
+                window.__eggCountSource.close();
+                window.__eggCountSource = null;
+            }
+        });
+    }
+
+    // ── Close SSE before full page navigation (sidebar, etc.) ──
+    if (!window.__eggLoggingNavGuard) {
+        window.__eggLoggingNavGuard = true;
+        document.addEventListener('turbo:before-render', function() {
+            if (window.__eggCountSource) {
+                window.__eggCountSource.close();
+                window.__eggCountSource = null;
+            }
+        });
+    }
+
     // ── Live SSE egg count for CAGE-T ───────────
     var cageTCode = 'CAGE-T';
 
@@ -780,17 +803,19 @@
         });
     }
 
-    var eggCountSource = null;
+    window.__eggCountSource = null;
 
     function connectEggCountSSE() {
-        if (eggCountSource) {
-            eggCountSource.close();
+        if (!document.getElementById('todayTotalEggs')) return;
+
+        if (window.__eggCountSource) {
+            window.__eggCountSource.close();
         }
 
         var url = '{{ route("eggs.logging.live-count") }}?cage_code=' + cageTCode;
-        eggCountSource = new EventSource(url);
+        window.__eggCountSource = new EventSource(url);
 
-        eggCountSource.addEventListener('count', function(e) {
+        window.__eggCountSource.addEventListener('count', function(e) {
             try {
                 var data = JSON.parse(e.data);
                 if (data.counts) {
@@ -805,7 +830,7 @@
             }
         });
 
-        eggCountSource.addEventListener('cage_stats', function(e) {
+        window.__eggCountSource.addEventListener('cage_stats', function(e) {
             try {
                 var cageStats = JSON.parse(e.data);
                 var grandTotal = 0;
@@ -836,15 +861,19 @@
             } catch(err) {}
         });
 
-        eggCountSource.onerror = function() {
-            if (eggCountSource && eggCountSource.readyState === EventSource.CLOSED) {
-                setTimeout(connectEggCountSSE, 3000);
+        window.__eggCountSource.onerror = function() {
+            if (window.__eggCountSource && window.__eggCountSource.readyState === EventSource.CLOSED) {
+                setTimeout(function() {
+                    if (document.getElementById('todayTotalEggs')) {
+                        connectEggCountSSE();
+                    }
+                }, 3000);
             }
         };
     }
 
     document.addEventListener('turbo:load', function() {
-        if (eggCountSource) eggCountSource.close();
+        if (window.__eggCountSource) window.__eggCountSource.close();
         setTimeout(connectEggCountSSE, 500);
     });
 

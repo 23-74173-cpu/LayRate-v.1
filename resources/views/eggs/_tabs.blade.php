@@ -13,6 +13,7 @@
                     ($isActive ? 'border-[#002D5E] text-[#002D5E]' : 'border-transparent text-[#6B7280] hover:text-[#333]');
             @endphp
             <a href="{{ route($tab['route']) }}" class="{{ $classes }}"
+               data-turbo-frame="egg-content"
                data-tab-key="{{ $key }}" data-subtitle="{{ $tab['subtitle'] }}">
                 <i data-lucide="{{ $tab['icon'] }}" class="w-4 h-4 inline mr-1"></i>
                 {{ $tab['label'] }}
@@ -53,11 +54,11 @@
 
         links.forEach(function(link) {
             link.addEventListener('click', function(e) {
-                e.preventDefault();
-                if (window.__eggActiveTab === this.getAttribute('href')) return;
+                if (window.__eggActiveTab === this.getAttribute('href')) {
+                    e.preventDefault();
+                    return;
+                }
                 window.__eggActiveTab = this.getAttribute('href');
-
-                history.replaceState({}, '', this.getAttribute('href'));
 
                 links.forEach(function(a) {
                     a.classList.remove('border-[#002D5E]', 'text-[#002D5E]');
@@ -69,10 +70,7 @@
                 var subtitleEl = document.getElementById('egg-header-subtitle');
                 if (subtitleEl) subtitleEl.textContent = this.dataset.subtitle;
 
-                var frame = document.querySelector('turbo-frame#egg-content');
-                if (frame) {
-                    frame.setAttribute('src', this.getAttribute('href'));
-                }
+                history.replaceState({}, '', this.getAttribute('href'));
             });
         });
 

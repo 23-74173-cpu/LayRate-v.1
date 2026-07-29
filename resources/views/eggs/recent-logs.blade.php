@@ -129,6 +129,29 @@ function editComputeHdep() {
     el.style.color = eggs > hens ? '#9b1c24' : '#1f1f1f';
 }
 
+// ── Close SSE before frame content is replaced (tab switch) ──
+if (!window.__recentLogsSseGuard) {
+    window.__recentLogsSseGuard = true;
+    document.addEventListener('turbo:before-frame-render', function(e) {
+        if (!e.target || e.target.id !== 'egg-content') return;
+        if (window.__logsSource) {
+            window.__logsSource.close();
+            window.__logsSource = null;
+        }
+    });
+}
+
+// ── Close SSE before full page navigation (sidebar, etc.) ──
+if (!window.__recentLogsNavGuard) {
+    window.__recentLogsNavGuard = true;
+    document.addEventListener('turbo:before-render', function() {
+        if (window.__logsSource) {
+            window.__logsSource.close();
+            window.__logsSource = null;
+        }
+    });
+}
+
 (function() {
     if (window.__recentLogsBound) return;
     window.__recentLogsBound = true;
@@ -139,14 +162,16 @@ function editComputeHdep() {
         }
     });
 
-    var logsSource = null;
+    window.__logsSource = null;
     var lastKnownId = 0;
 
     function connectLogsSSE() {
-        if (logsSource) logsSource.close();
-        logsSource = new EventSource('/eggs/logging/live-logs?since=' + lastKnownId);
+        if (!document.querySelector('turbo-frame#egg-logs-list')) return;
 
-        logsSource.addEventListener('log_update', function(e) {
+        if (window.__logsSource) window.__logsSource.close();
+        window.__logsSource = new EventSource('/eggs/logging/live-logs?since=' + lastKnownId);
+
+        window.__logsSource.addEventListener('log_update', function(e) {
             try {
                 var data = JSON.parse(e.data);
                 if (data.latest_id > lastKnownId) {
@@ -162,15 +187,19 @@ function editComputeHdep() {
             } catch(err) {}
         });
 
-        logsSource.onerror = function() {
-            if (logsSource && logsSource.readyState === EventSource.CLOSED) {
-                setTimeout(connectLogsSSE, 3000);
+        window.__logsSource.onerror = function() {
+            if (window.__logsSource && window.__logsSource.readyState === EventSource.CLOSED) {
+                setTimeout(function() {
+                    if (document.querySelector('turbo-frame#egg-logs-list')) {
+                        connectLogsSSE();
+                    }
+                }, 3000);
             }
         };
     }
 
     document.addEventListener('turbo:load', function() {
-        if (logsSource) logsSource.close();
+        if (window.__logsSource) window.__logsSource.close();
         setTimeout(connectLogsSSE, 500);
     });
 
