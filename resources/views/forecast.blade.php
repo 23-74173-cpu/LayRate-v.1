@@ -1063,6 +1063,9 @@
         if (e.target.id === 'forecast-workspace') {
             initForecastLoading();
         }
+        if (e.target.id === 'production-calendar') {
+            if (window.lucide) lucide.createIcons();
+        }
     });
 
     // ── Prevent unnecessary frame navigation when clicking the already-active scope ──

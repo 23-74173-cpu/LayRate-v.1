@@ -272,90 +272,91 @@
 <script>
     if (window.lucide) lucide.createIcons();
 
-    (function() {
+    function parseLocalDate(dateString) {
+        const [y, m, d] = dateString.split('-').map(Number);
+        return new Date(y, m - 1, d);
+    }
+
+    function formatAlertDate(dateString) {
+        const date = parseLocalDate(dateString);
+        return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    }
+
+    function closeForecastModal() {
+        const modal = document.getElementById('forecastDayModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    window.openForecastDayModal = function(dateString) {
         const modal = document.getElementById('forecastDayModal');
         const dateDisplay = document.getElementById('forecastDayModalDate');
         const startInput = document.getElementById('forecastDayModalStartDate');
-        const closeBtn = document.getElementById('closeForecastDayModal');
-        const cancelBtn = document.getElementById('cancelForecastDayModal');
+        if (!modal || !dateDisplay || !startInput) return;
+        startInput.value = dateString;
+        dateDisplay.textContent = formatAlertDate(dateString);
+        modal.style.display = 'flex';
+        if (window.lucide) lucide.createIcons();
+    };
 
-        function closeModal() {
-            if (modal) modal.style.display = 'none';
+    window.handleForecastDayClick = function(dateString, isSelectable) {
+        if (isSelectable) {
+            window.openForecastDayModal(dateString);
+            return;
         }
 
-        function parseLocalDate(dateString) {
-            const [y, m, d] = dateString.split('-').map(Number);
-            return new Date(y, m - 1, d);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const maxDate = new Date(today);
+        maxDate.setDate(today.getDate() + 30);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+
+        const clicked = parseLocalDate(dateString);
+        let message = '';
+
+        if (clicked < tomorrow) {
+            message = 'Forecasting is only available for future dates. Please select a date starting from tomorrow.';
+        } else if (clicked > maxDate) {
+            message = 'Custom forecasts can only be generated up to 30 days from today (' +
+                      maxDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) +
+                      '). Please select a date within this range.';
+        } else {
+            message = 'This date cannot be forecast. Please select a date between tomorrow and 30 days from today.';
         }
 
-        function formatAlertDate(dateString) {
-            const date = parseLocalDate(dateString);
-            return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+        showNotification(message, 'warning');
+    };
+
+    // Close modal on backdrop click — use document delegation so it works
+    // even after the frame content is replaced (scripts don't re-execute).
+    document.addEventListener('click', function(e) {
+        const modal = document.getElementById('forecastDayModal');
+        if (!modal) return;
+        if (e.target.closest('#closeForecastDayModal, #cancelForecastDayModal')) {
+            modal.style.display = 'none';
+            return;
         }
-
-        window.openForecastDayModal = function(dateString) {
-            if (!modal || !dateDisplay || !startInput) return;
-            startInput.value = dateString;
-            dateDisplay.textContent = formatAlertDate(dateString);
-            modal.style.display = 'flex';
-            if (window.lucide) lucide.createIcons();
-        };
-
-        window.handleForecastDayClick = function(dateString, isSelectable) {
-            if (isSelectable) {
-                window.openForecastDayModal(dateString);
-                return;
-            }
-
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const maxDate = new Date(today);
-            maxDate.setDate(today.getDate() + 30);
-            const tomorrow = new Date(today);
-            tomorrow.setDate(today.getDate() + 1);
-
-            const clicked = parseLocalDate(dateString);
-            let message = '';
-
-            if (clicked < tomorrow) {
-                message = 'Forecasting is only available for future dates. Please select a date starting from tomorrow.';
-            } else if (clicked > maxDate) {
-                message = 'Custom forecasts can only be generated up to 30 days from today (' +
-                          maxDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) +
-                          '). Please select a date within this range.';
-            } else {
-                message = 'This date cannot be forecast. Please select a date between tomorrow and 30 days from today.';
-            }
-
-            showNotification(message, 'warning');
-        };
-
-        if (closeBtn) closeBtn.addEventListener('click', closeModal);
-        if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
-        if (modal) {
-            modal.addEventListener('click', function(e) {
-                if (e.target === modal) closeModal();
-            });
+        if (e.target === modal) {
+            modal.style.display = 'none';
         }
+    });
 
-        // Wire loading overlay for specific-date forecast form
-        var dayForm = document.getElementById('forecastDayForm');
-        var loadingOverlay = document.getElementById('forecastLoadingOverlay');
-        var dayBtn = dayForm ? dayForm.querySelector('button[type="submit"]') : null;
-        var dayBtnText = dayBtn ? dayBtn.querySelector('span') : null;
-        var progressBar = document.getElementById('forecastProgressBar');
-        var progressText = document.getElementById('forecastProgressText');
-        var statusText = document.getElementById('forecastStatusText');
-
-        if (dayForm && loadingOverlay) {
-            dayForm.addEventListener('submit', function() {
-                loadingOverlay.style.display = 'flex';
-                if (dayBtn) dayBtn.disabled = true;
-                if (dayBtnText) dayBtnText.textContent = 'Generating...';
-                if (progressBar) progressBar.style.width = '50%';
-                if (progressText) progressText.textContent = '50%';
-                if (statusText) statusText.textContent = 'Generating single-day forecast...';
-            });
-        }
-    })();
+    // Wire loading overlay for specific-date forecast form — use document
+    // delegation so it survives Turbo Frame content replacement.
+    document.addEventListener('submit', function(e) {
+        if (e.target.id !== 'forecastDayForm') return;
+        const overlay = document.getElementById('forecastLoadingOverlay');
+        if (!overlay) return;
+        overlay.style.display = 'flex';
+        const dayBtn = e.target.querySelector('button[type="submit"]');
+        if (dayBtn) dayBtn.disabled = true;
+        const btnSpan = dayBtn ? dayBtn.querySelector('span') : null;
+        if (btnSpan) btnSpan.textContent = 'Generating...';
+        const progressBar = document.getElementById('forecastProgressBar');
+        const progressText = document.getElementById('forecastProgressText');
+        const statusText = document.getElementById('forecastStatusText');
+        if (progressBar) progressBar.style.width = '50%';
+        if (progressText) progressText.textContent = '50%';
+        if (statusText) statusText.textContent = 'Generating single-day forecast...';
+    });
 </script>

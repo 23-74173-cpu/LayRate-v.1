@@ -349,7 +349,7 @@
 
     function ensureForecastChart() {
         if (typeof Chart !== 'undefined') {
-            initForecastChart();
+            setTimeout(initForecastChart, 120);
         } else {
             console.warn('[ForecastChart] Chart.js not available, polling...');
             const checkChart = setInterval(function() {
