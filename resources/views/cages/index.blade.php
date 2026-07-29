@@ -1726,8 +1726,20 @@ function updateSaveButton() {
     if (dot) dot.classList.toggle('hidden', !dirty);
 }
 
+// Suppress beforeunload for intentional form submissions (add/edit cage forms,
+// which use data-turbo="false" full-page POSTs unrelated to canvas layout state).
+['addCageForm', 'editCageForm'].forEach(function(id) {
+    var form = document.getElementById(id);
+    if (form) {
+        form.addEventListener('submit', function() {
+            window.__intentionalFormSubmit = true;
+        });
+    }
+});
+
 // Warn before leaving with unsaved canvas changes
 window.addEventListener('beforeunload', function(e) {
+    if (window.__intentionalFormSubmit) return;
     if (hasPendingChanges()) {
         e.preventDefault();
         e.returnValue = '';
