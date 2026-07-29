@@ -50,7 +50,6 @@
     <script>
     (function() {
         var links = document.querySelectorAll('nav a[data-tab-key]');
-        var frame = document.querySelector('turbo-frame#egg-content');
 
         links.forEach(function(link) {
             link.addEventListener('click', function(e) {
@@ -70,6 +69,7 @@
                 var subtitleEl = document.getElementById('egg-header-subtitle');
                 if (subtitleEl) subtitleEl.textContent = this.dataset.subtitle;
 
+                var frame = document.querySelector('turbo-frame#egg-content');
                 if (frame) {
                     frame.setAttribute('src', this.getAttribute('href'));
                 }
