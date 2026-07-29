@@ -676,9 +676,18 @@ window.LayRateChart = {
     create(id, config, _retryCount) {
         _retryCount = _retryCount || 0;
         this.destroy(id);
-        this._configs[id] = config;
         const canvas = document.getElementById(id);
         if (!canvas) return null;
+        // Fallback: Chart.js's own global registry may still hold a live instance for this
+        // canvas even after LayRateChart.destroy() above was a no-op (because the primary
+        // destroy's inst.destroy() threw and was silently caught, leaving _instances[id]
+        // deleted but Chart.instances intact). Check directly via Chart.getChart() so we
+        // don't rely on LayRateChart's bookkeeping.
+        const orphaned = typeof Chart !== 'undefined' && Chart.getChart(canvas);
+        if (orphaned) {
+            try { orphaned.destroy(); } catch (e) { /* already gone */ }
+        }
+        this._configs[id] = config;
         try {
             const instance = new Chart(canvas, config);
             this._instances[id] = instance;
@@ -808,7 +817,9 @@ window.LayRateChart = {
     destroy(id) {
         const inst = this._instances[id];
         if (inst) {
-            try { inst.destroy(); } catch (e) {}
+            try { inst.destroy(); } catch (e) {
+                console.warn('[LayRateChart] Chart.js native destroy() threw for "' + id + '":', e);
+            }
             delete this._instances[id];
         }
     },

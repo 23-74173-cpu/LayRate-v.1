@@ -28,7 +28,7 @@ class EggCountSseController extends Controller
         $lastCounts = [];
         $lastCageStats = null;
 
-        $allSlotIds = CageSlot::pluck('id', 'cage_id');
+        $allSlotIds = CageSlot::pluck('cage_id', 'id');
 
         header('Content-Type: text/event-stream');
         header('Cache-Control: no-cache');

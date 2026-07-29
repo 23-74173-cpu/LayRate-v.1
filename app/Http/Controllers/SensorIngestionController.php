@@ -143,9 +143,11 @@ class SensorIngestionController extends Controller
                     /*
                      * Auto-create/update a ProductionLog for today from the
                      * sensor reading so it appears in the egg logging UI.
-                     * Does NOT overwrite a manual entry — only sensor-via
-                     * or nonexistent logs are touched. The user can then
-                     * override via the web UI's PIN/password flow.
+                     * NEVER overwrites a manual entry — once a user has
+                     * explicitly overridden the sensor via PIN/password,
+                     * that value is authoritative until the user changes
+                     * it again.  Only sensor-created logs or nonexistent
+                     * logs are touched.
                      */
                     if ($slot->active_hen_count > 0) {
                         $logDate = now()->parse($recordedAt)->toDateString();
@@ -153,42 +155,46 @@ class SensorIngestionController extends Controller
                             ->where('log_date', $logDate)
                             ->first();
 
-                        if (! $existingLog || $existingLog->logged_via === 'sensor' || $reportedCount !== (int) $existingLog->egg_count) {
-                            /*
-                             * INVARIANT GUARD — IR break-beam counts are
-                             * physically monotonic within a day.  If an
-                             * existing sensor-created log already records
-                             * a HIGHER egg_count, the sensor likely reset
-                             * (e.g. Arduino rebooted).  Do NOT overwrite.
-                             */
-                            if ($existingLog && $existingLog->logged_via === 'sensor' && $reportedCount < $existingLog->egg_count) {
-                                logger()->warning('Sensor count regression detected', [
-                                    'cage_slot_id' => $slot->id,
-                                    'log_date' => $logDate,
-                                    'previous_count' => $existingLog->egg_count,
-                                    'reported_count' => $reportedCount,
-                                    'hardware_item_id' => $hardwareItem->id,
-                                    'serial_number' => $serial,
-                                ]);
-
-                                self::createSensorResetAlert($slot, $existingLog->egg_count, $reportedCount);
-
-                                $errors[] = "Reading {$index}: count {$reportedCount} dropped from {$existingLog->egg_count} for slot {$slot->id} on {$logDate}. Sensor reset suspected.";
-                                continue;
-                            }
-
-                            $henCount = $slot->active_hen_count;
-                            ProductionLog::updateOrCreate(
-                                ['cage_slot_id' => $slot->id, 'log_date' => $logDate],
-                                [
-                                    'egg_count' => $reportedCount,
-                                    'hen_count' => $henCount,
-                                    'hdep' => $henCount > 0 ? round(($reportedCount / $henCount) * 100, 2) : 0,
-                                    'logged_via' => 'sensor',
-                                    'notes' => 'Sensor reading',
-                                ]
-                            );
+                        // Never overwrite a manual entry — the user explicitly overrode the sensor
+                        if ($existingLog && $existingLog->logged_via === 'manual') {
+                            $errors[] = "Reading {$index}: slot {$slot->id} has a manual override for {$logDate}. Sensor reading skipped.";
+                            continue;
                         }
+
+                        /*
+                         * INVARIANT GUARD — IR break-beam counts are
+                         * physically monotonic within a day.  If an
+                         * existing sensor-created log already records
+                         * a HIGHER egg_count, the sensor likely reset
+                         * (e.g. Arduino rebooted).  Do NOT overwrite.
+                         */
+                        if ($existingLog && $reportedCount < $existingLog->egg_count) {
+                            logger()->warning('Sensor count regression detected', [
+                                'cage_slot_id' => $slot->id,
+                                'log_date' => $logDate,
+                                'previous_count' => $existingLog->egg_count,
+                                'reported_count' => $reportedCount,
+                                'hardware_item_id' => $hardwareItem->id,
+                                'serial_number' => $serial,
+                            ]);
+
+                            self::createSensorResetAlert($slot, $existingLog->egg_count, $reportedCount);
+
+                            $errors[] = "Reading {$index}: count {$reportedCount} dropped from {$existingLog->egg_count} for slot {$slot->id} on {$logDate}. Sensor reset suspected.";
+                            continue;
+                        }
+
+                        $henCount = $slot->active_hen_count;
+                        ProductionLog::updateOrCreate(
+                            ['cage_slot_id' => $slot->id, 'log_date' => $logDate],
+                            [
+                                'egg_count' => $reportedCount,
+                                'hen_count' => $henCount,
+                                'hdep' => $henCount > 0 ? round(($reportedCount / $henCount) * 100, 2) : 0,
+                                'logged_via' => 'sensor',
+                                'notes' => 'Sensor reading',
+                            ]
+                        );
                     }
 
                     if ($reportedCount !== $actualOccupancy) {

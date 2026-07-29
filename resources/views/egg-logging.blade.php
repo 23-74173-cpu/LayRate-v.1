@@ -331,452 +331,271 @@
 
 <script>
 (function() {
-    if (window.__eggLoggingBound) return;
-    window.__eggLoggingBound = true;
-    let currentSlotId = null;
-    let currentHasSensor = false;
-    let overrideVerified = false;
+    // ── ONE-TIME: function definitions and document-level listeners ──
+    if (!window.__eggLoggingBound) {
+        window.__eggLoggingBound = true;
 
-    function resetSlotStyle(c) {
-        c.style.borderColor = '#e6e6e6';
-        c.style.borderWidth = '1px';
-        var wasLogged = parseInt(c.dataset.todayEggs) > 0;
-        c.style.backgroundColor = wasLogged ? '#eaf6ee' : '#ffffff';
-    }
+        let currentSlotId = null;
+        let currentHasSensor = false;
+        let overrideVerified = false;
 
-    function selectSlot(card) {
-        document.querySelectorAll('.slot-card').forEach(resetSlotStyle);
+        function resetSlotStyle(c) {
+            c.style.borderColor = '#e6e6e6';
+            c.style.borderWidth = '1px';
+            var wasLogged = parseInt(c.dataset.todayEggs) > 0;
+            c.style.backgroundColor = wasLogged ? '#eaf6ee' : '#ffffff';
+        }
 
-        const cageColors = @json(\App\Models\Cage::getColorMap());
-        const softColors = @json(\App\Models\Cage::getSoftColorMap());
-        const color = cageColors[card.dataset.cageCode] || '#6B7280';
-        const soft = softColors[card.dataset.cageCode] || '#f0f0f0';
+        function selectSlot(card) {
+            document.querySelectorAll('.slot-card').forEach(resetSlotStyle);
 
-        card.style.borderColor = color;
-        card.style.borderWidth = '2px';
-        card.style.backgroundColor = soft;
+            const cageColors = @json(\App\Models\Cage::getColorMap());
+            const softColors = @json(\App\Models\Cage::getSoftColorMap());
+            const color = cageColors[card.dataset.cageCode] || '#6B7280';
+            const soft = softColors[card.dataset.cageCode] || '#f0f0f0';
 
-        currentSlotId = parseInt(card.dataset.slotId);
-        currentHasSensor = card.dataset.hasSensor === '1';
+            card.style.borderColor = color;
+            card.style.borderWidth = '2px';
+            card.style.backgroundColor = soft;
 
-        document.getElementById('cageSlotId').value = currentSlotId;
-        document.getElementById('formSlotLabel').textContent =
-            card.dataset.cageCode + ' · R' + card.dataset.row + '-C' + card.dataset.col;
-        document.getElementById('formBreed').textContent = card.dataset.breed || '—';
-        document.getElementById('formHenCount').textContent = card.dataset.hens;
-        document.getElementById('henCount').value = card.dataset.hens;
+            currentSlotId = parseInt(card.dataset.slotId);
+            currentHasSensor = card.dataset.hasSensor === '1';
 
-        var existingEggs = parseInt(card.dataset.todayEggs) || 0;
-        document.getElementById('eggCount').value = existingEggs > 0 ? existingEggs : (currentHasSensor ? 0 : '');
+            document.getElementById('cageSlotId').value = currentSlotId;
+            document.getElementById('formSlotLabel').textContent =
+                card.dataset.cageCode + ' · R' + card.dataset.row + '-C' + card.dataset.col;
+            document.getElementById('formBreed').textContent = card.dataset.breed || '—';
+            document.getElementById('formHenCount').textContent = card.dataset.hens;
+            document.getElementById('henCount').value = card.dataset.hens;
 
-        const eggInput = document.getElementById('eggCount');
-        const overrideLabel = document.getElementById('overrideLabel');
+            var existingEggs = parseInt(card.dataset.todayEggs) || 0;
+            document.getElementById('eggCount').value = existingEggs > 0 ? existingEggs : (currentHasSensor ? 0 : '');
 
-        if (currentHasSensor) {
-            eggInput.readOnly = true;
-            overrideLabel.classList.remove('hidden');
-        } else {
-            eggInput.readOnly = false;
-            overrideLabel.classList.add('hidden');
+            const eggInput = document.getElementById('eggCount');
+            const overrideLabel = document.getElementById('overrideLabel');
+
+            if (currentHasSensor) {
+                eggInput.readOnly = true;
+                overrideLabel.classList.remove('hidden');
+            } else {
+                eggInput.readOnly = false;
+                overrideLabel.classList.add('hidden');
+                overrideVerified = false;
+            }
+
             overrideVerified = false;
+            document.getElementById('slotFormPlaceholder').classList.add('hidden');
+            document.getElementById('slotForm').classList.remove('hidden');
+            computeHdep();
+            checkSizeSum();
+            validateForm();
         }
 
-        overrideVerified = false;
-        document.getElementById('slotFormPlaceholder').classList.add('hidden');
-        document.getElementById('slotForm').classList.remove('hidden');
-        computeHdep();
-        checkSizeSum();
-        validateForm();
-    }
-
-    function clearSlotSelection() {
-        document.querySelectorAll('.slot-card').forEach(resetSlotStyle);
-        currentSlotId = null;
-        overrideVerified = false;
-        document.getElementById('slotFormPlaceholder').classList.remove('hidden');
-        document.getElementById('slotForm').classList.add('hidden');
-        checkSizeSum();
-        validateForm();
-    }
-
-    function switchCage(cageId) {
-        clearSlotSelection();
-
-        // Highlight selected cage card, dim others
-        document.querySelectorAll('.cage-overview-card').forEach(function(card) {
-            var isSelected = card.dataset.cageId == cageId;
-            if (isSelected) {
-                card.style.borderColor = '#0075de';
-                card.style.borderWidth = '2px';
-                card.style.backgroundColor = '#f0f7ff';
-            } else {
-                card.style.borderColor = '#e6e6e6';
-                card.style.borderWidth = '1px';
-                card.style.backgroundColor = '#ffffff';
-            }
-        });
-
-        document.querySelectorAll('.cage-grid').forEach(g => {
-            g.classList.add('hidden');
-        });
-
-        if (cageId) {
-            var target = document.querySelector('.cage-grid[data-cage-id="' + cageId + '"]');
-            if (target) target.classList.remove('hidden');
+        function clearSlotSelection() {
+            document.querySelectorAll('.slot-card').forEach(resetSlotStyle);
+            currentSlotId = null;
+            overrideVerified = false;
+            document.getElementById('slotFormPlaceholder').classList.remove('hidden');
+            document.getElementById('slotForm').classList.add('hidden');
+            checkSizeSum();
+            validateForm();
         }
 
-        checkSizeSum();
-        validateForm();
-    }
+        function switchCage(cageId) {
+            clearSlotSelection();
 
-    function computeHdep() {
-        const eggs = parseInt(document.getElementById('eggCount').value) || 0;
-        const hens = parseInt(document.getElementById('henCount').value) || 1;
-        const hdep = ((eggs / hens) * 100).toFixed(1);
-        const el = document.getElementById('hdepDisplay');
-        el.innerHTML = '<span class="relative group">HDEP: ' + hdep + '% <i data-lucide="info" class="inline w-3 h-3 ml-0.5" style="color: #a39e98;"></i></span>';
-        el.style.backgroundColor = eggs > hens ? '#fbe4e6' : '#f6f5f4';
-        el.style.borderColor = eggs > hens ? '#f3cdd0' : '#e6e6e6';
-        el.style.color = eggs > hens ? '#9b1c24' : '#1f1f1f';
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
-
-    function checkSizeSum() {
-        const totalEggs = parseInt(document.getElementById('eggCount').value) || 0;
-        const eggInput = document.getElementById('eggCount').value;
-        const inputs = document.querySelectorAll('#sizeBreakdown .size-input');
-        let sum = 0;
-        inputs.forEach(function(inp) { sum += parseInt(inp.value) || 0; });
-        const msg = document.getElementById('sizeSumMsg');
-
-        if (!eggInput || parseInt(eggInput) < 0) {
-            msg.innerHTML = 'Sum: ' + sum + ' <span id="sizeSumStatus" style="color: #a39e98;">—</span>';
-            msg.style.color = '#a39e98';
-            return;
-        }
-
-        if (sum === totalEggs) {
-            msg.innerHTML = 'Sum: ' + sum + ' <span id="sizeSumStatus" style="color: #1f6b3a;">✓</span>';
-            msg.style.color = '#1f6b3a';
-        } else {
-            msg.innerHTML = 'Sum: ' + sum + ' <span id="sizeSumStatus" style="color: #9b1c24;">(should be ' + totalEggs + ')</span>';
-            msg.style.color = '#9b1c24';
-        }
-    }
-
-    function validateForm() {
-        const eggInput = document.getElementById('eggCount');
-        const eggVal = eggInput.value;
-        const saveBtn = document.getElementById('saveBtn');
-
-        if (!eggVal || parseInt(eggVal) < 0 || isNaN(parseInt(eggVal))) {
-            saveBtn.disabled = true;
-            return;
-        }
-
-        const totalEggs = parseInt(eggVal);
-        const inputs = document.querySelectorAll('#sizeBreakdown .size-input');
-        let sum = 0;
-        let anySizeFilled = false;
-        inputs.forEach(function(inp) {
-            const v = parseInt(inp.value) || 0;
-            sum += v;
-            if (v > 0) anySizeFilled = true;
-        });
-
-        if (anySizeFilled && sum !== totalEggs) {
-            saveBtn.disabled = true;
-            return;
-        }
-
-        saveBtn.disabled = false;
-    }
-
-    function openOverrideModal() {
-        if (!currentSlotId) return;
-        document.getElementById('overrideError').classList.add('hidden');
-        document.getElementById('overridePinInput').value = '';
-        document.getElementById('overridePinSection').classList.remove('hidden');
-        document.getElementById('overridePasswordSection').classList.add('hidden');
-        document.getElementById('overrideModal').style.display = 'flex';
-        document.getElementById('overridePinInput').focus();
-        lucide.createIcons();
-    }
-
-    function closeOverrideModal() {
-        document.getElementById('overrideModal').style.display = 'none';
-    }
-
-    function submitOverride() {
-        const pin = document.getElementById('overridePinInput').value;
-        const password = document.getElementById('overridePasswordInput').value;
-
-        fetch('{{ route("eggs.logging.verify-override") }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-            },
-            body: JSON.stringify({ cage_slot_id: currentSlotId, pin: pin, password: password }),
-        })
-        .then(r => r.json().then(body => ({ status: r.status, body })))
-        .then(({ status, body }) => {
-            if (status === 200 && body.ok) {
-                document.getElementById('eggCount').readOnly = false;
-                overrideVerified = true;
-                closeOverrideModal();
-                if (body.needs_pin_setup) {
-                    showNotification('No override PIN set yet — please set one in Account Settings.', 'info');
+            document.querySelectorAll('.cage-overview-card').forEach(function(card) {
+                var isSelected = card.dataset.cageId == cageId;
+                if (isSelected) {
+                    card.style.borderColor = '#0075de';
+                    card.style.borderWidth = '2px';
+                    card.style.backgroundColor = '#f0f7ff';
+                } else {
+                    card.style.borderColor = '#e6e6e6';
+                    card.style.borderWidth = '1px';
+                    card.style.backgroundColor = '#ffffff';
                 }
-            } else {
-                const errEl = document.getElementById('overrideError');
-                errEl.textContent = body.error || 'Verification failed.';
-                errEl.classList.remove('hidden');
-                const noPinYet = (body.error || '').includes('password');
-                document.getElementById('overridePinSection').classList.toggle('hidden', noPinYet);
-                document.getElementById('overridePasswordSection').classList.toggle('hidden', !noPinYet);
+            });
+
+            document.querySelectorAll('.cage-grid').forEach(g => {
+                g.classList.add('hidden');
+            });
+
+            if (cageId) {
+                var target = document.querySelector('.cage-grid[data-cage-id="' + cageId + '"]');
+                if (target) target.classList.remove('hidden');
             }
-        })
-        .catch(function() {
-            showNotification('Network error — please try again.', 'error');
-        });
-    }
 
-    // ── Edit Log Modal ──────────────────────────────────────
-    function openEditLog(id, date, eggCount, henCount, notes, cageSlotId, sizeSmall, sizeMedium, sizeLarge, sizeJumbo) {
-        document.getElementById('editLogForm').action = '/eggs/logging/' + id;
-        document.getElementById('editLogDate').value = date;
-        document.getElementById('editEggCount').value = eggCount;
-        document.getElementById('editHenCountDisplay').value = henCount;
-        document.getElementById('editNotes').value = notes || '';
-        document.getElementById('editSizeSmall').value = sizeSmall ?? 0;
-        document.getElementById('editSizeMedium').value = sizeMedium ?? 0;
-        document.getElementById('editSizeLarge').value = sizeLarge ?? 0;
-        document.getElementById('editSizeJumbo').value = sizeJumbo ?? 0;
-        document.getElementById('editLogModal').style.display = 'flex';
-        editComputeHdep();
-        editCheckSizeSum();
-        lucide.createIcons();
-    }
+            checkSizeSum();
+            validateForm();
+        }
 
-    function closeEditLogModal() {
-        document.getElementById('editLogModal').style.display = 'none';
-    }
+        function computeHdep() {
+            const eggs = parseInt(document.getElementById('eggCount').value) || 0;
+            const hens = parseInt(document.getElementById('henCount').value) || 1;
+            const hdep = ((eggs / hens) * 100).toFixed(1);
+            const el = document.getElementById('hdepDisplay');
+            el.innerHTML = '<span class="relative group">HDEP: ' + hdep + '% <i data-lucide="info" class="inline w-3 h-3 ml-0.5" style="color: #a39e98;"></i></span>';
+            el.style.backgroundColor = eggs > hens ? '#fbe4e6' : '#f6f5f4';
+            el.style.borderColor = eggs > hens ? '#f3cdd0' : '#e6e6e6';
+            el.style.color = eggs > hens ? '#9b1c24' : '#1f1f1f';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
 
-    function editComputeHdep() {
-        const eggs = parseInt(document.getElementById('editEggCount').value) || 0;
-        const hens = parseInt(document.getElementById('editHenCountDisplay').value) || 1;
-        const hdep = ((eggs / hens) * 100).toFixed(1);
-        const el = document.getElementById('editHdepDisplay');
-        el.textContent = 'HDEP:  ' + hdep + '%';
-        el.style.backgroundColor = eggs > hens ? '#fbe4e6' : '#f6f5f4';
-        el.style.borderColor = eggs > hens ? '#f3cdd0' : '#e6e6e6';
-        el.style.color = eggs > hens ? '#9b1c24' : '#1f1f1f';
-    }
+        function checkSizeSum() {
+            const totalEggs = parseInt(document.getElementById('eggCount').value) || 0;
+            const eggInput = document.getElementById('eggCount').value;
+            const inputs = document.querySelectorAll('#sizeBreakdown .size-input');
+            let sum = 0;
+            inputs.forEach(function(inp) { sum += parseInt(inp.value) || 0; });
+            const msg = document.getElementById('sizeSumMsg');
 
-    // ── AJAX form submission ─────────────────────────────────
-    var eggForm = document.getElementById('eggForm');
-    if (eggForm) {
-        eggForm.addEventListener('submit', function(e) {
-            if (eggForm._submitting) { e.preventDefault(); return; }
-
-            var saveBtn = document.getElementById('saveBtn');
-            var origText = saveBtn ? saveBtn.innerHTML : '';
-
-            var eggCount = parseInt(document.getElementById('eggCount').value) || 0;
-            var hens = parseInt(document.getElementById('henCount').value) || 0;
-            if (eggCount > hens) {
-                e.preventDefault();
+            if (!eggInput || parseInt(eggInput) < 0) {
+                msg.innerHTML = 'Sum: ' + sum + ' <span id="sizeSumStatus" style="color: #a39e98;">—</span>';
+                msg.style.color = '#a39e98';
                 return;
             }
 
-            e.preventDefault();
-            eggForm._submitting = true;
-            if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving\u2026'; }
+            if (sum === totalEggs) {
+                msg.innerHTML = 'Sum: ' + sum + ' <span id="sizeSumStatus" style="color: #1f6b3a;">✓</span>';
+                msg.style.color = '#1f6b3a';
+            } else {
+                msg.innerHTML = 'Sum: ' + sum + ' <span id="sizeSumStatus" style="color: #9b1c24;">(should be ' + totalEggs + ')</span>';
+                msg.style.color = '#9b1c24';
+            }
+        }
 
-            fetch(eggForm.action, {
+        function validateForm() {
+            const eggInput = document.getElementById('eggCount');
+            const eggVal = eggInput.value;
+            const saveBtn = document.getElementById('saveBtn');
+
+            if (!eggVal || parseInt(eggVal) < 0 || isNaN(parseInt(eggVal))) {
+                saveBtn.disabled = true;
+                return;
+            }
+
+            const totalEggs = parseInt(eggVal);
+            const inputs = document.querySelectorAll('#sizeBreakdown .size-input');
+            let sum = 0;
+            let anySizeFilled = false;
+            inputs.forEach(function(inp) {
+                const v = parseInt(inp.value) || 0;
+                sum += v;
+                if (v > 0) anySizeFilled = true;
+            });
+
+            if (anySizeFilled && sum !== totalEggs) {
+                saveBtn.disabled = true;
+                return;
+            }
+
+            saveBtn.disabled = false;
+        }
+
+        function openOverrideModal() {
+            if (!currentSlotId) return;
+            document.getElementById('overrideError').classList.add('hidden');
+            document.getElementById('overridePinInput').value = '';
+            document.getElementById('overridePinSection').classList.remove('hidden');
+            document.getElementById('overridePasswordSection').classList.add('hidden');
+            document.getElementById('overrideModal').style.display = 'flex';
+            document.getElementById('overridePinInput').focus();
+            lucide.createIcons();
+        }
+
+        function closeOverrideModal() {
+            document.getElementById('overrideModal').style.display = 'none';
+        }
+
+        function submitOverride() {
+            const pin = document.getElementById('overridePinInput').value;
+            const password = document.getElementById('overridePasswordInput').value;
+
+            fetch('{{ route("eggs.logging.verify-override") }}', {
                 method: 'POST',
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('input[name="_token"]')?.value || '',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                 },
-                body: new FormData(eggForm),
+                body: JSON.stringify({ cage_slot_id: currentSlotId, pin: pin, password: password }),
             })
-            .then(function(r) {
-                return r.json().then(function(body) {
-                    return { status: r.status, body: body, ok: r.ok };
-                });
-            })
-            .then(function(resp) {
-                eggForm._submitting = false;
-                if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = origText; }
-
-                if (resp.ok && resp.body.success) {
-                    if (typeof showNotification === 'function') {
-                        showNotification(resp.body.message || 'Production log saved.', 'success');
+            .then(r => r.json().then(body => ({ status: r.status, body })))
+            .then(({ status, body }) => {
+                if (status === 200 && body.ok) {
+                    document.getElementById('eggCount').readOnly = false;
+                    overrideVerified = true;
+                    closeOverrideModal();
+                    if (body.needs_pin_setup) {
+                        showNotification('No override PIN set yet — please set one in Account Settings.', 'info');
                     }
-
-                    // Update slot card visual to show it's logged
-                    var slotCard = document.querySelector('.slot-card[data-slot-id="' + currentSlotId + '"]');
-                    var savedEggs = parseInt(resp.body.log.egg_count) || 0;
-                    var cageId = null;
-                    var eggDelta = savedEggs;
-                    if (slotCard) {
-                        var prevEggs = parseInt(slotCard.dataset.todayEggs) || 0;
-                        eggDelta = savedEggs - prevEggs;
-                        slotCard.dataset.todayEggs = savedEggs;
-                        slotCard.style.backgroundColor = '#eaf6ee';
-                        cageId = parseInt(slotCard.dataset.cageId);
-
-                        // Remove existing checkmark if any, then add green check
-                        var existingCheck = slotCard.querySelector('.logged-check');
-                        if (existingCheck) existingCheck.remove();
-
-                        var check = document.createElement('span');
-                        check.className = 'logged-check absolute top-0.5 left-0.5 w-3 h-3 rounded-full flex items-center justify-center';
-                        check.style.backgroundColor = '#1f6b3a';
-                        check.innerHTML = '<svg class="w-2 h-2 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-                        slotCard.appendChild(check);
-                    }
-
-                    // Update overview card for this cage
-                    if (cageId) {
-                        var card = document.querySelector('.cage-overview-card[data-cage-id="' + cageId + '"]');
-                        if (card) {
-                            var totalSlots = parseInt(card.dataset.totalSlots) || 0;
-                            var loggedCount = document.querySelectorAll('.slot-card[data-cage-id="' + cageId + '"] .logged-check').length;
-                            if (loggedCount > totalSlots) loggedCount = totalSlots;
-                            var loggedEl = document.getElementById('cage-logged-' + cageId);
-                            var completeEl = document.getElementById('cage-complete-' + cageId);
-                            if (loggedEl) {
-                                loggedEl.textContent = loggedCount + '/' + totalSlots;
-                                loggedEl.style.color = loggedCount >= totalSlots ? '#1f6b3a' : '#1f1f1f';
-                            }
-                            if (completeEl) {
-                                completeEl.style.display = loggedCount >= totalSlots ? 'inline' : 'none';
-                            }
-                            var eggsEl = document.getElementById('cage-eggs-' + cageId);
-                            if (eggsEl) {
-                                var currentEggs = parseInt(eggsEl.textContent.replace(/[^0-9]/g, '')) || 0;
-                                eggsEl.textContent = (currentEggs + eggDelta).toLocaleString() + ' eggs';
-                            }
-                        }
-                        var totalEl = document.getElementById('todayTotalEggs');
-                        if (totalEl) {
-                            var currentTotal = parseInt(totalEl.textContent.replace(/[^0-9]/g, '')) || 0;
-                            totalEl.textContent = (currentTotal + eggDelta).toLocaleString();
-                        }
-                    }
-
-                    // Reset size breakdown fields
-                    document.querySelectorAll('#sizeBreakdown .size-input').forEach(function(inp) {
-                        inp.value = '0';
-                    });
-                    // Reset notes
-                    var notesEl = eggForm.querySelector('textarea[name="notes"]');
-                    if (notesEl) notesEl.value = '';
-
-                    // Show the value that was actually saved (not a hardcoded 0) — the slot
-                    // stays selected, but the field must reflect what's now persisted, or a
-                    // save looks indistinguishable from the field silently resetting/failing.
-                    var eggInput = document.getElementById('eggCount');
-                    if (eggInput) {
-                        eggInput.value = resp.body.log.egg_count;
-                        if (eggInput.readOnly) {
-                            overrideVerified = false;
-                        }
-                    }
-
-                    computeHdep();
-                    checkSizeSum();
-                    validateForm();
                 } else {
-                    var errors = resp.body.errors || {};
-                    var firstMsg = '';
-                    for (var key in errors) {
-                        if (errors.hasOwnProperty(key) && errors[key]) {
-                            firstMsg = Array.isArray(errors[key]) ? errors[key][0] : errors[key];
-                            break;
-                        }
-                    }
-                    if (typeof showNotification === 'function') {
-                        showNotification(firstMsg || 'Validation failed.', 'error');
-                    }
+                    const errEl = document.getElementById('overrideError');
+                    errEl.textContent = body.error || 'Verification failed.';
+                    errEl.classList.remove('hidden');
+                    const noPinYet = (body.error || '').includes('password');
+                    document.getElementById('overridePinSection').classList.toggle('hidden', noPinYet);
+                    document.getElementById('overridePasswordSection').classList.toggle('hidden', !noPinYet);
                 }
             })
             .catch(function() {
-                eggForm._submitting = false;
-                if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = origText; }
-                if (typeof showNotification === 'function') {
-                    showNotification('Network error — please try again.', 'error');
-                }
+                showNotification('Network error — please try again.', 'error');
             });
-        });
-    }
+        }
 
-    // Expose functions to global scope for inline onclick/onchange/oninput handlers
-    window.selectSlot = selectSlot;
-    window.clearSlotSelection = clearSlotSelection;
-    window.switchCage = switchCage;
-    window.computeHdep = computeHdep;
-    window.checkSizeSum = checkSizeSum;
-    window.validateForm = validateForm;
-    window.openOverrideModal = openOverrideModal;
-    window.closeOverrideModal = closeOverrideModal;
-    window.submitOverride = submitOverride;
-    window.openEditLog = openEditLog;
-    window.closeEditLogModal = closeEditLogModal;
-    window.editComputeHdep = editComputeHdep;
+        function openEditLog(id, date, eggCount, henCount, notes, cageSlotId, sizeSmall, sizeMedium, sizeLarge, sizeJumbo) {
+            document.getElementById('editLogForm').action = '/eggs/logging/' + id;
+            document.getElementById('editLogDate').value = date;
+            document.getElementById('editEggCount').value = eggCount;
+            document.getElementById('editHenCountDisplay').value = henCount;
+            document.getElementById('editNotes').value = notes || '';
+            document.getElementById('editSizeSmall').value = sizeSmall ?? 0;
+            document.getElementById('editSizeMedium').value = sizeMedium ?? 0;
+            document.getElementById('editSizeLarge').value = sizeLarge ?? 0;
+            document.getElementById('editSizeJumbo').value = sizeJumbo ?? 0;
+            document.getElementById('editLogModal').style.display = 'flex';
+            editComputeHdep();
+            editCheckSizeSum();
+            lucide.createIcons();
+        }
 
-    // Auto-select cage from URL filter on page load
-    @if($cageFilter)
-    switchCage('{{ $cageFilter }}');
-    @endif
+        function closeEditLogModal() {
+            document.getElementById('editLogModal').style.display = 'none';
+        }
 
-    if (!window.__eggLoggingEscapeBound) {
-        window.__eggLoggingEscapeBound = true;
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                closeOverrideModal();
-                closeEditLogModal();
+        function editComputeHdep() {
+            const eggs = parseInt(document.getElementById('editEggCount').value) || 0;
+            const hens = parseInt(document.getElementById('editHenCountDisplay').value) || 1;
+            const hdep = ((eggs / hens) * 100).toFixed(1);
+            const el = document.getElementById('editHdepDisplay');
+            el.textContent = 'HDEP:  ' + hdep + '%';
+            el.style.backgroundColor = eggs > hens ? '#fbe4e6' : '#f6f5f4';
+            el.style.borderColor = eggs > hens ? '#f3cdd0' : '#e6e6e6';
+            el.style.color = eggs > hens ? '#9b1c24' : '#1f1f1f';
+        }
+
+        function editCheckSizeSum() {
+            const totalEggs = parseInt(document.getElementById('editEggCount').value) || 0;
+            const inputs = document.querySelectorAll('#editSizeBreakdown .size-input');
+            let sum = 0;
+            inputs.forEach(function(inp) { sum += parseInt(inp.value) || 0; });
+            const msg = document.getElementById('editSizeSumMsg');
+
+            if (sum === totalEggs) {
+                msg.innerHTML = 'Sum: ' + sum + ' <span style="color: #1f6b3a;">✓</span>';
+                msg.style.color = '#1f6b3a';
+            } else {
+                msg.innerHTML = 'Sum: ' + sum + ' <span style="color: #9b1c24;">(should be ' + totalEggs + ')</span>';
+                msg.style.color = '#9b1c24';
             }
-        });
-    }
+        }
 
-    // ── Close SSE before frame content is replaced (tab switch) ──
-    if (!window.__eggLoggingSseGuard) {
-        window.__eggLoggingSseGuard = true;
-        document.addEventListener('turbo:before-frame-render', function(e) {
-            if (!e.target || e.target.id !== 'egg-content') return;
-            if (window.__eggCountSource) {
-                window.__eggCountSource.close();
-                window.__eggCountSource = null;
-            }
-        });
-    }
+        // ── Live SSE egg count ──
+        var cageTCode = 'CAGE-T';
 
-    // ── Close SSE before full page navigation (sidebar, etc.) ──
-    if (!window.__eggLoggingNavGuard) {
-        window.__eggLoggingNavGuard = true;
-        document.addEventListener('turbo:before-render', function() {
-            if (window.__eggCountSource) {
-                window.__eggCountSource.close();
-                window.__eggCountSource = null;
-            }
-        });
-    }
-
-    // ── Live SSE egg count for CAGE-T ───────────
-    var cageTCode = 'CAGE-T';
-
-    function findCageTSlotCards() {
-        return document.querySelectorAll('.slot-card[data-cage-code="' + cageTCode + '"]');
-    }
-
-    function updateCageTCount(count) {
-        var cards = findCageTSlotCards();
-        cards.forEach(function(card) {
+        function updateCageTCount(slotId, count) {
+            var card = document.querySelector('.slot-card[data-slot-id="' + slotId + '"]');
+            if (!card) return;
             var prev = parseInt(card.dataset.todayEggs) || 0;
             if (count !== prev) {
                 card.dataset.todayEggs = count;
@@ -800,88 +619,277 @@
                     }
                 }
             }
-        });
-    }
-
-    window.__eggCountSource = null;
-
-    function connectEggCountSSE() {
-        if (!document.getElementById('todayTotalEggs')) return;
-
-        if (window.__eggCountSource) {
-            window.__eggCountSource.close();
         }
 
-        var url = '{{ route("eggs.logging.live-count") }}?cage_code=' + cageTCode;
-        window.__eggCountSource = new EventSource(url);
+        window.__eggCountSource = null;
 
-        window.__eggCountSource.addEventListener('count', function(e) {
-            try {
-                var data = JSON.parse(e.data);
-                if (data.counts) {
-                    for (var slotId in data.counts) {
-                        if (data.counts.hasOwnProperty(slotId)) {
-                            updateCageTCount(data.counts[slotId].egg_count);
+        function connectEggCountSSE() {
+            if (!document.getElementById('todayTotalEggs')) return;
+
+            if (window.__eggCountSource) {
+                window.__eggCountSource.close();
+            }
+
+            var url = '{{ route("eggs.logging.live-count") }}?cage_code=' + cageTCode;
+            window.__eggCountSource = new EventSource(url);
+
+            window.__eggCountSource.addEventListener('count', function(e) {
+                try {
+                    var data = JSON.parse(e.data);
+                    if (data.counts) {
+                        for (var slotId in data.counts) {
+                            if (data.counts.hasOwnProperty(slotId)) {
+                                updateCageTCount(slotId, data.counts[slotId].egg_count);
+                            }
                         }
                     }
+                } catch(err) {}
+            });
+
+            window.__eggCountSource.addEventListener('cage_stats', function(e) {
+                try {
+                    var cageStats = JSON.parse(e.data);
+                    var grandTotal = 0;
+                    for (var cageId in cageStats) {
+                        if (!cageStats.hasOwnProperty(cageId)) continue;
+                        var stat = cageStats[cageId];
+                        var card = document.querySelector('.cage-overview-card[data-cage-id="' + cageId + '"]');
+                        if (!card) continue;
+                        var totalSlots = parseInt(card.dataset.totalSlots) || 0;
+                        var loggedCount = stat.logged_count || 0;
+                        var loggedEl = document.getElementById('cage-logged-' + cageId);
+                        var completeEl = document.getElementById('cage-complete-' + cageId);
+                        if (loggedEl) {
+                            loggedEl.textContent = loggedCount + '/' + totalSlots;
+                            loggedEl.style.color = loggedCount >= totalSlots ? '#1f6b3a' : '#1f1f1f';
+                        }
+                        if (completeEl) {
+                            completeEl.style.display = loggedCount >= totalSlots ? 'inline' : 'none';
+                        }
+                        var eggsEl = document.getElementById('cage-eggs-' + cageId);
+                        if (eggsEl) {
+                            eggsEl.textContent = (stat.total_eggs || 0).toLocaleString() + ' eggs';
+                        }
+                        grandTotal += stat.total_eggs || 0;
+                    }
+                    var totalEl = document.getElementById('todayTotalEggs');
+                    if (totalEl) totalEl.textContent = grandTotal.toLocaleString();
+                } catch(err) {}
+            });
+
+            window.__eggCountSource.onerror = function() {
+                if (window.__eggCountSource && window.__eggCountSource.readyState === EventSource.CLOSED) {
+                    setTimeout(function() {
+                        if (document.getElementById('todayTotalEggs')) {
+                            connectEggCountSSE();
+                        }
+                    }, 3000);
                 }
-            } catch(err) {
-                // ignore parse errors on reconnect
+            };
+        }
+
+        // ── PER-RENDER INIT: re-runs on every page/frame render ──
+        window.__eggLoggingInit = function () {
+            // SSE — reconnect if not already active
+            if (!window.__eggCountSource || window.__eggCountSource.readyState === EventSource.CLOSED) {
+                connectEggCountSSE();
             }
-        });
 
-        window.__eggCountSource.addEventListener('cage_stats', function(e) {
-            try {
-                var cageStats = JSON.parse(e.data);
-                var grandTotal = 0;
-                for (var cageId in cageStats) {
-                    if (!cageStats.hasOwnProperty(cageId)) continue;
-                    var stat = cageStats[cageId];
-                    var card = document.querySelector('.cage-overview-card[data-cage-id="' + cageId + '"]');
-                    if (!card) continue;
-                    var totalSlots = parseInt(card.dataset.totalSlots) || 0;
-                    var loggedCount = stat.logged_count || 0;
-                    var loggedEl = document.getElementById('cage-logged-' + cageId);
-                    var completeEl = document.getElementById('cage-complete-' + cageId);
-                    if (loggedEl) {
-                        loggedEl.textContent = loggedCount + '/' + totalSlots;
-                        loggedEl.style.color = loggedCount >= totalSlots ? '#1f6b3a' : '#1f1f1f';
-                    }
-                    if (completeEl) {
-                        completeEl.style.display = loggedCount >= totalSlots ? 'inline' : 'none';
-                    }
-                    var eggsEl = document.getElementById('cage-eggs-' + cageId);
-                    if (eggsEl) {
-                        eggsEl.textContent = (stat.total_eggs || 0).toLocaleString() + ' eggs';
-                    }
-                    grandTotal += stat.total_eggs || 0;
-                }
-                var totalEl = document.getElementById('todayTotalEggs');
-                if (totalEl) totalEl.textContent = grandTotal.toLocaleString();
-            } catch(err) {}
-        });
+            // Form submit — bind to the current #eggForm element
+            var form = document.getElementById('eggForm');
+            if (form && !form.__submitBound) {
+                form.__submitBound = true;
+                form.addEventListener('submit', function(e) {
+                    if (form._submitting) { e.preventDefault(); return; }
 
-        window.__eggCountSource.onerror = function() {
-            if (window.__eggCountSource && window.__eggCountSource.readyState === EventSource.CLOSED) {
-                setTimeout(function() {
-                    if (document.getElementById('todayTotalEggs')) {
-                        connectEggCountSSE();
+                    var saveBtn = document.getElementById('saveBtn');
+                    var origText = saveBtn ? saveBtn.innerHTML : '';
+
+                    var eggCount = parseInt(document.getElementById('eggCount').value) || 0;
+                    var hens = parseInt(document.getElementById('henCount').value) || 0;
+                    if (eggCount > hens) {
+                        e.preventDefault();
+                        return;
                     }
-                }, 3000);
+
+                    e.preventDefault();
+                    form._submitting = true;
+                    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving\u2026'; }
+
+                    fetch(form.action, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('input[name="_token"]')?.value || '',
+                        },
+                        body: new FormData(form),
+                    })
+                    .then(function(r) {
+                        return r.json().then(function(body) {
+                            return { status: r.status, body: body, ok: r.ok };
+                        });
+                    })
+                    .then(function(resp) {
+                        form._submitting = false;
+                        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = origText; }
+
+                        if (resp.ok && resp.body.success) {
+                            if (typeof showNotification === 'function') {
+                                showNotification(resp.body.message || 'Production log saved.', 'success');
+                            }
+
+                            var slotCard = document.querySelector('.slot-card[data-slot-id="' + currentSlotId + '"]');
+                            var savedEggs = parseInt(resp.body.log.egg_count) || 0;
+                            var cageId = null;
+                            var eggDelta = savedEggs;
+                            if (slotCard) {
+                                var prevEggs = parseInt(slotCard.dataset.todayEggs) || 0;
+                                eggDelta = savedEggs - prevEggs;
+                                slotCard.dataset.todayEggs = savedEggs;
+                                slotCard.style.backgroundColor = '#eaf6ee';
+                                cageId = parseInt(slotCard.dataset.cageId);
+
+                                var existingCheck = slotCard.querySelector('.logged-check');
+                                if (existingCheck) existingCheck.remove();
+
+                                var check = document.createElement('span');
+                                check.className = 'logged-check absolute top-0.5 left-0.5 w-3 h-3 rounded-full flex items-center justify-center';
+                                check.style.backgroundColor = '#1f6b3a';
+                                check.innerHTML = '<svg class="w-2 h-2 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                                slotCard.appendChild(check);
+                            }
+
+                            if (cageId) {
+                                var card = document.querySelector('.cage-overview-card[data-cage-id="' + cageId + '"]');
+                                if (card) {
+                                    var totalSlots = parseInt(card.dataset.totalSlots) || 0;
+                                    var loggedCount = document.querySelectorAll('.slot-card[data-cage-id="' + cageId + '"] .logged-check').length;
+                                    if (loggedCount > totalSlots) loggedCount = totalSlots;
+                                    var loggedEl = document.getElementById('cage-logged-' + cageId);
+                                    var completeEl = document.getElementById('cage-complete-' + cageId);
+                                    if (loggedEl) {
+                                        loggedEl.textContent = loggedCount + '/' + totalSlots;
+                                        loggedEl.style.color = loggedCount >= totalSlots ? '#1f6b3a' : '#1f1f1f';
+                                    }
+                                    if (completeEl) {
+                                        completeEl.style.display = loggedCount >= totalSlots ? 'inline' : 'none';
+                                    }
+                                    var eggsEl = document.getElementById('cage-eggs-' + cageId);
+                                    if (eggsEl) {
+                                        var currentEggs = parseInt(eggsEl.textContent.replace(/[^0-9]/g, '')) || 0;
+                                        eggsEl.textContent = (currentEggs + eggDelta).toLocaleString() + ' eggs';
+                                    }
+                                }
+                                var totalEl = document.getElementById('todayTotalEggs');
+                                if (totalEl) {
+                                    var currentTotal = parseInt(totalEl.textContent.replace(/[^0-9]/g, '')) || 0;
+                                    totalEl.textContent = (currentTotal + eggDelta).toLocaleString();
+                                }
+                            }
+
+                            document.querySelectorAll('#sizeBreakdown .size-input').forEach(function(inp) {
+                                inp.value = '0';
+                            });
+                            var notesEl = form.querySelector('textarea[name="notes"]');
+                            if (notesEl) notesEl.value = '';
+
+                            var eggInput = document.getElementById('eggCount');
+                            if (eggInput) {
+                                eggInput.value = resp.body.log.egg_count;
+                                if (currentHasSensor) {
+                                    eggInput.readOnly = true;
+                                }
+                                overrideVerified = false;
+                            }
+
+                            computeHdep();
+                            checkSizeSum();
+                            validateForm();
+                        } else {
+                            var errors = resp.body.errors || {};
+                            var firstMsg = '';
+                            for (var key in errors) {
+                                if (errors.hasOwnProperty(key) && errors[key]) {
+                                    firstMsg = Array.isArray(errors[key]) ? errors[key][0] : errors[key];
+                                    break;
+                                }
+                            }
+                            if (typeof showNotification === 'function') {
+                                showNotification(firstMsg || 'Validation failed.', 'error');
+                            }
+                        }
+                    })
+                    .catch(function() {
+                        form._submitting = false;
+                        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = origText; }
+                        if (typeof showNotification === 'function') {
+                            showNotification('Network error — please try again.', 'error');
+                        }
+                    });
+                });
             }
         };
+
+        // Expose functions to global scope
+        window.selectSlot = selectSlot;
+        window.clearSlotSelection = clearSlotSelection;
+        window.switchCage = switchCage;
+        window.computeHdep = computeHdep;
+        window.checkSizeSum = checkSizeSum;
+        window.validateForm = validateForm;
+        window.openOverrideModal = openOverrideModal;
+        window.closeOverrideModal = closeOverrideModal;
+        window.submitOverride = submitOverride;
+        window.openEditLog = openEditLog;
+        window.closeEditLogModal = closeEditLogModal;
+        window.editComputeHdep = editComputeHdep;
+
+        // ── One-time document-level listeners ──
+        if (!window.__eggLoggingEscapeBound) {
+            window.__eggLoggingEscapeBound = true;
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    if (typeof closeOverrideModal === 'function') closeOverrideModal();
+                    if (typeof closeEditLogModal === 'function') closeEditLogModal();
+                }
+            });
+        }
+
+        if (!window.__eggLoggingSseGuard) {
+            window.__eggLoggingSseGuard = true;
+            document.addEventListener('turbo:before-frame-render', function(e) {
+                if (!e.target || e.target.id !== 'egg-content') return;
+                if (window.__eggCountSource) {
+                    window.__eggCountSource.close();
+                    window.__eggCountSource = null;
+                }
+            });
+        }
+
+        if (!window.__eggLoggingNavGuard) {
+            window.__eggLoggingNavGuard = true;
+            document.addEventListener('turbo:before-render', function() {
+                if (window.__eggCountSource) {
+                    window.__eggCountSource.close();
+                    window.__eggCountSource = null;
+                }
+            });
+        }
+
+        // ── Frame-load re-init (fires on every Turbo frame render) ──
+        document.addEventListener('turbo:frame-load', function(e) {
+            if (!e.target || e.target.id !== 'egg-content') return;
+            if (window.__eggLoggingInit) window.__eggLoggingInit();
+        });
     }
 
-    document.addEventListener('turbo:load', function() {
-        if (window.__eggCountSource) window.__eggCountSource.close();
-        setTimeout(connectEggCountSSE, 500);
-    });
+    // ── PER-RENDER (always runs on every script execution) ──
+    if (window.__eggLoggingInit) window.__eggLoggingInit();
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', connectEggCountSSE);
-    } else {
-        connectEggCountSSE();
-    }
+    @if($cageFilter)
+    if (window.switchCage) switchCage('{{ $cageFilter }}');
+    @endif
 })();
 </script>
 </turbo-frame>
