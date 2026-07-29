@@ -650,6 +650,10 @@ window.renderReportResults = function(data) {
     if (window.lucide) lucide.createIcons();
     updateExportHrefs();
     window.renderReportCharts(data.charts || {});
+    // Keep the module-level payload in sync with AJAX updates so that
+    // exportReportWithCharts() captures the correct charts even when the
+    // user hasn't navigated to the printable (?full=1) view first.
+    REPORT_CHARTS_PAYLOAD = data.charts || {};
     // Update URL to reflect current filter state (for history/bookmark)
     var qs = reportQuery();
     var url = qs ? '/reports?' + qs : '/reports';
