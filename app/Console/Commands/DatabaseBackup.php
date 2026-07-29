@@ -1,37 +1,25 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Console\Commands;
 
-use App\Models\Setting;
-use Illuminate\Http\Request;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
-use Symfony\Component\Process\Process;
+use Illuminate\Support\Process;
+use Symfony\Component\Process\Process as SymfonyProcess;
 
-class SettingsController extends Controller
+class DatabaseBackup extends Command
 {
-    public function storeFarmLayout(Request $request)
-    {
-        $data = $request->validate([
-            'rows' => 'required|integer|min:1|max:50',
-            'cols' => 'required|integer|min:1|max:50',
-        ]);
+    protected $signature = 'db:backup {--retention= : Number of backups to keep (default: 7)}';
 
-        Setting::set('farm_grid_rows', $data['rows']);
-        Setting::set('farm_grid_cols', $data['cols']);
+    protected $description = 'Dump the database to a timestamped .sql file in storage/app/private/backups';
 
-        if ($request->expectsJson() || $request->isJson()) {
-            return response()->json(['success' => true, 'rows' => (int) $data['rows'], 'cols' => (int) $data['cols']]);
-        }
-
-        return redirect()->route('dashboard')->with('success', 'Farm layout configured.');
-    }
-
-    public function backupNow(Request $request)
+    public function handle(): int
     {
         $config = config('database.connections.' . config('database.default'));
 
         if ($config['driver'] !== 'mysql') {
-            return back()->withErrors(['backup' => 'Backup currently only supports MySQL.']);
+            $this->error('Backup currently only supports MySQL. Configured driver: ' . $config['driver']);
+            return self::FAILURE;
         }
 
         $backupDir = storage_path('app/private/backups');
@@ -42,6 +30,8 @@ class SettingsController extends Controller
         $timestamp = now()->format('Y-m-d_His');
         $filename = "layrate_backup_{$timestamp}.sql";
         $filepath = $backupDir . '/' . $filename;
+
+        $this->info("Creating database backup: {$filename}");
 
         $host = $config['host'] ?? '127.0.0.1';
         $port = $config['port'] ?? '3306';
@@ -63,27 +53,40 @@ class SettingsController extends Controller
             $database,
         ]);
 
-        $process = new Process($cmd);
+        $process = new SymfonyProcess($cmd);
         $process->setTimeout(300);
         $process->run();
 
+        // Exit code 2 from mysqldump/mariadb-dump means routine dump failed
+        // (schema mismatch) but the table data was dumped successfully.
         $routineWarning = str_contains($process->getErrorOutput(), 'Column count of mysql.proc');
 
         if (! $process->isSuccessful() && ! $routineWarning) {
+            $this->error('mysqldump failed: ' . $process->getErrorOutput());
             @unlink($filepath);
-            return back()->withErrors(['backup' => 'mysqldump failed: ' . $process->getErrorOutput()]);
+            return self::FAILURE;
+        }
+
+        if ($routineWarning) {
+            $this->warn('Note: Stored routines could not be dumped (schema mismatch). Table data is intact.');
         }
 
         $size = filesize($filepath);
         if ($size === false || $size === 0) {
+            $this->error('Backup file is empty — mysqldump produced no output.');
             @unlink($filepath);
-            return back()->withErrors(['backup' => 'Backup file is empty.']);
+            return self::FAILURE;
         }
 
-        // Retention: keep last 7
-        $this->pruneOldBackups($backupDir, 7);
+        $this->info("Backup created: {$filename} (" . number_format($size) . " bytes)");
 
-        return response()->download($filepath, $filename)->deleteFileAfterSend(true);
+        // Retention: keep last N backups
+        $retention = (int) ($this->option('retention') ?? 7);
+        $this->pruneOldBackups($backupDir, $retention);
+
+        $this->info("Done. Kept last {$retention} backups.");
+
+        return self::SUCCESS;
     }
 
     private function pruneOldBackups(string $directory, int $keep): void
@@ -100,6 +103,7 @@ class SettingsController extends Controller
         $toDelete = $files->slice($keep);
         foreach ($toDelete as $file) {
             File::delete($file->getPathname());
+            $this->line("  Pruned old backup: {$file->getFilename()}");
         }
     }
 }

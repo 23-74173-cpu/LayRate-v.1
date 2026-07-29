@@ -580,6 +580,13 @@
                     </div>
                 </div>
 
+                <div id="editResizeCollisionWarning" class="hidden mb-4 rounded-lg p-3" style="background-color: #fef3cd; border: 1px solid #f59e0b;">
+                    <div class="flex items-start gap-2">
+                        <i data-lucide="alert-triangle" class="w-4 h-4 mt-0.5 shrink-0" style="color: #92400e;"></i>
+                        <p class="text-sm" style="color: #92400e;" id="editResizeCollisionText"></p>
+                    </div>
+                </div>
+
                 @if($errors->has('rows') || $errors->has('slots_per_row') || $errors->has('max_chickens_per_slot') || $errors->has('is_active') || $errors->has('slots') || $errors->has('dht22_count') || $errors->has('resize'))
                 <div class="mb-4 rounded-lg p-3" style="background-color: #fbe4e6; border: 1px solid #f3cdd0;">
                     <div class="space-y-1 text-sm" style="color: #9b1c24;">
@@ -909,7 +916,92 @@ function renderSlotPreview(prefix) {
 }
 
 function updateAddPreview() { renderSlotPreview('add'); }
-function updateEditPreview() { renderSlotPreview('edit'); }
+function updateEditPreview() { renderSlotPreview('edit'); checkEditResizeCollision(); }
+
+// ── Resize collision detection (proactive UX, not save-time validation) ──
+var _editCollisionCageId = null;
+var _editCollisionConflicts = [];
+
+function checkEditResizeCollision() {
+    if (!_editCollisionCageId) return;
+
+    var newRows = parseInt(document.getElementById('editRows').value) || 1;
+    var newSlots = parseInt(document.getElementById('editSlotsPerRow').value) || 1;
+    var cageId = _editCollisionCageId;
+
+    var pos = pendingMoves[cageId] || savedPositions[cageId] || {};
+    var originRow = pos.location_row;
+    var originCol = pos.location_column;
+
+    var warningEl = document.getElementById('editResizeCollisionWarning');
+    var warningText = document.getElementById('editResizeCollisionText');
+
+    clearResizeCollisionHighlight();
+
+    if (originRow === null || originCol === null) {
+        warningEl.classList.add('hidden');
+        return;
+    }
+
+    var candidate = { col: parseInt(originCol), row: parseInt(originRow), w: newSlots, h: newRows };
+
+    var outOfBounds = (candidate.col + candidate.w > GRID_COLS) || (candidate.row + candidate.h > GRID_ROWS);
+    var conflicts = [];
+
+    for (var id in placedCages) {
+        if (parseInt(id) === cageId) continue;
+        var p = placedCages[id];
+        var other = { col: p.origin_col, row: p.origin_row, w: p.width, h: p.height };
+        if (rectsOverlap(candidate, other)) {
+            conflicts.push({ id: parseInt(id), code: p.code });
+        }
+    }
+
+    _editCollisionConflicts = conflicts;
+
+    if (conflicts.length > 0 || outOfBounds) {
+        highlightConflictingCages(conflicts);
+        var code = cageMeta[cageId] ? cageMeta[cageId].code : 'This cage';
+        var msg = 'Resizing ' + code + ' to ' + newSlots + '\u00d7' + newRows + ' will ';
+        if (outOfBounds && conflicts.length > 0) {
+            msg += 'go out of bounds and overlap ' + conflicts.map(function(c) { return c.code; }).join(', ');
+        } else if (outOfBounds) {
+            msg += 'extend beyond the canvas bounds';
+        } else {
+            msg += 'overlap ' + conflicts.map(function(c) { return c.code; }).join(', ');
+        }
+        warningText.textContent = msg;
+        warningEl.classList.remove('hidden');
+    } else {
+        warningEl.classList.add('hidden');
+    }
+}
+
+function highlightConflictingCages(conflicts) {
+    conflicts.forEach(function(c) {
+        var el = document.querySelector('.cage-overlay[data-cage-id="' + c.id + '"]');
+        if (el) {
+            el.style.borderColor = '#dc2626';
+            el.style.borderWidth = '3px';
+            el.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.25)';
+        }
+    });
+}
+
+function clearResizeCollisionHighlight() {
+    _editCollisionConflicts.forEach(function(c) {
+        var el = document.querySelector('.cage-overlay[data-cage-id="' + c.id + '"]');
+        if (el && parseInt(el.dataset.cageId) !== selectedCageId) {
+            var p = placedCages[c.id];
+            if (p) {
+                el.style.borderColor = p.color;
+                el.style.borderWidth = '2px';
+                el.style.boxShadow = 'none';
+            }
+        }
+    });
+    _editCollisionConflicts = [];
+}
 
 // ── Edit Modal ───────────────────────────────────────────
 function openEditModal(id, cageCode, locationRow, locationCol, rows, slotsPerRow, maxPerSlot, isActive) {
@@ -920,6 +1012,9 @@ function openEditModal(id, cageCode, locationRow, locationCol, rows, slotsPerRow
     document.getElementById('editMaxPerSlot').value = maxPerSlot;
     document.getElementById('editActive').checked = isActive === 1;
     document.getElementById('editResizeError').classList.add('hidden');
+    document.getElementById('editResizeCollisionWarning').classList.add('hidden');
+    _editCollisionCageId = id;
+    clearResizeCollisionHighlight();
 
     // Canvas position display — positions saved this session (without a page
     // refresh) override the values baked into the server-rendered edit button.
@@ -1058,6 +1153,8 @@ function removeDht22(index) {
 
 function closeEditModal() {
     document.getElementById('editCageModal').style.display = 'none';
+    _editCollisionCageId = null;
+    clearResizeCollisionHighlight();
 }
 
 // ── Keyboard: Escape closes modals (bind once) ───────────
