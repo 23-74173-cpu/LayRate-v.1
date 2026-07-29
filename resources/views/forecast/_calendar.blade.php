@@ -355,8 +355,8 @@
         const progressBar = document.getElementById('forecastProgressBar');
         const progressText = document.getElementById('forecastProgressText');
         const statusText = document.getElementById('forecastStatusText');
-        if (progressBar) progressBar.style.width = '50%';
-        if (progressText) progressText.textContent = '50%';
-        if (statusText) statusText.textContent = 'Generating single-day forecast...';
+        if (progressBar) progressBar.style.width = '0%';
+        if (progressText) progressText.textContent = '0%';
+        if (statusText) statusText.textContent = 'Loading historical data...';
     });
 </script>
