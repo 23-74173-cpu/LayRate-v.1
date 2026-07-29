@@ -183,7 +183,7 @@
         </div>
         <div class="p-5">
             <p class="text-sm text-[#6B7280] mb-4">
-                Import a filled <strong>.xlsx</strong> forecast input sheet. At minimum the sheet must include <strong>Date</strong> and <strong>Cage_Code</strong>.
+                Import a filled <strong>.xlsx</strong> forecast input sheet. The sheet must include <strong>Date</strong> and <strong>Cage_Code</strong>; other columns (Breed, Hen_Count, Egg_Count, etc.) are recommended but not required.
             </p>
             <p class="text-xs text-[#6B7280] mt-2 flex items-start gap-1.5">
                 <i data-lucide="info" class="w-3.5 h-3.5 shrink-0 mt-0.5"></i>
@@ -283,6 +283,18 @@
                                     </thead>
                                     <tbody id="previewInvalidRowsTable" class="divide-y divide-amber-100"></tbody>
                                 </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Missing columns warning --}}
+                    <div id="previewMissingCols" class="hidden mb-3">
+                        <div class="rounded-lg border border-red-200 bg-red-50 overflow-hidden">
+                            <div class="px-4 py-2.5 border-b border-red-200">
+                                <p class="text-xs font-semibold text-red-800 uppercase tracking-wide">Missing columns</p>
+                            </div>
+                            <div class="px-4 py-2.5">
+                                <p id="previewMissingColsMessage" class="text-sm text-red-700"></p>
                             </div>
                         </div>
                     </div>
@@ -710,6 +722,19 @@
                             invalidDetail.classList.add('hidden');
                         }
 
+                        // Missing columns warning.
+                        const missingColsEl = document.getElementById('previewMissingCols');
+                        const missingColsMsg = document.getElementById('previewMissingColsMessage');
+                        if (response.missing_columns && response.missing_columns.length > 0) {
+                            missingColsMsg.textContent = 'The file is missing column' +
+                                (response.missing_columns.length > 1 ? 's' : '') + ': ' +
+                                response.missing_columns.join(', ') +
+                                '. All rows will be skipped.';
+                            missingColsEl.classList.remove('hidden');
+                        } else {
+                            missingColsEl.classList.add('hidden');
+                        }
+
                         // Disable confirm if no valid rows.
                         if (confirmBtn) confirmBtn.disabled = response.valid_rows === 0;
 
@@ -769,10 +794,10 @@
                         message = Object.values(response.errors).flat().join('\n');
                     }
                     showImportFeedback('error', message);
-                    // Return to file selection on confirm failure.
-                    if (stepFile) stepFile.classList.remove('hidden');
-                    if (stepPreview) stepPreview.classList.add('hidden');
-                    previewData = null;
+                    // Keep the preview visible on failure so the user sees the error.
+                    // Re-enable the confirm button so they can retry.
+                    if (confirmBtn) confirmBtn.disabled = false;
+                    if (confirmBtnText) confirmBtnText.textContent = 'Confirm Import';
                 });
 
                 xhr.addEventListener('error', function() {

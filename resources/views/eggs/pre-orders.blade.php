@@ -32,7 +32,7 @@
                 'jumbo'  => ['#6B4C8A', '#e9e0f5'],
             ];
             [$color, $soft] = $colors[$size];
-            $isDeficit = $data['available'] < 0;
+            $isDeficit = $data['deficit'] > 0;
         @endphp
         <div class="rounded-lg border p-4 {{ $isDeficit ? 'border-red-300 bg-red-50' : 'bg-white border-[#D9D9D9]' }}">
             <div class="text-xs font-semibold tracking-[0.125px] uppercase mb-1" style="color: {{ $color }}">{{ $label }}</div>
@@ -41,11 +41,12 @@
             </div>
             <div class="text-xs mt-1" style="color: #6B7280">available</div>
             <div class="text-xs mt-1" style="color: #6B7280">
-                {{ number_format($data['current_stock']) }} stock · {{ number_format($data['forecasted']) }} forecast · {{ number_format($data['committed']) }} committed
+                {{ number_format($data['logged']) }} produced · {{ number_format($data['stocked']) }} stocked · {{ number_format($data['committed']) }} committed
             </div>
+            <div class="text-xs" style="color: #6B7280">+{{ number_format($data['forecasted']) }} forecasted</div>
             @if($isDeficit)
-            <div class="mt-2 text-xs font-medium" style="color: #9b1c24">
-                Shortfall: {{ number_format(abs($data['available'])) }} eggs · {{ (int) ceil(abs($data['available']) / 30) }} trays
+            <div class="mt-1.5 text-xs font-medium" style="color: #9b1c24">
+                Shortfall: {{ number_format($data['deficit']) }} eggs · {{ (int) ceil($data['deficit'] / 30) }} trays
             </div>
             @endif
         </div>

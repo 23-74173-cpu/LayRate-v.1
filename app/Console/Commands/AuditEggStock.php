@@ -16,7 +16,7 @@ class AuditEggStock extends Command
 
     public function handle(): int
     {
-        $sizes = ['small', 'medium', 'large', 'jumbo'];
+        $sizes = ['small', 'medium', 'large', 'jumbo', 'unsorted'];
         $showDetail = $this->option('detail');
         $exitCode = self::SUCCESS;
 
@@ -29,9 +29,11 @@ class AuditEggStock extends Command
         foreach ($sizes as $size) {
             $logged = (int) EggSizeLog::where('egg_size', $size)->sum('count');
             $stocked = (int) EggStockBatch::where('egg_size', $size)->sum('count');
-            $pendingPreOrders = (int) PreOrder::where('egg_size', $size)
-                ->where('status', 'pending')
-                ->sum('egg_count');
+            $pendingPreOrders = $size === 'unsorted'
+                ? 0
+                : (int) PreOrder::where('egg_size', $size)
+                    ->where('status', 'pending')
+                    ->sum('egg_count');
             $totalCommitted = $stocked + $pendingPreOrders;
             $remaining = $logged - $totalCommitted;
             $overage = $totalCommitted - $logged;
@@ -59,14 +61,16 @@ class AuditEggStock extends Command
                             $this->line("      [{$b->id}] count={$b->count}, harvested={$b->harvested_date}, {$src}");
                         }
                     }
-                    $preOrders = PreOrder::where('egg_size', $size)
-                        ->where('status', 'pending')
-                        ->orderByDesc('requested_date')
-                        ->get();
-                    if ($preOrders->isNotEmpty()) {
-                        $this->line('    Pending pre-order detail:');
-                        foreach ($preOrders as $po) {
-                            $this->line("      [{$po->id}] {$po->customer_name}, count={$po->egg_count}, requested={$po->requested_date}");
+                    if ($size !== 'unsorted') {
+                        $preOrders = PreOrder::where('egg_size', $size)
+                            ->where('status', 'pending')
+                            ->orderByDesc('requested_date')
+                            ->get();
+                        if ($preOrders->isNotEmpty()) {
+                            $this->line('    Pending pre-order detail:');
+                            foreach ($preOrders as $po) {
+                                $this->line("      [{$po->id}] {$po->customer_name}, count={$po->egg_count}, requested={$po->requested_date}");
+                            }
                         }
                     }
                 }

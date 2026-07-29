@@ -37,10 +37,6 @@ class PreOrder extends Model
         if ($count === 6) return 'half-dozen';
         if ($count === 12) return '1 dozen';
 
-        // Half-tray / tray shortcuts (15 / 30) — still valid multiples of 6? No,
-        // 15 is not a multiple of 6, so these won't occur with the new validation.
-        // But keep the logic general in case the constraint changes again.
-
         if ($count % 12 === 0) {
             $dozens = $count / 12;
             return $dozens . ' ' . Str::plural('dozen', $dozens);
@@ -52,7 +48,6 @@ class PreOrder extends Model
                 $dozens = $halfDozens / 2;
                 return $dozens . ' ' . Str::plural('dozen', $dozens);
             }
-            // Odd number of half-dozens (e.g. 18 = 3 half-dozens = 1.5 dozen)
             $dozens = $count / 12;
             return number_format($dozens, 1) . ' dozen';
         }
@@ -67,21 +62,41 @@ class PreOrder extends Model
     }
 
     /**
+     * Compute available pool for a size with row-level locking.
+     *
+     * Formula: SUM(egg_size_logs.count) - SUM(egg_stock_batches.count) - SUM(pending pre_orders.egg_count)
+     * This matches EggStockBatch::getAvailablePoolForSize farm-wide (cageId = null).
+     */
+    private static function getPoolWithLock(string $size): int
+    {
+        EggSizeLog::where('egg_size', $size)->lockForUpdate()->get();
+        EggStockBatch::where('egg_size', $size)->lockForUpdate()->get();
+        self::where('egg_size', $size)->where('status', 'pending')->lockForUpdate()->get();
+
+        $logged = EggSizeLog::where('egg_size', $size)->sum('count');
+        $stocked = EggStockBatch::where('egg_size', $size)->sum('count');
+        $committed = self::where('egg_size', $size)->where('status', 'pending')->sum('egg_count');
+
+        return max(0, $logged - $stocked - $committed);
+    }
+
+    /**
      * Create a pre-order inside a DB transaction with row locking,
      * ensuring it doesn't over-commit available stock.
+     *
+     * Pool includes logged egg_size_logs (not just stocked batches),
+     * matching EggStockBatch::getAvailablePoolForSize.
      *
      * @throws \OverflowException if requested egg_count exceeds available stock
      */
     public static function createWithinPool(array $data): self
     {
         return DB::transaction(function () use ($data) {
-            $stocked = EggStockBatch::where('egg_size', $data['egg_size'])->sum('count');
-            $committed = self::where('egg_size', $data['egg_size'])->where('status', 'pending')->sum('egg_count');
-            $available = $stocked - $committed;
+            $available = self::getPoolWithLock($data['egg_size']);
 
             if (($data['egg_count'] ?? 0) > $available) {
                 throw new \OverflowException(
-                    "Only {$available} {$data['egg_size']} egg(s) available in stock (inventory minus other pending pre-orders)."
+                    "Only {$available} {$data['egg_size']} egg(s) available (total production minus stocked and other pending pre-orders)."
                 );
             }
 
@@ -110,21 +125,16 @@ class PreOrder extends Model
                 return;
             }
 
-            // If releasing reservation (fulfilling/cancelling a pending order), no stock check
-            if ($wasPending && (!$isPending || $newSize !== $oldSize)) {
-                if (!$isPending) {
-                    $this->update($data);
-                    return;
-                }
+            if ($wasPending && !$isPending) {
+                $this->update($data);
+                return;
             }
 
-            $stocked = EggStockBatch::where('egg_size', $newSize)->sum('count');
-            $committed = self::where('egg_size', $newSize)->where('status', 'pending')->sum('egg_count');
-            $available = $stocked - $committed;
+            $available = self::getPoolWithLock($newSize);
 
             if ($newCount > $available) {
                 throw new \OverflowException(
-                    "Only {$available} {$newSize} egg(s) available in stock (inventory minus other pending pre-orders)."
+                    "Only {$available} {$newSize} egg(s) available (total production minus stocked and other pending pre-orders)."
                 );
             }
 

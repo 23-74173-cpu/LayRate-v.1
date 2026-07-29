@@ -16,6 +16,12 @@ from sqlalchemy import create_engine, text
 
 REQUIRED_COLUMNS = {"Date", "Cage_Code"}
 
+INSERT_COLUMNS = {
+    "Date", "Cage_Code", "Breed", "Flock_Age_Weeks", "Hen_Count", "Egg_Count",
+    "Temperature_C", "Humidity_Percent", "Crude_Protein_Percent",
+    "Feed_Consumed_kg", "Mortality_Count",
+}
+
 COLUMN_MAP = {
     "Date": "date",
     "Cage_Code": "cage_code",
@@ -56,11 +62,13 @@ def clean_value(value):
 
 
 def parse_forecast_file(file_path: str):
-    """Parse the Excel file and return (df, raw_row_count, invalid_rows).
+    """Parse the Excel file and return (df, raw_row_count, invalid_rows, date_range, missing_columns).
 
     - df: cleaned DataFrame with only valid rows (ready for DB insert)
     - raw_row_count: total rows in the original file (excluding header)
     - invalid_rows: list of dicts with row_number, reason for each skipped row
+    - date_range: dict with start/end or None
+    - missing_columns: list of Excel column names that are entirely absent from the file
     """
     df_raw = pd.read_excel(file_path, engine="openpyxl", dtype=str)
     raw_row_count = len(df_raw)
@@ -68,14 +76,29 @@ def parse_forecast_file(file_path: str):
     df = pd.read_excel(file_path, engine="openpyxl")
     df.columns = [str(c).strip() for c in df.columns]
 
-    missing = REQUIRED_COLUMNS - set(df.columns)
+    file_cols = set(df.columns)
+
+    missing = REQUIRED_COLUMNS - file_cols
     if missing:
         raise ValueError(f"Missing required columns: {', '.join(sorted(missing))}")
+
+    # Detect any other INSERT columns missing from the file (Date/Cage_Code already checked).
+    missing_cols = sorted(INSERT_COLUMNS - file_cols - REQUIRED_COLUMNS)
 
     df = df.rename(columns=COLUMN_MAP)
 
     # Track invalid rows before dropping.
     invalid_rows = []
+
+    # If columns are entirely missing, mark every row as invalid and empty the
+    # DataFrame so valid_rows is 0 (no rows can be imported).
+    if missing_cols:
+        for idx in df.index:
+            invalid_rows.append({
+                "row": int(idx) + 2,
+                "reason": f"missing columns: {', '.join(missing_cols)}",
+            })
+        df = df.iloc[0:0]
 
     # Check for bad dates (row numbers are 1-indexed, +1 for header).
     if "date" in df.columns:
@@ -155,12 +178,12 @@ def parse_forecast_file(file_path: str):
             unique_invalid.append(r)
     invalid_rows = sorted(unique_invalid, key=lambda x: x["row"])
 
-    return df, raw_row_count, invalid_rows, date_range
+    return df, raw_row_count, invalid_rows, date_range, missing_cols
 
 
 def preview_forecast_input(file_path: str) -> dict:
     """Parse the file and return preview metadata without writing to DB."""
-    df, raw_row_count, invalid_rows, date_range = parse_forecast_file(file_path)
+    df, raw_row_count, invalid_rows, date_range, missing_cols = parse_forecast_file(file_path)
 
     return {
         "total_rows": raw_row_count,
@@ -168,23 +191,30 @@ def preview_forecast_input(file_path: str) -> dict:
         "invalid_rows": invalid_rows,
         "invalid_count": len(invalid_rows),
         "date_range": date_range,
+        "missing_columns": missing_cols,
     }
 
 
 def import_forecast_input(file_path: str, source_file: str | None = None) -> int:
-    df, raw_row_count, invalid_rows, _ = parse_forecast_file(file_path)
+    df, raw_row_count, invalid_rows, _, _ = parse_forecast_file(file_path)
 
     if df.empty:
-        raise ValueError("No valid rows to import after parsing dates and cage codes.")
+        raise ValueError("No valid rows to import after parsing.")
 
-    # Keep only columns that exist in the target table, plus source_file.
-    db_columns = set(COLUMN_MAP.values()) | {"source_file"}
-    df = df[[c for c in df.columns if c in db_columns or c == "source_file"]]
+    # Keep only columns expected by the INSERT, plus source_file.
+    db_columns = set(COLUMN_MAP.values())
+    for col in db_columns:
+        if col not in df.columns:
+            df[col] = None
+
     df["source_file"] = source_file or os.path.basename(file_path)
+
+    # Filter to only the columns the INSERT knows about.
+    insert_columns = db_columns | {"source_file"}
 
     records = []
     for _, row in df.iterrows():
-        record = {k: clean_value(v) for k, v in row.items()}
+        record = {k: clean_value(v) for k, v in row.items() if k in insert_columns}
         records.append(record)
 
     engine = build_engine()

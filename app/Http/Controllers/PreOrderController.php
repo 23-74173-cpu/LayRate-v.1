@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Alert;
+use App\Models\EggSizeLog;
 use App\Models\EggStockBatch;
 use App\Models\Hen;
 use App\Models\PreOrder;
@@ -69,16 +70,19 @@ class PreOrderController extends Controller
         $summary = [];
 
         foreach ($sizes as $size) {
-            $currentStock = EggStockBatch::where('egg_size', $size)->sum('count');
+            $logged = EggSizeLog::where('egg_size', $size)->sum('count');
+            $stocked = EggStockBatch::where('egg_size', $size)->sum('count');
             $committed = PreOrder::where('egg_size', $size)->where('status', 'pending')->sum('egg_count');
             $forecasted = $this->forecastSize($size);
-            $available = $currentStock + $forecasted - $committed;
+            $pool = $logged - $stocked - $committed;
 
             $summary[$size] = [
-                'current_stock' => $currentStock,
+                'logged' => $logged,
+                'stocked' => $stocked,
                 'committed' => $committed,
                 'forecasted' => $forecasted,
-                'available' => $available,
+                'available' => max(0, $pool),
+                'deficit' => $pool < 0 ? abs($pool) : 0,
             ];
         }
 
@@ -108,9 +112,10 @@ class PreOrderController extends Controller
         $sizes = ['small', 'medium', 'large', 'jumbo'];
         $pools = [];
         foreach ($sizes as $size) {
+            $logged = EggSizeLog::where('egg_size', $size)->sum('count');
             $stocked = EggStockBatch::where('egg_size', $size)->sum('count');
             $committed = PreOrder::where('egg_size', $size)->where('status', 'pending')->sum('egg_count');
-            $pools[$size] = $stocked - $committed;
+            $pools[$size] = max(0, $logged - $stocked - $committed);
         }
         return response()->json(['pools' => $pools]);
     }

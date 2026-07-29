@@ -107,14 +107,14 @@ class PreOrderTest extends TestCase
         $response = $this->post(route('eggs.preorders.store'), [
             'customer_name' => 'Test Customer',
             'egg_size' => 'large',
-            'egg_count' => 20,
+            'egg_count' => 18,
             'requested_date' => now()->addDay()->toDateString(),
         ]);
 
         $response->assertSessionHasNoErrors();
         $response->assertRedirect();
         $this->assertEquals(1, PreOrder::count());
-        $this->assertEquals(20, PreOrder::first()->egg_count);
+        $this->assertEquals(18, PreOrder::first()->egg_count);
     }
 
     /** @test */
@@ -245,13 +245,13 @@ class PreOrderTest extends TestCase
         $this->assertEquals('0 eggs', PreOrder::eggLabel(0));
         $this->assertEquals('1 egg', PreOrder::eggLabel(1));
         $this->assertEquals('1 dozen', PreOrder::eggLabel(12));
-        $this->assertEquals('half tray', PreOrder::eggLabel(15));
+        $this->assertEquals('15 eggs (0.5 trays)', PreOrder::eggLabel(15));
+        $this->assertEquals('1.5 dozen', PreOrder::eggLabel(18));
         $this->assertEquals('22 eggs (0.7 trays)', PreOrder::eggLabel(22));
-        $this->assertEquals('1 tray', PreOrder::eggLabel(30));
-        $this->assertEquals('1.5 trays', PreOrder::eggLabel(45));
-        $this->assertEquals('2 trays', PreOrder::eggLabel(60));
-        $this->assertEquals('3 trays', PreOrder::eggLabel(90));
-        $this->assertEquals('22 eggs (0.7 trays)', PreOrder::eggLabel(22));
+        $this->assertEquals('2.5 dozen', PreOrder::eggLabel(30));
+        $this->assertEquals('45 eggs (1.5 trays)', PreOrder::eggLabel(45));
+        $this->assertEquals('5 dozens', PreOrder::eggLabel(60));
+        $this->assertEquals('7.5 dozen', PreOrder::eggLabel(90));
     }
 
     /** @test */
@@ -281,7 +281,7 @@ class PreOrderTest extends TestCase
         $response = $this->post(route('eggs.preorders.store'), [
             'customer_name' => 'Test',
             'egg_size' => 'large',
-            'egg_count' => 10,
+            'egg_count' => 6,
             'requested_date' => now()->subDay()->toDateString(),
         ]);
 
