@@ -241,8 +241,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.preview:
-        result = preview_forecast_input(args.file)
-        print(json.dumps(result))
+        try:
+            result = preview_forecast_input(args.file)
+            print(json.dumps(result))
+        except ValueError as e:
+            print(json.dumps({"error": str(e)}))
+            raise SystemExit(1)
     else:
         count = import_forecast_input(args.file, source_file=args.source_file)
         print(f"Imported {count} row(s) into forecast_input_records.")

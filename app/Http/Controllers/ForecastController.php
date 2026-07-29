@@ -437,12 +437,20 @@ class ForecastController extends Controller
             $process->run();
 
             if (!$process->isSuccessful()) {
-                $error = trim($process->getErrorOutput()) ?: trim($process->getOutput());
+                $errorOutput = trim($process->getErrorOutput());
+                $stdOutput   = trim($process->getOutput());
+                // Python preview script may emit {"error": "..."} as JSON on failure.
+                $detail = $errorOutput;
+                if (!$detail && $stdOutput) {
+                    $decoded = json_decode($stdOutput, true);
+                    $detail = is_array($decoded) && isset($decoded['error']) ? $decoded['error'] : $stdOutput;
+                }
                 Log::error('Forecast preview process failed', [
                     'exit_code' => $process->getExitCode(),
-                    'stderr'    => $error,
+                    'stderr'    => $errorOutput,
+                    'stdout'    => $stdOutput,
                 ]);
-                throw new RuntimeException('Preview failed. ' . $error);
+                throw new RuntimeException('Preview failed. ' . $detail);
             }
 
             $json = json_decode(trim($process->getOutput()), true);
