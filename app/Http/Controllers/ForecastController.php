@@ -393,6 +393,144 @@ class ForecastController extends Controller
         }
     }
 
+    /**
+     * Phase 1: Parse the uploaded file and return preview metadata without writing to DB.
+     *
+     * The file is saved to a temporary path so phase 2 (confirm) can pick it up.
+     * Returns JSON with total_rows, valid_rows, invalid_rows, date_range, and a
+     * temp_path the client must pass back when confirming.
+     */
+    public function importPreview(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'forecast_file' => ['required', 'file', 'mimes:xlsx', 'max:10240'],
+            ]);
+
+            $file = $validated['forecast_file'];
+            $fullPath = $file->getRealPath();
+
+            if (!$fullPath || !file_exists($fullPath)) {
+                throw new RuntimeException('Uploaded file not found.');
+            }
+
+            // Persist the upload to a temp directory so the confirm step can read it.
+            $tempDir = storage_path('app/private/forecast-imports');
+            if (!is_dir($tempDir)) {
+                mkdir($tempDir, 0775, true);
+            }
+            $tempName = 'import_' . bin2hex(random_bytes(16)) . '.xlsx';
+            $tempPath = $tempDir . '/' . $tempName;
+            $file->move($tempDir, $tempName);
+
+            $pythonBinary = $this->resolvePythonBinary();
+            $scriptPath   = base_path('forecast-api/import_forecast_input.py');
+
+            if (!file_exists($scriptPath)) {
+                throw new RuntimeException('Forecast import script not found.');
+            }
+
+            $command = [$pythonBinary, $scriptPath, $tempPath, '--preview'];
+            $process = new Process($command, base_path());
+            $process->setTimeout(120);
+            $process->setEnv($this->processEnv());
+            $process->run();
+
+            if (!$process->isSuccessful()) {
+                $error = trim($process->getErrorOutput()) ?: trim($process->getOutput());
+                Log::error('Forecast preview process failed', [
+                    'exit_code' => $process->getExitCode(),
+                    'stderr'    => $error,
+                ]);
+                throw new RuntimeException('Preview failed. ' . $error);
+            }
+
+            $json = json_decode(trim($process->getOutput()), true);
+            if (!is_array($json)) {
+                throw new RuntimeException('Invalid preview output from Python script.');
+            }
+
+            $json['temp_path']  = $tempPath;
+            $json['source_file'] = $file->getClientOriginalName();
+
+            return response()->json($json);
+        } catch (Illuminate\Validation\ValidationException $e) {
+            return response()->json(['success' => false, 'errors' => $e->errors()], 422);
+        } catch (\Throwable $e) {
+            Log::error('Forecast preview failed', ['message' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Phase 2: Execute the actual import using the temp file from phase 1.
+     *
+     * Expects JSON body: { temp_path: string, source_file: string }
+     * Returns JSON with success, count, and message.
+     */
+    public function importConfirm(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'temp_path'   => ['required', 'string'],
+                'source_file' => ['required', 'string'],
+            ]);
+
+            $tempPath   = $validated['temp_path'];
+            $sourceFile = $validated['source_file'];
+
+            // Security: ensure the path is inside our temp directory.
+            $tempDir = realpath(storage_path('app/private/forecast-imports'));
+            $realPath = realpath($tempPath);
+            if ($tempDir === false || $realPath === false || !str_starts_with($realPath, $tempDir . '/')) {
+                throw new RuntimeException('Invalid or expired import session.');
+            }
+
+            if (!file_exists($realPath)) {
+                throw new RuntimeException('Import file not found. Please re-upload.');
+            }
+
+            $pythonBinary = $this->resolvePythonBinary();
+            $scriptPath   = base_path('forecast-api/import_forecast_input.py');
+
+            $command = [
+                $pythonBinary, $scriptPath, $realPath,
+                '--source-file', $sourceFile,
+            ];
+
+            $process = new Process($command, base_path());
+            $process->setTimeout(300);
+            $process->setEnv($this->processEnv());
+            $process->run();
+
+            // Clean up temp file regardless of outcome.
+            @unlink($realPath);
+
+            if (!$process->isSuccessful()) {
+                $error = trim($process->getErrorOutput()) ?: trim($process->getOutput());
+                Log::error('Forecast import confirm failed', [
+                    'exit_code' => $process->getExitCode(),
+                    'stderr'    => $error,
+                ]);
+                throw new RuntimeException('Import failed. ' . $error);
+            }
+
+            $output = trim($process->getOutput());
+            $count  = 0;
+            if (preg_match('/Imported (\d+) row/', $output, $matches)) {
+                $count = (int) $matches[1];
+            }
+
+            $message = "Imported {$count} production record(s) successfully.";
+            return response()->json(['success' => true, 'count' => $count, 'message' => $message]);
+        } catch (Illuminate\Validation\ValidationException $e) {
+            return response()->json(['success' => false, 'errors' => $e->errors()], 422);
+        } catch (\Throwable $e) {
+            Log::error('Forecast import confirm failed', ['message' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
     private function farmHistorical(int $days = 14): Collection
     {
         return DB::table('forecast_input_records')

@@ -211,34 +211,94 @@
             </div>
 
             @can('admin')
-            <form method="POST" action="{{ route('forecast.import') }}" id="forecastImportForm" enctype="multipart/form-data" data-turbo="false">
-                @csrf
-                <div id="dropZone" class="group relative border-2 border-dashed border-[#D9D9D9] rounded-lg p-5 hover:border-[#2D7D46] hover:bg-[#F5F6F8] transition-all cursor-pointer text-center mb-3">
-                    <input type="file" name="forecast_file" id="forecastFileInput" accept=".xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required
-                           class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
-                    <div id="dropZonePrompt" class="pointer-events-none">
-                        <div class="w-10 h-10 rounded-full bg-[#F5F6F8] group-hover:bg-white flex items-center justify-center mx-auto mb-2 transition-colors">
-                            <i data-lucide="file-spreadsheet" class="w-5 h-5 text-[#6B7280]"></i>
+            <div id="forecastImportSection">
+                {{-- Step 1: File selection --}}
+                <div id="importStepFile">
+                    <div id="dropZone" class="group relative border-2 border-dashed border-[#D9D9D9] rounded-lg p-5 hover:border-[#2D7D46] hover:bg-[#F5F6F8] transition-all cursor-pointer text-center mb-3">
+                        <input type="file" name="forecast_file" id="forecastFileInput" accept=".xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                               class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                        <div id="dropZonePrompt" class="pointer-events-none">
+                            <div class="w-10 h-10 rounded-full bg-[#F5F6F8] group-hover:bg-white flex items-center justify-center mx-auto mb-2 transition-colors">
+                                <i data-lucide="file-spreadsheet" class="w-5 h-5 text-[#6B7280]"></i>
+                            </div>
+                            <p class="text-sm text-[#333333] font-medium">Click or drag Excel file here</p>
+                            <p class="text-xs text-[#6B7280] mt-1">.xlsx only, max 10 MB</p>
                         </div>
-                        <p class="text-sm text-[#333333] font-medium">Click or drag Excel file here</p>
-                        <p class="text-xs text-[#6B7280] mt-1">.xlsx only, max 10 MB</p>
+                        <div id="fileSelectedPrompt" class="hidden pointer-events-none">
+                            <div class="w-10 h-10 rounded-full bg-[#D5E8D4] flex items-center justify-center mx-auto mb-2">
+                                <i data-lucide="check-circle" class="w-5 h-5 text-[#2D7D46]"></i>
+                            </div>
+                            <p class="text-sm text-[#333333] font-medium truncate px-2" id="selectedFileName">No file selected</p>
+                            <p class="text-xs text-[#6B7280] mt-1">Click or drop another file to replace</p>
+                        </div>
                     </div>
-                    <div id="fileSelectedPrompt" class="hidden pointer-events-none">
-                        <div class="w-10 h-10 rounded-full bg-[#D5E8D4] flex items-center justify-center mx-auto mb-2">
-                            <i data-lucide="check-circle" class="w-5 h-5 text-[#2D7D46]"></i>
+                    @error('forecast_file')
+                    <p class="text-xs text-red-600 mb-2">{{ $message }}</p>
+                    @enderror
+                    <x-button type="button" id="previewImportBtn" class="w-full py-3 shadow-md" disabled>
+                        <i data-lucide="scan-eye" class="w-5 h-5 shrink-0"></i>
+                        <span id="previewBtnText">Preview Import</span>
+                    </x-button>
+                </div>
+
+                {{-- Step 2: Preview results (hidden by default) --}}
+                <div id="importStepPreview" class="hidden">
+                    <div class="mb-3 rounded-lg border border-[#E5E7EB] overflow-hidden">
+                        <div class="bg-[#F5F6F8] px-4 py-2.5 border-b border-[#E5E7EB]">
+                            <p class="text-xs font-semibold text-[#333333] uppercase tracking-wide">Preview</p>
                         </div>
-                        <p class="text-sm text-[#333333] font-medium truncate px-2" id="selectedFileName">No file selected</p>
-                        <p class="text-xs text-[#6B7280] mt-1">Click or drop another file to replace</p>
+                        <div class="p-4 space-y-2.5 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-[#6B7280]">Total rows</span>
+                                <span class="font-medium text-[#333333]" id="previewTotalRows">—</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-[#6B7280]">Valid rows</span>
+                                <span class="font-medium text-[#2D7D46]" id="previewValidRows">—</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-[#6B7280]">Skipped rows</span>
+                                <span class="font-medium text-[#B45309]" id="previewInvalidRows">—</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-[#6B7280]">Date range</span>
+                                <span class="font-medium text-[#333333]" id="previewDateRange">—</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Invalid rows detail --}}
+                    <div id="previewInvalidDetail" class="hidden mb-3">
+                        <div class="rounded-lg border border-amber-200 bg-amber-50 overflow-hidden">
+                            <div class="px-4 py-2.5 border-b border-amber-200">
+                                <p class="text-xs font-semibold text-amber-800 uppercase tracking-wide">Skipped rows</p>
+                            </div>
+                            <div class="max-h-40 overflow-y-auto">
+                                <table class="w-full text-xs">
+                                    <thead class="bg-amber-50 sticky top-0">
+                                        <tr>
+                                            <th class="px-4 py-1.5 text-left font-medium text-amber-800">Row</th>
+                                            <th class="px-4 py-1.5 text-left font-medium text-amber-800">Reason</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="previewInvalidRowsTable" class="divide-y divide-amber-100"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <x-button type="button" id="cancelImportBtn" class="flex-1 py-3 bg-white border border-[#D9D9D9] text-[#333333] hover:bg-[#F5F6F8]">
+                            <i data-lucide="x" class="w-4 h-4 shrink-0"></i>
+                            <span>Cancel</span>
+                        </x-button>
+                        <x-button type="button" id="confirmImportBtn" class="flex-1 py-3 shadow-md">
+                            <i data-lucide="check" class="w-4 h-4 shrink-0"></i>
+                            <span id="confirmBtnText">Confirm Import</span>
+                        </x-button>
                     </div>
                 </div>
-                @error('forecast_file')
-                <p class="text-xs text-red-600 mb-2">{{ $message }}</p>
-                @enderror
-                <x-button type="submit" id="importForecastBtn" class="w-full py-3 shadow-md" disabled>
-                    <i data-lucide="upload" class="w-5 h-5 shrink-0"></i>
-                    <span id="importBtnText">Start Importing</span>
-                </x-button>
-            </form>
+            </div>
             @endcan
         </div>
     </div>
@@ -486,13 +546,18 @@
     }
 
     document.addEventListener('turbo:load', function() {
-        const form = document.getElementById('forecastImportForm');
-        const btn = document.getElementById('importForecastBtn');
-        const btnText = document.getElementById('importBtnText');
+        const previewBtn = document.getElementById('previewImportBtn');
+        const previewBtnText = document.getElementById('previewBtnText');
+        const confirmBtn = document.getElementById('confirmImportBtn');
+        const confirmBtnText = document.getElementById('confirmBtnText');
+        const cancelBtn = document.getElementById('cancelImportBtn');
         const feedback = document.getElementById('importFeedback');
         const feedbackMessage = document.getElementById('importFeedbackMessage');
         const feedbackIcon = document.getElementById('importFeedbackIcon');
         const copyFeedbackBtn = document.getElementById('copyImportFeedbackBtn');
+
+        // Preview state stored between phases.
+        let previewData = null;
 
         if (copyFeedbackBtn && feedbackMessage) {
             copyFeedbackBtn.addEventListener('click', function() {
@@ -538,23 +603,25 @@
         const dropZonePrompt = document.getElementById('dropZonePrompt');
         const fileSelectedPrompt = document.getElementById('fileSelectedPrompt');
         const selectedFileName = document.getElementById('selectedFileName');
+        const stepFile = document.getElementById('importStepFile');
+        const stepPreview = document.getElementById('importStepPreview');
 
         function updateDropZoneState() {
-            if (!fileInput || !dropZonePrompt || !fileSelectedPrompt || !selectedFileName || !btn) return;
+            if (!fileInput || !dropZonePrompt || !fileSelectedPrompt || !selectedFileName || !previewBtn) return;
             if (fileInput.files && fileInput.files.length > 0) {
                 dropZonePrompt.classList.add('hidden');
                 fileSelectedPrompt.classList.remove('hidden');
                 selectedFileName.textContent = fileInput.files[0].name;
                 dropZone.classList.add('border-[#2D7D46]', 'bg-[#D5E8D4]/20');
                 dropZone.classList.remove('border-[#D9D9D9]');
-                btn.disabled = false;
+                previewBtn.disabled = false;
             } else {
                 dropZonePrompt.classList.remove('hidden');
                 fileSelectedPrompt.classList.add('hidden');
                 selectedFileName.textContent = 'No file selected';
                 dropZone.classList.remove('border-[#2D7D46]', 'bg-[#D5E8D4]/20');
                 dropZone.classList.add('border-[#D9D9D9]');
-                btn.disabled = true;
+                previewBtn.disabled = true;
             }
             if (window.lucide) lucide.createIcons();
         }
@@ -587,37 +654,72 @@
             });
         }
 
-        if (form && btn) {
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
+        // ── Phase 1: Preview ──
+        if (previewBtn && fileInput) {
+            previewBtn.addEventListener('click', function() {
                 hideImportFeedback();
-                btn.disabled = true;
-                if (btnText) {
-                    btnText.textContent = 'Importing...';
-                }
+                previewBtn.disabled = true;
+                if (previewBtnText) previewBtnText.textContent = 'Analyzing...';
+
+                const formData = new FormData();
+                formData.append('forecast_file', fileInput.files[0]);
+                formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
 
                 const xhr = new XMLHttpRequest();
-                const formData = new FormData(form);
-
                 xhr.addEventListener('load', function() {
-                    btn.disabled = false;
-                    if (btnText) {
-                        btnText.textContent = 'Start Importing';
-                    }
+                    previewBtn.disabled = false;
+                    if (previewBtnText) previewBtnText.textContent = 'Preview Import';
 
                     let response = {};
                     try {
                         response = JSON.parse(xhr.responseText);
                     } catch (e) {
-                        response = { success: false, message: 'Unexpected server response.\n\n' + xhr.responseText };
-                    }
-
-                    if (xhr.status >= 200 && xhr.status < 300 && response.success) {
-                        window.location.reload();
+                        showImportFeedback('error', 'Unexpected server response.');
                         return;
                     }
 
-                    let message = response.message || 'Import failed. Please check the file and try again.';
+                    if (xhr.status >= 200 && xhr.status < 300 && response.temp_path) {
+                        // Show preview step.
+                        previewData = response;
+                        document.getElementById('previewTotalRows').textContent = response.total_rows;
+                        document.getElementById('previewValidRows').textContent = response.valid_rows;
+                        document.getElementById('previewInvalidRows').textContent = response.invalid_count;
+
+                        if (response.date_range) {
+                            document.getElementById('previewDateRange').textContent =
+                                response.date_range.start + ' to ' + response.date_range.end;
+                        } else {
+                            document.getElementById('previewDateRange').textContent = '—';
+                        }
+
+                        // Invalid rows detail.
+                        const invalidDetail = document.getElementById('previewInvalidDetail');
+                        const invalidTable = document.getElementById('previewInvalidRowsTable');
+                        if (response.invalid_rows && response.invalid_rows.length > 0) {
+                            invalidTable.innerHTML = '';
+                            response.invalid_rows.forEach(function(row) {
+                                const tr = document.createElement('tr');
+                                tr.className = 'bg-amber-50/50';
+                                tr.innerHTML =
+                                    '<td class="px-4 py-1.5 font-medium text-amber-900">' + row.row + '</td>' +
+                                    '<td class="px-4 py-1.5 text-amber-700">' + row.reason + '</td>';
+                                invalidTable.appendChild(tr);
+                            });
+                            invalidDetail.classList.remove('hidden');
+                        } else {
+                            invalidDetail.classList.add('hidden');
+                        }
+
+                        // Disable confirm if no valid rows.
+                        if (confirmBtn) confirmBtn.disabled = response.valid_rows === 0;
+
+                        if (stepFile) stepFile.classList.add('hidden');
+                        if (stepPreview) stepPreview.classList.remove('hidden');
+                        if (window.lucide) lucide.createIcons();
+                        return;
+                    }
+
+                    let message = response.message || 'Preview failed. Please check the file.';
                     if (response.errors && typeof response.errors === 'object') {
                         message = Object.values(response.errors).flat().join('\n');
                     }
@@ -625,16 +727,80 @@
                 });
 
                 xhr.addEventListener('error', function() {
-                    btn.disabled = false;
-                    if (btnText) {
-                        btnText.textContent = 'Start Importing';
-                    }
-                    showImportFeedback('error', 'Import failed. Please check the file and try again.');
+                    previewBtn.disabled = false;
+                    if (previewBtnText) previewBtnText.textContent = 'Preview Import';
+                    showImportFeedback('error', 'Preview failed. Please try again.');
                 });
 
-                xhr.open('POST', form.action);
+                xhr.open('POST', '{{ route("forecast.import.preview") }}');
                 xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
                 xhr.send(formData);
+            });
+        }
+
+        // ── Phase 2: Confirm ──
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', function() {
+                if (!previewData || !previewData.temp_path) return;
+                hideImportFeedback();
+                confirmBtn.disabled = true;
+                if (confirmBtnText) confirmBtnText.textContent = 'Importing...';
+
+                const xhr = new XMLHttpRequest();
+                xhr.addEventListener('load', function() {
+                    confirmBtn.disabled = false;
+                    if (confirmBtnText) confirmBtnText.textContent = 'Confirm Import';
+
+                    let response = {};
+                    try {
+                        response = JSON.parse(xhr.responseText);
+                    } catch (e) {
+                        showImportFeedback('error', 'Unexpected server response.');
+                        return;
+                    }
+
+                    if (xhr.status >= 200 && xhr.status < 300 && response.success) {
+                        window.location.reload();
+                        return;
+                    }
+
+                    let message = response.message || 'Import failed.';
+                    if (response.errors && typeof response.errors === 'object') {
+                        message = Object.values(response.errors).flat().join('\n');
+                    }
+                    showImportFeedback('error', message);
+                    // Return to file selection on confirm failure.
+                    if (stepFile) stepFile.classList.remove('hidden');
+                    if (stepPreview) stepPreview.classList.add('hidden');
+                    previewData = null;
+                });
+
+                xhr.addEventListener('error', function() {
+                    confirmBtn.disabled = false;
+                    if (confirmBtnText) confirmBtnText.textContent = 'Confirm Import';
+                    showImportFeedback('error', 'Import failed. Please try again.');
+                });
+
+                xhr.open('POST', '{{ route("forecast.import.confirm") }}');
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                xhr.send(JSON.stringify({
+                    temp_path: previewData.temp_path,
+                    source_file: previewData.source_file,
+                    _token: document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                }));
+            });
+        }
+
+        // ── Cancel: reset to file selection ──
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', function() {
+                if (stepFile) stepFile.classList.remove('hidden');
+                if (stepPreview) stepPreview.classList.add('hidden');
+                previewData = null;
+                if (fileInput) fileInput.value = '';
+                updateDropZoneState();
+                hideImportFeedback();
             });
         }
 
@@ -652,6 +818,28 @@
         function openImportModal() {
             if (importModal) {
                 importModal.style.display = 'flex';
+                // Reset import modal to file selection step.
+                const stepFile = document.getElementById('importStepFile');
+                const stepPreview = document.getElementById('importStepPreview');
+                const fileInput = document.getElementById('forecastFileInput');
+                if (stepFile) stepFile.classList.remove('hidden');
+                if (stepPreview) stepPreview.classList.add('hidden');
+                if (fileInput) fileInput.value = '';
+                const dropZonePrompt = document.getElementById('dropZonePrompt');
+                const fileSelectedPrompt = document.getElementById('fileSelectedPrompt');
+                const selectedFileName = document.getElementById('selectedFileName');
+                const dropZone = document.getElementById('dropZone');
+                const previewBtn = document.getElementById('previewImportBtn');
+                if (dropZonePrompt) dropZonePrompt.classList.remove('hidden');
+                if (fileSelectedPrompt) fileSelectedPrompt.classList.add('hidden');
+                if (selectedFileName) selectedFileName.textContent = 'No file selected';
+                if (dropZone) {
+                    dropZone.classList.remove('border-[#2D7D46]', 'bg-[#D5E8D4]/20');
+                    dropZone.classList.add('border-[#D9D9D9]');
+                }
+                if (previewBtn) previewBtn.disabled = true;
+                const feedback = document.getElementById('importFeedback');
+                if (feedback) feedback.classList.add('hidden');
                 if (window.lucide) lucide.createIcons();
             }
         }

@@ -169,7 +169,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/forecast/generate',   [ForecastController::class, 'generate'])->name('forecast.generate')->middleware('admin');
     Route::post('/forecast/clear',      [ForecastController::class, 'clear'])->name('forecast.clear')->middleware('admin');
     Route::get('/forecast/template',    [ForecastController::class, 'downloadTemplate'])->name('forecast.template');
-    Route::post('/forecast/import',     [ForecastController::class, 'import'])->name('forecast.import')->middleware('admin');
+    Route::post('/forecast/import',           [ForecastController::class, 'import'])->name('forecast.import')->middleware('admin');
+    Route::post('/forecast/import/preview',   [ForecastController::class, 'importPreview'])->name('forecast.import.preview')->middleware('admin');
+    Route::post('/forecast/import/confirm',   [ForecastController::class, 'importConfirm'])->name('forecast.import.confirm')->middleware('admin');
     Route::match(['GET', 'POST'], '/forecast/csv',   [ForecastController::class, 'exportCsv'])->name('forecast.csv');
     Route::match(['GET', 'POST'], '/forecast/excel', [ForecastController::class, 'exportExcel'])->name('forecast.excel');
     Route::match(['GET', 'POST'], '/forecast/pdf',   [ForecastController::class, 'exportPdf'])->name('forecast.pdf');
