@@ -288,7 +288,7 @@
                     </div>
 
                     <div class="flex gap-3">
-                        <x-button type="button" id="cancelImportBtn" class="flex-1 py-3 bg-white border border-[#D9D9D9] text-[#333333] hover:bg-[#F5F6F8]">
+                        <x-button type="button" id="cancelImportBtn" variant="secondary" class="flex-1 py-3">
                             <i data-lucide="x" class="w-4 h-4 shrink-0"></i>
                             <span>Cancel</span>
                         </x-button>
