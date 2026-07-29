@@ -53,6 +53,9 @@ class ForecastController extends Controller
             $breed = $allBreeds->first();
         }
 
+        $metrics = session('forecast_metrics');
+        $recommendedModel = session('recommended_model');
+
         $dataSufficiency = $this->checkForecastDataSufficiency($scope, $cageCode, $breed);
         $hasEnoughData = $dataSufficiency['has_enough'];
 
