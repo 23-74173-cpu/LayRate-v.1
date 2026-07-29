@@ -12,7 +12,7 @@
                 $classes = 'pb-2 text-sm font-medium border-b-2 transition-colors shrink-0 whitespace-nowrap ' .
                     ($isActive ? 'border-[#002D5E] text-[#002D5E]' : 'border-transparent text-[#6B7280] hover:text-[#333]');
             @endphp
-            <a href="{{ route($tab['route']) }}" class="{{ $classes }}" data-turbo-frame="egg-content"
+            <a href="{{ route($tab['route']) }}" class="{{ $classes }}"
                data-tab-key="{{ $key }}" data-subtitle="{{ $tab['subtitle'] }}">
                 <i data-lucide="{{ $tab['icon'] }}" class="w-4 h-4 inline mr-1"></i>
                 {{ $tab['label'] }}
@@ -23,10 +23,8 @@
     {{--
         Header sync payloads for tabs that need page-header actions. Kept as
         hidden templates, outside the frame, so they survive every frame swap
-        untouched — the sync script below clones the one matching the active
+        untouched. The sync script below clones the one matching the active
         tab's key (id="egg-header-actions-{tabKey}") into #egg-header-actions.
-        Each mirrors the exact buttons that tab's own view renders server-side
-        for its own (correct-on-full-load) header.
     --}}
     <template id="egg-header-actions-stocks">
         <div class="flex items-center gap-2">
@@ -51,17 +49,14 @@
 
     <script>
     (function() {
-        var links = document.querySelectorAll('nav a[data-turbo-frame="egg-content"]');
+        var links = document.querySelectorAll('nav a[data-tab-key]');
+        var frame = document.querySelector('turbo-frame#egg-content');
+
         links.forEach(function(link) {
             link.addEventListener('click', function(e) {
                 e.preventDefault();
                 if (window.__eggActiveTab === this.getAttribute('href')) return;
                 window.__eggActiveTab = this.getAttribute('href');
-
-                var frame = document.querySelector('turbo-frame#egg-content');
-                if (frame) {
-                    frame.setAttribute('src', this.getAttribute('href'));
-                }
 
                 history.replaceState({}, '', this.getAttribute('href'));
 
@@ -72,31 +67,22 @@
                 this.classList.remove('border-transparent', 'text-[#6B7280]', 'hover:text-[#333]');
                 this.classList.add('border-[#002D5E]', 'text-[#002D5E]');
 
-                // Subtitle can update immediately — it's plain text with no
-                // dependency on the new tab's own JS having loaded yet.
                 var subtitleEl = document.getElementById('egg-header-subtitle');
                 if (subtitleEl) subtitleEl.textContent = this.dataset.subtitle;
+
+                if (frame) {
+                    frame.setAttribute('src', this.getAttribute('href'));
+                }
             });
         });
 
-        // Actions (e.g. Egg Weights / Thresholds / Add Stock) wait for the
-        // frame's content to actually finish loading before appearing, since
-        // their onclick handlers and the modals they open only exist once
-        // that tab's own frame content — not just the header — has rendered.
-        // This is the fix for the root cause found during investigation: the
-        // header lives outside turbo-frame#egg-content, so tab clicks (which
-        // only swap the frame) never touched it before; a full reload was
-        // the only thing that did.
         if (!window.__eggHeaderSyncBound) {
             window.__eggHeaderSyncBound = true;
             document.addEventListener('turbo:frame-load', function(e) {
                 if (!e.target || e.target.id !== 'egg-content') return;
 
                 var activeLink = null;
-                document.querySelectorAll('nav a[data-turbo-frame="egg-content"]').forEach(function(a) {
-                    // a.pathname (not getAttribute('href')) — the anchor's href is
-                    // an absolute URL from route(), while location.pathname has no
-                    // origin, so comparing raw attributes never matches.
+                document.querySelectorAll('nav a[data-tab-key]').forEach(function(a) {
                     if (a.pathname === window.location.pathname) activeLink = a;
                 });
                 if (!activeLink) return;
