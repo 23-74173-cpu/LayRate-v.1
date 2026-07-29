@@ -31,6 +31,7 @@ class ForecastController extends Controller
         $allCages  = DB::table('forecast_input_records')
             ->whereNotNull('cage_code')
             ->whereRaw("TRIM(cage_code) != ''")
+            ->whereNotIn('cage_code', ['C01', 'C03'])
             ->distinct()
             ->pluck('cage_code')
             ->filter()
@@ -51,9 +52,6 @@ class ForecastController extends Controller
         if ($scope === 'breed' && empty($breed)) {
             $breed = $allBreeds->first();
         }
-
-        $metrics = session('forecast_metrics');
-        $recommendedModel = session('recommended_model');
 
         $dataSufficiency = $this->checkForecastDataSufficiency($scope, $cageCode, $breed);
         $hasEnoughData = $dataSufficiency['has_enough'];
@@ -1015,6 +1013,7 @@ class ForecastController extends Controller
         $allCages  = DB::table('forecast_input_records')
             ->whereNotNull('cage_code')
             ->whereRaw("TRIM(cage_code) != ''")
+            ->whereNotIn('cage_code', ['C01', 'C03'])
             ->distinct()
             ->pluck('cage_code')
             ->filter()
