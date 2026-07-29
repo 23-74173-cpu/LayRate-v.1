@@ -452,10 +452,10 @@
             var batchSelect = document.querySelector('#consumptionModal select[name="feed_batch_id"]');
             var farmBatchSelect = document.querySelector('#farmEntryModal select[name="feed_batch_id"]');
 
-            var cages = @json($cages->map(fn($c) => ['id' => $c->id, 'code' => $c->cage_code]));
+            var cages = {!! json_encode($cages->map(fn($c) => ['id' => $c->id, 'code' => $c->cage_code])) !!};
             // remaining_kg is null for batches with no total_quantity_kg set (unlimited/untracked) —
             // the exceeds-check below treats null as "no limit to check against".
-            var batches = @json($allBatches->map(fn($b) => ['id' => $b->id, 'code' => $b->batch_code, 'remaining' => $b->remaining_kg, 'unit_cost' => $b->unit_cost]));
+            var batches = {!! json_encode($allBatches->map(fn($b) => ['id' => $b->id, 'code' => $b->batch_code, 'remaining' => $b->remaining_kg, 'unit_cost' => $b->unit_cost])) !!};
 
             if (cageSelect && cageSelect.options.length <= 1) {
                 cages.forEach(function(c) {

@@ -8,34 +8,42 @@ use Illuminate\Support\Facades\DB;
 
 class EggStockBatch extends Model
 {
-    public static function getAvailablePool(?int $cageId = null): int
+    public static function getAvailablePool(?int $cageId = null, ?string $harvestedDate = null): int
     {
         $logged = ProductionLog::when($cageId, fn($q) => $q->whereHas('cageSlot', fn($sq) => $sq->where('cage_id', $cageId)))
+            ->when($harvestedDate, fn($q) => $q->where('log_date', '<=', $harvestedDate))
             ->sum('egg_count');
         $stocked = self::when($cageId, fn($q) => $q->where('cage_id', $cageId))
+            ->when($harvestedDate, fn($q) => $q->where('harvested_date', '<=', $harvestedDate))
             ->sum('count');
 
         return max(0, $logged - $stocked);
     }
 
-    public static function getAvailablePoolForSize(string $size, bool $lockForUpdate = false, ?int $cageId = null): int
+    public static function getAvailablePoolForSize(string $size, bool $lockForUpdate = false, ?int $cageId = null, ?string $harvestedDate = null): int
     {
         if ($lockForUpdate) {
             $batchQuery = self::where('egg_size', $size);
             if ($cageId) $batchQuery->where('cage_id', $cageId);
+            if ($harvestedDate) $batchQuery->where('harvested_date', '<=', $harvestedDate);
             $batchQuery->lockForUpdate()->get();
 
             $eggSizeLogQuery = \App\Models\EggSizeLog::where('egg_size', $size);
             if ($cageId) {
                 $eggSizeLogQuery->whereHas('productionLog.cageSlot', fn($q) => $q->where('cage_id', $cageId));
             }
+            if ($harvestedDate) {
+                $eggSizeLogQuery->whereHas('productionLog', fn($q) => $q->where('log_date', '<=', $harvestedDate));
+            }
             $eggSizeLogQuery->lockForUpdate()->get();
 
             if ($cageId === null) {
-                \App\Models\PreOrder::where('egg_size', $size)
-                    ->where('status', 'pending')
-                    ->lockForUpdate()
-                    ->get();
+                $preOrderQuery = \App\Models\PreOrder::where('egg_size', $size)
+                    ->where('status', 'pending');
+                if ($harvestedDate) {
+                    $preOrderQuery->where('created_at', '<=', $harvestedDate . ' 23:59:59');
+                }
+                $preOrderQuery->lockForUpdate()->get();
             }
         }
 
@@ -43,28 +51,35 @@ class EggStockBatch extends Model
         if ($cageId) {
             $loggedQuery->whereHas('productionLog.cageSlot', fn($q) => $q->where('cage_id', $cageId));
         }
+        if ($harvestedDate) {
+            $loggedQuery->whereHas('productionLog', fn($q) => $q->where('log_date', '<=', $harvestedDate));
+        }
         $logged = $loggedQuery->sum('count');
 
         $stockedQuery = self::where('egg_size', $size);
         if ($cageId) $stockedQuery->where('cage_id', $cageId);
+        if ($harvestedDate) $stockedQuery->where('harvested_date', '<=', $harvestedDate);
         $stocked = $stockedQuery->sum('count');
 
         $preOrdered = 0;
         if ($cageId === null) {
-            $preOrdered = \App\Models\PreOrder::where('egg_size', $size)
-                ->where('status', 'pending')
-                ->sum('egg_count');
+            $preOrderQuery = \App\Models\PreOrder::where('egg_size', $size)
+                ->where('status', 'pending');
+            if ($harvestedDate) {
+                $preOrderQuery->where('created_at', '<=', $harvestedDate . ' 23:59:59');
+            }
+            $preOrdered = $preOrderQuery->sum('egg_count');
         }
 
         return max(0, $logged - $stocked - $preOrdered);
     }
 
-    public static function getAvailablePools(?int $cageId = null): array
+    public static function getAvailablePools(?int $cageId = null, ?string $harvestedDate = null): array
     {
         $sizes = ['small', 'medium', 'large', 'jumbo', 'unsorted'];
         $pools = [];
         foreach ($sizes as $size) {
-            $pools[$size] = self::getAvailablePoolForSize($size, cageId: $cageId);
+            $pools[$size] = self::getAvailablePoolForSize($size, cageId: $cageId, harvestedDate: $harvestedDate);
         }
         return $pools;
     }
@@ -75,7 +90,8 @@ class EggStockBatch extends Model
             $available = self::getAvailablePoolForSize(
                 $data['egg_size'],
                 lockForUpdate: true,
-                cageId: $data['cage_id'] ?? null
+                cageId: $data['cage_id'] ?? null,
+                harvestedDate: $data['harvested_date'] ?? null
             );
 
             if (($data['count'] ?? 0) > $available) {
@@ -94,7 +110,8 @@ class EggStockBatch extends Model
             $newSize = $data['egg_size'] ?? $this->egg_size;
             $newCount = (int) ($data['count'] ?? $this->count);
             $oldSize = $this->getOriginal('egg_size');
-            $oldCount = $this->getOriginal('count');
+            $oldCount = (int) $this->getOriginal('count');
+            $poolDate = $data['harvested_date'] ?? $this->harvested_date?->toDateString();
 
             if ($newSize === $oldSize && $newCount <= $oldCount) {
                 $this->update($data);
@@ -102,7 +119,7 @@ class EggStockBatch extends Model
             }
 
             if ($newSize !== $oldSize) {
-                $available = self::getAvailablePoolForSize($newSize, lockForUpdate: true, cageId: $this->cage_id);
+                $available = self::getAvailablePoolForSize($newSize, lockForUpdate: true, cageId: $this->cage_id, harvestedDate: $poolDate);
                 if ($newCount > $available) {
                     throw new \OverflowException(
                         "Only {$available} {$newSize} egg(s) available to stock."
@@ -110,7 +127,7 @@ class EggStockBatch extends Model
                 }
             } elseif ($newCount > $oldCount) {
                 $increase = $newCount - $oldCount;
-                $available = self::getAvailablePoolForSize($newSize, lockForUpdate: true, cageId: $this->cage_id);
+                $available = self::getAvailablePoolForSize($newSize, lockForUpdate: true, cageId: $this->cage_id, harvestedDate: $poolDate);
                 if ($increase > $available) {
                     throw new \OverflowException(
                         "Only {$available} additional {$newSize} egg(s) available to stock."

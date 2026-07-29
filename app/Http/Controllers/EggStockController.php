@@ -69,7 +69,12 @@ class EggStockController extends Controller
         $cageId = $request->integer('cage_id');
         if ($cageId < 1) $cageId = null;
 
-        $pools = EggStockBatch::getAvailablePools($cageId);
+        $harvestedDate = $request->input('harvested_date');
+        if ($harvestedDate && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $harvestedDate)) {
+            $harvestedDate = null;
+        }
+
+        $pools = EggStockBatch::getAvailablePools($cageId, $harvestedDate);
 
         return response()->json(['pools' => $pools]);
     }
@@ -144,7 +149,7 @@ class EggStockController extends Controller
         }
 
         if ($data['egg_size'] !== 'unsorted' && !$request->boolean('classify')) {
-            $available = EggStockBatch::getAvailablePoolForSize($data['egg_size'], cageId: $data['cage_id'] ?? null);
+            $available = EggStockBatch::getAvailablePoolForSize($data['egg_size'], cageId: $data['cage_id'] ?? null, harvestedDate: $data['harvested_date']);
             if (($data['count'] ?? 0) > $available) {
                 return $this->stockWithAutoReclassify($data);
             }
@@ -200,6 +205,9 @@ class EggStockController extends Controller
                     ->where('count', '>', 0);
                 if ($cageId) {
                     $unsortedQuery->whereHas('productionLog.cageSlot', fn($q) => $q->where('cage_id', $cageId));
+                }
+                if (!empty($data['harvested_date'])) {
+                    $unsortedQuery->whereHas('productionLog', fn($q) => $q->where('log_date', '<=', $data['harvested_date']));
                 }
                 $unsortedRecords = $unsortedQuery->lockForUpdate()->orderBy('id')->get();
 
@@ -279,6 +287,9 @@ class EggStockController extends Controller
                     ->where('count', '>', 0);
                 if ($cageId) {
                     $unsortedQuery->whereHas('productionLog.cageSlot', fn($q) => $q->where('cage_id', $cageId));
+                }
+                if (!empty($data['harvested_date'])) {
+                    $unsortedQuery->whereHas('productionLog', fn($q) => $q->where('log_date', '<=', $data['harvested_date']));
                 }
                 $unsortedRecords = $unsortedQuery->lockForUpdate()->orderBy('id')->get();
 

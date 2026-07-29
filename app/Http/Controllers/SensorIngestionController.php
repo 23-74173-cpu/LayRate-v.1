@@ -153,7 +153,7 @@ class SensorIngestionController extends Controller
                             ->where('log_date', $logDate)
                             ->first();
 
-                        if (! $existingLog || $existingLog->logged_via === 'sensor') {
+                        if (! $existingLog || $existingLog->logged_via === 'sensor' || $reportedCount !== (int) $existingLog->egg_count) {
                             /*
                              * INVARIANT GUARD — IR break-beam counts are
                              * physically monotonic within a day.  If an

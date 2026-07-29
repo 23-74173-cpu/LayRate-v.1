@@ -84,6 +84,13 @@
             @csrf
             <div class="space-y-4">
                 <div>
+                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">HARVESTED DATE</label>
+                    <input type="date" name="harvested_date" value="{{ now()->toDateString() }}" required
+                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                           style="border-color: #e6e6e6; color: #1f1f1f;">
+                    <p class="text-xs mt-1" style="color: #9CA3AF;">Determines which harvest pool eggs are drawn from.</p>
+                </div>
+                <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG SIZE</label>
                     <select name="egg_size" id="addStockEggSize" required
                             class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
@@ -144,12 +151,6 @@
                     <p id="classifySumHint" class="text-xs mt-1 hidden" style="color: #a39e98;"></p>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">HARVESTED DATE</label>
-                    <input type="date" name="harvested_date" value="{{ now()->toDateString() }}" required
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
-                           style="border-color: #e6e6e6; color: #1f1f1f;">
-                </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">SOURCE CAGE <span class="font-normal normal-case tracking-normal" style="color: #9CA3AF;">— pool scope</span></label>
                     <select name="cage_id" id="stockCageSelect"
@@ -455,8 +456,9 @@ function updateLogSelect(cageId) {
 
         var eggsStocksBase = '{{ url('eggs/stocks') }}';
 
-        function fetchPoolForCage(cageId, callback) {
+        function fetchPoolForCage(cageId, callback, harvestedDate) {
             var url = eggsStocksBase + '/pool-data?cage_id=' + (cageId || 0);
+            if (harvestedDate) url += '&harvested_date=' + encodeURIComponent(harvestedDate);
             fetch(url)
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
@@ -579,9 +581,20 @@ function updateLogSelect(cageId) {
         if (cageSelect) {
             cageSelect.addEventListener('change', function() {
                 var cageId = this.value || null;
+                var harvestedDate = document.querySelector('#addStockForm input[name="harvested_date"]').value || null;
                 fetchPoolForCage(cageId, function(pools) {
                     updateOptionsFromPools(pools);
-                });
+                }, harvestedDate);
+            });
+        }
+
+        var harvestedDateInput = document.querySelector('#addStockForm input[name="harvested_date"]');
+        if (harvestedDateInput) {
+            harvestedDateInput.addEventListener('change', function() {
+                var cageId = cageSelect ? cageSelect.value || null : null;
+                fetchPoolForCage(cageId, function(pools) {
+                    updateOptionsFromPools(pools);
+                }, this.value);
             });
         }
 

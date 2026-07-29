@@ -40,7 +40,7 @@
 <table class="letterhead">
     <tr>
         <td style="width:40px;vertical-align:middle;">
-            <img src="{{ public_path('images/layrate-logo-mark.png') }}" style="width:32px;height:32px;">
+            <div style="width:32px;height:32px;background:#102A4C;color:#fff;font-size:14px;font-weight:bold;text-align:center;line-height:32px;border-radius:4px;">L</div>
         </td>
         <td>
             <div class="brand-name">LayRate Poultry Farm</div>

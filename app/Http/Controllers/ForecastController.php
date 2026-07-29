@@ -950,8 +950,13 @@ class ForecastController extends Controller
             return $pdf->download('forecast-' . $scope . '-' . now()->format('Y-m-d') . '.pdf');
         } catch (\Exception $e) {
             Log::warning('PDF export failed with chart image, retrying without: ' . $e->getMessage());
-            $pdf = Pdf::loadView('forecast.pdf', compact('forecasts', 'scope', 'cageCode', 'breed', 'horizon') + ['chartImage' => null]);
-            return $pdf->download('forecast-' . $scope . '-' . now()->format('Y-m-d') . '.pdf');
+            try {
+                $pdf = Pdf::loadView('forecast.pdf', compact('forecasts', 'scope', 'cageCode', 'breed', 'horizon') + ['chartImage' => null]);
+                return $pdf->download('forecast-' . $scope . '-' . now()->format('Y-m-d') . '.pdf');
+            } catch (\Exception $e2) {
+                Log::error('PDF export failed even without chart image: ' . $e2->getMessage());
+                return response()->json(['message' => 'PDF export failed. Please try exporting as Excel instead.'], 500);
+            }
         }
     }
 

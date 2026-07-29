@@ -34,8 +34,11 @@
                     $loggedCount = $todayLoggedCountByCage[$cage->cage_code] ?? 0;
                     $allLogged = $loggedCount >= $slotCount;
                 @endphp
-                <div class="rounded-xl border p-4 flex flex-col gap-2 min-h-[7rem] cage-overview-card"
+                <div class="rounded-xl border p-4 flex flex-col gap-2 min-h-[7rem] cage-overview-card cursor-pointer transition-all hover:shadow-md"
                      data-cage-id="{{ $cage->id }}" data-total-slots="{{ $slotCount }}"
+                     onclick="switchCage('{{ $cage->id }}')"
+                     role="button" tabindex="0"
+                     onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); switchCage('{{ $cage->id }}'); }"
                      style="background-color: #ffffff; border-color: #e6e6e6;">
                     <div class="flex items-center justify-between gap-2">
                         <x-cage-color :cage="$cage" />
@@ -69,20 +72,7 @@
                 <h3 class="text-lg font-semibold" style="color: #1f1f1f;">Log Entry</h3>
             </div>
 
-                {{-- Single cage dropdown --}}
-                <div class="mb-3">
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Select Cage</label>
-                    <select id="cageSelect" onchange="switchCage(this.value)"
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
-                            style="border-color: #e6e6e6; color: #1f1f1f;">
-                        <option value="">Select a cage…</option>
-                        @foreach($cages as $cage)
-                        <option value="{{ $cage->id }}" {{ $cageFilter == $cage->id ? 'selected' : '' }}>
-                            {{ $cage->cage_code }} — {{ $cage->formatted_location }}
-                        </option>
-                        @endforeach
-                    </select>
-                </div>
+                {{-- Cage selection via overview cards (click a card above) --}}
 
                 {{-- Per-cage slot grids (hidden; shown via dropdown) --}}
                 @php $slotsByCageId = $cageSlots->groupBy('cage_id'); @endphp
@@ -158,7 +148,7 @@
                 {{-- Empty state --}}
                 <div id="slotFormPlaceholder" class="text-center py-10 text-sm" style="color: #a39e98;">
                     <i data-lucide="mouse-pointer-2" class="w-6 h-6 mx-auto mb-2" style="color: #d1d5db;"></i>
-                    Select a cage above, then click a slot to log.
+                    Click a cage card above, then click a slot to log.
                 </div>
 
                 {{-- Active form --}}
@@ -411,6 +401,20 @@
 
     function switchCage(cageId) {
         clearSlotSelection();
+
+        // Highlight selected cage card, dim others
+        document.querySelectorAll('.cage-overview-card').forEach(function(card) {
+            var isSelected = card.dataset.cageId == cageId;
+            if (isSelected) {
+                card.style.borderColor = '#0075de';
+                card.style.borderWidth = '2px';
+                card.style.backgroundColor = '#f0f7ff';
+            } else {
+                card.style.borderColor = '#e6e6e6';
+                card.style.borderWidth = '1px';
+                card.style.backgroundColor = '#ffffff';
+            }
+        });
 
         document.querySelectorAll('.cage-grid').forEach(g => {
             g.classList.add('hidden');
@@ -726,10 +730,9 @@
     window.editComputeHdep = editComputeHdep;
 
     // Auto-select cage from URL filter on page load
-    var cageSelect = document.getElementById('cageSelect');
-    if (cageSelect && cageSelect.value) {
-        switchCage(cageSelect.value);
-    }
+    @if($cageFilter)
+    switchCage('{{ $cageFilter }}');
+    @endif
 
     if (!window.__eggLoggingEscapeBound) {
         window.__eggLoggingEscapeBound = true;
@@ -743,7 +746,6 @@
 
     // ── Live SSE egg count for CAGE-T ───────────
     var cageTCode = 'CAGE-T';
-    var cageTSelect = document.querySelector('#cageSelect option[value]');
 
     function findCageTSlotCards() {
         return document.querySelectorAll('.slot-card[data-cage-code="' + cageTCode + '"]');
