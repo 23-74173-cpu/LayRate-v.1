@@ -405,7 +405,7 @@ class EggStockController extends Controller
     public function qr(EggStockBatch $batch)
     {
         $cageCode = $batch->cage?->cage_code ?? 'UNKNOWN';
-        $qrData = "LAYRATE|{$batch->harvested_date->toDateString()}|{$cageCode}|{$batch->egg_size}|{$batch->count}";
+        $qrData = "LAYRATE|{$batch->id}|{$batch->harvested_date->toDateString()}|{$cageCode}|{$batch->egg_size}|{$batch->count}";
 
         return view('eggs.qr-print', [
             'batch' => $batch,
