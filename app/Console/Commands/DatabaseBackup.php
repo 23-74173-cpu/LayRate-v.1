@@ -43,7 +43,7 @@ class DatabaseBackup extends Command
         $password = $config['password'] ?? '';
 
         $cmd = array_filter([
-            'mysqldump',
+            $this->findMysqldump(),
             '--host=' . $host,
             '--port=' . $port,
             '--user=' . $username,
@@ -90,6 +90,22 @@ class DatabaseBackup extends Command
         $this->info("Done. Kept last {$retention} backups.");
 
         return self::SUCCESS;
+    }
+
+    private function findMysqldump(): string
+    {
+        $paths = [
+            'C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysqldump.exe',
+            'C:\\xampp3\\mysql\\bin\\mysqldump.exe',
+        ];
+
+        foreach ($paths as $path) {
+            if (file_exists($path)) {
+                return $path;
+            }
+        }
+
+        return 'mysqldump';
     }
 
     private function pruneOldBackups(string $directory, int $keep): void

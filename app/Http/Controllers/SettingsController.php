@@ -53,7 +53,7 @@ class SettingsController extends Controller
         $password = $config['password'] ?? '';
 
         $cmd = array_filter([
-            'mysqldump',
+            $this->findMysqldump(),
             '--host=' . $host,
             '--port=' . $port,
             '--user=' . $username,
@@ -86,7 +86,34 @@ class SettingsController extends Controller
         // Retention: keep last 7
         $this->pruneOldBackups($backupDir, 7);
 
-        return response()->download($filepath, $filename)->deleteFileAfterSend(true);
+        return response()->stream(function () use ($filepath) {
+            $handle = fopen($filepath, 'rb');
+            if ($handle) {
+                fpassthru($handle);
+                fclose($handle);
+            }
+            @unlink($filepath);
+        }, 200, [
+            'Content-Type' => 'application/octet-stream',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Length' => filesize($filepath),
+        ]);
+    }
+
+    private function findMysqldump(): string
+    {
+        $paths = [
+            'C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysqldump.exe',
+            'C:\\xampp3\\mysql\\bin\\mysqldump.exe',
+        ];
+
+        foreach ($paths as $path) {
+            if (file_exists($path)) {
+                return $path;
+            }
+        }
+
+        return 'mysqldump';
     }
 
     private function pruneOldBackups(string $directory, int $keep): void

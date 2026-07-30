@@ -7,7 +7,7 @@ A minimal Flask REST API for the LayRate mobile app. Designed to run on a Raspbe
 The mobile app expects:
 
 ```
-http://192.168.4.1:8000
+http://192.168.4.1:5000
 ```
 
 You can change the host/port with environment variables if needed.
@@ -50,13 +50,13 @@ python app.py
 The server starts on:
 
 ```
-http://0.0.0.0:8000
+http://0.0.0.0:5000
 ```
 
 You can override host/port/debug mode with environment variables:
 
 ```bash
-FLASK_HOST=0.0.0.0 FLASK_PORT=8000 python app.py
+FLASK_HOST=0.0.0.0 FLASK_PORT=5000 python app.py
 ```
 
 ### Run on Boot (Optional)
@@ -109,14 +109,14 @@ Or:
 ip addr show | grep "inet "
 ```
 
-Use the IP address in the mobile app base URL, e.g. `http://192.168.4.1:8000`.
+Use the IP address in the mobile app base URL, e.g. `http://192.168.4.1:5000`.
 
 ## API Endpoints
 
 ### Register (optional)
 
 ```bash
-curl -X POST http://192.168.4.1:8000/api/register \
+curl -X POST http://192.168.4.1:5000/api/register \
   -H "Content-Type: application/json" \
   -d '{"name":"Test User","email":"test@example.com","password":"secret"}'
 ```
@@ -124,7 +124,7 @@ curl -X POST http://192.168.4.1:8000/api/register \
 ### Login
 
 ```bash
-curl -X POST http://192.168.4.1:8000/api/login \
+curl -X POST http://192.168.4.1:5000/api/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@layrate.com","password":"password"}'
 ```
@@ -145,7 +145,7 @@ Response:
 ### Get Incubator Status
 
 ```bash
-curl -X GET http://192.168.4.1:8000/api/dashboard/status \
+curl -X GET http://192.168.4.1:5000/api/dashboard/status \
   -H "Authorization: Bearer <token-from-login>"
 ```
 

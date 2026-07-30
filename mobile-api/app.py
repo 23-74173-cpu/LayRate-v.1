@@ -6,7 +6,7 @@ and provides authentication plus sensor status.
 Usage:
     python app.py
 
-The server binds to 0.0.0.0:8000. Set environment variables to override:
+The server binds to 0.0.0.0:5000. Set environment variables to override:
     FLASK_HOST (default: 0.0.0.0)
     FLASK_PORT (default: 5000)
     FLASK_DEBUG (default: 0)
@@ -14,10 +14,15 @@ The server binds to 0.0.0.0:8000. Set environment variables to override:
 
 import os
 import secrets
+import socket
 import sqlite3
+import subprocess  # nosec — used for authorized nftables updates only
+import atexit
 from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
+
+from zeroconf import Zeroconf, ServiceInfo
 
 import bcrypt
 import pymysql
@@ -137,6 +142,31 @@ def require_auth(f):
     return decorated
 
 
+# ── nftables client authorization ─────────────────────────────────────────
+
+def authorize_client_ip():
+    """Add the requesting client's IP to the nftables authenticated_clients set.
+
+    This allows the client through the walled garden for services that
+    have no auth layer of their own (e.g. ICMP ping). Flask's own
+    Bearer-token-protected endpoints are already open via the
+    unconditional port 5000 accept rule.
+
+    This is called after successful login/registration to make the
+    nftables state consistent even though Flask is already open.
+    """
+    client_ip = request.remote_addr
+    if client_ip and client_ip not in ("127.0.0.1", "::1"):
+        try:
+            subprocess.run(
+                ["sudo", "/usr/local/bin/layrate-auth-client", client_ip],
+                capture_output=True,
+                timeout=5,
+            )
+        except Exception:
+            pass  # Non-critical — auth still works via Bearer token
+
+
 # ── Routes ─────────────────────────────────────────────────────────────────
 
 @app.route("/api/register", methods=["POST"])
@@ -172,6 +202,8 @@ def register():
         (user_id, name, email, token, now_iso()),
     )
     db.commit()
+
+    authorize_client_ip()
 
     return jsonify({"token": token, "user": {"id": user_id, "email": email, "name": name}}), 201
 
@@ -211,6 +243,8 @@ def login():
     )
     db.commit()
 
+    authorize_client_ip()
+
     return jsonify(
         {
             "token": token,
@@ -226,29 +260,53 @@ def login():
 @app.route("/api/alerts", methods=["GET"])
 @require_auth
 def list_alerts():
-    """Return all alerts with optional limit/offset pagination."""
+    """Return alerts with optional is_read filter and limit/offset pagination."""
     limit = request.args.get("limit", 50, type=int)
     offset = request.args.get("offset", 0, type=int)
     limit = min(limit, 200)
 
+    is_read = request.args.get("is_read")
+    where = ""
+    params = []
+    if is_read is not None:
+        where = "WHERE a.is_read = %s"
+        params.append(int(is_read))
+
     conn = get_mysql()
     with conn.cursor(pymysql.cursors.DictCursor) as cursor:
         cursor.execute(
-            """SELECT a.id, a.alert_type, a.message, a.is_read,
-                      a.triggered_at, a.created_at,
-                      c.cage_code
-               FROM alerts a
-               LEFT JOIN cages c ON c.id = a.cage_id
-               ORDER BY a.triggered_at DESC
-               LIMIT %s OFFSET %s""",
-            (limit, offset),
+            f"""SELECT a.id, a.alert_type, a.message, a.is_read,
+                        a.triggered_at, a.created_at,
+                        c.cage_code
+                 FROM alerts a
+                 LEFT JOIN cages c ON c.id = a.cage_id
+                 {where}
+                 ORDER BY a.triggered_at DESC
+                 LIMIT %s OFFSET %s""",
+            (*params, limit, offset),
         )
         alerts = cursor.fetchall()
 
-        cursor.execute("SELECT COUNT(*) AS total FROM alerts")
+        cursor.execute(
+            f"SELECT COUNT(*) AS total FROM alerts a {where}",
+            params,
+        )
         total = cursor.fetchone()["total"]
 
     return jsonify({"alerts": alerts, "total": total}), 200
+
+
+@app.route("/api/alerts/<int:alert_id>/read", methods=["PUT"])
+@require_auth
+def mark_alert_read(alert_id):
+    """Mark a single alert as read."""
+    conn = get_mysql()
+    with conn.cursor() as cursor:
+        cursor.execute("UPDATE alerts SET is_read = 1 WHERE id = %s", (alert_id,))
+        conn.commit()
+        if cursor.rowcount == 0:
+            return jsonify({"message": "Alert not found"}), 404
+    return jsonify({"message": "Alert marked as read"}), 200
 
 
 @app.route("/api/dashboard/status", methods=["GET"])
@@ -282,6 +340,20 @@ def dashboard_status():
     ), 200
 
 
+@app.route("/api/ping", methods=["GET"])
+def ping():
+    """Unauthenticated endpoint used by the mobile app for auto-discovery."""
+    return jsonify({"ok": True}), 200
+
+
+# ── Health check ────────────────────────────────────────────────────────────
+
+@app.route("/api/health", methods=["GET"])
+def health():
+    """Simple health check for deployment monitoring."""
+    return jsonify({"status": "ok"}), 200
+
+
 # ── Error handlers ─────────────────────────────────────────────────────────
 
 @app.errorhandler(404)
@@ -299,11 +371,50 @@ def internal_error(error):
     return jsonify({"message": "Internal server error"}), 500
 
 
-# ── Main entry point ───────────────────────────────────────────────────────
+# ── mDNS service discovery ─────────────────────────────────────────────────
 
+def _get_local_ip() -> str:
+    """Get the LAN IP address of this machine."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("10.254.254.254", 1))
+        ip = s.getsockname()[0]
+    except Exception:
+        ip = "127.0.0.1"
+    finally:
+        s.close()
+    return ip
+
+
+def _start_mdns(port: int) -> Zeroconf:
+    """Register this server on the LAN via mDNS so the mobile app can discover it."""
+    ip = _get_local_ip()
+    info = ServiceInfo(
+        "_http._tcp.local.",
+        f"Layrate Server._http._tcp.local.",
+        addresses=[socket.inet_aton(ip)],
+        port=port,
+        properties={"path": "/"},
+    )
+    zc = Zeroconf()
+    zc.register_service(info)
+    print(f"  mDNS: Layrate Server advertised at http://{ip}:{port}")
+    return zc
+
+
+# ── Main entry point ───────────────────────────────────────────────────────
+# __ TEST COMMENT --------------------
 if __name__ == "__main__":
     init_db()
     host = os.getenv("FLASK_HOST", "0.0.0.0")
     port = int(os.getenv("FLASK_PORT", "5000"))
     debug = os.getenv("FLASK_DEBUG", "0") == "1"
+
+    if not host.startswith("127."):
+        try:
+            zc = _start_mdns(port)
+            atexit.register(lambda: zc.close())
+        except Exception as e:
+            print(f"  mDNS: could not register ({e}) — continuing anyway")
+
     app.run(host=host, port=port, debug=debug)

@@ -16,7 +16,7 @@
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 mb-0.5">
                             @if($alert->cage)
-                            <span class="text-xs font-medium" style="color: #31302e;">{{ $alert->cage->cage_code }}</span>
+                            <a href="{{ route('cages.index') }}" class="text-xs font-medium hover:underline" style="color: #31302e;">{{ $alert->cage->cage_code }}</a>
                             @else
                             <span class="text-xs font-medium" style="color: #31302e;">Farm-wide</span>
                             @endif
@@ -29,7 +29,7 @@
                         <div class="flex items-center gap-2 mt-1.5">
                             <span class="text-xs px-2 py-0.5 rounded" style="background-color: #F0F0EC; color: #6B7280;">{{ $alert->alert_type }}</span>
                             @if(!$alert->is_read)
-                            <form method="POST" action="{{ route('alerts.read', $alert) }}" class="inline">
+                            <form method="POST" action="{{ route('alerts.read', $alert) }}" class="inline" data-turbo="false">
                                 @csrf
                                 <button type="submit" class="text-xs font-medium hover:underline" style="color: #0075de;">Mark read</button>
                             </form>
@@ -44,5 +44,6 @@
         </div>
         @endforeach
     </div>
+    <x-paginator :paginator="$alertsPaginator" class="mt-4" />
     @endif
 </turbo-frame>
