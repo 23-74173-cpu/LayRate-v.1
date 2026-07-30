@@ -185,8 +185,15 @@ class CageDeleteFlowTest extends TestCase
         $slotIds = $this->cage->cageSlots->pluck('id')->toArray();
 
         $this->actingAs($this->user)
-            ->delete("/cages/{$this->cage->id}/force")
-            ->assertRedirect('/cages');
+            ->delete("/cages/{$this->cage->id}/force", [
+                'confirmation'         => $this->cage->cage_code,
+                'hens_action'          => 'delete',
+                'return_sensors'       => 0,
+                'preserve_production'  => 0,
+                'preserve_mortality'   => 0,
+                'preserve_feed'        => 0,
+                'preserve_environment' => 0,
+            ]);
 
         $this->assertNull(Cage::find($this->cage->id));
         $this->assertEquals(0, CageSlot::where('cage_id', $this->cage->id)->count());

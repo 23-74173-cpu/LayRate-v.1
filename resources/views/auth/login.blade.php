@@ -8,28 +8,37 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-    <link href="{{ asset('css/tailwind.css') }}" rel="stylesheet">
-    <script src="{{ asset('js/lucide.min.js') }}"></script>
+    <link href="/css/tailwind.css" rel="stylesheet">
+    <script src="/js/lucide.min.js"></script>
     <style>
-        body { background-color: #f6f5f4; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+        body { background-color: #f6f5f4; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; overscroll-behavior: none; }
         :focus-visible { outline: 2px solid #0075de; outline-offset: 2px; border-radius: 4px; }
+
+        /* Reverse of the landing page's circle-wipe: this page loads already
+           covered, then wipes away to reveal the form — continuing the same
+           transition that started on the landing page. Pure CSS start state,
+           so it works even if JS never runs (just stays covered momentarily
+           then the fallback below force-removes it). */
+        #page-wipe {
+            position: fixed; inset: 0; z-index: 9999; pointer-events: none;
+            background: linear-gradient(135deg, #213183, #1a2342);
+            clip-path: circle(150% at 50% 50%);
+            transition: clip-path 0.65s cubic-bezier(.76,0,.24,1);
+        }
+        .login-enter { opacity: 0; transform: translateY(16px); }
+        .login-enter.in { opacity: 1; transform: translateY(0); transition: opacity 0.5s ease-out 0.3s, transform 0.5s ease-out 0.3s; }
+        @media (prefers-reduced-motion: reduce) {
+            #page-wipe { display: none; }
+            .login-enter { opacity: 1; transform: none; }
+        }
     </style>
-    <link rel="stylesheet" href="{{ asset('css/inter.css') }}">
+    <link rel="stylesheet" href="/css/inter.css">
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
 
-    <div class="w-full max-w-sm">
+    <div id="page-wipe"></div>
 
-        {{-- Logo --}}
-        <div class="flex items-center justify-center gap-3 mb-8">
-            <div class="w-10 h-10 rounded-xl bg-[#102A4C] flex items-center justify-center">
-                <i data-lucide="feather" class="w-5 h-5 text-white"></i>
-            </div>
-            <div>
-                <div class="text-lg font-semibold text-[#102A4C] leading-tight">LayRate</div>
-                <div class="text-xs text-[#6B7280]">Farm Monitor</div>
-            </div>
-        </div>
+    <div class="w-full max-w-sm login-enter">
 
         {{-- Login Error Banner --}}
         @if($errors->any())
@@ -44,8 +53,15 @@
 
         {{-- Card --}}
         <div class="bg-white rounded-xl border border-[#D9D9D9] p-7 shadow-sm">
-            <h1 class="text-base font-semibold text-[#333333] mb-1">Sign in</h1>
-            <p class="text-xs text-[#6B7280] mb-6">Enter your credentials to access the dashboard.</p>
+            {{-- Logo — lives inside the card: the PNG has a solid white
+                 background, which blends invisibly here but would show as a
+                 white box on the page's warm canvas. --}}
+            <img src="/images/layrate-logo.png"
+                 alt="LayRate — Egg Counting &amp; Forecasting System"
+                 class="w-36 mx-auto -mt-3 -mb-5" loading="lazy">
+
+            <h1 class="text-base font-semibold text-[#333333] mb-1 text-center">Sign in</h1>
+            <p class="text-xs text-[#6B7280] mb-6 text-center">Enter your credentials to access the dashboard.</p>
 
             <form action="{{ route('login') }}" method="POST" class="space-y-4">
                 @csrf
@@ -77,11 +93,16 @@
                     <label for="remember" class="text-xs text-[#6B7280]">Remember me</label>
                 </div>
 
-                <button type="submit"
-                        class="w-full bg-[#102A4C] text-white py-2.5 rounded-lg text-sm font-medium
-                               hover:bg-[#1D4E8F] transition-colors mt-2">
+                <x-button type="submit" class="w-full py-2.5 mt-2">
                     Sign In
-                </button>
+                </x-button>
+
+                <div class="text-center mt-4 pt-4 border-t border-[#D9D9D9]">
+                    <a href="{{ route('landing') }}"
+                       class="text-xs text-[#6B7280] hover:text-[#102A4C] transition-colors">
+                        What is LayRate?
+                    </a>
+                </div>
             </form>
         </div>
 
@@ -90,6 +111,22 @@
         </p>
     </div>
 
-    <script>lucide.createIcons();</script>
+    <script>
+        lucide.createIcons();
+        document.addEventListener('DOMContentLoaded', function () {
+            var wipe = document.getElementById('page-wipe');
+            var card = document.querySelector('.login-enter');
+            requestAnimationFrame(function () {
+                if (wipe) wipe.style.clipPath = 'circle(0% at 50% 50%)';
+                if (card) card.classList.add('in');
+            });
+            // Safety net: if the transition never fires for any reason, don't
+            // leave the page permanently covered.
+            setTimeout(function () {
+                if (wipe) wipe.style.display = 'none';
+                if (card) card.classList.add('in');
+            }, 1500);
+        });
+    </script>
 </body>
 </html>

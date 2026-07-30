@@ -27,13 +27,9 @@
                         <option value="{{ $cage->id }}" @selected(old('cage_id') == $cage->id)>{{ $cage->cage_code }}</option>
                         @endforeach
                     </select>
-                    <button type="submit"
-                            class="px-6 py-2.5 text-sm font-medium rounded-full text-white transition-opacity whitespace-nowrap"
-                            style="background-color: #0075de;"
-                            onmouseover="this.style.opacity='0.85'"
-                            onmouseout="this.style.opacity='1'">
+                    <x-button type="submit" class="px-6 py-2.5 whitespace-nowrap">
                         Add Note
-                    </button>
+                    </x-button>
                 </div>
             </div>
         </form>
@@ -65,7 +61,7 @@
                     <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                 </button>
                 <form method="POST" action="{{ route('notes.destroy', $note) }}"
-                      data-confirm="Delete this note?" data-confirm-action="Delete">
+                      data-confirm="Delete this note?" data-confirm-action="Delete" data-confirm-severity="destructive">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="p-1.5 rounded hover:bg-red-50 transition-colors" style="color: #a39e98;" aria-label="Delete note">
@@ -84,9 +80,9 @@
     <x-paginator :paginator="$notes" />
 
     {{-- ── Edit Note Modal ── --}}
-    <div id="noteEditModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div id="noteEditModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" style="display: none;">
         <div class="absolute inset-0" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeNoteEdit()"></div>
-        <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+        <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Edit Note</h2>
                 <button onclick="closeNoteEdit()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
@@ -98,13 +94,14 @@
                 @method('PUT')
                 <textarea name="body" id="noteEditBody" rows="4" required maxlength="2000"
                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1 resize-y mb-3"
-                          style="border-color: #e6e6e6; color: #1f1f1f;"></textarea>
+                          style="border-color: #e6e6e6; color: #1f1f1f;">{{ old('body') }}</textarea>
+                <x-input-error name="body" />
                 <select name="cage_id" id="noteEditCage"
                         class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1 mb-4"
                         style="border-color: #e6e6e6; color: #1f1f1f;">
                     <option value="">No cage tag</option>
                     @foreach($cages as $cage)
-                    <option value="{{ $cage->id }}">{{ $cage->cage_code }}</option>
+                    <option value="{{ $cage->id }}" @selected(old('cage_id') == $cage->id)>{{ $cage->cage_code }}</option>
                     @endforeach
                 </select>
                 <div class="flex items-center justify-end gap-3">
@@ -115,19 +112,27 @@
                             onmouseout="this.style.backgroundColor='transparent'">
                         Cancel
                     </button>
-                    <button type="submit"
-                            class="px-5 py-2 text-sm font-medium rounded-full text-white transition-opacity"
-                            style="background-color: #0075de;"
-                            onmouseover="this.style.opacity='0.85'"
-                            onmouseout="this.style.opacity='1'">
+                    <x-button type="submit" class="px-5 py-2">
                         Save
-                    </button>
+                    </x-button>
                 </div>
             </form>
         </div>
     </div>
 
-    <x-confirm-modal />
+@if(session('reopen_edit_note'))
+@php $editNote = \App\Models\Note::find(session('reopen_edit_note')); @endphp
+@if($editNote)
+<x-modal-reopen modal-id="noteEditModal" session-key="reopen_edit_note" guard="editNote">
+    openNoteEdit(
+        {{ $editNote->id }},
+        {{ Js::from($editNote->body) }},
+        {{ $editNote->cage_id ?? 'null' }}
+    );
+</x-modal-reopen>
+@endif
+@endif
+
 </div>
 
 <script>
@@ -135,11 +140,11 @@ function openNoteEdit(id, body, cageId) {
     document.getElementById('noteEditForm').action = '/notes/' + id;
     document.getElementById('noteEditBody').value = body;
     document.getElementById('noteEditCage').value = cageId === null ? '' : cageId;
-    document.getElementById('noteEditModal').classList.remove('hidden');
+    document.getElementById('noteEditModal').style.display = 'flex';
     document.getElementById('noteEditBody').focus();
 }
 function closeNoteEdit() {
-    document.getElementById('noteEditModal').classList.add('hidden');
+    document.getElementById('noteEditModal').style.display = 'none';
 }
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeNoteEdit();

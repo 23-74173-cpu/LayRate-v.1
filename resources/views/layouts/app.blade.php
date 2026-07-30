@@ -19,10 +19,10 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
     {{-- Inter Font (self-hosted) --}}
-    <link rel="stylesheet" href="{{ asset('css/inter.css') }}">
+    <link rel="stylesheet" href="/css/inter.css">
 
     {{-- Tailwind CSS (compiled) --}}
-    <link href="{{ asset('css/tailwind.css') }}" rel="stylesheet">
+    <link href="/css/tailwind.css" rel="stylesheet">
 
     {{-- Prevent white flash while styles load --}}
     <style>
@@ -30,21 +30,15 @@
       body { background-color: #F5F6F8; }
     </style>
 
-    {{-- Chart.js --}}
-    <script src="{{ asset('js/chart.min.js') }}" defer></script>
-
-    {{-- Lucide Icons --}}
-    <script src="{{ asset('js/lucide.min.js') }}" defer></script>
-
     {{-- Turbo Drive --}}
-    <script type="module" src="{{ asset('js/turbo.js') }}"></script>
+    <script type="module" src="/js/turbo.js"></script>
 
     <style>
         * { -webkit-tap-highlight-color: transparent; }
         html { height: 100%; height: -webkit-fill-available; }
-        body { background-color: #F5F6F8; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; height: 100%; height: -webkit-fill-available; overflow: hidden; }
+        body { background-color: #F5F6F8; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; height: 100%; height: -webkit-fill-available; overflow: hidden; overscroll-behavior: none; }
         .nav-active { background: rgba(255,255,255,.2); box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
-        .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+        .scrollbar-thin::-webkit-scrollbar { width: 4px; height: 4px; }
         .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
         .scrollbar-thin::-webkit-scrollbar-thumb { background: #D9D9D9; border-radius: 9999px; }
         [x-cloak] { display: none !important; }
@@ -86,6 +80,22 @@
             to   { opacity: 1; transform: translateY(0); }
         }
         .turbo-loaded { animation: turboFade 120ms ease-out; }
+    </style>
+
+    {{-- Print: the root flex row and main column are both pinned to a fixed
+         viewport height with overflow:hidden on screen (so only the sidebar's
+         own nav scrolls) — during print that clips everything to page 1. Only
+         these two structural wrappers need overriding; a page's own
+         @media print rules (pushed via @stack('head') below) handle content
+         specifics like hiding the sidebar or resetting a printable doc's own
+         layout. --}}
+    <style>
+        @media print {
+            html, body { height: auto !important; overflow: visible !important; }
+            .flex.overflow-hidden { height: auto !important; overflow: visible !important; }
+            .flex.flex-col.flex-1.overflow-hidden { height: auto !important; overflow: visible !important; }
+            main.page-wrapper { overflow: visible !important; }
+        }
     </style>
 
     @stack('head')
@@ -162,8 +172,8 @@
         {{-- TOP: Brand + Arrow (mobile close / desktop unused) --}}
         <div class="flex items-center justify-between px-4 pt-3 pb-1 shrink-0">
             <div class="logo-wrap flex items-center gap-2.5 overflow-hidden">
-                <div class="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center shrink-0 border border-white/25">
-                    <i data-lucide="feather" class="w-5 h-5 text-white"></i>
+                <div class="w-11 h-11 rounded-lg bg-white flex items-center justify-center shrink-0 p-1 shadow-sm">
+                    <img src="/images/layrate-logo-white.png" alt="LayRate logo" class="w-full h-full object-contain" loading="lazy">
                 </div>
                 <div class="logo-text overflow-hidden whitespace-nowrap">
                     <div class="text-white text-sm font-semibold">LayRate</div>
@@ -184,7 +194,6 @@
                 ['icon'=>'feather',       'label'=>'Cages',              'route'=>'cages.index'],
                 ['icon'=>'bird',          'label'=>'Chickens',           'route'=>'chickens.index'],
                 ['icon'=>'egg',           'label'=>'Egg Management',     'route'=>'eggs.logging'],
-                ['icon'=>'history',       'label'=>'Egg History',        'route'=>'egg-production-history'],
                 ['icon'=>'thermometer',   'label'=>'Environment',        'route'=>'environment'],
                 ['icon'=>'cpu',           'label'=>'Hardware',           'route'=>'hardware.index'],
                 ['icon'=>'leaf',          'label'=>'Feed & Nutrition',   'route'=>'feed'],
@@ -209,31 +218,15 @@
 
         {{-- BOTTOM: Pinned footer nav --}}
         <div class="border-t border-white/10 py-4 px-3 shrink-0">
-            <a href="{{ route('notifications.index') }}"
-               data-route="notifications"
-               class="nav-link group flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors"
-               title="Notifications" aria-label="Notifications">
-                <i data-lucide="bell" class="w-[19px] h-[19px] shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"></i>
-                <span class="sidebar-label text-sm font-medium whitespace-nowrap overflow-hidden">Notifications</span>
-                @if($globalAlertCount > 0)
-                <span class="ml-auto bg-alert-text text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">{{ $globalAlertCount }}</span>
-                @endif
-            </a>
-            <a href="{{ route('account') }}"
-               data-route="settings"
-               class="nav-link group flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors"
-               title="Settings" aria-label="Settings">
-                <i data-lucide="settings" class="w-[19px] h-[19px] shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"></i>
-                <span class="sidebar-label text-sm font-medium whitespace-nowrap overflow-hidden">Settings</span>
-            </a>
-            <a href="#"
+            <a href="{{ route('profile') }}"
                data-route="profile"
                class="nav-link group flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors"
                title="Profile" aria-label="Profile">
                 <i data-lucide="user" class="w-[19px] h-[19px] shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"></i>
                 <span class="sidebar-label text-sm font-medium whitespace-nowrap overflow-hidden">Profile</span>
             </a>
-            <form action="{{ route('logout') }}" method="POST" data-turbo="false">
+            <form action="{{ route('logout') }}" method="POST" data-turbo="false"
+                  data-confirm="Sign out of LayRate?" data-confirm-action="Sign out" data-confirm-severity="neutral">
                 @csrf
                 <button type="submit"
                         class="nav-link group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors"
@@ -269,13 +262,34 @@
                 <a href="{{ route('notifications.index') }}" class="relative text-ink hover:text-ink-muted transition-colors" aria-label="Notifications">
                     <i data-lucide="bell" class="w-4 h-4"></i>
                     @if($globalAlertCount > 0)
-                    <span class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-alert-text text-white text-[8px] rounded-full flex items-center justify-center font-bold">{{ $globalAlertCount }}</span>
+                    <span class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-alert-text text-white text-xs rounded-full flex items-center justify-center font-bold">{{ $globalAlertCount }}</span>
                     @endif
                 </a>
-                <div class="flex items-center gap-2 pl-2 border-l border-hairline">
-                    <div class="text-right hidden sm:block">
-                        <div class="text-xs text-ink leading-tight">{{ auth()->user()->name }}</div>
-                        <div class="text-xs text-ink-muted uppercase tracking-wider">{{ auth()->user()->role }}</div>
+                <div class="relative pl-2 border-l border-hairline">
+                    <button id="profileMenuBtn" type="button"
+                            class="flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-black/5 transition-colors"
+                            aria-haspopup="true" aria-expanded="false" aria-label="Account menu">
+                        <div class="text-right hidden sm:block">
+                            <div class="text-xs text-ink leading-tight">{{ auth()->user()->name }}</div>
+                            <div class="text-xs text-ink-muted uppercase tracking-wider">{{ auth()->user()->role }}</div>
+                        </div>
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-ink-muted"></i>
+                    </button>
+                    <div id="profileMenu" class="hidden absolute right-0 top-full mt-2 w-44 rounded-lg border border-hairline bg-surface shadow-soft py-1 z-50">
+                        <a href="{{ route('profile') }}" class="flex items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/5 transition-colors">
+                            <i data-lucide="user" class="w-4 h-4"></i> Profile
+                        </a>
+                        <a href="{{ route('profile', ['tab' => 'settings']) }}" class="flex items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/5 transition-colors">
+                            <i data-lucide="settings" class="w-4 h-4"></i> Settings
+                        </a>
+                        <div class="my-1 border-t border-hairline"></div>
+                        <form action="{{ route('logout') }}" method="POST" data-turbo="false"
+                              data-confirm="Sign out of LayRate?" data-confirm-action="Sign out" data-confirm-severity="neutral">
+                            @csrf
+                            <button type="submit" class="w-full flex items-center gap-2 px-3 py-2 text-sm text-alert-text hover:bg-black/5 transition-colors">
+                                <i data-lucide="log-out" class="w-4 h-4"></i> Sign out
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -296,7 +310,7 @@
         @endif
 
         {{-- SCROLLABLE PAGE CONTENT --}}
-        <main class="page-wrapper flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-4 lg:px-6 py-4 scrollbar-thin">
+        <main class="page-wrapper flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-4 lg:px-6 py-4 scrollbar-thin" style="overscroll-behavior: none;">
             @yield('content')
         </main>
     </div>
@@ -357,11 +371,28 @@
 
     var SIDEBAR_INITIALIZED = false;
 
+    // ── Scroll-position preservation across form-submit navigations ──
+    // Many action forms (record mortality, add consumption, add note, ...)
+    // redirect()->back() after saving, which — whether Turbo Drive treats it
+    // as a full "advance" Visit or a classic reload — rebuilds <main> from
+    // scratch and naturally lands at scrollTop 0. Save the scroll position
+    // just before any such submit, keyed by path, and restore it once on the
+    // next load. Bound once, at the document level, so it survives regardless
+    // of how the next page arrives (Turbo visit or classic navigation).
+    document.addEventListener('submit', function(e) {
+        var mainEl = document.querySelector('.page-wrapper');
+        if (!mainEl) return;
+        try {
+            sessionStorage.setItem('scrollPos:' + location.pathname, String(mainEl.scrollTop));
+        } catch (err) { /* sessionStorage unavailable — degrade to no-op */ }
+    }, true);
+
     document.addEventListener('turbo:load', function() {
         var sidebar  = document.getElementById('sidebar');
         var toggleBtn = document.getElementById('sidebar-toggle');
         var arrowBtn = document.getElementById('sidebar-arrow');
         var backdrop = document.getElementById('sidebar-backdrop');
+        if (!sidebar) return;
         var navLinks = sidebar.querySelectorAll('.nav-link');
         var STORAGE_KEY = 'sidebar_state';
 
@@ -371,6 +402,21 @@
             mainContent.classList.remove('turbo-loaded');
             void mainContent.offsetWidth;
             mainContent.classList.add('turbo-loaded');
+        }
+
+        // ── Restore scroll position saved just before the submit that led here ──
+        // Re-applied on every turbo:frame-load below too: a lazy-loaded frame
+        // (e.g. a "Recent Records" list) can expand the page's scrollHeight
+        // well after this first attempt, which would otherwise clamp the
+        // restore to whatever little height existed at this exact instant.
+        // The saved value itself is only cleared on the next navigation.
+        if (mainContent) {
+            try {
+                var savedScroll = sessionStorage.getItem('scrollPos:' + location.pathname);
+                if (savedScroll !== null) {
+                    mainContent.scrollTop = parseInt(savedScroll, 10) || 0;
+                }
+            } catch (err) { /* sessionStorage unavailable — degrade to no-op */ }
         }
 
         // ── Desktop collapse toggle ──
@@ -464,6 +510,39 @@
             navLinks.forEach(function(link) {
                 link.addEventListener('click', closeMobile);
             });
+
+            // ── Header profile dropdown ──
+            var profileBtn = document.getElementById('profileMenuBtn');
+            var profileMenu = document.getElementById('profileMenu');
+            if (profileBtn && profileMenu) {
+                profileBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var isOpen = !profileMenu.classList.contains('hidden');
+                    profileMenu.classList.toggle('hidden', isOpen);
+                    profileBtn.setAttribute('aria-expanded', String(!isOpen));
+                });
+                document.body.addEventListener('click', function(e) {
+                    if (!e.target.closest('#profileMenu') && !e.target.closest('#profileMenuBtn')) {
+                        profileMenu.classList.add('hidden');
+                        profileBtn.setAttribute('aria-expanded', 'false');
+                    }
+                });
+                // Close immediately on selecting an item — otherwise the menu
+                // stays visibly open (header persists across Turbo visits)
+                // when the user lands back on this page later.
+                profileMenu.querySelectorAll('a, button').forEach(function(el) {
+                    el.addEventListener('click', function() {
+                        profileMenu.classList.add('hidden');
+                        profileBtn.setAttribute('aria-expanded', 'false');
+                    });
+                });
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        profileMenu.classList.add('hidden');
+                        profileBtn.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            }
         }
 
         // ── Initialize icons ──
@@ -490,7 +569,7 @@
             'environment': 'Environment','hardware': 'Hardware',
             'feed': 'Feed & Nutrition', 'analytics': 'Analytics',    'forecast': 'Forecast',
             'reports': 'Reports',       'notes': 'Notes',            'mortality': 'Mortality',
-            'notifications': 'Notifications', 'account': 'Settings',
+            'notifications': 'Notifications', 'profile': 'Profile',
         };
         var crumb = document.getElementById('breadcrumb-current');
         if (crumb) {
@@ -501,7 +580,25 @@
     // ── Re-initialize Lucide icons when turbo-frame content loads ──
     document.addEventListener('turbo:frame-load', function() {
         lucide.createIcons();
+
+        // Re-apply any pending scroll restore — a lazy frame finishing load
+        // can grow the page after the initial turbo:load attempt clamped short.
+        var mainEl = document.querySelector('.page-wrapper');
+        if (mainEl) {
+            try {
+                var savedScroll = sessionStorage.getItem('scrollPos:' + location.pathname);
+                if (savedScroll !== null) {
+                    mainEl.scrollTop = parseInt(savedScroll, 10) || 0;
+                }
+            } catch (err) { /* sessionStorage unavailable — degrade to no-op */ }
+        }
     });
+
+    // Note: deliberately NOT clearing the saved scroll value on turbo:before-visit —
+    // that event also fires for the very redirect-following visit this value is
+    // meant to be consumed by (redirect()->back() lands on the same path), which
+    // would wipe it before turbo:load ever gets to read it. Any stale leftover
+    // value is harmless: it's just overwritten by the next real submit on that path.
 
     // ── Prevent right-click context menu (bind once) ──
     document.addEventListener('contextmenu', function(e) {
@@ -509,7 +606,24 @@
     });
 })();
 
-if (typeof Chart !== 'undefined') {
+window.CAGE_COLORS = @json(\App\Models\Cage::getColorMap());
+
+// Factored out so it can be re-applied after a Chart.js library reload
+// (see LayRateChart._reloadChartJsLibrary below) — a fresh Chart module starts
+// with library defaults, not this app's.
+//
+// `full` (default true) applies everything, including scale.grid/layout. LayRateChart's
+// self-heal calls this with `full: false` after reloading the library: confirmed live
+// that reassigning scale.grid/layout in that specific situation (a Chart module that's
+// only just finished loading) is what leaves bar charts unable to paint — merging into
+// the existing objects instead of replacing them avoids that, but Chart.js's own
+// internal scale-defaults routing silently doesn't persist a merge for scale.grid
+// specifically, so the safest fix is to just skip both in that one path. The visual
+// difference (library default grid shade/padding instead of this app's) only shows up
+// in the rare case a chart needed this recovery at all, which is an acceptable
+// trade-off against the chart staying blank.
+window.__applyChartDefaults = function(full) {
+    if (typeof Chart === 'undefined') return;
     Chart.defaults.color = '#31302e';
     Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
     Chart.defaults.set('plugins.legend.labels.font.size', 12);
@@ -517,11 +631,218 @@ if (typeof Chart !== 'undefined') {
     Chart.defaults.plugins.legend.labels.pointStyle = 'circle';
     Chart.defaults.plugins.legend.labels.padding = 16;
     Chart.defaults.elements.bar.borderRadius = 4;
-    Chart.defaults.scale.grid = { color: 'rgba(0,0,0,0.06)' };
-    window.CAGE_COLORS = {
-        'CAGE-A': '#1B8A3E', 'CAGE-B': '#2563EB', 'CAGE-C': '#EA580C', 'CAGE-D': '#7C3AED'
-    };
-}
+    if (full !== false) {
+        Chart.defaults.scale.grid = { color: 'rgba(0,0,0,0.06)' };
+        Chart.defaults.layout = { padding: { top: 10, bottom: 10, left: 10, right: 10 } };
+    }
+};
+window.__applyChartDefaults();
+
+// ── Shared chart lifecycle manager ──
+// Every chart on every page routes through this helper so that:
+//   • instances are properly destroyed before recreation (no "goes blank" bug)
+//   • all charts are torn down on turbo:before-cache (no stale canvas errors)
+//   • consistent defaults (padding, legend, grid) apply globally
+window.LayRateChart = {
+    _instances: {},
+    _configs: {},
+    _lifecycleBound: false,
+    _recoveryHook: null,
+    _recovering: false,
+    _generation: 0,
+
+    // A page can register how to "re-render everything I currently show" (e.g.
+    // Analytics re-runs its normal AJAX fetch for the active cage/period). The
+    // self-heal path below calls this instead of trying to rebuild charts generically
+    // from cached configs — confirmed live that rebuilding from a config directly
+    // (even a config identical in every way, deep-cloned) does *not* reliably clear
+    // the stuck-paint state, but re-entering the page's own real fetch/render flow
+    // does, every time tested. Re-registered on every call, so it always points at
+    // the current page's live closures, not stale ones from a previous render.
+    registerRecoveryHook(fn) {
+        this._recoveryHook = fn;
+    },
+
+    // Unconditionally rebuilds from a clean Chart.js module before rendering — call
+    // this on every tab/cage/period switch, not just when a chart is detected broken.
+    // Returns a Promise; render inside its .then(). Heavier than the detect-then-heal
+    // approach this replaced, but guaranteed correct every time instead of depending on
+    // a check that can itself race.
+    prepareForRender() {
+        this._generation++;
+        Object.keys(this._instances).forEach(id => this.destroy(id));
+        return this._reloadChartJsLibrary();
+    },
+
+    create(id, config, _retryCount) {
+        _retryCount = _retryCount || 0;
+        this.destroy(id);
+        const canvas = document.getElementById(id);
+        if (!canvas) return null;
+        // Fallback: Chart.js's own global registry may still hold a live instance for this
+        // canvas even after LayRateChart.destroy() above was a no-op (because the primary
+        // destroy's inst.destroy() threw and was silently caught, leaving _instances[id]
+        // deleted but Chart.instances intact). Check directly via Chart.getChart() so we
+        // don't rely on LayRateChart's bookkeeping.
+        const orphaned = typeof Chart !== 'undefined' && Chart.getChart(canvas);
+        if (orphaned) {
+            try { orphaned.destroy(); } catch (e) { /* already gone */ }
+        }
+        this._configs[id] = config;
+        try {
+            const instance = new Chart(canvas, config);
+            this._instances[id] = instance;
+            // Defensive self-heal: intermittently (observed live, root cause not fully
+            // pinned down despite extensive investigation — ruled out stale scale/data,
+            // canvas reuse, animation timing, ResizeObserver loops, and font-loading races
+            // as the trigger) a bar chart's dataset elements never get a valid pixel
+            // geometry (base stays null) even though data/scale are correct, so nothing
+            // paints. Confirmed live: the corruption lives inside Chart.js's own shared
+            // module state, not the DOM — neither a fresh canvas+chart instance nor a full
+            // turbo-frame reload clears it, but forcing the Chart.js <script> itself to
+            // re-execute (a fresh module, no page navigation) reliably does. Only bar
+            // charts have been observed affected; harmless no-op otherwise since the check
+            // is bar-geometry-specific.
+            // Suppressed while a recovery is already in flight (see _verifyBarPainted):
+            // the recovery hook itself creates fresh bar charts as part of re-rendering,
+            // and letting those schedule their own independent verification/retry chains
+            // caused overlapping recoveries to race each other — confirmed live, this is
+            // what was reintroducing the earlier stale-cage/period bug via multiple
+            // concurrent recovery-triggered tab "clicks".
+            if (config.type === 'bar' && _retryCount < 3 && !this._recovering) {
+                setTimeout(() => this._verifyBarPainted(id, config, canvas, instance, _retryCount), 1100);
+            }
+            return instance;
+        } catch (e) {
+            console.error('[LayRateChart] Failed to create chart "' + id + '":', e);
+            return null;
+        }
+    },
+
+    _verifyBarPainted(id, config, canvas, instance, retryCount) {
+        if (this._instances[id] !== instance) return; // superseded by a newer render already
+        const meta = instance.getDatasetMeta(0);
+        const stuck = meta.data.length > 0 && meta.data.every(el => el.base == null || !isFinite(el.base));
+        if (!stuck) return;
+
+        if (retryCount === 0) {
+            console.warn('[LayRateChart] "' + id + '" failed to paint, rebuilding once');
+            const fresh = document.createElement('canvas');
+            fresh.id = id;
+            fresh.className = canvas.className;
+            fresh.style.cssText = canvas.style.cssText;
+            canvas.replaceWith(fresh);
+            this.create(id, config, 1);
+        } else if (retryCount === 1) {
+            console.warn('[LayRateChart] "' + id + '" still stuck — reloading the Chart.js library (graph-only recovery, no page navigation) and re-rendering');
+            // Confirmed live: reloading the library while *other* charts built on the old
+            // module are still alive doesn't clear it, and neither does rebuilding from a
+            // cached config directly (even an exact deep-cloned copy) — only re-entering
+            // the page's own real fetch/render flow does. So every currently-live chart is
+            // torn down, the library is reloaded, and the page's registered hook re-runs
+            // its normal render path (which is what a manual tab re-click already does).
+            this._recovering = true;
+            const gen = this._generation; // if this changes, the page navigated away — abort
+            Object.keys(this._instances).forEach(otherId => this.destroy(otherId));
+            this._reloadChartJsLibrary()
+                .then(() => {
+                    if (gen !== this._generation) return; // navigated away mid-recovery
+                    if (typeof this._recoveryHook === 'function') {
+                        this._recoveryHook();
+                    } else {
+                        // No page hook registered — best effort, may not clear it (see above).
+                        this.create(id, config, 2);
+                    }
+                    // Give the recovery's own fetch/render (triggered above) time to finish
+                    // before allowing verification to run again.
+                    setTimeout(() => {
+                        if (gen === this._generation) this._recovering = false;
+                    }, 2000);
+                })
+                .catch(() => {
+                    if (gen !== this._generation) return; // navigated away mid-recovery
+                    this._recovering = false;
+                    window.location.reload();
+                });
+        } else {
+            console.error('[LayRateChart] "' + id + '" still failed to paint after a Chart.js library reload — falling back to a full page reload');
+            window.location.reload();
+        }
+    },
+
+    // Forces Chart.js to fully re-initialize (fresh Animator, fresh registries) by
+    // re-executing its <script> tag, without touching the rest of the page. Existing
+    // chart instances built against the old module keep working (their own destroy()/
+    // update() stay bound to their own instance), but new ones after this point use the
+    // fresh module — which is what actually clears the stuck-paint state.
+    _reloadChartJsLibrary() {
+        return new Promise((resolve, reject) => {
+            const old = document.querySelector('script[src*="chart.min.js"]');
+            if (!old) { reject(new Error('chart.min.js script tag not found')); return; }
+            const fresh = document.createElement('script');
+            fresh.src = old.src.split('?')[0] + '?r=' + Date.now();
+            fresh.onload = () => {
+                if (typeof window.__applyChartDefaults === 'function') window.__applyChartDefaults(false);
+                // The fresh module isn't actually ready to build a working chart the
+                // instant its script finishes executing — confirmed live: rebuilding
+                // immediately on load still failed every time, but the exact same rebuild
+                // succeeded reliably once a short delay was inserted first. Likely some
+                // async part of Chart.js's own init (its animator's first scheduling tick)
+                // that onload doesn't wait for.
+                setTimeout(resolve, 300);
+            };
+            fresh.onerror = () => reject(new Error('Failed to reload chart.min.js'));
+            old.remove();
+            document.head.appendChild(fresh);
+        });
+    },
+
+    update(id, config) {
+        const inst = this._instances[id];
+        if (inst) {
+            try {
+                if (config.data) inst.data = config.data;
+                if (config.options) {
+                    if (config.options.scales) inst.options.scales = config.options.scales;
+                    if (config.options.plugins) inst.options.plugins = config.options.plugins;
+                }
+                inst.update('none');
+                return inst;
+            } catch (e) {
+                console.warn('[LayRateChart] Update failed for "' + id + '", falling back to recreate:', e);
+            }
+        }
+        return this.create(id, config);
+    },
+
+    destroy(id) {
+        const inst = this._instances[id];
+        if (inst) {
+            try { inst.destroy(); } catch (e) {
+                console.warn('[LayRateChart] Chart.js native destroy() threw for "' + id + '":', e);
+            }
+            delete this._instances[id];
+        }
+    },
+
+    destroyAll() {
+        // Invalidates any in-flight self-heal recovery (see _verifyBarPainted) — without
+        // this, navigating away mid-recovery left its pending .then() callback to fire
+        // later against whatever the *next* page happened to render, clicking tabs and
+        // creating charts that had nothing to do with the page the user was now on.
+        // Confirmed live: repeated fast navigation reliably corrupted state without this.
+        this._generation++;
+        this._recovering = false;
+        Object.keys(this._instances).forEach(id => this.destroy(id));
+    },
+
+    _bindLifecycle() {
+        if (this._lifecycleBound) return;
+        this._lifecycleBound = true;
+        document.addEventListener('turbo:before-cache', () => this.destroyAll());
+    }
+};
+LayRateChart._bindLifecycle();
 
 // ── Reusable loading-button helper for form submissions ──
 function loadingButton(btn, label) {
@@ -531,6 +852,15 @@ function loadingButton(btn, label) {
         + (label || 'Saving\u2026');
 }
 </script>
+
+<x-confirm-modal />
+<x-notification-toast />
+<x-loading-modal />
+<x-transaction-logger />
+
+{{-- Libraries needed by inline scripts in @stack('scripts') --}}
+<script src="/js/lucide.min.js"></script>
+<script src="/js/chart.min.js"></script>
 
 @stack('scripts')
 </body>

@@ -1,14 +1,18 @@
 {{--
     <x-confirm-modal />
     Replaces all onsubmit="return confirm('...')".
-    Notion-style modal: centered, white card, subtle backdrop blur,
-    clear primary (destructive) / secondary (cancel) button hierarchy.
+    Severity tiers:
+      destructive — red icon + red button (permanent/irreversible actions)
+      neutral     — calm icon + navy button (standard confirmations)
+      info        — blue icon + single "Got it" button (informational)
+    Default: neutral.
 
     Usage:
       Include once in the layout or page.
-      Trigger via JS: confirmModal('Are you sure?', formElement)
+      Trigger via JS: confirmModal('Are you sure?', formElement, 'Delete', 'destructive')
       Or via data attributes on a form:
-        <form data-confirm="Delete this record?" data-confirm-action="Delete">
+        <form data-confirm="Delete this record?" data-confirm-action="Delete" data-confirm-severity="destructive">
+        <form data-confirm="Note added." data-confirm-action="Got it" data-confirm-severity="info" data-confirm-cancel="false">
 --}}
 
 {{-- Backdrop + Card --}}
@@ -28,7 +32,7 @@
 
     {{-- Card --}}
     <div
-        class="relative w-full max-w-md rounded-2xl p-6"
+        class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto"
         style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;"
     >
         {{-- Close X --}}
@@ -42,8 +46,8 @@
         </button>
 
         {{-- Icon --}}
-        <div class="mb-4 flex items-center justify-center w-10 h-10 rounded-full" style="background-color: #fbe4e6;">
-            <i data-lucide="alert-triangle" class="w-5 h-5" style="color: #9b1c24;"></i>
+        <div id="confirm-modal-icon" class="mb-4 flex items-center justify-center w-10 h-10 rounded-full" style="background-color: #e8ecf4;">
+            <i data-lucide="info" class="w-5 h-5" style="color: #213183;"></i>
         </div>
 
         {{-- Title --}}
@@ -57,26 +61,22 @@
         </p>
 
         {{-- Actions --}}
-        <div class="mt-6 flex items-center justify-end gap-3">
+        <div id="confirm-modal-actions" class="mt-6 flex items-center justify-end gap-3">
             <button
+                id="confirm-modal-cancel"
                 type="button"
                 onclick="confirmModalClose()"
-                class="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
-                style="color: #1f1f1f; border: 1px solid #e6e6e6;"
-                onmouseover="this.style.backgroundColor='#f6f5f4'"
-                onmouseout="this.style.backgroundColor='transparent'"
+                class="px-4 py-2 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors"
             >
                 Cancel
             </button>
             <button
                 id="confirm-modal-action"
                 type="button"
-                class="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
-                style="background-color: #9b1c24; color: #ffffff;"
-                onmouseover="this.style.backgroundColor='#7a161d'"
-                onmouseout="this.style.backgroundColor='#9b1c24'"
+                class="px-4 py-2 text-sm font-medium rounded-full text-white transition-colors"
+                style="background-color: #213183;"
             >
-                Delete
+                Confirm
             </button>
         </div>
     </div>
@@ -87,13 +87,63 @@
 (function() {
     let pendingForm = null;
 
-    window.confirmModal = function(message, form, actionLabel) {
+    window.confirmModal = function(message, form, actionLabel, severity) {
         pendingForm = form;
-        document.getElementById('confirm-modal-message').textContent = message;
+        severity = severity || 'neutral';
+        document.getElementById('confirm-modal-message').innerHTML = message;
         document.getElementById('confirm-modal-action').textContent = actionLabel || 'Confirm';
+
+        var iconWrap = document.getElementById('confirm-modal-icon');
+        var cancelBtn  = document.getElementById('confirm-modal-cancel');
+        var actionBtn  = document.getElementById('confirm-modal-action');
+        var actionsRow = document.getElementById('confirm-modal-actions');
+
+        // Recreate icon element — Lucide may have already replaced the
+        // initial <i> with <svg>, so querySelector('i') would return null.
+        // By rebuilding via innerHTML we avoid that null reference entirely.
+        var lucideIcon, bgColor, iconColor;
+        if (severity === 'destructive') {
+            lucideIcon = 'alert-triangle';
+            bgColor = '#fbe4e6';
+            iconColor = '#9b1c24';
+            actionBtn.style.backgroundColor = '#9b1c24';
+            actionBtn.className = 'px-4 py-2 text-sm font-medium rounded-full bg-[#9b1c24] text-white hover:bg-[#7a161d] transition-colors';
+            cancelBtn.classList.remove('hidden');
+            actionsRow.classList.remove('flex-col');
+            actionsRow.classList.add('flex');
+        } else if (severity === 'info') {
+            lucideIcon = 'circle-info';
+            bgColor = '#dbeafe';
+            iconColor = '#1D4E8F';
+            actionBtn.style.backgroundColor = '#1D4E8F';
+            actionBtn.className = 'px-4 py-2 text-sm font-medium rounded-lg bg-[#1D4E8F] text-white hover:bg-[#163d73] transition-colors';
+            cancelBtn.classList.add('hidden');
+            actionsRow.classList.remove('flex');
+            actionsRow.classList.add('flex-col');
+            actionBtn.classList.add('w-full');
+        } else {
+            // neutral (default)
+            lucideIcon = 'circle-check';
+            bgColor = '#e8ecf4';
+            iconColor = '#213183';
+            actionBtn.className = 'px-4 py-2 text-sm font-medium rounded-full text-white transition-colors';
+            actionBtn.style.backgroundColor = '#213183';
+            cancelBtn.classList.remove('hidden');
+            actionsRow.classList.remove('flex-col');
+            actionsRow.classList.add('flex');
+        }
+
+        iconWrap.style.backgroundColor = bgColor;
+        iconWrap.innerHTML = '<i data-lucide="' + lucideIcon + '" class="w-5 h-5" style="color: ' + iconColor + ';"></i>';
+
+        // Remove hidden from the modal itself
         document.getElementById('confirm-modal').classList.remove('hidden');
         document.getElementById('confirm-modal').classList.add('flex');
-        document.getElementById('confirm-modal-action').focus();
+
+        // Re-render Lucide icons for the dynamic icon
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
+        actionBtn.focus();
     };
 
     window.confirmModalClose = function() {
@@ -103,10 +153,19 @@
     };
 
     document.getElementById('confirm-modal-action').addEventListener('click', function() {
-        if (pendingForm) {
-            pendingForm.submit();
-        }
+        var form = pendingForm;
         confirmModalClose();
+        if (!form) return;
+        if (form instanceof HTMLFormElement) {
+            // Use submit() not requestSubmit() to bypass Turbo's submit-event
+            // interception entirely. At this point the user has already
+            // confirmed the action, so re-dispatching a submit event — and
+            // risking Turbo hijacking the navigation — is unnecessary.
+            form.submit();
+        } else if (typeof form.submit === 'function') {
+            // JS-path pseudo-form ({ submit: callback }) — e.g. Clear All Cages.
+            form.submit();
+        }
     });
 
     // Escape key closes modal
@@ -121,10 +180,15 @@
         document.querySelectorAll('form[data-confirm]:not([data-confirm-wired])').forEach(function(form) {
             form.setAttribute('data-confirm-wired', 'true');
             form.addEventListener('submit', function(e) {
+                if (form.dataset.confirmed === 'true') {
+                    delete form.dataset.confirmed;
+                    return; // user already confirmed — let the submit proceed
+                }
                 e.preventDefault();
-                const message = form.getAttribute('data-confirm');
-                const action = form.getAttribute('data-confirm-action') || 'Confirm';
-                confirmModal(message, form, action);
+                const message  = form.getAttribute('data-confirm');
+                const action   = form.getAttribute('data-confirm-action') || 'Confirm';
+                const severity = form.getAttribute('data-confirm-severity') || 'neutral';
+                confirmModal(message, form, action, severity);
             });
         });
     }

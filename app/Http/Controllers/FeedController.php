@@ -10,6 +10,7 @@ use App\Models\FeedConsumptionLog;
 use App\Services\FcrCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class FeedController extends Controller
 {
@@ -18,9 +19,33 @@ class FeedController extends Controller
         return view('feed', ['preselectedCageId' => (int) request('cage_id') ?: null]);
     }
 
+    public function batchSessionData()
+    {
+        $batchId = session('reopen_edit_batch');
+        return $batchId ? FeedBatch::find($batchId) : null;
+    }
+
+    public function consumptionSessionData()
+    {
+        $logId = session('reopen_edit_consumption');
+        return $logId ? FeedConsumptionLog::with(['cage', 'feedBatch'])->find($logId) : null;
+    }
+
+    public function farmEntrySessionData()
+    {
+        $entryId = session('reopen_edit_farm_entry');
+        return $entryId ? FarmFeedEntry::find($entryId) : null;
+    }
+
     public function liveData()
     {
-        $batches = FeedBatch::orderByDesc('date_received')->get();
+        // Full, unpaginated list — needed for the avg CP% stat and to populate
+        // the consumption/farm-entry modal <select> dropdowns with every batch,
+        // not just whichever page the table happens to be on.
+        $allBatches = FeedBatch::orderByDesc('date_received')->get();
+        $avgCp = $allBatches->avg('crude_protein');
+
+        $batches = FeedBatch::orderByDesc('date_received')->paginate(15)->withQueryString();
 
         $preselectedCageId = (int) request('cage_id') ?: null;
 
@@ -30,8 +55,6 @@ class FeedController extends Controller
             ->orderBy('log_time')
             ->paginate(20)
             ->withQueryString();
-
-        $avgCp = $batches->avg('crude_protein');
 
         $totalFeedWeek = FeedConsumptionLog::where('log_date', '>=', now()->subDays(7))
             ->sum('feed_consumed_kg');
@@ -49,75 +72,184 @@ class FeedController extends Controller
 
         $cages = Cage::where('is_active', 1)->orderBy('cage_code')->get();
 
-        $fcrCageId = (int) request('fcr_cage_id') ?: $preselectedCageId ?: $cages->value('id');
+        $fcrCageId = request('fcr_cage_id', $preselectedCageId ? (string) $preselectedCageId : null);
         $fcrGroupBy = request('fcr_group_by', 'week');
         if (! in_array($fcrGroupBy, ['day', 'week', 'month'])) {
             $fcrGroupBy = 'week';
         }
 
-        $fcrCage = $fcrCageId ? Cage::find($fcrCageId) : null;
-        $fcrTimeline = $fcrCage ? FcrCalculator::timeline($fcrCage, $fcrGroupBy) : collect();
+        // Default to first cage when no FCR selection is provided
+        if ($fcrCageId === null) {
+            $firstCage = $cages->first();
+            $fcrCageId = $firstCage ? (string) $firstCage->id : null;
+        }
 
-        $fcrPeriodDays = match ($fcrGroupBy) {
-            'month' => 30,
-            'week' => 7,
-            default => 1,
-        };
-        $fcrCurrent = $fcrCage
-            ? FcrCalculator::forCage($fcrCage, now()->subDays($fcrPeriodDays - 1)->startOfDay(), now()->endOfDay())
-            : null;
+        $fcrData = $this->computeFcrData($fcrCageId, $fcrGroupBy);
 
-        return view('feed._live-data', compact(
-            'batches', 'consumptionLogs', 'avgCp', 'totalFeedWeek', 'avgFeedPerCage',
-            'totalFeedCostMonth', 'cages',
-            'preselectedCageId',
-            'fcrCage', 'fcrCageId', 'fcrGroupBy', 'fcrTimeline', 'fcrCurrent',
+        return view('feed._live-data', array_merge(
+            compact('batches', 'allBatches', 'consumptionLogs', 'avgCp', 'totalFeedWeek', 'avgFeedPerCage',
+                     'totalFeedCostMonth', 'cages', 'preselectedCageId'),
+            $fcrData
         ));
     }
 
-    public function storeBatch(Request $request)
+    /**
+     * AJAX endpoint: returns rendered FCR content HTML.
+     */
+    public function fcrData()
     {
-        $data = $request->validate([
+        $cageId = request('cage_id', 'all');
+        $groupBy = request('group_by', 'week');
+        if (! in_array($groupBy, ['day', 'week', 'month'])) {
+            $groupBy = 'week';
+        }
+
+        $fcrData = $this->computeFcrData($cageId, $groupBy);
+
+        return view('feed._fcr-content', $fcrData);
+    }
+
+    /**
+     * Shared FCR computation for both server-render and AJAX.
+     */
+    private function computeFcrData(string|null $cageId, string $groupBy): array
+    {
+        $periodDays = match ($groupBy) {
+            'month' => 30,
+            'week'   => 7,
+            default  => 1,
+        };
+
+        $label = null;
+        $selectedCageId = null;
+
+        if ($cageId === 'all' || $cageId === null) {
+            if ($cageId === 'all') {
+                $fcrCurrent  = FcrCalculator::forAllCages(
+                    now()->subDays($periodDays - 1)->startOfDay(), now()->endOfDay()
+                );
+                $fcrTimeline = FcrCalculator::timelineAll($groupBy);
+                $label       = 'All Cages';
+                $selectedCageId = 'all';
+            } else {
+                $fcrCurrent  = null;
+                $fcrTimeline = collect();
+                $label       = null;
+                $selectedCageId = null;
+            }
+        } else {
+            $selectedCageId = (int) $cageId;
+            $cage = Cage::find($selectedCageId);
+            if ($cage) {
+                $fcrTimeline = FcrCalculator::timeline($cage, $groupBy);
+                $fcrCurrent  = FcrCalculator::forCage(
+                    $cage, now()->subDays($periodDays - 1)->startOfDay(), now()->endOfDay()
+                );
+                $label = $cage->cage_code;
+            } else {
+                $fcrTimeline = collect();
+                $fcrCurrent  = null;
+                $label       = null;
+            }
+        }
+
+        return [
+            'fcrCurrent'    => $fcrCurrent,
+            'fcrTimeline'   => $fcrTimeline,
+            'fcrGroupBy'    => $groupBy,
+            'fcrCageLabel'  => $label,
+            'fcrSelectedId' => $selectedCageId,
+        ];
+    }
+
+    private function batchRules(): array
+    {
+        return [
             'brand' => 'nullable|string|max:100',
             'crude_protein' => 'required|numeric|min:0|max:100',
             'total_quantity_kg' => 'nullable|numeric|min:0',
             'unit_cost' => 'nullable|numeric|min:0',
-            'date_received' => 'required|date',
+            'date_received' => 'sometimes|required|date',
             'low_stock_threshold' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
-        ]);
+        ];
+    }
 
+    public function storeBatch(Request $request)
+    {
+        $validator = Validator::make($request->all(), $this->batchRules());
+
+        if ($validator->fails()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+            }
+            return redirect()->back()
+                ->with('reopen_add_batch', true)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
         $batch = FeedBatch::create($data);
 
-        return redirect()->route('feed')
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'batch_code' => $batch->batch_code]);
+        }
+
+        return redirect()->back()
             ->with('success', "Feed batch {$batch->batch_code} added.");
     }
 
     public function updateBatch(Request $request, FeedBatch $feedBatch)
     {
-        $data = $request->validate([
-            'brand' => 'nullable|string|max:100',
-            'crude_protein' => 'required|numeric|min:0|max:100',
-            'total_quantity_kg' => 'nullable|numeric|min:0',
-            'unit_cost' => 'nullable|numeric|min:0',
-            'low_stock_threshold' => 'nullable|numeric|min:0',
-            'notes' => 'nullable|string',
-        ]);
+        $validator = Validator::make($request->all(), $this->batchRules());
 
+        if ($validator->fails()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+            }
+            return redirect()->back()
+                ->with('reopen_edit_batch', $feedBatch->id)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
         $feedBatch->update($data);
 
-        return redirect()->route('feed')->with('success', 'Feed batch updated.');
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->back()->with('success', 'Feed batch updated.');
     }
 
-    public function storeConsumption(Request $request)
+    private function consumptionRules(): array
     {
-        $data = $request->validate([
+        return [
             'cage_id' => 'required|exists:cages,id',
             'feed_batch_id' => 'required|exists:feed_batches,id',
             'log_date' => 'required|date',
             'log_time' => 'nullable|date_format:H:i',
             'feed_consumed_kg' => 'required|numeric|min:0',
-        ]);
+        ];
+    }
+
+    public function storeConsumption(Request $request)
+    {
+        $validator = Validator::make($request->all(), $this->consumptionRules());
+
+        if ($validator->fails()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+            }
+            return redirect()->back()
+                ->with('reopen_add_consumption', true)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
 
         $log = FeedConsumptionLog::create(array_merge($data, [
             'source' => 'direct',
@@ -126,23 +258,36 @@ class FeedController extends Controller
 
         $this->checkLowStock($data['feed_batch_id']);
 
-        return redirect()->route('feed')
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->back()
             ->with('success', "Feed consumption logged for Cage " . Cage::find($data['cage_id'])->cage_code . ".");
     }
 
     public function updateConsumption(Request $request, FeedConsumptionLog $feedConsumptionLog)
     {
         if ($feedConsumptionLog->source !== 'direct') {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => ['source' => 'Distributed entries can only be edited via the whole-farm entry.']], 422);
+            }
             return redirect()->back()->with('error', 'Distributed entries can only be edited via the whole-farm entry.');
         }
 
-        $data = $request->validate([
-            'cage_id' => 'required|exists:cages,id',
-            'feed_batch_id' => 'required|exists:feed_batches,id',
-            'log_date' => 'required|date',
-            'log_time' => 'nullable|date_format:H:i',
-            'feed_consumed_kg' => 'required|numeric|min:0',
-        ]);
+        $validator = Validator::make($request->all(), $this->consumptionRules());
+
+        if ($validator->fails()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+            }
+            return redirect()->back()
+                ->with('reopen_edit_consumption', $feedConsumptionLog->id)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
 
         $feedConsumptionLog->update(array_merge($data, [
             'source' => 'direct',
@@ -150,30 +295,58 @@ class FeedController extends Controller
 
         $this->checkLowStock($data['feed_batch_id']);
 
-        return redirect()->route('feed')
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->back()
             ->with('success', "Feed consumption updated for Cage " . Cage::find($data['cage_id'])->cage_code . ".");
     }
 
     public function destroyConsumption(FeedConsumptionLog $feedConsumptionLog)
     {
         if ($feedConsumptionLog->source !== 'direct') {
+            if (request()->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => ['source' => 'Distributed entries can only be removed by deleting the whole-farm entry.']], 422);
+            }
             return redirect()->back()->with('error', 'Distributed entries can only be removed by deleting the whole-farm entry.');
         }
 
         $feedConsumptionLog->delete();
 
-        return redirect()->route('feed')->with('success', 'Consumption log deleted.');
+        if (request()->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->back()->with('success', 'Consumption log deleted.');
     }
 
-    public function storeFarmFeedEntry(Request $request)
+    private function farmEntryRules(): array
     {
-        $data = $request->validate([
+        return [
             'feed_batch_id' => 'required|exists:feed_batches,id',
             'log_date' => 'required|date',
             'log_time' => 'nullable|date_format:H:i',
             'total_kg' => 'required|numeric|min:0',
             'unit_cost' => 'nullable|numeric|min:0',
-        ]);
+        ];
+    }
+
+    public function storeFarmFeedEntry(Request $request)
+    {
+        $validator = Validator::make($request->all(), $this->farmEntryRules());
+
+        if ($validator->fails()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+            }
+            return redirect()->back()
+                ->with('reopen_add_farm_entry', true)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
 
         $batch = FeedBatch::find($data['feed_batch_id']);
 
@@ -188,19 +361,29 @@ class FeedController extends Controller
         $this->distributeFarmFeedEntry($entry);
         $this->checkLowStock($entry->feed_batch_id);
 
-        return redirect()->route('feed')
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->back()
             ->with('success', "Whole-farm feeding logged ({$entry->total_kg} kg distributed across active cages).");
     }
 
     public function updateFarmFeedEntry(Request $request, FarmFeedEntry $farmFeedEntry)
     {
-        $data = $request->validate([
-            'feed_batch_id' => 'required|exists:feed_batches,id',
-            'log_date' => 'required|date',
-            'log_time' => 'nullable|date_format:H:i',
-            'total_kg' => 'required|numeric|min:0',
-            'unit_cost' => 'nullable|numeric|min:0',
-        ]);
+        $validator = Validator::make($request->all(), $this->farmEntryRules());
+
+        if ($validator->fails()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+            }
+            return redirect()->back()
+                ->with('reopen_edit_farm_entry', $farmFeedEntry->id)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
 
         $batch = FeedBatch::find($data['feed_batch_id']);
 
@@ -217,7 +400,11 @@ class FeedController extends Controller
         $this->distributeFarmFeedEntry($farmFeedEntry);
         $this->checkLowStock($farmFeedEntry->feed_batch_id);
 
-        return redirect()->route('feed')
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->back()
             ->with('success', 'Whole-farm feeding updated and redistributed.');
     }
 
@@ -225,7 +412,11 @@ class FeedController extends Controller
     {
         $farmFeedEntry->delete();
 
-        return redirect()->route('feed')->with('success', 'Whole-farm feeding entry deleted.');
+        if (request()->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->back()->with('success', 'Whole-farm feeding entry deleted.');
     }
 
     /**
@@ -298,12 +489,20 @@ class FeedController extends Controller
         if ($feedBatch->consumptionLogs()->exists()) {
             $count = $feedBatch->consumptionLogs()->count();
 
+            if (request()->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => ['batch' => "Cannot delete this batch — {$count} consumption log(s) reference it."]], 422);
+            }
+
             return redirect()->back()->with('error', "Cannot delete this batch — {$count} consumption log(s) reference it. Remove those records first.");
         }
 
         $feedBatch->delete();
 
-        return redirect()->route('feed')->with('success', 'Feed batch deleted.');
+        if (request()->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->back()->with('success', 'Feed batch deleted.');
     }
 
     protected function checkLowStock(int $feedBatchId): void

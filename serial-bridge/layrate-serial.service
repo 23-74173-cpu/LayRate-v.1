@@ -1,0 +1,16 @@
+[Unit]
+Description=LayRate Serial Bridge - Arduino sensor ingestion
+Documentation=https://github.com/anomalyco/LayRate-Main
+After=network.target mysql.service mariadb.service
+
+[Service]
+Type=simple
+User=layratepi
+Group=www-data
+WorkingDirectory=/var/www/layrate/serial-bridge
+ExecStart=/var/www/layrate/serial-bridge/.venv/bin/python bridge.py --config /var/www/layrate/serial-bridge/sensors.json
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

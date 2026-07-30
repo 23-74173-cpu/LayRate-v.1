@@ -6,6 +6,7 @@ use App\Models\Alert;
 use App\Models\Device;
 use App\Models\EnvironmentalLog;
 use App\Models\HardwareItem;
+use App\Models\ProductionLog;
 use App\Models\SensorOccupancyReading;
 use App\Services\EnvironmentAlertService;
 use Illuminate\Http\JsonResponse;
@@ -92,7 +93,7 @@ class SensorIngestionController extends Controller
                         'type' => 'environment',
                         'cage_id' => $hardwareItem->cage_id,
                     ];
-                } elseif ($hardwareItem->device_type === 'IR_breakbeam') {
+                } else            if ($hardwareItem->device_type === 'IR_breakbeam') {
                     if (! isset($reading['count'])) {
                         $errors[] = "Reading {$index}: IR breakbeam reading requires count.";
                         continue;
@@ -107,6 +108,27 @@ class SensorIngestionController extends Controller
                     $reportedCount = (int) $reading['count'];
                     $actualOccupancy = $slot->current_occupancy;
 
+                    /*
+                     * DEBOUNCE — skip if the same count was already recorded
+                     * within the last 5 seconds. The Arduino firmware already
+                     * has a 1-second IR_COOLDOWN_MS, so 5 seconds on the
+                     * server side catches any duplicate blocks sent by the
+                     * Python bridge (e.g. due to curl retry or TCP re-send).
+                     *
+                     * This replaces the old rate-limit design which used a
+                     * formula of 22 / max_chickens_per_slot hours (min 1h)
+                     * — far too aggressive for live updates.
+                     */
+                    $lastReading = SensorOccupancyReading::where('hardware_item_id', $hardwareItem->id)
+                        ->latest('recorded_at')
+                        ->first();
+
+                    if ($lastReading
+                        && (int) $lastReading->reported_count === $reportedCount
+                        && $lastReading->recorded_at->gt(now()->subSeconds(5))) {
+                        continue;
+                    }
+
                     SensorOccupancyReading::updateOrCreate(
                         [
                             'hardware_item_id' => $hardwareItem->id,
@@ -117,6 +139,63 @@ class SensorIngestionController extends Controller
                             'reported_count' => $reportedCount,
                         ]
                     );
+
+                    /*
+                     * Auto-create/update a ProductionLog for today from the
+                     * sensor reading so it appears in the egg logging UI.
+                     * NEVER overwrites a manual entry — once a user has
+                     * explicitly overridden the sensor via PIN/password,
+                     * that value is authoritative until the user changes
+                     * it again.  Only sensor-created logs or nonexistent
+                     * logs are touched.
+                     */
+                    if ($slot->active_hen_count > 0) {
+                        $logDate = now()->parse($recordedAt)->toDateString();
+                        $existingLog = ProductionLog::where('cage_slot_id', $slot->id)
+                            ->where('log_date', $logDate)
+                            ->first();
+
+                        // Never overwrite a manual entry — the user explicitly overrode the sensor
+                        if ($existingLog && $existingLog->logged_via === 'manual') {
+                            $errors[] = "Reading {$index}: slot {$slot->id} has a manual override for {$logDate}. Sensor reading skipped.";
+                            continue;
+                        }
+
+                        /*
+                         * INVARIANT GUARD — IR break-beam counts are
+                         * physically monotonic within a day.  If an
+                         * existing sensor-created log already records
+                         * a HIGHER egg_count, the sensor likely reset
+                         * (e.g. Arduino rebooted).  Do NOT overwrite.
+                         */
+                        if ($existingLog && $reportedCount < $existingLog->egg_count) {
+                            logger()->warning('Sensor count regression detected', [
+                                'cage_slot_id' => $slot->id,
+                                'log_date' => $logDate,
+                                'previous_count' => $existingLog->egg_count,
+                                'reported_count' => $reportedCount,
+                                'hardware_item_id' => $hardwareItem->id,
+                                'serial_number' => $serial,
+                            ]);
+
+                            self::createSensorResetAlert($slot, $existingLog->egg_count, $reportedCount);
+
+                            $errors[] = "Reading {$index}: count {$reportedCount} dropped from {$existingLog->egg_count} for slot {$slot->id} on {$logDate}. Sensor reset suspected.";
+                            continue;
+                        }
+
+                        $henCount = $slot->active_hen_count;
+                        ProductionLog::updateOrCreate(
+                            ['cage_slot_id' => $slot->id, 'log_date' => $logDate],
+                            [
+                                'egg_count' => $reportedCount,
+                                'hen_count' => $henCount,
+                                'hdep' => $henCount > 0 ? round(($reportedCount / $henCount) * 100, 2) : 0,
+                                'logged_via' => 'sensor',
+                                'notes' => 'Sensor reading',
+                            ]
+                        );
+                    }
 
                     if ($reportedCount !== $actualOccupancy) {
                         self::createOccupancyMismatchAlert($slot, $reportedCount, $actualOccupancy, $recordedAt);
@@ -166,6 +245,30 @@ class SensorIngestionController extends Controller
                 'error' => config('app.debug') ? $e->getMessage() : 'Internal server error.',
             ], 500);
         }
+    }
+
+    private static function createSensorResetAlert($slot, int $previousCount, int $reportedCount): void
+    {
+        $cage = $slot->cage;
+        $cageCode = $cage?->cage_code ?? 'Unknown';
+
+        $exists = Alert::where('cage_id', $cage?->id)
+            ->where('alert_type', 'sensor_reset')
+            ->where('is_read', 0)
+            ->whereDate('triggered_at', today())
+            ->exists();
+
+        if ($exists) {
+            return;
+        }
+
+        Alert::create([
+            'cage_id' => $cage?->id,
+            'alert_type' => 'sensor_reset',
+            'message' => "IR sensor in {$cageCode} slot {$slot->row_number}-{$slot->column_number} likely reset: count dropped from {$previousCount} to {$reportedCount}",
+            'is_read' => 0,
+            'triggered_at' => now(),
+        ]);
     }
 
     private static function createOccupancyMismatchAlert($slot, int $reportedCount, int $actualOccupancy, string $recordedAt): void

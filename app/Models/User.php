@@ -24,11 +24,21 @@ class User extends Authenticatable
         'password',
         'role',
         'override_pin_hash',
+        'is_active',
     ];
 
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+            'is_active' => 'boolean',
+        ];
     }
 
     /**
@@ -41,17 +51,4 @@ class User extends Authenticatable
         'remember_token',
         'override_pin_hash',
     ];
-
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
-    }
 }

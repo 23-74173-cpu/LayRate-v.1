@@ -15,3 +15,24 @@ Schedule::command('forecast:sync-input-records')
     ->at('02:00')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/forecast-sync.log'));
+
+// Check environmental log thresholds for violations every 15 minutes.
+Schedule::command('alerts:check-environment')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/alerts-check-environment.log'));
+
+// Compute daily average environmental readings (runs early morning for previous day).
+Schedule::command('environment:compute-daily-averages')
+    ->daily()
+    ->at('03:00')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/environment-daily-averages.log'));
+
+// Check active hardware sensors for staleness every 15 minutes.
+// Sensors with no environmental_log within the threshold (default 30 min)
+// are automatically marked as faulty.
+Schedule::command('hardware:check-staleness')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/hardware-staleness-check.log'));

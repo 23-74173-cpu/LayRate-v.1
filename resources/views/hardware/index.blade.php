@@ -6,20 +6,9 @@
 
     <x-page-header title="Hardware Inventory" subtitle="Manage sensors, relays, and other hardware devices">
         <x-slot:actions>
-            <button onclick="openDeviceModal()"
-                    class="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full text-white transition-opacity"
-                    style="background-color: #6B4C8A;"
-                    onmouseover="this.style.opacity='0.85'"
-                    onmouseout="this.style.opacity='1'">
-                <i data-lucide="cpu" class="w-4 h-4"></i> Add Ingestion Device
-            </button>
-            <button onclick="openAddModal()"
-                    class="flex items-center gap-2 px-6 py-2 text-sm font-medium rounded-full text-white transition-opacity"
-                    style="background-color: #0075de;"
-                    onmouseover="this.style.opacity='0.85'"
-                    onmouseout="this.style.opacity='1'">
+            <x-button onclick="openAddModal()">
                 <i data-lucide="plus" class="w-4 h-4"></i> Add Device
-            </button>
+            </x-button>
         </x-slot:actions>
     </x-page-header>
 
@@ -39,59 +28,6 @@
     </div>
     @endif
 
-    {{-- Ingestion Devices --}}
-    <div class="bg-white rounded-xl border border-[#e6e6e6] overflow-hidden mb-5">
-        <div class="px-6 py-4 border-b border-[#e6e6e6] bg-[#f9f9f7]">
-            <h2 class="text-sm font-semibold text-[#333333]">Ingestion Devices (Raspberry Pi)</h2>
-            <p class="text-xs text-[#6B7280] mt-0.5">Each device gets one API key for the LAN sensor endpoint.</p>
-        </div>
-        <table class="w-full">
-            <thead>
-                <tr class="border-b border-[#e6e6e6] bg-[#f9f9f7]">
-                    <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Name</th>
-                    <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Status</th>
-                    <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Linked Sensors</th>
-                    <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Key</th>
-                    <th class="text-right text-xs text-[#6B7280] px-6 py-3 font-medium">Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($devices as $device)
-                <tr class="border-b border-[#e6e6e6] hover:bg-black/[0.02]">
-                    <td class="px-6 py-3.5 text-sm font-medium text-[#333333]">{{ $device->name }}</td>
-                    <td class="px-6 py-3.5">
-                        @if($device->is_active)
-                            <span class="text-xs px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200">Active</span>
-                        @else
-                            <span class="text-xs px-2 py-0.5 rounded-full border bg-gray-100 text-gray-500 border-gray-200">Inactive</span>
-                        @endif
-                    </td>
-                    <td class="px-6 py-3.5 text-sm text-[#6B7280]">{{ $device->hardware_items_count }}</td>
-                    <td class="px-6 py-3.5 text-sm font-mono text-[#6B7280]">••••••••••••</td>
-                    <td class="px-6 py-3.5 text-right">
-                        <div class="flex items-center justify-end gap-1">
-                            <form method="POST" action="{{ route('devices.regenerate-key', $device) }}" class="inline">
-                                @csrf
-                                <button type="submit" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Regenerate key" onclick="return confirm('Regenerate API key? The old key will stop working immediately.')">
-                                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-                                </button>
-                            </form>
-                            <form method="POST" action="{{ route('devices.destroy', $device) }}" class="inline" data-confirm="Delete this ingestion device?" data-confirm-action="Delete">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="p-1.5 rounded-full hover:bg-red-50 transition-colors" style="color: #a39e98;" aria-label="Delete device">
-                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                                </button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-                @empty
-                <tr><td colspan="5" class="px-6 py-8 text-center text-sm text-[#6B7280]">No ingestion devices yet.</td></tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-
     <turbo-frame id="hardware-live-data" src="{{ route('hardware.live-data') }}" loading="lazy">
         @include('hardware._live-data-skeleton')
     </turbo-frame>
@@ -99,7 +35,7 @@
 </div>
 
 {{-- Add Modal --}}
-<div id="addModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+<div id="addModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" style="display: none;" role="dialog" aria-modal="true">
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeAddModal()"></div>
     <div class="relative w-full max-w-md rounded-2xl p-6 max-h-[90vh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
@@ -109,7 +45,9 @@
             </button>
         </div>
 
-        <form method="POST" action="{{ route('hardware.store') }}" onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Adding\u2026')">
+        <form method="POST" action="{{ route('hardware.store') }}"
+              data-confirm="Add this hardware item?" data-confirm-action="Add Item" data-confirm-severity="neutral"
+              onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Adding\u2026')">
             @csrf
             <div class="space-y-4">
                 <div>
@@ -118,28 +56,19 @@
                             class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select type…</option>
-                        <option value="IR_breakbeam">IR Breakbeam</option>
-                        <option value="DHT22">DHT22 Temp/Humidity</option>
-                        <option value="relay">Relay</option>
-                        <option value="other">Other</option>
+                        <option value="IR_breakbeam" {{ old('device_type') === 'IR_breakbeam' ? 'selected' : '' }}>IR Breakbeam</option>
+                        <option value="DHT22" {{ old('device_type') === 'DHT22' ? 'selected' : '' }}>DHT22 Temp/Humidity</option>
+                        <option value="relay" {{ old('device_type') === 'relay' ? 'selected' : '' }}>Relay</option>
+                        <option value="other" {{ old('device_type') === 'other' ? 'selected' : '' }}>Other</option>
                     </select>
+                    <x-input-error name="device_type" />
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Serial Number</label>
-                    <input type="text" name="serial_number" required maxlength="100"
+                    <input type="text" name="serial_number" value="{{ old('serial_number') }}" required maxlength="100"
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Ingestion Device <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
-                    <select name="device_id"
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
-                            style="border-color: #e6e6e6; color: #1f1f1f;">
-                        <option value="">— None —</option>
-                        @foreach($devices as $device)
-                        <option value="{{ $device->id }}">{{ $device->name }}</option>
-                        @endforeach
-                    </select>
+                    <x-input-error name="serial_number" />
                 </div>
                 <div id="addCageSlotGroup" class="hidden">
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Cage Slot</label>
@@ -148,9 +77,10 @@
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select slot…</option>
                         @foreach($cageSlots as $slot)
-                        <option value="{{ $slot->id }}">{{ $slot->cage->cage_code }} · Slot {{ $slot->row_number }}-{{ $slot->column_number }}</option>
+                        <option value="{{ $slot->id }}" {{ old('cage_slot_id') == $slot->id ? 'selected' : '' }}>{{ $slot->cage->cage_code }} · Slot {{ $slot->row_number }}-{{ $slot->column_number }}</option>
                         @endforeach
                     </select>
+                    <x-input-error name="cage_slot_id" />
                 </div>
                 <div id="addCageGroup" class="hidden">
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Cage</label>
@@ -159,30 +89,32 @@
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select cage…</option>
                         @foreach($cages as $cage)
-                        <option value="{{ $cage->id }}">{{ $cage->cage_code }} — {{ $cage->formatted_location }}</option>
+                        <option value="{{ $cage->id }}" {{ old('cage_id') == $cage->id ? 'selected' : '' }}>{{ $cage->cage_code }} — {{ $cage->formatted_location }}</option>
                         @endforeach
                     </select>
+                    <x-input-error name="cage_id" />
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Status</label>
-                    <select name="status" required
+                    <select name="status" id="addStatus" required onchange="onAddStatusChange()"
                             class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
-                        <option value="active">Active</option>
-                        <option value="spare">Spare</option>
-                        <option value="faulty">Faulty</option>
-                        <option value="removed">Removed</option>
+                        <option value="active" {{ old('status') === 'active' ? 'selected' : '' }}>Active</option>
+                        <option value="spare" {{ old('status') === 'spare' ? 'selected' : '' }}>Spare</option>
+                        <option value="faulty" {{ old('status') === 'faulty' ? 'selected' : '' }}>Faulty</option>
+                        <option value="removed" {{ old('status') === 'removed' ? 'selected' : '' }}>Removed</option>
                     </select>
+                    <x-input-error name="status" />
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Installation Date <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
-                    <input type="date" name="installation_date"
+                    <input type="date" name="installation_date" value="{{ old('installation_date') }}"
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Last Calibration <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
-                    <input type="date" name="last_calibration_date"
+                    <input type="date" name="last_calibration_date" value="{{ old('last_calibration_date') }}"
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                 </div>
@@ -196,20 +128,22 @@
                         onmouseout="this.style.backgroundColor='transparent'">
                     Cancel
                 </button>
-                <button type="submit"
-                        class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity"
-                        style="background-color: #0075de;"
-                        onmouseover="this.style.opacity='0.85'"
-                        onmouseout="this.style.opacity='1'">
+                <x-button type="submit" class="flex-1 py-2.5">
                     Add Device
-                </button>
+                </x-button>
             </div>
         </form>
     </div>
 </div>
 
+@if(session('reopen_add_hardware'))
+<x-modal-reopen modal-id="addModal" session-key="reopen_add_hardware" guard="addHardware">
+    openAddModal();
+</x-modal-reopen>
+@endif
+
 {{-- Edit Modal --}}
-<div id="editModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+<div id="editModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" style="display: none;" role="dialog" aria-modal="true">
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEditModal()"></div>
     <div class="relative w-full max-w-md rounded-2xl p-6 max-h-[90vh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
@@ -232,23 +166,14 @@
                         <option value="relay">Relay</option>
                         <option value="other">Other</option>
                     </select>
+                    <x-input-error name="device_type" />
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Serial Number</label>
-                    <input type="text" name="serial_number" id="editSerial" required maxlength="100"
+                    <input type="text" name="serial_number" id="editSerial" value="{{ old('serial_number', $editItem->serial_number ?? '') }}" required maxlength="100"
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Ingestion Device <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
-                    <select name="device_id" id="editDeviceId"
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
-                            style="border-color: #e6e6e6; color: #1f1f1f;">
-                        <option value="">— None —</option>
-                        @foreach($devices as $device)
-                        <option value="{{ $device->id }}">{{ $device->name }}</option>
-                        @endforeach
-                    </select>
+                    <x-input-error name="serial_number" />
                 </div>
                 <div id="editCageSlotGroup" class="hidden">
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Cage Slot</label>
@@ -257,9 +182,10 @@
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select slot…</option>
                         @foreach($cageSlots as $slot)
-                        <option value="{{ $slot->id }}">{{ $slot->cage->cage_code }} · Slot {{ $slot->row_number }}-{{ $slot->column_number }}</option>
+                        <option value="{{ $slot->id }}" {{ old('cage_slot_id', $editItem->cage_slot_id ?? '') == $slot->id ? 'selected' : '' }}>{{ $slot->cage->cage_code }} · Slot {{ $slot->row_number }}-{{ $slot->column_number }}</option>
                         @endforeach
                     </select>
+                    <x-input-error name="cage_slot_id" />
                 </div>
                 <div id="editCageGroup" class="hidden">
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Cage</label>
@@ -268,30 +194,32 @@
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select cage…</option>
                         @foreach($cages as $cage)
-                        <option value="{{ $cage->id }}">{{ $cage->cage_code }} — {{ $cage->formatted_location }}</option>
+                        <option value="{{ $cage->id }}" {{ old('cage_id', $editItem->cage_id ?? '') == $cage->id ? 'selected' : '' }}>{{ $cage->cage_code }} — {{ $cage->formatted_location }}</option>
                         @endforeach
                     </select>
+                    <x-input-error name="cage_id" />
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Status</label>
                     <select name="status" id="editStatus" required onchange="onEditStatusChange()"
                             class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
-                        <option value="active">Active</option>
-                        <option value="spare">Spare</option>
-                        <option value="faulty">Faulty</option>
-                        <option value="removed">Removed</option>
+                        <option value="active" {{ old('status', $editItem->status ?? '') === 'active' ? 'selected' : '' }}>Active</option>
+                        <option value="spare" {{ old('status', $editItem->status ?? '') === 'spare' ? 'selected' : '' }}>Spare</option>
+                        <option value="faulty" {{ old('status', $editItem->status ?? '') === 'faulty' ? 'selected' : '' }}>Faulty</option>
+                        <option value="removed" {{ old('status', $editItem->status ?? '') === 'removed' ? 'selected' : '' }}>Removed</option>
                     </select>
+                    <x-input-error name="status" />
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Installation Date <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
-                    <input type="date" name="installation_date" id="editInstallDate"
+                    <input type="date" name="installation_date" id="editInstallDate" value="{{ old('installation_date', $editItem->installation_date ?? '') }}"
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Last Calibration <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
-                    <input type="date" name="last_calibration_date" id="editCalDate"
+                    <input type="date" name="last_calibration_date" id="editCalDate" value="{{ old('last_calibration_date', $editItem->last_calibration_date ?? '') }}"
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                 </div>
@@ -305,54 +233,29 @@
                         onmouseout="this.style.backgroundColor='transparent'">
                     Cancel
                 </button>
-                <button type="submit"
-                        class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity"
-                        style="background-color: #0075de;"
-                        onmouseover="this.style.opacity='0.85'"
-                        onmouseout="this.style.opacity='1'">
+                <x-button type="submit" class="flex-1 py-2.5">
                     Save Changes
-                </button>
+                </x-button>
             </div>
         </form>
     </div>
 </div>
 
-{{-- Add Ingestion Device Modal --}}
-<div id="deviceModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
-    <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeDeviceModal()"></div>
-    <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
-        <div class="flex items-center justify-between mb-5">
-            <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Add Ingestion Device</h2>
-            <button onclick="closeDeviceModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
-                <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
-            </button>
-        </div>
-        <form method="POST" action="{{ route('devices.store') }}" onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Creating\u2026')">
-            @csrf
-            <div>
-                <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Device Name</label>
-                <input type="text" name="name" required maxlength="100" placeholder="e.g. Raspberry Pi 4 Farm Hub"
-                       class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
-                       style="border-color: #e6e6e6; color: #1f1f1f;">
-            </div>
-            <p class="text-xs text-[#6B7280] mt-3">A new API key will be generated and shown once. Save it to the Pi's configuration.</p>
-            <div class="flex gap-3 mt-5">
-                <button type="button" onclick="closeDeviceModal()"
-                        class="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors"
-                        style="color: #1f1f1f; border: 1px solid #e6e6e6;"
-                        onmouseover="this.style.backgroundColor='#f6f5f4'"
-                        onmouseout="this.style.backgroundColor='transparent'">Cancel</button>
-                <button type="submit"
-                        class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity"
-                        style="background-color: #6B4C8A;"
-                        onmouseover="this.style.opacity='0.85'"
-                        onmouseout="this.style.opacity='1'">Create & Show Key</button>
-            </div>
-        </form>
-    </div>
-</div>
+@if(isset($editItem))
+<x-modal-reopen modal-id="editModal" session-key="reopen_edit_hardware" guard="editHardware">
+    openEditModal(
+        {{ $editItem->id }},
+        '{{ $editItem->device_type }}',
+        '{{ $editItem->serial_number }}',
+        {{ $editItem->cage_id ?: 'null' }},
+        {{ $editItem->cage_slot_id ?: 'null' }},
+        '{{ $editItem->installation_date ?? '' }}',
+        '{{ $editItem->status }}',
+        '{{ $editItem->last_calibration_date ?? '' }}'
+    );
+</x-modal-reopen>
+@endif
 
-<x-confirm-modal />
 @endsection
 
 @push('scripts')
@@ -361,9 +264,28 @@ function updateAddAssignment() {
     var type = document.getElementById('addDeviceType').value;
     var slotGroup = document.getElementById('addCageSlotGroup');
     var cageGroup = document.getElementById('addCageGroup');
+    var status = document.getElementById('addStatus').value;
 
+    if (status === 'spare') {
+        slotGroup.classList.add('hidden');
+        cageGroup.classList.add('hidden');
+        return;
+    }
     slotGroup.classList.toggle('hidden', type !== 'IR_breakbeam');
     cageGroup.classList.toggle('hidden', type !== 'DHT22' && type !== 'relay');
+}
+
+function onAddStatusChange() {
+    var status = document.getElementById('addStatus').value;
+    var slotGroup = document.getElementById('addCageSlotGroup');
+    var cageGroup = document.getElementById('addCageGroup');
+
+    if (status === 'spare') {
+        slotGroup.classList.add('hidden');
+        cageGroup.classList.add('hidden');
+    } else {
+        updateAddAssignment();
+    }
 }
 
 function updateEditAssignment() {
@@ -385,7 +307,7 @@ function onEditStatusChange() {
     }
 }
 
-function openEditModal(id, deviceType, serial, cageId, cageSlotId, deviceId, installDate, status, calDate) {
+function openEditModal(id, deviceType, serial, cageId, cageSlotId, installDate, status, calDate) {
     document.getElementById('editForm').action = '/hardware/' + id;
     document.getElementById('editDeviceType').value = deviceType;
     document.getElementById('editSerial').value = serial;
@@ -399,11 +321,6 @@ function openEditModal(id, deviceType, serial, cageId, cageSlotId, deviceId, ins
     if (cageSlotId) {
         document.getElementById('editCageSlot').value = cageSlotId;
     }
-    if (deviceId) {
-        document.getElementById('editDeviceId').value = deviceId;
-    } else {
-        document.getElementById('editDeviceId').value = '';
-    }
 
     onEditStatusChange();
     document.getElementById('editModal').style.display = 'flex';
@@ -412,7 +329,7 @@ function openEditModal(id, deviceType, serial, cageId, cageSlotId, deviceId, ins
 
 function openAddModal() {
     document.getElementById('addModal').style.display = 'flex';
-    updateAddAssignment();
+    onAddStatusChange();
     lucide.createIcons();
 }
 
@@ -424,15 +341,6 @@ function closeEditModal() {
     document.getElementById('editModal').style.display = 'none';
 }
 
-function openDeviceModal() {
-    document.getElementById('deviceModal').style.display = 'flex';
-    lucide.createIcons();
-}
-
-function closeDeviceModal() {
-    document.getElementById('deviceModal').style.display = 'none';
-}
-
 (function() {
     if (window.__hardwareEscapeBound) return;
     window.__hardwareEscapeBound = true;
@@ -440,7 +348,6 @@ function closeDeviceModal() {
         if (e.key === 'Escape') {
             closeAddModal();
             closeEditModal();
-            closeDeviceModal();
         }
     });
 })();

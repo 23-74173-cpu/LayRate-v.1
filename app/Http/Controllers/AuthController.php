@@ -23,7 +23,21 @@ class AuthController extends Controller
         ]);
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
+            if (Auth::user()->is_active === false) {
+                Auth::logout();
+                return back()
+                    ->withInput($request->only('email'))
+                    ->withErrors(['email' => 'This account has been deactivated.']);
+            }
+
             $request->session()->regenerate();
+
+            // Authorize client IP in the nftables walled garden
+            $clientIp = $request->ip();
+            if ($clientIp && $clientIp !== '127.0.0.1' && $clientIp !== '::1') {
+                exec('sudo /usr/local/bin/layrate-auth-client ' . escapeshellarg($clientIp) . ' 2>/dev/null &');
+            }
+
             return redirect()->intended(route('dashboard'));
         }
 

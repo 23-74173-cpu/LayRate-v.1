@@ -247,4 +247,144 @@ class FcrCalculationTest extends TestCase
         $this->assertEqualsWithDelta(1.8, $row['egg_mass_kg'], 0.001); // 0.6 + 1.2
         $this->assertEqualsWithDelta(5.0 / 1.8, $row['fcr'], 0.01);
     }
+
+    /** @test */
+    public function for_all_cages_aggregates_across_multiple_cages()
+    {
+        // First cage (from setUp): 10 eggs, 1.2 kg feed today
+        $this->createLog(10, now()->toDateString());  // 0.6 kg egg mass
+        $this->createFeed(1.2, now()->toDateString()); // 1.2 kg feed
+
+        // Second cage: 20 eggs, 3.0 kg feed
+        $cage2 = Cage::create([
+            'cage_code' => 'CAGE-T2',
+            'location' => 'Test 2',
+            'rows' => 1,
+            'slots_per_row' => 1,
+            'max_chickens_per_slot' => 4,
+            'total_capacity' => 4,
+            'is_active' => 1,
+        ]);
+        $slot2 = CageSlot::create([
+            'cage_id' => $cage2->id,
+            'slot_number' => 1,
+            'row_number' => 1,
+            'column_number' => 1,
+            'current_occupancy' => 4,
+        ]);
+        $hen2 = Hen::create([
+            'tag_code' => 'T-HEN2',
+            'breed' => 'ISA Brown',
+            'flock_age_weeks' => 28,
+            'date_acquired' => now()->subMonths(6)->toDateString(),
+            'placement_date' => now()->subMonths(6)->toDateString(),
+            'age_at_placement_weeks' => 0,
+            'is_active' => 1,
+        ]);
+        $hen2->cage_slot_id = $slot2->id;
+        $hen2->save();
+
+        $log2 = new ProductionLog;
+        $log2->cage_slot_id = $slot2->id;
+        $log2->log_date = now()->toDateString();
+        $log2->egg_count = 20;
+        $log2->hen_count = 4;
+        $log2->hdep = 500;
+        $log2->logged_via = 'manual';
+        $log2->recorded_by = $this->user->id;
+        $log2->save();
+
+        FeedConsumptionLog::create([
+            'cage_id' => $cage2->id,
+            'feed_batch_id' => $this->feedBatch->id,
+            'log_date' => now()->toDateString(),
+            'feed_consumed_kg' => 3.0,
+            'recorded_by' => $this->user->id,
+        ]);
+
+        // Expected: feed = 1.2 + 3.0 = 4.2 kg; egg mass = 0.6 + 1.2 = 1.8 kg; FCR = 4.2 / 1.8 = 2.333...
+        $fcr = FcrCalculator::forAllCages(now()->startOfDay(), now()->endOfDay());
+
+        $this->assertNotNull($fcr);
+        $this->assertEqualsWithDelta(4.2 / 1.8, $fcr, 0.01);
+    }
+
+    /** @test */
+    public function for_all_cages_returns_null_when_no_data()
+    {
+        // No production logs or feed logs beyond what setUp already created (none in the future)
+        $fcr = FcrCalculator::forAllCages(
+            now()->addDay()->startOfDay(),
+            now()->addDay()->endOfDay()
+        );
+
+        $this->assertNull($fcr);
+    }
+
+    /** @test */
+    public function timeline_all_aggregates_across_cages()
+    {
+        $today = now()->toDateString();
+
+        // Cage 1 (from setUp): 10 eggs, 1.2 kg feed
+        $this->createLog(10, $today);   // 0.6 kg
+        $this->createFeed(1.2, $today);
+
+        // Cage 2: 20 eggs, 3.0 kg feed
+        $cage2 = Cage::create([
+            'cage_code' => 'CAGE-T3',
+            'location' => 'Test 3',
+            'rows' => 1,
+            'slots_per_row' => 1,
+            'max_chickens_per_slot' => 4,
+            'total_capacity' => 4,
+            'is_active' => 1,
+        ]);
+        $slot2 = CageSlot::create([
+            'cage_id' => $cage2->id,
+            'slot_number' => 1,
+            'row_number' => 1,
+            'column_number' => 1,
+            'current_occupancy' => 4,
+        ]);
+        $hen2 = Hen::create([
+            'tag_code' => 'T-HEN3',
+            'breed' => 'ISA Brown',
+            'flock_age_weeks' => 28,
+            'date_acquired' => now()->subMonths(6)->toDateString(),
+            'placement_date' => now()->subMonths(6)->toDateString(),
+            'age_at_placement_weeks' => 0,
+            'is_active' => 1,
+            'cage_slot_id' => $slot2->id,
+        ]);
+
+        $log2 = new ProductionLog;
+        $log2->cage_slot_id = $slot2->id;
+        $log2->log_date = $today;
+        $log2->egg_count = 20;
+        $log2->hen_count = 4;
+        $log2->hdep = 500;
+        $log2->logged_via = 'manual';
+        $log2->recorded_by = $this->user->id;
+        $log2->save();
+
+        FeedConsumptionLog::create([
+            'cage_id' => $cage2->id,
+            'feed_batch_id' => $this->feedBatch->id,
+            'log_date' => $today,
+            'feed_consumed_kg' => 3.0,
+            'recorded_by' => $this->user->id,
+        ]);
+
+        $timeline = FcrCalculator::timelineAll('day');
+        $row = $timeline->firstWhere('period', $today);
+
+        $this->assertNotNull($row);
+        // feed: 1.2 + 3.0 = 4.2
+        $this->assertEqualsWithDelta(4.2, $row['feed_kg'], 0.01);
+        // egg mass: 0.6 + 1.2 = 1.8
+        $this->assertEqualsWithDelta(1.8, $row['egg_mass_kg'], 0.001);
+        // FCR = 4.2 / 1.8 = 2.333...
+        $this->assertEqualsWithDelta(4.2 / 1.8, $row['fcr'], 0.01);
+    }
 }

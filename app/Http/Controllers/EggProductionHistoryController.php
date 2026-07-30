@@ -8,6 +8,7 @@ use App\Models\ProductionLog;
 use App\Services\ProductionTimelineService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class EggProductionHistoryController extends Controller
 {
@@ -23,6 +24,20 @@ class EggProductionHistoryController extends Controller
 
         // Timeline aggregation via shared service.
         $timeline = ProductionTimelineService::aggregate($groupBy);
+
+        // Records count must reflect the whole timeline, not just one page.
+        $timelineRecordsTotal = $timeline->sum('records');
+
+        // Cumulative total is a running sum across the full (descending) dataset —
+        // pre-computed here, before pagination, so page 2+ doesn't restart the count.
+        $cumulative = $lifetimeEggs;
+        $timeline = $timeline->map(function ($row) use (&$cumulative) {
+            $row['cumulative'] = $cumulative;
+            $cumulative -= $row['total_eggs'];
+            return $row;
+        });
+
+        $timeline = $this->paginateCollection($timeline, $request);
 
         // Breakdown by cage.
         $byCage = Cage::where('is_active', 1)
@@ -47,7 +62,18 @@ class EggProductionHistoryController extends Controller
             ]);
 
         return view('egg-production-history', compact(
-            'lifetimeEggs', 'timeline', 'byCage', 'bySize', 'groupBy'
+            'lifetimeEggs', 'timeline', 'timelineRecordsTotal', 'byCage', 'bySize', 'groupBy'
         ));
+    }
+
+    private function paginateCollection($items, Request $request, int $perPage = 30): LengthAwarePaginator
+    {
+        $page  = LengthAwarePaginator::resolveCurrentPage();
+        $slice = $items->slice(($page - 1) * $perPage, $perPage)->values();
+
+        return new LengthAwarePaginator($slice, $items->count(), $perPage, $page, [
+            'path'  => LengthAwarePaginator::resolveCurrentPath(),
+            'query' => $request->query(),
+        ]);
     }
 }

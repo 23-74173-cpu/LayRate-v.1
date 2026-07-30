@@ -8,7 +8,9 @@ use App\Http\Controllers\CageController;
 use App\Http\Controllers\ChickensController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeviceController;
+use App\Http\Controllers\EggCountSseController;
 use App\Http\Controllers\EggLoggingController;
+use App\Http\Controllers\EggLogsSseController;
 use App\Http\Controllers\EggProductionHistoryController;
 use App\Http\Controllers\EggStockController;
 use App\Http\Controllers\EnvironmentController;
@@ -20,7 +22,16 @@ use App\Http\Controllers\NoteController;
 use App\Http\Controllers\PreOrderController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsController;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+
+// ─── Public landing page ───────────────────────────────────────
+Route::get('/', function () {
+    if (Auth::check()) {
+        return redirect()->route('dashboard');
+    }
+    return view('landing');
+})->name('landing');
 
 // ─── Guest routes ─────────────────────────────────────────────
 Route::middleware('guest')->group(function () {
@@ -41,9 +52,8 @@ Route::get('/_reset-opcache', function () {
 // ─── Authenticated routes ──────────────────────────────────────
 Route::middleware('auth')->group(function () {
 
-    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/stats', [DashboardController::class, 'stats'])->name('dashboard.stats');
-    Route::get('/dashboard/cage-overview', [DashboardController::class, 'cageOverview'])->name('dashboard.cage-overview');
     Route::get('/dashboard/feed-mortality', [DashboardController::class, 'feedMortality'])->name('dashboard.feed-mortality');
     Route::post('/settings/farm-layout', [SettingsController::class, 'storeFarmLayout'])->name('settings.farm-layout');
 
@@ -97,32 +107,39 @@ Route::middleware('auth')->group(function () {
     Route::post('/eggs/logging',                       [EggLoggingController::class, 'store'])->name('eggs.logging.store');
     Route::post('/eggs/logging/verify-override',       [EggLoggingController::class, 'verifyOverride'])->name('eggs.logging.verify-override')->middleware('throttle:6,1');
     Route::put('/eggs/logging/{productionLog}',        [EggLoggingController::class, 'update'])->name('eggs.logging.update');
+    Route::put('/eggs/logging/{productionLog}/reset',  [EggLoggingController::class, 'resetCount'])->name('eggs.logging.reset');
     Route::delete('/eggs/logging/{productionLog}',     [EggLoggingController::class, 'destroy'])->name('eggs.logging.destroy')->middleware('admin');
+    Route::get('/eggs/logging/live-count',             [EggCountSseController::class, 'stream'])->name('eggs.logging.live-count');
+    Route::get('/eggs/logging/live-logs',              [EggLogsSseController::class, 'stream'])->name('eggs.logging.live-logs');
 
     Route::get('/eggs/stocks',                         [EggStockController::class, 'index'])->name('eggs.stocks');
     Route::get('/eggs/stocks/live-data',                [EggStockController::class, 'liveData'])->name('eggs.stocks.live-data');
+    Route::get('/eggs/stocks/pool-data',                [EggStockController::class, 'poolData'])->name('eggs.stocks.pool-data');
     Route::post('/eggs/stocks',                        [EggStockController::class, 'store'])->name('eggs.stocks.store');
     Route::put('/eggs/stocks/{batch}',                 [EggStockController::class, 'update'])->name('eggs.stocks.update');
-    Route::delete('/eggs/stocks/{batch}',              [EggStockController::class, 'destroy'])->name('eggs.stocks.destroy');
+    Route::delete('/eggs/stocks/{batch}',              [EggStockController::class, 'destroy'])->name('eggs.stocks.destroy')->middleware('admin');
     Route::get('/eggs/stocks/{batch}/qr',              [EggStockController::class, 'qr'])->name('eggs.stocks.qr');
 
     Route::get('/eggs/pre-orders',                     [PreOrderController::class, 'index'])->name('eggs.preorders');
     Route::get('/eggs/pre-orders/table',                [PreOrderController::class, 'table'])->name('eggs.preorders.table');
+    Route::get('/eggs/pre-orders/pool-data',            [PreOrderController::class, 'poolData'])->name('eggs.preorders.pool-data');
     Route::post('/eggs/pre-orders',                    [PreOrderController::class, 'store'])->name('eggs.preorders.store');
     Route::patch('/eggs/pre-orders/{order}',           [PreOrderController::class, 'update'])->name('eggs.preorders.update');
-    Route::delete('/eggs/pre-orders/{order}',          [PreOrderController::class, 'destroy'])->name('eggs.preorders.destroy');
+    Route::delete('/eggs/pre-orders/{order}',          [PreOrderController::class, 'destroy'])->name('eggs.preorders.destroy')->middleware('admin');
 
     Route::get('/environment',        [EnvironmentController::class, 'index'])->name('environment');
     Route::get('/environment/live-data', [EnvironmentController::class, 'liveData'])->name('environment.live-data');
     Route::get('/environment/logs',      [EnvironmentController::class, 'logs'])->name('environment.logs');
+    Route::put('/environment/logs/{cageId}/{date}', [EnvironmentController::class, 'updateLog'])->name('environment.logs.update');
     Route::post('/environment/thresholds', [EnvironmentController::class, 'saveThresholds'])->name('environment.thresholds');
-    Route::post('/environment/egg-weights', [EnvironmentController::class, 'saveEggWeights'])->name('environment.egg-weights');
+    Route::post('/eggs/stocks/egg-weights', [EggStockController::class, 'saveEggWeights'])->name('eggs.stocks.egg-weights');
+    Route::post('/eggs/stocks/thresholds', [EggStockController::class, 'saveThresholds'])->name('eggs.stocks.thresholds');
 
     Route::get('/hardware',                    [HardwareItemController::class, 'index'])->name('hardware.index');
     Route::get('/hardware/live-data',          [HardwareItemController::class, 'liveData'])->name('hardware.live-data');
     Route::post('/hardware',                   [HardwareItemController::class, 'store'])->name('hardware.store');
     Route::put('/hardware/{hardwareItem}',     [HardwareItemController::class, 'update'])->name('hardware.update');
-    Route::delete('/hardware/{hardwareItem}',  [HardwareItemController::class, 'destroy'])->name('hardware.destroy');
+    Route::delete('/hardware/{hardwareItem}',  [HardwareItemController::class, 'destroy'])->name('hardware.destroy')->middleware('admin');
 
     Route::middleware('admin')->group(function () {
         Route::post('/devices',                           [DeviceController::class, 'store'])->name('devices.store');
@@ -132,32 +149,49 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/feed',                          [FeedController::class, 'index'])->name('feed');
     Route::get('/feed/live-data',                [FeedController::class, 'liveData'])->name('feed.live-data');
+    Route::get('/feed/fcr-data',                 [FeedController::class, 'fcrData'])->name('feed.fcr-data');
     Route::post('/feed/batch',                   [FeedController::class, 'storeBatch'])->name('feed.batch.store');
     Route::put('/feed/batch/{feedBatch}',        [FeedController::class, 'updateBatch'])->name('feed.batch.update');
-    Route::delete('/feed/batch/{feedBatch}',     [FeedController::class, 'destroyBatch'])->name('feed.batch.destroy');
+    Route::delete('/feed/batch/{feedBatch}',     [FeedController::class, 'destroyBatch'])->name('feed.batch.destroy')->middleware('admin');
     Route::get('/feed/batch/{feedBatch}/delete-check', [FeedController::class, 'checkDeleteBatch'])->name('feed.batch.delete-check');
     Route::post('/feed/consumption',             [FeedController::class, 'storeConsumption'])->name('feed.consumption.store');
     Route::put('/feed/consumption/{feedConsumptionLog}', [FeedController::class, 'updateConsumption'])->name('feed.consumption.update');
-    Route::delete('/feed/consumption/{feedConsumptionLog}', [FeedController::class, 'destroyConsumption'])->name('feed.consumption.destroy');
+    Route::delete('/feed/consumption/{feedConsumptionLog}', [FeedController::class, 'destroyConsumption'])->name('feed.consumption.destroy')->middleware('admin');
     Route::post('/feed/farm-entry',              [FeedController::class, 'storeFarmFeedEntry'])->name('feed.farm-entry.store');
     Route::put('/feed/farm-entry/{farmFeedEntry}', [FeedController::class, 'updateFarmFeedEntry'])->name('feed.farm-entry.update');
     Route::delete('/feed/farm-entry/{farmFeedEntry}', [FeedController::class, 'destroyFarmFeedEntry'])->name('feed.farm-entry.destroy');
 
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics');
     Route::get('/analytics/charts', [AnalyticsController::class, 'charts'])->name('analytics.charts');
+    Route::get('/analytics/data', [AnalyticsController::class, 'data'])->name('analytics.data');
 
     Route::get('/forecast',             [ForecastController::class, 'index'])->name('forecast');
-    Route::post('/forecast/generate',   [ForecastController::class, 'generate'])->name('forecast.generate');
-    Route::post('/forecast/clear',      [ForecastController::class, 'clear'])->name('forecast.clear');
+    Route::post('/forecast/generate',   [ForecastController::class, 'generate'])->name('forecast.generate')->middleware('admin');
+    Route::post('/forecast/clear',      [ForecastController::class, 'clear'])->name('forecast.clear')->middleware('admin');
     Route::get('/forecast/template',    [ForecastController::class, 'downloadTemplate'])->name('forecast.template');
-    Route::post('/forecast/import',     [ForecastController::class, 'import'])->name('forecast.import');
+    Route::post('/forecast/import',           [ForecastController::class, 'import'])->name('forecast.import')->middleware('admin');
+    Route::post('/forecast/import/preview',   [ForecastController::class, 'importPreview'])->name('forecast.import.preview')->middleware('admin');
+    Route::post('/forecast/import/confirm',   [ForecastController::class, 'importConfirm'])->name('forecast.import.confirm')->middleware('admin');
+    Route::match(['GET', 'POST'], '/forecast/csv',   [ForecastController::class, 'exportCsv'])->name('forecast.csv');
+    Route::match(['GET', 'POST'], '/forecast/excel', [ForecastController::class, 'exportExcel'])->name('forecast.excel');
+    Route::match(['GET', 'POST'], '/forecast/pdf',   [ForecastController::class, 'exportPdf'])->name('forecast.pdf');
 
-    Route::get('/account',           [AccountController::class, 'show'])->name('account');
+    Route::get('/profile',                         [AccountController::class, 'profile'])->name('profile');
+    Route::post('/profile',                        [AccountController::class, 'updateProfile'])->name('profile.update');
+    Route::post('/profile/logout-other-devices',   [AccountController::class, 'logoutOtherDevices'])->name('profile.logout-other-devices');
+    Route::post('/settings/users',                 [AccountController::class, 'storeUser'])->name('settings.users.store')->middleware('admin');
+    Route::put('/settings/users/{targetUser}',      [AccountController::class, 'updateUser'])->name('settings.users.update')->middleware('admin');
+    Route::post('/settings/users/{targetUser}/toggle-active', [AccountController::class, 'toggleUserActive'])->name('settings.users.toggle-active')->middleware('admin');
+    Route::post('/settings/backup', [SettingsController::class, 'backupNow'])->name('settings.backup.now')->middleware('admin');
+    Route::redirect('/account', '/profile', 301);
     Route::post('/account/password', [AccountController::class, 'updatePassword'])->name('account.password');
     Route::post('/account/pin',      [AccountController::class, 'updatePin'])->name('account.pin');
 
     Route::get('/reports',     [ReportController::class, 'index'])->name('reports');
+    Route::get('/reports/data', [ReportController::class, 'data'])->name('reports.data');
     Route::get('/reports/csv', [ReportController::class, 'exportCsv'])->name('reports.csv');
+    Route::match(['GET', 'POST'], '/reports/excel', [ReportController::class, 'exportExcel'])->name('reports.excel');
+    Route::match(['GET', 'POST'], '/reports/pdf', [ReportController::class, 'exportPdf'])->name('reports.pdf');
 
     Route::get('/notifications',                    [AlertController::class, 'index'])->name('notifications.index');
     Route::get('/notifications/table',              [AlertController::class, 'table'])->name('notifications.table');

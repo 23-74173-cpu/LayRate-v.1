@@ -16,6 +16,7 @@
 /public/build
 /public/hot
 /public/storage
+/public/css/tailwind.css
 /storage/*.key
 /bootstrap/cache
 /storage/framework/cache
@@ -41,6 +42,18 @@ forecast-api/EggRecord_2026_updated.xlsx
 forecast-api/layrate_forecast_input_updated.xlsx
 .history/
 layrate_forecast_input_updated.xlsx
+layrate_production_all_time.xlsx
 /test-results/
 test-results/
 test-results/
+mobile-api/.venv/
+forecast-api/venv/
+.dev/
+
+# Markdown docs -- tracked only for API reference, delivery scope, and READMEs
+*.md
+!README.md
+!forecast-api/README.md
+!mobile-api/README.md
+!API_ROUTES.md
+!WHAT_WE_CAN_DELIVER.md

@@ -13,7 +13,9 @@ use App\Models\Removal;
 use App\Models\HealthEvent;
 use App\Models\WeightCheck;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class ChickensController extends Controller
 {
@@ -24,6 +26,7 @@ class ChickensController extends Controller
         $isActive = $request->query('status', 'all');
         $search = $request->query('search');
         $sort = $request->query('sort', '');
+        $preselectedCageId = (int) $request->query('cage_id');
 
         $cages = Cage::with('cageSlots')->orderBy('cage_code')->get();
         $breeds = Hen::distinct()->pluck('breed')->filter()->sort()->values();
@@ -40,7 +43,7 @@ class ChickensController extends Controller
 
         return view('chickens.index', compact(
             'cages', 'breeds', 'todayTotal', 'todayByCage', 'tab',
-            'cageId', 'breed', 'isActive', 'search', 'sort'
+            'cageId', 'breed', 'isActive', 'search', 'sort', 'preselectedCageId'
         ));
     }
 
@@ -94,11 +97,27 @@ class ChickensController extends Controller
 
         $unplacedCount = $unplacedHens->count();
 
+        // Paginate by CAGE, not by individual hen — a flat paginate() would risk
+        // splitting one cage's slots across two pages. Unplaced hens are always
+        // shown in full above the grid since they're a small, actionable bucket.
+        $cageGroups = $this->paginateCageGroups($hensByCage->values(), $request);
+
         return response()
-            ->view('chickens._inventory-list', compact('hensByCage', 'unplacedHens', 'unplacedCount'))
+            ->view('chickens._inventory-list', compact('cageGroups', 'hensByCage', 'unplacedHens', 'unplacedCount'))
             ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
             ->header('Pragma', 'no-cache')
             ->header('Expires', '0');
+    }
+
+    private function paginateCageGroups($groups, Request $request, int $perPage = 6): LengthAwarePaginator
+    {
+        $page  = LengthAwarePaginator::resolveCurrentPage();
+        $slice = $groups->slice(($page - 1) * $perPage, $perPage)->values();
+
+        return new LengthAwarePaginator($slice, $groups->count(), $perPage, $page, [
+            'path'  => LengthAwarePaginator::resolveCurrentPath(),
+            'query' => $request->query(),
+        ]);
     }
 
     public function mortalityRecords(Request $request)
@@ -114,9 +133,8 @@ class ChickensController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
+        $validator = Validator::make($request->all(), [
             'breed'              => 'required|string|in:ISA Brown,Lohmann Brown-Classic,Dekalb White,Hy-Line Brown,Novogen Brown',
-            'sex'                => 'required|in:hen,cockerel,unknown',
             'source'             => 'nullable|string|max:200',
             'date_acquired'      => 'required|date',
             'age_at_placement_weeks' => 'required|integer|min:0|max:200',
@@ -124,6 +142,16 @@ class ChickensController extends Controller
             'notes'              => 'nullable|string|max:1000',
             'quantity'           => 'required|integer|min:1|max:100',
         ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->with('reopen_register', true)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
+        $data['sex'] = 'hen';
 
         $quantity = (int) $data['quantity'];
         $year = now()->format('Y');
@@ -162,6 +190,8 @@ class ChickensController extends Controller
 
         [$created, $firstId, $lastId] = $hens;
         $count = count($created);
+
+        session()->forget('show_no_chickens_modal');
 
         if ($count === 1) {
             return redirect()->back()->with('success', "1 hen registered: CHK-{$year}-" . str_pad($firstId, 5, '0', STR_PAD_LEFT) . ".");
@@ -225,6 +255,9 @@ class ChickensController extends Controller
         $henIds = array_unique($henIds);
 
         if (empty($henIds)) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => ['hen_id' => ['No valid hens specified.']]], 422);
+            }
             return back()->withErrors(['hen_id' => 'No valid hens specified.']);
         }
 
@@ -255,6 +288,9 @@ class ChickensController extends Controller
         }
 
         if (empty($culled)) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => ['hen_id' => [implode(' ', $errors)]]], 422);
+            }
             return back()->withErrors(['hen_id' => implode(' ', $errors)]);
         }
 
@@ -262,6 +298,11 @@ class ChickensController extends Controller
         if (!empty($errors)) {
             $msg .= '. ' . implode(' ', $errors);
         }
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => $msg . '.']);
+        }
+
         return redirect()->back()->with('success', $msg . '.');
     }
 
@@ -279,6 +320,9 @@ class ChickensController extends Controller
         $henIds = array_unique($henIds);
 
         if (empty($henIds)) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => ['hen_id' => ['No valid hens specified.']]], 422);
+            }
             return back()->withErrors(['hen_id' => 'No valid hens specified.']);
         }
 
@@ -310,6 +354,9 @@ class ChickensController extends Controller
         }
 
         if (empty($removed)) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => ['hen_id' => [implode(' ', $errors)]]], 422);
+            }
             return back()->withErrors(['hen_id' => implode(' ', $errors)]);
         }
 
@@ -317,6 +364,11 @@ class ChickensController extends Controller
         if (!empty($errors)) {
             $msg .= '. ' . implode(' ', $errors);
         }
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => $msg . '.']);
+        }
+
         return redirect()->back()->with('success', $msg . '.');
     }
 
@@ -360,11 +412,17 @@ class ChickensController extends Controller
         }
 
         if (empty($henIds)) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => ['hen_ids' => ['No hens selected.']]], 422);
+            }
             return back()->withErrors(['hen_ids' => 'No hens selected.']);
         }
 
         $hens = Hen::whereIn('id', $henIds)->where('is_active', 1)->get();
         if ($hens->isEmpty()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => ['hen_ids' => ['No active hens selected.']]], 422);
+            }
             return back()->withErrors(['hen_ids' => 'No active hens selected.']);
         }
 
@@ -417,7 +475,14 @@ class ChickensController extends Controller
         });
 
         if ($error) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => ['destination_slot_id' => [$error]]], 422);
+            }
             return back()->withErrors(['destination_slot_id' => $error]);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => "{$toMove} hen(s) moved to {$destCode} slot {$destSlotNumber}."]);
         }
 
         return redirect()->back()
@@ -437,11 +502,17 @@ class ChickensController extends Controller
         $henIds = array_unique($henIds);
 
         if (empty($henIds)) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => ['hen_ids' => ['No hens selected.']]], 422);
+            }
             return back()->withErrors(['hen_ids' => 'No hens selected.']);
         }
 
         $hens = Hen::with('cageSlot.cage')->whereIn('id', $henIds)->where('is_active', 1)->get();
         if ($hens->isEmpty()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => ['hen_ids' => ['No active hens selected.']]], 422);
+            }
             return back()->withErrors(['hen_ids' => 'No active hens selected.']);
         }
 
@@ -535,6 +606,10 @@ class ChickensController extends Controller
         }
         if (!empty($errors)) {
             $parts[] = implode(' ', $errors);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => implode('. ', $parts) . '.']);
         }
 
         return redirect()->back()->with('success', implode('. ', $parts) . '.');

@@ -2,119 +2,30 @@
     {{-- ── Top Metric Cards ── --}}
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs tracking-wider text-[#6B7280] mb-2">COOP AVG TEMPERATURE</div>
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">COOP AVG TEMPERATURE</div>
             <div class="flex items-end gap-2 mb-1">
-                <span class="text-3xl tracking-tight text-[#333333]">{{ $avgTemp ? number_format($avgTemp,1) . '°C' : '—' }}</span>
-                <span class="text-xs bg-[#D5E8D4] text-[#2D6A4F] px-2 py-0.5 rounded mb-1">In Range</span>
+                <span class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $avgTemp ? number_format($avgTemp,1) . '°C' : '—' }}</span>
+                <x-status-badge status="In Range" type="sensor" class="mb-1" />
             </div>
-            <div class="text-xs text-[#6B7280]">Spread across sensors: 1.3°C</div>
+            <div class="text-xs text-[#6B7280] mt-1">Spread across sensors: 1.3°C</div>
         </div>
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs tracking-wider text-[#6B7280] mb-2">COOP AVG HUMIDITY</div>
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">COOP AVG HUMIDITY</div>
             <div class="flex items-end gap-2 mb-1">
-                <span class="text-3xl tracking-tight text-[#333333]">{{ $avgHum ? number_format($avgHum,1) . '%' : '—' }}</span>
-                <span class="text-xs bg-[#D5E8D4] text-[#2D6A4F] px-2 py-0.5 rounded mb-1">In Range</span>
+                <span class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $avgHum ? number_format($avgHum,1) . '%' : '—' }}</span>
+                <x-status-badge status="In Range" type="sensor" class="mb-1" />
             </div>
-            <div class="text-xs text-[#6B7280]">Spread across sensors: 4.4%</div>
+            <div class="text-xs text-[#6B7280] mt-1">Spread across sensors: 4.4%</div>
         </div>
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs tracking-wider text-[#6B7280] mb-2">ACTIVE SENSORS</div>
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">ACTIVE SENSORS</div>
             <div class="flex items-end gap-2 mb-1">
-                <span class="text-3xl tracking-tight text-[#333333]">{{ $latestPerCage->count() }}</span>
-                <span class="text-xs bg-[#D5E8D4] text-[#2D6A4F] px-2 py-0.5 rounded mb-1">Live</span>
+                <span class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $latestPerCage->count() }}</span>
+                <x-status-badge status="Live" type="sensor" class="mb-1" />
             </div>
-            <div class="text-xs text-[#6B7280]">One sensor node mapped per cage.</div>
+            <div class="text-xs text-[#6B7280] mt-1">One sensor node mapped per cage.</div>
         </div>
     </div>
-
-    {{-- ── Alert Threshold Configuration ── --}}
-    <x-card>
-        <h3 class="text-xs font-semibold tracking-[0.05em] uppercase mb-4" style="color: #615d59;">Alert Threshold Configuration</h3>
-        <form action="{{ route('environment.thresholds') }}" method="POST">
-            @csrf
-            <div class="flex flex-wrap items-end gap-4">
-                <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TEMP MIN (°C)</label>
-                    <input type="number" name="temp_min" step="0.5"
-                           value="{{ $thresholds['temp_min'] }}"
-                           class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                </div>
-                <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TEMP MAX (°C)</label>
-                    <input type="number" name="temp_max" step="0.5"
-                           value="{{ $thresholds['temp_max'] }}"
-                           class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                </div>
-                <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">HUMIDITY MIN (%)</label>
-                    <input type="number" name="hum_min" step="1"
-                           value="{{ $thresholds['hum_min'] }}"
-                           class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                </div>
-                <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">HUMIDITY MAX (%)</label>
-                    <input type="number" name="hum_max" step="1"
-                           value="{{ $thresholds['hum_max'] }}"
-                           class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                </div>
-                <button type="submit"
-                        class="bg-[#102A4C] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#1D4E8F] transition-colors">
-                    Save Thresholds
-                </button>
-            </div>
-            @if($errors->any())
-            <div class="mt-3 text-xs text-red-500">{{ $errors->first() }}</div>
-            @endif
-        </form>
-    </x-card>
-
-    {{-- ── Egg Weight Configuration (used for FCR) ── --}}
-    <x-card class="mt-5">
-        <h3 class="text-xs font-semibold tracking-[0.05em] uppercase mb-4" style="color: #615d59;">Egg Weight Configuration</h3>
-        <p class="text-xs text-[#6B7280] mb-4">Average weights used to estimate egg mass for Feed Conversion Ratio calculations.</p>
-        <form action="{{ route('environment.egg-weights') }}" method="POST">
-            @csrf
-            <div class="flex flex-wrap items-end gap-4">
-                <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">SMALL (g)</label>
-                    <input type="number" name="egg_weight_small" step="0.1" min="1" max="500"
-                           value="{{ $eggWeights['small'] }}"
-                           class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                </div>
-                <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">MEDIUM (g)</label>
-                    <input type="number" name="egg_weight_medium" step="0.1" min="1" max="500"
-                           value="{{ $eggWeights['medium'] }}"
-                           class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                </div>
-                <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">LARGE (g)</label>
-                    <input type="number" name="egg_weight_large" step="0.1" min="1" max="500"
-                           value="{{ $eggWeights['large'] }}"
-                           class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                </div>
-                <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">JUMBO (g)</label>
-                    <input type="number" name="egg_weight_jumbo" step="0.1" min="1" max="500"
-                           value="{{ $eggWeights['jumbo'] }}"
-                           class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                </div>
-                <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">FALLBACK (g)</label>
-                    <input type="number" name="egg_weight_fallback" step="0.1" min="1" max="500"
-                           value="{{ $eggWeights['fallback'] }}"
-                           class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                </div>
-                <button type="submit"
-                        class="bg-[#102A4C] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#1D4E8F] transition-colors">
-                    Save Weights
-                </button>
-            </div>
-            @if($errors->any())
-            <div class="mt-3 text-xs text-red-500">{{ $errors->first() }}</div>
-            @endif
-        </form>
-    </x-card>
 
     {{-- ── Per-cage Sensor Cards ── --}}
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mt-5 mb-8">
@@ -122,20 +33,29 @@
         @php
             $color = $r->cage->color;
             $sensorId = 'S-0' . $loop->iteration;
-            $statusBg  = $r->status === 'Normal' ? '#D5E8D4' : ($r->status === 'Watch' ? '#FFF3CD' : '#F8D7DA');
-            $statusTxt = $r->status === 'Normal' ? '#2D6A4F' : ($r->status === 'Watch' ? '#856404' : '#721C24');
-            $tBg  = $r->tempStatus === 'OK' ? '#D5E8D4' : ($r->tempStatus === 'Watch' ? '#FFF3CD' : '#F8D7DA');
-            $tTxt = $r->tempStatus === 'OK' ? '#2D6A4F' : ($r->tempStatus === 'Watch' ? '#856404' : '#721C24');
-            $hBg  = $r->humStatus  === 'OK' ? '#D5E8D4' : ($r->humStatus  === 'Watch' ? '#FFF3CD' : '#F8D7DA');
-            $hTxt = $r->humStatus  === 'OK' ? '#2D6A4F' : ($r->humStatus  === 'Watch' ? '#856404' : '#721C24');
+            // Canonical ok/watch/alert palette from DESIGN-SYSTEM.md §2.4 (matches <x-status-badge>) —
+            // previously this used a second, incompatible hex palette (#D5E8D4/#FFF3CD/#F8D7DA).
+            $toneColors = fn (string $tone) => match ($tone) {
+                'Normal', 'OK' => ['#e8f5ec', '#1f6b3a'],
+                'Watch'        => ['#fdf3e0', '#8a5a00'],
+                default        => ['#fbe4e6', '#9b1c24'],
+            };
+            [$statusBg, $statusTxt] = $toneColors($r->status);
+            [$tBg, $tTxt] = $toneColors($r->tempStatus);
+            [$hBg, $hTxt] = $toneColors($r->humStatus);
+            // A stale-but-present reading previously rendered identically to a
+            // fresh one — no timestamp or staleness signal existed anywhere here.
+            $isStale = $r->env->recorded_at?->lt(now()->subMinutes(30)) ?? false;
         @endphp
-        <div class="bg-white rounded-lg border-2 overflow-hidden" style="border-color:{{ $color }}">
-            <div class="px-4 py-2.5 flex items-center justify-between" style="background:{{ $color }}22">
+        <div class="bg-white rounded-lg border-2 overflow-hidden" style="border-color:{{ $isStale ? '#9b1c24' : $color }}">
+            <div class="px-5 py-3 flex items-center justify-between" style="background:{{ $color }}22">
                 <div class="flex items-center gap-2">
                     <span class="w-2.5 h-2.5 rounded-full" style="background:{{ $color }}"></span>
                     <span class="text-sm font-medium text-[#333333]">{{ $r->cage->cage_code }}</span>
                 </div>
-                <span class="text-xs text-[#6B7280]">{{ $sensorId }}</span>
+                <span class="text-xs" style="color: {{ $isStale ? '#9b1c24' : '#6B7280' }};" title="{{ $r->env->recorded_at }}">
+                    {{ $isStale ? 'Stale · ' : '' }}{{ $r->env->recorded_at?->diffForHumans() ?? $sensorId }}
+                </span>
             </div>
             <div class="px-4 py-3 space-y-2">
                 <div class="flex justify-between text-sm">
@@ -166,7 +86,7 @@
         @foreach($cages as $cage)
         @if($latestPerCage->pluck('cage.id')->doesntContain($cage->id))
         <div class="bg-white rounded-lg border border-dashed border-[#D9D9D9] overflow-hidden">
-            <div class="px-4 py-2.5 bg-[#F5F6F8] flex items-center gap-2">
+            <div class="px-5 py-3 bg-[#F5F6F8] flex items-center gap-2">
                 <span class="w-2.5 h-2.5 rounded-full bg-gray-300"></span>
                 <span class="text-sm text-[#333333]">{{ $cage->cage_code }}</span>
             </div>
@@ -180,14 +100,29 @@
     </div>
 
     {{-- ── Trend Charts ── --}}
+    <div class="flex items-center justify-between mb-3">
+        <span class="text-xs tracking-wider text-[#6B7280]">TREND CHARTS</span>
+        <select id="trendRange" onchange="changeTrendRange(this.value)"
+                class="text-xs border border-[#D9D9D9] rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30">
+            <option value="24h" {{ ($range ?? '24h') === '24h' ? 'selected' : '' }}>24 Hours</option>
+            <option value="week" {{ ($range ?? '24h') === 'week' ? 'selected' : '' }}>Week</option>
+            <option value="month" {{ ($range ?? '24h') === 'month' ? 'selected' : '' }}>Month</option>
+        </select>
+    </div>
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
             <div class="text-xs tracking-wider text-[#6B7280] mb-3">TEMPERATURE TREND (COOP + PER CAGE)</div>
-            <canvas id="envTempChart" height="160"></canvas>
+            <div id="envTempChartWrap" class="relative w-full h-[160px]">
+                <canvas id="envTempChart" style="width: 100%; height: 100%; display: block;"></canvas>
+            </div>
+            <div id="envTempChartEmpty" class="hidden h-[160px] flex items-center justify-center text-sm" style="color: #a39e98;">No temperature readings in this window.</div>
         </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
             <div class="text-xs tracking-wider text-[#6B7280] mb-3">HUMIDITY TREND (COOP + PER CAGE)</div>
-            <canvas id="envHumChart" height="160"></canvas>
+            <div id="envHumChartWrap" class="relative w-full h-[160px]">
+                <canvas id="envHumChart" style="width: 100%; height: 100%; display: block;"></canvas>
+            </div>
+            <div id="envHumChartEmpty" class="hidden h-[160px] flex items-center justify-center text-sm" style="color: #a39e98;">No humidity readings in this window.</div>
         </div>
     </div>
 
@@ -195,45 +130,67 @@
 
     <script>
     (function() {
-        const cageColors  = ['#2D7D46','#1D4E8F','#C2703E','#6B4C8A','#6B7280'];
-        const trendData   = @json($trendData);
-        const cagesMap    = @json($cages->pluck('cage_code','id'));
-        const labels = ['14:00','16:00','18:00','20:00','22:00','00:00','02:00','04:00','06:00','08:00','10:00','12:00'];
-
-        function buildDatasets(field) {
-            const sets = [];
-            let i = 0;
-            for (const [cageId, rows] of Object.entries(trendData)) {
-                const name = cagesMap[cageId] || 'Cage '+cageId;
-                const data = labels.map(l => {
-                    const r = rows.find(r => r.hour === l);
-                    return r ? r[field] : null;
-                });
-                sets.push({ label: name, data, borderColor: cageColors[i%cageColors.length], tension: 0.3, pointRadius: 3, borderWidth: 1.5, fill: false });
-                i++;
+        window.initEnvCharts = function initEnvCharts() {
+            // Looked up per cage code from the canonical Cage color accessor —
+            // previously a positional array assigned colors by iteration order,
+            // which only happened to line up with A/B/C/D by coincidence.
+            const cageColors  = @json($cages->pluck('color', 'id'));
+            const trendData   = @json($trendData);
+            const cagesMap    = @json($cages->pluck('cage_code','id'));
+            const allHours = new Set();
+            for (const rows of Object.values(trendData)) {
+                rows.forEach(function(r) { allHours.add(r.period); });
             }
-            return sets;
+            const labels = Array.from(allHours).sort();
+            const hasAnyData = Object.values(trendData).some(rows => rows.length > 0);
+
+            function buildDatasets(field) {
+                const sets = [];
+                for (const [cageId, rows] of Object.entries(trendData)) {
+                    const name = cagesMap[cageId] || 'Cage '+cageId;
+                    const data = labels.map(l => {
+                        const r = rows.find(r => r.period === l);
+                        return r ? r[field] : null;
+                    });
+                    sets.push({ label: name, data, borderColor: cageColors[cageId] || '#6B7280', tension: 0.3, pointRadius: 3, borderWidth: 1.5, fill: false });
+                }
+                return sets;
+            }
+
+            const chartOpts = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: true, labels: { boxWidth: 10, font: { size: 10 } } } },
+                scales: {
+                    x: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 }, autoSkip: true, maxRotation: 45, minRotation: 0 } },
+                    y: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } } },
+                }
+            };
+
+            const tempWrap  = document.getElementById('envTempChartWrap');
+            const humWrap   = document.getElementById('envHumChartWrap');
+            const tempEmpty = document.getElementById('envTempChartEmpty');
+            const humEmpty  = document.getElementById('envHumChartEmpty');
+            if (!tempWrap || !humWrap) return;
+
+            tempWrap.classList.toggle('hidden', !hasAnyData);
+            humWrap.classList.toggle('hidden', !hasAnyData);
+            if (tempEmpty) tempEmpty.classList.toggle('hidden', hasAnyData);
+            if (humEmpty) humEmpty.classList.toggle('hidden', hasAnyData);
+            if (!hasAnyData) return;
+
+            // create(), not update(): this page's 10s poll replaces the canvas DOM
+            // nodes wholesale via innerHTML=, so any existing chart instance is
+            // already bound to a detached canvas by the time this runs. update()
+            // would silently redraw onto that invisible old node instead of the
+            // new one — create() always re-queries the live canvas by id.
+            LayRateChart.create('envTempChart', { type:'line', data:{ labels, datasets: buildDatasets('avg_temp') }, options: chartOpts });
+            LayRateChart.create('envHumChart', { type:'line', data:{ labels, datasets: buildDatasets('avg_hum')  }, options: chartOpts });
         }
 
-        const chartOpts = {
-            responsive: true,
-            plugins: { legend: { display: true, labels: { boxWidth: 10, font: { size: 10 } } } },
-            scales: {
-                x: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } } },
-                y: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } } },
-            }
-        };
-
-        function initEnvCharts() {
-            const tempCanvas = document.getElementById('envTempChart');
-            const humCanvas  = document.getElementById('envHumChart');
-            if (!tempCanvas || !humCanvas) return;
-
-            if (window.envTempChart) window.envTempChart.destroy();
-            window.envTempChart = new Chart(tempCanvas, { type:'line', data:{ labels, datasets: buildDatasets('avg_temp') }, options: {...chartOpts, scales:{...chartOpts.scales, y:{...chartOpts.scales.y, min:24,max:32}}} });
-
-            if (window.envHumChart) window.envHumChart.destroy();
-            window.envHumChart = new Chart(humCanvas, { type:'line', data:{ labels, datasets: buildDatasets('avg_hum')  }, options: {...chartOpts, scales:{...chartOpts.scales, y:{...chartOpts.scales.y, min:50,max:80}}} });
+        if (!window.__envChartsLifecycleBound) {
+            window.__envChartsLifecycleBound = true;
+            document.addEventListener('turbo:load', initEnvCharts);
         }
 
         if (document.readyState === 'loading') {
@@ -242,5 +199,6 @@
             initEnvCharts();
         }
     })();
+
     </script>
 </turbo-frame>

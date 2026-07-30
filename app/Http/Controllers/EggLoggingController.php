@@ -6,9 +6,12 @@ use App\Models\Cage;
 use App\Models\CageSlot;
 use App\Models\EggSizeLog;
 use App\Models\Hen;
+use App\Models\MortalityLog;
 use App\Models\ProductionLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 
 class EggLoggingController extends Controller
 {
@@ -19,18 +22,13 @@ class EggLoggingController extends Controller
 
         $cages = Cage::where('is_active', 1)->orderBy('cage_code')->get();
 
-        $slotQuery = CageSlot::with([
+        $cageSlots = CageSlot::with([
             'cage',
-            'hens' => fn($q) => $q->where('is_active', 1),
-        ])->whereHas('cage', fn($q) => $q->where('is_active', 1))
-          ->orderBy('cage_id')
-          ->orderBy('slot_number');
-
-        if ($cageFilter) {
-            $slotQuery->where('cage_id', $cageFilter);
-        }
-
-        $cageSlots = $slotQuery->get();
+            'hens' => fn ($q) => $q->where('is_active', 1),
+        ])->whereHas('cage', fn ($q) => $q->where('is_active', 1))
+            ->orderBy('cage_id')
+            ->orderBy('slot_number')
+            ->get();
 
         $slotIds = $cageSlots->pluck('id');
         $todayLogs = ProductionLog::whereIn('cage_slot_id', $slotIds)
@@ -43,19 +41,26 @@ class EggLoggingController extends Controller
         });
 
         $todayTotal = ProductionLog::where('log_date', $today)
-            ->when($cageFilter, fn($q) => $q->whereHas('cageSlot', fn($s) => $s->where('cage_id', $cageFilter)))
+            ->when($cageFilter, fn ($q) => $q->whereHas('cageSlot', fn ($s) => $s->where('cage_id', $cageFilter)))
             ->sum('egg_count');
 
-        $todayByCage = ProductionLog::with('cageSlot.cage')
+        $todayData = ProductionLog::with('cageSlot.cage')
             ->where('log_date', $today)
             ->get()
-            ->groupBy(fn($l) => $l->cageSlot?->cage?->cage_code)
-            ->map(fn($g) => $g->sum('egg_count'));
+            ->groupBy(fn ($l) => $l->cageSlot?->cage?->cage_code);
+
+        $todayByCage = $todayData->map(fn ($g) => $g->sum('egg_count'));
+        $todayLoggedCountByCage = $todayData->map(fn ($g) => $g->count());
 
         $selectedCage = $cageFilter ? $cages->firstWhere('id', $cageFilter) : null;
 
+        $editLog = null;
+        if ($editLogId = session('reopen_edit_log')) {
+            $editLog = ProductionLog::with('eggSizeLogs')->find($editLogId);
+        }
+
         return view('egg-logging', compact(
-            'cageSlots', 'cages', 'cageFilter', 'todayTotal', 'todayByCage', 'selectedCage'
+            'cageSlots', 'cages', 'cageFilter', 'todayTotal', 'todayByCage', 'todayLoggedCountByCage', 'selectedCage', 'editLog'
         ));
     }
 
@@ -65,12 +70,12 @@ class EggLoggingController extends Controller
 
         $cages = Cage::where('is_active', 1)->orderBy('cage_code')->get();
         $cageSlots = CageSlot::with('cage')
-            ->when($filters['cage_id'], fn($q, $cageId) => $q->where('cage_id', $cageId))
+            ->when($filters['cage_id'], fn ($q, $cageId) => $q->where('cage_id', $cageId))
             ->orderBy('cage_id')
             ->orderBy('slot_number')
             ->get();
 
-        $breeds = \App\Models\Hen::where('is_active', 1)
+        $breeds = Hen::where('is_active', 1)
             ->selectRaw('distinct breed')
             ->orderBy('breed')
             ->pluck('breed');
@@ -111,7 +116,7 @@ class EggLoggingController extends Controller
             ->orderByDesc('created_at');
 
         if ($filters['cage_id']) {
-            $query->whereHas('cageSlot', fn($q) => $q->where('cage_id', $filters['cage_id']));
+            $query->whereHas('cageSlot', fn ($q) => $q->where('cage_id', $filters['cage_id']));
         }
 
         if ($filters['cage_slot_id']) {
@@ -119,7 +124,7 @@ class EggLoggingController extends Controller
         }
 
         if ($filters['breed']) {
-            $query->whereHas('cageSlot.hens', fn($q) => $q->where('breed', $filters['breed'])->where('is_active', 1));
+            $query->whereHas('cageSlot.hens', fn ($q) => $q->where('breed', $filters['breed'])->where('is_active', 1));
         }
 
         if (! empty($filters['logged_via'])) {
@@ -133,8 +138,8 @@ class EggLoggingController extends Controller
     {
         $data = $request->validate([
             'cage_slot_id' => 'required|exists:cage_slots,id',
-            'pin'          => 'nullable|string',
-            'password'     => 'nullable|string',
+            'pin' => 'nullable|string',
+            'password' => 'nullable|string',
         ]);
 
         $user = auth()->user();
@@ -152,42 +157,88 @@ class EggLoggingController extends Controller
         session()->put("override_verified_slot.{$data['cage_slot_id']}", now()->timestamp);
 
         return response()->json([
-            'ok'              => true,
+            'ok' => true,
             'needs_pin_setup' => $user->override_pin_hash === null,
         ]);
     }
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'log_date'     => 'required|date',
+        $isAjax = $request->wantsJson() || $request->ajax();
+
+        $validator = Validator::make($request->all(), [
+            'log_date' => 'required|date|before_or_equal:'.now()->toDateString(),
             'cage_slot_id' => 'required|exists:cage_slots,id',
-            'egg_count'    => 'required|integer|min:0',
-            'hen_count'    => 'required|integer|min:1',
-            'notes'        => 'nullable|string',
-            'size_small'   => 'nullable|integer|min:0',
-            'size_medium'  => 'nullable|integer|min:0',
-            'size_large'   => 'nullable|integer|min:0',
-            'size_jumbo'   => 'nullable|integer|min:0',
+            'egg_count' => 'required|integer|min:0',
+            'notes' => 'nullable|string',
+            'size_small' => 'nullable|integer|min:0',
+            'size_medium' => 'nullable|integer|min:0',
+            'size_large' => 'nullable|integer|min:0',
+            'size_jumbo' => 'nullable|integer|min:0',
         ]);
+
+        if ($validator->fails()) {
+            if ($isAjax) {
+                return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+            }
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        $data = $validator->validated();
 
         $sizeSum = (int) ($data['size_small'] ?? 0)
                  + (int) ($data['size_medium'] ?? 0)
                  + (int) ($data['size_large'] ?? 0)
                  + (int) ($data['size_jumbo'] ?? 0);
 
-        $anySizeFilled = ($data['size_small'] ?? null) !== null
-                      || ($data['size_medium'] ?? null) !== null
-                      || ($data['size_large'] ?? null) !== null
-                      || ($data['size_jumbo'] ?? null) !== null;
+        $anySizeFilled = ($data['size_small'] ?? 0) > 0
+                      || ($data['size_medium'] ?? 0) > 0
+                      || ($data['size_large'] ?? 0) > 0
+                      || ($data['size_jumbo'] ?? 0) > 0;
 
         if ($anySizeFilled && $sizeSum !== (int) $data['egg_count']) {
+            if ($isAjax) {
+                return response()->json(['success' => false, 'errors' => ['size_breakdown' => "Size breakdown sum ({$sizeSum}) must equal total eggs ({$data['egg_count']})."]], 422);
+            }
             return redirect()->back()
                 ->withErrors(['size_breakdown' => "Size breakdown sum ({$sizeSum}) must equal total eggs ({$data['egg_count']})."])
                 ->withInput();
         }
 
         $slot = CageSlot::with('cage')->findOrFail($data['cage_slot_id']);
+
+        $diedToday = DB::table('mortality_logs')
+            ->join('mortality_log_hens', 'mortality_logs.id', '=', 'mortality_log_hens.mortality_log_id')
+            ->where('mortality_logs.cage_id', $slot->cage_id)
+            ->where('mortality_logs.log_date', $data['log_date'])
+            ->distinct()
+            ->count('mortality_log_hens.hen_id');
+
+        if ($diedToday === 0) {
+            $diedToday = (int) MortalityLog::where('cage_id', $slot->cage_id)
+                ->where('log_date', $data['log_date'])
+                ->sum('count');
+        }
+
+        $henCount = $slot->active_hen_count + $diedToday;
+
+        if ($henCount === 0) {
+            if ($isAjax) {
+                return response()->json(['success' => false, 'errors' => ['cage_slot_id' => 'This slot has no hens assigned.']], 422);
+            }
+            return redirect()->back()
+                ->withErrors(['cage_slot_id' => 'This slot has no hens assigned. Cannot log egg production for an empty slot.'])
+                ->withInput();
+        }
+
+        if ($data['egg_count'] > $henCount) {
+            if ($isAjax) {
+                return response()->json(['success' => false, 'errors' => ['egg_count' => "Egg count ({$data['egg_count']}) cannot exceed hen count ({$henCount})."]], 422);
+            }
+            return redirect()->back()
+                ->withErrors(['egg_count' => "Egg count ({$data['egg_count']}) cannot exceed hen count ({$henCount})."])
+                ->withInput();
+        }
 
         $log = ProductionLog::firstOrNew(
             ['cage_slot_id' => $slot->id, 'log_date' => $data['log_date']]
@@ -196,55 +247,95 @@ class EggLoggingController extends Controller
         $log->recorded_by = auth()->id();
         $log->fill([
             'egg_count' => $data['egg_count'],
-            'hen_count' => $data['hen_count'],
-            'hdep'       => round(($data['egg_count'] / $data['hen_count']) * 100, 2),
-            'notes'      => $data['notes'] ?? 'Manual entry',
-            // Web form submissions are always manual. Future sensor ingestion must
-            // create ProductionLog records with logged_via = 'sensor' explicitly.
+            'hen_count' => $henCount,
+            'hdep' => round(($data['egg_count'] / $henCount) * 100, 2),
+            'notes' => $data['notes'] ?? 'Manual entry',
             'logged_via' => $data['logged_via'] ?? 'manual',
         ]);
         $log->save();
 
         $this->syncSizeLogs($log, $data);
 
+        if ($isAjax) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Production log saved.',
+                'log' => [
+                    'id' => $log->id,
+                    'cage_slot_id' => $log->cage_slot_id,
+                    'egg_count' => $log->egg_count,
+                    'hen_count' => $log->hen_count,
+                    'hdep' => $log->hdep,
+                    'log_date' => $log->log_date->toDateString(),
+                ],
+            ]);
+        }
+
         return redirect()->route('eggs.logging')->with('success', 'Production log saved.');
     }
 
     public function update(Request $request, ProductionLog $productionLog)
     {
-        $data = $request->validate([
-            'log_date'    => 'required|date',
-            'egg_count'   => 'required|integer|min:0',
-            'hen_count'   => 'required|integer|min:1',
-            'notes'       => 'nullable|string',
-            'size_small'  => 'nullable|integer|min:0',
+        $validator = Validator::make($request->all(), [
+            'log_date' => 'required|date|before_or_equal:'.now()->toDateString(),
+            'egg_count' => 'required|integer|min:0',
+            'hen_count' => 'nullable|integer|min:0',
+            'notes' => 'nullable|string',
+            'size_small' => 'nullable|integer|min:0',
             'size_medium' => 'nullable|integer|min:0',
-            'size_large'  => 'nullable|integer|min:0',
-            'size_jumbo'  => 'nullable|integer|min:0',
+            'size_large' => 'nullable|integer|min:0',
+            'size_jumbo' => 'nullable|integer|min:0',
         ]);
+
+        if ($validator->fails()) {
+            return redirect()->route('eggs.logging')
+                ->with('reopen_edit_log', $productionLog->id)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
 
         $sizeSum = (int) ($data['size_small'] ?? 0)
                  + (int) ($data['size_medium'] ?? 0)
                  + (int) ($data['size_large'] ?? 0)
                  + (int) ($data['size_jumbo'] ?? 0);
 
-        $anySizeFilled = ($data['size_small'] ?? null) !== null
-                      || ($data['size_medium'] ?? null) !== null
-                      || ($data['size_large'] ?? null) !== null
-                      || ($data['size_jumbo'] ?? null) !== null;
+        $anySizeFilled = ($data['size_small'] ?? 0) > 0
+                      || ($data['size_medium'] ?? 0) > 0
+                      || ($data['size_large'] ?? 0) > 0
+                      || ($data['size_jumbo'] ?? 0) > 0;
 
         if ($anySizeFilled && $sizeSum !== (int) $data['egg_count']) {
-            return redirect()->back()
+            return redirect()->route('eggs.logging')
+                ->with('reopen_edit_log', $productionLog->id)
                 ->withErrors(['size_breakdown' => "Size breakdown sum ({$sizeSum}) must equal total eggs ({$data['egg_count']})."])
                 ->withInput();
         }
 
+        // Use hen_count submitted by the editor, or preserve the stored value
+        $henCount = $data['hen_count'] !== null ? (int) $data['hen_count'] : $productionLog->hen_count;
+
+        if ($henCount === 0) {
+            return redirect()->route('eggs.logging')
+                ->with('reopen_edit_log', $productionLog->id)
+                ->withErrors(['hen_count' => 'Hen count cannot be zero.'])
+                ->withInput();
+        }
+
+        if ($data['egg_count'] > $henCount) {
+            return redirect()->route('eggs.logging')
+                ->with('reopen_edit_log', $productionLog->id)
+                ->withErrors(['egg_count' => "Egg count ({$data['egg_count']}) cannot exceed hen count ({$henCount})."])
+                ->withInput();
+        }
+
         $productionLog->update([
-            'log_date'  => $data['log_date'],
+            'log_date' => $data['log_date'],
             'egg_count' => $data['egg_count'],
-            'hen_count' => $data['hen_count'],
-            'hdep'      => round(($data['egg_count'] / $data['hen_count']) * 100, 2),
-            'notes'     => $data['notes'] ?? null,
+            'hen_count' => $henCount,
+            'hdep' => round(($data['egg_count'] / $henCount) * 100, 2),
+            'notes' => $data['notes'] ?? null,
         ]);
 
         $this->syncSizeLogs($productionLog, $data);
@@ -255,18 +346,18 @@ class EggLoggingController extends Controller
     private function syncSizeLogs(ProductionLog $log, array $data): void
     {
         $sizes = ['small', 'medium', 'large', 'jumbo'];
-        $anyFilled = false;
+        $hasNonZero = false;
 
         foreach ($sizes as $size) {
-            if (($data["size_{$size}"] ?? null) !== null) {
-                $anyFilled = true;
+            if (((int) ($data["size_{$size}"] ?? 0)) > 0) {
+                $hasNonZero = true;
                 break;
             }
         }
 
         EggSizeLog::where('production_log_id', $log->id)->delete();
 
-        if ($anyFilled) {
+        if ($hasNonZero) {
             foreach ($sizes as $size) {
                 $count = (int) ($data["size_{$size}"] ?? 0);
                 if ($count > 0) {
@@ -276,12 +367,37 @@ class EggLoggingController extends Controller
                     ]);
                 }
             }
+        } elseif ($log->egg_count > 0) {
+            $log->eggSizeLogs()->create([
+                'egg_size' => 'unsorted',
+                'count' => $log->egg_count,
+            ]);
         }
+    }
+
+    public function resetCount(ProductionLog $productionLog)
+    {
+        $productionLog->update([
+            'egg_count' => 0,
+            'hdep' => 0,
+            'notes' => $productionLog->notes
+                ? $productionLog->notes . ' | Reset to 0'
+                : 'Reset to 0',
+        ]);
+
+        $productionLog->eggSizeLogs()->delete();
+
+        if (request()->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->route('eggs.logging')->with('success', 'Egg count reset to 0.');
     }
 
     public function destroy(ProductionLog $productionLog)
     {
         $productionLog->delete();
+
         return redirect()->route('eggs.logging')->with('success', 'Log deleted.');
     }
 }

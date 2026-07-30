@@ -11,13 +11,18 @@ use App\Models\MortalityLogHen;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 class MortalityController extends Controller
 {
     public function index()
     {
-        $cages = Cage::orderBy('cage_code')->get();
+        // active_hens_count feeds the client-side "count exceeds active hens
+        // in this cage" check on the mortality form (red text + disabled
+        // submit) — mirrors the server-side guard in store()/update() below.
+        $cages = Cage::withCount(['hens as active_hens_count' => fn($q) => $q->where('is_active', 1)])
+            ->orderBy('cage_code')->get();
         $logs  = MortalityLog::with(['cage', 'hens'])
             ->orderByDesc('log_date')
             ->orderByDesc('created_at')
@@ -102,24 +107,39 @@ class MortalityController extends Controller
         });
 
         if ($error) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => ['count' => [$error]]], 422);
+            }
             return back()->withErrors(['count' => $error])->withInput();
         }
 
         $this->checkMortalitySpike($data['cage_id'], $data['log_date']);
 
-        return redirect()->route('mortality.index')
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'cage_code' => $cageCode, 'count' => $data['count']]);
+        }
+
+        return redirect()->back()
             ->with('success', 'Mortality record saved.');
     }
 
     public function update(Request $request, MortalityLog $mortalityLog)
     {
-        $data = $request->validate([
+        $validator = Validator::make($request->all(), [
             'log_date' => 'required|date',
             'count'    => 'required|integer|min:1',
             'reason'   => 'required|in:' . implode(',', MortalityLog::REASONS),
             'notes'    => 'nullable|string|max:1000',
         ]);
 
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->with('reopen_edit_mortality', $mortalityLog->id)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
         $oldCount = $mortalityLog->count;
         $newCount = (int) $data['count'];
 
@@ -141,9 +161,11 @@ class MortalityController extends Controller
                 ->values();
 
             if ($activeHens->count() < $diff) {
-                return back()->withErrors([
-                    'count' => "Only {$activeHens->count()} remaining active hen(s) available in " . ($mortalityLog->cage?->cage_code ?? 'Deleted Cage') . ", but {$diff} additional deaths recorded.",
-                ])->withInput();
+                return redirect()->back()
+                    ->with('reopen_edit_mortality', $mortalityLog->id)
+                    ->withErrors([
+                        'count' => "Only {$activeHens->count()} remaining active hen(s) available in " . ($mortalityLog->cage?->cage_code ?? 'Deleted Cage') . ", but {$diff} additional deaths recorded.",
+                    ])->withInput();
             }
 
             $hensToDeactivate = $activeHens->take($diff);
@@ -193,7 +215,7 @@ class MortalityController extends Controller
 
         $this->checkMortalitySpike($mortalityLog->cage_id, $data['log_date']);
 
-        return redirect()->route('mortality.index')
+        return redirect()->back()
             ->with('success', 'Mortality record updated.');
     }
 
@@ -221,7 +243,7 @@ class MortalityController extends Controller
             $mortalityLog->delete();
         });
 
-        return redirect()->route('mortality.index')
+        return redirect()->back()
             ->with('success', 'Record deleted.');
     }
 
@@ -239,7 +261,9 @@ class MortalityController extends Controller
         }
 
         foreach ($slotCounts as $slotId => $decrement) {
-            CageSlot::where('id', $slotId)->decrement('current_occupancy', $decrement);
+            CageSlot::where('id', $slotId)
+                ->where('current_occupancy', '>', 0)
+                ->decrement('current_occupancy', $decrement);
         }
     }
 

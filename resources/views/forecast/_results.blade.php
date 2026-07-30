@@ -1,7 +1,7 @@
 <turbo-frame id="forecast-results">
     @php
-        $cageColorMap = ['CAGE-A'=>'#2D7D46','CAGE-B'=>'#1D4E8F','CAGE-C'=>'#C2703E','CAGE-D'=>'#6B4C8A'];
-        $cageColor = $scope === 'farm' ? '#102A4C' : ($cageColorMap[$cageCode ?? ''] ?? '#2D7D46');
+        $cageColorMap = \App\Models\Cage::getColorMap();
+        $cageColor = $scope === 'farm' ? '#102A4C' : ($cageColorMap[$cageCode ?? ''] ?? '#6B7280');
         $scopeLabel = match($scope) {
             'farm' => 'Whole Farm',
             'breed' => $breed ?? '',
@@ -11,7 +11,7 @@
 
     {{-- ── Chart Panel ── --}}
     <div class="xl:col-span-2 bg-white rounded-lg border border-[#D9D9D9] p-5 mb-8">
-        <div class="text-xs tracking-wider text-[#6B7280] mb-4">HISTORICAL VS FORECAST HDEP — {{ $scopeLabel }}</div>
+        <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-4">Historical vs Forecast Hdep — {{ $scopeLabel }}</div>
         <canvas id="forecastChart" height="160"></canvas>
     </div>
 
@@ -20,24 +20,24 @@
         <table class="w-full">
             <thead>
                 <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
-                    <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Date</th>
-                    <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Predicted HDEP</th>
-                    <th class="text-left text-xs text-[#6B7280] px-6 py-3 font-medium">Confidence</th>
+                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Date</th>
+                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Predicted HDEP</th>
+                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Confidence</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($forecasts as $f)
                 <tr class="border-b border-[#F0F0F0] hover:bg-[#F5F6F8]">
-                    <td class="px-6 py-3 text-sm text-[#333333] font-mono">{{ $f->target_date->format('Y-m-d') }}</td>
-                    <td class="px-6 py-3 text-sm text-[#333333]">{{ number_format($f->predicted_hdep,1) }}%</td>
-                    <td class="px-6 py-3">
+                    <td class="px-5 py-3.5 text-sm text-[#333333] font-mono">{{ $f->target_date->format('Y-m-d') }}</td>
+                    <td class="px-5 py-3.5 text-sm text-[#333333]">{{ number_format($f->predicted_hdep,1) }}%</td>
+                    <td class="px-5 py-3.5">
                         <span class="text-xs px-2.5 py-1 rounded-full" style="background:{{ $f->confidenceColor }}">
                             {{ $f->confidence }}%
                         </span>
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="3" class="px-6 py-8 text-center text-sm text-[#6B7280]">
+                <tr><td colspan="3" class="px-5 py-10 text-center text-sm text-[#6B7280]">
                     No forecast generated yet.
                 </td></tr>
                 @endforelse
@@ -47,8 +47,8 @@
 
     <script>
     (function() {
-        const historical = @json($historical->map(fn($l) => ['date'=> is_object($l->log_date) ? $l->log_date->format('Y-m-d') : $l->log_date,'hdep'=>$l->hdep]));
-        const forecasts  = @json($forecasts->map(fn($f) => ['date'=> is_object($f->target_date) ? $f->target_date->format('Y-m-d') : $f->target_date,'hdep'=>$f->predicted_hdep]));
+        const historical = @json($historical->map(fn($l) => ['date'=> is_object($l->log_date) ? $l->log_date->format('Y-m-d') : $l->log_date,'hdep'=>(float)$l->hdep]));
+        const forecasts  = @json($forecasts->map(fn($f) => ['date'=> is_object($f->target_date) ? $f->target_date->format('Y-m-d') : $f->target_date,'hdep'=>(float)$f->predicted_hdep]));
         const cageColor  = '{{ $cageColor }}';
 
         const histLabels = historical.map((h, i) => 'H-' + (historical.length - i));
@@ -59,10 +59,8 @@
         const fcData   = [...Array(histLabels.length).fill(null), ...forecasts.map(f => f.hdep)];
 
         function initForecastChart() {
-            const canvas = document.getElementById('forecastChart');
-            if (!canvas) return;
-            if (window.forecastChart) window.forecastChart.destroy();
-            window.forecastChart = new Chart(canvas, {
+            if (!document.getElementById('forecastChart')) return;
+            LayRateChart.create('forecastChart', {
                 type: 'line',
                 data: {
                     labels: allLabels,

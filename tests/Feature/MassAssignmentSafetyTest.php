@@ -67,24 +67,34 @@ class MassAssignmentSafetyTest extends TestCase
         $this->assertEquals(5, $log->egg_count, 'egg_count should be mass-assignable');
     }
 
-    public function test_forecast_mass_assign_fks_are_ignored(): void
+    public function test_forecast_scoped_fields_are_deliberately_fillable(): void
     {
+        // Forecast::$fillable was intentionally widened (cage_id, cage_slot_id,
+        // breed, forecast_date) for cage/breed-scoped forecasts — the forecast
+        // calendar creates them via `new Forecast([...])` with server-resolved
+        // values only (ForecastController resolves $cage itself, never from raw
+        // request input). The guard here is that the scoped fields fill as
+        // designed while anything outside $fillable is still silently dropped.
         $forecast = new Forecast;
         $forecast->fill([
-            'cage_id'        => $this->cage->id,
-            'cage_slot_id'   => $this->slot->id,
-            'breed'          => 'ISA Brown',
-            'forecast_date'  => now()->toDateString(),
-            'target_date'    => now()->addDays(7)->toDateString(),
-            'predicted_hdep' => 85.0,
+            'cage_id'             => $this->cage->id,
+            'cage_slot_id'        => $this->slot->id,
+            'breed'               => 'ISA Brown',
+            'forecast_date'       => now()->toDateString(),
+            'target_date'         => now()->addDays(7)->toDateString(),
+            'predicted_egg_count' => 12.5,
+            'id'                  => 999999,           // not fillable — must be ignored
+            'created_at'          => now()->subYear(), // not fillable — must be ignored
         ]);
 
-        $this->assertNull($forecast->cage_id, 'cage_id should not be mass-assignable');
-        $this->assertNull($forecast->cage_slot_id, 'cage_slot_id should not be mass-assignable');
-        $this->assertNull($forecast->breed, 'breed should not be mass-assignable');
-        $this->assertNull($forecast->forecast_date, 'forecast_date should not be mass-assignable');
-        $this->assertNull($forecast->predicted_hdep, 'predicted_hdep should not be mass-assignable');
-        $this->assertNotNull($forecast->target_date, 'target_date should be mass-assignable');
+        $this->assertEquals($this->cage->id, $forecast->cage_id, 'cage_id is deliberately fillable');
+        $this->assertEquals($this->slot->id, $forecast->cage_slot_id, 'cage_slot_id is deliberately fillable');
+        $this->assertEquals('ISA Brown', $forecast->breed, 'breed is deliberately fillable');
+        $this->assertNotNull($forecast->forecast_date, 'forecast_date is deliberately fillable');
+        $this->assertNotNull($forecast->target_date, 'target_date is deliberately fillable');
+        $this->assertEquals(12.5, $forecast->predicted_egg_count, 'predicted_egg_count is deliberately fillable');
+        $this->assertNull($forecast->id, 'id must never be mass-assignable');
+        $this->assertNull($forecast->created_at, 'created_at must not be mass-assignable');
     }
 
     public function test_mortality_log_hen_mass_assign_all_blocked(): void

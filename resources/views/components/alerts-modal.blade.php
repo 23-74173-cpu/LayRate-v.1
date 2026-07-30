@@ -12,7 +12,7 @@
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="acknowledgeAlertsModal()"></div>
 
     {{-- Card --}}
-    <div class="relative w-full max-w-md rounded-2xl p-6 mx-4" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+    <div class="relative w-full max-w-md rounded-2xl p-6 mx-4 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         {{-- Close X --}}
         <button type="button" onclick="acknowledgeAlertsModal()" class="absolute top-4 right-4 p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
             <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
@@ -54,7 +54,7 @@
             <button type="button" onclick="acknowledgeAlertsModal()" class="w-full sm:w-auto px-4 py-2 text-sm font-medium rounded-lg transition-colors" style="color: #1f1f1f; border: 1px solid #e6e6e6;" onmouseover="this.style.backgroundColor='#f6f5f4'" onmouseout="this.style.backgroundColor='transparent'">
                 Acknowledge
             </button>
-            <a href="{{ route('notifications.index') }}" class="w-full sm:w-auto px-4 py-2 text-sm font-medium rounded-lg text-center transition-colors" style="background-color: #0075de; color: #ffffff;" onmouseover="this.style.backgroundColor='#005bb5'" onmouseout="this.style.backgroundColor='#0075de'">
+            <a href="{{ route('notifications.index') }}" class="inline-flex items-center justify-center w-full sm:w-auto px-4 py-2 text-sm font-medium rounded-lg text-white bg-[#002D5E] hover:bg-[#001F42] transition-colors">
                 View all notifications
             </a>
         </div>

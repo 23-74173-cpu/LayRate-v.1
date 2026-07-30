@@ -15,15 +15,24 @@ class EnvironmentController extends Controller
     {
         $thresholds = Setting::thresholds();
         $envTab = $request->query('envTab', 'live');
+        $cages = \App\Models\Cage::orderBy('cage_code')->pluck('cage_code', 'id');
 
-        return view('environment', compact('thresholds', 'envTab'));
+        return view('environment', compact('thresholds', 'envTab', 'cages'));
     }
 
-    public function liveData()
+    public function liveData(Request $request)
     {
         $thresholds = Setting::thresholds();
-        $eggWeights = Setting::eggWeights();
         $cages = Cage::with(['latestEnvironmentLog'])->orderBy('cage_code')->get();
+
+        $range = $request->query('range', '24h');
+
+        $trendDateFormats = [
+            '24h' => ["%H:00", now()->subHours(24)],
+            'week' => ["%a %d", now()->subWeek()],
+            'month' => ["%b %d", now()->subMonth()],
+        ];
+        [$dateFormat, $since] = $trendDateFormats[$range] ?? $trendDateFormats['24h'];
 
         $latestPerCage = $cages->map(function ($cage) use ($thresholds) {
             $env = $cage->latestEnvironmentLog;
@@ -40,23 +49,23 @@ class EnvironmentController extends Controller
         })->filter();
 
         $trendData = EnvironmentalLog::select(
-                DB::raw("DATE_FORMAT(recorded_at, '%H:00') as hour"),
+                DB::raw("DATE_FORMAT(recorded_at, '{$dateFormat}') as period"),
                 'cage_id',
                 DB::raw('ROUND(AVG(temperature_c),1) as avg_temp'),
                 DB::raw('ROUND(AVG(humidity_pct),1) as avg_hum')
             )
-            ->where('recorded_at', '>=', now()->subHours(24))
-            ->groupBy('hour', 'cage_id')
-            ->orderBy('hour')
+            ->where('recorded_at', '>=', $since)
+            ->groupBy('period', 'cage_id')
+            ->orderBy('period')
             ->get()
             ->groupBy('cage_id');
 
         $summaryLogs = EnvironmentalLog::select(
-                DB::raw("DATE_FORMAT(recorded_at, '%H:00') as time_slot"),
+                DB::raw("DATE_FORMAT(recorded_at, '{$dateFormat}') as time_slot"),
                 DB::raw('ROUND(AVG(temperature_c),1) as avg_temp'),
                 DB::raw('ROUND(AVG(humidity_pct),1) as avg_hum')
             )
-            ->where('recorded_at', '>=', now()->subHours(24))
+            ->where('recorded_at', '>=', $since)
             ->groupBy('time_slot')
             ->orderByDesc('time_slot')
             ->limit(10)
@@ -67,26 +76,78 @@ class EnvironmentController extends Controller
 
         return view('environment._live-data', compact(
             'cages', 'latestPerCage', 'trendData', 'summaryLogs',
-            'avgTemp', 'avgHum', 'thresholds', 'eggWeights'
+            'avgTemp', 'avgHum', 'thresholds', 'range'
         ));
     }
 
-    public function logs()
+    public function logs(Request $request)
     {
         $thresholds = Setting::thresholds();
+        $cages = Cage::orderBy('cage_code')->pluck('cage_code', 'id');
 
-        $summaryLogs = EnvironmentalLog::selectRaw("
-                DATE_FORMAT(recorded_at, '%Y-%m-%d %H:00') as time_slot,
+        $query = EnvironmentalLog::selectRaw("
+                cage_id,
+                DATE(recorded_at) as log_date,
                 ROUND(AVG(temperature_c), 1) as avg_temp,
-                ROUND(AVG(humidity_pct), 0) as avg_hum
+                ROUND(AVG(humidity_pct), 0) as avg_hum,
+                ROUND(MIN(temperature_c), 1) as min_temp,
+                ROUND(MAX(temperature_c), 1) as max_temp,
+                ROUND(MIN(humidity_pct), 0) as min_hum,
+                ROUND(MAX(humidity_pct), 0) as max_hum,
+                COUNT(*) as reading_count
             ")
-            ->where('recorded_at', '>=', now()->subHours(24))
-            ->groupBy('time_slot')
-            ->orderByDesc('time_slot')
-            ->limit(10)
-            ->get();
+            ->groupBy('cage_id', 'log_date')
+            ->orderByDesc('log_date')
+            ->orderBy('cage_id');
 
-        return view('environment._logs', compact('summaryLogs', 'thresholds'));
+        if ($request->filled('date_from')) {
+            $query->where('recorded_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->where('recorded_at', '<=', $request->date_to . ' 23:59:59');
+        }
+
+        if ($request->filled('cage_id')) {
+            $query->where('cage_id', $request->cage_id);
+        }
+
+        $summaryLogs = $query->paginate(20);
+
+        return view('environment._logs', compact('summaryLogs', 'thresholds', 'cages'));
+    }
+
+    public function updateLog(Request $request, int $cageId, string $date)
+    {
+        $validated = $request->validate([
+            'temperature_c' => 'required|numeric|min:-10|max:60',
+            'humidity_pct' => 'required|numeric|min:0|max:100',
+        ]);
+
+        $dateStart = \Carbon\Carbon::parse($date)->startOfDay();
+        $dateEnd = \Carbon\Carbon::parse($date)->endOfDay();
+        $noon = $dateStart->copy()->setHour(12);
+
+        // Delete all raw readings for this cage/date so the override row
+        // is the only row — the on-the-fly AVG in logs() and the nightly
+        // aggregation will both produce the override value.
+        EnvironmentalLog::where('cage_id', $cageId)
+            ->whereBetween('recorded_at', [$dateStart, $dateEnd])
+            ->delete();
+
+        EnvironmentalLog::create([
+            'cage_id' => $cageId,
+            'recorded_at' => $noon,
+            'temperature_c' => $validated['temperature_c'],
+            'humidity_pct' => $validated['humidity_pct'],
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->route('environment', ['envTab' => 'logs'])
+            ->with('success', "Environment log for Cage #{$cageId} on {$date} overridden.");
     }
 
     public function saveThresholds(Request $request)
@@ -102,26 +163,12 @@ class EnvironmentController extends Controller
             Setting::set($key, $value);
         }
 
-        return redirect()->route('environment')
-            ->with('success', 'Thresholds saved.');
-    }
-
-    public function saveEggWeights(Request $request)
-    {
-        $data = $request->validate([
-            'egg_weight_small'    => 'required|numeric|min:1|max:500',
-            'egg_weight_medium'   => 'required|numeric|min:1|max:500',
-            'egg_weight_large'    => 'required|numeric|min:1|max:500',
-            'egg_weight_jumbo'    => 'required|numeric|min:1|max:500',
-            'egg_weight_fallback' => 'required|numeric|min:1|max:500',
-        ]);
-
-        foreach ($data as $key => $value) {
-            Setting::set($key, $value);
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true]);
         }
 
         return redirect()->route('environment')
-            ->with('success', 'Egg weights saved.');
+            ->with('success', 'Thresholds saved.');
     }
 }
 

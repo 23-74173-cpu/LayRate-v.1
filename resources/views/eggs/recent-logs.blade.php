@@ -1,20 +1,22 @@
 @extends('layouts.app')
-@section('title', 'Recent Logs')
+@section('title', 'Egg Management')
 
 @section('content')
 <div class="space-y-5">
 
-    <x-page-header title="Recent Logs" subtitle="Review and manage egg production records" />
+    <x-page-header title="Egg Management" subtitle="Review and manage egg production records" subtitle-id="egg-header-subtitle" actions-id="egg-header-actions" />
 
     @include('eggs._tabs', ['activeTab' => 'recent-logs'])
 
+    <turbo-frame id="egg-content">
+
     <x-card header="Production Logs">
-        <form method="GET" action="{{ route('eggs.recent-logs') }}" class="mb-4">
+        <form id="recentLogsForm" onsubmit="return false" class="mb-4">
             <div class="flex flex-wrap items-end gap-4">
                 {{-- Cage filter --}}
                 <div>
                     <label class="block text-xs mb-1" style="color: #615d59;">Cage</label>
-                    <select name="cage_id"
+                    <select name="cage_id" onchange="recentLogsFilter()"
                             class="border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">All Cages</option>
@@ -29,7 +31,7 @@
                 {{-- Slot filter --}}
                 <div>
                     <label class="block text-xs mb-1" style="color: #615d59;">Slot</label>
-                    <select name="cage_slot_id"
+                    <select name="cage_slot_id" onchange="recentLogsFilter()"
                             class="border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">All Slots</option>
@@ -44,7 +46,7 @@
                 {{-- Breed filter --}}
                 <div>
                     <label class="block text-xs mb-1" style="color: #615d59;">Breed</label>
-                    <select name="breed"
+                    <select name="breed" onchange="recentLogsFilter()"
                             class="border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">All Breeds</option>
@@ -62,7 +64,7 @@
                     <div class="flex items-center gap-3">
                         @foreach(['manual' => 'Manual', 'sensor' => 'Sensor', 'unknown' => 'Unknown'] as $value => $label)
                         <label class="inline-flex items-center gap-1.5 text-sm cursor-pointer" style="color: #31302e;">
-                            <input type="checkbox" name="logged_via[]" value="{{ $value }}"
+                            <input type="checkbox" name="logged_via[]" value="{{ $value }}" onchange="recentLogsFilter()"
                                    {{ in_array($value, (array) $filters['logged_via']) ? 'checked' : '' }}
                                    class="rounded border-gray-300 text-[#0075de] focus:ring-[#0075de]">
                             {{ $label }}
@@ -72,14 +74,8 @@
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <button type="submit"
-                            class="px-4 py-1.5 text-sm font-medium rounded-lg text-white transition-opacity"
-                            style="background-color: #0075de;">
-                        Filter
-                    </button>
                     <a href="{{ route('eggs.recent-logs') }}"
-                       class="px-4 py-1.5 text-sm font-medium rounded-lg transition-colors"
-                       style="color: #1f1f1f; border: 1px solid #e6e6e6;">
+                       class="px-3 py-1.5 text-xs font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">
                         Reset
                     </a>
                 </div>
@@ -93,16 +89,20 @@
 
     @include('egg-logging._edit-modal')
 
-</div>
-@endsection
-
-@push('scripts')
 <script>
+function recentLogsFilter() {
+    var form = document.getElementById('recentLogsForm');
+    if (!form) return;
+    var params = new URLSearchParams(new FormData(form));
+    var frame = document.querySelector('turbo-frame#egg-logs-list');
+    if (frame) frame.setAttribute('src', '/eggs/logging/logs?' + params.toString());
+}
+
 function openEditLog(id, date, eggCount, henCount, notes, cageSlotId, sizeSmall, sizeMedium, sizeLarge, sizeJumbo) {
     document.getElementById('editLogForm').action = '/eggs/logging/' + id;
     document.getElementById('editLogDate').value = date;
     document.getElementById('editEggCount').value = eggCount;
-    document.getElementById('editHenCount').value = henCount;
+    document.getElementById('editHenCountDisplay').value = henCount;
     document.getElementById('editNotes').value = notes || '';
     document.getElementById('editSizeSmall').value = sizeSmall ?? 0;
     document.getElementById('editSizeMedium').value = sizeMedium ?? 0;
@@ -120,13 +120,36 @@ function closeEditLogModal() {
 
 function editComputeHdep() {
     const eggs = parseInt(document.getElementById('editEggCount').value) || 0;
-    const hens = parseInt(document.getElementById('editHenCount').value) || 1;
+    const hens = parseInt(document.getElementById('editHenCountDisplay').value) || 1;
     const hdep = ((eggs / hens) * 100).toFixed(1);
     const el = document.getElementById('editHdepDisplay');
     el.textContent = 'HDEP:  ' + hdep + '%';
     el.style.backgroundColor = eggs > hens ? '#fbe4e6' : '#f6f5f4';
     el.style.borderColor = eggs > hens ? '#f3cdd0' : '#e6e6e6';
     el.style.color = eggs > hens ? '#9b1c24' : '#1f1f1f';
+}
+
+// ── Close SSE before frame content is replaced (tab switch) ──
+if (!window.__recentLogsSseGuard) {
+    window.__recentLogsSseGuard = true;
+    document.addEventListener('turbo:before-frame-render', function(e) {
+        if (!e.target || e.target.id !== 'egg-content') return;
+        if (window.__logsSource) {
+            window.__logsSource.close();
+            window.__logsSource = null;
+        }
+    });
+}
+
+// ── Close SSE before full page navigation (sidebar, etc.) ──
+if (!window.__recentLogsNavGuard) {
+    window.__recentLogsNavGuard = true;
+    document.addEventListener('turbo:before-render', function() {
+        if (window.__logsSource) {
+            window.__logsSource.close();
+            window.__logsSource = null;
+        }
+    });
 }
 
 (function() {
@@ -138,6 +161,55 @@ function editComputeHdep() {
             if (modal && !modal.classList.contains('hidden')) closeEditLogModal();
         }
     });
+
+    window.__logsSource = null;
+    var lastKnownId = 0;
+
+    function connectLogsSSE() {
+        if (!document.querySelector('turbo-frame#egg-logs-list')) return;
+
+        if (window.__logsSource) window.__logsSource.close();
+        window.__logsSource = new EventSource('/eggs/logging/live-logs?since=' + lastKnownId);
+
+        window.__logsSource.addEventListener('log_update', function(e) {
+            try {
+                var data = JSON.parse(e.data);
+                if (data.latest_id > lastKnownId) {
+                    lastKnownId = data.latest_id;
+                    var frame = document.querySelector('turbo-frame#egg-logs-list');
+                    if (frame) {
+                        var src = frame.getAttribute('src');
+                        var url = new URL(src, window.location.origin);
+                        url.searchParams.set('_', Date.now());
+                        frame.setAttribute('src', url.toString());
+                    }
+                }
+            } catch(err) {}
+        });
+
+        window.__logsSource.onerror = function() {
+            if (window.__logsSource && window.__logsSource.readyState === EventSource.CLOSED) {
+                setTimeout(function() {
+                    if (document.querySelector('turbo-frame#egg-logs-list')) {
+                        connectLogsSSE();
+                    }
+                }, 3000);
+            }
+        };
+    }
+
+    document.addEventListener('turbo:load', function() {
+        if (window.__logsSource) window.__logsSource.close();
+        setTimeout(connectLogsSSE, 500);
+    });
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', connectLogsSSE);
+    } else {
+        connectLogsSSE();
+    }
 })();
 </script>
-@endpush
+</turbo-frame>
+</div>
+@endsection

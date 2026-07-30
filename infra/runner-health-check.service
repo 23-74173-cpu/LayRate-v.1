@@ -1,0 +1,9 @@
+[Unit]
+Description=Daily health check for GitHub Actions runner
+
+[Service]
+Type=oneshot
+User=layratepi
+Group=www-data
+WorkingDirectory=/var/www/layrate
+ExecStart=/usr/bin/php artisan runner:health-check

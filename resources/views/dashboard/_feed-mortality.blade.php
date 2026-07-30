@@ -6,14 +6,15 @@
              style="background-color: #ffffff; border-color: #e6e6e6;"
              role="link" tabindex="0" aria-label="Go to Feeds"
              data-nav="{{ route('feed') }}">
-            <h3 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px] mb-4" style="color: #1f1f1f;">Feed Today</h3>
-            <div class="max-h-60 overflow-y-auto pr-1 scrollbar-thin">
+            <h3 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.5px] mb-4" style="color: #1f1f1f;">Feed Today</h3>
+            @php $feedCount = $feedToday->count(); @endphp
+            <div class="max-h-[340px] overflow-y-auto pr-1 scrollbar-thin">
                 @forelse($feedToday as $cageCode => $feed)
                 @php
                     $fColor = $feed->cage?->color ?? '#6B7280';
-                    $total = 48;
+                    $total = $feed->feed_target_kg;
                     $consumed = $feed->feed_consumed_kg;
-                    $pct = min(100, round(($consumed/$total)*100));
+                    $pct = min(100, round(($total > 0 ? $consumed/$total : 0) * 100));
                 @endphp
                 <div class="mb-4 rounded-lg -mx-1 px-1 hover:bg-black/[0.03] transition-colors"
                      data-row-nav="{{ route('feed') }}?cage_id={{ $feed->cage?->id }}">
@@ -30,7 +31,10 @@
                 <p class="text-sm" style="color: #a39e98;">No feed data for today.</p>
                 @endforelse
             </div>
-            <div class="pt-3 border-t flex justify-between text-xs mt-3" style="border-color: #e6e6e6;">
+            @if($feedCount > 5)
+            <div class="text-xs text-center pt-1.5" style="color: #a39e98;">+{{ $feedCount - 5 }} more cage{{ $feedCount - 5 !== 1 ? 's' : '' }}</div>
+            @endif
+            <div class="pt-3 border-t flex justify-between text-xs mt-2" style="border-color: #e6e6e6;">
                 <span style="color: #615d59;">Total consumed</span>
                 <span class="font-semibold" style="color: #1f1f1f;">{{ number_format($feedToday->sum('feed_consumed_kg'), 0) }} kg</span>
             </div>
@@ -40,19 +44,20 @@
         <div class="kpi-card rounded-xl border p-6 cursor-pointer transition-shadow hover:shadow-md"
              style="background-color: #ffffff; border-color: #e6e6e6;"
              role="link" tabindex="0" aria-label="Go to Mortality"
-             data-nav="{{ route('mortality.index') }}">
+             data-nav="{{ route('chickens.index', ['tab' => 'mortality']) }}">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Mortality Today</h3>
+                <h3 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.5px]" style="color: #1f1f1f;">Mortality Today</h3>
                 <x-status-badge :status="$mortalityTodayTotal > 0 ? 'Alert' : 'Normal'" type="general" />
             </div>
-            <div class="max-h-60 overflow-y-auto pr-1 scrollbar-thin">
+            @php $mortalityCount = $cages->count(); @endphp
+            <div class="max-h-[185px] overflow-y-auto pr-1 scrollbar-thin">
                 @foreach($cages as $cage)
                 @php
                     $fColor = $cage->color;
                     $mCount = $mortalityToday[$cage->cage_code] ?? 0;
                 @endphp
                 <div class="flex items-center justify-between py-2 border-b rounded-lg -mx-1 px-1 hover:bg-black/[0.03] transition-colors" style="border-color: #e6e6e6;"
-                     data-row-nav="{{ route('mortality.index') }}?cage_id={{ $cage->id }}">
+                     data-row-nav="{{ route('chickens.index', ['tab' => 'mortality', 'cage_id' => $cage->id]) }}">
                     <div class="flex items-center gap-2">
                         <div class="w-2 h-2 rounded-full" style="background-color: {{ $fColor }};"></div>
                         <span class="text-sm" style="color: #31302e;">{{ $cage->cage_code }}</span>
@@ -65,8 +70,11 @@
                 </div>
                 @endforeach
             </div>
-            <div class="pt-3 mt-3">
-                <a href="{{ route('mortality.index') }}" data-turbo-frame="_top" class="text-sm font-medium hover:underline" style="color: #0075de;" onclick="event.stopPropagation()">View full mortality log →</a>
+            @if($mortalityCount > 5)
+            <div class="text-xs text-center pt-1.5" style="color: #a39e98;">+{{ $mortalityCount - 5 }} more cage{{ $mortalityCount - 5 !== 1 ? 's' : '' }}</div>
+            @endif
+            <div class="pt-3 mt-2">
+                <a href="{{ route('chickens.index', ['tab' => 'mortality']) }}" data-turbo-frame="_top" class="text-sm font-medium hover:underline" style="color: #0075de;" onclick="event.stopPropagation()">View full mortality log →</a>
             </div>
         </div>
     </div>

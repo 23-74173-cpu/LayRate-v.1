@@ -3,7 +3,7 @@
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeRemoveModal()"></div>
 
     {{-- Card --}}
-    <div class="relative w-full max-w-md rounded-2xl p-6 overflow-hidden" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+    <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <form id="removeForm" method="POST" action="{{ route('chickens.remove') }}">
             @csrf
 
@@ -45,18 +45,19 @@
                 <div id="mortalityFields" class="space-y-3">
                     <div>
                         <label class="block text-xs font-medium text-[#6B7280] mb-1">Reason</label>
-                        <select name="reason" id="removeReason"
-                                class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
-                            <option value="">Select reason...</option>
-                            @foreach(['Disease', 'Heat Stress', 'Injury', 'Predator', 'Unknown', 'Other'] as $reason)
-                            <option value="{{ $reason }}">{{ $reason }}</option>
-                            @endforeach
-                        </select>
+                    <select name="reason" id="removeReason"
+                            class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
+                        <option value="">Select reason...</option>
+                        @foreach(['Disease', 'Heat Stress', 'Injury', 'Predator', 'Unknown', 'Other'] as $reason)
+                        <option value="{{ $reason }}" {{ old('reason') === $reason ? 'selected' : '' }}>{{ $reason }}</option>
+                        @endforeach
+                    </select>
+                    <x-input-error name="reason" />
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-[#6B7280] mb-1">Notes (optional)</label>
                         <textarea name="notes" id="removeNotes" rows="2" placeholder="Additional details..."
-                                  class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E] resize-none"></textarea>
+                                  class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E] resize-none">{{ old('notes') }}</textarea>
                     </div>
                 </div>
 
@@ -66,17 +67,11 @@
             {{-- Footer --}}
             <div class="flex gap-3 mt-5">
                 <button type="button" onclick="closeRemoveModal()"
-                        class="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors"
-                        style="color: #1f1f1f; border: 1px solid #e6e6e6;"
-                        onmouseover="this.style.backgroundColor='#f6f5f4'"
-                        onmouseout="this.style.backgroundColor='transparent'">
+                        class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">
                     Cancel
                 </button>
-                <button type="submit" id="removeSubmitBtn"
-                        class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity"
-                        style="background-color: #9b1c24;"
-                        onmouseover="this.style.backgroundColor='#7a161d'"
-                        onmouseout="this.style.backgroundColor='#9b1c24'">
+                <button type="button" onclick="submitRemove(this.form)" id="removeSubmitBtn"
+                        class="flex-1 py-2.5 text-sm font-medium rounded-full text-white bg-[#9b1c24] hover:bg-[#7a161d] transition-colors">
                     Remove Chickens
                 </button>
             </div>
@@ -115,7 +110,6 @@ function closeRemoveModal() {
 window.openRemoveModal = openRemoveModal;
 window.closeRemoveModal = closeRemoveModal;
 
-// Escape key closes modal
 (function() {
     if (window.__removeModalEscapeBound) return;
     window.__removeModalEscapeBound = true;
@@ -123,5 +117,87 @@ window.closeRemoveModal = closeRemoveModal;
         if (e.key === 'Escape') closeRemoveModal();
     });
 })();
+
+function submitRemove(form) {
+    var henInput = form.querySelector('input[name="hen_ids"]');
+    var henCount = henInput && henInput.value ? henInput.value.split(',').length : 1;
+    var isMortality = document.getElementById('recordMortality')?.checked;
+    var msg = 'Remove ' + henCount + ' hen(s) from the system? ';
+    if (isMortality) {
+        msg += 'Mortality records will be created and hens permanently deactivated.';
+    } else {
+        msg += 'Hens will be permanently deactivated.';
+    }
+    confirmModal(
+        msg,
+        { submit: function() { ajaxRemove(form); } },
+        'Remove', 'destructive'
+    );
+}
+
+function ajaxRemove(form) {
+    form.querySelectorAll('.bulk-remove-error').forEach(function(el) { el.remove(); });
+    form.querySelectorAll('.has-bulk-remove-error').forEach(function(el) {
+        el.classList.remove('has-bulk-remove-error');
+    });
+
+    var formData = new FormData(form);
+    var data = {};
+    formData.forEach(function(v, k) { data[k] = v; });
+    data.record_mortality = document.getElementById('recordMortality')?.checked ? '1' : '0';
+
+    fetch(form.action, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify(data)
+    }).then(function(r) {
+        return r.json().then(function(j) { return { ok: r.ok, json: j }; });
+    }).then(function(result) {
+        if (result.ok) {
+            closeRemoveModal();
+            if (typeof showNotification === 'function') {
+                showNotification(result.json.message, 'success');
+            }
+            var frame = document.getElementById('chickens-inventory-list');
+            if (frame) {
+                var src = frame.src;
+                frame.src = '';
+                frame.src = src;
+            }
+        } else {
+            var errors = result.json.errors || {};
+            Object.keys(errors).forEach(function(field) {
+                var input = form.querySelector('[name="' + field + '"]');
+                if (!input) {
+                    var errorEl = document.getElementById('removeError');
+                    if (errorEl && errors[field] && errors[field][0]) {
+                        errorEl.textContent = errors[field][0];
+                        errorEl.classList.remove('hidden');
+                    }
+                    return;
+                }
+                var wrapper = input.closest('div');
+                if (!wrapper) return;
+                wrapper.classList.add('has-bulk-remove-error');
+                input.style.borderColor = '#9b1c24';
+                input.classList.add('ring-1');
+                input.style.setProperty('--tw-ring-color', '#f3cdd0');
+                var msg = errors[field][0];
+                var errorEl = document.createElement('p');
+                errorEl.className = 'bulk-remove-error flex items-center gap-1.5 text-sm mt-1';
+                errorEl.style.color = '#9b1c24';
+                errorEl.innerHTML = '<i data-lucide="alert-circle" class="w-4 h-4" style="color: #9b1c24; min-width: 16px;"></i> ' + msg;
+                wrapper.appendChild(errorEl);
+            });
+            if (window.lucide) lucide.createIcons();
+        }
+    }).catch(function() {
+        form.submit();
+    });
+}
 </script>
 @endpush

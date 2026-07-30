@@ -11,7 +11,7 @@
     $endOffset = (7 - ($totalCells % 7)) % 7;
     $weeksInMonth = ($totalCells + $endOffset) / 7;
 
-    $forecastMap = collect($forecasts ?? [])->keyBy(fn($f) => $f->target_date->format('Y-m-d'));
+    $forecastMap = collect($forecasts ?? [])->keyBy(fn($f) => is_object($f->target_date) ? $f->target_date->format('Y-m-d') : $f->target_date);
     $weekdays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
     $months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
@@ -21,22 +21,21 @@
     $nextUrl = request()->fullUrlWithQuery(['month' => $nextMonthDate->month, 'year' => $nextMonthDate->year]);
     $todayUrl = request()->fullUrlWithQuery(['month' => now()->month, 'year' => now()->year]);
 
-    $maxSelectableDate = now()->addDays(30)->format('Y-m-d');
-    $tomorrowDate = now()->addDay()->format('Y-m-d');
+    $maxSelectableDate = \App\Forecast\ForecastRules::maxStartDate()->format('Y-m-d');
+    $tomorrowDate = \App\Forecast\ForecastRules::minStartDate()->format('Y-m-d');
 @endphp
 
 <turbo-frame id="production-calendar">
-<div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+<div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
     {{-- Month / Year header with navigation --}}
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-        <div>
-            <div class="text-xs tracking-wider text-[#6B7280]">PRODUCTION CALENDAR</div>
-            <div class="text-xl font-semibold text-[#333333]">{{ $calendarMonth->format('F Y') }}</div>
-        </div>
+    <div class="mb-5">
+        <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Production Calendar</div>
 
-        <div class="flex items-center gap-2">
-            {{-- Month selector --}}
-            <form method="GET" action="{{ route('forecast') }}" class="flex items-center gap-2" data-turbo-frame="production-calendar" data-turbo-action="advance">
+        {{-- Row 1: month/year (the select IS the display — tapping it opens the
+             picker directly, no separate static label duplicating the same text)
+             + Prev/Next, right-aligned, same row. --}}
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <form method="GET" action="{{ route('forecast') }}" class="flex items-center gap-1" data-turbo-frame="production-calendar" data-turbo-action="advance">
                 @foreach(request()->except(['month','year']) as $key => $value)
                     @if(is_array($value))
                         @foreach($value as $v)
@@ -46,44 +45,51 @@
                     <input type="hidden" name="{{ $key }}" value="{{ $value }}">
                     @endif
                 @endforeach
-                <select name="month" onchange="this.form.submit()"
-                        class="border border-[#D9D9D9] rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
+                <select name="month" onchange="this.form.submit()" aria-label="Select month"
+                        class="appearance-none bg-transparent border-none cursor-pointer text-xl font-semibold text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 rounded px-1 -ml-1">
                     @foreach($months as $index => $monthName)
                     <option value="{{ $index + 1 }}" {{ $calendarMonth->month == $index + 1 ? 'selected' : '' }}>{{ $monthName }}</option>
                     @endforeach
                 </select>
-                <select name="year" onchange="this.form.submit()"
-                        class="border border-[#D9D9D9] rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
+                <select name="year" onchange="this.form.submit()" aria-label="Select year"
+                        class="appearance-none bg-transparent border-none cursor-pointer text-xl font-semibold text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 rounded px-1">
                     @for($y = now()->year - 5; $y <= now()->year + 5; $y++)
                     <option value="{{ $y }}" {{ $calendarMonth->year == $y ? 'selected' : '' }}>{{ $y }}</option>
                     @endfor
                 </select>
             </form>
 
-            {{-- Prev / Next arrows --}}
+            <div class="flex items-center gap-2">
                 <a href="{{ $prevUrl }}" data-turbo-frame="production-calendar" data-turbo-action="advance" class="w-8 h-8 flex items-center justify-center rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
                     <i data-lucide="chevron-left" class="w-4 h-4"></i>
                 </a>
                 <a href="{{ $nextUrl }}" data-turbo-frame="production-calendar" data-turbo-action="advance" class="w-8 h-8 flex items-center justify-center rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
                     <i data-lucide="chevron-right" class="w-4 h-4"></i>
                 </a>
-                <a href="{{ $todayUrl }}" data-turbo-frame="production-calendar" data-turbo-action="advance" class="text-xs px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
-                    Today
-                </a>
+            </div>
+        </div>
 
-                <form method="POST" action="{{ route('forecast.clear') }}" class="inline" data-turbo-stream onsubmit="return confirm('Clear all forecast badges from the calendar for the current selection?');">
-                    @csrf
-                    <input type="hidden" name="scope" value="{{ $scope }}">
-                    @if($scope === 'cage')
-                    <input type="hidden" name="cage" value="{{ $cageCode }}">
-                    @elseif($scope === 'breed')
-                    <input type="hidden" name="breed" value="{{ $breed }}">
-                    @endif
-                    <button type="submit" class="text-xs px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors flex items-center gap-1.5">
-                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                        Clear
-                    </button>
-                </form>
+        {{-- Row 2: Today + Clear Forecast, directly beneath the month/year/prev/next row. --}}
+        <div class="flex items-center gap-2 mt-3">
+            <a href="{{ $todayUrl }}" data-turbo-frame="production-calendar" data-turbo-action="advance" class="text-xs px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
+                Today
+            </a>
+
+            @can('admin')
+            <form method="POST" action="{{ route('forecast.clear') }}" class="inline" data-confirm="Clear all forecast badges from the calendar for the current selection?" data-confirm-action="Clear" data-confirm-severity="neutral">
+                @csrf
+                <input type="hidden" name="scope" value="{{ $scope }}">
+                @if($scope === 'cage')
+                <input type="hidden" name="cage" value="{{ $cageCode }}">
+                @elseif($scope === 'breed')
+                <input type="hidden" name="breed" value="{{ $breed }}">
+                @endif
+                <button type="submit" class="text-xs px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors flex items-center gap-1.5">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    Clear Forecast
+                </button>
+            </form>
+            @endcan
         </div>
     </div>
 
@@ -107,7 +113,7 @@
             <thead>
                 <tr>
                     @foreach($weekdays as $dayLabel)
-                    <th class="text-center text-[10px] sm:text-xs font-semibold text-[#6B7280] uppercase tracking-wider py-2 px-1 bg-[#F9F9F7] rounded">
+                    <th class="text-center text-xs sm:text-xs font-semibold text-[#6B7280] uppercase tracking-wider py-2 px-1 bg-[#F9F9F7] rounded">
                         <span class="hidden sm:inline">{{ $dayLabel }}</span>
                         <span class="sm:hidden">{{ substr($dayLabel, 0, 1) }}</span>
                     </th>
@@ -192,11 +198,11 @@
                              data-date="{{ $cell['dateString'] }}"
                              data-selectable="{{ $isSelectable ? 'true' : 'false' }}"
                              onclick="window.handleForecastDayClick('{{ $cell['dateString'] }}', {{ $isSelectable ? 'true' : 'false' }})">
+                            {{-- No separate "Today" badge here — the cell's own border,
+                                 background tint, and bold day-number already mark today
+                                 unambiguously; a fourth label repeated the same signal. --}}
                             <div class="flex items-center gap-1">
                                 <span class="{{ $dayNumberClasses }}">{{ $cell['day'] }}</span>
-                                @if($cell['isToday'])
-                                <span class="text-[9px] font-bold text-[#002D5E] bg-[#002D5E]/10 px-1 py-0.5 rounded">Today</span>
-                                @endif
                             </div>
                             @if($cell['forecast'])
                             <i data-lucide="egg" class="absolute top-1 right-1 w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#2D7D46]" title="Forecast: {{ number_format($cell['forecast']->predicted_egg_count, 0) }} eggs"></i>
@@ -213,29 +219,10 @@
         </table>
     </div>
 
-    {{-- Week summary footer --}}
-    <div class="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
-        <div class="bg-[#F9F9F7] rounded-lg p-3 text-center">
-            <div class="text-xs text-[#6B7280]">Weeks in month</div>
-            <div class="text-lg font-semibold text-[#333333]">{{ $weeksInMonth }}</div>
-        </div>
-        <div class="bg-[#F9F9F7] rounded-lg p-3 text-center">
-            <div class="text-xs text-[#6B7280]">Days in month</div>
-            <div class="text-lg font-semibold text-[#333333]">{{ $daysInMonth }}</div>
-        </div>
-        <div class="bg-[#F9F9F7] rounded-lg p-3 text-center">
-            <div class="text-xs text-[#6B7280]">Forecast days</div>
-            <div class="text-lg font-semibold text-[#333333]">{{ count($forecastMap) }}</div>
-        </div>
-        <div class="bg-[#F9F9F7] rounded-lg p-3 text-center">
-            <div class="text-xs text-[#6B7280]">Current week</div>
-            <div class="text-lg font-semibold text-[#333333]">{{ $calendarToday->weekOfMonth }}</div>
-        </div>
-    </div>
 </div>
 
 {{-- Single-day forecast modal --}}
-<div id="forecastDayModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+<div id="forecastDayModal" class="fixed inset-0 min-h-screen min-h-[100dvh] bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
     <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-auto overflow-hidden">
         <div class="flex items-center justify-between px-5 py-4 border-b border-[#F0F0F0]">
             <div class="flex items-center gap-2">
@@ -255,7 +242,8 @@
                 This will forecast egg count for the selected date only, using the current scope
                 (<span class="font-medium text-[#333333]">{{ $scope === 'farm' ? 'Whole Farm' : ($scope === 'breed' ? $breed : $cageCode) }}</span>).
             </p>
-            <form method="POST" action="{{ route('forecast.generate') }}" id="forecastDayForm" data-turbo-stream>
+            @can('admin')
+            <form method="POST" action="{{ route('forecast.generate') }}" id="forecastDayForm" data-turbo="false">
                 @csrf
                 <input type="hidden" name="scope" value="{{ $scope }}">
                 <input type="hidden" name="horizon" value="1">
@@ -272,6 +260,7 @@
                     <span>Generate Forecast</span>
                 </button>
             </form>
+            @endcan
             <button type="button" id="cancelForecastDayModal" class="w-full mt-3 border border-[#D9D9D9] text-[#6B7280] py-2.5 rounded-lg text-sm font-medium hover:bg-[#F5F6F8] transition-colors">
                 Cancel
             </button>
@@ -283,70 +272,89 @@
 <script>
     if (window.lucide) lucide.createIcons();
 
-    (function() {
+    function parseLocalDate(dateString) {
+        const [y, m, d] = dateString.split('-').map(Number);
+        return new Date(y, m - 1, d);
+    }
+
+    function formatAlertDate(dateString) {
+        const date = parseLocalDate(dateString);
+        return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    }
+
+    function closeForecastModal() {
+        const modal = document.getElementById('forecastDayModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    window.openForecastDayModal = function(dateString) {
         const modal = document.getElementById('forecastDayModal');
         const dateDisplay = document.getElementById('forecastDayModalDate');
         const startInput = document.getElementById('forecastDayModalStartDate');
-        const closeBtn = document.getElementById('closeForecastDayModal');
-        const cancelBtn = document.getElementById('cancelForecastDayModal');
+        if (!modal || !dateDisplay || !startInput) return;
+        startInput.value = dateString;
+        dateDisplay.textContent = formatAlertDate(dateString);
+        modal.style.display = 'flex';
+        if (window.lucide) lucide.createIcons();
+    };
 
-        function closeModal() {
-            if (modal) modal.classList.add('hidden');
+    window.handleForecastDayClick = function(dateString, isSelectable) {
+        if (isSelectable) {
+            window.openForecastDayModal(dateString);
+            return;
         }
 
-        function parseLocalDate(dateString) {
-            const [y, m, d] = dateString.split('-').map(Number);
-            return new Date(y, m - 1, d);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const maxDate = new Date(today);
+        maxDate.setDate(today.getDate() + 30);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+
+        const clicked = parseLocalDate(dateString);
+        let message = '';
+
+        if (clicked < tomorrow) {
+            message = 'Forecasting is only available for future dates. Please select a date starting from tomorrow.';
+        } else if (clicked > maxDate) {
+            message = 'Custom forecasts can only be generated up to 30 days from today (' +
+                      maxDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) +
+                      '). Please select a date within this range.';
+        } else {
+            message = 'This date cannot be forecast. Please select a date between tomorrow and 30 days from today.';
         }
 
-        function formatAlertDate(dateString) {
-            const date = parseLocalDate(dateString);
-            return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+        showNotification(message, 'warning');
+    };
+
+    // Close modal on backdrop click — use document delegation so it works
+    // even after the frame content is replaced (scripts don't re-execute).
+    document.addEventListener('click', function(e) {
+        const modal = document.getElementById('forecastDayModal');
+        if (!modal) return;
+        if (e.target.closest('#closeForecastDayModal, #cancelForecastDayModal')) {
+            modal.style.display = 'none';
+            return;
         }
-
-        window.openForecastDayModal = function(dateString) {
-            if (!modal || !dateDisplay || !startInput) return;
-            startInput.value = dateString;
-            dateDisplay.textContent = formatAlertDate(dateString);
-            modal.classList.remove('hidden');
-            if (window.lucide) lucide.createIcons();
-        };
-
-        window.handleForecastDayClick = function(dateString, isSelectable) {
-            if (isSelectable) {
-                window.openForecastDayModal(dateString);
-                return;
-            }
-
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const maxDate = new Date(today);
-            maxDate.setDate(today.getDate() + 30);
-            const tomorrow = new Date(today);
-            tomorrow.setDate(today.getDate() + 1);
-
-            const clicked = parseLocalDate(dateString);
-            let message = '';
-
-            if (clicked < tomorrow) {
-                message = 'Forecasting is only available for future dates. Please select a date starting from tomorrow.';
-            } else if (clicked > maxDate) {
-                message = 'Custom forecasts can only be generated up to 30 days from today (' +
-                          maxDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) +
-                          '). Please select a date within this range.';
-            } else {
-                message = 'This date cannot be forecast. Please select a date between tomorrow and 30 days from today.';
-            }
-
-            alert(message);
-        };
-
-        if (closeBtn) closeBtn.addEventListener('click', closeModal);
-        if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
-        if (modal) {
-            modal.addEventListener('click', function(e) {
-                if (e.target === modal) closeModal();
-            });
+        if (e.target === modal) {
+            modal.style.display = 'none';
         }
-    })();
+    });
+
+    // Wire loading overlay for specific-date forecast form.  Must prevent the
+    // default so Turbo Frame (which wraps this form) doesn't also submit via
+    // fetch alongside our native form.submit() — the double-submission was
+    // causing the page to double-refresh.  The overlay shows a spinner already
+    // (embedded in the overlay HTML); skip the progress-bar animation since a
+    // single-day forecast completes too fast for it to matter.
+    document.addEventListener('submit', function(e) {
+        if (e.target.id !== 'forecastDayForm') return;
+        e.preventDefault();
+        const overlay = document.getElementById('forecastLoadingOverlay');
+        if (!overlay) return;
+        overlay.style.display = 'flex';
+        const statusText = document.getElementById('forecastStatusText');
+        if (statusText) statusText.textContent = 'Generating single-day forecast...';
+        setTimeout(function() { e.target.submit(); }, 80);
+    });
 </script>

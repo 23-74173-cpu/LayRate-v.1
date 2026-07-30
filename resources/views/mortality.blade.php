@@ -11,7 +11,7 @@
         </span>
     </div>
 
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
 
         {{-- ── Record Form ── --}}
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
@@ -20,17 +20,19 @@
                 Record Mortality
             </h2>
 
-            <form action="{{ route('mortality.store') }}" method="POST" class="space-y-4">
+            <form action="{{ route('mortality.store') }}" method="POST" class="space-y-4"
+                  data-confirm="Record this mortality? The affected hen(s) will be deactivated and slot occupancy updated."
+                  data-confirm-action="Record" data-confirm-severity="destructive">
                 @csrf
 
                 {{-- Cage --}}
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CAGE</label>
-                    <select name="cage_id" required
+                    <select name="cage_id" id="mortalityCageSelect" required
                             class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                         <option value="">Select cage…</option>
                         @foreach($cages as $cage)
-                        <option value="{{ $cage->id }}" {{ (old('cage_id') ?: ($preselectedCageId ?? 0)) == $cage->id ? 'selected' : '' }}>
+                        <option value="{{ $cage->id }}" data-active-hens="{{ $cage->active_hens_count }}" {{ (old('cage_id') ?: ($preselectedCageId ?? 0)) == $cage->id ? 'selected' : '' }}>
                             {{ $cage->cage_code }} — {{ $cage->formatted_location }}
                         </option>
                         @endforeach
@@ -50,9 +52,10 @@
                 {{-- Count --}}
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">NUMBER OF DEATHS</label>
-                    <input type="number" name="count" min="1" required
+                    <input type="number" name="count" id="mortalityCountInput" min="1" required
                            value="{{ old('count', 1) }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                    <p id="mortalityExceedsWarning" class="hidden text-xs text-red-500 mt-1"></p>
                     @error('count')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
                 </div>
 
@@ -80,10 +83,9 @@
                     @error('notes')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
                 </div>
 
-                <button type="submit"
-                        class="w-full bg-[#102A4C] text-white py-2.5 rounded-lg text-sm font-medium hover:bg-[#1D4E8F] transition-colors">
+                <x-button type="submit" id="mortalitySubmitBtn" class="w-full py-2.5">
                     Save Record
-                </button>
+                </x-button>
             </form>
         </div>
 
@@ -101,9 +103,9 @@
                         $bg    = $count > 0 ? '#F8D7DA' : '#F5F6F8';
                         $txt   = $count > 0 ? '#721C24' : '#6B7280';
                     @endphp
-                    <div class="rounded-lg border p-3" style="border-color:{{ $count > 0 ? '#F5C6CB' : '#D9D9D9' }};background:{{ $bg }}">
-                        <div class="text-xs tracking-wider mb-1" style="color:{{ $color }}">{{ $cage->cage_code }}</div>
-                        <div class="text-2xl font-semibold" style="color:{{ $txt }}">{{ $count }}</div>
+                    <div class="rounded-lg border p-4" style="border-color:{{ $count > 0 ? '#F5C6CB' : '#D9D9D9' }};background:{{ $bg }}">
+                        <div class="text-xs font-semibold tracking-[0.125px] uppercase mb-1" style="color:{{ $color }}">{{ $cage->cage_code }}</div>
+                        <div class="text-2xl font-bold leading-none tracking-[-0.5px]" style="color:{{ $txt }}">{{ $count }}</div>
                         <div class="text-xs mt-1" style="color:{{ $txt }}">{{ $count === 1 ? 'hen' : 'hens' }}</div>
                     </div>
                     @endforeach
@@ -123,11 +125,11 @@
 </div>
 
 {{-- ── Edit Mortality Modal ── --}}
-<div id="editMortalityModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+<div id="editMortalityModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" style="display: none;">
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEditMortalityModal()"></div>
-    <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
-        <div class="flex items-center justify-between mb-5">
-            <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Edit Mortality Record</h2>
+    <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+            <div class="flex items-center justify-between mb-5">
+                <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Edit Mortality Record</h2>
             <button onclick="closeEditMortalityModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
@@ -141,12 +143,14 @@
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">DATE</label>
                     <input type="date" name="log_date" id="editMortDate" required
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                    <x-input-error name="log_date" />
                 </div>
 
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">NUMBER OF DEATHS</label>
                     <input type="number" name="count" id="editMortCount" min="1" required
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                    <x-input-error name="count" />
                 </div>
 
                 <div>
@@ -158,12 +162,13 @@
                         <option value="{{ $reason }}">{{ $reason }}</option>
                         @endforeach
                     </select>
+                    <x-input-error name="reason" />
                 </div>
 
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">ADDITIONAL NOTES</label>
                     <textarea name="notes" id="editMortNotes" rows="3"
-                              class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] resize-none focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]"></textarea>
+                              class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] resize-none focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">{{ old('notes') }}</textarea>
                 </div>
             </div>
 
@@ -186,6 +191,22 @@
         </form>
     </div>
 </div>
+
+@if(session('reopen_edit_mortality'))
+@php $editMortality = \App\Models\MortalityLog::find(session('reopen_edit_mortality')); @endphp
+@if($editMortality)
+<x-modal-reopen modal-id="editMortalityModal" session-key="reopen_edit_mortality" guard="editMortality">
+    openEditMortality(
+        {{ $editMortality->id }},
+        '{{ $editMortality->log_date->format('Y-m-d') }}',
+        {{ $editMortality->count }},
+        '{{ $editMortality->reason }}',
+        '{{ addslashes($editMortality->notes ?? '') }}'
+    );
+</x-modal-reopen>
+@endif
+@endif
+
 @push('scripts')
 <script>
 function openEditMortality(id, date, count, reason, notes) {
@@ -194,14 +215,12 @@ function openEditMortality(id, date, count, reason, notes) {
     document.getElementById('editMortCount').value = count;
     document.getElementById('editMortReason').value = reason;
     document.getElementById('editMortNotes').value = notes || '';
-    document.getElementById('editMortalityModal').classList.remove('hidden');
-    document.getElementById('editMortalityModal').classList.add('flex');
+    document.getElementById('editMortalityModal').style.display = 'flex';
     lucide.createIcons();
 }
 
 function closeEditMortalityModal() {
-    document.getElementById('editMortalityModal').classList.add('hidden');
-    document.getElementById('editMortalityModal').classList.remove('flex');
+    document.getElementById('editMortalityModal').style.display = 'none';
 }
 
 (function() {
@@ -212,6 +231,37 @@ function closeEditMortalityModal() {
             closeEditMortalityModal();
         }
     });
+})();
+
+(function() {
+    // Live "count exceeds active hens in this cage" check — mirrors
+    // MortalityController::store()'s server-side guard, surfaced before submit.
+    var cageSelect = document.getElementById('mortalityCageSelect');
+    var countInput = document.getElementById('mortalityCountInput');
+    var warningEl = document.getElementById('mortalityExceedsWarning');
+    var submitBtn = document.getElementById('mortalitySubmitBtn');
+    if (!cageSelect || !countInput || !warningEl || !submitBtn) return;
+
+    function check() {
+        var opt = cageSelect.options[cageSelect.selectedIndex];
+        var activeHens = opt && opt.value ? parseInt(opt.getAttribute('data-active-hens') || '0') : null;
+        var entered = parseInt(countInput.value) || 0;
+
+        if (activeHens !== null && entered > activeHens) {
+            warningEl.textContent = 'Only ' + activeHens + ' active hen(s) in this cage — cannot record ' + entered + ' death(s).';
+            warningEl.classList.remove('hidden');
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+            warningEl.classList.add('hidden');
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
+    cageSelect.addEventListener('change', check);
+    countInput.addEventListener('input', check);
+    check();
 })();
 </script>
 @endpush

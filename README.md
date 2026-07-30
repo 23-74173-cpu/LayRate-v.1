@@ -7,6 +7,39 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## Development
+
+After editing Blade views or CSS, rebuild Tailwind and clear view cache before verifying visually:
+
+```bash
+npm run build
+php artisan view:clear
+```
+
+Always hard-reload the browser (Ctrl+F5 / Cmd+Shift+R) — stale browser or compiled-view cache can cause correct source to appear broken.
+
+### Local dev server (GD / chart-in-PDF support)
+
+PDF chart-image embedding requires the GD extension. On this Arch Linux dev environment the `php-gd` package installs `gd.so` to `/usr/lib/php/modules/` (the correct `extension_dir`), but no corresponding `gd.ini` is present in `/etc/php/conf.d/`, so PHP never loads it.
+
+Until this is resolved at the system level, use the provided launcher script instead of `php artisan serve` directly:
+
+```bash
+./scripts/serve-local.sh --host=0.0.0.0 --port=8000
+```
+
+The script sets `PHP_INI_SCAN_DIR` to include `.dev/php-ext/gd.ini` and `LD_LIBRARY_PATH` to include the bundled shared libraries (`libgd.so.3`, `libXpm.so.4`). These live in `.dev/php-ext/` (git-ignored).
+
+### Worker count
+
+The built-in PHP dev server runs a single worker by default. Since this app uses Server-Sent Events (SSE) endpoints that hold a connection for up to 10 seconds, the single worker can become exhausted if multiple SSE connections are in-flight (e.g. tab-switching in Egg Management). Set `PHP_CLI_SERVER_WORKERS=4` before starting the server to avoid blocking:
+
+```bash
+PHP_CLI_SERVER_WORKERS=4 ./scripts/serve-local.sh --host=0.0.0.0 --port=8000
+```
+
+Requires PHP 8.5+ (the app server is already on 8.5.8).
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

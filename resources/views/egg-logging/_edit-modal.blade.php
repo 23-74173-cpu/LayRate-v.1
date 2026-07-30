@@ -1,6 +1,6 @@
-<div id="editLogModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+<div id="editLogModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" style="display: none;" role="dialog" aria-modal="true">
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEditLogModal()"></div>
-    <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+    <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
             <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Edit Production Log</h2>
             <button onclick="closeEditLogModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
@@ -8,7 +8,7 @@
             </button>
         </div>
 
-        <form id="editLogForm" method="POST" onsubmit="loadingButton(this.querySelector('button[type=submit]'))">
+        <form id="editLogForm" method="POST" data-turbo="false" onsubmit="loadingButton(this.querySelector('button[type=submit]'))">
             @csrf @method('PUT')
 
             <div class="space-y-4">
@@ -17,6 +17,7 @@
                     <input type="date" name="log_date" id="editLogDate" required
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
+                    <x-input-error name="log_date" />
                 </div>
 
                 <div>
@@ -25,14 +26,16 @@
                            oninput="editComputeHdep(); editCheckSizeSum()"
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
+                    <x-input-error name="egg_count" />
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Hen Count <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(edit if the original was wrong)</span></label>
-                    <input type="number" name="hen_count" id="editHenCount" min="1" required
+                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Hen Count <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(preserve or correct deliberately)</span></label>
+                    <input type="number" name="hen_count" id="editHenCountDisplay" min="0" required
                            oninput="editComputeHdep()"
                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
+                    <x-input-error name="hen_count" />
                     <div id="editHdepDisplay" class="mt-2 inline-block border rounded-lg px-3 py-1.5 text-sm font-mono" style="background-color: #f6f5f4; border-color: #e6e6e6; color: #1f1f1f;">
                         HDEP: —
                     </div>
@@ -82,6 +85,7 @@
                         </div>
                     </div>
                     <div id="editSizeSumMsg" class="mt-2 text-xs" style="color: #a39e98;">Sum: 0</div>
+                    <x-input-error name="size_breakdown" />
                 </div>
             </div>
 
@@ -93,13 +97,9 @@
                         onmouseout="this.style.backgroundColor='transparent'">
                     Cancel
                 </button>
-                <button type="submit"
-                        class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity"
-                        style="background-color: #0075de;"
-                        onmouseover="this.style.opacity='0.85'"
-                        onmouseout="this.style.opacity='1'">
+                <x-button type="submit" class="flex-1 py-2.5">
                     Save Changes
-                </button>
+                </x-button>
             </div>
         </form>
     </div>

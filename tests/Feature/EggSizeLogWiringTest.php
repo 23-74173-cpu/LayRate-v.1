@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Cage;
 use App\Models\CageSlot;
 use App\Models\EggSizeLog;
+use App\Models\Hen;
 use App\Models\ProductionLog;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -40,6 +41,20 @@ class EggSizeLogWiringTest extends TestCase
             'column_number' => 1,
             'current_occupancy' => 4,
         ]);
+
+        for ($i = 0; $i < 4; $i++) {
+            $hen = new Hen;
+            $hen->chicken_id = 'T-HEN-' . uniqid();
+            $hen->tag_code = 'T-' . uniqid();
+            $hen->breed = 'ISA Brown';
+            $hen->cage_slot_id = $this->slot->id;
+            $hen->date_acquired = now()->subDays(30);
+            $hen->placement_date = now()->subDays(30);
+            $hen->age_at_placement_weeks = 0;
+            $hen->flock_age_weeks = 20;
+            $hen->is_active = 1;
+            $hen->save();
+        }
     }
 
     private function createLog(int $eggCount, ?string $date = null): ProductionLog
@@ -55,7 +70,7 @@ class EggSizeLogWiringTest extends TestCase
     }
 
     /** @test */
-    public function store_with_no_size_fields_creates_no_size_logs()
+    public function store_with_no_size_fields_creates_unsorted_size_log()
     {
         $log = $this->createLog(4);
 
@@ -68,7 +83,9 @@ class EggSizeLogWiringTest extends TestCase
             'hen_count' => 4,
         ])->assertSessionHasNoErrors();
 
-        $this->assertEquals(0, EggSizeLog::count());
+        $this->assertEquals(1, EggSizeLog::count());
+        $this->assertEquals('unsorted', EggSizeLog::first()->egg_size);
+        $this->assertEquals(4, EggSizeLog::first()->count);
     }
 
     /** @test */
@@ -192,7 +209,10 @@ class EggSizeLogWiringTest extends TestCase
         $response->assertSessionHasNoErrors();
         $response->assertSessionHas('success');
 
-        $this->assertEquals(0, EggSizeLog::where('production_log_id', $log->id)->count());
+        $sizeLogs = EggSizeLog::where('production_log_id', $log->id)->get();
+        $this->assertEquals(1, $sizeLogs->count());
+        $this->assertEquals('unsorted', $sizeLogs->first()->egg_size);
+        $this->assertEquals(4, $sizeLogs->first()->count);
     }
 
     /** @test */

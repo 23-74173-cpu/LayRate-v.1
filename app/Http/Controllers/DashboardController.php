@@ -22,43 +22,39 @@ class DashboardController extends Controller
 
     public function stats()
     {
-        $data = $this->buildDashboardData();
+        $data = $this->buildDashboardData(request('cage'));
 
         return view('dashboard._metric-cards', $data);
     }
 
-    public function cageOverview()
-    {
-        $data = $this->buildDashboardData();
-
-        return view('dashboard._cage-overview', $data);
-    }
-
     public function feedMortality()
     {
-        $data = $this->buildDashboardData();
+        $data = $this->buildDashboardData(request('cage'));
 
         return view('dashboard._feed-mortality', $data);
     }
 
-    private function buildDashboardData(): array
+    private function buildDashboardData(?string $cageCode = null): array
     {
         $today = now()->toDateString();
         $thresholds = Setting::thresholds();
 
-        $gridRows = (int) Setting::get('farm_grid_rows', 4);
-        $gridCols = (int) Setting::get('farm_grid_cols', 4);
         $needsOnboarding = Setting::where('key', 'farm_grid_rows')->doesntExist()
-            || Setting::where('key', 'farm_grid_cols')->doesntExist()
-            || Cage::count() === 0;
+            || Setting::where('key', 'farm_grid_cols')->doesntExist();
 
-        $cages = Cage::with([
+        $cagesQuery = Cage::with([
             'productionLogs',
             'latestEnvironmentLog',
             'cageSlots.hardwareItems',
             'hardwareItems',
             'hens' => fn ($q) => $q->where('is_active', 1),
-        ])->get();
+        ]);
+
+        if ($cageCode) {
+            $cagesQuery->where('cage_code', $cageCode);
+        }
+
+        $cages = $cagesQuery->get();
 
         // Attach today's stats to each cage
         $cages->each(function ($cage) use ($today) {
@@ -71,26 +67,31 @@ class DashboardController extends Controller
             $cage->sensor_status = $this->sensorStatusText($cage);
         });
 
-        // Total active hens (actual live count, not theoretical capacity)
-        $totalHens = \App\Models\Hen::where('is_active', 1)->count();
-
-        // Today's average HDEP
-        $todayLogs = ProductionLog::whereDate('log_date', $today)->get();
-        $todayHdep = $todayLogs->count()
-            ? round($todayLogs->avg('hdep'), 1)
-            : round($cages->sum(fn ($c) => $c->today_hdep) / max($cages->count(), 1), 1);
-
-        // Yesterday comparison
-        $yesterdayLogs = ProductionLog::whereDate('log_date', now()->subDay()->toDateString())->get();
-        $yesterdayHdep = $yesterdayLogs->count() ? round($yesterdayLogs->avg('hdep'), 1) : 0;
-        $hdepDelta = round($todayHdep - $yesterdayHdep, 1);
-
-        // Eggs collected today
-        $eggsToday = $todayLogs->sum('egg_count')
-            ?: $cages->sum(fn ($c) => $c->today_eggs);
-
-        // Lifetime eggs logged (since day 1)
-        $lifetimeEggs = ProductionLog::sum('egg_count');
+        // Total active hens
+        if ($cageCode) {
+            $totalHens = $cages->sum('hen_count');
+            $todayLogs = $cages->flatMap->productionLogs->where('log_date', $today);
+            $todayHdep = $todayLogs->count()
+                ? round($todayLogs->avg('hdep'), 1)
+                : round($cages->avg('today_hdep'), 1);
+            $yesterdayLogs = $cages->flatMap->productionLogs->where('log_date', now()->subDay()->toDateString());
+            $yesterdayHdep = $yesterdayLogs->count() ? round($yesterdayLogs->avg('hdep'), 1) : 0;
+            $hdepDelta = round($todayHdep - $yesterdayHdep, 1);
+            $eggsToday = $todayLogs->sum('egg_count') ?: $cages->sum('today_eggs');
+            $lifetimeEggs = $cages->flatMap->productionLogs->sum('egg_count');
+        } else {
+            $totalHens = \App\Models\Hen::where('is_active', 1)->count();
+            $todayLogs = ProductionLog::whereDate('log_date', $today)->get();
+            $todayHdep = $todayLogs->count()
+                ? round($todayLogs->avg('hdep'), 1)
+                : round($cages->sum(fn ($c) => $c->today_hdep) / max($cages->count(), 1), 1);
+            $yesterdayLogs = ProductionLog::whereDate('log_date', now()->subDay()->toDateString())->get();
+            $yesterdayHdep = $yesterdayLogs->count() ? round($yesterdayLogs->avg('hdep'), 1) : 0;
+            $hdepDelta = round($todayHdep - $yesterdayHdep, 1);
+            $eggsToday = $todayLogs->sum('egg_count')
+                ?: $cages->sum(fn ($c) => $c->today_eggs);
+            $lifetimeEggs = ProductionLog::sum('egg_count');
+        }
 
         // Coop environment averages
         $latestEnv = EnvironmentalLog::whereIn('cage_id', $cages->pluck('id'))
@@ -100,18 +101,26 @@ class DashboardController extends Controller
         $avgTemp = $latestEnv->count() ? round($latestEnv->avg('temperature_c'), 1) : null;
         $avgHum = $latestEnv->count() ? round($latestEnv->avg('humidity_pct'), 1) : null;
 
-        // Feed today
+        // Feed today — sum ALL of today's logs per cage (not just the most recent)
+        $feedPerHenKg = (float) Setting::get('feed_per_hen_daily', 0.12);
+
         $feedToday = FeedConsumptionLog::with('cage')
             ->whereDate('log_date', $today)
-            ->orWhereDate('log_date', now()->subDay()->toDateString())
+            ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
             ->orderByDesc('log_date')
             ->get()
             ->groupBy(fn ($f) => $f->cage?->cage_code ?? 'Deleted Cage')
-            ->map(fn ($g) => $g->first());
+            ->map(fn ($g) => (object) [
+                'cage' => $g->first()->cage,
+                'feed_consumed_kg' => round($g->sum('feed_consumed_kg'), 2),
+                'hen_count' => $g->first()->cage?->hens->where('is_active', 1)->count() ?? 0,
+                'feed_target_kg' => round($g->first()->cage?->hens->where('is_active', 1)->count() ?? 0, 2) * $feedPerHenKg,
+            ]);
 
         // Mortality today
         $mortalityToday = MortalityLog::with('cage')
             ->whereDate('log_date', $today)
+            ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
             ->get()
             ->groupBy(fn ($l) => $l->cage?->cage_code ?? 'Deleted Cage')
             ->map(fn ($g) => $g->sum('count'));
@@ -144,7 +153,7 @@ class DashboardController extends Controller
             'eggsToday', 'lifetimeEggs', 'avgTemp', 'avgHum', 'feedToday',
             'mortalityToday', 'mortalityTodayTotal',
             'liveReadings', 'today',
-            'gridRows', 'gridCols', 'needsOnboarding'
+            'needsOnboarding'
         );
     }
 

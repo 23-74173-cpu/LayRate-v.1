@@ -30,6 +30,11 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            // Explicit rather than relying on the DB column default: create()
+            // never re-fetches the row, so an omitted attribute stays absent
+            // (null) on the in-memory model — and actingAs() in tests uses
+            // that same in-memory object directly, not a fresh DB read.
+            'is_active' => true,
         ];
     }
 

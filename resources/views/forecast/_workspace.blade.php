@@ -1,6 +1,6 @@
 @php
-    $cageColorMap = ['CAGE-A'=>'#2D7D46','CAGE-B'=>'#1D4E8F','CAGE-C'=>'#C2703E','CAGE-D'=>'#6B4C8A'];
-    $cageColor = $scope === 'farm' ? '#102A4C' : ($cageColorMap[$cageCode] ?? '#2D7D46');
+    $cageColorMap = \App\Models\Cage::getColorMap();
+    $cageColor = $scope === 'farm' ? '#102A4C' : ($cageColorMap[$cageCode] ?? '#6B7280');
     $scopeLabel = match($scope) {
         'farm' => 'Whole Farm',
         'breed' => $breed ?? '',
@@ -12,11 +12,11 @@
 
 <turbo-frame id="forecast-workspace">
 <div class="space-y-5">
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
 
         {{-- ── Inputs Panel ── --}}
-        <x-card>
-            <div class="text-xs tracking-wider text-[#6B7280] mb-4">FORECAST INPUTS</div>
+        <x-card padding="p-4">
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-4">Forecast Inputs</div>
             <form method="POST" action="{{ route('forecast.generate') }}" id="forecastForm" data-turbo="false">
                 @csrf
                 <input type="hidden" name="scope" value="{{ $scope }}" id="formScope">
@@ -40,7 +40,7 @@
 
                 @if($scope === 'cage')
                 <label class="block text-sm text-[#333333] mb-2">Select Cage</label>
-                <select name="cage" onchange="this.form.submit()"
+                <select name="cage" onchange="document.querySelector('turbo-frame#forecast-workspace').setAttribute('src', '/forecast?scope=cage&cage=' + encodeURIComponent(this.value) + '&horizon={{ $horizon }}')"
                         class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white mb-4 focus:outline-none focus:border-[#002D5E]">
                     @foreach($allCages as $c)
                     <option value="{{ $c }}" {{ $c === $cageCode ? 'selected' : '' }}>{{ $c }}</option>
@@ -50,7 +50,7 @@
 
                 @elseif($scope === 'breed')
                 <label class="block text-sm text-[#333333] mb-2">Select Breed</label>
-                <select name="breed" onchange="this.form.submit()"
+                <select name="breed" onchange="document.querySelector('turbo-frame#forecast-workspace').setAttribute('src', '/forecast?scope=breed&breed=' + encodeURIComponent(this.value) + '&horizon={{ $horizon }}')"
                         class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white mb-4 focus:outline-none focus:border-[#002D5E]">
                     @foreach($allBreeds as $b)
                     <option value="{{ $b }}" {{ $breed === $b ? 'selected' : '' }}>{{ $b }}</option>
@@ -73,15 +73,17 @@
                     @endforeach
                 </div>
 
+                @can('admin')
                 <button type="submit" id="generateForecastBtn" class="w-full bg-[#002D5E] text-white py-2.5 rounded-lg text-sm hover:bg-[#001F42] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                     <span id="btnText">Generate Forecast</span>
                 </button>
+                @endcan
             </form>
         </x-card>
 
         {{-- ── Chart Panel ── --}}
-        <div class="xl:col-span-2 bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <div class="text-xs tracking-wider text-[#6B7280] mb-4">{{ $chartTitle }} — {{ $scopeLabel }}</div>
+        <div class="xl:col-span-2 bg-white rounded-lg border border-[#D9D9D9] p-4">
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-4">{{ $chartTitle }} — {{ $scopeLabel }}</div>
             <div class="relative h-64 w-full" style="height: 16rem;">
                 <canvas id="forecastChart" style="width: 100%; height: 100%; display: block;"></canvas>
             </div>
@@ -105,8 +107,37 @@
             $mapeWinner = ($sarima['MAPE'] ?? PHP_FLOAT_MAX) <= ($xgboost['MAPE'] ?? PHP_FLOAT_MAX) ? 'SARIMA' : 'XGBoost';
         }
     @endphp
-    <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-        <div class="text-xs tracking-wider text-[#6B7280] mb-4">MODEL COMPARISON</div>
+
+    {{-- ── Forecast Summary ── --}}
+    @if($forecasts->count() > 0)
+    @php
+        $usedMetrics = match($recommended) {
+            'SARIMA'  => $sarima,
+            'XGBoost' => $xgboost,
+            default   => $sarima ?? $xgboost,
+        };
+        $avgEggs = round($forecasts->avg('predicted_egg_count'));
+    @endphp
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 p-4 rounded-lg bg-[#F5F6F8] border border-[#D9D9D9] text-sm mb-5">
+        <span class="text-[#6B7280]">Forecast avg for <strong>{{ $scopeLabel }}</strong>:</span>
+        <span class="text-2xl font-bold text-[#333333]">{{ number_format($avgEggs) }}</span>
+        <span class="text-[#6B7280]">eggs/day</span>
+        @if($usedMetrics)
+            @if(isset($usedMetrics['MAE']))
+            <span class="text-[#6B7280]">±{{ number_format($usedMetrics['MAE'], 1) }} MAE</span>
+            @endif
+            @if(isset($usedMetrics['MAPE']) && $usedMetrics['MAPE'] !== null)
+            <span class="text-[#6B7280]">{{ number_format($usedMetrics['MAPE'], 1) }}% MAPE</span>
+            @endif
+            <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-[#002D5E]/10 text-[#002D5E] font-medium">
+                <i data-lucide="award" class="w-3 h-3"></i>{{ $recommended }}
+            </span>
+        @endif
+    </div>
+    @endif
+
+    <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+        <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-4">Model Comparison</div>
 
         @if($recommended)
         <div class="flex items-center gap-3 p-4 rounded-lg bg-[#D5E8D4] text-[#1F5F35] mb-5">
@@ -125,36 +156,36 @@
             <table class="w-full text-sm">
                 <thead class="bg-[#F9F9F7] border-b border-[#D9D9D9]">
                     <tr>
-                        <th class="text-left text-xs font-medium text-[#6B7280] px-4 py-3">Metric</th>
-                        <th class="text-right text-xs font-medium text-[#6B7280] px-4 py-3">SARIMA</th>
-                        <th class="text-right text-xs font-medium text-[#6B7280] px-4 py-3">XGBoost Regression</th>
+                        <th class="text-left text-xs font-medium text-[#6B7280] px-5 py-3">Metric</th>
+                        <th class="text-right text-xs font-medium text-[#6B7280] px-5 py-3">SARIMA</th>
+                        <th class="text-right text-xs font-medium text-[#6B7280] px-5 py-3">XGBoost Regression</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr class="border-b border-[#F0F0F0]">
-                        <td class="px-4 py-3 text-[#333333]">MAE</td>
-                        <td class="px-4 py-3 text-right font-mono {{ $maeWinner === 'SARIMA' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
+                        <td class="px-5 py-3.5 text-[#333333]">MAE</td>
+                        <td class="px-5 py-3.5 text-right font-mono {{ $maeWinner === 'SARIMA' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
                             {{ number_format($sarima['MAE'] ?? 0, 2) }}
                         </td>
-                        <td class="px-4 py-3 text-right font-mono {{ $maeWinner === 'XGBoost' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
+                        <td class="px-5 py-3.5 text-right font-mono {{ $maeWinner === 'XGBoost' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
                             {{ number_format($xgboost['MAE'] ?? 0, 2) }}
                         </td>
                     </tr>
                     <tr class="border-b border-[#F0F0F0]">
-                        <td class="px-4 py-3 text-[#333333]">RMSE</td>
-                        <td class="px-4 py-3 text-right font-mono {{ $rmseWinner === 'SARIMA' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
+                        <td class="px-5 py-3.5 text-[#333333]">RMSE</td>
+                        <td class="px-5 py-3.5 text-right font-mono {{ $rmseWinner === 'SARIMA' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
                             {{ number_format($sarima['RMSE'] ?? 0, 2) }}
                         </td>
-                        <td class="px-4 py-3 text-right font-mono {{ $rmseWinner === 'XGBoost' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
+                        <td class="px-5 py-3.5 text-right font-mono {{ $rmseWinner === 'XGBoost' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
                             {{ number_format($xgboost['RMSE'] ?? 0, 2) }}
                         </td>
                     </tr>
                     <tr>
-                        <td class="px-4 py-3 text-[#333333]">MAPE</td>
-                        <td class="px-4 py-3 text-right font-mono {{ $mapeWinner === 'SARIMA' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
+                        <td class="px-5 py-3.5 text-[#333333]">MAPE</td>
+                        <td class="px-5 py-3.5 text-right font-mono {{ $mapeWinner === 'SARIMA' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
                             {{ number_format($sarima['MAPE'] ?? 0, 2) }}%
                         </td>
-                        <td class="px-4 py-3 text-right font-mono {{ $mapeWinner === 'XGBoost' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
+                        <td class="px-5 py-3.5 text-right font-mono {{ $mapeWinner === 'XGBoost' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
                             {{ number_format($xgboost['MAPE'] ?? 0, 2) }}%
                         </td>
                     </tr>
@@ -189,6 +220,38 @@
     });
     const allLabels  = showForecast ? [...histLabels, ...fcLabels] : histLabels;
 
+    // ── Vertical reference line (historical → forecast transition) ──
+    (function() {
+        const plugin = {
+            id: 'forecastSeparator',
+            afterDraw(chart) {
+                if (!showForecast) return;
+                const histCount = histLabels.length;
+                if (histCount === 0) return;
+                const xScale = chart.scales.x;
+                const chartArea = chart.chartArea;
+                const x = xScale.getPixelForValue(histCount - 0.5);
+                const ctx = chart.ctx;
+                ctx.save();
+                ctx.beginPath();
+                ctx.strokeStyle = '#6B7280';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([4, 4]);
+                ctx.moveTo(x, chartArea.top);
+                ctx.lineTo(x, chartArea.bottom - 12);
+                ctx.stroke();
+                ctx.fillStyle = '#6B7280';
+                ctx.font = '10px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('▼ forecast starts', x, chartArea.bottom - 2);
+                ctx.restore();
+            }
+        };
+        if (typeof Chart !== 'undefined' && !Chart.registry.plugins.get('forecastSeparator')) {
+            Chart.register(plugin);
+        }
+    })();
+
     const histData = showForecast
         ? [...recentHistorical.map(h => h.egg_count), ...Array(fcLabels.length).fill(null)]
         : recentHistorical.map(h => h.egg_count);
@@ -218,23 +281,17 @@
     }
 
     function initForecastChart() {
-        const canvas = document.getElementById('forecastChart');
-        if (!canvas) {
-            console.warn('[ForecastChart] Canvas element not found.');
-            return;
-        }
-
         if (typeof Chart === 'undefined') {
             console.warn('[ForecastChart] Chart.js not loaded yet.');
             return;
         }
 
-        if (window.forecastChartInstance) {
-            window.forecastChartInstance.destroy();
+        if (!document.getElementById('forecastChart')) {
+            console.warn('[ForecastChart] Canvas element not found.');
+            return;
         }
 
         if (!recentHistorical || recentHistorical.length === 0) {
-            console.warn('[ForecastChart] No historical data available.', historical);
             setChartError('No historical data to display.');
             return;
         }
@@ -267,37 +324,32 @@
             });
         }
 
-        console.log('[ForecastChart] Initializing with labels:', allLabels, 'datasets:', datasets);
-
-        try {
-            window.forecastChartInstance = new Chart(canvas, {
-                type: 'line',
-                data: {
-                    labels: allLabels,
-                    datasets: datasets
+        const chart = LayRateChart.create('forecastChart', {
+            type: 'line',
+            data: {
+                labels: allLabels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, labels: { boxWidth: 10, font: { size: 10 } } }
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: true, labels: { boxWidth: 10, font: { size: 10 } } }
-                    },
-                    scales: {
-                        x: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 45 } },
-                        y: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } }, min: 0, beginAtZero: true },
-                    }
+                scales: {
+                    x: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 45 } },
+                    y: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } }, min: 0, beginAtZero: true },
                 }
-            });
-            console.log('[ForecastChart] Chart initialized successfully.');
-        } catch (e) {
-            console.error('[ForecastChart] Failed to initialize chart:', e);
-            setChartError('Chart failed to render.');
+            }
+        });
+        if (!chart) {
+            setChartError('Failed to render chart. Check console for details.');
         }
     }
 
     function ensureForecastChart() {
         if (typeof Chart !== 'undefined') {
-            initForecastChart();
+            setTimeout(initForecastChart, 120);
         } else {
             console.warn('[ForecastChart] Chart.js not available, polling...');
             const checkChart = setInterval(function() {
@@ -317,6 +369,23 @@
         }
     }
 
+    // This whole script re-executes on every Turbo visit that lands on this
+    // page (confirmed behavior — Turbo replays body <script> tags per visit),
+    // and everything above is scoped inside this IIFE with `const`/`let` so
+    // each execution's ensureForecastChart() closure captures that visit's
+    // own freshly-rendered historical/forecast data — unlike reports.blade.php's
+    // equivalent fix, we can't just skip re-registering on repeat executions,
+    // that would permanently freeze the chart on whichever visit happened to
+    // bind first. Instead, swap out the previous visit's 'turbo:load' listener
+    // for this one on every execution, so exactly one is ever attached. Without
+    // this, listeners accumulate across visits (document persists across Turbo
+    // navigations, old listeners are never auto-removed) and on a later
+    // turbo:load multiple stacked listeners each call LayRateChart.create() on
+    // the same #forecastChart canvas, throwing "Canvas is already in use."
+    if (window.__forecastChartTurboLoadHandler) {
+        document.removeEventListener('turbo:load', window.__forecastChartTurboLoadHandler);
+    }
+    window.__forecastChartTurboLoadHandler = ensureForecastChart;
     document.addEventListener('turbo:load', ensureForecastChart);
     document.addEventListener('DOMContentLoaded', ensureForecastChart);
     window.addEventListener('load', ensureForecastChart);

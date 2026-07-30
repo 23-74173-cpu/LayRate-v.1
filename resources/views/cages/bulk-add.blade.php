@@ -17,7 +17,7 @@
 
     @if($unplacedHens->isEmpty())
     <div class="bg-white rounded-lg border border-[#D9D9D9] p-10 text-center text-sm text-[#9CA3AF]">
-        No unplaced hens available. <a href="{{ route('chickens.index') }}" class="text-[#002D5E] underline">Register new chickens</a> first.
+        No unplaced hens available. <a href="{{ route('chickens.index') }}" class="text-[#002D5E] underline">Register new hens</a> first.
     </div>
     @else
 
@@ -33,7 +33,11 @@
     @endif
 
     {{-- Form --}}
-    <form id="placementForm" method="POST" action="{{ route('cages.bulk-add.store') }}" class="space-y-5">
+    <form id="placementForm" method="POST" action="{{ route('cages.bulk-add.store') }}" class="space-y-5"
+          data-confirm="Place the selected hens into their assigned slots?"
+          data-confirm-action="Place Hens" data-confirm-severity="neutral"
+          data-loading="Placing hens and updating slot occupancy..."
+          data-loading-title="Placing Hens">
         @csrf
 
         {{-- Hidden inputs --}}
@@ -43,7 +47,7 @@
 
         {{-- ── Step 1: Select Hens ── --}}
         <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
-            <div class="flex items-center justify-between px-4 py-2.5"
+            <div class="flex items-center justify-between px-5 py-3"
                  style="background: #F0F4FF; border-bottom: 1px solid #CCDDFF;">
                 <div class="flex items-center gap-3">
                     <span class="text-sm font-semibold text-[#1D4E8F]">Step 1: Select Hens</span>
@@ -84,9 +88,9 @@
         </div>
 
         {{-- ── Step 2: Choose Cage ── --}}
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
             <label class="block text-xs font-semibold text-[#1D4E8F] mb-2">Step 2: Choose Cage</label>
-            <select name="cage_id" id="cageSelect" required
+            <select name="cage_id" id="cageSelect" required data-slots-url-base="{{ url('cages') }}"
                     class="w-full max-w-md border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]"
                     onchange="loadCageSlots()">
                 <option value="">Select cage...</option>
@@ -104,7 +108,7 @@
 
         {{-- ── Step 3: Choose Mode + Slot Grid ── --}}
         <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
-            <div class="flex items-center gap-4 px-4 py-2.5 border-b border-[#D9D9D9]" style="background: #FAFAFA;">
+            <div class="flex items-center gap-4 px-5 py-3 border-b border-[#D9D9D9]" style="background: #FAFAFA;">
                 <span class="text-xs font-semibold text-[#1D4E8F]">Step 3: Placement Mode</span>
                 <label class="flex items-center gap-1.5 text-xs cursor-pointer">
                     <input type="radio" name="mode_radio" value="manual" {{ old('mode', 'manual') === 'manual' ? 'checked' : '' }} onchange="switchMode('manual')"
@@ -119,7 +123,7 @@
             </div>
 
             {{-- Manual mode --}}
-            <div id="manualMode" class="{{ old('mode') === 'auto' ? 'hidden' : '' }} p-4">
+            <div id="manualMode" class="{{ old('mode') === 'auto' ? 'hidden' : '' }} p-5">
                 <div class="flex items-center justify-between mb-3">
                     <span class="text-xs font-medium text-[#6B7280] uppercase tracking-wider">Click slots to select</span>
                     <div class="flex items-center gap-3 text-xs text-[#9CA3AF]">
@@ -135,10 +139,10 @@
             </div>
 
             {{-- Auto mode --}}
-            <div id="autoMode" class="{{ old('mode') === 'auto' ? '' : 'hidden' }} p-4">
-                <div class="flex items-center gap-4">
-                    <div>
-                        <label class="block text-xs font-medium text-[#6B7280] mb-1">Hens per slot</label>
+            <div id="autoMode" class="{{ old('mode') === 'auto' ? '' : 'hidden' }} p-5">
+            <div class="flex items-center gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-[#6B7280] mb-1">Hens per slot</label>
                         <input type="number" id="chickensPerSlot" name="chickens_per_slot" min="1" max="10" value="{{ old('chickens_per_slot', 4) }}"
                                class="w-24 border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]"
                                oninput="updateAutoSummary()">
@@ -187,12 +191,15 @@
     // Pre-select hens from deep-link
     updateHenSelection();
 
-    document.addEventListener('turbo:load', function() {
-        var cageSelect = document.getElementById('cageSelect');
-        if (cageSelect && cageSelect.value) {
-            loadCageSlots();
-        }
-    });
+    if (!window.__bulkAddTurboLoadBound) {
+        window.__bulkAddTurboLoadBound = true;
+        document.addEventListener('turbo:load', function() {
+            var cageSelect = document.getElementById('cageSelect');
+            if (cageSelect && cageSelect.value) {
+                loadCageSlots();
+            }
+        });
+    }
 
     // ── Hen Selection ────────────────────────────────────
     function toggleSelectAll() {
@@ -279,7 +286,10 @@
 
         slotsLoadFailed = false;
         const cageId = select.value;
-        fetch(`/cages/${cageId}/slots-json`, {
+        // Absolute "/cages/..." breaks under a subfolder deployment (e.g.
+        // XAMPP's /LayRate/public) — build from the select's own base URL.
+        const slotsUrlBase = select.dataset.slotsUrlBase || '/cages';
+        fetch(`${slotsUrlBase}/${cageId}/slots-json`, {
             headers: { 'Accept': 'application/json' },
             credentials: 'same-origin',
         })
@@ -335,7 +345,7 @@
                              title="${title}">
                     ${isSensor ? '<div class="absolute top-0 right-0 w-2 h-2 rounded-bl bg-emerald-500"></div>' : ''}
                     <span class="text-xs font-mono text-[#6B7280]">${slot.slot_number}</span>
-                    <span class="text-[8px] text-[#9CA3AF]">${occupancy}/${currentMaxPerSlot}</span>
+                    <span class="text-xs text-[#9CA3AF]">${occupancy}/${currentMaxPerSlot}</span>
                 </div>`;
             }
             html += '</div>';
@@ -348,6 +358,11 @@
             el.addEventListener('mousedown', onMouseDown);
             el.addEventListener('mouseenter', onMouseEnter);
         });
+    }
+
+    // Register mouseup once — not inside renderGrid which runs multiple times
+    if (!window.__bulkAddMouseUpBound) {
+        window.__bulkAddMouseUpBound = true;
         document.addEventListener('mouseup', onMouseUp);
     }
 
@@ -386,10 +401,11 @@
 
     // ── Auto-distribute summary ───────────────────────────
     function updateAutoSummary() {
+        // Every branch below fully replaces #autoSummary's innerHTML, so
+        // #autoHenCount (only present in the static placeholder markup) gets
+        // destroyed on the very first call and never exists again — do not
+        // guard on it or the function permanently no-ops after first render.
         const henCount = document.querySelectorAll('.hen-checkbox:checked').length;
-        const autoHenCount = document.getElementById('autoHenCount');
-        if (!autoHenCount) return;
-        autoHenCount.textContent = henCount;
 
         const select = document.getElementById('cageSelect');
         if (!select || !select.value) {
@@ -421,8 +437,10 @@
         const available = cageSlots.filter(s => (s.current_occupancy || 0) < maxPerSlot);
 
         if (available.length === 0) {
+            window.autoModeFits = henCount === 0;
             autoSummary.innerHTML =
                 '<span class="text-red-500">No available slots in this cage.</span>';
+            validateForm();
             return;
         }
 
@@ -430,9 +448,11 @@
         available.forEach(s => { totalCapacity += Math.min(perSlot, maxPerSlot - (s.current_occupancy || 0)); });
 
         const fits = totalCapacity >= henCount;
+        window.autoModeFits = fits;
         autoSummary.innerHTML =
             'Will distribute <strong>' + henCount + '</strong> hens across <strong>' + available.length + '</strong> available slot(s)' +
             (fits ? '.' : '. <span class="text-red-500">Only ' + totalCapacity + ' space(s) available — select fewer hens or reduce per-slot count.</span>');
+        validateForm();
     }
     window.updateAutoSummary = updateAutoSummary;
 
@@ -469,8 +489,14 @@
                 valid = false;
                 if (!errorMsg) errorMsg = 'Select at least one slot.';
             }
-        } else if (summarySlots) {
-            summarySlots.textContent = 'auto';
+        } else {
+            if (summarySlots) summarySlots.textContent = 'auto';
+            // window.autoModeFits is set by updateAutoSummary() — false when
+            // the selected hens exceed the selected cage's available capacity.
+            if (henCount > 0 && window.autoModeFits === false) {
+                valid = false;
+                if (!errorMsg) errorMsg = 'Selected hens exceed available slot capacity in this cage.';
+            }
         }
 
         submitBtn.disabled = !valid;

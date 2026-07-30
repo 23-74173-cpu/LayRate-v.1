@@ -1,6 +1,28 @@
 @extends('layouts.app')
 @section('title', 'Cage Management')
 
+@push('head')
+<style>
+#canvasContent { position: relative; }
+.tile-bg { transition: background-color 0.1s ease; }
+.cage-overlay { transition: box-shadow 0.15s ease, border-color 0.15s ease; }
+#dragGhost { transition: none; }
+#farmCanvas { overscroll-behavior: auto; }
+#farmCanvas::-webkit-scrollbar { width: 6px; height: 6px; }
+#farmCanvas::-webkit-scrollbar-track { background: transparent; }
+#farmCanvas::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+.staging-tile { user-select: none; }
+.cage-card .slot-mini { flex-shrink: 0; }
+.flipper { transform-style: preserve-3d; transition: transform 0.5s ease; }
+.cage-card.is-flipped .flipper { transform: rotateY(180deg); }
+.front-face, .back-face { backface-visibility: hidden; }
+.back-face { transform: rotateY(180deg); }
+.cage-card { box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: box-shadow 0.2s ease, transform 0.2s ease; }
+.cage-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.07); transform: translateY(-1px); }
+.cage-card .icon-btn { width:28px; height:28px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; transition:background-color 0.15s ease, color 0.15s ease; }
+.cage-card .icon-btn:hover { background-color:rgba(0,0,0,0.06); }
+</style>
+@endpush
 @section('content')
 @php $isAdmin = auth()->user()->isAdmin(); @endphp
 <div class="space-y-5">
@@ -16,26 +38,28 @@
                     <i data-lucide="bird" class="w-4 h-4"></i> Bulk Add Chickens
                 </a>
                 @if($isAdmin)
-                <button onclick="openAddModal()"
-                        class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2 text-xs sm:text-sm font-medium rounded-full text-white transition-opacity"
-                        style="background-color: #0075de;"
-                        onmouseover="this.style.opacity='0.85'"
-                        onmouseout="this.style.opacity='1'">
+                <x-button onclick="openAddModal()">
                     <i data-lucide="plus" class="w-4 h-4"></i> Add Cage
-                </button>
+                </x-button>
                 @endif
             </div>
         </x-slot:actions>
     </x-page-header>
 
-    {{-- ── Farm Layout Canvas (drag-and-drop) ── --}}
-    <div class="rounded-xl border p-6" style="background-color: #ffffff; border-color: #e6e6e6;">
+    {{-- ── Farm Layout Canvas (tile-based floor-plan grid, fit-to-width on small screens) ── --}}
+    <div class="rounded-xl border p-4 sm:p-6" style="background-color: #ffffff; border-color: #e6e6e6;">
         <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
             <h3 class="text-xs font-semibold tracking-[0.05em] uppercase" style="color: #615d59;">Farm Layout</h3>
             <div class="flex items-center gap-2">
                 <button id="clearFilterBtn" class="hidden text-xs font-medium px-3 py-1 rounded-lg transition-colors" style="color: #0075de; border: 1px solid #0075de;" onclick="clearCanvasFilter()">Show all</button>
-                {{-- Layout flow toggle removed per audit decision --}}
                 @if($isAdmin)
+                <button onclick="openGridSettings()"
+                        class="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+                        style="color: #615d59; border: 1px solid #e6e6e6;"
+                        onmouseover="this.style.backgroundColor='#f6f5f4'"
+                        onmouseout="this.style.backgroundColor='transparent'">
+                    <i data-lucide="grid-3x3" class="w-3.5 h-3.5 inline-block mr-1"></i> Grid Settings
+                </button>
                 <button id="clearAllBtn" onclick="clearAllCages()"
                         class="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
                         style="color: #9b1c24; border: 1px solid #f0c8cb;"
@@ -43,105 +67,125 @@
                         onmouseout="this.style.backgroundColor='transparent'">
                     Clear All Cages
                 </button>
-                <button id="saveLayoutBtn" onclick="saveLayout()" disabled
-                        class="text-xs font-medium px-4 py-1.5 rounded-lg text-white transition-opacity disabled:opacity-45 disabled:cursor-not-allowed"
-                        style="background-color: #0075de;">
-                    Save Layout
-                </button>
+                <div class="relative inline-flex items-center">
+                    <x-button id="saveLayoutBtn" onclick="saveLayout()" disabled class="text-xs px-4 py-1.5">
+                        Save Layout
+                    </x-button>
+                    <span id="unsavedDot" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full" style="background-color: #f59e0b; border: 2px solid #ffffff;"></span>
+                </div>
+                <span id="clearAllMsg" class="hidden text-xs whitespace-nowrap" style="color: #c2703e;">Cages cleared — click Save Layout</span>
                 @endif
             </div>
         </div>
-        <div id="farmCanvas" class="relative">
-        <div id="farmSaveOverlay" class="hidden absolute inset-0 z-10 items-center justify-center rounded-lg" style="background-color: rgba(255,255,255,0.7);">
-            <i data-lucide="loader" class="animate-spin w-8 h-8" style="color: #0075de;"></i>
-        </div>
-        <div id="farmGrid" class="grid gap-2" style="grid-template-columns: repeat({{ $gridCols }}, minmax(0, 1fr));">
-            @for($r = 0; $r < $gridRows; $r++)
-                @for($c = 0; $c < $gridCols; $c++)
-                @php
-                    $placedCage = $cages->firstWhere(fn($cg) => $cg->location_row === $r && $cg->location_column === $c);
-                @endphp
-                @if($placedCage)
-                <div class="farm-cell min-h-[5rem] rounded-lg border-2 p-3 flex flex-col justify-between transition-all group relative"
-                     style="border-color: {{ $placedCage->color }}; background-color: {{ $placedCage->colorSoft }};"
-                     data-row="{{ $r }}" data-col="{{ $c }}"
-                     ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, {{ $r }}, {{ $c }})">
-                    @if($isAdmin)
-                    <button onclick="event.stopPropagation(); confirmRemoveCell({{ $r }}, {{ $c }}, '{{ $placedCage->cage_code }}')"
-                            class="remove-cell-btn absolute top-0.5 right-0.5 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            style="background-color: rgba(155,28,36,0.85); color: #fff; font-size: 12px; line-height: 1;"
-                            title="Remove {{ $placedCage->cage_code }} from canvas" aria-label="Remove {{ $placedCage->cage_code }}">
-                        ×
-                    </button>
-                    @endif
-                    <div class="farm-tile {{ $isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer' }}"
-                         draggable="{{ $isAdmin ? 'true' : 'false' }}"
-                         data-cage-id="{{ $placedCage->id }}"
-                         data-cage-code="{{ $placedCage->cage_code }}"
-                         @if($isAdmin) ondragstart="handleDragStart(event, {{ $placedCage->id }})" @endif
-                         onclick="handleTileClick(event, {{ $placedCage->id }}, '{{ $placedCage->cage_code }}')">
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm font-semibold" style="color: {{ $placedCage->color }};">{{ $placedCage->cage_code }}</span>
-                        </div>
-                        <div class="text-xs truncate" style="color: #615d59;">{{ Str::limit($placedCage->hens->first()?->breed ?? '—', 16) }}</div>
-                    </div>
+
+        {{-- Canvas container (tile grid auto-rendered by JS, fit-to-width) --}}
+        <div id="farmCanvas" class="relative overflow-auto rounded-lg border select-none" style="border-color: #e6e6e6; background-color: #f9fafb; min-height: 120px; max-height: 60vh;">
+            <div id="canvasScaler" style="transform-origin: top left;">
+                <div id="canvasContent" class="relative inline-block">
+                    {{-- Tile background grid --}}
+                    <div id="tileGridLayer" class="absolute inset-0" style="pointer-events: none;"></div>
+                    {{-- Cage footprint overlays --}}
+                    <div id="cageOverlayLayer" class="relative"></div>
                 </div>
-                @else
-                <div class="farm-cell min-h-[5rem] rounded-lg border p-3 flex items-center justify-center transition-all group relative"
-                     style="border-color: #e6e6e6; background-color: #f9fafb;"
-                     data-row="{{ $r }}" data-col="{{ $c }}"
-                     ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, {{ $r }}, {{ $c }})">
-                    @if($isAdmin)
-                    <button onclick="event.stopPropagation(); confirmRemoveCell({{ $r }}, {{ $c }})"
-                            class="remove-cell-btn absolute top-0.5 right-0.5 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            style="background-color: rgba(155,28,36,0.85); color: #fff; font-size: 12px; line-height: 1;"
-                            title="Remove empty cell" aria-label="Remove empty cell">
-                        ×
-                    </button>
-                    @endif
-                    <span class="text-xs" style="color: #d1d5db;">{{ $r + 1 }}-{{ $c + 1 }}</span>
-                </div>
-                @endif
-                @endfor
-            @endfor
+            </div>
+            {{-- Saving overlay --}}
+            <div id="farmSaveOverlay" class="hidden absolute inset-0 z-10 items-center justify-center rounded-lg" style="background-color: rgba(255,255,255,0.7);">
+                <i data-lucide="loader" class="animate-spin w-8 h-8" style="color: #0075de;"></i>
+            </div>
         </div>
 
-        {{-- Staging Area (unplaced cages) — always rendered so tiles can be moved here client-side --}}
+        {{-- Drag ghost (follows cursor during drag) --}}
+        <div id="dragGhost" class="hidden fixed pointer-events-none z-50 rounded-lg border-2 flex items-center justify-center opacity-80 shadow-lg"
+             style="background-color: rgba(255,255,255,0.92);"></div>
+
+        {{-- Staging Area (unplaced cages) --}}
         @php $unplaced = $cages->filter(fn($cg) => is_null($cg->location_row)); @endphp
         <div id="stagingSection" class="mt-4 pt-4 border-t {{ $unplaced->count() > 0 ? '' : 'hidden' }}" style="border-color: #e6e6e6;">
             <h4 class="text-xs font-semibold tracking-[0.05em] uppercase mb-3" style="color: #615d59;">Unplaced Cages — drag to grid</h4>
-            <div id="stagingArea" class="flex flex-wrap gap-3 min-h-[3.5rem]"
-                 ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleStagingDrop(event)">
+            <div id="stagingArea" class="flex flex-wrap gap-3 min-h-[3.5rem]">
                 @foreach($unplaced as $uc)
-                <div class="farm-tile min-h-[3.5rem] rounded-lg border-2 px-4 py-2 flex flex-col justify-center {{ $isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer' }}"
+                @php
+                    $isTiny = $uc->rows == 1 && $uc->slots_per_row == 1;
+                    $isSmall = $uc->rows <= 2 || $uc->slots_per_row <= 2;
+                @endphp
+                <div class="staging-tile rounded-lg border-2 px-4 py-2 flex flex-col items-center justify-center {{ $isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer' }}"
                      style="border-color: {{ $uc->color }}; background-color: {{ $uc->colorSoft }};"
                      draggable="{{ $isAdmin ? 'true' : 'false' }}"
                      data-cage-id="{{ $uc->id }}"
                      data-cage-code="{{ $uc->cage_code }}"
-                     @if($isAdmin) ondragstart="handleDragStart(event, {{ $uc->id }})" @endif
-                     onclick="handleTileClick(event, {{ $uc->id }}, '{{ $uc->cage_code }}')">
-                    <span class="text-sm font-semibold" style="color: {{ $uc->color }};">{{ $uc->cage_code }}</span>
+                     @if($isAdmin) ondragstart="handleDragStart(event, {{ $uc->id }})" @endif>
+                    @if($isTiny)
+                    <span class="font-bold leading-none text-center" style="font-size:14px;color: {{ $uc->color }};overflow:hidden;text-overflow:ellipsis;max-width:100%;display:inline-block;">
+                        {{ \Illuminate\Support\Str::after($uc->cage_code, 'CAGE-') }}
+                    </span>
+                    @elseif($isSmall)
+                    <span class="text-sm font-semibold leading-tight text-center" style="color: {{ $uc->color }};overflow:hidden;text-overflow:ellipsis;word-break:break-all;max-width:100%;display:inline-block;">
+                        {{ $uc->cage_code }}
+                    </span>
+                    @else
+                    <span class="text-sm font-semibold leading-tight text-center" style="color: {{ $uc->color }};">{{ $uc->cage_code }}</span>
+                    <span class="text-xs leading-tight text-center" style="color: #615d59;">{{ $uc->rows }}×{{ $uc->slots_per_row }}</span>
+                    @endif
                 </div>
                 @endforeach
             </div>
         </div>
-        </div>{{-- /#farmCanvas --}}
 
         {{-- Error Toast --}}
-        <div id="dragErrorToast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-lg px-4 py-2 text-sm font-medium text-white" style="background-color: #9b1c24;">
+        <div id="dragErrorToast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-lg px-4 py-2 text-sm font-medium text-white" style="background-color: #9b1c24;"></div>
+    </div>
+
+    {{-- ── Grid Settings Modal (resize canvas dimensions post-onboarding) ── --}}
+    <div id="gridSettingsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" style="display: none;">
+        <div class="absolute inset-0" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeGridSettings()"></div>
+        <div class="relative w-full max-w-sm rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+            <div class="flex items-center justify-between mb-5">
+                <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Grid Settings</h2>
+                <button onclick="closeGridSettings()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                    <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+                </button>
+            </div>
+            <p class="text-sm mb-4" style="color: #615d59;">Adjust the overall canvas tile dimensions. Shrinking may require moving or removing cages that extend beyond the new bounds.</p>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Rows</label>
+                    <input type="number" id="gridSettingsRows" value="{{ $gridRows }}" min="1" max="50"
+                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                           style="border-color: #e6e6e6; color: #1f1f1f;">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Columns</label>
+                    <input type="number" id="gridSettingsCols" value="{{ $gridCols }}" min="1" max="50"
+                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                           style="border-color: #e6e6e6; color: #1f1f1f;">
+                </div>
+            </div>
+            <div id="gridSettingsWarning" class="hidden mb-4 rounded-lg p-3 text-sm" style="background-color: #fbe4e6; border: 1px solid #f3cdd0; color: #9b1c24;"></div>
+            <div class="flex gap-3">
+                <button type="button" onclick="closeGridSettings()"
+                        class="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors"
+                        style="color: #1f1f1f; border: 1px solid #e6e6e6;"
+                        onmouseover="this.style.backgroundColor='#f6f5f4'"
+                        onmouseout="this.style.backgroundColor='transparent'">
+                    Cancel
+                </button>
+                <x-button type="button" onclick="applyGridSettings()" class="flex-1 py-2.5">
+                    Apply
+                </x-button>
+            </div>
         </div>
     </div>
 
     {{-- ── Tab Bar (Notion underline style) ── --}}
     <div class="flex items-center gap-0 border-b overflow-x-auto" style="border-color: #e6e6e6;">
-        <button type="button" onclick="filterCage('all')" class="cage-tab px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
+        <button type="button" onclick="filterCage('all')" class="cage-tab px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap cursor-pointer"
                 data-tab="all"
-                style="border-bottom-color: #0075de; color: #1f1f1f;">
+                style="border-bottom-color: #002D5E; color: #1f1f1f;">
             All
             <span class="ml-1 text-xs" style="color: #a39e98;">({{ $cages->count() }})</span>
         </button>
         @foreach($cages as $cage)
-        <button type="button" onclick="filterCage('{{ $cage->cage_code }}')" class="cage-tab px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
+        <button type="button" onclick="filterCage('{{ $cage->cage_code }}')" class="cage-tab px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap cursor-pointer"
                 data-tab="{{ $cage->cage_code }}"
                 style="border-bottom-color: transparent; color: #615d59;">
             <span class="inline-block w-2 h-2 rounded-full mr-1.5" style="background-color: {{ $cage->color }};"></span>
@@ -151,8 +195,8 @@
         @endforeach
     </div>
 
-    {{-- ── Cage Cards ── --}}
-    <div class="flex flex-wrap gap-4">
+    {{-- ── Cage Cards (responsive grid) ── --}}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         @forelse($cages as $cage)
         @php
             $color = $cage->color;
@@ -161,110 +205,216 @@
             $sensorCount = $cage->cageSlots->filter(fn($s) => $s->hasBreakbeam())->count();
             $occupiedCount = $cage->cageSlots->where('current_occupancy', '>', 0)->count();
             $primaryHen = $cage->hens->first();
-            $cardMinWidth = max(240, $cage->slots_per_row * 30 + 40);
+            $slotGridMaxH = min(($cage->rows ?? 3), 4) * 36 + (min($cage->rows ?? 3, 4) - 1) * 4;
+            $hasLargeGrid = ($cage->rows ?? 1) > 4 || ($cage->slots_per_row ?? 1) > 6;
+            $currentHens = $cage->cageSlots->sum('current_occupancy');
+            $totalSlots = $cage->cageSlots->count();
+            $maxPerSlot = $cage->max_chickens_per_slot ?? 4;
+            $occupancyPct = $cage->total_capacity > 0 ? round(($currentHens / $cage->total_capacity) * 100) : 0;
+            // Health cue for accent bar: inactive=grey, near-cap=amber, over=red, ok=normal color
+            if (!$cage->is_active) {
+                $accentColor = '#a39e98';
+                $healthLevel = 'inactive';
+            } elseif ($occupancyPct > 100) {
+                $accentColor = '#9b1c24';
+                $healthLevel = 'over';
+            } elseif ($occupancyPct >= 90) {
+                $accentColor = '#c2703e';
+                $healthLevel = 'near';
+            } else {
+                $accentColor = $color;
+                $healthLevel = 'ok';
+            }
+            $sizeColors = [
+                'small'    => ['bg' => '#d6f0e3', 'txt' => '#2D7D46'],
+                'medium'   => ['bg' => '#dcebfa', 'txt' => '#1D4E8F'],
+                'large'    => ['bg' => '#fae3d0', 'txt' => '#C2703E'],
+                'jumbo'    => ['bg' => '#e9e0f5', 'txt' => '#6B4C8A'],
+                'unsorted' => ['bg' => '#f0f0f0', 'txt' => '#6B7280'],
+            ];
+            $cageSizes = $eggSizeByCage->get($cage->id, collect());
         @endphp
-        <div class="cage-card rounded-xl border overflow-hidden transition-all flex-grow"
+        <div class="cage-card rounded-xl border w-full"
              data-cage-code="{{ $cage->cage_code }}"
-              style="background-color: #ffffff; border-color: #e6e6e6; border-left: 3px solid {{ $color }}; flex: 1 1 {{ $cardMinWidth }}px; min-width: min({{ $cardMinWidth }}px, 100%); max-width: 100%;">
+             style="perspective:1000px; background-color:#ffffff; border-color:#e6e6e6;">
 
-            {{-- Cage Header --}}
-            <div class="flex items-center justify-between px-4 py-3">
-                <div class="flex items-center gap-3">
-                    <span class="text-sm font-semibold" style="color: {{ $color }}">{{ $cage->cage_code }}</span>
-                </div>
-                <div class="flex items-center gap-1">
-                    <span class="text-xs px-2 py-0.5 rounded-full" style="background-color: {{ $cage->is_active ? '#e8f5ec' : '#f0f0f0' }}; color: {{ $cage->is_active ? '#1f6b3a' : '#615d59' }};">
-                        {{ $cage->is_active ? 'Active' : 'Inactive' }}
-                    </span>
-                    <button onclick="window.open('{{ route('cages.print-label', $cage) }}', 'print-{{ $cage->id }}', 'width=900,height=700')"
-                            class="p-1.5 rounded hover:bg-black/5 transition-colors" style="color: #615d59;" aria-label="Print cage label">
-                        <i data-lucide="printer" class="w-3.5 h-3.5"></i>
-                    </button>
-                    <a href="{{ route('cages.bulk-add') }}?cage_id={{ $cage->id }}"
-                       class="p-1.5 rounded hover:bg-black/5 transition-colors" style="color: #615d59;" aria-label="Bulk add hens">
-                        <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
-                    </a>
-                    @if($isAdmin)
-                    <button onclick="toggleReorderMode({{ $cage->id }})"
-                            class="p-1.5 rounded hover:bg-black/5 transition-colors reorder-toggle" style="color: #615d59;" aria-label="Renumber slots">
-                        <i data-lucide="list-ordered" class="w-3.5 h-3.5"></i>
-                    </button>
-                    <button onclick="openEditModal({{ $cage->id }}, '{{ $cage->cage_code }}', {{ is_null($cage->location_row) ? 'null' : $cage->location_row }}, {{ is_null($cage->location_column) ? 'null' : $cage->location_column }}, {{ $cage->rows }}, {{ $cage->slots_per_row }}, {{ $cage->max_chickens_per_slot }}, {{ $cage->is_active ? 1 : 0 }})"
-                            class="p-1.5 rounded hover:bg-black/5 transition-colors" style="color: #615d59;" aria-label="Edit cage">
-                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                    </button>
-                    <button onclick="openDeleteModal({{ $cage->id }}, '{{ $cage->cage_code }}')"
-                            class="p-1.5 rounded hover:bg-red-50 transition-colors" style="color: #a39e98;" aria-label="Delete cage">
-                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                    </button>
-                    @endif
-                </div>
-            </div>
+             <div class="flipper relative" id="flipper-{{ $cage->id }}" style="min-height:260px;">
 
-            {{-- Meta strip --}}
-            <div class="flex items-center gap-4 px-4 pb-2 text-xs" style="color: #615d59;">
-                <span>{{ $cage->rows }}×{{ $cage->slots_per_row }}</span>
-                <span>{{ $cage->total_capacity }} capacity</span>
-                <span>{{ $occupiedCount }} occupied</span>
-                @if($sensorCount > 0)
-                <span>{{ $sensorCount }} sensor{{ $sensorCount > 1 ? 's' : '' }}</span>
-                @endif
-                @if($primaryHen)
-                <span>{{ $primaryHen->breed }} · {{ $primaryHen->current_age_weeks }}w</span>
-                @endif
-            </div>
+                {{-- ═══════ FRONT FACE ═══════ --}}
+                <div class="front-face absolute inset-0 flex flex-col" style="background-color:#ffffff; z-index:2;">
+                    {{-- Header bar with health-aware color accent + divider --}}
+                    <div class="flex items-center gap-3 px-3 pt-3 pb-2 border-b" style="background-color:#f8f8f8; border-bottom-color:#e6e6e6; border-top-left-radius:11px; border-top-right-radius:11px;">
+                        {{-- Accent bar (color shifts with occupancy health) --}}
+                        <div style="width:4px; align-self:stretch; background-color:{{ $accentColor }}; border-radius:3px; flex-shrink:0;"></div>
+                        {{-- Left: name + badge --}}
+                        <div class="flex items-center gap-2 min-w-0 flex-1">
+                            <span class="text-sm font-bold shrink-0" style="color:{{ $color }}">{{ $cage->cage_code }}</span>
+                            <span class="text-[10px] px-2 py-0.5 rounded-full shrink-0 font-semibold" style="background-color:{{ $cage->is_active ? '#e8f5ec' : '#f0f0f0' }}; color:{{ $cage->is_active ? '#1f6b3a' : '#615d59' }};">
+                                {{ $cage->is_active ? 'Active' : 'Inactive' }}
+                            </span>
+                        </div>
+                        {{-- Right: occupancy count (equal weight) + actions --}}
+                        <div class="flex items-center gap-1 shrink-0">
+                            <span class="text-sm font-semibold" style="color:{{ $occupancyPct >= 90 ? '#9b1c24' : ($occupancyPct >= 75 ? '#c2703e' : '#1f1f1f') }};">{{ $currentHens }}/{{ $cage->total_capacity ?? '?' }}</span>
+                            <a href="{{ route('cages.bulk-add') }}?cage_id={{ $cage->id }}"
+                               class="icon-btn" style="color:#0075de;" aria-label="Bulk add hens" title="Add hens">
+                                <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                            </a>
+                            <button onclick="flipCage({{ $cage->id }})"
+                                    class="icon-btn" style="color:#615d59;" aria-label="Show details" title="Details & settings">
+                                <i data-lucide="info" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </div>
 
-            {{-- Mini Slot Grid --}}
-            <div class="px-4 pb-3">
-                <div class="grid gap-1 slot-grid-{{ $cage->id }}" style="grid-template-columns: repeat({{ $cage->slots_per_row }}, 1fr);">
-                    @foreach($cage->cageSlots as $slot)
-                    @php
-                        $isSensor = $slot->hasBreakbeam();
-                        $occupancy = $slot->current_occupancy;
-                        $slotBg = $isSensor ? '#d6f0e3' : ($occupancy > 0 ? '#f6f5f4' : '#ffffff');
-                        $slotBorder = $isSensor ? '#2a9d6a' : '#e6e6e6';
-                    @endphp
+                    {{-- Slot Grid with density shading (flex-1 fills remaining space) --}}
+                    <div class="flex-1 min-h-0 px-4 pb-2 pt-2 {{ $hasLargeGrid ? 'overflow-y-auto' : '' }}" style="{{ $hasLargeGrid ? 'max-height:' . $slotGridMaxH . 'px;' : '' }}">
+                        <div class="grid gap-1 slot-grid-{{ $cage->id }}" style="grid-template-columns:repeat({{ min($cage->slots_per_row ?? 3, 6) }}, 32px);justify-content:flex-start;">
+                            @foreach($cage->cageSlots as $slot)
+                            @php
+                                $isSensor = $slot->hasBreakbeam();
+                                $occupancy = $slot->current_occupancy;
+                                $fillRatio = $maxPerSlot > 0 ? min(1, $occupancy / $maxPerSlot) : 0;
+                                if ($isSensor) {
+                                    $slotBg = '#d6f0e3';
+                                    $slotBorder = '#2a9d6a';
+                                    $densityHint = 'sensor';
+                                } elseif ($occupancy > 0) {
+                                    // Density shading: light at low fill, darker at high fill
+                                    $gray = round(248 - ($fillRatio * 40));
+                                    $slotBg = "rgb({$gray},{$gray},{$gray})";
+                                    $slotBorder = $gray > 235 ? '#e6e6e6' : '#d1d5db';
+                                    $densityHint = round($fillRatio * 100) . '%';
+                                } else {
+                                    $slotBg = '#ffffff';
+                                    $slotBorder = '#e6e6e6';
+                                    $densityHint = 'empty';
+                                }
+                            @endphp
                     <button type="button"
                             onclick="expandSlot({{ $slot->id }}, {{ $cage->id }}, '{{ $cage->cage_code }}')"
-                            class="slot-mini aspect-square rounded flex flex-col items-center justify-center text-xs transition-all relative"
-                            style="background-color: {{ $slotBg }}; border: 1px solid {{ $slotBorder }};"
-                            title="Slot {{ $slot->row_number }}-{{ $slot->column_number }}: {{ $occupancy }} hens"
+                            class="slot-mini w-8 h-8 rounded flex flex-col items-center justify-center text-xs transition-all relative"
+                            style="background-color:{{ $slotBg }}; border:1px solid {{ $slotBorder }};"
+                            title="Slot {{ $slot->row_number }}-{{ $slot->column_number }}: {{ $occupancy }} hens{{ $isSensor ? ' (sensor equipped)' : '' }}"
                             aria-label="Slot {{ $slot->row_number }}-{{ $slot->column_number }}, {{ $occupancy }} hens"
                             data-slot-id="{{ $slot->id }}"
                             data-original-number="{{ $slot->slot_number }}">
-                        @if($isSensor)
-                        <span class="absolute top-0 right-0 w-1.5 h-1.5 rounded-bl" style="background-color: #0075de;"></span>
-                        @endif
-                        <span class="slot-reorder-number hidden text-xs font-bold" style="color: #002D5E;">{{ $slot->slot_number }}</span>
-                        @if($occupancy > 0)
-                        <span class="text-xs font-semibold" style="color: #1f1f1f;">{{ $occupancy }}</span>
-                        @else
-                        <span class="text-xs" style="color: #d1d5db;">—</span>
-                        @endif
-                    </button>
-                    @endforeach
-                </div>
-                {{-- Reorder control bar --}}
-                <div id="reorderBar-{{ $cage->id }}" class="hidden mt-2 flex items-center justify-between text-xs" style="color: #615d59;">
-                    <span>Drag slots to renumber</span>
-                    <div class="flex items-center gap-2">
-                        <button onclick="saveReorder({{ $cage->id }})" class="px-2 py-1 rounded text-white text-xs font-medium" style="background-color: #002D5E;">Save</button>
-                        <button onclick="cancelReorder({{ $cage->id }})" class="px-2 py-1 rounded text-xs" style="background-color: #e6e6e6;">Cancel</button>
+                                @if($isSensor)
+                                <span class="absolute top-0 right-0 w-1.5 h-1.5 rounded-bl" style="background-color:#0075de;" title="Sensor equipped"></span>
+                                @endif
+                                <span class="slot-reorder-number hidden text-xs font-bold" style="color:#002D5E;">{{ $slot->slot_number }}</span>
+                                @if($occupancy > 0)
+                                <span class="text-xs font-semibold" style="color:{{ $isSensor ? '#1f6b3a' : '#1f1f1f' }};">{{ $occupancy }}</span>
+                                @else
+                                <span class="text-xs" style="color:#d1d5db;">—</span>
+                                @endif
+                            </button>
+                            @endforeach
+                        </div>
+                        {{-- Reorder bar --}}
+                        <div id="reorderBar-{{ $cage->id }}" class="hidden mt-2 flex items-center justify-between text-xs" style="color:#615d59;">
+                            <span>Drag slots to renumber</span>
+                            <div class="flex items-center gap-2">
+                                <button onclick="saveReorder({{ $cage->id }})" class="px-2 py-1 rounded text-white text-xs font-medium" style="background-color:#002D5E;">Save</button>
+                                <button onclick="cancelReorder({{ $cage->id }})" class="px-2 py-1 rounded text-xs" style="background-color:#e6e6e6;">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Footer: legend bar pinned to bottom --}}
+                    <div class="flex items-center gap-3 px-4 py-2 border-t text-[10px] leading-none shrink-0" style="border-color:#e6e6e6; color:#a39e98;">
+                        <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded" style="background-color:#d6f0e3;border:1px solid #2a9d6a;"></span> Sensor</span>
+                        <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded" style="background-color:#f6f5f4;border:1px solid #e6e6e6;"></span> Occupied</span>
+                        <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded" style="background-color:#ffffff;border:1px solid #e6e6e6;"></span> Empty</span>
                     </div>
                 </div>
+
+                {{-- ═══════ BACK FACE ═══════ --}}
+                <div class="back-face absolute inset-0 rounded-xl flex flex-col" style="background-color:#ffffff; z-index:1;">
+                    {{-- Back header with matching accent bar --}}
+                    <div class="flex items-center gap-3 px-3 pt-3 pb-2 border-b" style="background-color:#f8f8f8; border-bottom-color:#e6e6e6; border-top-left-radius:11px; border-top-right-radius:11px;">
+                        <div style="width:4px; align-self:stretch; background-color:{{ $accentColor }}; border-radius:3px; flex-shrink:0;"></div>
+                        <span class="text-sm font-bold flex-1" style="color:{{ $color }};">{{ $cage->cage_code }}</span>
+                        <button onclick="flipCage({{ $cage->id }})"
+                                class="icon-btn" style="color:#615d59;" aria-label="Back to front" title="Back">
+                            <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+
+                    {{-- Specs (no scrollbar, generous spacing) --}}
+                    <div class="flex-1 px-4 py-3 space-y-2.5">
+                        <div class="grid grid-cols-[60px_1fr] gap-x-2 gap-y-1.5 text-xs">
+                            <span class="font-medium" style="color:#a39e98;">Dims</span>
+                            <span style="color:#1f1f1f;">{{ $cage->rows ?? '?' }}×{{ $cage->slots_per_row ?? '?' }} · {{ $totalSlots }} slots</span>
+
+                            <span class="font-medium" style="color:#a39e98;">Cap</span>
+                            <span style="color:#1f1f1f;">{{ $currentHens }} / {{ $cage->total_capacity ?? '?' }} hens</span>
+
+                            @if($primaryHen)
+                            <span class="font-medium" style="color:#a39e98;">Breed</span>
+                            <span style="color:#1f1f1f;">{{ $primaryHen->breed }} · {{ $primaryHen->current_age_weeks }}w</span>
+                            @endif
+
+                            @if($sensorCount > 0)
+                            <span class="font-medium" style="color:#a39e98;">Sensor</span>
+                            <span style="color:#1f1f1f;">{{ $sensorCount }} slot{{ $sensorCount > 1 ? 's' : '' }}</span>
+                            @endif
+                        </div>
+
+                        {{-- Egg size tags --}}
+                        @if($cageSizes->isNotEmpty())
+                        <div class="flex flex-wrap items-center gap-1">
+                            @foreach(['small','medium','large','jumbo','unsorted'] as $sz)
+                                @php $entry = $cageSizes->firstWhere('egg_size', $sz); @endphp
+                                @if($entry && $entry->total > 0)
+                                <span class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-tight"
+                                      style="background:{{ $sizeColors[$sz]['bg'] }}; color:{{ $sizeColors[$sz]['txt'] }};">
+                                    {{ ucfirst($sz) }} {{ number_format($entry->total) }}
+                                </span>
+                                @endif
+                            @endforeach
+                        </div>
+                        @endif
+                    </div>
+
+                    {{-- Action buttons with tooltips --}}
+                    <div class="flex items-center justify-around px-4 py-2 border-t shrink-0" style="border-color:#e6e6e6;">
+                        @if($isAdmin)
+                        <button onclick="openEditModal({{ $cage->id }}, '{{ $cage->cage_code }}', {{ is_null($cage->location_row) ? 'null' : $cage->location_row }}, {{ is_null($cage->location_column) ? 'null' : $cage->location_column }}, {{ $cage->rows ?? 0 }}, {{ $cage->slots_per_row ?? 0 }}, {{ $cage->max_chickens_per_slot ?? 0 }}, {{ $cage->is_active ? 1 : 0 }})"
+                                class="icon-btn" style="color:#615d59;" aria-label="Edit cage" title="Edit cage">
+                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button onclick="toggleReorderMode({{ $cage->id }})"
+                                class="icon-btn reorder-toggle" style="color:#615d59;" aria-label="Renumber slots" title="Renumber slots">
+                            <i data-lucide="list-ordered" class="w-3.5 h-3.5"></i>
+                        </button>
+                        @endif
+                        <button onclick="window.open('{{ route('cages.print-label', $cage) }}', 'print-{{ $cage->id }}', 'width=900,height=700')"
+                                class="icon-btn" style="color:#615d59;" aria-label="Print cage label" title="Print label">
+                            <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                        </button>
+                        @if($isAdmin)
+                        <button onclick="openDeleteModal({{ $cage->id }}, '{{ $cage->cage_code }}')"
+                                class="icon-btn" style="color:#a39e98;" aria-label="Delete cage" title="Delete cage">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                        @endif
+                    </div>
+                </div>
+
             </div>
 
-            {{-- Expanded Detail Panel (inside cage-card for proper flex containment) --}}
-            <div id="slotExpandPanel-{{ $cage->id }}" class="hidden border-t" style="border-color: #e6e6e6; background-color: #f6f5f4;">
+            {{-- Expanded Detail Panel (outside flipper, stays on front) --}}
+            <div id="slotExpandPanel-{{ $cage->id }}" class="hidden border-t" style="border-color:#e6e6e6; background-color:#f6f5f4;">
                 <div class="p-4">
                     <div class="flex items-center justify-between mb-3">
-                        <span id="slotPanelTitle-{{ $cage->id }}" class="text-sm font-semibold" style="color: #1f1f1f;">Slot details</span>
+                        <span id="slotPanelTitle-{{ $cage->id }}" class="text-sm font-semibold" style="color:#1f1f1f;">Slot details</span>
                         <button onclick="closeSlotExpand({{ $cage->id }})" class="p-1.5 rounded hover:bg-black/5 transition-colors" aria-label="Close">
-                            <i data-lucide="x" class="w-4 h-4" style="color: #615d59;"></i>
+                            <i data-lucide="x" class="w-4 h-4" style="color:#615d59;"></i>
                         </button>
                     </div>
                     <div id="slotPanelContent-{{ $cage->id }}">
-                        <div class="text-xs text-center py-4" style="color: #a39e98;">Loading...</div>
+                        <div class="text-xs text-center py-4" style="color:#a39e98;">Loading...</div>
                     </div>
                 </div>
             </div>
@@ -288,7 +438,8 @@
                 </button>
             </div>
 
-            <form method="POST" action="{{ route('cages.store') }}" id="addCageForm" data-turbo="false" onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Adding\u2026')">
+            <form method="POST" action="{{ route('cages.store') }}" id="addCageForm" data-turbo="false"
+                  onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Adding\u2026')">
                 @csrf
                 <div class="space-y-4">
                     <div class="rounded-lg p-3" style="background-color: #f0f7ff; border: 1px solid #b3d4fc;">
@@ -307,24 +458,27 @@
                     <div class="grid grid-cols-3 gap-4">
                         <div>
                             <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Rows</label>
-                            <input type="number" name="rows" id="addRows" value="3" min="1" max="10"
+                            <input type="number" name="rows" id="addRows" value="{{ old('rows', 3) }}" min="1" max="10"
                                    oninput="updateAddPreview()"
                                    class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
+                            <x-input-error name="rows" />
                         </div>
                         <div>
                             <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Slots</label>
-                            <input type="number" name="slots_per_row" id="addSlotsPerRow" value="5" min="1" max="100"
+                            <input type="number" name="slots_per_row" id="addSlotsPerRow" value="{{ old('slots_per_row', 5) }}" min="1" max="100"
                                    oninput="updateAddPreview()"
                                    class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
+                            <x-input-error name="slots_per_row" />
                         </div>
                         <div>
                             <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Max/Slot</label>
-                            <input type="number" name="max_chickens_per_slot" id="addMaxPerSlot" value="4" min="1" max="10"
+                            <input type="number" name="max_chickens_per_slot" id="addMaxPerSlot" value="{{ old('max_chickens_per_slot', 4) }}" min="1" max="10"
                                    oninput="updateAddPreview()"
                                    class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
+                            <x-input-error name="max_chickens_per_slot" />
                         </div>
                     </div>
 
@@ -359,15 +513,49 @@
                             onmouseout="this.style.backgroundColor='transparent'">
                         Cancel
                     </button>
-                    <button type="submit"
-                            class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity"
-                            style="background-color: #0075de;"
-                            onmouseover="this.style.opacity='0.85'"
-                            onmouseout="this.style.opacity='1'">
+                    <x-button type="submit" class="flex-1 py-2.5">
                         Add Cage
-                    </button>
+                    </x-button>
                 </div>
             </form>
+        </div>
+    </div>
+
+@if(session('reopen_add_cage'))
+<x-modal-reopen modal-id="addCageModal" session-key="reopen_add_cage" guard="addCage">
+    openAddModal();
+</x-modal-reopen>
+@endif
+
+    {{-- ── No Unplaced Chickens Modal ────────────────────── --}}
+    <div id="noChickensModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" style="display: none;">
+        <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeNoChickensModal()"></div>
+        <div class="relative w-full max-w-sm rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+            <div class="flex items-center justify-between mb-5">
+                <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">No Unplaced Chickens</h2>
+                <button onclick="closeNoChickensModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                    <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+                </button>
+            </div>
+            <p class="text-sm" style="color: #6B7280;">
+                All registered chickens are already assigned to cages. Register new chickens before using bulk placement.
+            </p>
+            <div class="flex gap-3 mt-5">
+                <button type="button" onclick="closeNoChickensModal()"
+                        class="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors"
+                        style="color: #1f1f1f; border: 1px solid #e6e6e6;"
+                        onmouseover="this.style.backgroundColor='#f6f5f4'"
+                        onmouseout="this.style.backgroundColor='transparent'">
+                    Maybe Later
+                </button>
+                <button type="button" onclick="closeNoChickensModal(); openRegisterModal()"
+                        class="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors"
+                        style="color: #ffffff; background-color: #002D5E;"
+                        onmouseover="this.style.backgroundColor='#0a3d7a'"
+                        onmouseout="this.style.backgroundColor='#002D5E'">
+                    Register Chickens
+                </button>
+            </div>
         </div>
     </div>
 
@@ -392,6 +580,25 @@
                     </div>
                 </div>
 
+                <div id="editResizeCollisionWarning" class="hidden mb-4 rounded-lg p-3" style="background-color: #fef3cd; border: 1px solid #f59e0b;">
+                    <div class="flex items-start gap-2">
+                        <i data-lucide="alert-triangle" class="w-4 h-4 mt-0.5 shrink-0" style="color: #92400e;"></i>
+                        <p class="text-sm" style="color: #92400e;" id="editResizeCollisionText"></p>
+                    </div>
+                </div>
+
+                @if($errors->has('rows') || $errors->has('slots_per_row') || $errors->has('max_chickens_per_slot') || $errors->has('is_active') || $errors->has('slots') || $errors->has('dht22_count') || $errors->has('resize'))
+                <div class="mb-4 rounded-lg p-3" style="background-color: #fbe4e6; border: 1px solid #f3cdd0;">
+                    <div class="space-y-1 text-sm" style="color: #9b1c24;">
+                        @foreach(['rows','slots_per_row','max_chickens_per_slot','is_active','slots','dht22_count','resize'] as $errKey)
+                        @error($errKey)
+                        <p>{{ $message }}</p>
+                        @enderror
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+
                 <div class="space-y-4">
                     <div class="rounded-lg p-3" style="background-color: #f6f5f4;">
                         <div class="text-xs font-semibold tracking-[0.05em] uppercase mb-1" style="color: #615d59;">Canvas Position</div>
@@ -400,26 +607,51 @@
                     <div class="grid grid-cols-3 gap-4">
                         <div>
                             <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Rows</label>
-                            <input type="number" name="rows" id="editRows" value="3" min="1" max="10"
+                            <input type="number" name="rows" id="editRows" value="{{ old('rows', 3) }}" min="1" max="10"
+                                   oninput="updateEditPreview()"
                                    class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Slots</label>
-                            <input type="number" name="slots_per_row" id="editSlotsPerRow" value="5" min="1" max="100"
+                            <input type="number" name="slots_per_row" id="editSlotsPerRow" value="{{ old('slots_per_row', 5) }}" min="1" max="100"
+                                   oninput="updateEditPreview()"
                                    class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Max/Slot</label>
-                            <input type="number" name="max_chickens_per_slot" id="editMaxPerSlot" value="4" min="1" max="10"
+                            <input type="number" name="max_chickens_per_slot" id="editMaxPerSlot" value="{{ old('max_chickens_per_slot', 4) }}" min="1" max="10"
+                                   oninput="updateEditPreview()"
                                    class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <input id="editActive" name="is_active" type="checkbox" value="1" class="w-4 h-4 rounded" style="accent-color: #0075de;">
+                        <input id="editActive" name="is_active" type="checkbox" value="1" class="w-4 h-4 rounded" style="accent-color: #0075de;" {{ old('is_active', true) ? 'checked' : '' }}>
                         <label for="editActive" class="text-sm" style="color: #31302e;">Active</label>
+                    </div>
+
+                    {{-- Configuration Summary (shared preview component) --}}
+                    <div class="rounded-lg p-3" style="background-color: #f6f5f4;">
+                        <div class="text-xs font-semibold tracking-[0.05em] uppercase mb-2" style="color: #615d59;">Configuration Summary</div>
+                        <div class="flex justify-between text-sm">
+                            <span style="color: #615d59;">Total slots</span>
+                            <span class="font-semibold" style="color: #1f1f1f;" id="editSummarySlots">15</span>
+                        </div>
+                        <div class="flex justify-between text-sm mt-1">
+                            <span style="color: #615d59;">Total capacity</span>
+                            <span class="font-semibold" style="color: #0075de;" id="editSummaryCapacity">60 hens</span>
+                        </div>
+                    </div>
+
+                    {{-- Layout Preview (shared component reused from Add Cage) --}}
+                    <div>
+                        <div class="text-xs font-semibold tracking-[0.05em] uppercase mb-2" style="color: #615d59;">Layout Preview</div>
+                        <div id="editPreviewContainer" class="border rounded-lg p-3 overflow-hidden" style="border-color: #e6e6e6; background-color: #ffffff; max-width: 100%;">
+                            <div class="flex gap-1 mb-1" id="editPreviewColHeaders"></div>
+                            <div id="editPreviewGrid"></div>
+                        </div>
                     </div>
 
                     {{-- Counting sensor (IR break beam) — per slot (items 15, 21, 23, 24) --}}
@@ -467,120 +699,30 @@
                             onmouseout="this.style.backgroundColor='transparent'">
                         Cancel
                     </button>
-                    <button type="submit"
-                            class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity"
-                            style="background-color: #0075de;"
-                            onmouseover="this.style.opacity='0.85'"
-                            onmouseout="this.style.opacity='1'">
+                    <x-button type="submit" class="flex-1 py-2.5">
                         Save Changes
-                    </button>
+                    </x-button>
                 </div>
             </form>
         </div>
     </div>
-
-    {{-- ── Delete Cage Modal (items 19 + 20) ── --}}
-    <div id="deleteCageModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
-        <div class="absolute inset-0" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeDeleteModal()"></div>
-        <div class="relative w-full max-w-md rounded-2xl p-6" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
-            <div class="mb-4 flex items-center justify-center w-10 h-10 rounded-full" style="background-color: #fbe4e6;">
-                <i data-lucide="trash-2" class="w-5 h-5" style="color: #9b1c24;"></i>
-            </div>
-            <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Delete <span id="deleteCageCode"></span>?</h2>
-            <p class="mt-1 text-sm mb-4" style="color: #615d59;">Choose what the deletion includes:</p>
-
-            <div class="space-y-3 text-sm">
-                {{-- Hens --}}
-                <div class="rounded-lg p-3" style="background-color: #f6f5f4;">
-                    <div class="font-medium mb-2" style="color: #31302e;">Hens in this cage (<span id="delHenCount">0</span> active)</div>
-                    <label class="flex items-center gap-2 cursor-pointer mb-1.5">
-                        <input type="radio" name="delHensAction" value="move" checked class="w-4 h-4" style="accent-color: #0075de;">
-                        <span style="color: #615d59;">Move to unplaced (return to chicken inventory)</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="delHensAction" value="delete" class="w-4 h-4" style="accent-color: #9b1c24;">
-                        <span style="color: #615d59;">Delete permanently</span>
-                    </label>
-                </div>
-
-                {{-- Sensors --}}
-                <div class="rounded-lg p-3" style="background-color: #f6f5f4;">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" id="delReturnSensors" checked class="w-4 h-4 rounded" style="accent-color: #0075de;">
-                        <span style="color: #615d59;">Return <span id="delSensorCount">0</span> assigned sensor(s) to inventory</span>
-                    </label>
-                    <p class="text-xs mt-1 ml-6" style="color: #a39e98;">If unchecked, the sensors are deleted with the cage.</p>
-                </div>
-
-                {{-- Historical records — per-type preservation checkboxes --}}
-                <div class="rounded-lg p-3" style="background-color: #f6f5f4;">
-                    <div class="font-medium mb-2" style="color: #31302e;">Preserve historical records</div>
-                    <p class="text-xs mb-2" style="color: #a39e98;">Checked records survive deletion (FK removed). Unchecked ones are permanently deleted.</p>
-                    <label class="flex items-center gap-2 cursor-pointer mb-1.5">
-                        <input type="checkbox" id="delPreserveProduction" checked class="w-4 h-4 rounded" style="accent-color: #0075de;">
-                        <span style="color: #615d59;">Egg production logs (<span class="del-log-count" data-type="production">0</span>)</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer mb-1.5">
-                        <input type="checkbox" id="delPreserveMortality" checked class="w-4 h-4 rounded" style="accent-color: #0075de;">
-                        <span style="color: #615d59;">Mortality records (<span class="del-log-count" data-type="mortality">0</span>)</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer mb-1.5">
-                        <input type="checkbox" id="delPreserveFeed" checked class="w-4 h-4 rounded" style="accent-color: #0075de;">
-                        <span style="color: #615d59;">Feed consumption logs (<span class="del-log-count" data-type="feed">0</span>)</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" id="delPreserveEnvironment" checked class="w-4 h-4 rounded" style="accent-color: #0075de;">
-                        <span style="color: #615d59;">Environment logs (<span class="del-log-count" data-type="env">0</span>)</span>
-                    </label>
-                </div>
-
-                {{-- Delete Permanently (no salvage) — admin-only destructive path --}}
-                @if($isAdmin)
-                <div class="border-t border-dashed pt-3 mt-1" style="border-color: #e6e6e6;">
-                    <a href="#" id="delPermanentLink"
-                       class="text-xs font-medium transition-colors"
-                       style="color: #9b1c24;"
-                       onmouseover="this.style.color='#7a161d'"
-                       onmouseout="this.style.color='#9b1c24'">
-                        Delete Permanently (no salvage) →
-                    </a>
-                </div>
-                @endif
-            </div>
-
-            <div class="flex items-center justify-end gap-3 mt-5">
-                <button type="button" onclick="closeDeleteModal()"
-                        class="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
-                        style="color: #1f1f1f; border: 1px solid #e6e6e6;"
-                        onmouseover="this.style.backgroundColor='#f6f5f4'"
-                        onmouseout="this.style.backgroundColor='transparent'">
-                    Cancel
-                </button>
-                <button type="button" id="confirmDeleteCageBtn" onclick="confirmCageDelete()"
-                        class="px-5 py-2 text-sm font-medium rounded-lg text-white transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
-                        style="background-color: #9b1c24;"
-                        onmouseover="if(!this.disabled)this.style.backgroundColor='#7a161d'"
-                        onmouseout="this.style.backgroundColor='#9b1c24'">
-                    Delete Cage
-                </button>
-            </div>
-        </div>
-    </div>
-
-    {{-- ── Confirm Modal (for delete) ── --}}
-    <x-confirm-modal />
 
 </div>
 @endsection
 
 @push('scripts')
 <script>
+var cagesBase = '{{ url('cages') }}';
+
 // ── Tab Filter ────────────────────────────────────────────
 function filterCage(code) {
-    const cageColors = { 'CAGE-A': '#2D7D46', 'CAGE-B': '#1D4E8F', 'CAGE-C': '#C2703E', 'CAGE-D': '#6B4C8A' };
+    if (window.__cagesActiveTab === code) return;
+    window.__cagesActiveTab = code;
+
+    const cageColors = @json(\App\Models\Cage::getColorMap());
     document.querySelectorAll('.cage-tab').forEach(tab => {
         if (tab.dataset.tab === code) {
-            tab.style.borderBottomColor = code === 'all' ? '#0075de' : (cageColors[code] || '#0075de');
+            tab.style.borderBottomColor = code === 'all' ? '#002D5E' : (cageColors[code] || '#002D5E');
             tab.style.color = '#1f1f1f';
         } else {
             tab.style.borderBottomColor = 'transparent';
@@ -598,7 +740,7 @@ function expandSlot(slotId, cageId, cageCode) {
     const content = document.getElementById('slotPanelContent-' + cageId);
     const title = document.getElementById('slotPanelTitle-' + cageId);
     panel.classList.remove('hidden');
-    fetch(`/cages/slots/${slotId}/hens-json`)
+    fetch(`${cagesBase}/slots/${slotId}/hens-json`)
         .then(r => r.json())
         .then(data => {
             title.textContent = cageCode + ' — Slot ' + data.slot.row_number + '-' + data.slot.column_number + ' (#' + data.slot.slot_number + ')';
@@ -656,6 +798,17 @@ function closeSlotExpand(cageId) {
     document.getElementById('slotExpandPanel-' + cageId).classList.add('hidden');
 }
 
+// ── Flip Card ─────────────────────────────────────────────
+function flipCage(cageId) {
+    var card = document.querySelector('.cage-card[data-cage-code]')?.closest('.cage-card');
+    // Find the card by looking for the flipper
+    var flipper = document.getElementById('flipper-' + cageId);
+    if (!flipper) return;
+    var card = flipper.closest('.cage-card');
+    if (!card) return;
+    card.classList.toggle('is-flipped');
+}
+
 // ── Add Modal ────────────────────────────────────────────
 function openAddModal() {
     document.getElementById('addCageModal').style.display = 'flex';
@@ -666,22 +819,31 @@ function closeAddModal() {
     document.getElementById('addCageModal').style.display = 'none';
 }
 
-function updateAddPreview() {
-    const rows = parseInt(document.getElementById('addRows').value) || 1;
-    const slotsPerRow = parseInt(document.getElementById('addSlotsPerRow').value) || 1;
-    const maxPerSlot = parseInt(document.getElementById('addMaxPerSlot').value) || 1;
+// ── No Chickens Modal ───────────────────────────────
+function openNoChickensModal() {
+    document.getElementById('noChickensModal').style.display = 'flex';
+    lucide.createIcons();
+}
+
+function closeNoChickensModal() {
+    document.getElementById('noChickensModal').style.display = 'none';
+}
+
+function renderSlotPreview(prefix) {
+    const rows = parseInt(document.getElementById(prefix + 'Rows').value) || 1;
+    const slotsPerRow = parseInt(document.getElementById(prefix + 'SlotsPerRow').value) || 1;
+    const maxPerSlot = parseInt(document.getElementById(prefix + 'MaxPerSlot').value) || 1;
     const totalSlots = rows * slotsPerRow;
     const totalCapacity = totalSlots * maxPerSlot;
-    document.getElementById('addSummarySlots').textContent = totalSlots;
-    document.getElementById('addSummaryCapacity').textContent = totalCapacity + ' hens';
+    document.getElementById(prefix + 'SummarySlots').textContent = totalSlots;
+    document.getElementById(prefix + 'SummaryCapacity').textContent = totalCapacity + ' hens';
 
-    const container = document.getElementById('addPreviewContainer');
-    const grid = document.getElementById('addPreviewGrid');
-    const colHeaders = document.getElementById('addPreviewColHeaders');
+    const container = document.getElementById(prefix + 'PreviewContainer');
+    const grid = document.getElementById(prefix + 'PreviewGrid');
+    const colHeaders = document.getElementById(prefix + 'PreviewColHeaders');
     const gap = 3;
 
-    // Available width inside container (excl. padding)
-    const containerPad = 24; // p-3 = 12px each side
+    const containerPad = 24;
     const availW = container.clientWidth - containerPad;
     const rowLabelW = 20;
     const totalGaps = (slotsPerRow - 1) * gap;
@@ -706,7 +868,6 @@ function updateAddPreview() {
 
     const axisFontSize = cellSize < 20 ? '8px' : (cellSize < 26 ? '9px' : '11px');
 
-    // Column headers (always visible)
     colHeaders.innerHTML = '';
     colHeaders.style.display = 'flex';
     colHeaders.style.gap = gap + 'px';
@@ -733,7 +894,6 @@ function updateAddPreview() {
         colHeaders.appendChild(d);
     }
 
-    // Grid rows (row labels always visible, per-cell numbers conditional)
     let html = '';
     for (let r = 1; r <= rows; r++) {
         html += '<div style="display: flex; gap: ' + gap + 'px; margin-bottom: ' + gap + 'px;">';
@@ -755,15 +915,106 @@ function updateAddPreview() {
     grid.innerHTML = html;
 }
 
+function updateAddPreview() { renderSlotPreview('add'); }
+function updateEditPreview() { renderSlotPreview('edit'); checkEditResizeCollision(); }
+
+// ── Resize collision detection (proactive UX, not save-time validation) ──
+var _editCollisionCageId = null;
+var _editCollisionConflicts = [];
+
+function checkEditResizeCollision() {
+    if (!_editCollisionCageId) return;
+
+    var newRows = parseInt(document.getElementById('editRows').value) || 1;
+    var newSlots = parseInt(document.getElementById('editSlotsPerRow').value) || 1;
+    var cageId = _editCollisionCageId;
+
+    var pos = pendingMoves[cageId] || savedPositions[cageId] || {};
+    var originRow = pos.location_row;
+    var originCol = pos.location_column;
+
+    var warningEl = document.getElementById('editResizeCollisionWarning');
+    var warningText = document.getElementById('editResizeCollisionText');
+
+    clearResizeCollisionHighlight();
+
+    if (originRow === null || originCol === null) {
+        warningEl.classList.add('hidden');
+        return;
+    }
+
+    var candidate = { col: parseInt(originCol), row: parseInt(originRow), w: newSlots, h: newRows };
+
+    var outOfBounds = (candidate.col + candidate.w > GRID_COLS) || (candidate.row + candidate.h > GRID_ROWS);
+    var conflicts = [];
+
+    for (var id in placedCages) {
+        if (parseInt(id) === cageId) continue;
+        var p = placedCages[id];
+        var other = { col: p.origin_col, row: p.origin_row, w: p.width, h: p.height };
+        if (rectsOverlap(candidate, other)) {
+            conflicts.push({ id: parseInt(id), code: p.code });
+        }
+    }
+
+    _editCollisionConflicts = conflicts;
+
+    if (conflicts.length > 0 || outOfBounds) {
+        highlightConflictingCages(conflicts);
+        var code = cageMeta[cageId] ? cageMeta[cageId].code : 'This cage';
+        var msg = 'Resizing ' + code + ' to ' + newSlots + '\u00d7' + newRows + ' will ';
+        if (outOfBounds && conflicts.length > 0) {
+            msg += 'go out of bounds and overlap ' + conflicts.map(function(c) { return c.code; }).join(', ');
+        } else if (outOfBounds) {
+            msg += 'extend beyond the canvas bounds';
+        } else {
+            msg += 'overlap ' + conflicts.map(function(c) { return c.code; }).join(', ');
+        }
+        warningText.textContent = msg;
+        warningEl.classList.remove('hidden');
+    } else {
+        warningEl.classList.add('hidden');
+    }
+}
+
+function highlightConflictingCages(conflicts) {
+    conflicts.forEach(function(c) {
+        var el = document.querySelector('.cage-overlay[data-cage-id="' + c.id + '"]');
+        if (el) {
+            el.style.borderColor = '#dc2626';
+            el.style.borderWidth = '3px';
+            el.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.25)';
+        }
+    });
+}
+
+function clearResizeCollisionHighlight() {
+    _editCollisionConflicts.forEach(function(c) {
+        var el = document.querySelector('.cage-overlay[data-cage-id="' + c.id + '"]');
+        if (el && parseInt(el.dataset.cageId) !== selectedCageId) {
+            var p = placedCages[c.id];
+            if (p) {
+                el.style.borderColor = p.color;
+                el.style.borderWidth = '2px';
+                el.style.boxShadow = 'none';
+            }
+        }
+    });
+    _editCollisionConflicts = [];
+}
+
 // ── Edit Modal ───────────────────────────────────────────
 function openEditModal(id, cageCode, locationRow, locationCol, rows, slotsPerRow, maxPerSlot, isActive) {
-    document.getElementById('editCageForm').action = '/cages/' + id;
+    document.getElementById('editCageForm').action = cagesBase + '/' + id;
     document.getElementById('editCageCode').textContent = cageCode;
     document.getElementById('editRows').value = rows;
     document.getElementById('editSlotsPerRow').value = slotsPerRow;
     document.getElementById('editMaxPerSlot').value = maxPerSlot;
     document.getElementById('editActive').checked = isActive === 1;
     document.getElementById('editResizeError').classList.add('hidden');
+    document.getElementById('editResizeCollisionWarning').classList.add('hidden');
+    _editCollisionCageId = id;
+    clearResizeCollisionHighlight();
 
     // Canvas position display — positions saved this session (without a page
     // refresh) override the values baked into the server-rendered edit button.
@@ -788,8 +1039,8 @@ function openEditModal(id, cageCode, locationRow, locationCol, rows, slotsPerRow
     sensorInv = { spareIR: 0, spareDHT: 0, irBaseline: {}, dhtBaseline: 0 };
 
     Promise.all([
-        fetch('/cages/' + id + '/slots-json').then(r => r.json()),
-        fetch('/cages/' + id + '/sensor-info').then(r => r.json()),
+        fetch(cagesBase + '/' + id + '/slots-json').then(r => r.json()),
+        fetch(cagesBase + '/' + id + '/sensor-info').then(r => r.json()),
     ])
         .then(function(results) {
             var slots = results[0];
@@ -833,6 +1084,7 @@ function openEditModal(id, cageCode, locationRow, locationCol, rows, slotsPerRow
         });
 
     document.getElementById('editCageModal').style.display = 'flex';
+    updateEditPreview();
 }
 
 // ── Sensor inventory tracking (items 21, 23, 24) ─────────
@@ -901,6 +1153,8 @@ function removeDht22(index) {
 
 function closeEditModal() {
     document.getElementById('editCageModal').style.display = 'none';
+    _editCollisionCageId = null;
+    clearResizeCollisionHighlight();
 }
 
 // ── Keyboard: Escape closes modals (bind once) ───────────
@@ -917,282 +1171,585 @@ function closeEditModal() {
             closeMoveModal();
             closeRemoveModal();
             if (typeof closeDeleteModal === 'function') closeDeleteModal();
+            if (typeof closeGridSettings === 'function') closeGridSettings();
         }
     });
 })();
 
-// ── Farm Layout: Drag-and-Drop + Click Filter ────────────
+// ── Tile-based Farm Layout Canvas ──────────────────────────────────
 var IS_ADMIN = {{ $isAdmin ? 'true' : 'false' }};
-var draggedCageId = null;
-var dragMoved = false;
-var activeFilterId = null;
+var STORED_GRID_ROWS = {{ (int) \App\Models\Setting::get('farm_grid_rows', 6) }};
+var STORED_GRID_COLS = {{ (int) \App\Models\Setting::get('farm_grid_cols', 10) }};
+var GRID_ROWS = {{ $gridRows }};
+var GRID_COLS = {{ $gridCols }};
+var TILE_SIZE = 42;
+var TILE_GAP = 2;
+var GRID_PAD = 10;
 
-// cageId -> { location_row, location_column } (nulls = staging). Applied on Save Layout.
+var draggedCageId = null;
+var draggedFromCanvas = false;
+var grabOffsetCol = 0;
+var grabOffsetRow = 0;
+var selectedCageId = null;
+var activeFilterId = null;
 var pendingMoves = {};
-// Positions persisted this session without a page refresh; overrides the
-// server-rendered values baked into each cage card's edit button.
 var savedPositions = {};
 var cageMeta = {!! $cages->mapWithKeys(fn($c) => [$c->id => [
     'code' => $c->cage_code,
     'color' => $c->color,
     'colorSoft' => $c->colorSoft,
     'breed' => \Illuminate\Support\Str::limit($c->hens->first()?->breed ?? '—', 16),
+    'rows' => (int) ($c->rows ?? 1),
+    'slots_per_row' => (int) ($c->slots_per_row ?? 1),
+    'max_chickens_per_slot' => (int) ($c->max_chickens_per_slot ?? 4),
+    'location_row' => $c->location_row,
+    'location_col' => $c->location_column,
 ]])->toJson(JSON_UNESCAPED_UNICODE) !!};
 
+// ── Initialize placed cages state from server data ──
+var placedCages = {};
+var initialPositions = {};
+Object.keys(cageMeta).forEach(function(id) {
+    var m = cageMeta[id];
+    if (m.location_row !== null && m.location_col !== null) {
+        placedCages[id] = {
+            origin_row: parseInt(m.location_row),
+            origin_col: parseInt(m.location_col),
+            width: m.slots_per_row,
+            height: m.rows,
+            color: m.color,
+            colorSoft: m.colorSoft,
+            code: m.code,
+        };
+        initialPositions[id] = { location_row: m.location_row, location_col: m.location_col };
+    }
+});
+
+// ── Tile coordinate helpers ──
+function tileLeft(col) { return GRID_PAD + col * (TILE_SIZE + TILE_GAP); }
+function tileTop(row) { return GRID_PAD + row * (TILE_SIZE + TILE_GAP); }
+function canvasW() { return GRID_PAD * 2 + GRID_COLS * (TILE_SIZE + TILE_GAP) - TILE_GAP; }
+function canvasH() { return GRID_PAD * 2 + GRID_ROWS * (TILE_SIZE + TILE_GAP) - TILE_GAP; }
+
+// ── Overlap detection ──
+function rectsOverlap(a, b) {
+    return !(a.col + a.w <= b.col || b.col + b.w <= a.col ||
+             a.row + a.h <= b.row || b.row + b.h <= a.row);
+}
+
+function checkPlacement(cageId, originRow, originCol) {
+    var m = cageMeta[cageId];
+    if (!m) return false;
+    var w = m.slots_per_row;
+    var h = m.rows;
+    if (originCol + w > GRID_COLS || originRow + h > GRID_ROWS || originCol < 0 || originRow < 0) return false;
+    var candidate = { col: originCol, row: originRow, w: w, h: h };
+    for (var id in placedCages) {
+        if (parseInt(id) === cageId) continue;
+        var p = placedCages[id];
+        var other = { col: p.origin_col, row: p.origin_row, w: p.width, h: p.height };
+        if (rectsOverlap(candidate, other)) return false;
+    }
+    return true;
+}
+
+function getTilesOccupied(originRow, originCol, width, height) {
+    var tiles = [];
+    for (var r = originRow; r < originRow + height; r++) {
+        for (var c = originCol; c < originCol + width; c++) {
+            tiles.push({ row: r, col: c });
+        }
+    }
+    return tiles;
+}
+
+// ── Canvas Rendering ──
+function renderCanvas() {
+    renderTileGrid();
+    renderCageOverlays();
+    updateCanvasSize();
+    updateStagingVisibility();
+    updateSaveButton();
+}
+
+function renderTileGrid() {
+    var layer = document.getElementById('tileGridLayer');
+    var html = '';
+    for (var r = 0; r < GRID_ROWS; r++) {
+        for (var c = 0; c < GRID_COLS; c++) {
+            var left = tileLeft(c);
+            var top = tileTop(r);
+            html += '<div class="tile-bg absolute rounded-sm" style="left:' + left + 'px;top:' + top + 'px;width:' + TILE_SIZE + 'px;height:' + TILE_SIZE + 'px;background:#f9fafb;border:1px solid #e6e6e6;"></div>';
+        }
+    }
+    layer.innerHTML = html;
+}
+
+function renderCageOverlays() {
+    var layer = document.getElementById('cageOverlayLayer');
+    var html = '';
+    for (var id in placedCages) {
+        var c = placedCages[id];
+        html += cageOverlayHtml(parseInt(id), c);
+    }
+    layer.innerHTML = html;
+    // Re-bind click events for selection
+    layer.querySelectorAll('.cage-overlay').forEach(function(el) {
+        el.addEventListener('click', function(e) {
+            e.stopPropagation();
+            selectCage(parseInt(el.dataset.cageId));
+        });
+    });
+    // Bind remove buttons
+    layer.querySelectorAll('.cage-remove-btn').forEach(function(el) {
+        el.addEventListener('click', function(e) {
+            e.stopPropagation();
+            confirmRemoveCage(parseInt(el.dataset.cageId));
+        });
+    });
+    // Bind resize buttons (opens Edit Cage focused on size fields)
+    layer.querySelectorAll('.cage-resize-btn').forEach(function(el) {
+        el.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var id = parseInt(el.dataset.cageId);
+            var m = cageMeta[id];
+            var p = placedCages[id];
+            if (!m || !p) return;
+            openEditModal(id, m.code, p.origin_row, p.origin_col, m.rows, m.slots_per_row, m.max_chickens_per_slot || 4, 1);
+            // Scroll to rows field after modal opens
+            setTimeout(function() {
+                var rowsInput = document.getElementById('editRows');
+                if (rowsInput) { rowsInput.focus(); rowsInput.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+            }, 300);
+        });
+    });
+    // Bind drag events
+    layer.querySelectorAll('.cage-drag-handle').forEach(function(el) {
+        el.addEventListener('dragstart', function(e) { handleDragStart(e, parseInt(el.dataset.cageId)); });
+    });
+    updateCanvasSize();
+}
+
+function cageLabelHtml(code, w, h, color) {
+    var isTiny = (w === 1 && h === 1);
+    var isSmall = (w <= 2 || h <= 2);
+    var shortCode = code.indexOf('CAGE-') === 0 ? code.slice(5) : code;
+
+    if (isTiny) {
+        return '<span class="font-bold leading-none text-center" style="font-size:18px;color:' + color + ';overflow:hidden;text-overflow:ellipsis;max-width:100%;display:inline-block;">' + shortCode + '</span>';
+    }
+    if (isSmall) {
+        return '<span class="font-semibold leading-tight text-center" style="font-size:13px;color:' + color + ';overflow:hidden;text-overflow:ellipsis;word-break:break-all;max-width:100%;display:inline-block;">' + code + '</span>';
+    }
+    return '<span class="font-semibold leading-tight text-center" style="font-size:14px;color:' + color + ';">' + code + '</span>'
+        + '<span class="text-xs leading-tight text-center" style="color:#615d59;">' + w + '×' + h + '</span>';
+}
+
+function cageOverlayHtml(cageId, c) {
+    var left = tileLeft(c.origin_col);
+    var top = tileTop(c.origin_row);
+    var w = c.width * (TILE_SIZE + TILE_GAP) - TILE_GAP;
+    var h = c.height * (TILE_SIZE + TILE_GAP) - TILE_GAP;
+    var isSelected = (selectedCageId === cageId);
+    var borderColor = isSelected ? '#002D5E' : c.color;
+    var borderWidth = isSelected ? 3 : 2;
+    var shadow = isSelected ? '0 0 0 2px rgba(0,45,94,0.25)' : 'none';
+    var btns = '';
+    if (isSelected && IS_ADMIN) {
+        btns += '<button class="cage-remove-btn absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white z-10" data-cage-id="' + cageId + '" style="background-color:#9b1c24;line-height:1;" title="Remove from canvas">×</button>';
+    }
+    return '<div class="cage-overlay absolute rounded-lg flex items-center justify-center" data-cage-id="' + cageId + '" style="left:' + left + 'px;top:' + top + 'px;width:' + w + 'px;height:' + h + 'px;border:' + borderWidth + 'px solid ' + borderColor + ';background:' + c.colorSoft + ';box-shadow:' + shadow + ';cursor:pointer;z-index:1;" title="' + c.code + ' — ' + c.width + '×' + c.height + '">'
+        + btns
+        + '<div class="cage-drag-handle absolute inset-0 rounded-lg flex flex-col items-center justify-center gap-0.5" draggable="' + IS_ADMIN + '" data-cage-id="' + cageId + '" style="cursor:grab;">'
+        + cageLabelHtml(c.code, c.width, c.height, c.color)
+        + '</div>'
+        + '</div>';
+}
+
+function updateCanvasSize() {
+    var content = document.getElementById('canvasContent');
+    if (content) {
+        content.style.width = canvasW() + 'px';
+        content.style.height = canvasH() + 'px';
+    }
+    fitCanvasToWidth();
+}
+
+function fitCanvasToWidth() {
+    var scaler = document.getElementById('canvasScaler');
+    var canvas = document.getElementById('farmCanvas');
+    if (!scaler || !canvas) return;
+    var contentW = canvasW();
+    var containerW = canvas.clientWidth - 4;
+    if (containerW < 1) return;
+    var scale = Math.min(1, containerW / contentW);
+    scaler.style.transform = 'scale(' + scale + ')';
+    scaler.style.width = (contentW * scale) + 'px';
+    scaler.style.height = (canvasH() * scale) + 'px';
+}
+
+// Fit canvas on window resize
+var _fitCanvasTimer = null;
+window.addEventListener('resize', function() {
+    if (_fitCanvasTimer) clearTimeout(_fitCanvasTimer);
+    _fitCanvasTimer = setTimeout(fitCanvasToWidth, 150);
+});
+
+// ── Grid extent recomputation (after add/remove) ──
+function recomputeGridExtent() {
+    var maxR = GRID_ROWS;
+    var maxC = GRID_COLS;
+    for (var id in placedCages) {
+        var c = placedCages[id];
+        var r = c.origin_row + c.height;
+        var cl = c.origin_col + c.width;
+        if (r > maxR) maxR = r;
+        if (cl > maxC) maxC = cl;
+    }
+    GRID_ROWS = maxR;
+    GRID_COLS = maxC;
+}
+
+// ── Selection ──
+function selectCage(cageId) {
+    if (selectedCageId === cageId) { deselectAll(); return; }
+    selectedCageId = cageId;
+    renderCageOverlays();
+}
+
+function deselectAll() {
+    if (selectedCageId === null) return;
+    selectedCageId = null;
+    renderCageOverlays();
+}
+
+// ── Canvas click to deselect ──
+document.addEventListener('click', function(e) {
+    if (selectedCageId !== null && !e.target.closest('.cage-overlay') && !e.target.closest('.staging-tile')) {
+        deselectAll();
+    }
+});
+
+// ── Drag and Drop ──
+function handleDragStart(e, cageId) {
+    if (!IS_ADMIN) return;
+    draggedCageId = cageId;
+    // Transparent drag image (hide browser default)
+    var hiddenCanvas = document.createElement('canvas');
+    hiddenCanvas.width = 1; hiddenCanvas.height = 1;
+    e.dataTransfer.setDragImage(hiddenCanvas, 0, 0);
+    e.dataTransfer.setData('text/plain', String(cageId));
+    e.dataTransfer.effectAllowed = 'move';
+
+    draggedFromCanvas = e.target.closest('.cage-overlay') !== null || e.target.closest('.cage-drag-handle') !== null;
+
+    // Calculate grab offset: where within the cage footprint the user grabbed
+    var m = cageMeta[cageId];
+    var cellW = TILE_SIZE + TILE_GAP;
+    var cellH = TILE_SIZE + TILE_GAP;
+
+    if (draggedFromCanvas) {
+        var overlay = document.querySelector('.cage-overlay[data-cage-id="' + cageId + '"]');
+        if (overlay) overlay.style.opacity = '0.35';
+        // Grab offset relative to cage overlay in pixels
+        var overlayRect = overlay.getBoundingClientRect();
+        var grabPxX = e.clientX - overlayRect.left;
+        var grabPxY = e.clientY - overlayRect.top;
+        grabOffsetCol = grabPxX / cellW;
+        grabOffsetRow = grabPxY / cellH;
+    } else {
+        // Dragging from staging tile — grab from center of tile
+        var tile = e.target.closest('.staging-tile');
+        if (tile) {
+            var tileRect = tile.getBoundingClientRect();
+            var grabPxX = e.clientX - tileRect.left;
+            var grabPxY = e.clientY - tileRect.top;
+            grabOffsetCol = grabPxX / cellW;
+            grabOffsetRow = grabPxY / cellH;
+        } else {
+            grabOffsetCol = (m.slots_per_row * cellW) / 2 / cellW;
+            grabOffsetRow = (m.rows * cellH) / 2 / cellH;
+        }
+    }
+    // Clamp grab offset so it stays within the cage footprint
+    grabOffsetCol = Math.max(0, Math.min(grabOffsetCol, m.slots_per_row));
+    grabOffsetRow = Math.max(0, Math.min(grabOffsetRow, m.rows));
+
+    bindDragListeners();
+}
+
+var dragListenersBound = false;
+function bindDragListeners() {
+    if (dragListenersBound) return;
+    dragListenersBound = true;
+    var canvas = document.getElementById('farmCanvas');
+    document.addEventListener('dragover', function(e) { e.preventDefault(); showGhost(e); });
+    document.addEventListener('dragend', function(e) { hideGhost(); unbindDragListeners(); resetDragState(); });
+    document.addEventListener('drop', function(e) { e.preventDefault(); hideGhost(); handleCanvasDrop(e); });
+}
+
+function unbindDragListeners() {
+    dragListenersBound = false;
+}
+
+function showGhost(e) {
+    var ghost = document.getElementById('dragGhost');
+    if (!ghost) return;
+    var cageId = draggedCageId;
+    if (!cageId || !cageMeta[cageId]) { ghost.classList.add('hidden'); return; }
+    var m = cageMeta[cageId];
+    var w = m.slots_per_row;
+    var h = m.rows;
+    var cellW = TILE_SIZE + TILE_GAP;
+    var cellH = TILE_SIZE + TILE_GAP;
+
+    // Calculate snapped position relative to canvas content origin
+    var canvas = document.getElementById('farmCanvas');
+    var rect = canvas.getBoundingClientRect();
+    var mx = e.clientX - rect.left - GRID_PAD;
+    var my = e.clientY - rect.top - GRID_PAD;
+
+    // Floor-based snap from grab-offset-adjusted cursor position
+    var snapCol = Math.floor((mx - grabOffsetCol * cellW) / cellW);
+    var snapRow = Math.floor((my - grabOffsetRow * cellH) / cellH);
+    // Clamp so the entire footprint stays within grid bounds
+    snapCol = Math.max(0, Math.min(snapCol, GRID_COLS - w));
+    snapRow = Math.max(0, Math.min(snapRow, GRID_ROWS - h));
+
+    // Ghost positioned at snapped tile (viewport coordinates)
+    var ghostLeft = rect.left + tileLeft(snapCol);
+    var ghostTop = rect.top + tileTop(snapRow);
+    var ghostW = w * cellW - TILE_GAP;
+    var ghostH = h * cellH - TILE_GAP;
+
+    var valid = checkPlacement(cageId, snapRow, snapCol);
+
+    // Check if the snap position actually changed — avoids redundant DOM updates
+    var snapChanged = (window._lastSnap === undefined ||
+                       window._lastSnap.row !== snapRow ||
+                       window._lastSnap.col !== snapCol);
+    if (!snapChanged && ghost.classList.contains('hidden') === false) return;
+
+    window._lastSnap = { row: snapRow, col: snapCol };
+
+    ghost.style.left = ghostLeft + 'px';
+    ghost.style.top = ghostTop + 'px';
+    ghost.style.width = ghostW + 'px';
+    ghost.style.height = ghostH + 'px';
+    ghost.style.borderColor = valid ? m.color : '#9b1c24';
+    ghost.style.backgroundColor = valid ? m.colorSoft : '#fbe4e6';
+    ghost.innerHTML = cageLabelHtml(m.code, m.slots_per_row, m.rows, valid ? m.color : '#9b1c24');
+    ghost.classList.remove('hidden');
+
+    // Highlight target tiles
+    clearGridHighlights();
+    if (valid) {
+        for (var r = snapRow; r < snapRow + h; r++) {
+            for (var c = snapCol; c < snapCol + w; c++) {
+                var tiles = document.querySelectorAll('.tile-bg');
+                var idx = r * GRID_COLS + c;
+                if (idx >= 0 && idx < tiles.length) {
+                    tiles[idx].style.backgroundColor = '#dcebfa';
+                }
+            }
+        }
+    }
+}
+
+function hideGhost() {
+    var ghost = document.getElementById('dragGhost');
+    if (ghost) ghost.classList.add('hidden');
+    clearGridHighlights();
+    window._lastSnap = undefined;
+}
+
+function clearGridHighlights() {
+    document.querySelectorAll('.tile-bg').forEach(function(t) {
+        t.style.backgroundColor = '#f9fafb';
+    });
+}
+
+function handleCanvasDrop(e) {
+    var cageId = draggedCageId;
+    if (!cageId) return;
+    var m = cageMeta[cageId];
+    if (!m) return;
+
+    var cellW = TILE_SIZE + TILE_GAP;
+    var cellH = TILE_SIZE + TILE_GAP;
+    var w = m.slots_per_row;
+    var h = m.rows;
+
+    // Compute snap position at drop (same logic as showGhost for consistency)
+    var canvas = document.getElementById('farmCanvas');
+    var rect = canvas.getBoundingClientRect();
+    var mx = e.clientX - rect.left - GRID_PAD;
+    var my = e.clientY - rect.top - GRID_PAD;
+    var snapCol = Math.floor((mx - grabOffsetCol * cellW) / cellW);
+    var snapRow = Math.floor((my - grabOffsetRow * cellH) / cellH);
+    snapCol = Math.max(0, Math.min(snapCol, GRID_COLS - w));
+    snapRow = Math.max(0, Math.min(snapRow, GRID_ROWS - h));
+
+    // Reject if any part of the footprint would be outside grid bounds
+    if (snapCol < 0 || snapRow < 0 || snapCol + w > GRID_COLS || snapRow + h > GRID_ROWS) {
+        showDragError('Cannot place here — cage extends beyond the grid edge');
+        return;
+    }
+
+    // Reject overlap with any other placed cage
+    if (!checkPlacement(cageId, snapRow, snapCol)) {
+        showDragError('Cannot place here — tiles overlap with another cage');
+        return;
+    }
+
+    // Place the cage
+    placeCage(cageId, snapRow, snapCol);
+}
+
+function placeCage(cageId, originRow, originCol) {
+    var m = cageMeta[cageId];
+    if (!m) return;
+    // Remove from staging if present
+    removeStagingTile(cageId);
+    // Add to placed map
+    placedCages[cageId] = {
+        origin_row: originRow,
+        origin_col: originCol,
+        width: m.slots_per_row,
+        height: m.rows,
+        color: m.color,
+        colorSoft: m.colorSoft,
+        code: m.code,
+    };
+    pendingMoves[cageId] = { location_row: originRow, location_column: originCol };
+    // Track for edit modal positioning
+    savedPositions[cageId] = { location_row: originRow, location_column: originCol };
+
+    recomputeGridExtent();
+    renderCanvas();
+    selectCage(cageId);
+    updateSaveButton();
+    updateStagingVisibility();
+    document.getElementById('clearAllMsg').classList.add('hidden');
+}
+
+function removeStagingTile(cageId) {
+    var tile = document.querySelector('.staging-tile[data-cage-id="' + cageId + '"]');
+    if (tile) tile.remove();
+}
+
+function resetDragState() {
+    if (draggedFromCanvas && draggedCageId) {
+        var overlay = document.querySelector('.cage-overlay[data-cage-id="' + draggedCageId + '"]');
+        if (overlay) overlay.style.opacity = '1';
+    }
+    draggedCageId = null;
+    draggedFromCanvas = false;
+}
+
+// ── Remove from Canvas ──
+function confirmRemoveCage(cageId) {
+    var m = cageMeta[cageId];
+    if (!m) return;
+    confirmModal(
+        'Remove <strong>' + m.code + '</strong> from this canvas position?<br><br>' +
+        'The cage and all its data (slots, hens, sensors) will remain completely untouched ' +
+        'it will just be moved back to the unplaced area. You must save the layout to persist this change.',
+        { submit: function() { doRemoveCage(cageId); } },
+        'Remove from Canvas', 'neutral'
+    );
+}
+
+function doRemoveCage(cageId) {
+    delete placedCages[cageId];
+    pendingMoves[cageId] = { location_row: null, location_column: null };
+    addStagingTile(cageId);
+    deselectAll();
+    recomputeGridExtent();
+    renderCanvas();
+    updateSaveButton();
+    updateStagingVisibility();
+}
+
+function addStagingTile(cageId) {
+    var m = cageMeta[cageId];
+    if (!m) return;
+    var area = document.getElementById('stagingArea');
+    var tile = document.createElement('div');
+    tile.className = 'staging-tile rounded-lg border-2 px-4 py-2 flex items-center justify-center ' + (IS_ADMIN ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer');
+    tile.draggable = IS_ADMIN;
+    tile.dataset.cageId = cageId;
+    tile.dataset.cageCode = m.code;
+    tile.style.borderColor = m.color;
+    tile.style.backgroundColor = m.colorSoft;
+    tile.innerHTML = '<span class="text-sm font-semibold" style="color:' + m.color + ';">' + m.code + '</span>';
+    tile.addEventListener('dragstart', function(e) { handleDragStart(e, cageId); });
+    area.appendChild(tile);
+}
+
+// ── Clear All ──
+function clearAllCages() {
+    if (Object.keys(placedCages).length === 0) return;
+    confirmModal(
+        'Move all cages back to the staging area? This is not applied until you click Save Layout.',
+        { submit: doClearAll },
+        'Clear All', 'neutral'
+    );
+}
+
+function doClearAll() {
+    var ids = Object.keys(placedCages);
+    ids.forEach(function(id) {
+        var cageId = parseInt(id);
+        addStagingTile(cageId);
+        pendingMoves[cageId] = { location_row: null, location_column: null };
+        delete placedCages[cageId];
+    });
+    deselectAll();
+    recomputeGridExtent();
+    renderCanvas();
+    updateSaveButton();
+    updateStagingVisibility();
+    document.getElementById('clearAllMsg').classList.remove('hidden');
+}
+
+// ── Save Layout ──
 function hasPendingChanges() {
     return Object.keys(pendingMoves).length > 0;
 }
 
 function updateSaveButton() {
     var btn = document.getElementById('saveLayoutBtn');
-    if (btn) btn.disabled = !hasPendingChanges();
+    var dot = document.getElementById('unsavedDot');
+    var dirty = hasPendingChanges();
+    if (btn) btn.disabled = !dirty;
+    if (dot) dot.classList.toggle('hidden', !dirty);
 }
+
+// Suppress beforeunload for intentional form submissions (add/edit cage forms,
+// which use data-turbo="false" full-page POSTs unrelated to canvas layout state).
+['addCageForm', 'editCageForm'].forEach(function(id) {
+    var form = document.getElementById(id);
+    if (form) {
+        form.addEventListener('submit', function() {
+            window.__intentionalFormSubmit = true;
+        });
+    }
+});
+
+// Warn before leaving with unsaved canvas changes
+window.addEventListener('beforeunload', function(e) {
+    if (window.__intentionalFormSubmit) return;
+    if (hasPendingChanges()) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
 
 function updateStagingVisibility() {
     var section = document.getElementById('stagingSection');
     var area = document.getElementById('stagingArea');
     if (section && area) section.classList.toggle('hidden', area.children.length === 0);
-}
-
-function bindTileEvents(tile, cageId, cageCode) {
-    if (IS_ADMIN) {
-        tile.addEventListener('dragstart', function(e) { handleDragStart(e, cageId); });
-    }
-    tile.addEventListener('click', function(e) { handleTileClick(e, cageId, cageCode); });
-}
-
-function makeGridTile(cageId) {
-    var meta = cageMeta[cageId];
-    var tile = document.createElement('div');
-    tile.className = 'farm-tile ' + (IS_ADMIN ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer');
-    tile.draggable = IS_ADMIN;
-    tile.dataset.cageId = cageId;
-    tile.dataset.cageCode = meta.code;
-    tile.innerHTML =
-        '<div class="flex items-center justify-between">' +
-            '<span class="text-sm font-semibold"></span>' +
-        '</div>' +
-        '<div class="text-xs truncate" style="color: #615d59;"></div>';
-    var code = tile.querySelector('span');
-    code.style.color = meta.color;
-    code.textContent = meta.code;
-    tile.querySelector('.truncate').textContent = meta.breed;
-    bindTileEvents(tile, cageId, meta.code);
-    return tile;
-}
-
-function addTileToStaging(cageId) {
-    var meta = cageMeta[cageId];
-    var tile = document.createElement('div');
-    tile.className = 'farm-tile min-h-[3.5rem] rounded-lg border-2 px-4 py-2 flex flex-col justify-center ' + (IS_ADMIN ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer');
-    tile.draggable = IS_ADMIN;
-    tile.dataset.cageId = cageId;
-    tile.dataset.cageCode = meta.code;
-    tile.style.borderColor = meta.color;
-    tile.style.backgroundColor = meta.colorSoft;
-    tile.innerHTML = '<span class="text-sm font-semibold"></span>';
-    var code = tile.querySelector('span');
-    code.style.color = meta.color;
-    code.textContent = meta.code;
-    bindTileEvents(tile, cageId, meta.code);
-    document.getElementById('stagingArea').appendChild(tile);
-    updateStagingVisibility();
-}
-
-function setCellOccupied(cell, cageId) {
-    var meta = cageMeta[cageId];
-    cell.className = 'farm-cell min-h-[5rem] rounded-lg border-2 p-3 flex flex-col justify-between transition-all group relative';
-    cell.style.borderColor = meta.color;
-    cell.style.backgroundColor = meta.colorSoft;
-    cell.innerHTML = '';
-    cell.appendChild(makeGridTile(cageId));
-    addCellRemoveButton(cell, parseInt(cell.dataset.row), parseInt(cell.dataset.col), meta.code);
-}
-
-function setCellEmpty(cell) {
-    cell.className = 'farm-cell min-h-[5rem] rounded-lg border p-3 flex items-center justify-center transition-all group relative';
-    cell.style.borderColor = '#e6e6e6';
-    cell.style.backgroundColor = '#f9fafb';
-    var r = parseInt(cell.dataset.row), c = parseInt(cell.dataset.col);
-    cell.innerHTML = '<span class="text-xs" style="color: #d1d5db;">' + (r + 1) + '-' + (c + 1) + '</span>';
-    addCellRemoveButton(cell, r, c);
-}
-
-function addCellRemoveButton(cell, row, col, cageCode) {
-    if (!IS_ADMIN) return;
-    var btn = document.createElement('button');
-    btn.innerHTML = '×';
-    btn.className = 'remove-cell-btn absolute top-0.5 right-0.5 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity';
-    btn.style.cssText = 'background-color: rgba(155,28,36,0.85); color: #fff; font-size: 16px; line-height: 1;';
-    btn.title = cageCode ? 'Remove ' + cageCode + ' from canvas' : 'Remove empty cell';
-    btn.setAttribute('aria-label', btn.title);
-    btn.onclick = function(e) {
-        e.stopPropagation();
-        confirmRemoveCell(row, col, cageCode);
-    };
-    cell.appendChild(btn);
-}
-
-function confirmRemoveCell(row, col, cageCode) {
-    if (cageCode) {
-        confirmModal(
-            'Remove <strong>' + cageCode + '</strong> from this canvas position?<br><br>' +
-            'The cage and all its data (slots, hens, sensors) will remain completely untouched — ' +
-            'it will just be moved back to the unplaced area. You must save the layout to persist this change.',
-            { submit: function() { doRemoveCell(row, col); } },
-            'Remove from Canvas'
-        );
-    } else {
-        // Empty cell removal — attempt grid shrink
-        doRemoveCell(row, col);
-    }
-}
-
-function doRemoveCell(row, col) {
-    var cell = document.querySelector('.farm-cell[data-row="' + row + '"][data-col="' + col + '"]');
-    if (!cell) return;
-    var tile = cell.querySelector('.farm-tile');
-
-    if (tile) {
-        var cageId = parseInt(tile.dataset.cageId);
-        tile.remove();
-        setCellEmpty(cell);
-        addTileToStaging(cageId);
-        pendingMoves[cageId] = { location_row: null, location_column: null };
-        updateSaveButton();
-        applyRowSpanning();
-    } else {
-        // Remove empty cell: POST to backend to attempt grid shrink
-        fetch('/cages/remove-cell', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            },
-            body: JSON.stringify({ row: row, col: col }),
-        })
-        .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
-        .then(function(res) {
-            if (res.ok && res.data.success) {
-                location.reload();
-            } else {
-                showDragError(res.data.message || 'Cannot remove this cell');
-            }
-        })
-        .catch(function() {
-            showDragError('Failed to remove cell');
-        });
-    }
-}
-
-function handleDragStart(e, cageId) {
-    draggedCageId = cageId;
-    dragMoved = false;
-    e.dataTransfer.setData('text/plain', cageId);
-    e.dataTransfer.effectAllowed = 'move';
-    // Expose every cell as a drop target while dragging (item 18)
-    resetRowSpanning();
-    setTimeout(function() { e.target.style.opacity = '0.4'; }, 0);
-}
-
-function handleDragOver(e) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    e.currentTarget.style.boxShadow = 'inset 0 0 0 2px #0075de';
-}
-
-function handleDragLeave(e) {
-    e.currentTarget.style.boxShadow = '';
-}
-
-function handleDrop(e, row, col) {
-    e.preventDefault();
-    e.stopPropagation();
-    e.currentTarget.style.boxShadow = '';
-    var cageId = parseInt(e.dataTransfer.getData('text/plain'));
-    if (!cageId) return;
-
-    var cell = e.currentTarget;
-    var tile = document.querySelector('.farm-tile[data-cage-id="' + cageId + '"]');
-    if (tile) tile.style.opacity = '1';
-
-    var existing = cell.querySelector('.farm-tile');
-    if (existing) {
-        if (parseInt(existing.dataset.cageId) === cageId) return; // dropped on its own cell
-
-        // ── Swap (item 14): dropping onto an occupied cell swaps the two cages ──
-        var otherId = parseInt(existing.dataset.cageId);
-        var sourceCell = tile ? tile.closest('.farm-cell') : null;
-        if (!sourceCell) {
-            // Dragged from staging onto an occupied cell — nothing to swap into
-            showDragError('Cell occupied — drop on an empty cell');
-            return;
-        }
-        tile.remove();
-        existing.remove();
-        setCellOccupied(cell, cageId);
-        setCellOccupied(sourceCell, otherId);
-        pendingMoves[cageId] = { location_row: row, location_column: col };
-        pendingMoves[otherId] = { location_row: parseInt(sourceCell.dataset.row), location_column: parseInt(sourceCell.dataset.col) };
-        updateSaveButton();
-        applyRowSpanning();
-        return;
-    }
-
-    var sourceCell = tile ? tile.closest('.farm-cell') : null;
-    if (tile) tile.remove();
-    if (sourceCell) setCellEmpty(sourceCell);
-    setCellOccupied(cell, cageId);
-    updateStagingVisibility();
-
-    pendingMoves[cageId] = { location_row: row, location_column: col };
-    updateSaveButton();
-    applyRowSpanning();
-}
-
-function handleStagingDrop(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    e.currentTarget.style.boxShadow = '';
-    var cageId = parseInt(e.dataTransfer.getData('text/plain'));
-    if (!cageId) return;
-
-    var tile = document.querySelector('.farm-tile[data-cage-id="' + cageId + '"]');
-    if (!tile) return;
-    tile.style.opacity = '1';
-
-    var sourceCell = tile.closest('.farm-cell');
-    if (!sourceCell) return; // already in staging
-
-    tile.remove();
-    setCellEmpty(sourceCell);
-    addTileToStaging(cageId);
-
-    pendingMoves[cageId] = { location_row: null, location_column: null };
-    updateSaveButton();
-    applyRowSpanning();
-}
-
-function clearAllCages() {
-    if (document.querySelectorAll('#farmGrid .farm-tile').length === 0) return;
-    confirmModal(
-        'Move all cages back to the staging area? This is not applied until you click Save Layout.',
-        { submit: doClearAll },
-        'Clear All'
-    );
-}
-
-function doClearAll() {
-    document.querySelectorAll('#farmGrid .farm-tile').forEach(function(tile) {
-        var cageId = parseInt(tile.dataset.cageId);
-        var cell = tile.closest('.farm-cell');
-        tile.remove();
-        if (cell) setCellEmpty(cell);
-        addTileToStaging(cageId);
-        pendingMoves[cageId] = { location_row: null, location_column: null };
-    });
-    updateSaveButton();
-    applyRowSpanning();
 }
 
 function setSavingState(saving) {
@@ -1221,7 +1778,7 @@ function saveLayout() {
 
     setSavingState(true);
 
-    fetch('/cages/batch-position', {
+    fetch(cagesBase + '/batch-position', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -1234,15 +1791,15 @@ function saveLayout() {
     })
     .then(function(res) {
         if (res.ok && res.data.success) {
-            // The grid DOM already matches what was saved, so no page refresh
-            // is needed — just remember the persisted positions for the edit modal.
             Object.assign(savedPositions, pendingMoves);
             pendingMoves = {};
             setSavingState(false);
+            document.getElementById('clearAllMsg').classList.add('hidden');
             showToast('Layout saved', true);
         } else {
             setSavingState(false);
             showDragError(res.data.message || 'Failed to save layout');
+            resyncPositionsFromServer();
         }
     })
     .catch(function() {
@@ -1251,24 +1808,141 @@ function saveLayout() {
     });
 }
 
-function handleTileClick(e, cageId, cageCode) {
-    if (dragMoved) { dragMoved = false; return; }
-    e.stopPropagation();
+// Re-sync client-side placement state from savedPositions (last-known-good
+// server state) after a failed save, avoiding a full page reload that would
+// trigger the beforeunload "unsaved changes" dialog.
+function resyncPositionsFromServer() {
+    placedCages = {};
+    Object.keys(savedPositions).forEach(function(id) {
+        var m = cageMeta[id];
+        if (!m) return;
+        var pos = savedPositions[id];
+        if (pos.location_row !== null && pos.location_column !== null) {
+            placedCages[id] = {
+                origin_row: pos.location_row,
+                origin_col: pos.location_column,
+                width: m.slots_per_row,
+                height: m.rows,
+                color: m.color,
+                colorSoft: m.colorSoft,
+                code: m.code,
+            };
+        }
+    });
 
+    pendingMoves = {};
+
+    Object.keys(cageMeta).forEach(function(id) {
+        if (placedCages[id]) {
+            removeStagingTile(id);
+        } else {
+            addStagingTile(id);
+        }
+    });
+
+    recomputeGridExtent();
+    renderCanvas();
+    updateSaveButton();
+    updateStagingVisibility();
+}
+
+// ── Toast ──
+function showToast(msg, isSuccess) {
+    var toast = document.getElementById('dragErrorToast');
+    toast.textContent = msg;
+    toast.style.backgroundColor = isSuccess ? '#1f6b3a' : '#9b1c24';
+    toast.classList.remove('hidden');
+    setTimeout(function() { toast.classList.add('hidden'); }, 3000);
+}
+
+function showDragError(msg) {
+    showToast(msg, false);
+}
+
+// ── Grid Settings (post-onboarding canvas resize) ─────────
+function openGridSettings() {
+    document.getElementById('gridSettingsRows').value = GRID_ROWS;
+    document.getElementById('gridSettingsCols').value = GRID_COLS;
+    document.getElementById('gridSettingsWarning').classList.add('hidden');
+    document.getElementById('gridSettingsModal').style.display = 'flex';
+    lucide.createIcons();
+}
+
+function closeGridSettings() {
+    document.getElementById('gridSettingsModal').style.display = 'none';
+}
+
+function applyGridSettings() {
+    var newRows = parseInt(document.getElementById('gridSettingsRows').value);
+    var newCols = parseInt(document.getElementById('gridSettingsCols').value);
+    if (!newRows || !newCols || newRows < 1 || newCols < 1) {
+        showDragError('Rows and columns must be at least 1');
+        return;
+    }
+
+    // Validate: check if any placed cage extends beyond new dimensions
+    var affected = [];
+    for (var id in placedCages) {
+        var c = placedCages[id];
+        if (c.origin_row + c.height > newRows || c.origin_col + c.width > newCols) {
+            affected.push(c.code);
+        }
+    }
+
+    if (affected.length > 0) {
+        var warn = document.getElementById('gridSettingsWarning');
+        warn.innerHTML = '<strong>Cannot shrink the grid</strong> — the following cage(s) extend beyond the new dimensions:<br><br>'
+            + affected.map(function(code) { return '&bull; ' + code; }).join('<br>')
+            + '<br><br>Move or remove these cages first, or increase the grid dimensions.';
+        warn.classList.remove('hidden');
+        return;
+    }
+
+    // Persist to server, then update canvas in-place
+    fetch('{{ route('settings.farm-layout') }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        },
+        body: JSON.stringify({ rows: newRows, cols: newCols }),
+    })
+    .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+    })
+    .then(function() {
+        // Update local variables
+        STORED_GRID_ROWS = newRows;
+        STORED_GRID_COLS = newCols;
+        GRID_ROWS = newRows;
+        GRID_COLS = newCols;
+        // Re-render the tile grid and reposition overlays
+        renderTileGrid();
+        renderCageOverlays();
+        closeGridSettings();
+        showToast('Grid dimensions updated.', true);
+    })
+    .catch(function() {
+        showDragError('Failed to update grid dimensions');
+    });
+}
+
+// ── Filter / Tab (kept from original) ──
+function handleTileClick(e, cageId, cageCode) {
+    e.stopPropagation();
     if (activeFilterId === cageId) {
         clearCanvasFilter();
         return;
     }
-
     activeFilterId = cageId;
     document.querySelectorAll('.cage-card').forEach(function(card) {
         card.style.display = card.dataset.cageCode === cageCode ? '' : 'none';
     });
     document.getElementById('clearFilterBtn').classList.remove('hidden');
-
     document.querySelectorAll('.cage-tab').forEach(function(tab) {
         if (tab.dataset.tab === cageCode) {
-            tab.style.borderBottomColor = '#0075de';
+            tab.style.borderBottomColor = '#002D5E';
             tab.style.color = '#1f1f1f';
         } else {
             tab.style.borderBottomColor = 'transparent';
@@ -1286,122 +1960,104 @@ function clearCanvasFilter() {
     filterCage('all');
 }
 
-function showToast(msg, isSuccess) {
-    var toast = document.getElementById('dragErrorToast');
-    toast.textContent = msg;
-    toast.style.backgroundColor = isSuccess ? '#1f6b3a' : '#9b1c24';
-    toast.classList.remove('hidden');
-    setTimeout(function() { toast.classList.add('hidden'); }, 3000);
-}
+// ── Init ──
+renderCanvas();
 
-function showDragError(msg) {
-    showToast(msg, false);
-}
-
-(function() {
-    if (window.__cagesDragendBound) return;
-    window.__cagesDragendBound = true;
-    document.addEventListener('dragend', function(e) {
-        if (e.target.classList && e.target.classList.contains('farm-tile')) {
-            e.target.style.opacity = '1';
-        }
-        dragMoved = true;
-        // Re-apply full-row spanning once the drag interaction ends (item 18)
-        if (typeof applyRowSpanning === 'function') applyRowSpanning();
-    });
-})();
-
-// ── Row-spanning removed per audit (Item 1): lone cages no longer stretch.
-// All cells always render at their normal width; empty placeholders visible.
-function applyRowSpanning() {
-    resetRowSpanning();
-}
-
-function resetRowSpanning() {
-    document.querySelectorAll('#farmGrid .farm-cell').forEach(function(c) {
-        c.style.gridColumn = '';
-        c.style.display = '';
-    });
-}
-
-applyRowSpanning();
-
-// ── Delete Cage Modal (items 19 + 20) ─────────────────────
+// ── Delete Cage (uses shared confirmModal) ─────────────────
 var deleteTargetId = null;
 
 function openDeleteModal(id, code) {
     deleteTargetId = id;
-    document.getElementById('deleteCageCode').textContent = code;
-    document.getElementById('delHenCount').textContent = '…';
-    document.getElementById('delSensorCount').textContent = '…';
-    document.querySelector('input[name="delHensAction"][value="move"]').checked = true;
-    document.getElementById('delReturnSensors').checked = true;
-    document.querySelectorAll('#deleteCageModal .del-log-count').forEach(function(el) { el.textContent = '…'; });
-    document.getElementById('deleteCageModal').classList.remove('hidden');
-    lucide.createIcons();
+    var form = {
+        submit: function() {
+            if (!deleteTargetId) return;
+            var data = {};
+            document.querySelectorAll('#del-options input, #del-options select').forEach(function(el) {
+                if (el.type === 'radio') { if (el.checked) data[el.name] = el.value; }
+                else if (el.type === 'checkbox') { data[el.id] = el.checked; }
+                else { data[el.name || el.id] = el.value; }
+            });
+            fetch(cagesBase + '/' + deleteTargetId, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                },
+                body: JSON.stringify({
+                    hens_action: data.delHensAction || 'delete',
+                    return_sensors: !!data.delReturnSensors,
+                    preserve_production: !!data.delPreserveProduction,
+                    preserve_mortality: !!data.delPreserveMortality,
+                    preserve_feed: !!data.delPreserveFeed,
+                    preserve_environment: !!data.delPreserveEnvironment,
+                }),
+            })
+            .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+            .then(function(res) {
+                deleteTargetId = null;
+                if (res.ok && res.data.success) {
+                    showToast(res.data.message || 'Cage deleted', true);
+                    Turbo.visit(window.location.href, { action: 'replace' });
+                } else {
+                    showDragError(res.data.message || 'Failed to delete cage');
+                }
+            })
+            .catch(function() {
+                deleteTargetId = null;
+                showDragError('Failed to delete cage');
+            });
+        }
+    };
+    var msg = '<strong>Delete ' + code + '?</strong><br><br>' +
+        '<div id="del-options">' +
+        '<div style="background:#f6f5f4;border-radius:8px;padding:12px;margin-bottom:12px;">' +
+        '<div style="font-weight:500;margin-bottom:8px;color:#31302e;">Hens in this cage (<span id="delHenCount">…</span> active)</div>' +
+        '<label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;color:#615d59;">' +
+        '<input type="radio" name="delHensAction" value="move" checked style="accent-color:#0075de;">' +
+        'Move to unplaced (return to chicken inventory)</label>' +
+        '<label style="display:flex;align-items:center;gap:8px;color:#615d59;">' +
+        '<input type="radio" name="delHensAction" value="delete" style="accent-color:#9b1c24;">' +
+        'Delete permanently</label>' +
+        '</div>' +
+        '<div style="background:#f6f5f4;border-radius:8px;padding:12px;margin-bottom:12px;">' +
+        '<label style="display:flex;align-items:center;gap:8px;color:#615d59;">' +
+        '<input type="checkbox" id="delReturnSensors" checked style="accent-color:#0075de;">' +
+        'Return <span id="delSensorCount">…</span> sensor(s) to inventory</label>' +
+        '<p style="font-size:12px;margin-top:4px;margin-left:24px;color:#a39e98;">If unchecked, sensors are deleted with the cage.</p>' +
+        '</div>' +
+        '<div style="background:#f6f5f4;border-radius:8px;padding:12px;margin-bottom:12px;">' +
+        '<div style="font-weight:500;margin-bottom:8px;color:#31302e;">Preserve historical records</div>' +
+        '<p style="font-size:12px;margin-bottom:8px;color:#a39e98;">Checked records survive deletion (FK removed). Unchecked are permanently deleted.</p>' +
+        '<label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;color:#615d59;">' +
+        '<input type="checkbox" id="delPreserveProduction" checked style="accent-color:#0075de;">' +
+        'Egg production logs (<span class="del-log-count" data-type="production">…</span>)</label>' +
+        '<label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;color:#615d59;">' +
+        '<input type="checkbox" id="delPreserveMortality" checked style="accent-color:#0075de;">' +
+        'Mortality records (<span class="del-log-count" data-type="mortality">…</span>)</label>' +
+        '<label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;color:#615d59;">' +
+        '<input type="checkbox" id="delPreserveFeed" checked style="accent-color:#0075de;">' +
+        'Feed consumption logs (<span class="del-log-count" data-type="feed">…</span>)</label>' +
+        '<label style="display:flex;align-items:center;gap:8px;color:#615d59;">' +
+        '<input type="checkbox" id="delPreserveEnvironment" checked style="accent-color:#0075de;">' +
+        'Environment logs (<span class="del-log-count" data-type="env">…</span>)</label>' +
+        '</div></div>';
+    confirmModal(msg, form, 'Delete', 'destructive');
 
-    var link = document.getElementById('delPermanentLink');
-    if (link) link.href = '/cages/' + id + '/confirm-delete';
-
-    fetch('/cages/' + id + '/delete-info')
+    fetch(cagesBase + '/' + id + '/delete-info')
         .then(function(r) { return r.json(); })
         .then(function(info) {
-            document.getElementById('delHenCount').textContent = info.hens;
-            document.getElementById('delSensorCount').textContent = info.sensors;
+            var el;
+            el = document.getElementById('delHenCount'); if (el) el.textContent = info.hens;
+            el = document.getElementById('delSensorCount'); if (el) el.textContent = info.sensors;
             var typeMap = { production: info.production_logs, mortality: info.mortality_logs, feed: info.feed_logs, env: info.env_logs };
-            document.querySelectorAll('#deleteCageModal .del-log-count').forEach(function(el) {
+            document.querySelectorAll('#del-options .del-log-count').forEach(function(el) {
                 el.textContent = typeMap[el.dataset.type] || 0;
             });
         })
         .catch(function() {
-            document.querySelectorAll('#deleteCageModal .del-log-count').forEach(function(el) {
-                el.textContent = '?';
-            });
+            document.querySelectorAll('#del-options .del-log-count').forEach(function(el) { el.textContent = '?'; });
         });
-}
-
-function closeDeleteModal() {
-    deleteTargetId = null;
-    document.getElementById('deleteCageModal').classList.add('hidden');
-}
-
-function confirmCageDelete() {
-    if (!deleteTargetId) return;
-    var btn = document.getElementById('confirmDeleteCageBtn');
-    btn.disabled = true;
-
-    fetch('/cages/' + deleteTargetId, {
-        method: 'DELETE',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-        },
-        body: JSON.stringify({
-            hens_action: document.querySelector('input[name="delHensAction"]:checked').value,
-            return_sensors: document.getElementById('delReturnSensors').checked,
-            preserve_production: document.getElementById('delPreserveProduction').checked,
-            preserve_mortality: document.getElementById('delPreserveMortality').checked,
-            preserve_feed: document.getElementById('delPreserveFeed').checked,
-            preserve_environment: document.getElementById('delPreserveEnvironment').checked,
-        }),
-    })
-    .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
-    .then(function(res) {
-        btn.disabled = false;
-        if (res.ok && res.data.success) {
-            closeDeleteModal();
-            showToast(res.data.message || 'Cage deleted', true);
-            // Refresh the cage list in place — never navigates away (item 19)
-            Turbo.visit(window.location.href, { action: 'replace' });
-        } else {
-            showDragError(res.data.message || 'Failed to delete cage');
-        }
-    })
-    .catch(function() {
-        btn.disabled = false;
-        showDragError('Failed to delete cage');
-    });
 }
 
 // ── Slot Reorder (Item 1: drag-and-drop renumbering) ────
@@ -1525,7 +2181,7 @@ function saveReorder(cageId) {
     var saveBtn = document.querySelector('#reorderBar-' + cageId + ' button');
     if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving\u2026'; }
 
-    fetch('/cages/' + cageId + '/slots/reorder', {
+    fetch(cagesBase + '/' + cageId + '/slots/reorder', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -1576,30 +2232,51 @@ function cancelReorder(cageId) {
 
 // ── Auto-open edit modal on resize error ─────────────────
 @if(session('edit_cage_id') && isset($editCage))
-document.addEventListener('turbo:load', function() {
-    openEditModal(
-        {{ $editCage->id }},
-        '{{ $editCage->cage_code }}',
-        {{ is_null($editCage->location_row) ? 'null' : $editCage->location_row }},
-        {{ is_null($editCage->location_column) ? 'null' : $editCage->location_column }},
-        {{ $editCage->rows }},
-        {{ $editCage->slots_per_row }},
-        {{ $editCage->max_chickens_per_slot }},
-        {{ $editCage->is_active ? 1 : 0 }}
-    );
-    @if(session('errors') && session('errors')->has('resize'))
-    const errEl = document.getElementById('editResizeError');
-    const errText = document.getElementById('editResizeErrorText');
-    if (errEl) errEl.classList.remove('hidden');
-    if (errText) errText.textContent = '{{ addslashes(session('errors')->first('resize')) }}';
-    lucide.createIcons();
-    @endif
-});
+if (!window.__cagesAutoEditBound) {
+    window.__cagesAutoEditBound = true;
+    document.addEventListener('turbo:load', function() {
+        openEditModal(
+            {{ $editCage->id }},
+            '{{ $editCage->cage_code }}',
+            {{ is_null($editCage->location_row) ? 'null' : $editCage->location_row }},
+            {{ is_null($editCage->location_column) ? 'null' : $editCage->location_column }},
+            {{ $editCage->rows ?? 0 }},
+            {{ $editCage->slots_per_row ?? 0 }},
+            {{ $editCage->max_chickens_per_slot ?? 0 }},
+            {{ $editCage->is_active ? 1 : 0 }}
+        );
+        @if(session('errors') && session('errors')->has('resize'))
+        const errEl = document.getElementById('editResizeError');
+        const errText = document.getElementById('editResizeErrorText');
+        if (errEl) errEl.classList.remove('hidden');
+        if (errText) errText.textContent = '{{ addslashes(session('errors')->first('resize')) }}';
+        lucide.createIcons();
+        @endif
+    });
+}
+@endif
+
+// ── Auto-open no-chickens modal ───────────────────────────
+// Use DOMContentLoaded (not a persistent turbo:load listener) so the
+// modal only opens on the initial page load when the session flag is
+// set, not on subsequent Turbo navigations where the flag may be gone.
+@if(session('show_no_chickens_modal'))
+(function() {
+    if (window.__cagesNoChickensFired) return;
+    window.__cagesNoChickensFired = true;
+    var f = function() { openNoChickensModal(); };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', f);
+    } else {
+        f();
+    }
+})();
 @endif
 
 </script>
 @endpush
 
-{{-- Move + Remove Modals ──────────────────────────────────── --}}
+{{-- Move + Remove + Register Modals ─────────────────────────── --}}
 @include('chickens.partials.move-modal')
 @include('chickens.partials.remove-modal')
+@include('chickens.partials.register-modal')

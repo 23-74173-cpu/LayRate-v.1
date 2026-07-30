@@ -6,6 +6,7 @@ use App\Models\Alert;
 use App\Models\Cage;
 use App\Models\CageSlot;
 use App\Models\CageTransfer;
+use App\Models\EggStockBatch;
 use App\Models\EnvironmentalLog;
 use App\Models\FeedConsumptionLog;
 use App\Models\HardwareItem;
@@ -17,18 +18,29 @@ use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class CageController extends Controller
 {
     public function index()
     {
-        $gridRows = (int) Setting::get('farm_grid_rows', 4);
-        $gridCols = (int) Setting::get('farm_grid_cols', 4);
-
         $cages = Cage::with([
             'cageSlots.hardwareItems',
             'hens' => fn ($q) => $q->where('is_active', 1)->orderBy('id'),
         ])->orderBy('cage_code')->get();
+
+        // Tile-based grid: respects stored settings as minimum, auto-expands to fit all placed cages
+        $storedRows = (int) Setting::get('farm_grid_rows', 6);
+        $storedCols = (int) Setting::get('farm_grid_cols', 10);
+        $gridCols = max($storedCols, 10);
+        $gridRows = max($storedRows, 6);
+        foreach ($cages as $cage) {
+            if (is_null($cage->location_row) || is_null($cage->location_column)) continue;
+            $right = $cage->location_column + ($cage->slots_per_row ?? 1);
+            $bottom = $cage->location_row + ($cage->rows ?? 1);
+            if ($right > $gridCols) $gridCols = $right;
+            if ($bottom > $gridRows) $gridRows = $bottom;
+        }
 
         $nextCageCode = $this->generateCageCode();
 
@@ -38,6 +50,12 @@ class CageController extends Controller
             ->groupBy('device_type')
             ->pluck('c', 'device_type');
 
+        $eggSizeByCage = EggStockBatch::selectRaw('cage_id, egg_size, SUM(count) as total')
+            ->whereNotNull('cage_id')
+            ->groupBy('cage_id', 'egg_size')
+            ->get()
+            ->groupBy('cage_id');
+
         $editCage = null;
         if ($editCageId = session('edit_cage_id')) {
             $editCage = Cage::with([
@@ -46,17 +64,25 @@ class CageController extends Controller
             ])->find($editCageId);
         }
 
-        return view('cages.index', compact('cages', 'nextCageCode', 'gridRows', 'gridCols', 'spareCounts', 'editCage'));
+        return view('cages.index', compact('cages', 'nextCageCode', 'gridRows', 'gridCols', 'spareCounts', 'editCage', 'eggSizeByCage'));
     }
 
     public function store(Request $request)
     {
-        $data = $request->validate([
+        $validator = Validator::make($request->all(), [
             'rows' => 'required|integer|min:1|max:10',
             'slots_per_row' => 'required|integer|min:1|max:100',
             'max_chickens_per_slot' => 'required|integer|min:1|max:10',
         ]);
 
+        if ($validator->fails()) {
+            return redirect()->route('cages.index')
+                ->with('reopen_add_cage', true)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
         $cageCode = $this->generateCageCode();
 
         $totalCapacity = (int) $data['rows'] * (int) $data['slots_per_row'] * (int) $data['max_chickens_per_slot'];
@@ -77,7 +103,7 @@ class CageController extends Controller
 
     public function update(Request $request, Cage $cage)
     {
-        $data = $request->validate([
+        $validator = Validator::make($request->all(), [
             'rows' => 'nullable|integer|min:1|max:10',
             'slots_per_row' => 'nullable|integer|min:1|max:100',
             'max_chickens_per_slot' => 'nullable|integer|min:1|max:10',
@@ -87,12 +113,24 @@ class CageController extends Controller
             'dht22_count' => 'nullable|integer|min:0|max:20',
         ]);
 
+        if ($validator->fails()) {
+            return redirect()->route('cages.index')
+                ->with('edit_cage_id', $cage->id)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
+
         if ($cage->is_active && isset($data['is_active']) && ! $data['is_active']) {
             $occupiedSlots = $cage->cageSlots()->where('current_occupancy', '>', 0)->count();
             if ($occupiedSlots > 0) {
-                return back()->withInput()->withErrors([
-                    'is_active' => "Cannot deactivate cage with {$occupiedSlots} occupied slot(s). Rehome or remove hens first.",
-                ]);
+                return redirect()->route('cages.index')
+                    ->with('edit_cage_id', $cage->id)
+                    ->withInput()
+                    ->withErrors([
+                        'is_active' => "Cannot deactivate cage with {$occupiedSlots} occupied slot(s). Rehome or remove hens first.",
+                    ]);
             }
         }
 
@@ -143,9 +181,12 @@ class CageController extends Controller
             if (count($slotsNeedingSensor) > 0) {
                 $spareIr = HardwareItem::where('device_type', 'IR_breakbeam')->availableForAssignment()->count();
                 if (count($slotsNeedingSensor) > $spareIr) {
-                    return back()->withInput()->withErrors([
-                        'slots' => 'Only '.$spareIr.' IR break-beam sensor(s) available in inventory, but '.count($slotsNeedingSensor).' requested.',
-                    ]);
+                    return redirect()->route('cages.index')
+                        ->with('edit_cage_id', $cage->id)
+                        ->withInput()
+                        ->withErrors([
+                            'slots' => 'Only '.$spareIr.' IR break-beam sensor(s) available in inventory, but '.count($slotsNeedingSensor).' requested.',
+                        ]);
                 }
                 foreach ($slotsNeedingSensor as $slot) {
                     $this->assignSpareSensor('IR_breakbeam', null, $slot->id);
@@ -166,9 +207,12 @@ class CageController extends Controller
                 $needed = $target - $current->count();
                 $spareDht = HardwareItem::where('device_type', 'DHT22')->availableForAssignment()->count();
                 if ($needed > $spareDht) {
-                    return back()->withInput()->withErrors([
-                        'dht22_count' => "Only {$spareDht} DHT22 sensor(s) available in inventory, but {$needed} more requested.",
-                    ]);
+                    return redirect()->route('cages.index')
+                        ->with('edit_cage_id', $cage->id)
+                        ->withInput()
+                        ->withErrors([
+                            'dht22_count' => "Only {$spareDht} DHT22 sensor(s) available in inventory, but {$needed} more requested.",
+                        ]);
                 }
                 for ($i = 0; $i < $needed; $i++) {
                     $this->assignSpareSensor('DHT22', $cage->id, null);
@@ -323,20 +367,40 @@ class CageController extends Controller
         $col = $data['location_column'] ?? null;
 
         if ($row !== null || $col !== null) {
-            $gridRows = (int) Setting::get('farm_grid_rows', 4);
-            $gridCols = (int) Setting::get('farm_grid_cols', 4);
+            $w = $cage->slots_per_row ?? 1;
+            $h = $cage->rows ?? 1;
 
-            if ($row < 0 || $row >= $gridRows || $col < 0 || $col >= $gridCols) {
-                return response()->json(['success' => false, 'message' => 'Position out of bounds'], 422)->header('Content-Type', 'application/json');
+            // Compute grid bounds from all placed cages
+            $allCages = Cage::where('id', '!=', $cage->id)->get();
+            $gridCols = 10; $gridRows = 6;
+            foreach ($allCages as $c) {
+                if (is_null($c->location_row) || is_null($c->location_column)) continue;
+                $r = $c->location_row + ($c->rows ?? 1);
+                $cl = $c->location_column + ($c->slots_per_row ?? 1);
+                if ($r > $gridRows) $gridRows = $r;
+                if ($cl > $gridCols) $gridCols = $cl;
             }
 
-            $occupied = Cage::where('id', '!=', $cage->id)
-                ->where('location_row', $row)
-                ->where('location_column', $col)
-                ->exists();
+            if ($row + $h > $gridRows || $col + $w > $gridCols) {
+                return response()->json(['success' => false, 'message' => 'Position out of bounds'], 422);
+            }
 
-            if ($occupied) {
-                return response()->json(['success' => false, 'message' => 'Cell occupied'], 422)->header('Content-Type', 'application/json');
+            // Tile-level overlap check
+            $overlap = Cage::where('id', '!=', $cage->id)
+                ->whereNotNull('location_row')
+                ->whereNotNull('location_column')
+                ->get()
+                ->contains(function ($other) use ($row, $col, $w, $h) {
+                    $oR = $other->location_row;
+                    $oC = $other->location_column;
+                    $oW = $other->slots_per_row ?? 1;
+                    $oH = $other->rows ?? 1;
+                    return !($col + $w <= $oC || $oC + $oW <= $col ||
+                             $row + $h <= $oR || $oR + $oH <= $row);
+                });
+
+            if ($overlap) {
+                return response()->json(['success' => false, 'message' => 'Tile overlap with existing cage'], 422);
             }
         }
 
@@ -357,14 +421,16 @@ class CageController extends Controller
             'positions.*.location_column' => 'nullable|integer|min:0',
         ]);
 
-        $gridRows = (int) Setting::get('farm_grid_rows', 4);
-        $gridCols = (int) Setting::get('farm_grid_cols', 4);
+        // Tile-based overlap detection — compute bound from all cages, not just moved ones.
+        $allCages = Cage::all()->keyBy('id');
 
-        // Compute the final layout (current positions + requested changes) so
-        // occupancy is checked against the whole batch, not one cage at a time.
-        $final = Cage::query()->get(['id', 'location_row', 'location_column'])
-            ->keyBy('id')
-            ->map(fn ($c) => ['row' => $c->location_row, 'col' => $c->location_column]);
+        // Build final placement for every cage (current + requested changes)
+        $final = $allCages->map(fn ($c) => [
+            'row' => $c->location_row,
+            'col' => $c->location_column,
+            'w'   => $c->slots_per_row ?? 1,
+            'h'   => $c->rows ?? 1,
+        ]);
 
         foreach ($data['positions'] as $entry) {
             $row = $entry['location_row'] ?? null;
@@ -374,28 +440,46 @@ class CageController extends Controller
                 return response()->json(['success' => false, 'message' => 'Row and column must both be set or both be empty'], 422);
             }
 
-            if ($row !== null && ($row >= $gridRows || $col >= $gridCols)) {
-                return response()->json(['success' => false, 'message' => 'Position out of bounds'], 422);
+            $c = $allCages->get($entry['id']);
+            if (!$c) continue;
+            $w = $c->slots_per_row ?? 1;
+            $h = $c->rows ?? 1;
+
+            if ($row !== null) {
+                $gridCols = 0; $gridRows = 0;
+                foreach ($allCages as $cc) {
+                    if (is_null($cc->location_row) || is_null($cc->location_column)) continue;
+                    $r = ($cc->id === $entry['id']) ? $row + $h : $cc->location_row + ($cc->rows ?? 1);
+                    $cl = ($cc->id === $entry['id']) ? $col + $w : $cc->location_column + ($cc->slots_per_row ?? 1);
+                    if ($r > $gridRows) $gridRows = $r;
+                    if ($cl > $gridCols) $gridCols = $cl;
+                }
+                $gridRows = max($gridRows, 6);
+                $gridCols = max($gridCols, 10);
+
+                if ($row + $h > $gridRows || $col + $w > $gridCols) {
+                    return response()->json(['success' => false, 'message' => 'Position out of bounds'], 422);
+                }
             }
 
-            $final[$entry['id']] = ['row' => $row, 'col' => $col];
+            $final[$entry['id']] = ['row' => $row, 'col' => $col, 'w' => $w, 'h' => $h];
         }
 
-        $seen = [];
-        foreach ($final as $pos) {
-            if ($pos['row'] === null) {
-                continue;
+        // Tile-level overlap check — compare every pair of placed cages
+        $placed = $final->filter(fn ($p) => $p['row'] !== null)->values();
+        for ($i = 0; $i < $placed->count(); $i++) {
+            for ($j = $i + 1; $j < $placed->count(); $j++) {
+                $a = $placed[$i];
+                $b = $placed[$j];
+                $overlap = !($a['col'] + $a['w'] <= $b['col'] || $b['col'] + $b['w'] <= $a['col'] ||
+                    $a['row'] + $a['h'] <= $b['row'] || $b['row'] + $b['h'] <= $a['row']);
+                if ($overlap) {
+                    return response()->json(['success' => false, 'message' => 'Two cages would overlap on the grid'], 422);
+                }
             }
-            $key = $pos['row'].'-'.$pos['col'];
-            if (isset($seen[$key])) {
-                return response()->json(['success' => false, 'message' => 'Two cages assigned to the same cell'], 422);
-            }
-            $seen[$key] = true;
         }
 
         DB::transaction(function () use ($data) {
-            // Two-phase apply: vacate every moved cage first so swaps can't
-            // transiently collide on the (location_row, location_column) unique index.
             $ids = array_column($data['positions'], 'id');
             Cage::whereIn('id', $ids)->update(['location_row' => null, 'location_column' => null]);
 
@@ -547,12 +631,69 @@ class CageController extends Controller
         ));
     }
 
-    public function forceDestroy(Cage $cage)
+    public function forceDestroy(Request $request, Cage $cage)
     {
-        $cage->cageSlots()->delete();
-        $cage->delete();
+        $data = $request->validate([
+            'confirmation'         => 'required|string',
+            'hens_action'          => 'required|in:move,delete',
+            'return_sensors'       => 'nullable|boolean',
+            'preserve_production'  => 'nullable|boolean',
+            'preserve_mortality'   => 'nullable|boolean',
+            'preserve_feed'        => 'nullable|boolean',
+            'preserve_environment' => 'nullable|boolean',
+        ]);
 
-        return redirect()->route('cages.index')->with('success', 'Cage and all associated slots deleted.');
+        if ($data['confirmation'] !== $cage->cage_code) {
+            return redirect()->back()
+                ->withErrors(['confirmation' => 'Type the cage name exactly to confirm deletion.'])
+                ->withInput();
+        }
+
+        $cageCode = $cage->cage_code;
+
+        DB::transaction(function () use ($request, $data, $cage) {
+            $slotIds = $cage->cageSlots()->pluck('id');
+
+            if ($request->boolean('preserve_production')) {
+                ProductionLog::whereIn('cage_slot_id', $slotIds)->update(['cage_slot_id' => null]);
+            }
+            if ($request->boolean('preserve_mortality')) {
+                MortalityLog::where('cage_id', $cage->id)->update(['cage_id' => null]);
+            }
+            if ($request->boolean('preserve_feed')) {
+                FeedConsumptionLog::where('cage_id', $cage->id)->update(['cage_id' => null]);
+            }
+            if ($request->boolean('preserve_environment')) {
+                EnvironmentalLog::where('cage_id', $cage->id)->update(['cage_id' => null]);
+            }
+
+            if ($data['hens_action'] === 'move') {
+                Hen::whereIn('cage_slot_id', $slotIds)->where('is_active', 1)->update(['cage_slot_id' => null]);
+            }
+
+            if ($request->boolean('return_sensors', true)) {
+                HardwareItem::where(function ($q) use ($slotIds, $cage) {
+                    $q->whereIn('cage_slot_id', $slotIds)->orWhere('cage_id', $cage->id);
+                })->update(['status' => 'spare', 'cage_id' => null, 'cage_slot_id' => null]);
+            }
+
+            $cage->cageSlots()->delete();
+            $cage->delete();
+        });
+
+        logger()->warning('Cage force-deleted', [
+            'user_id' => auth()->id(),
+            'user_name' => auth()->user()?->name,
+            'cage_code' => $cageCode,
+            'cage_id' => $cage->id,
+            'hens_action' => $data['hens_action'],
+            'preserve_production' => $request->boolean('preserve_production'),
+            'preserve_mortality' => $request->boolean('preserve_mortality'),
+            'preserve_feed' => $request->boolean('preserve_feed'),
+            'preserve_environment' => $request->boolean('preserve_environment'),
+        ]);
+
+        return redirect()->route('cages.index')->with('success', "Cage {$cageCode} and all associated slots deleted.");
     }
 
     private function checkResizeSafety(Cage $cage, array $data): ?array
@@ -667,6 +808,11 @@ class CageController extends Controller
             ->where('is_active', 1)
             ->orderBy('id')
             ->get();
+
+        if ($unplacedHens->isEmpty() && !$request->has('hen_ids')) {
+            return redirect()->route('cages.index')
+                ->with('show_no_chickens_modal', true);
+        }
 
         $unplacedBreeds = $unplacedHens->pluck('breed')->unique()->sort()->values();
         $unplacedBreedCounts = $unplacedHens->groupBy('breed')->map->count();
