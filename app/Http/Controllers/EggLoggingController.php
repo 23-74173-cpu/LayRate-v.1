@@ -168,7 +168,9 @@ class EggLoggingController extends Controller
 
         $validator = Validator::make($request->all(), [
             'log_date' => 'required|date|before_or_equal:'.now()->toDateString(),
-            'cage_slot_id' => 'required|exists:cage_slots,id',
+            'cage_slot_ids' => 'nullable|array',
+            'cage_slot_ids.*' => 'exists:cage_slots,id',
+            'cage_slot_id' => 'nullable|exists:cage_slots,id',
             'egg_count' => 'required|integer|min:0',
             'notes' => 'nullable|string',
             'size_small' => 'nullable|integer|min:0',
@@ -205,70 +207,96 @@ class EggLoggingController extends Controller
                 ->withInput();
         }
 
-        $slot = CageSlot::with('cage')->findOrFail($data['cage_slot_id']);
+        $slotIds = $data['cage_slot_ids'] ?? [$data['cage_slot_id']];
+        $isMulti = count($slotIds) > 1;
 
-        $diedToday = DB::table('mortality_logs')
-            ->join('mortality_log_hens', 'mortality_logs.id', '=', 'mortality_log_hens.mortality_log_id')
-            ->where('mortality_logs.cage_id', $slot->cage_id)
-            ->where('mortality_logs.log_date', $data['log_date'])
-            ->distinct()
-            ->count('mortality_log_hens.hen_id');
+        $slots = CageSlot::with('cage')->whereIn('id', $slotIds)->get()->keyBy('id');
 
-        if ($diedToday === 0) {
-            $diedToday = (int) MortalityLog::where('cage_id', $slot->cage_id)
-                ->where('log_date', $data['log_date'])
-                ->sum('count');
-        }
+        $cageIds = $slots->pluck('cage_id')->unique();
+        $diedTodayByCage = [];
+        foreach ($cageIds as $cid) {
+            $died = (int) DB::table('mortality_logs')
+                ->join('mortality_log_hens', 'mortality_logs.id', '=', 'mortality_log_hens.mortality_log_id')
+                ->where('mortality_logs.cage_id', $cid)
+                ->where('mortality_logs.log_date', $data['log_date'])
+                ->distinct()
+                ->count('mortality_log_hens.hen_id');
 
-        $henCount = $slot->active_hen_count + $diedToday;
-
-        if ($henCount === 0) {
-            if ($isAjax) {
-                return response()->json(['success' => false, 'errors' => ['cage_slot_id' => 'This slot has no hens assigned.']], 422);
+            if ($died === 0) {
+                $died = (int) MortalityLog::where('cage_id', $cid)
+                    ->where('log_date', $data['log_date'])
+                    ->sum('count');
             }
-            return redirect()->back()
-                ->withErrors(['cage_slot_id' => 'This slot has no hens assigned. Cannot log egg production for an empty slot.'])
-                ->withInput();
+            $diedTodayByCage[$cid] = $died;
         }
 
-        if ($data['egg_count'] > $henCount) {
-            if ($isAjax) {
-                return response()->json(['success' => false, 'errors' => ['egg_count' => "Egg count ({$data['egg_count']}) cannot exceed hen count ({$henCount})."]], 422);
+        // Validate all slots before saving any
+        foreach ($slotIds as $sid) {
+            $slot = $slots->get($sid);
+            if (!$slot) continue;
+
+            $henCount = $slot->active_hen_count + ($diedTodayByCage[$slot->cage_id] ?? 0);
+
+            if ($henCount === 0) {
+                if ($isAjax) {
+                    return response()->json(['success' => false, 'errors' => ['cage_slot_id' => "Slot {$slot->slot_number} has no hens assigned."]], 422);
+                }
+                return redirect()->back()
+                    ->withErrors(['cage_slot_id' => "Slot {$slot->slot_number} has no hens assigned. Cannot log egg production for an empty slot."])
+                    ->withInput();
             }
-            return redirect()->back()
-                ->withErrors(['egg_count' => "Egg count ({$data['egg_count']}) cannot exceed hen count ({$henCount})."])
-                ->withInput();
+
+            if ($data['egg_count'] > $henCount) {
+                if ($isAjax) {
+                    return response()->json(['success' => false, 'errors' => ['egg_count' => "Egg count ({$data['egg_count']}) cannot exceed hen count ({$henCount}) in slot {$slot->slot_number}."]], 422);
+                }
+                return redirect()->back()
+                    ->withErrors(['egg_count' => "Egg count ({$data['egg_count']}) cannot exceed hen count ({$henCount}) in slot {$slot->slot_number}."])
+                    ->withInput();
+            }
         }
 
-        $log = ProductionLog::firstOrNew(
-            ['cage_slot_id' => $slot->id, 'log_date' => $data['log_date']]
-        );
-        $log->cage_slot_id = $slot->id;
-        $log->recorded_by = auth()->id();
-        $log->fill([
-            'egg_count' => $data['egg_count'],
-            'hen_count' => $henCount,
-            'hdep' => round(($data['egg_count'] / $henCount) * 100, 2),
-            'notes' => $data['notes'] ?? 'Manual entry',
-            'logged_via' => $data['logged_via'] ?? 'manual',
-        ]);
-        $log->save();
+        $savedLogs = [];
+        foreach ($slotIds as $sid) {
+            $slot = $slots->get($sid);
+            if (!$slot) continue;
 
-        $this->syncSizeLogs($log, $data);
+            $henCount = $slot->active_hen_count + ($diedTodayByCage[$slot->cage_id] ?? 0);
+
+            $log = ProductionLog::firstOrNew(
+                ['cage_slot_id' => $slot->id, 'log_date' => $data['log_date']]
+            );
+            $log->cage_slot_id = $slot->id;
+            $log->recorded_by = auth()->id();
+            $log->fill([
+                'egg_count' => $data['egg_count'],
+                'hen_count' => $henCount,
+                'hdep' => round(($data['egg_count'] / $henCount) * 100, 2),
+                'notes' => $data['notes'] ?? 'Manual entry',
+                'logged_via' => $data['logged_via'] ?? 'manual',
+            ]);
+            $log->save();
+
+            $this->syncSizeLogs($log, $data);
+
+            $savedLogs[] = [
+                'id' => $log->id,
+                'cage_slot_id' => $log->cage_slot_id,
+                'egg_count' => $log->egg_count,
+                'hen_count' => $log->hen_count,
+                'hdep' => $log->hdep,
+                'log_date' => $log->log_date->toDateString(),
+            ];
+        }
 
         if ($isAjax) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Production log saved.',
-                'log' => [
-                    'id' => $log->id,
-                    'cage_slot_id' => $log->cage_slot_id,
-                    'egg_count' => $log->egg_count,
-                    'hen_count' => $log->hen_count,
-                    'hdep' => $log->hdep,
-                    'log_date' => $log->log_date->toDateString(),
-                ],
-            ]);
+            $response = ['success' => true, 'message' => 'Production log saved.'];
+            if ($isMulti) {
+                $response['logs'] = $savedLogs;
+            } else {
+                $response['log'] = $savedLogs[0];
+            }
+            return response()->json($response);
         }
 
         return redirect()->route('eggs.logging')->with('success', 'Production log saved.');

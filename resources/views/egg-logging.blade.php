@@ -96,7 +96,7 @@
                         @endphp
                         @php $activeHenCount = $slot->active_hen_count; @endphp
                         <button type="button"
-                                class="slot-card flex flex-col items-center justify-center aspect-square rounded-lg border transition-all relative {{ $activeHenCount === 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer' }}"
+                                class="slot-card flex flex-col items-center justify-center aspect-square rounded-lg border transition-all relative select-none {{ $activeHenCount === 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer' }}"
                                 style="background-color: {{ $isLogged ? '#eaf6ee' : '#ffffff' }}; border-color: {{ $isLogged ? '#b8dfc6' : '#e6e6e6' }};"
                                 data-slot-id="{{ $slot->id }}"
                                 data-cage-id="{{ $cage->id }}"
@@ -110,11 +110,9 @@
                                 data-has-sensor="{{ $isSensor ? 1 : 0 }}"
                                 data-today-eggs="{{ $slot->today_egg_count }}"
                                 data-empty="{{ $activeHenCount === 0 ? 1 : 0 }}"
-                                onclick="{{ $activeHenCount === 0 ? 'event.preventDefault(); return false;' : 'selectSlot(this)' }}"
                                 aria-label="{{ $cage->cage_code }} slot {{ $slot->row_number }}-{{ $slot->column_number }}, {{ $activeHenCount }} hens{{ $activeHenCount === 0 ? ', no hens assigned' : '' }}"
                                 tabindex="{{ $activeHenCount === 0 ? '-1' : '0' }}"
-                                title="{{ $activeHenCount === 0 ? 'No hens assigned to this slot' : '' }}"
-                                onkeydown="{{ $activeHenCount === 0 ? '' : 'if(event.key===\'Enter\'||event.key===\' \') selectSlot(this)' }}">
+                                title="{{ $activeHenCount === 0 ? 'No hens assigned to this slot' : '' }}">
 
                                 @if($isSensor)
                                 <span class="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full" style="background-color: #0075de;"></span>
@@ -156,7 +154,7 @@
                     <form method="POST" action="{{ route('eggs.logging.store') }}" id="eggForm" data-turbo="false">
                         @csrf
 
-                        {{-- Selected slot info bar --}}
+                        {{-- Single slot info bar --}}
                         <div id="selectedSlotBar" class="mb-3 p-3 rounded-lg flex items-center flex-wrap gap-3 text-xs" style="background-color: #f6f5f4;">
                             <div>
                                 <span style="color: #a39e98;">Slot:</span>
@@ -172,6 +170,12 @@
                             </div>
                         </div>
 
+                        {{-- Multi-slot info bar --}}
+                        <div id="multiSlotBar" class="hidden mb-3 p-3 rounded-lg text-xs" style="background-color: #e8f0fe; color: #1f1f1f;">
+                            <span id="multiSlotCount">0 slots selected</span> — same egg count will be saved to all selected slots.
+                        </div>
+
+                        <input type="hidden" name="cage_slot_ids" id="cageSlotIdsInput" value="">
                         <input type="hidden" name="cage_slot_id" id="cageSlotId" value="">
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -185,7 +189,7 @@
 
                             {{-- Egg Count --}}
                             <div>
-                                <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Egg Count</label>
+                                <label id="eggCountLabel" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Egg Count</label>
                                 <input type="number" name="egg_count" id="eggCount" min="0" required
                                        oninput="computeHdep(); checkSizeSum(); validateForm()"
                                        class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
@@ -197,6 +201,9 @@
                                         class="hidden mt-1.5 text-xs flex items-center gap-1" style="color: #8a5a00;">
                                     <i data-lucide="lock" class="w-3 h-3"></i> Sensor reading — click to override
                                 </button>
+                                <p id="multiEggHint" class="hidden mt-1.5 text-xs" style="color: #615d59;">
+                                    This egg count will be saved to all <span id="multiEggHintCount">0</span> selected slots.
+                                </p>
                             </div>
 
                             {{-- Hen Count --}}
@@ -329,6 +336,52 @@
         </div>
     </div>
 
+    {{-- ── Multi-Save Confirmation Modal ── --}}
+    <div id="confirmMultiModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" style="display: none;" role="dialog" aria-modal="true">
+        <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeConfirmMultiModal()"></div>
+        <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Confirm Multi-Slot Logging</h2>
+                <button onclick="closeConfirmMultiModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+                </button>
+            </div>
+            <div class="space-y-3 text-sm">
+                <div class="p-3 rounded-lg" style="background-color: #f6f5f4;">
+                    <div class="flex justify-between mb-1">
+                        <span style="color: #615d59;">Selected slots</span>
+                        <span id="confirmSlotCount" class="font-semibold" style="color: #1f1f1f;"></span>
+                    </div>
+                    <div class="flex justify-between mb-1">
+                        <span style="color: #615d59;">Slots</span>
+                        <span id="confirmSlotList" class="font-semibold text-xs" style="color: #1f1f1f;"></span>
+                    </div>
+                    <div class="flex justify-between mb-1">
+                        <span style="color: #615d59;">Egg count per slot</span>
+                        <span id="confirmEggPerSlot" class="font-semibold" style="color: #1f1f1f;"></span>
+                    </div>
+                    <div class="flex justify-between pt-1 border-t" style="border-color: #e6e6e6;">
+                        <span style="color: #615d59;">Total eggs to record</span>
+                        <span id="confirmTotalEggs" class="font-semibold" style="color: #0075de;"></span>
+                    </div>
+                </div>
+                <p class="text-xs" style="color: #a39e98;">This action will create or update production logs for all selected slots.</p>
+            </div>
+            <div class="flex items-center gap-3 mt-4">
+                <button type="button" onclick="closeConfirmMultiModal()"
+                        class="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors text-center"
+                        style="color: #1f1f1f; border: 1px solid #e6e6e6;"
+                        onmouseover="this.style.backgroundColor='#f6f5f4'"
+                        onmouseout="this.style.backgroundColor='transparent'">
+                    Cancel
+                </button>
+                <x-button type="button" id="confirmMultiSaveBtn" onclick="executeMultiSave()" class="flex-1 py-2.5 text-center">
+                    Confirm Save
+                </x-button>
+            </div>
+        </div>
+    </div>
+
 <script>
 (function() {
     // ── ONE-TIME: function definitions and document-level listeners ──
@@ -339,6 +392,15 @@
         let currentHasSensor = false;
         let overrideVerified = false;
 
+        // ── Drag-to-select state ──
+        let isDragging = false;
+        let dragMoved = false;
+        let selectedSlotIds = new Set();
+        let isMultiSelect = false;
+        let pendingFormData = null;
+        let pendingSaveBtn = null;
+        let pendingOrigText = '';
+
         function resetSlotStyle(c) {
             c.style.borderColor = '#e6e6e6';
             c.style.borderWidth = '1px';
@@ -346,8 +408,43 @@
             c.style.backgroundColor = wasLogged ? '#eaf6ee' : '#ffffff';
         }
 
-        function selectSlot(card) {
+        function clearSlotSelection() {
+            clearAllSlotSelections();
+            document.getElementById('slotFormPlaceholder').classList.remove('hidden');
+            document.getElementById('slotForm').classList.add('hidden');
+            checkSizeSum();
+            validateForm();
+        }
+
+        function clearAllSlotSelections() {
             document.querySelectorAll('.slot-card').forEach(resetSlotStyle);
+            document.querySelectorAll('.slot-card').forEach(function(c) {
+                c.classList.remove('ring-2', 'ring-[#0075de]', 'ring-offset-1', 'bg-[#0075de]/10');
+            });
+            selectedSlotIds.clear();
+            isMultiSelect = false;
+            currentSlotId = null;
+            overrideVerified = false;
+            document.getElementById('cageSlotIdsInput').value = '';
+            document.getElementById('cageSlotId').value = '';
+        }
+
+        function toggleSlotSelection(el) {
+            if (el.dataset.empty === '1') return;
+            var id = el.dataset.slotId;
+            if (selectedSlotIds.has(id)) {
+                selectedSlotIds.delete(id);
+                el.classList.remove('ring-2', 'ring-[#0075de]', 'ring-offset-1', 'bg-[#0075de]/10');
+            } else {
+                selectedSlotIds.add(id);
+                el.classList.add('ring-2', 'ring-[#0075de]', 'ring-offset-1', 'bg-[#0075de]/10');
+            }
+            document.getElementById('cageSlotIdsInput').value = Array.from(selectedSlotIds).join(',');
+        }
+
+        function selectSingleSlot(card) {
+            document.querySelectorAll('.slot-card').forEach(resetSlotStyle);
+            clearAllSlotSelections();
 
             const cageColors = @json(\App\Models\Cage::getColorMap());
             const softColors = @json(\App\Models\Cage::getSoftColorMap());
@@ -384,6 +481,12 @@
             }
 
             overrideVerified = false;
+            document.getElementById('selectedSlotBar').classList.remove('hidden');
+            document.getElementById('multiSlotBar').classList.add('hidden');
+            document.getElementById('multiEggHint').classList.add('hidden');
+            document.getElementById('eggCountLabel').textContent = 'Egg Count';
+            var hdepEl = document.getElementById('hdepDisplay');
+            if (hdepEl) hdepEl.classList.remove('hidden');
             document.getElementById('slotFormPlaceholder').classList.add('hidden');
             document.getElementById('slotForm').classList.remove('hidden');
             computeHdep();
@@ -391,14 +494,80 @@
             validateForm();
         }
 
-        function clearSlotSelection() {
-            document.querySelectorAll('.slot-card').forEach(resetSlotStyle);
+        function updateFormForMultiSelect() {
+            if (selectedSlotIds.size === 0) {
+                clearSlotSelection();
+                return;
+            }
+            if (selectedSlotIds.size === 1) {
+                var card = document.querySelector('.slot-card[data-slot-id="' + Array.from(selectedSlotIds)[0] + '"]');
+                if (card) { selectSingleSlot(card); return; }
+            }
+            isMultiSelect = true;
             currentSlotId = null;
+            currentHasSensor = false;
             overrideVerified = false;
-            document.getElementById('slotFormPlaceholder').classList.remove('hidden');
-            document.getElementById('slotForm').classList.add('hidden');
+
+            document.getElementById('selectedSlotBar').classList.add('hidden');
+            document.getElementById('multiSlotBar').classList.remove('hidden');
+            document.getElementById('multiSlotCount').textContent = selectedSlotIds.size + ' slots selected';
+
+            document.getElementById('overrideLabel').classList.add('hidden');
+            document.getElementById('multiEggHint').classList.remove('hidden');
+            document.getElementById('multiEggHintCount').textContent = selectedSlotIds.size;
+            document.getElementById('eggCountLabel').textContent = 'Total Egg Count per Cage Slot';
+            var totalHens = 0;
+            selectedSlotIds.forEach(function(id) {
+                var card = document.querySelector('.slot-card[data-slot-id="' + id + '"]');
+                if (card) totalHens += parseInt(card.dataset.hens) || 0;
+            });
+            document.getElementById('henCount').value = totalHens || 1;
+            document.getElementById('eggCount').value = 0;
+            document.getElementById('eggCount').readOnly = false;
+            var hdepEl = document.getElementById('hdepDisplay');
+            if (hdepEl) hdepEl.classList.remove('hidden');
+
+            document.getElementById('slotFormPlaceholder').classList.add('hidden');
+            document.getElementById('slotForm').classList.remove('hidden');
+            computeHdep();
             checkSizeSum();
             validateForm();
+        }
+
+        function onSlotMouseDown(e) {
+            if (e.button !== 0) return;
+            var el = e.currentTarget;
+            if (el.dataset.empty === '1') return;
+            isDragging = true;
+            dragMoved = false;
+            clearAllSlotSelections();
+            toggleSlotSelection(el);
+        }
+
+        function onSlotMouseEnter(e) {
+            if (!isDragging) return;
+            var el = e.currentTarget;
+            if (el.dataset.empty === '1') return;
+            dragMoved = true;
+            toggleSlotSelection(el);
+        }
+
+        function onGlobalMouseUp() {
+            if (!isDragging) return;
+            isDragging = false;
+            if (selectedSlotIds.size === 0) {
+                clearSlotSelection();
+            } else if (dragMoved) {
+                updateFormForMultiSelect();
+            } else {
+                var card = document.querySelector('.slot-card[data-slot-id="' + Array.from(selectedSlotIds)[0] + '"]');
+                if (card) selectSingleSlot(card);
+            }
+        }
+
+        if (!window.__eggLoggingDragBound) {
+            window.__eggLoggingDragBound = true;
+            document.addEventListener('mouseup', onGlobalMouseUp);
         }
 
         function switchCage(cageId) {
@@ -433,12 +602,16 @@
         function computeHdep() {
             const eggs = parseInt(document.getElementById('eggCount').value) || 0;
             const hens = parseInt(document.getElementById('henCount').value) || 1;
-            const hdep = ((eggs / hens) * 100).toFixed(1);
+            var count = eggs;
+            if (isMultiSelect && selectedSlotIds.size > 0) {
+                count = eggs * selectedSlotIds.size;
+            }
+            const hdep = ((count / hens) * 100).toFixed(1);
             const el = document.getElementById('hdepDisplay');
             el.innerHTML = '<span class="relative group">HDEP: ' + hdep + '% <i data-lucide="info" class="inline w-3 h-3 ml-0.5" style="color: #a39e98;"></i></span>';
-            el.style.backgroundColor = eggs > hens ? '#fbe4e6' : '#f6f5f4';
-            el.style.borderColor = eggs > hens ? '#f3cdd0' : '#e6e6e6';
-            el.style.color = eggs > hens ? '#9b1c24' : '#1f1f1f';
+            el.style.backgroundColor = count > hens ? '#fbe4e6' : '#f6f5f4';
+            el.style.borderColor = count > hens ? '#f3cdd0' : '#e6e6e6';
+            el.style.color = count > hens ? '#9b1c24' : '#1f1f1f';
             if (typeof lucide !== 'undefined') lucide.createIcons();
         }
 
@@ -540,6 +713,148 @@
             })
             .catch(function() {
                 showNotification('Network error — please try again.', 'error');
+            });
+        }
+
+        function closeConfirmMultiModal() {
+            document.getElementById('confirmMultiModal').style.display = 'none';
+            pendingFormData = null;
+            pendingSaveBtn = null;
+        }
+
+        function showConfirmMultiModal() {
+            var eggCount = parseInt(document.getElementById('eggCount').value) || 0;
+            var totalEggs = eggCount * selectedSlotIds.size;
+
+            var slotLabels = [];
+            selectedSlotIds.forEach(function(id) {
+                var card = document.querySelector('.slot-card[data-slot-id="' + id + '"]');
+                if (card) slotLabels.push(card.dataset.cageCode + ' R' + card.dataset.row + '-C' + card.dataset.col);
+            });
+
+            document.getElementById('confirmSlotCount').textContent = selectedSlotIds.size + ' slots';
+            document.getElementById('confirmSlotList').textContent = slotLabels.join(', ');
+            document.getElementById('confirmEggPerSlot').textContent = eggCount;
+            document.getElementById('confirmTotalEggs').textContent = totalEggs.toLocaleString();
+            document.getElementById('confirmMultiModal').style.display = 'flex';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        function executeMultiSave() {
+            if (!pendingFormData) return;
+            document.getElementById('confirmMultiModal').style.display = 'none';
+
+            if (pendingSaveBtn) { pendingSaveBtn.disabled = true; pendingSaveBtn.textContent = 'Saving\u2026'; }
+
+            var form = document.getElementById('eggForm');
+
+            fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('input[name="_token"]')?.value || '',
+                },
+                body: pendingFormData,
+            })
+            .then(function(r) {
+                return r.json().then(function(body) {
+                    return { status: r.status, body: body, ok: r.ok };
+                });
+            })
+            .then(function(resp) {
+                form._submitting = false;
+                if (pendingSaveBtn) { pendingSaveBtn.disabled = false; pendingSaveBtn.textContent = pendingOrigText; }
+                pendingFormData = null;
+                pendingSaveBtn = null;
+
+                if (resp.ok && resp.body.success) {
+                    if (typeof showNotification === 'function') {
+                        showNotification(resp.body.message || 'Production log saved.', 'success');
+                    }
+
+                    var logs = resp.body.logs || [];
+                    var cageDeltas = {};
+                    var grandDelta = 0;
+
+                    logs.forEach(function(l) {
+                        var slotCard = document.querySelector('.slot-card[data-slot-id="' + l.cage_slot_id + '"]');
+                        if (!slotCard) return;
+
+                        var prevEggs = parseInt(slotCard.dataset.todayEggs) || 0;
+                        var savedEggs = parseInt(l.egg_count) || 0;
+                        var delta = savedEggs - prevEggs;
+                        grandDelta += delta;
+
+                        slotCard.dataset.todayEggs = savedEggs;
+                        slotCard.style.backgroundColor = '#eaf6ee';
+
+                        var existingCheck = slotCard.querySelector('.logged-check');
+                        if (existingCheck) existingCheck.remove();
+
+                        var check = document.createElement('span');
+                        check.className = 'logged-check absolute top-0.5 left-0.5 w-3 h-3 rounded-full flex items-center justify-center';
+                        check.style.backgroundColor = '#1f6b3a';
+                        check.innerHTML = '<svg class="w-2 h-2 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                        slotCard.appendChild(check);
+
+                        var cid = parseInt(slotCard.dataset.cageId);
+                        if (!cageDeltas[cid]) cageDeltas[cid] = 0;
+                        cageDeltas[cid] += delta;
+                    });
+
+                    // Update cage overview cards
+                    Object.keys(cageDeltas).forEach(function(cid) {
+                        var card = document.querySelector('.cage-overview-card[data-cage-id="' + cid + '"]');
+                        if (!card) return;
+                        var totalSlots = parseInt(card.dataset.totalSlots) || 0;
+                        var loggedCount = document.querySelectorAll('.slot-card[data-cage-id="' + cid + '"] .logged-check').length;
+                        if (loggedCount > totalSlots) loggedCount = totalSlots;
+                        var loggedEl = document.getElementById('cage-logged-' + cid);
+                        var completeEl = document.getElementById('cage-complete-' + cid);
+                        if (loggedEl) {
+                            loggedEl.textContent = loggedCount + '/' + totalSlots;
+                            loggedEl.style.color = loggedCount >= totalSlots ? '#1f6b3a' : '#1f1f1f';
+                        }
+                        if (completeEl) {
+                            completeEl.style.display = loggedCount >= totalSlots ? 'inline' : 'none';
+                        }
+                        var eggsEl = document.getElementById('cage-eggs-' + cid);
+                        if (eggsEl) {
+                            var currentEggs = parseInt(eggsEl.textContent.replace(/[^0-9]/g, '')) || 0;
+                            eggsEl.textContent = (currentEggs + cageDeltas[cid]).toLocaleString() + ' eggs';
+                        }
+                    });
+
+                    var totalEl = document.getElementById('todayTotalEggs');
+                    if (totalEl) {
+                        var currentTotal = parseInt(totalEl.textContent.replace(/[^0-9]/g, '')) || 0;
+                        totalEl.textContent = (currentTotal + grandDelta).toLocaleString();
+                    }
+
+                    clearSlotSelection();
+                } else {
+                    var errors = resp.body.errors || {};
+                    var firstMsg = '';
+                    for (var key in errors) {
+                        if (errors.hasOwnProperty(key) && errors[key]) {
+                            firstMsg = Array.isArray(errors[key]) ? errors[key][0] : errors[key];
+                            break;
+                        }
+                    }
+                    if (typeof showNotification === 'function') {
+                        showNotification(firstMsg || 'Validation failed.', 'error');
+                    }
+                }
+            })
+            .catch(function() {
+                form._submitting = false;
+                if (pendingSaveBtn) { pendingSaveBtn.disabled = false; pendingSaveBtn.textContent = pendingOrigText; }
+                pendingFormData = null;
+                pendingSaveBtn = null;
+                if (typeof showNotification === 'function') {
+                    showNotification('Network error — please try again.', 'error');
+                }
             });
         }
 
@@ -695,6 +1010,15 @@
                 connectEggCountSSE();
             }
 
+            // Drag-to-select event wiring on slot cards
+            document.querySelectorAll('.slot-card').forEach(function(el) {
+                if (!el.__dragWired) {
+                    el.__dragWired = true;
+                    el.addEventListener('mousedown', onSlotMouseDown);
+                    el.addEventListener('mouseenter', onSlotMouseEnter);
+                }
+            });
+
             // Form submit — bind to the current #eggForm element
             var form = document.getElementById('eggForm');
             if (form && !form.__submitBound) {
@@ -707,13 +1031,37 @@
 
                     var eggCount = parseInt(document.getElementById('eggCount').value) || 0;
                     var hens = parseInt(document.getElementById('henCount').value) || 0;
-                    if (eggCount > hens) {
+                    if (!isMultiSelect && eggCount > hens) {
                         e.preventDefault();
                         return;
                     }
 
                     e.preventDefault();
                     form._submitting = true;
+
+                    var eggCount = parseInt(document.getElementById('eggCount').value) || 0;
+
+                    // Build form data: always send cage_slot_ids[] array
+                    var fd = new FormData(form);
+                    fd.delete('cage_slot_ids');
+
+                    if (isMultiSelect) {
+                        selectedSlotIds.forEach(function(id) { fd.append('cage_slot_ids[]', id); });
+                    } else if (currentSlotId) {
+                        fd.append('cage_slot_ids[]', currentSlotId);
+                    }
+
+                    if (isMultiSelect) {
+                        // Show confirmation modal instead of saving directly
+                        if (saveBtn) { saveBtn.disabled = false; }
+                        form._submitting = false;
+                        pendingFormData = fd;
+                        pendingSaveBtn = saveBtn;
+                        pendingOrigText = origText;
+                        showConfirmMultiModal();
+                        return;
+                    }
+
                     if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving\u2026'; }
 
                     fetch(form.action, {
@@ -723,7 +1071,7 @@
                             'Accept': 'application/json',
                             'X-CSRF-TOKEN': document.querySelector('input[name="_token"]')?.value || '',
                         },
-                        body: new FormData(form),
+                        body: fd,
                     })
                     .then(function(r) {
                         return r.json().then(function(body) {
@@ -739,6 +1087,13 @@
                                 showNotification(resp.body.message || 'Production log saved.', 'success');
                             }
 
+                            if (resp.body.logs) {
+                                // Multi-save: clear selection, let SSE refresh counts
+                                clearSlotSelection();
+                                return;
+                            }
+
+                            // Single-save: update the slot card inline
                             var slotCard = document.querySelector('.slot-card[data-slot-id="' + currentSlotId + '"]');
                             var savedEggs = parseInt(resp.body.log.egg_count) || 0;
                             var cageId = null;
@@ -832,7 +1187,7 @@
         };
 
         // Expose functions to global scope
-        window.selectSlot = selectSlot;
+        window.selectSlot = selectSingleSlot;
         window.clearSlotSelection = clearSlotSelection;
         window.switchCage = switchCage;
         window.computeHdep = computeHdep;
@@ -844,6 +1199,8 @@
         window.openEditLog = openEditLog;
         window.closeEditLogModal = closeEditLogModal;
         window.editComputeHdep = editComputeHdep;
+        window.closeConfirmMultiModal = closeConfirmMultiModal;
+        window.executeMultiSave = executeMultiSave;
 
         // ── One-time document-level listeners ──
         if (!window.__eggLoggingEscapeBound) {
@@ -851,6 +1208,7 @@
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape') {
                     if (typeof closeOverrideModal === 'function') closeOverrideModal();
+                    if (typeof closeConfirmMultiModal === 'function') closeConfirmMultiModal();
                     if (typeof closeEditLogModal === 'function') closeEditLogModal();
                 }
             });
