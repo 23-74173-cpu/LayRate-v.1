@@ -431,9 +431,9 @@
     };
 
     var FORECAST_DEFAULT_DURATIONS = {
-        cage: { 7: 5000, 14: 8000, 30: 12000 },
-        breed: { 7: 6000, 14: 10000, 30: 15000 },
-        farm: { 7: 8000, 14: 14000, 30: 20000 },
+        cage: { 1: 5000, 7: 5000, 14: 8000, 30: 12000 },
+        breed: { 1: 6000, 7: 6000, 14: 10000, 30: 15000 },
+        farm: { 1: 8000, 7: 8000, 14: 14000, 30: 20000 },
     };
 
     var FORECAST_MIN_DURATION = 3000;
@@ -450,6 +450,53 @@
         var scopeMap = FORECAST_DEFAULT_DURATIONS[scope] || FORECAST_DEFAULT_DURATIONS.cage;
         return scopeMap[horizon] || scopeMap[7] || FORECAST_MIN_DURATION;
     }
+    window.resolveForecastDuration = resolveForecastDuration;
+
+    const STATUS_MESSAGES = [
+        'Loading historical data...',
+        'Training SARIMA model...',
+        'Training XGBoost model...',
+        'Evaluating model performance...',
+        'Generating predictions...',
+        'Saving forecast results...',
+    ];
+
+    window.startForecastProgress = function(expectedDuration) {
+        const progressBar = document.getElementById('forecastProgressBar');
+        const progressText = document.getElementById('forecastProgressText');
+        const statusText = document.getElementById('forecastStatusText');
+        if (!progressBar) return;
+
+        progressBar.style.width = '0%';
+        if (progressText) progressText.textContent = '0%';
+        if (statusText) statusText.textContent = STATUS_MESSAGES[0];
+
+        const startTime = Date.now();
+
+        function updateProgress() {
+            const elapsed = Date.now() - startTime;
+            const ratio = Math.min(elapsed / expectedDuration, 1);
+            const eased = 1 - Math.pow(1 - ratio, 3);
+            const progress = Math.min(95, eased * 95);
+
+            progressBar.style.width = progress + '%';
+            if (progressText) progressText.textContent = Math.round(progress) + '%';
+
+            const messageIndex = Math.min(
+                STATUS_MESSAGES.length - 1,
+                Math.floor(ratio * STATUS_MESSAGES.length)
+            );
+            if (statusText) {
+                statusText.textContent = STATUS_MESSAGES[messageIndex];
+            }
+
+            if (progress < 95) {
+                requestAnimationFrame(updateProgress);
+            }
+        }
+
+        requestAnimationFrame(updateProgress);
+    };
 
     function recordForecastDuration() {
         var start = sessionStorage.getItem(FORECAST_STORAGE_KEYS.startTime);
@@ -480,9 +527,6 @@
 
         const form = e.target;
         const overlay = document.getElementById('forecastLoadingOverlay');
-        const progressBar = document.getElementById('forecastProgressBar');
-        const progressText = document.getElementById('forecastProgressText');
-        const statusText = document.getElementById('forecastStatusText');
         const btn = document.getElementById('generateForecastBtn');
         const btnText = document.getElementById('btnText');
 
@@ -502,46 +546,7 @@
 
         sessionStorage.setItem('layrate_forecast_start_time', Date.now());
 
-        progressBar.style.width = '0%';
-        progressText.textContent = '0%';
-        if (statusText) {
-            statusText.textContent = 'Loading historical data...';
-        }
-
-        const statusMessages = [
-            'Loading historical data...',
-            'Training SARIMA model...',
-            'Training XGBoost model...',
-            'Evaluating model performance...',
-            'Generating predictions...',
-            'Saving forecast results...',
-        ];
-
-        const startTime = Date.now();
-
-        function updateProgress() {
-            const elapsed = Date.now() - startTime;
-            const ratio = Math.min(elapsed / expectedDuration, 1);
-            const eased = 1 - Math.pow(1 - ratio, 3);
-            const progress = Math.min(95, eased * 95);
-
-            progressBar.style.width = progress + '%';
-            progressText.textContent = Math.round(progress) + '%';
-
-            const messageIndex = Math.min(
-                statusMessages.length - 1,
-                Math.floor(ratio * statusMessages.length)
-            );
-            if (statusText) {
-                statusText.textContent = statusMessages[messageIndex];
-            }
-
-            if (progress < 95) {
-                requestAnimationFrame(updateProgress);
-            }
-        }
-
-        requestAnimationFrame(updateProgress);
+        window.startForecastProgress(expectedDuration);
 
         requestAnimationFrame(function() {
             setTimeout(function() {

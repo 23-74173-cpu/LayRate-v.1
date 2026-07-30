@@ -341,20 +341,21 @@
         }
     });
 
-    // Wire loading overlay for specific-date forecast form.  Must prevent the
-    // default so Turbo Frame (which wraps this form) doesn't also submit via
-    // fetch alongside our native form.submit() — the double-submission was
-    // causing the page to double-refresh.  The overlay shows a spinner already
-    // (embedded in the overlay HTML); skip the progress-bar animation since a
-    // single-day forecast completes too fast for it to matter.
     document.addEventListener('submit', function(e) {
         if (e.target.id !== 'forecastDayForm') return;
         e.preventDefault();
+        const form = e.target;
         const overlay = document.getElementById('forecastLoadingOverlay');
         if (!overlay) return;
         overlay.style.display = 'flex';
-        const statusText = document.getElementById('forecastStatusText');
-        if (statusText) statusText.textContent = 'Generating single-day forecast...';
-        setTimeout(function() { e.target.submit(); }, 80);
+
+        const scopeInput = form.querySelector('input[name="scope"]');
+        const scope = scopeInput ? scopeInput.value : 'cage';
+        const expectedDuration = window.resolveForecastDuration(scope, 1);
+
+        sessionStorage.setItem('layrate_forecast_start_time', Date.now());
+        window.startForecastProgress(expectedDuration);
+
+        setTimeout(function() { form.submit(); }, 80);
     });
 </script>
