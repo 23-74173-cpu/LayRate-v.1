@@ -74,7 +74,7 @@ class PreOrderController extends Controller
             $stocked = EggStockBatch::where('egg_size', $size)->sum('count');
             $committed = PreOrder::where('egg_size', $size)->where('status', 'pending')->sum('egg_count');
             $forecasted = $this->forecastSize($size);
-            $pool = $logged - $stocked - $committed;
+            $pool = $stocked - $committed;
 
             $summary[$size] = [
                 'logged' => $logged,
@@ -112,10 +112,9 @@ class PreOrderController extends Controller
         $sizes = ['small', 'medium', 'large', 'jumbo'];
         $pools = [];
         foreach ($sizes as $size) {
-            $logged = EggSizeLog::where('egg_size', $size)->sum('count');
             $stocked = EggStockBatch::where('egg_size', $size)->sum('count');
             $committed = PreOrder::where('egg_size', $size)->where('status', 'pending')->sum('egg_count');
-            $pools[$size] = max(0, $logged - $stocked - $committed);
+            $pools[$size] = max(0, $stocked - $committed);
         }
         return response()->json(['pools' => $pools]);
     }
@@ -131,13 +130,6 @@ class PreOrderController extends Controller
             'fulfillment_date' => 'nullable|date|after_or_equal:requested_date',
             'notes' => 'nullable|string',
         ]);
-
-        $validator->after(function ($v) {
-            $count = $v->validated()['egg_count'] ?? 0;
-            if ($count % 6 !== 0) {
-                $v->errors()->add('egg_count', 'Order must be in multiples of 6 (half-dozen).');
-            }
-        });
 
         if ($validator->fails()) {
             return redirect()->route('eggs.preorders')
@@ -172,13 +164,6 @@ class PreOrderController extends Controller
             'notes' => 'nullable|string',
             'status' => 'required|in:pending,fulfilled,cancelled',
         ]);
-
-        $validator->after(function ($v) {
-            $count = $v->validated()['egg_count'] ?? 0;
-            if ($count % 6 !== 0) {
-                $v->errors()->add('egg_count', 'Order must be in multiples of 6 (half-dozen).');
-            }
-        });
 
         if ($validator->fails()) {
             return redirect()->route('eggs.preorders')

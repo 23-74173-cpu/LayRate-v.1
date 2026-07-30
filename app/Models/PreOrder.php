@@ -64,28 +64,22 @@ class PreOrder extends Model
     /**
      * Compute available pool for a size with row-level locking.
      *
-     * Formula: SUM(egg_size_logs.count) - SUM(egg_stock_batches.count) - SUM(pending pre_orders.egg_count)
-     * This matches EggStockBatch::getAvailablePoolForSize farm-wide (cageId = null).
+     * Formula: SUM(egg_stock_batches.count) - SUM(pending pre_orders.egg_count)
      */
     private static function getPoolWithLock(string $size): int
     {
-        EggSizeLog::where('egg_size', $size)->lockForUpdate()->get();
         EggStockBatch::where('egg_size', $size)->lockForUpdate()->get();
         self::where('egg_size', $size)->where('status', 'pending')->lockForUpdate()->get();
 
-        $logged = EggSizeLog::where('egg_size', $size)->sum('count');
         $stocked = EggStockBatch::where('egg_size', $size)->sum('count');
         $committed = self::where('egg_size', $size)->where('status', 'pending')->sum('egg_count');
 
-        return max(0, $logged - $stocked - $committed);
+        return max(0, $stocked - $committed);
     }
 
     /**
      * Create a pre-order inside a DB transaction with row locking,
      * ensuring it doesn't over-commit available stock.
-     *
-     * Pool includes logged egg_size_logs (not just stocked batches),
-     * matching EggStockBatch::getAvailablePoolForSize.
      *
      * @throws \OverflowException if requested egg_count exceeds available stock
      */
@@ -96,7 +90,7 @@ class PreOrder extends Model
 
             if (($data['egg_count'] ?? 0) > $available) {
                 throw new \OverflowException(
-                    "Only {$available} {$data['egg_size']} egg(s) available (total production minus stocked and other pending pre-orders)."
+                    "Only {$available} {$data['egg_size']} egg(s) in stock (after subtracting other pending pre-orders)."
                 );
             }
 
@@ -134,7 +128,7 @@ class PreOrder extends Model
 
             if ($newCount > $available) {
                 throw new \OverflowException(
-                    "Only {$available} {$newSize} egg(s) available (total production minus stocked and other pending pre-orders)."
+                    "Only {$available} {$newSize} egg(s) in stock (after subtracting other pending pre-orders)."
                 );
             }
 

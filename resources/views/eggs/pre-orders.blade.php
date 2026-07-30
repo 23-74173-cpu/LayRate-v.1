@@ -380,24 +380,14 @@ function onOrderCountChange() {
     var submitBtn = document.getElementById('addOrderSubmitBtn');
 
     if (count < 1 || !selected) {
-        trayLabel.textContent = selected ? 'Enter a count (multiples of 15 for halves/whole trays).' : 'Select a size first.';
+        trayLabel.textContent = selected ? 'Enter a count.' : 'Select a size first.';
         if (remainingEl) remainingEl.classList.add('hidden');
         if (submitBtn) submitBtn.disabled = true;
         return;
     }
 
-    if (count % 15 !== 0) {
-        trayLabel.textContent = eggCountLabel(count) || count + ' eggs';
-        if (remainingEl) {
-            remainingEl.textContent = 'Orders must be in multiples of 15 (half-tray = 15, whole tray = 30).';
-            remainingEl.style.color = '#9b1c24';
-            remainingEl.classList.remove('hidden');
-        }
-        if (submitBtn) submitBtn.disabled = true;
-        return;
-    }
-
-    trayLabel.textContent = eggCountLabel(count);
+    var label = eggCountLabel(count);
+    trayLabel.textContent = label;
 
     var avail = getAvailableForSize(selected);
     if (avail < 1) {
