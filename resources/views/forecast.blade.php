@@ -145,6 +145,13 @@
                 <i data-lucide="download" class="w-4 h-4 text-[#002D5E]"></i>
             </div>
         </button>
+        <a href="{{ route('forecast.input-records.download') }}" data-turbo="false"
+           class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>Download Production Data</span>
+            <div class="w-8 h-8 rounded-full bg-[#C2703E]/10 flex items-center justify-center">
+                <i data-lucide="database" class="w-4 h-4 text-[#C2703E]"></i>
+            </div>
+        </a>
         <button type="button" id="fabImportBtn" class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Import production data</span>
             <div class="w-8 h-8 rounded-full bg-[#2D7D46]/10 flex items-center justify-center">

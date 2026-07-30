@@ -175,6 +175,7 @@ Route::middleware('auth')->group(function () {
     Route::match(['GET', 'POST'], '/forecast/csv',   [ForecastController::class, 'exportCsv'])->name('forecast.csv');
     Route::match(['GET', 'POST'], '/forecast/excel', [ForecastController::class, 'exportExcel'])->name('forecast.excel');
     Route::match(['GET', 'POST'], '/forecast/pdf',   [ForecastController::class, 'exportPdf'])->name('forecast.pdf');
+    Route::get('/forecast/input-records/download', [ForecastController::class, 'downloadProductionData'])->name('forecast.input-records.download');
 
     Route::get('/profile',                         [AccountController::class, 'profile'])->name('profile');
     Route::post('/profile',                        [AccountController::class, 'updateProfile'])->name('profile.update');

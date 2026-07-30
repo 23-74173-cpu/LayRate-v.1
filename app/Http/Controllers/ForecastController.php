@@ -1178,6 +1178,44 @@ class ForecastController extends Controller
         }
     }
 
+    public function downloadProductionData(Request $request)
+    {
+        $records = DB::table('forecast_input_records')
+            ->orderBy('date')
+            ->orderBy('cage_code')
+            ->get();
+
+        $filename = 'production_data_' . now()->format('Y-m-d') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function () use ($records) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['date', 'cage_code', 'breed', 'flock_age_weeks', 'hen_count', 'egg_count', 'temperature_c', 'humidity_percent', 'crude_protein_percent', 'feed_consumed_kg', 'mortality_count']);
+            foreach ($records as $row) {
+                fputcsv($handle, [
+                    $row->date,
+                    $row->cage_code,
+                    $row->breed,
+                    $row->flock_age_weeks,
+                    $row->hen_count,
+                    $row->egg_count,
+                    $row->temperature_c,
+                    $row->humidity_percent,
+                    $row->crude_protein_percent,
+                    $row->feed_consumed_kg,
+                    $row->mortality_count,
+                ]);
+            }
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
     // Export requests are fired via fetch() with default redirect-following —
     // a redirect() response here used to be silently followed to GET /forecast,
     // whose HTML then got downloaded and saved as "forecast-export-pdf-....pdf"
