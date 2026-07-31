@@ -162,7 +162,7 @@
 
     {{-- ─── SIDEBAR ─────────────────────────────────────────────────────── --}}
     <aside id="sidebar" data-turbo-permanent
-           class="flex flex-col bg-sidebar-bg text-white
+           class="flex flex-col bg-linear-to-br from-secondary to-sidebar-bg text-white
                   transition-all duration-300 ease-in-out
                   flex-shrink-0
                   fixed lg:relative lg:translate-x-0
