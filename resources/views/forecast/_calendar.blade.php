@@ -54,11 +54,11 @@
     <div class="mb-5">
         <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Production Calendar</div>
 
-        {{-- Row 1: month/year (the select IS the display — tapping it opens the
-             picker directly, no separate static label duplicating the same text)
-             + Prev/Next, right-aligned, same row. --}}
+        {{-- Month/Year filter pills + Today + Clear Forecast, with Prev/Next
+             right-aligned — all on one row. --}}
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <form method="GET" action="{{ route('forecast') }}" class="flex items-center gap-1" data-turbo-frame="production-calendar" data-turbo-action="advance">
+            <div class="flex flex-wrap items-center gap-2">
+                <form method="GET" action="{{ route('forecast') }}" class="flex items-center gap-2" data-turbo-frame="production-calendar" data-turbo-action="advance">
                 @foreach(request()->except(['month','year']) as $key => $value)
                     @if(is_array($value))
                         @foreach($value as $v)
@@ -68,19 +68,44 @@
                     <input type="hidden" name="{{ $key }}" value="{{ $value }}">
                     @endif
                 @endforeach
-                <select name="month" onchange="this.form.submit()" aria-label="Select month"
-                        class="appearance-none bg-transparent border-none cursor-pointer text-xl font-semibold text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 rounded px-1 -ml-1">
-                    @foreach($monthOptions as $m)
-                    <option value="{{ $m }}" {{ $calendarMonth->month == $m ? 'selected' : '' }}>{{ $months[$m - 1] }}</option>
-                    @endforeach
-                </select>
-                <select name="year" onchange="this.form.submit()" aria-label="Select year"
-                        class="appearance-none bg-transparent border-none cursor-pointer text-xl font-semibold text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 rounded px-1">
-                    @foreach($yearOptions as $y)
-                    <option value="{{ $y }}" {{ $calendarMonth->year == $y ? 'selected' : '' }}>{{ $y }}</option>
-                    @endforeach
-                </select>
-            </form>
+                <div class="relative">
+                    <select name="month" onchange="this.form.submit()" aria-label="Select month"
+                            class="appearance-none cursor-pointer rounded-lg border border-[#D9D9D9] bg-white py-1.5 px-4 text-center text-sm font-semibold text-[#333333] shadow-sm transition-colors hover:border-[#002D5E]/40 hover:bg-[#F5F6F8] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30">
+                        @foreach($monthOptions as $m)
+                        <option value="{{ $m }}" {{ $calendarMonth->month == $m ? 'selected' : '' }}>{{ $months[$m - 1] }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="relative">
+                    <select name="year" onchange="this.form.submit()" aria-label="Select year"
+                            class="appearance-none cursor-pointer rounded-lg border border-[#D9D9D9] bg-white py-1.5 px-4 min-w-24 text-center text-sm font-semibold text-[#333333] shadow-sm transition-colors hover:border-[#002D5E]/40 hover:bg-[#F5F6F8] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30">
+                        @foreach($yearOptions as $y)
+                        <option value="{{ $y }}" {{ $calendarMonth->year == $y ? 'selected' : '' }}>{{ $y }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                </form>
+
+                <a href="{{ $todayUrl }}" data-turbo-frame="production-calendar" data-turbo-action="advance" class="text-xs min-w-16 text-center px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
+                    Today
+                </a>
+
+                @can('admin')
+                <form method="POST" action="{{ route('forecast.clear') }}" class="inline" data-confirm="Clear all forecast badges from the calendar for the current selection?" data-confirm-action="Clear" data-confirm-severity="neutral">
+                    @csrf
+                    <input type="hidden" name="scope" value="{{ $scope }}">
+                    @if($scope === 'cage')
+                    <input type="hidden" name="cage" value="{{ $cageCode }}">
+                    @elseif($scope === 'breed')
+                    <input type="hidden" name="breed" value="{{ $breed }}">
+                    @endif
+                    <button type="submit" class="text-xs px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors flex items-center gap-1.5">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        Clear Forecast
+                    </button>
+                </form>
+                @endcan
+            </div>
 
             <div class="flex items-center gap-2">
                 @if($isAtOrBeforeCurrentMonth)
@@ -96,29 +121,6 @@
                     <i data-lucide="chevron-right" class="w-4 h-4"></i>
                 </a>
             </div>
-        </div>
-
-        {{-- Row 2: Today + Clear Forecast, directly beneath the month/year/prev/next row. --}}
-        <div class="flex items-center gap-2 mt-3">
-            <a href="{{ $todayUrl }}" data-turbo-frame="production-calendar" data-turbo-action="advance" class="text-xs px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
-                Today
-            </a>
-
-            @can('admin')
-            <form method="POST" action="{{ route('forecast.clear') }}" class="inline" data-confirm="Clear all forecast badges from the calendar for the current selection?" data-confirm-action="Clear" data-confirm-severity="neutral">
-                @csrf
-                <input type="hidden" name="scope" value="{{ $scope }}">
-                @if($scope === 'cage')
-                <input type="hidden" name="cage" value="{{ $cageCode }}">
-                @elseif($scope === 'breed')
-                <input type="hidden" name="breed" value="{{ $breed }}">
-                @endif
-                <button type="submit" class="text-xs px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors flex items-center gap-1.5">
-                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                    Clear Forecast
-                </button>
-            </form>
-            @endcan
         </div>
     </div>
 
