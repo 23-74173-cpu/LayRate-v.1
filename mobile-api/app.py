@@ -340,6 +340,102 @@ def dashboard_status():
     ), 200
 
 
+@app.route("/api/environment/live", methods=["GET"])
+@require_auth
+def environment_live():
+    """Return per-cage environment data with status classification.
+
+    Mirrors the web UI's EnvironmentStatusService logic:
+      OK:     min < value < max   (strictly inside)
+      Watch:  value == min || value == max  (exactly at boundary)
+      Alert:  value < min || value > max   (strictly outside)
+    Combined status = worst of temp + hum (Alert > Watch > Normal).
+    """
+    # Default thresholds — will be replaced by GET /api/environment/thresholds once built.
+    TEMP_MIN, TEMP_MAX = 18.0, 30.0
+    HUM_MIN, HUM_MAX = 40.0, 70.0
+    STALE_MINUTES = 30
+
+    def classify(value, lo, hi):
+        if value < lo or value > hi:
+            return "Alert"
+        if value == lo or value == hi:
+            return "Watch"
+        return "OK"
+
+    def worst(*statuses):
+        if "Alert" in statuses:
+            return "Alert"
+        if "Watch" in statuses:
+            return "Watch"
+        return "Normal"
+
+    conn = get_mysql()
+    with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute(
+            """SELECT c.cage_code,
+                      e.temperature_c, e.humidity_pct, e.recorded_at
+               FROM cages c
+               LEFT JOIN environmental_logs e
+                 ON e.cage_id = c.id
+                 AND e.recorded_at = (
+                   SELECT MAX(e2.recorded_at)
+                   FROM environmental_logs e2
+                   WHERE e2.cage_id = c.id
+                 )
+               WHERE c.is_active = 1
+               ORDER BY c.cage_code"""
+        )
+        rows = cursor.fetchall()
+
+    from datetime import datetime, timezone, timedelta
+    now = datetime.now(timezone.utc)
+    stale_cutoff = timedelta(minutes=STALE_MINUTES)
+
+    cages = []
+    for r in rows:
+        temp = float(r["temperature_c"]) if r["temperature_c"] is not None else None
+        hum = float(r["humidity_pct"]) if r["humidity_pct"] is not None else None
+        recorded_at = r["recorded_at"]
+
+        if temp is not None and hum is not None and recorded_at is not None:
+            temp_status = classify(temp, TEMP_MIN, TEMP_MAX)
+            hum_status = classify(hum, HUM_MIN, HUM_MAX)
+            combined = worst(temp_status, hum_status)
+
+            if isinstance(recorded_at, datetime):
+                if recorded_at.tzinfo is None:
+                    recorded_at = recorded_at.replace(tzinfo=timezone.utc)
+                is_stale = (now - recorded_at) > stale_cutoff
+            else:
+                is_stale = True
+
+            cages.append({
+                "cageCode": r["cage_code"],
+                "temperature": temp,
+                "humidity": hum,
+                "tempStatus": temp_status,
+                "humStatus": hum_status,
+                "status": combined,
+                "lastReadingAt": recorded_at.isoformat(),
+                "isStale": is_stale,
+            })
+        else:
+            # Cage has no environmental data — include with defaults.
+            cages.append({
+                "cageCode": r["cage_code"],
+                "temperature": 0.0,
+                "humidity": 0.0,
+                "tempStatus": "Alert",
+                "humStatus": "Alert",
+                "status": "Alert",
+                "lastReadingAt": now.isoformat(),
+                "isStale": True,
+            })
+
+    return jsonify({"cages": cages}), 200
+
+
 @app.route("/api/ping", methods=["GET"])
 def ping():
     """Unauthenticated endpoint used by the mobile app for auto-discovery."""
