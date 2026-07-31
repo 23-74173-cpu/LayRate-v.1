@@ -569,6 +569,14 @@
     document.addEventListener('turbo:before-cache', function() { _forecastIsSubmitting = false; });
 
     document.addEventListener('turbo:load', function() {
+        // Every element bound below lives outside the turbo-frames and persists
+        // across frame navigations, but turbo:load re-fires on each frame action
+        // (e.g. next/prev month), which double-bound the FAB toggle so one click
+        // opened then immediately closed the menu. Bind once; still refresh the
+        // forecast loading state on every load.
+        initForecastLoading();
+        if (window.__forecastActionsBound) return;
+        window.__forecastActionsBound = true;
         const previewBtn = document.getElementById('previewImportBtn');
         const previewBtnText = document.getElementById('previewBtnText');
         const confirmBtn = document.getElementById('confirmImportBtn');
@@ -1066,8 +1074,6 @@
                 exportForecast(format);
             });
         });
-
-        initForecastLoading();
     });
 
     document.addEventListener('turbo:frame-load', function(e) {
