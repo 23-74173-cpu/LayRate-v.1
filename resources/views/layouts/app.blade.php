@@ -189,33 +189,49 @@
         {{-- MIDDLE: Main nav (scrollable) --}}
         <nav class="flex-1 overflow-y-auto py-4 px-3 scrollbar-thin">
             @php
-            $nav = [
-                ['icon'=>'home',          'label'=>'Dashboard',          'route'=>'dashboard'],
-                ['icon'=>'feather',       'label'=>'Cages',              'route'=>'cages.index'],
-                ['icon'=>'bird',          'label'=>'Chickens',           'route'=>'chickens.index'],
-                ['icon'=>'egg',           'label'=>'Egg Management',     'route'=>'eggs.logging'],
-                ['icon'=>'thermometer',   'label'=>'Environment',        'route'=>'environment'],
-                ['icon'=>'cpu',           'label'=>'Hardware',           'route'=>'hardware.index'],
-                ['icon'=>'leaf',          'label'=>'Feed & Nutrition',   'route'=>'feed'],
-                ['icon'=>'bar-chart-3',   'label'=>'Analytics',          'route'=>'analytics'],
-                ['icon'=>'trending-up',   'label'=>'Forecast',           'route'=>'forecast', 'adminOnly' => true],
-                ['icon'=>'clipboard-list','label'=>'Reports',            'route'=>'reports'],
-                ['icon'=>'sticky-note',   'label'=>'Notes',              'route'=>'notes.index'],
+            $sections = [
+                'Overview' => [
+                    ['icon'=>'home',          'label'=>'Dashboard',          'route'=>'dashboard'],
+                ],
+                'Production' => [
+                    ['icon'=>'feather',       'label'=>'Cages',              'route'=>'cages.index'],
+                    ['icon'=>'bird',          'label'=>'Chickens',           'route'=>'chickens.index'],
+                    ['icon'=>'egg',           'label'=>'Egg Management',     'route'=>'eggs.logging'],
+                    ['icon'=>'leaf',          'label'=>'Feed & Nutrition',   'route'=>'feed'],
+                ],
+                'Monitoring' => [
+                    ['icon'=>'thermometer',   'label'=>'Environment',        'route'=>'environment'],
+                    ['icon'=>'cpu',           'label'=>'Hardware',           'route'=>'hardware.index'],
+                ],
+                'Insights' => [
+                    ['icon'=>'bar-chart-3',   'label'=>'Analytics',          'route'=>'analytics'],
+                    ['icon'=>'trending-up',   'label'=>'Forecast',           'route'=>'forecast', 'adminOnly' => true],
+                    ['icon'=>'clipboard-list','label'=>'Reports',            'route'=>'reports'],
+                    ['icon'=>'sticky-note',   'label'=>'Notes',              'route'=>'notes.index'],
+                ],
             ];
             @endphp
 
-            @foreach($nav as $item)
-            @if(!empty($item['adminOnly']) && !auth()->user()->isAdmin())
+            @foreach($sections as $sectionName => $items)
+            @php
+                $visible = array_values(array_filter($items, fn($item) => empty($item['adminOnly']) || auth()->user()->isAdmin()));
+            @endphp
+            @if(empty($visible))
                 @continue
             @endif
-            <a href="{{ route($item['route']) }}"
-               data-route="{{ $item['route'] === 'dashboard' ? 'dashboard' : explode('.', $item['route'])[0] }}"
-               class="nav-link group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-white/85 hover:text-white hover:bg-white/10"
-               title="{{ $item['label'] }}"
-               aria-label="{{ $item['label'] }}">
-                <i data-lucide="{{ $item['icon'] }}" class="w-[19px] h-[19px] shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"></i>
-                <span class="sidebar-label text-sm font-medium whitespace-nowrap overflow-hidden">{{ $item['label'] }}</span>
-            </a>
+            <div class="mt-3 first:mt-0">
+                <div class="px-3 pb-0.5 text-[9px] uppercase tracking-widest text-white/45 font-semibold">{{ $sectionName }}</div>
+                @foreach($visible as $item)
+                <a href="{{ route($item['route']) }}"
+                   data-route="{{ $item['route'] === 'dashboard' ? 'dashboard' : explode('.', $item['route'])[0] }}"
+                   class="nav-link group flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-white/85 hover:text-white hover:bg-white/10"
+                   title="{{ $item['label'] }}"
+                   aria-label="{{ $item['label'] }}">
+                    <i data-lucide="{{ $item['icon'] }}" class="w-[19px] h-[19px] shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"></i>
+                    <span class="sidebar-label text-xs font-medium whitespace-nowrap overflow-hidden">{{ $item['label'] }}</span>
+                </a>
+                @endforeach
+            </div>
             @endforeach
         </nav>
 
@@ -223,19 +239,19 @@
         <div class="border-t border-white/10 py-4 px-3 shrink-0">
             <a href="{{ route('profile') }}"
                data-route="profile"
-               class="nav-link group flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors"
+               class="nav-link group flex items-center gap-3 px-3 py-2 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors"
                title="Profile" aria-label="Profile">
                 <i data-lucide="user" class="w-[19px] h-[19px] shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"></i>
-                <span class="sidebar-label text-sm font-medium whitespace-nowrap overflow-hidden">Profile</span>
+                <span class="sidebar-label text-xs font-medium whitespace-nowrap overflow-hidden">Profile</span>
             </a>
             <form action="{{ route('logout') }}" method="POST" data-turbo="false"
                   data-confirm="Sign out of LayRate?" data-confirm-action="Sign out" data-confirm-severity="neutral">
                 @csrf
                 <button type="submit"
-                        class="nav-link group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors"
+                        class="nav-link group w-full flex items-center gap-3 px-3 py-2 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors"
                         title="Sign out" aria-label="Sign out">
                     <i data-lucide="log-out" class="w-[19px] h-[19px] shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"></i>
-                    <span class="sidebar-label text-sm font-medium whitespace-nowrap overflow-hidden">Sign out</span>
+                    <span class="sidebar-label text-xs font-medium whitespace-nowrap overflow-hidden">Sign out</span>
                 </button>
             </form>
         </div>
