@@ -1,5 +1,5 @@
 <turbo-frame id="dashboard-feed-mortality">
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 gap-4">
 
         {{-- Feed Today --}}
         <div class="kpi-card rounded-xl border p-6 cursor-pointer transition-shadow hover:shadow-md"

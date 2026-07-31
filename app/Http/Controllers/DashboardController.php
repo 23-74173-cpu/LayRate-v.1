@@ -34,6 +34,51 @@ class DashboardController extends Controller
         return view('dashboard._feed-mortality', $data);
     }
 
+    public function calendar()
+    {
+        $cageCode = request('cage');
+        $month = max(1, min(12, (int) request('month', now()->month)));
+        $year = max(2000, (int) request('year', now()->year));
+        $calendarMonth = now()->copy()->setDate($year, $month, 1)->startOfMonth();
+
+        $monthStart = $calendarMonth->copy()->startOfMonth();
+        $monthEnd = $calendarMonth->copy()->endOfMonth();
+        // Leading/trailing days spill into adjacent months, so fetch a little
+        // margin either side to cover every rendered cell.
+        $rangeStart = $monthStart->copy()->subDays(6);
+        $rangeEnd = $monthEnd->copy()->addDays(6);
+
+        $scope = fn ($q) => $q->when($cageCode, fn ($cq) => $cq->whereHas('cageSlot.cage', fn ($c) => $c->where('cage_code', $cageCode)));
+
+        $logs = ProductionLog::query()
+            ->whereBetween('log_date', [$rangeStart->toDateString(), $rangeEnd->toDateString()])
+            ->where($scope)
+            ->get()
+            ->groupBy(fn ($l) => $l->log_date->format('Y-m-d'))
+            ->map(fn ($g) => (object) [
+                'eggs' => $g->sum('egg_count'),
+                'logs' => $g->count(),
+            ]);
+
+        $monthLogs = ProductionLog::query()
+            ->whereBetween('log_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
+            ->where($scope)
+            ->get();
+        $monthTotalEggs = $monthLogs->sum('egg_count');
+        $monthLoggedDays = $monthLogs->groupBy(fn ($l) => $l->log_date->format('Y-m-d'))->count();
+
+        // Year options for navigation: earliest recorded log .. next year.
+        $firstLogDate = ProductionLog::query()->orderBy('log_date')->value('log_date');
+        $firstYear = $firstLogDate ? (int) date('Y', strtotime($firstLogDate)) : now()->year;
+        $yearOptions = range(max($firstYear, now()->year - 10), now()->year + 1);
+
+        $cageOptions = Cage::query()->orderBy('cage_code')->get(['id', 'cage_code']);
+
+        return view('dashboard._calendar', compact(
+            'calendarMonth', 'logs', 'monthTotalEggs', 'monthLoggedDays', 'yearOptions', 'cageOptions', 'cageCode'
+        ));
+    }
+
     private function buildDashboardData(?string $cageCode = null): array
     {
         $today = now()->toDateString();

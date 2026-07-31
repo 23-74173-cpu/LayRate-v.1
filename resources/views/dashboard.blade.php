@@ -114,10 +114,19 @@
     });
     </script>
 
-    {{-- ── Feed Today / Mortality Today (lazy) ── --}}
-    <turbo-frame id="dashboard-feed-mortality" src="{{ route('dashboard.feed-mortality') }}" loading="lazy" class="mt-5 block">
-        @include('dashboard._feed-mortality-skeleton')
-    </turbo-frame>
+    {{-- ── Daily Egg Logs Calendar (wider) + Feed / Mortality (narrow) ── --}}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div class="lg:col-span-2">
+            <turbo-frame id="dashboard-calendar" src="{{ route('dashboard.calendar') }}" loading="lazy" class="block">
+                @include('dashboard._calendar-skeleton')
+            </turbo-frame>
+        </div>
+        <div class="lg:col-span-1">
+            <turbo-frame id="dashboard-feed-mortality" src="{{ route('dashboard.feed-mortality') }}" loading="lazy" class="block">
+                @include('dashboard._feed-mortality-skeleton')
+            </turbo-frame>
+        </div>
+    </div>
 
     {{-- ── KPI Breakdown Modal (shared by all metric cards — item 9) ── --}}
     <div id="kpiModal" style="display: none;" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
@@ -251,15 +260,19 @@
 
         var statsUrl = '{{ route('dashboard.stats') }}';
         var feedUrl  = '{{ route('dashboard.feed-mortality') }}';
+        var calendarUrl = '{{ route('dashboard.calendar') }}';
         if (code !== 'all') {
             statsUrl += '?cage=' + encodeURIComponent(code);
             feedUrl  += '?cage=' + encodeURIComponent(code);
+            calendarUrl += '?cage=' + encodeURIComponent(code);
         }
 
         var statsFrame = document.getElementById('dashboard-stats');
         var feedFrame  = document.getElementById('dashboard-feed-mortality');
+        var calendarFrame = document.getElementById('dashboard-calendar');
         if (statsFrame) { statsFrame.src = statsUrl; statsFrame.reload(); }
         if (feedFrame)  { feedFrame.src  = feedUrl;  feedFrame.reload();  }
+        if (calendarFrame) { calendarFrame.src = calendarUrl; calendarFrame.reload(); }
     };
     </script>
 
