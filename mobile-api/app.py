@@ -309,6 +309,18 @@ def mark_alert_read(alert_id):
     return jsonify({"message": "Alert marked as read"}), 200
 
 
+@app.route("/api/alerts/read-all", methods=["PUT"])
+@require_auth
+def mark_all_alerts_read():
+    """Mark all unread alerts as read."""
+    conn = get_mysql()
+    with conn.cursor() as cursor:
+        cursor.execute("UPDATE alerts SET is_read = 1 WHERE is_read = 0")
+        affected = cursor.rowcount
+        conn.commit()
+    return jsonify({"message": "All alerts marked as read", "count": affected}), 200
+
+
 @app.route("/api/dashboard/status", methods=["GET"])
 @require_auth
 def dashboard_status():
