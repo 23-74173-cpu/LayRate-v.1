@@ -198,13 +198,16 @@
                 ['icon'=>'cpu',           'label'=>'Hardware',           'route'=>'hardware.index'],
                 ['icon'=>'leaf',          'label'=>'Feed & Nutrition',   'route'=>'feed'],
                 ['icon'=>'bar-chart-3',   'label'=>'Analytics',          'route'=>'analytics'],
-                ['icon'=>'trending-up',   'label'=>'Forecast',           'route'=>'forecast'],
+                ['icon'=>'trending-up',   'label'=>'Forecast',           'route'=>'forecast', 'adminOnly' => true],
                 ['icon'=>'clipboard-list','label'=>'Reports',            'route'=>'reports'],
                 ['icon'=>'sticky-note',   'label'=>'Notes',              'route'=>'notes.index'],
             ];
             @endphp
 
             @foreach($nav as $item)
+            @if(!empty($item['adminOnly']) && !auth()->user()->isAdmin())
+                @continue
+            @endif
             <a href="{{ route($item['route']) }}"
                data-route="{{ $item['route'] === 'dashboard' ? 'dashboard' : explode('.', $item['route'])[0] }}"
                class="nav-link group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-white/85 hover:text-white hover:bg-white/10"

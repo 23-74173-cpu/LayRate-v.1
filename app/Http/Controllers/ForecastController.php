@@ -9,6 +9,7 @@ use App\Models\Forecast;
 use App\Models\Hen;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -22,6 +23,10 @@ class ForecastController extends Controller
 {
     public function index(Request $request)
     {
+        if ($redirect = $this->ensureAdminOrRedirect($request)) {
+            return $redirect;
+        }
+
         $scope     = $request->get('scope', 'cage');
         $horizon   = (int) $request->get('horizon', 7);
 
@@ -140,8 +145,31 @@ class ForecastController extends Controller
         return view('forecast', $viewData);
     }
 
+    /**
+     * Forecast pages are admin-only. A non-admin who reaches a forecast URL
+     * (e.g. by typing /forecast directly) is redirected back to the module
+     * they were on, or to the dashboard when there is no safe referrer.
+     */
+    private function ensureAdminOrRedirect(Request $request): ?RedirectResponse
+    {
+        if ($request->user()?->isAdmin()) {
+            return null;
+        }
+
+        $referer = $request->headers->get('referer');
+        if ($referer && ! str_contains($referer, '/forecast')) {
+            return redirect()->to($referer);
+        }
+
+        return redirect()->route('dashboard');
+    }
+
     public function downloadTemplate(Request $request)
     {
+        if ($redirect = $this->ensureAdminOrRedirect($request)) {
+            return $redirect;
+        }
+
         try {
             $pythonBinary = $this->resolvePythonBinary();
             $scriptPath = base_path('forecast-api/generate_forecast_sheet.py');
@@ -1104,6 +1132,10 @@ class ForecastController extends Controller
      */
     public function data(Request $request)
     {
+        if ($redirect = $this->ensureAdminOrRedirect($request)) {
+            return $redirect;
+        }
+
         $scope   = $request->get('scope', 'cage');
         $horizon = (int) $request->get('horizon', 7);
 
@@ -1199,6 +1231,10 @@ class ForecastController extends Controller
 
     public function exportCsv(Request $request)
     {
+        if ($redirect = $this->ensureAdminOrRedirect($request)) {
+            return $redirect;
+        }
+
         $data = $this->resolveExportData($request);
         if (!$data) {
             return $this->noForecastToExport();
@@ -1232,6 +1268,10 @@ class ForecastController extends Controller
 
     public function exportExcel(Request $request)
     {
+        if ($redirect = $this->ensureAdminOrRedirect($request)) {
+            return $redirect;
+        }
+
         $data = $this->resolveExportData($request);
         if (!$data) {
             return $this->noForecastToExport();
@@ -1264,6 +1304,10 @@ class ForecastController extends Controller
 
     public function exportPdf(Request $request)
     {
+        if ($redirect = $this->ensureAdminOrRedirect($request)) {
+            return $redirect;
+        }
+
         $data = $this->resolveExportData($request);
         if (!$data) {
             return $this->noForecastToExport();
@@ -1296,6 +1340,10 @@ class ForecastController extends Controller
 
     public function downloadProductionData(Request $request)
     {
+        if ($redirect = $this->ensureAdminOrRedirect($request)) {
+            return $redirect;
+        }
+
         $records = DB::table('forecast_input_records')
             ->orderBy('date')
             ->orderBy('cage_code')
