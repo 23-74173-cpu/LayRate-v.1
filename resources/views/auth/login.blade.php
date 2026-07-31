@@ -11,8 +11,10 @@
     <link href="/css/tailwind.css" rel="stylesheet">
     <script src="/js/lucide.min.js"></script>
     <style>
-        body { background-color: #f6f5f4; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; overscroll-behavior: none; }
+        body { background: linear-gradient(135deg, #213183, #1a2342); background-attachment: fixed; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; overscroll-behavior: none; }
         :focus-visible { outline: 2px solid #0075de; outline-offset: 2px; border-radius: 4px; }
+
+        .egg-decor { color: rgba(255, 255, 255, 0.10); }
 
         /* Reverse of the landing page's circle-wipe: this page loads already
            covered, then wipes away to reveal the form — continuing the same
@@ -37,8 +39,9 @@
 <body class="min-h-screen flex items-center justify-center p-4">
 
     <div id="page-wipe"></div>
+    <div id="egg-decor" class="fixed inset-0 overflow-hidden pointer-events-none egg-decor" style="z-index:0;"></div>
 
-    <div class="w-full max-w-sm login-enter">
+    <div class="w-full max-w-sm login-enter relative" style="z-index:10;">
 
         {{-- Login Error Banner --}}
         @if($errors->any())
@@ -99,20 +102,41 @@
 
                 <div class="text-center mt-4 pt-4 border-t border-[#D9D9D9]">
                     <a href="{{ route('landing') }}"
-                       class="text-xs text-[#6B7280] hover:text-[#102A4C] transition-colors">
+                       class="text-xs text-white/70 hover:text-white transition-colors">
                         What is LayRate?
                     </a>
                 </div>
             </form>
         </div>
 
-        <p class="text-center text-xs text-[#6B7280] mt-5">
+        <p class="text-center text-xs text-white mt-5">
             LayRate · Offline Poultry Farm Management System
         </p>
     </div>
 
     <script>
         lucide.createIcons();
+        (function () {
+            // Decorative eggs scattered over the blue gradient background —
+            // random position, size, rotation, and translucency on every load.
+            var decor = document.getElementById('egg-decor');
+            if (!decor) return;
+            var opacities = ['0.30', '0.40', '0.50', '0.60', '0.70'];
+            var count = 40;
+            for (var i = 0; i < count; i++) {
+                var egg = document.createElement('div');
+                egg.style.position = 'absolute';
+                egg.style.left = (Math.random() * 100).toFixed(2) + '%';
+                egg.style.top = (Math.random() * 100).toFixed(2) + '%';
+                egg.style.width = (16 + Math.random() * 48).toFixed(1) + 'px';
+                egg.style.height = (16 + Math.random() * 48).toFixed(1) + 'px';
+                egg.style.opacity = opacities[i % opacities.length];
+                egg.style.transform = 'rotate(' + (Math.random() * 360).toFixed(0) + 'deg)';
+                egg.innerHTML = '<i data-lucide="egg" class="w-full h-full"></i>';
+                decor.appendChild(egg);
+            }
+            if (window.lucide) lucide.createIcons();
+        })();
         document.addEventListener('DOMContentLoaded', function () {
             var wipe = document.getElementById('page-wipe');
             var card = document.querySelector('.login-enter');
