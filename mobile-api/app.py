@@ -506,6 +506,36 @@ def ping():
     return jsonify({"ok": True}), 200
 
 
+@app.route("/api/hardware/health", methods=["GET"])
+@require_auth
+def hardware_health():
+    """Return summary counts of hardware items by status and type."""
+    conn = get_mysql()
+    with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute("SELECT COUNT(*) AS total FROM hardware_items")
+        total = cursor.fetchone()["total"]
+
+        cursor.execute("SELECT COUNT(*) AS cnt FROM hardware_items WHERE status = 'active'")
+        active = cursor.fetchone()["cnt"]
+
+        cursor.execute("SELECT COUNT(*) AS cnt FROM hardware_items WHERE status = 'faulty'")
+        faulty = cursor.fetchone()["cnt"]
+
+        cursor.execute("SELECT COUNT(*) AS cnt FROM hardware_items WHERE status = 'active' AND device_type = 'DHT22'")
+        dht22 = cursor.fetchone()["cnt"]
+
+        cursor.execute("SELECT COUNT(*) AS cnt FROM hardware_items WHERE status = 'active' AND device_type = 'IR_breakbeam'")
+        breakbeam = cursor.fetchone()["cnt"]
+
+    return jsonify({
+        "total": total,
+        "active": active,
+        "faulty": faulty,
+        "dht22": dht22,
+        "breakbeam": breakbeam,
+    }), 200
+
+
 # ── Health check ────────────────────────────────────────────────────────────
 
 @app.route("/api/health", methods=["GET"])
