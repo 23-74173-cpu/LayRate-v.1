@@ -4,13 +4,17 @@
 @section('content')
 <div class="space-y-5">
 
-    <x-page-header title="Hardware Inventory" subtitle="Manage sensors, relays, and other hardware devices">
-        <x-slot:actions>
-            <x-button onclick="openAddModal()">
-                <i data-lucide="plus" class="w-4 h-4"></i> Add Device
-            </x-button>
-        </x-slot:actions>
-    </x-page-header>
+    <x-page-header title="Hardware Inventory" subtitle="Manage sensors, relays, and other hardware devices" />
+
+    <x-fab>
+        <button type="button" onclick="openAddModal()"
+                class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>Add Device</span>
+            <div class="w-8 h-8 rounded-full bg-[#2D7D46]/10 flex items-center justify-center">
+                <i data-lucide="plus" class="w-4 h-4 text-[#2D7D46]"></i>
+            </div>
+        </button>
+    </x-fab>
 
     @if(session('new_device_key'))
     <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5">

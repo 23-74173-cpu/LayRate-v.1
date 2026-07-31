@@ -4,15 +4,7 @@
 @section('content')
 <div class="space-y-5">
 
-    <x-page-header title="Egg Management" subtitle="Customer orders and fulfillment tracking" subtitle-id="egg-header-subtitle" actions-id="egg-header-actions">
-        <x-slot:actions>
-            <div class="flex items-center gap-2">
-                <x-button onclick="document.getElementById('addOrderModal').style.display = 'flex'">
-                    <i data-lucide="plus" class="w-4 h-4"></i> Add Pre-Order
-                </x-button>
-            </div>
-        </x-slot:actions>
-    </x-page-header>
+    <x-page-header title="Egg Management" subtitle="Customer orders and fulfillment tracking" subtitle-id="egg-header-subtitle" />
 
     @include('eggs._tabs', ['activeTab' => 'preorders'])
 

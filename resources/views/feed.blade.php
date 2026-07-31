@@ -4,14 +4,18 @@
 @section('content')
 <div class="space-y-5">
 
-    <x-page-header title="Feed & Nutrition" subtitle="Track feed batches, crude protein, and daily consumption">
-        <x-slot:actions>
-            <button onclick="document.getElementById('addBatchModal').classList.remove('hidden'); document.getElementById('addBatchModal').classList.add('flex');"
-                    class="flex items-center gap-2 bg-[#002D5E] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#001F42] transition-colors">
-                <i data-lucide="plus" class="w-4 h-4"></i> Add Feed Batch
-            </button>
-        </x-slot:actions>
-    </x-page-header>
+    <x-page-header title="Feed & Nutrition" subtitle="Track feed batches, crude protein, and daily consumption" />
+
+    <x-fab>
+        <button type="button"
+                onclick="document.getElementById('addBatchModal').classList.remove('hidden'); document.getElementById('addBatchModal').classList.add('flex');"
+                class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>Add Feed Batch</span>
+            <div class="w-8 h-8 rounded-full bg-[#C2703E]/10 flex items-center justify-center">
+                <i data-lucide="plus" class="w-4 h-4 text-[#C2703E]"></i>
+            </div>
+        </button>
+    </x-fab>
 
     {{-- Live Data (lazy): metrics, tabs, batches, consumption --}}
     <turbo-frame id="feed-live-data" src="{{ route('feed.live-data', request()->only('cage_id')) }}" loading="lazy">

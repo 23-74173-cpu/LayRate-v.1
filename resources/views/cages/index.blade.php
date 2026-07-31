@@ -27,24 +27,26 @@
 @php $isAdmin = auth()->user()->isAdmin(); @endphp
 <div class="space-y-5">
 
-    <x-page-header title="Cages" subtitle="Manage battery cage configurations, slots, and sensor placement">
-        <x-slot:actions>
-            <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                <a href="{{ route('cages.bulk-add') }}"
-                   class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 text-xs sm:text-sm font-medium rounded-full transition-colors"
-                   style="color: #0075de; border: 1px solid #0075de;"
-                   onmouseover="this.style.backgroundColor='#dcebfa'"
-                   onmouseout="this.style.backgroundColor='transparent'">
-                    <i data-lucide="bird" class="w-4 h-4"></i> Bulk Add Chickens
-                </a>
-                @if($isAdmin)
-                <x-button onclick="openAddModal()">
-                    <i data-lucide="plus" class="w-4 h-4"></i> Add Cage
-                </x-button>
-                @endif
+    <x-page-header title="Cages" subtitle="Manage battery cage configurations, slots, and sensor placement" />
+
+    <x-fab>
+        <a href="{{ route('cages.bulk-add') }}"
+           class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>Bulk Add Chickens</span>
+            <div class="w-8 h-8 rounded-full bg-[#002D5E]/10 flex items-center justify-center">
+                <i data-lucide="bird" class="w-4 h-4 text-[#002D5E]"></i>
             </div>
-        </x-slot:actions>
-    </x-page-header>
+        </a>
+        @if($isAdmin)
+        <button type="button" onclick="openAddModal()"
+                class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>Add Cage</span>
+            <div class="w-8 h-8 rounded-full bg-[#2D7D46]/10 flex items-center justify-center">
+                <i data-lucide="plus" class="w-4 h-4 text-[#2D7D46]"></i>
+            </div>
+        </button>
+        @endif
+    </x-fab>
 
     {{-- ── Farm Layout Canvas (tile-based floor-plan grid, fit-to-width on small screens) ── --}}
     <div class="rounded-xl border p-4 sm:p-6" style="background-color: #ffffff; border-color: #e6e6e6;">

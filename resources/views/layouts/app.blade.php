@@ -388,6 +388,60 @@
     if (window.__layoutScriptInitialized) return;
     window.__layoutScriptInitialized = true;
 
+    // ── Shared Floating Action Button (delegated, bound once) ──
+    // Used by every section's FAB (the shared fab component). The markup lives
+    // in <main> and is re-rendered on every Turbo visit, so handlers are
+    // delegated to document (a permanent ancestor) instead of being bound per
+    // element. The Forecast module's FAB predates this and binds its own
+    // handlers by id — it shares the visual style but not the
+    // .fab-toggle/.fab-menu classes, so there is no double-handling.
+    document.addEventListener('click', function(e) {
+        var toggle = e.target.closest('.fab-toggle');
+        if (toggle) {
+            var fab = toggle.closest('.fab');
+            var menu = fab ? fab.querySelector('.fab-menu') : null;
+            var icon = fab ? fab.querySelector('.fab-icon') : null;
+            var isOpen = menu && !menu.classList.contains('invisible');
+            if (isOpen) {
+                menu.classList.add('invisible', 'opacity-0', 'translate-y-4');
+                menu.classList.remove('opacity-100', 'translate-y-0');
+                toggle.setAttribute('aria-expanded', 'false');
+                toggle.setAttribute('aria-label', 'Open menu');
+                if (icon) icon.style.transform = 'rotate(0deg)';
+            } else {
+                menu.classList.remove('invisible', 'opacity-0', 'translate-y-4');
+                menu.classList.add('opacity-100', 'translate-y-0');
+                toggle.setAttribute('aria-expanded', 'true');
+                toggle.setAttribute('aria-label', 'Close menu');
+                if (icon) icon.style.transform = 'rotate(45deg)';
+            }
+            return;
+        }
+        // Outside click closes any open FAB menu
+        document.querySelectorAll('.fab .fab-menu:not(.invisible)').forEach(function(menu) {
+            var fab = menu.closest('.fab');
+            var fabToggle = fab ? fab.querySelector('.fab-toggle') : null;
+            var icon = fab ? fab.querySelector('.fab-icon') : null;
+            menu.classList.add('invisible', 'opacity-0', 'translate-y-4');
+            menu.classList.remove('opacity-100', 'translate-y-0');
+            if (fabToggle) {
+                fabToggle.setAttribute('aria-expanded', 'false');
+                fabToggle.setAttribute('aria-label', 'Open menu');
+            }
+            if (icon) icon.style.transform = 'rotate(0deg)';
+        });
+    });
+
+    // Some pages (e.g. Egg History) have no inline script of their own to call
+    // lucide.createIcons() after a Turbo visit, so ensure the FAB's plus icon is
+    // always rendered. Scoped to the FAB to avoid disturbing per-page handling.
+    document.addEventListener('turbo:load', function() {
+        var fabIcons = document.querySelectorAll('.fab [data-lucide]');
+        if (fabIcons.length && window.lucide) {
+            window.lucide.createIcons({ els: fabIcons });
+        }
+    });
+
     var SIDEBAR_INITIALIZED = false;
 
     // ── Scroll-position preservation across form-submit navigations ──

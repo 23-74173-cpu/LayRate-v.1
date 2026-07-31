@@ -4,11 +4,17 @@
 @section('content')
 <div class="space-y-5">
 
-    <x-page-header title="Environment" subtitle="Monitor coop temperature, humidity, and alert thresholds">
-        <x-button variant="secondary" onclick="openEnvThresholdsModal()">
-            <i data-lucide="sliders" class="w-4 h-4"></i> Configure Thresholds
-        </x-button>
-    </x-page-header>
+    <x-page-header title="Environment" subtitle="Monitor coop temperature, humidity, and alert thresholds" />
+
+    <x-fab>
+        <button type="button" onclick="openEnvThresholdsModal()"
+                class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>Configure Thresholds</span>
+            <div class="w-8 h-8 rounded-full bg-[#6B4C8A]/10 flex items-center justify-center">
+                <i data-lucide="sliders" class="w-4 h-4 text-[#6B4C8A]"></i>
+            </div>
+        </button>
+    </x-fab>
 
     {{-- Page-level tabs: Live Data / Log History --}}
     <x-underline-tabs :tabs="[

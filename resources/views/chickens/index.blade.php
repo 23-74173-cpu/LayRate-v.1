@@ -4,13 +4,17 @@
 @section('content')
 <div class="space-y-5">
 
-    <x-page-header title="Chickens" subtitle="Manage hen inventory, movements, and mortality records">
-        <x-slot:actions>
-            <x-button size="sm" onclick="openRegisterModal()">
-                <i data-lucide="plus" class="w-3 h-3 inline"></i> Register New Hens
-            </x-button>
-        </x-slot:actions>
-    </x-page-header>
+    <x-page-header title="Chickens" subtitle="Manage hen inventory, movements, and mortality records" />
+
+    <x-fab>
+        <button type="button" onclick="openRegisterModal()"
+                class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>Register New Hens</span>
+            <div class="w-8 h-8 rounded-full bg-[#002D5E]/10 flex items-center justify-center">
+                <i data-lucide="plus" class="w-4 h-4 text-[#002D5E]"></i>
+            </div>
+        </button>
+    </x-fab>
 
     {{-- Tabs --}}
     <div id="chickens-tabs-nav" class="mb-5">

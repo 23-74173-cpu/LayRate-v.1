@@ -4,21 +4,7 @@
 @section('content')
 <div class="space-y-5">
 
-    <x-page-header title="Egg Management" subtitle="Track harvested egg inventory by size and freshness" subtitle-id="egg-header-subtitle" actions-id="egg-header-actions">
-        <x-slot:actions>
-            <div class="flex items-center gap-2">
-                <x-button variant="secondary" onclick="openEggWeightsModal()">
-                    <i data-lucide="weight" class="w-4 h-4"></i> Egg Weights
-                </x-button>
-                <x-button variant="secondary" onclick="openThresholdsModal()">
-                    <i data-lucide="sliders" class="w-4 h-4"></i> Thresholds
-                </x-button>
-                <x-button onclick="document.getElementById('addStockModal').style.display = 'flex'">
-                    <i data-lucide="plus" class="w-4 h-4"></i> Add Stock
-                </x-button>
-            </div>
-        </x-slot:actions>
-    </x-page-header>
+    <x-page-header title="Egg Management" subtitle="Track harvested egg inventory by size and freshness" subtitle-id="egg-header-subtitle" />
 
     @include('eggs._tabs', ['activeTab' => 'stocks'])
 

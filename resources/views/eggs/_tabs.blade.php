@@ -22,35 +22,78 @@
     </nav>
 
     {{--
+        Floating Action Button shared by all Egg Management pages. The menu is
+        populated at runtime (see the sync script below) from the hidden
+        templates, so the header stays clean and every tab shows only the
+        actions that apply to it. The FAB sits outside the #egg-content frame,
+        so it survives every frame swap untouched.
+    --}}
+    <x-fab menu-id="egg-fab-menu"></x-fab>
+
+    {{--
         Header sync payloads for tabs that need page-header actions. Kept as
         hidden templates, outside the frame, so they survive every frame swap
         untouched. The sync script below clones the one matching the active
-        tab's key (id="egg-header-actions-{tabKey}") into #egg-header-actions.
+        tab's key (id="egg-fab-actions-{tabKey}") into the FAB menu
+        (#egg-fab-menu).
     --}}
-    <template id="egg-header-actions-stocks">
-        <div class="flex items-center gap-2">
-            <x-button variant="secondary" onclick="openEggWeightsModal()">
-                <i data-lucide="weight" class="w-4 h-4"></i> Egg Weights
-            </x-button>
-            <x-button variant="secondary" onclick="openThresholdsModal()">
-                <i data-lucide="sliders" class="w-4 h-4"></i> Thresholds
-            </x-button>
-            <x-button onclick="document.getElementById('addStockModal').style.display = 'flex'">
-                <i data-lucide="plus" class="w-4 h-4"></i> Add Stock
-            </x-button>
-        </div>
+    <template id="egg-fab-actions-stocks">
+        <button type="button" onclick="openEggWeightsModal()"
+                class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>Egg Weights</span>
+            <div class="w-8 h-8 rounded-full bg-[#6B4C8A]/10 flex items-center justify-center">
+                <i data-lucide="weight" class="w-4 h-4 text-[#6B4C8A]"></i>
+            </div>
+        </button>
+        <button type="button" onclick="openThresholdsModal()"
+                class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>Thresholds</span>
+            <div class="w-8 h-8 rounded-full bg-[#C2703E]/10 flex items-center justify-center">
+                <i data-lucide="sliders" class="w-4 h-4 text-[#C2703E]"></i>
+            </div>
+        </button>
+        <button type="button" onclick="document.getElementById('addStockModal').style.display = 'flex'"
+                class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>Add Stock</span>
+            <div class="w-8 h-8 rounded-full bg-[#002D5E]/10 flex items-center justify-center">
+                <i data-lucide="plus" class="w-4 h-4 text-[#002D5E]"></i>
+            </div>
+        </button>
     </template>
-    <template id="egg-header-actions-preorders">
-        <div class="flex items-center gap-2">
-            <x-button onclick="document.getElementById('addOrderModal').style.display = 'flex'">
-                <i data-lucide="plus" class="w-4 h-4"></i> Add Pre-Order
-            </x-button>
-        </div>
+    <template id="egg-fab-actions-preorders">
+        <button type="button" onclick="document.getElementById('addOrderModal').style.display = 'flex'"
+                class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>Add Pre-Order</span>
+            <div class="w-8 h-8 rounded-full bg-[#002D5E]/10 flex items-center justify-center">
+                <i data-lucide="plus" class="w-4 h-4 text-[#002D5E]"></i>
+            </div>
+        </button>
     </template>
 
     <script>
     (function() {
         var links = document.querySelectorAll('nav a[data-tab-key]');
+        var MENU_ID = 'egg-fab-menu';
+
+        function syncActive() {
+            var activeLink = null;
+            document.querySelectorAll('nav a[data-tab-key]').forEach(function(a) {
+                if (a.pathname === window.location.pathname) activeLink = a;
+            });
+            if (!activeLink) return;
+
+            var subtitleEl = document.getElementById('egg-header-subtitle');
+            if (subtitleEl) subtitleEl.textContent = activeLink.dataset.subtitle;
+
+            var menu = document.getElementById(MENU_ID);
+            if (!menu) return;
+            var tpl = document.getElementById('egg-fab-actions-' + activeLink.dataset.tabKey);
+            menu.innerHTML = '';
+            if (tpl) {
+                menu.appendChild(tpl.content.cloneNode(true));
+                if (typeof lucide !== 'undefined') lucide.createIcons({ els: menu.querySelectorAll('[data-lucide]') });
+            }
+        }
 
         links.forEach(function(link) {
             link.addEventListener('click', function(e) {
@@ -67,35 +110,19 @@
                 this.classList.remove('border-transparent', 'text-[#6B7280]', 'hover:text-[#333]');
                 this.classList.add('border-[#002D5E]', 'text-[#002D5E]');
 
-                var subtitleEl = document.getElementById('egg-header-subtitle');
-                if (subtitleEl) subtitleEl.textContent = this.dataset.subtitle;
-
                 history.replaceState({}, '', this.getAttribute('href'));
             });
         });
+
+        // Populate the FAB menu for the initially-rendered tab (the server-side
+        // frame content doesn't fire turbo:frame-load on the first paint).
+        syncActive();
 
         if (!window.__eggHeaderSyncBound) {
             window.__eggHeaderSyncBound = true;
             document.addEventListener('turbo:frame-load', function(e) {
                 if (!e.target || e.target.id !== 'egg-content') return;
-
-                var activeLink = null;
-                document.querySelectorAll('nav a[data-tab-key]').forEach(function(a) {
-                    if (a.pathname === window.location.pathname) activeLink = a;
-                });
-                if (!activeLink) return;
-
-                var subtitleEl = document.getElementById('egg-header-subtitle');
-                if (subtitleEl) subtitleEl.textContent = activeLink.dataset.subtitle;
-
-                var actionsEl = document.getElementById('egg-header-actions');
-                if (!actionsEl) return;
-                var tpl = document.getElementById('egg-header-actions-' + activeLink.dataset.tabKey);
-                actionsEl.innerHTML = '';
-                if (tpl) {
-                    actionsEl.appendChild(tpl.content.cloneNode(true));
-                    if (typeof lucide !== 'undefined') lucide.createIcons({ els: actionsEl.querySelectorAll('[data-lucide]') });
-                }
+                syncActive();
             });
         }
     })();

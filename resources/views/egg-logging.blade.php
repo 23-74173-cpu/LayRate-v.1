@@ -4,7 +4,7 @@
 @section('content')
 <div class="space-y-5">
 
-    <x-page-header title="Egg Management" subtitle="Log daily egg production per cage slot" subtitle-id="egg-header-subtitle" actions-id="egg-header-actions" />
+    <x-page-header title="Egg Management" subtitle="Log daily egg production per cage slot" subtitle-id="egg-header-subtitle" />
 
     @include('eggs._tabs', ['activeTab' => 'logging'])
 
