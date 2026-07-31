@@ -23,6 +23,29 @@
 
     $maxSelectableDate = \App\Forecast\ForecastRules::maxStartDate()->format('Y-m-d');
     $tomorrowDate = \App\Forecast\ForecastRules::minStartDate()->format('Y-m-d');
+
+    // Calendar navigation is bounded to the present and future only:
+    //   • Year filter: current year always; the next year only when viewing
+    //     December (year end) or already viewing next year — no other years.
+    //   • Month filter: only the current month and future months. For the next
+    //     year, every month is in the future, so all 12 are offered.
+    $todayYear  = (int) now()->format('Y');
+    $todayMonth = (int) now()->format('n');
+    $viewYear   = (int) $calendarMonth->format('Y');
+    $viewMonth  = (int) $calendarMonth->format('n');
+
+    $yearOptions = [$todayYear];
+    if ($viewMonth === 12 || $viewYear === $todayYear + 1) {
+        $yearOptions[] = $todayYear + 1;
+    }
+    $yearOptions = array_values(array_unique($yearOptions));
+
+    $monthOptions = $viewYear === $todayYear + 1 ? range(1, 12) : range($todayMonth, 12);
+
+    // The earliest month the calendar can show is the current month, so the
+    // previous-month arrow is disabled for the current month (and any past month
+    // reached via a crafted URL).
+    $isAtOrBeforeCurrentMonth = ! $calendarMonth->gt(now()->startOfMonth());
 @endphp
 
 <turbo-frame id="production-calendar">
@@ -47,22 +70,28 @@
                 @endforeach
                 <select name="month" onchange="this.form.submit()" aria-label="Select month"
                         class="appearance-none bg-transparent border-none cursor-pointer text-xl font-semibold text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 rounded px-1 -ml-1">
-                    @foreach($months as $index => $monthName)
-                    <option value="{{ $index + 1 }}" {{ $calendarMonth->month == $index + 1 ? 'selected' : '' }}>{{ $monthName }}</option>
+                    @foreach($monthOptions as $m)
+                    <option value="{{ $m }}" {{ $calendarMonth->month == $m ? 'selected' : '' }}>{{ $months[$m - 1] }}</option>
                     @endforeach
                 </select>
                 <select name="year" onchange="this.form.submit()" aria-label="Select year"
                         class="appearance-none bg-transparent border-none cursor-pointer text-xl font-semibold text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 rounded px-1">
-                    @for($y = now()->year - 5; $y <= now()->year + 5; $y++)
+                    @foreach($yearOptions as $y)
                     <option value="{{ $y }}" {{ $calendarMonth->year == $y ? 'selected' : '' }}>{{ $y }}</option>
-                    @endfor
+                    @endforeach
                 </select>
             </form>
 
             <div class="flex items-center gap-2">
+                @if($isAtOrBeforeCurrentMonth)
+                <span class="w-8 h-8 flex items-center justify-center rounded-lg border border-[#F0F0F0] bg-[#F9F9F7] text-[#D9D9D9] cursor-not-allowed transition-colors" title="Past months are not available">
+                    <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                </span>
+                @else
                 <a href="{{ $prevUrl }}" data-turbo-frame="production-calendar" data-turbo-action="advance" class="w-8 h-8 flex items-center justify-center rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
                     <i data-lucide="chevron-left" class="w-4 h-4"></i>
                 </a>
+                @endif
                 <a href="{{ $nextUrl }}" data-turbo-frame="production-calendar" data-turbo-action="advance" class="w-8 h-8 flex items-center justify-center rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
                     <i data-lucide="chevron-right" class="w-4 h-4"></i>
                 </a>

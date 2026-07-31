@@ -159,7 +159,7 @@
             </div>
         </button>
         <button type="button" id="fabExportBtn" class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
-            <span>Export forecast</span>
+            <span>Export Forecast Report</span>
             <div class="w-8 h-8 rounded-full bg-[#6B4C8A]/10 flex items-center justify-center">
                 <i data-lucide="file-down" class="w-4 h-4 text-[#6B4C8A]"></i>
             </div>
