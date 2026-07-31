@@ -314,17 +314,6 @@
         if (modal) modal.style.display = 'none';
     }
 
-    window.openForecastDayModal = function(dateString) {
-        const modal = document.getElementById('forecastDayModal');
-        const dateDisplay = document.getElementById('forecastDayModalDate');
-        const startInput = document.getElementById('forecastDayModalStartDate');
-        if (!modal || !dateDisplay || !startInput) return;
-        startInput.value = dateString;
-        dateDisplay.textContent = formatAlertDate(dateString);
-        modal.style.display = 'flex';
-        if (window.lucide) lucide.createIcons();
-    };
-
     window.handleForecastDayClick = function(dateString, isSelectable) {
         if (isSelectable) {
             window.openForecastDayModal(dateString);
@@ -417,6 +406,30 @@
         });
     }
 
+    // The modal's scope should mirror the live selection in the Forecast Inputs panel.
+    // #formScope is kept in sync by the workspace's in-place refresh, so the modal stays
+    // locked to the current scope even after switching scope without a page reload.
+    function getLiveForecastScope() {
+        const el = document.getElementById('formScope');
+        return el && el.value ? el.value : '{{ $scope }}';
+    }
+
+    function syncDaySelectsFromWorkspace() {
+        const cageSelect = document.getElementById('dayCageSelect');
+        const breedSelect = document.getElementById('dayBreedSelect');
+        const wsCage = document.getElementById('cageSelect');
+        const wsBreed = document.getElementById('breedSelect');
+
+        if (cageSelect && wsCage) {
+            const values = Array.from(cageSelect.options).map(function(o) { return o.value; });
+            if (values.indexOf(wsCage.value) !== -1) cageSelect.value = wsCage.value;
+        }
+        if (breedSelect && wsBreed) {
+            const values = Array.from(breedSelect.options).map(function(o) { return o.value; });
+            if (values.indexOf(wsBreed.value) !== -1) breedSelect.value = wsBreed.value;
+        }
+    }
+
     window.openForecastDayModal = function(dateString) {
         const modal = document.getElementById('forecastDayModal');
         const dateDisplay = document.getElementById('forecastDayModalDate');
@@ -424,7 +437,8 @@
         if (!modal || !dateDisplay || !startInput) return;
         startInput.value = dateString;
         dateDisplay.textContent = formatAlertDate(dateString);
-        setDayScope('{{ $scope }}');
+        syncDaySelectsFromWorkspace();
+        setDayScope(getLiveForecastScope());
         modal.style.display = 'flex';
         if (window.lucide) lucide.createIcons();
     };

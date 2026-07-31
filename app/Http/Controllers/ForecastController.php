@@ -1081,6 +1081,106 @@ class ForecastController extends Controller
             + ['forecastDataDays' => $dataSufficiency['current_count'], 'breed' => $breed];
     }
 
+    /**
+     * Lightweight JSON payload for the Forecast workspace so scope / cage /
+     * breed / horizon changes can update the chart + labels in place without
+     * re-rendering the whole turbo-frame (no URL change, no history churn).
+     */
+    public function data(Request $request)
+    {
+        $scope   = $request->get('scope', 'cage');
+        $horizon = (int) $request->get('horizon', 7);
+
+        $allCages = DB::table('forecast_input_records')
+            ->whereNotNull('cage_code')
+            ->whereRaw("TRIM(cage_code) != ''")
+            ->whereNotIn('cage_code', ['C01', 'C03'])
+            ->distinct()
+            ->pluck('cage_code')
+            ->filter()
+            ->sort()
+            ->values();
+        $allBreeds = DB::table('forecast_input_records')
+            ->whereNotNull('breed')
+            ->whereRaw("TRIM(breed) != ''")
+            ->distinct()
+            ->pluck('breed')
+            ->filter()
+            ->sort()
+            ->values();
+
+        $cageCode = $request->get('cage', $allCages->first() ?? '');
+        $breed    = $request->get('breed');
+
+        if ($scope === 'breed' && empty($breed)) {
+            $breed = $allBreeds->first();
+        }
+
+        $dataSufficiency = $this->checkForecastDataSufficiency($scope, $cageCode, $breed);
+
+        $metrics = session('forecast_metrics');
+        $recommendedModel = session('recommended_model');
+        $showForecast = session('forecast_generated', false);
+
+        $historical = collect();
+        $forecasts  = collect();
+
+        if ($scope === 'farm') {
+            $historical = $this->farmHistorical();
+            $forecasts  = Forecast::where('forecast_date', now()->toDateString())
+                ->whereNull('cage_id')->whereNull('breed')
+                ->whereNotNull('target_date')
+                ->orderBy('target_date')->limit($horizon)->get();
+        } elseif ($scope === 'breed' && $breed) {
+            $historical = $this->breedHistorical($breed);
+            $forecasts  = Forecast::where('forecast_date', now()->toDateString())
+                ->whereNull('cage_id')->where('breed', $breed)
+                ->whereNotNull('target_date')
+                ->orderBy('target_date')->limit($horizon)->get();
+        } else {
+            $cage = Cage::where('cage_code', $cageCode)->first();
+            $historical = $this->cageHistorical($cageCode);
+            $forecasts  = Forecast::where('forecast_date', now()->toDateString())
+                ->when($cage, fn($q) => $q->where('cage_id', $cage->id))
+                ->when(!$cage, fn($q) => $q->whereNull('cage_id'))
+                ->whereNull('breed')
+                ->whereNotNull('target_date')
+                ->orderBy('target_date')->limit($horizon)->get();
+        }
+
+        $scopeLabel = match ($scope) {
+            'farm'  => 'Whole Farm',
+            'breed' => $breed ?? '',
+            default => $cageCode,
+        };
+        $cageColorMap = Cage::getColorMap();
+        $cageColor = $scope === 'farm' ? '#102A4C' : ($cageColorMap[$cageCode] ?? '#6B7280');
+        $chartTitle = $showForecast ? 'HISTORICAL DATA VS FORECASTED EGG COUNT' : 'HISTORICAL EGG COUNT';
+
+        return response()->json([
+            'scope'            => $scope,
+            'cageCode'         => $cageCode,
+            'breed'            => $breed,
+            'horizon'          => $horizon,
+            'scopeLabel'       => $scopeLabel,
+            'cageColor'        => $cageColor,
+            'chartTitle'       => $chartTitle,
+            'showForecast'     => $showForecast,
+            'hasEnoughData'    => $dataSufficiency['has_enough'],
+            'forecastDataDays' => $dataSufficiency['current_count'],
+            'historical'       => $historical->map(fn($l) => [
+                'date'      => is_object($l->log_date) ? $l->log_date->format('Y-m-d') : $l->log_date,
+                'egg_count' => $l->egg_count,
+            ])->values(),
+            'forecasts'        => $forecasts->map(fn($f) => [
+                'date'      => is_object($f->target_date) ? $f->target_date->format('Y-m-d') : $f->target_date,
+                'egg_count' => (int) $f->predicted_egg_count,
+            ])->values(),
+            'metrics'          => $metrics,
+            'recommendedModel' => $recommendedModel,
+        ]);
+    }
+
     public function exportCsv(Request $request)
     {
         $data = $this->resolveExportData($request);
