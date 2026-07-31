@@ -227,7 +227,10 @@ class ForecastController extends Controller
         $startDate = $request->input('start_date');
 
         if ($startDate) {
-            $horizon = 1;
+            // A calendar/date-specific forecast can span multiple consecutive
+            // days (e.g. drag-selecting Aug 5-10). Honor the requested horizon,
+            // defaulting to a single day when none is supplied.
+            $horizon = max(1, (int) $request->get('horizon', 1));
 
             try {
                 $parsed = \Carbon\Carbon::parse($startDate);
@@ -239,6 +242,13 @@ class ForecastController extends Controller
                 if ($parsed->gt(ForecastRules::maxStartDate())) {
                     return redirect()->back()
                         ->with('error', 'Forecast date cannot exceed 30 days from today.')
+                        ->withInput();
+                }
+
+                $rangeEnd = $parsed->copy()->addDays($horizon - 1)->endOfDay();
+                if ($rangeEnd->gt(ForecastRules::maxStartDate())) {
+                    return redirect()->back()
+                        ->with('error', 'Forecast range cannot extend beyond 30 days from today.')
                         ->withInput();
                 }
             } catch (\Exception $e) {
@@ -264,7 +274,9 @@ class ForecastController extends Controller
 
                 $result = $this->generateForecast(null, 'ALL', null, $historical, $horizon, true, $startDate);
 
-                $successMessage = $startDate ? 'Single-day whole-farm forecast generated.' : 'Whole-farm forecast generated.';
+                $successMessage = $startDate
+                    ? ($horizon > 1 ? "Whole-farm forecast generated for {$horizon} days." : 'Single-day whole-farm forecast generated.')
+                    : 'Whole-farm forecast generated.';
                 $redirectParams = $startDate
                     ? ['scope' => 'farm', 'horizon' => $horizon, 'start_date' => $startDate, 'month' => \Carbon\Carbon::parse($startDate)->month, 'year' => \Carbon\Carbon::parse($startDate)->year]
                     : ['scope' => 'farm', 'horizon' => $horizon];
@@ -280,7 +292,9 @@ class ForecastController extends Controller
 
                 $result = $this->generateForecast(null, 'ALL', $breed, $historical, $horizon, true, $startDate);
 
-                $successMessage = $startDate ? "Single-day {$breed} forecast generated." : "{$breed} forecast generated.";
+                $successMessage = $startDate
+                    ? ($horizon > 1 ? "{$breed} forecast generated for {$horizon} days." : "Single-day {$breed} forecast generated.")
+                    : "{$breed} forecast generated.";
                 $redirectParams = $startDate
                     ? ['scope' => 'breed', 'breed' => $breed, 'horizon' => $horizon, 'start_date' => $startDate, 'month' => \Carbon\Carbon::parse($startDate)->month, 'year' => \Carbon\Carbon::parse($startDate)->year]
                     : ['scope' => 'breed', 'breed' => $breed, 'horizon' => $horizon];
@@ -302,7 +316,9 @@ class ForecastController extends Controller
 
             $result = $this->generateForecast($cage, $cageCode, null, $historical, $horizon, true, $startDate);
 
-            $successMessage = $startDate ? 'Single-day forecast generated.' : 'Forecast generated.';
+            $successMessage = $startDate
+                ? ($horizon > 1 ? "Forecast generated for {$horizon} days." : 'Single-day forecast generated.')
+                : 'Forecast generated.';
             $redirectParams = $startDate
                 ? ['scope' => 'cage', 'cage' => $cageCode, 'horizon' => $horizon, 'start_date' => $startDate, 'month' => \Carbon\Carbon::parse($startDate)->month, 'year' => \Carbon\Carbon::parse($startDate)->year]
                 : ['scope' => 'cage', 'cage' => $cageCode, 'horizon' => $horizon];

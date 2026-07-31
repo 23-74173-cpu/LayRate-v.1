@@ -260,14 +260,14 @@
                 <div class="w-8 h-8 rounded-lg bg-[#002D5E]/10 flex items-center justify-center">
                     <i data-lucide="calendar-plus" class="w-4 h-4 text-[#002D5E]"></i>
                 </div>
-                <h3 class="text-base font-semibold text-[#333333]">Forecast this day</h3>
+                <h3 id="forecastDayModalTitle" class="text-base font-semibold text-[#333333]">Forecast this day</h3>
             </div>
             <button type="button" id="closeForecastDayModal" class="text-[#6B7280] hover:text-[#333333] transition-colors">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
         </div>
         <div class="p-5">
-            <p class="text-sm text-[#333333] mb-1">Generate a single-day egg production forecast for</p>
+            <p id="forecastDayModalHint" class="text-sm text-[#333333] mb-1">Generate a single-day egg production forecast for</p>
             <p class="text-lg font-semibold text-[#002D5E] mb-4" id="forecastDayModalDate">—</p>
 
             <div class="mb-4">
@@ -309,7 +309,7 @@
             <form method="POST" action="{{ route('forecast.generate') }}" id="forecastDayForm" data-turbo="false">
                 @csrf
                 <input type="hidden" name="scope" id="dayScopeInput" value="{{ $scope }}">
-                <input type="hidden" name="horizon" value="1">
+                <input type="hidden" name="horizon" id="forecastDayHorizon" value="1">
                 <input type="hidden" name="start_date" id="forecastDayModalStartDate" value="">
                 <input type="hidden" name="cage" id="dayCageInput" value="{{ $scope === 'cage' ? $cageCode : 'ALL' }}">
                 <input type="hidden" name="breed" id="dayBreedInput" value="{{ $scope === 'breed' ? ($breed ?? '') : '' }}">
@@ -346,6 +346,13 @@
     }
 
     window.handleForecastDayClick = function(dateString, isSelectable) {
+        // A drag-to-select ends with a native click on the hovered cell; swallow
+        // that click so it doesn't also open the single-day modal.
+        if (Date.now() - suppressNextDayClick < 350) {
+            suppressNextDayClick = 0;
+            return;
+        }
+
         if (isSelectable) {
             window.openForecastDayModal(dateString);
             return;
@@ -373,6 +380,185 @@
 
         showNotification(message, 'warning');
     };
+
+    // ── Drag-to-select a contiguous day range (Egg Logging style, range-fill) ──
+    // The selection is always the full date window between the anchor and the
+    // hovered cell, so the chosen days are guaranteed to be a continuous
+    // ascending sequence (5 → 6 → 7) with no skipped dates.
+    let isDayDragging = false;
+    let dayDragMoved = false;
+    let dayDragAnchor = null;   // 'Y-m-d'
+    let dayDragHover = null;    // 'Y-m-d'
+    let dayDragOriginalClasses = {}; // date -> original className for restore
+    let suppressNextDayClick = 0;    // timestamp; self-heals if no click follows
+
+    function snapshotSelectableDayClasses() {
+        dayDragOriginalClasses = {};
+        document.querySelectorAll('.calendar-day[data-selectable="true"]').forEach(function(el) {
+            dayDragOriginalClasses[el.dataset.date] = el.className;
+        });
+    }
+
+    function clearDaySelection() {
+        isDayDragging = false;
+        dayDragAnchor = null;
+        dayDragHover = null;
+        Object.keys(dayDragOriginalClasses).forEach(function(date) {
+            const el = document.querySelector('.calendar-day[data-date="' + date + '"]');
+            if (el) el.className = dayDragOriginalClasses[date];
+        });
+        dayDragOriginalClasses = {};
+    }
+
+    function dayDateToMs(dateString) {
+        const [y, m, d] = dateString.split('-').map(Number);
+        return Date.UTC(y, m - 1, d);
+    }
+
+    function selectedDayRange() {
+        if (!dayDragAnchor || !dayDragHover) return [];
+        const from = Math.min(dayDateToMs(dayDragAnchor), dayDateToMs(dayDragHover));
+        const to = Math.max(dayDateToMs(dayDragAnchor), dayDateToMs(dayDragHover));
+        const dates = [];
+        for (let ms = from; ms <= to; ms += 86400000) {
+            const d = new Date(ms);
+            dates.push(d.getUTCFullYear() + '-' +
+                       String(d.getUTCMonth() + 1).padStart(2, '0') + '-' +
+                       String(d.getUTCDate()).padStart(2, '0'));
+        }
+        return dates;
+    }
+
+    function setDayCellSelected(date, selected) {
+        const el = document.querySelector('.calendar-day[data-date="' + date + '"]');
+        if (!el) return;
+        if (selected) {
+            el.classList.add('ring-2', 'ring-[#002D5E]', 'ring-offset-1', 'bg-[#002D5E]/10');
+        } else {
+            el.classList.remove('ring-2', 'ring-[#002D5E]', 'ring-offset-1', 'bg-[#002D5E]/10');
+        }
+    }
+
+    function renderDaySelection() {
+        Object.keys(dayDragOriginalClasses).forEach(function(date) {
+            const el = document.querySelector('.calendar-day[data-date="' + date + '"]');
+            if (el) el.className = dayDragOriginalClasses[date];
+        });
+        selectedDayRange().forEach(function(date) { setDayCellSelected(date, true); });
+    }
+
+    function onCalendarDayMouseDown(e) {
+        if (e.button !== 0) return;
+        const el = e.currentTarget;
+        if (el.dataset.selectable !== 'true') return;
+        e.preventDefault(); // prevent text-selection while dragging
+        isDayDragging = true;
+        dayDragMoved = false;
+        dayDragAnchor = el.dataset.date;
+        dayDragHover = el.dataset.date;
+        snapshotSelectableDayClasses();
+        renderDaySelection();
+    }
+
+    function onCalendarDayMouseEnter(e) {
+        if (!isDayDragging) return;
+        const el = e.currentTarget;
+        if (el.dataset.selectable !== 'true') return;
+        if (el.dataset.date !== dayDragHover) {
+            dayDragHover = el.dataset.date;
+            dayDragMoved = true;
+            renderDaySelection();
+        }
+    }
+
+    function isContiguousRange(dates) {
+        for (let i = 1; i < dates.length; i++) {
+            if (dayDateToMs(dates[i]) - dayDateToMs(dates[i - 1]) !== 86400000) return false;
+        }
+        return true;
+    }
+
+    function onCalendarDayGlobalMouseUp() {
+        if (!isDayDragging) return;
+        isDayDragging = false;
+        const dates = selectedDayRange();
+        if (dates.length === 0) {
+            clearDaySelection();
+            return;
+        }
+
+        // Validation: the chosen dates must form a continuous sequence.
+        if (!isContiguousRange(dates)) {
+            showNotification('Please select dates in a continuous sequence — you cannot skip a day.', 'warning');
+            clearDaySelection();
+            return;
+        }
+
+        suppressNextDayClick = Date.now();
+        if (dayDragMoved) {
+            window.openForecastRangeModal(dates);
+        } else {
+            window.openForecastDayModal(dates[0]);
+        }
+    }
+
+    // Wire drag handlers per frame render (flag-guarded so re-renders don't
+    // double-bind), and the global mouseup exactly once.
+    document.querySelectorAll('.calendar-day[data-selectable="true"]').forEach(function(el) {
+        if (!el.__dragWired) {
+            el.__dragWired = true;
+            el.addEventListener('mousedown', onCalendarDayMouseDown);
+            el.addEventListener('mouseenter', onCalendarDayMouseEnter);
+        }
+    });
+    if (!window.__calendarDayDragBound) {
+        window.__calendarDayDragBound = true;
+        document.addEventListener('mouseup', onCalendarDayGlobalMouseUp);
+    }
+
+    function formatAlertRange(startDate, endDate) {
+        if (startDate === endDate) return formatAlertDate(startDate);
+        const start = parseLocalDate(startDate);
+        const end = parseLocalDate(endDate);
+        const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
+        const s = sameMonth
+            ? start.toLocaleDateString('en-US', { month: 'long' }) + ' ' + start.getDate()
+            : start.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+        return s + ' \u2013 ' + end.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    }
+
+    function openForecastModal(dates) {
+        const modal = document.getElementById('forecastDayModal');
+        const dateDisplay = document.getElementById('forecastDayModalDate');
+        const startInput = document.getElementById('forecastDayModalStartDate');
+        const horizonInput = document.getElementById('forecastDayHorizon');
+        const title = document.getElementById('forecastDayModalTitle');
+        const hint = document.getElementById('forecastDayModalHint');
+        if (!modal || !dateDisplay || !startInput) return;
+
+        dates.sort();
+        const first = dates[0];
+        const last = dates[dates.length - 1];
+        const isRange = dates.length > 1;
+
+        startInput.value = first;
+        if (horizonInput) horizonInput.value = dates.length;
+        dateDisplay.textContent = isRange ? formatAlertRange(first, last) : formatAlertDate(first);
+        if (title) title.textContent = isRange ? 'Forecast this range' : 'Forecast this day';
+        if (hint) {
+            hint.textContent = isRange
+                ? 'Generate a ' + dates.length + '-day egg production forecast for'
+                : 'Generate a single-day egg production forecast for';
+        }
+
+        syncDaySelectsFromWorkspace();
+        setDayScope(getLiveForecastScope());
+        modal.style.display = 'flex';
+        if (window.lucide) lucide.createIcons();
+    }
+
+    window.openForecastDayModal = function(dateString) { openForecastModal([dateString]); };
+    window.openForecastRangeModal = function(dates) { openForecastModal(dates); };
 
     function setDayScope(scope) {
         const scopeInput = document.getElementById('dayScopeInput');
@@ -461,48 +647,46 @@
         }
     }
 
-    window.openForecastDayModal = function(dateString) {
-        const modal = document.getElementById('forecastDayModal');
-        const dateDisplay = document.getElementById('forecastDayModalDate');
-        const startInput = document.getElementById('forecastDayModalStartDate');
-        if (!modal || !dateDisplay || !startInput) return;
-        startInput.value = dateString;
-        dateDisplay.textContent = formatAlertDate(dateString);
-        syncDaySelectsFromWorkspace();
-        setDayScope(getLiveForecastScope());
-        modal.style.display = 'flex';
-        if (window.lucide) lucide.createIcons();
-    };
-
     // Close modal on backdrop click — use document delegation so it works
     // even after the frame content is replaced (scripts don't re-execute).
-    document.addEventListener('click', function(e) {
-        const modal = document.getElementById('forecastDayModal');
-        if (!modal) return;
-        if (e.target.closest('#closeForecastDayModal, #cancelForecastDayModal')) {
-            modal.style.display = 'none';
-            return;
-        }
-        if (e.target === modal) {
-            modal.style.display = 'none';
-        }
-    });
+    if (!window.__forecastDayModalCloseBound) {
+        window.__forecastDayModalCloseBound = true;
+        document.addEventListener('click', function(e) {
+            const modal = document.getElementById('forecastDayModal');
+            if (!modal) return;
+            if (e.target.closest('#closeForecastDayModal, #cancelForecastDayModal')) {
+                modal.style.display = 'none';
+                clearDaySelection();
+                return;
+            }
+            if (e.target === modal) {
+                modal.style.display = 'none';
+                clearDaySelection();
+            }
+        });
+    }
 
-    document.addEventListener('submit', function(e) {
-        if (e.target.id !== 'forecastDayForm') return;
-        e.preventDefault();
-        const form = e.target;
-        const overlay = document.getElementById('forecastLoadingOverlay');
-        if (!overlay) return;
-        overlay.style.display = 'flex';
+    if (!window.__forecastDayFormSubmitBound) {
+        window.__forecastDayFormSubmitBound = true;
+        document.addEventListener('submit', function(e) {
+            if (e.target.id !== 'forecastDayForm') return;
+            e.preventDefault();
+            const form = e.target;
+            const overlay = document.getElementById('forecastLoadingOverlay');
+            if (!overlay) return;
+            overlay.style.display = 'flex';
 
-        const scopeInput = form.querySelector('input[name="scope"]');
-        const scope = scopeInput ? scopeInput.value : 'cage';
-        const expectedDuration = window.resolveForecastDuration(scope, 1);
+            const scopeInput = form.querySelector('input[name="scope"]');
+            const scope = scopeInput ? scopeInput.value : 'cage';
+            const horizonInput = form.querySelector('input[name="horizon"]');
+            const horizon = horizonInput ? (parseInt(horizonInput.value, 10) || 1) : 1;
+            const expectedDuration = window.resolveForecastDuration(scope, horizon);
 
-        sessionStorage.setItem('layrate_forecast_start_time', Date.now());
-        window.startForecastProgress(expectedDuration);
+            sessionStorage.setItem('layrate_forecast_start_time', Date.now());
+            window.startForecastProgress(expectedDuration);
 
-        setTimeout(function() { form.submit(); }, 80);
-    });
+            clearDaySelection();
+            setTimeout(function() { form.submit(); }, 80);
+        });
+    }
 </script>
