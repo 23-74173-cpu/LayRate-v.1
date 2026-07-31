@@ -238,23 +238,50 @@
         <div class="p-5">
             <p class="text-sm text-[#333333] mb-1">Generate a single-day egg production forecast for</p>
             <p class="text-lg font-semibold text-[#002D5E] mb-4" id="forecastDayModalDate">—</p>
-            <p class="text-xs text-[#6B7280] mb-5">
-                This will forecast egg count for the selected date only, using the current scope
-                (<span class="font-medium text-[#333333]">{{ $scope === 'farm' ? 'Whole Farm' : ($scope === 'breed' ? $breed : $cageCode) }}</span>).
-            </p>
+
+            <div class="mb-4">
+                <label class="block text-xs font-semibold uppercase tracking-wide text-[#6B7280] mb-2">Scope</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <button type="button" data-day-scope="farm" class="day-scope-btn flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium border transition-colors">
+                        <i data-lucide="globe" class="w-3.5 h-3.5"></i> Whole Farm
+                    </button>
+                    <button type="button" data-day-scope="cage" class="day-scope-btn flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium border transition-colors">
+                        <i data-lucide="box" class="w-3.5 h-3.5"></i> Per Cage
+                    </button>
+                    <button type="button" data-day-scope="breed" class="day-scope-btn flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium border transition-colors">
+                        <i data-lucide="bird" class="w-3.5 h-3.5"></i> Per Breed
+                    </button>
+                </div>
+
+                <div id="dayScopeCage" class="hidden mt-3">
+                    <label class="block text-sm text-[#333333] mb-1.5">Select Cage</label>
+                    <select id="dayCageSelect"
+                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
+                        @foreach($allCages as $c)
+                        <option value="{{ $c }}" {{ $c === $cageCode ? 'selected' : '' }}>{{ $c }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div id="dayScopeBreed" class="hidden mt-3">
+                    <label class="block text-sm text-[#333333] mb-1.5">Select Breed</label>
+                    <select id="dayBreedSelect"
+                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
+                        @foreach($allBreeds as $b)
+                        <option value="{{ $b }}" {{ $b === $breed ? 'selected' : '' }}>{{ $b }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+
             @can('admin')
             <form method="POST" action="{{ route('forecast.generate') }}" id="forecastDayForm" data-turbo="false">
                 @csrf
-                <input type="hidden" name="scope" value="{{ $scope }}">
+                <input type="hidden" name="scope" id="dayScopeInput" value="{{ $scope }}">
                 <input type="hidden" name="horizon" value="1">
                 <input type="hidden" name="start_date" id="forecastDayModalStartDate" value="">
-                @if($scope === 'cage')
-                <input type="hidden" name="cage" value="{{ $cageCode }}">
-                @elseif($scope === 'breed')
-                <input type="hidden" name="breed" value="{{ $breed }}">
-                @else
-                <input type="hidden" name="cage" value="ALL">
-                @endif
+                <input type="hidden" name="cage" id="dayCageInput" value="{{ $scope === 'cage' ? $cageCode : 'ALL' }}">
+                <input type="hidden" name="breed" id="dayBreedInput" value="{{ $scope === 'breed' ? ($breed ?? '') : '' }}">
                 <button type="submit" class="w-full bg-[#002D5E] text-white py-3 rounded-lg text-sm font-medium hover:bg-[#001F42] transition-colors flex items-center justify-center gap-2">
                     <i data-lucide="sparkles" class="w-4 h-4"></i>
                     <span>Generate Forecast</span>
@@ -325,6 +352,81 @@
         }
 
         showNotification(message, 'warning');
+    };
+
+    function setDayScope(scope) {
+        const scopeInput = document.getElementById('dayScopeInput');
+        const cageInput = document.getElementById('dayCageInput');
+        const breedInput = document.getElementById('dayBreedInput');
+        const cageWrap = document.getElementById('dayScopeCage');
+        const breedWrap = document.getElementById('dayScopeBreed');
+
+        document.querySelectorAll('.day-scope-btn').forEach(function(btn) {
+            const isActive = btn.dataset.dayScope === scope;
+            btn.classList.toggle('bg-[#002D5E]', isActive);
+            btn.classList.toggle('text-white', isActive);
+            btn.classList.toggle('border-[#002D5E]', isActive);
+            btn.classList.toggle('border-[#D9D9D9]', !isActive);
+            btn.classList.toggle('text-[#6B7280]', !isActive);
+            btn.classList.toggle('hover:bg-[#F5F6F8]', !isActive);
+        });
+
+        if (scopeInput) scopeInput.value = scope;
+        if (cageWrap) cageWrap.classList.toggle('hidden', scope !== 'cage');
+        if (breedWrap) breedWrap.classList.toggle('hidden', scope !== 'breed');
+
+        const cageSelect = document.getElementById('dayCageSelect');
+        const breedSelect = document.getElementById('dayBreedSelect');
+
+        if (cageInput) {
+            if (scope === 'cage') {
+                cageInput.value = cageSelect ? cageSelect.value : 'ALL';
+            } else {
+                cageInput.value = 'ALL';
+            }
+        }
+        if (breedInput) {
+            breedInput.value = (scope === 'breed' && breedSelect) ? breedSelect.value : '';
+        }
+        if (window.lucide) lucide.createIcons();
+    }
+
+    // Delegate scope button clicks inside the modal
+    if (!window.__dayScopeClickBound) {
+        window.__dayScopeClickBound = true;
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.day-scope-btn');
+            if (btn) {
+                setDayScope(btn.dataset.dayScope);
+            }
+        });
+    }
+
+    // Delegate dropdown changes inside the modal
+    if (!window.__dayScopeChangeBound) {
+        window.__dayScopeChangeBound = true;
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.id === 'dayCageSelect') {
+                const cageInput = document.getElementById('dayCageInput');
+                if (cageInput) cageInput.value = e.target.value;
+            }
+            if (e.target && e.target.id === 'dayBreedSelect') {
+                const breedInput = document.getElementById('dayBreedInput');
+                if (breedInput) breedInput.value = e.target.value;
+            }
+        });
+    }
+
+    window.openForecastDayModal = function(dateString) {
+        const modal = document.getElementById('forecastDayModal');
+        const dateDisplay = document.getElementById('forecastDayModalDate');
+        const startInput = document.getElementById('forecastDayModalStartDate');
+        if (!modal || !dateDisplay || !startInput) return;
+        startInput.value = dateString;
+        dateDisplay.textContent = formatAlertDate(dateString);
+        setDayScope('{{ $scope }}');
+        modal.style.display = 'flex';
+        if (window.lucide) lucide.createIcons();
     };
 
     // Close modal on backdrop click — use document delegation so it works

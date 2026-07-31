@@ -80,7 +80,7 @@ class ForecastController extends Controller
                 ->orderBy('target_date')->limit($horizon)->get();
 
             $viewData = compact('scope', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate')
-                + ['forecastDataDays' => $dataSufficiency['current_count']];
+                + ['forecastDataDays' => $dataSufficiency['current_count'], 'breed' => $breed];
 
             if ($request->header('Turbo-Frame') === 'production-calendar') {
                 return view('forecast._calendar', $viewData);
@@ -127,7 +127,7 @@ class ForecastController extends Controller
             ->orderBy('target_date')->limit($horizon)->get();
 
         $viewData = compact('scope', 'cage', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate')
-            + ['forecastDataDays' => $dataSufficiency['current_count']];
+            + ['forecastDataDays' => $dataSufficiency['current_count'], 'breed' => $breed];
 
         if ($request->header('Turbo-Frame') === 'production-calendar') {
             return view('forecast._calendar', $viewData);
@@ -1053,7 +1053,7 @@ class ForecastController extends Controller
                 ->orderBy('target_date')->limit($horizon)->get();
 
             return compact('scope', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate')
-                + ['forecastDataDays' => $dataSufficiency['current_count']];
+                + ['forecastDataDays' => $dataSufficiency['current_count'], 'breed' => $breed];
         }
 
         if ($scope === 'breed' && $breed) {
@@ -1078,7 +1078,7 @@ class ForecastController extends Controller
             ->orderBy('target_date')->limit($horizon)->get();
 
         return compact('scope', 'cage', 'cageCode', 'horizon', 'historical', 'forecasts', 'metrics', 'recommendedModel', 'allCages', 'allBreeds', 'hasEnoughData', 'calendarDate')
-            + ['forecastDataDays' => $dataSufficiency['current_count']];
+            + ['forecastDataDays' => $dataSufficiency['current_count'], 'breed' => $breed];
     }
 
     public function exportCsv(Request $request)
