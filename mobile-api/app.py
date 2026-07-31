@@ -436,6 +436,70 @@ def environment_live():
     return jsonify({"cages": cages}), 200
 
 
+@app.route("/api/environment/thresholds", methods=["GET"])
+@require_auth
+def get_thresholds():
+    """Return current environment threshold values."""
+    conn = get_mysql()
+    with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute(
+            "SELECT `key`, `value` FROM settings WHERE `key` IN ('temp_min','temp_max','hum_min','hum_max')"
+        )
+        rows = {r["key"]: r["value"] for r in cursor.fetchall()}
+
+    return jsonify({
+        "tempMin": float(rows.get("temp_min", 18)),
+        "tempMax": float(rows.get("temp_max", 30)),
+        "humMin": float(rows.get("hum_min", 40)),
+        "humMax": float(rows.get("hum_max", 70)),
+    }), 200
+
+
+@app.route("/api/environment/thresholds", methods=["PUT"])
+@require_auth
+def update_thresholds():
+    """Update environment threshold values."""
+    data = request.get_json(silent=True) or {}
+
+    fields = {
+        "tempMin": ("temp_min", 0, 50),
+        "tempMax": ("temp_max", 0, 50),
+        "humMin": ("hum_min", 0, 100),
+        "humMax": ("hum_max", 0, 100),
+    }
+
+    parsed = {}
+    for js_key, (db_key, lo, hi) in fields.items():
+        val = data.get(js_key)
+        if val is None:
+            return jsonify({"errors": {js_key: ["This field is required."]}}), 422
+        try:
+            val = float(val)
+        except (TypeError, ValueError):
+            return jsonify({"errors": {js_key: ["Must be a number."]}}), 422
+        if val < lo or val > hi:
+            return jsonify({"errors": {js_key: [f"Must be between {lo} and {hi}."]}}), 422
+        parsed[js_key] = val
+
+    # Cross-field validation.
+    if parsed["tempMax"] < parsed["tempMin"]:
+        return jsonify({"errors": {"tempMax": ["Must be greater than or equal to tempMin."]}}), 422
+    if parsed["humMax"] < parsed["humMin"]:
+        return jsonify({"errors": {"humMax": ["Must be greater than or equal to humMin."]}}), 422
+
+    conn = get_mysql()
+    with conn.cursor() as cursor:
+        for js_key, (db_key, _, _) in fields.items():
+            cursor.execute(
+                "INSERT INTO settings (`key`, `value`, `updated_at`) VALUES (%s, %s, NOW()) "
+                "ON DUPLICATE KEY UPDATE `value` = VALUES(`value`), `updated_at` = NOW()",
+                (db_key, str(parsed[js_key])),
+            )
+        conn.commit()
+
+    return jsonify({"success": True}), 200
+
+
 @app.route("/api/ping", methods=["GET"])
 def ping():
     """Unauthenticated endpoint used by the mobile app for auto-discovery."""
