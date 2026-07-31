@@ -502,19 +502,35 @@
         }
     }
 
-    // Wire drag handlers per frame render (flag-guarded so re-renders don't
-    // double-bind), and the global mouseup exactly once.
-    document.querySelectorAll('.calendar-day[data-selectable="true"]').forEach(function(el) {
-        if (!el.__dragWired) {
-            el.__dragWired = true;
-            el.addEventListener('mousedown', onCalendarDayMouseDown);
-            el.addEventListener('mouseenter', onCalendarDayMouseEnter);
+    // Wire drag handlers on the current calendar cells (flag-guarded so
+    // re-wires don't double-bind) and bind the global mouseup exactly once.
+    // Re-run after every Turbo frame render of #production-calendar, because
+    // this script lives outside the <turbo-frame> (its scripts do not
+    // re-execute when the frame contents are replaced).
+    window.__calendarDayDragInit = function() {
+        document.querySelectorAll('.calendar-day[data-selectable="true"]').forEach(function(el) {
+            if (!el.__dragWired) {
+                el.__dragWired = true;
+                el.addEventListener('mousedown', onCalendarDayMouseDown);
+                el.addEventListener('mouseenter', onCalendarDayMouseEnter);
+            }
+        });
+        if (!window.__calendarDayDragBound) {
+            window.__calendarDayDragBound = true;
+            document.addEventListener('mouseup', onCalendarDayGlobalMouseUp);
         }
-    });
-    if (!window.__calendarDayDragBound) {
-        window.__calendarDayDragBound = true;
-        document.addEventListener('mouseup', onCalendarDayGlobalMouseUp);
+    };
+
+    if (!window.__calendarDayFrameLoadBound) {
+        window.__calendarDayFrameLoadBound = true;
+        document.addEventListener('turbo:frame-load', function(e) {
+            if (e.target && e.target.id === 'production-calendar' && window.__calendarDayDragInit) {
+                window.__calendarDayDragInit();
+            }
+        });
     }
+
+    window.__calendarDayDragInit();
 
     function formatAlertRange(startDate, endDate) {
         if (startDate === endDate) return formatAlertDate(startDate);

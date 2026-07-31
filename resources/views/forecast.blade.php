@@ -136,9 +136,9 @@
 </div>
 
 {{-- Floating Action Button --}}
-<div class="fixed bottom-6 right-3 z-40 flex flex-col items-end gap-3">
+<div class="fixed bottom-6 right-3 z-40 flex flex-col items-end gap-3 pointer-events-none">
     {{-- FAB Menu --}}
-    <div id="fabMenu" class="flex flex-col items-end gap-2 mb-1 mr-2 transition-all duration-200 opacity-0 invisible translate-y-4">
+    <div id="fabMenu" class="flex flex-col items-end gap-2 mb-1 mr-2 transition-all duration-200 opacity-0 invisible translate-y-4 pointer-events-auto">
         <button type="button" id="fabDownloadBtn" class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Download input sheet</span>
             <div class="w-8 h-8 rounded-full bg-[#002D5E]/10 flex items-center justify-center">
@@ -168,7 +168,7 @@
 
     {{-- FAB Toggle --}}
     <button type="button" id="fabToggle"
-        class="w-16 h-12 rounded-full bg-surface text-ink border border-hairline shadow-soft hover:bg-canvas-soft transition-colors flex items-center justify-center flex-shrink-0"
+        class="w-16 h-12 rounded-full bg-surface text-ink border border-hairline shadow-soft hover:bg-canvas-soft transition-colors flex items-center justify-center flex-shrink-0 pointer-events-auto"
         aria-label="Open menu" aria-expanded="false">
         <i data-lucide="plus" id="fabIcon" class="w-6 h-6 transition-transform duration-200 ease-out"></i>
     </button>
