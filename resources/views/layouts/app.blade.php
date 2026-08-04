@@ -33,6 +33,75 @@
     {{-- Turbo Drive --}}
     <script type="module" src="/js/turbo.js"></script>
 
+    {{-- Slow-page loading screen: appears only when a page takes >600ms to
+         render. Fast loads clear the timer and never flash it. Covers both
+         Turbo Drive visits and initial hard loads. Guarded against Turbo
+         re-evaluation so listeners aren't attached twice. --}}
+    <style>
+        @keyframes app-spin { to { transform: rotate(360deg); } }
+        #app-loading-overlay {
+            position: fixed; inset: 0; z-index: 10000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+            background: rgba(245, 246, 248, 0.92); backdrop-filter: blur(2px);
+            opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+        }
+        #app-loading-overlay.visible { opacity: 1; pointer-events: auto; }
+        #app-loading-overlay .al-spinner {
+            width: 40px; height: 40px; border-radius: 50%;
+            border: 3px solid rgba(0, 117, 222, 0.2); border-top-color: #0075de;
+            animation: app-spin 0.8s linear infinite;
+        }
+        #app-loading-overlay .al-text { font-size: 13px; font-weight: 500; color: #6B7280; letter-spacing: 0.02em; }
+        @media (prefers-reduced-motion: reduce) {
+            #app-loading-overlay .al-spinner { animation: none; }
+            #app-loading-overlay { transition: none; }
+        }
+    </style>
+    <script>
+    (function () {
+        if (window.__appLoadingInit) return;
+        window.__appLoadingInit = true;
+
+        // Element lives in <body>, but on a slow initial hard load the body
+        // may not have arrived yet — so query at call time and inject the
+        // overlay early if needed.
+        function ensureOverlay() {
+            var el = document.getElementById('app-loading-overlay');
+            if (el) return el;
+            el = document.createElement('div');
+            el.id = 'app-loading-overlay';
+            el.setAttribute('role', 'status');
+            el.setAttribute('aria-live', 'polite');
+            el.innerHTML = '<div class="al-spinner"></div><div class="al-text">Loading…</div>';
+            (document.body || document.documentElement).appendChild(el);
+            return el;
+        }
+        function show() { ensureOverlay().classList.add('visible'); }
+        function hide() { var el = document.getElementById('app-loading-overlay'); if (el) el.classList.remove('visible'); }
+
+        var timer = null;
+        function arm() {
+            clearTimeout(timer);
+            timer = setTimeout(show, 600);
+        }
+
+        // Initial hard load: arm while the document is still being transferred.
+        if (document.readyState === 'loading') arm();
+
+        window.addEventListener('load', function () { clearTimeout(timer); hide(); });
+        // Hide as soon as the initial document is parsed (window.load can lag
+        // behind waiting on images, which would flash the overlay over a
+        // rendered page).
+        document.addEventListener('DOMContentLoaded', function () { clearTimeout(timer); hide(); });
+
+        // Turbo Drive visits (drive only — lazy frames keep their skeletons).
+        document.addEventListener('turbo:before-visit', arm);
+        document.addEventListener('turbo:load', function () { clearTimeout(timer); hide(); });
+        document.addEventListener('turbo:render', hide);
+        document.addEventListener('turbo:visit-end', function () { clearTimeout(timer); hide(); });
+    })();
+    </script>
+
     <style>
         * { -webkit-tap-highlight-color: transparent; }
         html { height: 100%; height: -webkit-fill-available; }
@@ -114,6 +183,12 @@
 #turbo-loading-bar.active { opacity: 1; }
 </style>
 <div id="turbo-loading-bar"></div>
+
+{{-- ── Slow-page loading screen (shown only after 600ms, see head script) ── --}}
+<div id="app-loading-overlay" role="status" aria-live="polite" aria-busy="false">
+    <div class="al-spinner"></div>
+    <div class="al-text">Loading…</div>
+</div>
 
 {{-- ── Turbo loading bar control ─────────────────────────────────────────── --}}
 <script>
