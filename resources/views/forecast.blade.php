@@ -566,7 +566,15 @@
     // submission doesn't permanently prevent retries.
     document.addEventListener('turbo:load', function() { _forecastIsSubmitting = false; });
     document.addEventListener('turbo:frame-load', function() { _forecastIsSubmitting = false; });
-    document.addEventListener('turbo:before-cache', function() { _forecastIsSubmitting = false; });
+    document.addEventListener('turbo:before-cache', function() {
+        _forecastIsSubmitting = false;
+        // Turbo caches the page DOM but not element-level listeners, and the
+        // window flag below survives navigation. Without this reset, returning
+        // to /forecast via Turbo skips re-binding the dropZone drag/preview
+        // handlers, so drag-and-drop silently stops responding. Frame actions
+        // don't fire turbo:before-cache, so this can't double-bind on them.
+        window.__forecastActionsBound = false;
+    });
 
     document.addEventListener('turbo:load', function() {
         // Every element bound below lives outside the turbo-frames and persists

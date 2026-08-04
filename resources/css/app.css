@@ -54,26 +54,19 @@
 .kpi-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 16px 36px -12px rgba(20, 30, 60, 0.22);
+  border-color: #c2c2c2 !important;
 }
 .kpi-card:active { transform: translateY(-1px); }
 
-/* Per-metric hover accent border */
-.kpi-blue:hover   { border-color: #62aef0 !important; }
-.kpi-green:hover  { border-color: #62c887 !important; }
-.kpi-yellow:hover { border-color: #fbbf24 !important; }
-.kpi-orange:hover { border-color: #f0a35e !important; }
-.kpi-purple:hover { border-color: #a99bf0 !important; }
-.kpi-teal:hover   { border-color: #5fc7a4 !important; }
-.kpi-red:hover    { border-color: #e05c66 !important; }
-
-/* KPI icon chip with gradient fill */
+/* KPI icon chip (neutral) */
 .kpi-chip {
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 12px;
-  box-shadow: 0 4px 10px -4px rgba(20, 30, 60, 0.25);
-  color: #fff;
+  box-shadow: 0 4px 10px -4px rgba(20, 30, 60, 0.1);
+  background: #F3F4F6;
+  color: #6B7280;
 }
 
 /* Watermark icon in the corner of KPI cards */
@@ -83,22 +76,10 @@
   bottom: -12px;
   width: 88px;
   height: 88px;
-  opacity: 0.07;
+  opacity: 0.14;
+  color: #6B7280;
   pointer-events: none;
   transform: rotate(-8deg);
-}
-
-/* Soft radial glow in the card corner */
-.kpi-glow {
-  position: absolute;
-  top: -40px;
-  right: -40px;
-  width: 150px;
-  height: 150px;
-  border-radius: 9999px;
-  filter: blur(36px);
-  opacity: 0.16;
-  pointer-events: none;
 }
 
 /* Animated progress bar fill on view */

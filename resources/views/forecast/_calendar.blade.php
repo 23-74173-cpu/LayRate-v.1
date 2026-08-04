@@ -385,12 +385,16 @@
     // The selection is always the full date window between the anchor and the
     // hovered cell, so the chosen days are guaranteed to be a continuous
     // ascending sequence (5 → 6 → 7) with no skipped dates.
-    let isDayDragging = false;
-    let dayDragMoved = false;
-    let dayDragAnchor = null;   // 'Y-m-d'
-    let dayDragHover = null;    // 'Y-m-d'
-    let dayDragOriginalClasses = {}; // date -> original className for restore
-    let suppressNextDayClick = 0;    // timestamp; self-heals if no click follows
+    // var (not let) for the drag state: Turbo re-executes this inline script
+    // when /forecast is revisited via a full-page visit, and top-level `let`
+    // redeclaration throws "Identifier ... has already been declared", killing
+    // the whole script so calendar cells never get wired again.
+    var isDayDragging = false;
+    var dayDragMoved = false;
+    var dayDragAnchor = null;   // 'Y-m-d'
+    var dayDragHover = null;    // 'Y-m-d'
+    var dayDragOriginalClasses = {}; // date -> original className for restore
+    var suppressNextDayClick = 0;    // timestamp; self-heals if no click follows
 
     function snapshotSelectableDayClasses() {
         dayDragOriginalClasses = {};

@@ -302,8 +302,10 @@
                    class="nav-link group flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-white/85 hover:text-white hover:bg-white/10"
                    title="{{ $item['label'] }}"
                    aria-label="{{ $item['label'] }}">
-                    <i data-lucide="{{ $item['icon'] }}" class="w-[19px] h-[19px] shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"></i>
-                    <span class="sidebar-label text-xs font-medium whitespace-nowrap overflow-hidden">{{ $item['label'] }}</span>
+                    <span class="flex items-center gap-3 min-w-0 transition-transform duration-200 ease-out group-hover:-translate-y-0.5 group-hover:translate-x-1">
+                        <i data-lucide="{{ $item['icon'] }}" class="w-[19px] h-[19px] shrink-0"></i>
+                        <span class="sidebar-label text-xs font-medium whitespace-nowrap overflow-hidden min-w-0">{{ $item['label'] }}</span>
+                    </span>
                 </a>
                 @endforeach
             </div>
@@ -316,8 +318,10 @@
                data-route="profile"
                class="nav-link group flex items-center gap-3 px-3 py-2 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors"
                title="Profile" aria-label="Profile">
-                <i data-lucide="user" class="w-[19px] h-[19px] shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"></i>
-                <span class="sidebar-label text-xs font-medium whitespace-nowrap overflow-hidden">Profile</span>
+                <span class="flex items-center gap-3 min-w-0 transition-transform duration-200 ease-out group-hover:-translate-y-0.5 group-hover:translate-x-1">
+                    <i data-lucide="user" class="w-[19px] h-[19px] shrink-0"></i>
+                    <span class="sidebar-label text-xs font-medium whitespace-nowrap overflow-hidden min-w-0">Profile</span>
+                </span>
             </a>
             <form action="{{ route('logout') }}" method="POST" data-turbo="false"
                   data-confirm="Sign out of LayRate?" data-confirm-action="Sign out" data-confirm-severity="neutral">
@@ -325,8 +329,10 @@
                 <button type="submit"
                         class="nav-link group w-full flex items-center gap-3 px-3 py-2 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors"
                         title="Sign out" aria-label="Sign out">
-                    <i data-lucide="log-out" class="w-[19px] h-[19px] shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"></i>
-                    <span class="sidebar-label text-xs font-medium whitespace-nowrap overflow-hidden">Sign out</span>
+                    <span class="flex items-center gap-3 min-w-0 transition-transform duration-200 ease-out group-hover:-translate-y-0.5 group-hover:translate-x-1">
+                        <i data-lucide="log-out" class="w-[19px] h-[19px] shrink-0"></i>
+                        <span class="sidebar-label text-xs font-medium whitespace-nowrap overflow-hidden min-w-0">Sign out</span>
+                    </span>
                 </button>
             </form>
         </div>

@@ -2,16 +2,14 @@
     <div class="grid grid-cols-1 gap-4">
 
         {{-- Feed Today --}}
-        <div class="kpi-card kpi-orange dash-rise relative overflow-hidden rounded-2xl border p-6 cursor-pointer"
+        <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-6 cursor-pointer"
              style="background-color: #ffffff; border-color: #e6e6e6; animation-delay: 140ms;"
              role="link" tabindex="0" aria-label="Go to Feeds"
              data-nav="{{ route('feed') }}">
-            <div class="absolute inset-x-0 top-0 h-1" style="background: linear-gradient(90deg, #d97a3e, #f0b072);"></div>
-            <div class="kpi-glow" style="background: radial-gradient(circle, #d97a3e, transparent 70%);"></div>
             <i data-lucide="wheat" class="kpi-watermark"></i>
             <div class="relative flex items-center justify-between mb-4">
                 <div class="flex items-center gap-3">
-                    <span class="kpi-chip w-10 h-10" style="background: linear-gradient(135deg, #d97a3e, #f0b072);">
+                    <span class="kpi-chip w-10 h-10">
                         <i data-lucide="wheat" class="w-4 h-4"></i>
                     </span>
                     <h3 class="text-base font-semibold" style="color: #1f1f1f;">Feed Today</h3>
@@ -51,16 +49,14 @@
         </div>
 
         {{-- Mortality Today --}}
-        <div class="kpi-card kpi-red dash-rise relative overflow-hidden rounded-2xl border p-6 cursor-pointer"
+        <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-6 cursor-pointer"
              style="background-color: #ffffff; border-color: #e6e6e6; animation-delay: 200ms;"
              role="link" tabindex="0" aria-label="Go to Mortality"
              data-nav="{{ route('chickens.index', ['tab' => 'mortality']) }}">
-            <div class="absolute inset-x-0 top-0 h-1" style="background: linear-gradient(90deg, #9b1c24, #e05c66);"></div>
-            <div class="kpi-glow" style="background: radial-gradient(circle, #9b1c24, transparent 70%);"></div>
             <i data-lucide="heart-crack" class="kpi-watermark"></i>
             <div class="relative flex items-center justify-between mb-4">
                 <div class="flex items-center gap-3">
-                    <span class="kpi-chip w-10 h-10" style="background: linear-gradient(135deg, #9b1c24, #e05c66);">
+                    <span class="kpi-chip w-10 h-10">
                         <i data-lucide="heart-crack" class="w-4 h-4"></i>
                     </span>
                     <h3 class="text-base font-semibold" style="color: #1f1f1f;">Mortality Today</h3>
