@@ -2,6 +2,11 @@
 @section('title', 'Chicken Inventory')
 
 @section('content')
+<style>
+.slot-mini-active { outline: 2px solid #002D5E; outline-offset: 1px; box-shadow: 0 0 0 3px rgba(0,45,94,0.15); }
+.slot-card { cursor: pointer; }
+.slot-card:hover { border-color: #0075de; }
+</style>
 <div class="space-y-5">
 
     <x-page-header title="Chickens" subtitle="Manage hen inventory, movements, and mortality records" />
@@ -333,31 +338,119 @@ function switchTab(tab) {
     }
 }
 
-function toggleCage(btn) {
-    const slots = btn.closest('.bg-white').querySelector('.cage-slots');
-    const chevron = btn.querySelector('.cage-chevron');
-    if (slots.classList.contains('hidden')) {
-        slots.classList.remove('hidden');
-        chevron.style.transform = 'rotate(180deg)';
-    } else {
-        slots.classList.add('hidden');
-        chevron.style.transform = '';
+function switchChickenCage(cageId) {
+    document.querySelectorAll('.cage-overview-card').forEach(function(card) {
+        var isSelected = card.dataset.cageId == cageId;
+        if (isSelected) {
+            card.style.borderColor = '#0075de';
+            card.style.borderWidth = '2px';
+            card.style.backgroundColor = '#f0f7ff';
+        } else {
+            card.style.borderColor = '#e6e6e6';
+            card.style.borderWidth = '1px';
+            card.style.backgroundColor = '#ffffff';
+        }
+    });
+
+    document.querySelectorAll('.cage-grid').forEach(g => g.classList.add('hidden'));
+    document.querySelectorAll('.slot-hens-panel').forEach(p => p.classList.add('hidden'));
+    document.querySelectorAll('.slot-mini').forEach(t => t.classList.remove('slot-mini-active'));
+    document.querySelectorAll('.slot-panel-placeholder').forEach(p => p.classList.remove('hidden'));
+
+    if (cageId) {
+        var target = document.querySelector('.cage-grid[data-cage-id="' + cageId + '"]');
+        if (target) target.classList.remove('hidden');
+    }
+
+    var card = document.querySelector('.cage-overview-card[data-cage-id="' + cageId + '"]');
+    var title = document.getElementById('cageSlotsModalTitle');
+    if (title && card) title.textContent = card.dataset.cageCode || '';
+    var modal = document.getElementById('cageSlotsModal');
+    if (modal) modal.style.display = 'flex';
+    lucide.createIcons();
+}
+
+function closeChickenCageModal() {
+    document.getElementById('cageSlotsModal').style.display = 'none';
+}
+
+function showSlotHens(cageId, slotId) {
+    const card = document.querySelector(`[data-cage-card="${cageId}"]`);
+    if (!card) return;
+    const panels = card.querySelectorAll('.slot-hens-panel');
+    const target = card.querySelector(`[data-slot-hens="${slotId}"]`);
+    if (!target) return;
+    const isOpen = !target.classList.contains('hidden');
+
+    panels.forEach(p => p.classList.add('hidden'));
+    card.querySelectorAll('.slot-mini').forEach(t => t.classList.remove('slot-mini-active'));
+
+    if (!isOpen) {
+        target.classList.remove('hidden');
+        card.querySelector(`[data-slot-tile="${slotId}"]`)?.classList.add('slot-mini-active');
+    }
+    card.querySelectorAll('.slot-panel-placeholder').forEach(p => p.classList.add('hidden'));
+    if (isOpen) {
+        const anyPanelOpen = Array.from(panels).some(p => !p.classList.contains('hidden'));
+        if (!anyPanelOpen) card.querySelectorAll('.slot-panel-placeholder').forEach(p => p.classList.remove('hidden'));
     }
     lucide.createIcons();
 }
 
-function toggleSlot(btn) {
-    const hens = btn.closest('.border-t').querySelector('.slot-hens');
-    const chevron = btn.querySelector('.slot-chevron');
-    if (hens.classList.contains('hidden')) {
-        hens.classList.remove('hidden');
-        chevron.style.transform = 'rotate(180deg)';
-    } else {
-        hens.classList.add('hidden');
-        chevron.style.transform = '';
-    }
+let unplacedPage = 0;
+const UNPLACED_PAGE_SIZE = 4;
+
+function toggleUnplaced() {
+    const list = document.getElementById('unplacedList');
+    const chevron = document.getElementById('unplacedChevron');
+    const pagination = document.getElementById('unplacedPagination');
+    if (!list) return;
+    const isHidden = list.classList.contains('hidden');
+    list.classList.toggle('hidden', !isHidden);
+    if (pagination) pagination.classList.toggle('hidden', !isHidden);
+    if (chevron) chevron.style.transform = isHidden ? 'rotate(90deg)' : '';
     lucide.createIcons();
 }
+
+function initUnplacedPagination() {
+    const list = document.querySelector('[data-unplaced-list]');
+    if (!list) return;
+    const rows = list.querySelectorAll('.unplaced-row');
+    const prevBtn = document.querySelector('[data-unplaced-prev]');
+    const nextBtn = document.querySelector('[data-unplaced-next]');
+    const rangeEl = document.querySelector('[data-unplaced-range]');
+    const totalPages = Math.max(1, Math.ceil(rows.length / UNPLACED_PAGE_SIZE));
+    if (unplacedPage >= totalPages) unplacedPage = totalPages - 1;
+    if (unplacedPage < 0) unplacedPage = 0;
+
+    rows.forEach(row => {
+        const page = Math.floor(parseInt(row.dataset.unplacedIndex, 10) / UNPLACED_PAGE_SIZE);
+        row.classList.toggle('hidden', page !== unplacedPage);
+    });
+
+    if (rangeEl) {
+        const start = unplacedPage * UNPLACED_PAGE_SIZE + 1;
+        const end = Math.min((unplacedPage + 1) * UNPLACED_PAGE_SIZE, rows.length);
+        rangeEl.textContent = `Showing ${start}–${end} of ${rows.length} unplaced`;
+    }
+    if (prevBtn) prevBtn.disabled = unplacedPage <= 0;
+    if (nextBtn) nextBtn.disabled = unplacedPage >= totalPages - 1;
+}
+
+function unplacedPageMove(dir) {
+    unplacedPage += dir;
+    initUnplacedPagination();
+}
+
+document.addEventListener('turbo:frame-load', function(e) {
+    if (e.target && e.target.id === 'chickens-inventory-list') {
+        unplacedPage = 0;
+        initUnplacedPagination();
+    }
+});
+document.addEventListener('DOMContentLoaded', function() {
+    initUnplacedPagination();
+});
 
 function updateBulkBar() {
     const checked = document.querySelectorAll('.hen-checkbox:checked');
@@ -495,5 +588,9 @@ function mortalityAjaxSubmit(form) {
         form.submit();
     });
 }
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeChickenCageModal();
+});
 </script>
 @endpush

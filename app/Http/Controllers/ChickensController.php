@@ -69,7 +69,7 @@ class ChickensController extends Controller
         $search = $request->query('search');
         $sort = $request->query('sort', '');
 
-        $hens = Hen::with(['cageSlot.cage'])
+        $hens = Hen::with(['cageSlot.cage.cageSlots.hardwareItems'])
             ->when($cageId, fn($q) => $q->whereHas('cageSlot', fn($q) => $q->where('cage_id', $cageId)))
             ->when($breed, fn($q) => $q->where('breed', $breed))
             ->when($isActive !== 'all', fn($q) => $q->where('is_active', $isActive === 'active'))

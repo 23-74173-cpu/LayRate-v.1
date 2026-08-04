@@ -783,6 +783,11 @@ class CageController extends Controller
                     'column_number' => $col,
                     'current_occupancy' => 0,
                 ]);
+            } else {
+                $slot->update([
+                    'row_number' => $row,
+                    'column_number' => $col,
+                ]);
             }
 
             if ($slot->current_occupancy > $newMax) {
