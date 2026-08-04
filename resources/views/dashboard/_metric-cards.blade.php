@@ -1,15 +1,15 @@
 <turbo-frame id="dashboard-stats">
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-3">
         {{-- Total Hens --}}
-        <div class="kpi-card kpi-blue dash-rise relative overflow-hidden rounded-2xl border bg-white p-5 cursor-pointer"
+        <div class="kpi-card kpi-yellow dash-rise relative overflow-hidden rounded-2xl border bg-white p-5 cursor-pointer"
              style="border-color: #e6e6e6; animation-delay: 0ms;"
              role="link" tabindex="0" aria-label="Go to Chickens"
              data-nav="{{ route('chickens.index') }}" data-kpi="hens">
-            <div class="absolute inset-x-0 top-0 h-1" style="background: linear-gradient(90deg, #0075de, #62aef0);"></div>
-            <div class="kpi-glow" style="background: radial-gradient(circle, #0075de, transparent 70%);"></div>
+            <div class="absolute inset-x-0 top-0 h-1" style="background: linear-gradient(90deg, #d97706, #fbbf24);"></div>
+            <div class="kpi-glow" style="background: radial-gradient(circle, #d97706, transparent 70%);"></div>
             <i data-lucide="bird" class="kpi-watermark"></i>
             <div class="relative flex items-center justify-between mb-4">
-                <span class="kpi-chip w-11 h-11" style="background: linear-gradient(135deg, #0075de, #62aef0);">
+                <span class="kpi-chip w-11 h-11" style="background: linear-gradient(135deg, #d97706, #fbbf24);">
                     <i data-lucide="bird" class="w-5 h-5"></i>
                 </span>
                 <button type="button" class="p-1 rounded-full hover:bg-black/5 transition-colors"
@@ -18,7 +18,7 @@
                 </button>
             </div>
             <div class="relative">
-                <div class="text-xs font-semibold tracking-[0.125px] uppercase" style="color: #0075de;">Total Hens</div>
+                <div class="text-xs font-semibold tracking-[0.125px] uppercase" style="color: #d97706;">Total Hens</div>
                 <div class="text-[32px] font-bold leading-none tracking-[-1px] text-[#1f1f1f] mt-2 kpi-count" data-target="{{ $totalHens }}">0</div>
                 <div class="text-xs text-[#9CA3AF] mt-2">across {{ $cages->count() }} {{ Str::plural('cage', $cages->count()) }}</div>
             </div>
