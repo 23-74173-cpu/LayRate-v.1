@@ -365,6 +365,17 @@ function switchChickenCage(cageId) {
     var card = document.querySelector('.cage-overview-card[data-cage-id="' + cageId + '"]');
     var title = document.getElementById('cageSlotsModalTitle');
     if (title && card) title.textContent = card.dataset.cageCode || '';
+    var subtitle = document.getElementById('cageSlotsModalSubtitle');
+    if (subtitle && card) {
+        var loc = card.dataset.cageLocation || '';
+        var slots = card.dataset.cageSlots || '';
+        subtitle.textContent = [loc, slots ? slots + ' slots' : ''].filter(Boolean).join(' \u00b7 ') || 'Select a slot to view its hens';
+    }
+    var iconEl = document.getElementById('cageSlotsModalIcon');
+    if (iconEl && card) {
+        iconEl.style.backgroundColor = card.dataset.cageSoft || '#e8f3fe';
+        iconEl.style.color = card.dataset.cageColor || '#0075de';
+    }
     var modal = document.getElementById('cageSlotsModal');
     if (modal) modal.style.display = 'flex';
     lucide.createIcons();
