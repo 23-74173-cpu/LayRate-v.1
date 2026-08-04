@@ -22,10 +22,15 @@
 @endphp
 
 <turbo-frame id="dashboard-calendar">
-<div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+<div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 dash-rise" style="animation-delay: 100ms;">
     {{-- Month / Year header with navigation --}}
     <div class="mb-5">
-        <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Daily Egg Logs</div>
+        <div class="flex items-center gap-2 mb-3">
+            <span class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: #e8f3fe; color: #0075de;">
+                <i data-lucide="calendar-days" class="w-4 h-4"></i>
+            </span>
+            <div class="text-sm font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Daily Egg Logs</div>
+        </div>
 
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div class="flex flex-wrap items-center gap-2">

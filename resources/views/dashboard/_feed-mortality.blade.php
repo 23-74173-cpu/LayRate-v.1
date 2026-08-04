@@ -2,11 +2,21 @@
     <div class="grid grid-cols-1 gap-4">
 
         {{-- Feed Today --}}
-        <div class="kpi-card rounded-xl border p-6 cursor-pointer transition-shadow hover:shadow-md"
-             style="background-color: #ffffff; border-color: #e6e6e6;"
+        <div class="kpi-card kpi-orange dash-rise relative overflow-hidden rounded-2xl border p-6 cursor-pointer"
+             style="background-color: #ffffff; border-color: #e6e6e6; animation-delay: 140ms;"
              role="link" tabindex="0" aria-label="Go to Feeds"
              data-nav="{{ route('feed') }}">
-            <h3 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.5px] mb-4" style="color: #1f1f1f;">Feed Today</h3>
+            <div class="absolute inset-x-0 top-0 h-1" style="background: linear-gradient(90deg, #d97a3e, #f0b072);"></div>
+            <div class="kpi-glow" style="background: radial-gradient(circle, #d97a3e, transparent 70%);"></div>
+            <i data-lucide="wheat" class="kpi-watermark"></i>
+            <div class="relative flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <span class="kpi-chip w-10 h-10" style="background: linear-gradient(135deg, #d97a3e, #f0b072);">
+                        <i data-lucide="wheat" class="w-4 h-4"></i>
+                    </span>
+                    <h3 class="text-base font-semibold" style="color: #1f1f1f;">Feed Today</h3>
+                </div>
+            </div>
             @php $feedCount = $feedToday->count(); @endphp
             <div class="max-h-[340px] overflow-y-auto pr-1 scrollbar-thin">
                 @forelse($feedToday as $cageCode => $feed)
@@ -22,7 +32,7 @@
                         <x-cage-color :cage="$feed->cage" />
                         <span class="text-xs" style="color: #615d59;">{{ number_format($consumed, 0) }} / {{ $total }} kg</span>
                     </div>
-                    <div class="w-full h-1.5 rounded-full overflow-hidden" style="background-color: #f0f0f0;">
+                    <div class="w-full h-1.5 rounded-full overflow-hidden dash-bar" style="background-color: #f0f0f0;">
                         <div class="h-full rounded-full" style="width: {{ $pct }}%; background-color: {{ $fColor }};"></div>
                     </div>
                     <div class="text-xs mt-1 {{ $pct < 80 ? 'text-amber-600' : '' }}" style="color: {{ $pct >= 80 ? '#a39e98' : '' }};">{{ $pct }}% consumed</div>
@@ -41,12 +51,20 @@
         </div>
 
         {{-- Mortality Today --}}
-        <div class="kpi-card rounded-xl border p-6 cursor-pointer transition-shadow hover:shadow-md"
-             style="background-color: #ffffff; border-color: #e6e6e6;"
+        <div class="kpi-card kpi-red dash-rise relative overflow-hidden rounded-2xl border p-6 cursor-pointer"
+             style="background-color: #ffffff; border-color: #e6e6e6; animation-delay: 200ms;"
              role="link" tabindex="0" aria-label="Go to Mortality"
              data-nav="{{ route('chickens.index', ['tab' => 'mortality']) }}">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.5px]" style="color: #1f1f1f;">Mortality Today</h3>
+            <div class="absolute inset-x-0 top-0 h-1" style="background: linear-gradient(90deg, #9b1c24, #e05c66);"></div>
+            <div class="kpi-glow" style="background: radial-gradient(circle, #9b1c24, transparent 70%);"></div>
+            <i data-lucide="heart-crack" class="kpi-watermark"></i>
+            <div class="relative flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <span class="kpi-chip w-10 h-10" style="background: linear-gradient(135deg, #9b1c24, #e05c66);">
+                        <i data-lucide="heart-crack" class="w-4 h-4"></i>
+                    </span>
+                    <h3 class="text-base font-semibold" style="color: #1f1f1f;">Mortality Today</h3>
+                </div>
                 <x-status-badge :status="$mortalityTodayTotal > 0 ? 'Alert' : 'Normal'" type="general" />
             </div>
             @php $mortalityCount = $cages->count(); @endphp

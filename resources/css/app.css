@@ -10,6 +10,90 @@
   animation: pageFadeIn 150ms ease-out forwards;
 }
 
+/* Dashboard card entrance + count-up helpers */
+@keyframes dashRise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.dash-rise { animation: dashRise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@keyframes dashPop {
+  0%   { transform: scale(0.9); opacity: 0; }
+  60%  { transform: scale(1.03); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.dash-pop { animation: dashPop 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* KPI card hover lift */
+.kpi-card {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.kpi-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 36px -12px rgba(20, 30, 60, 0.22);
+}
+.kpi-card:active { transform: translateY(-1px); }
+
+/* Per-metric hover accent border */
+.kpi-blue:hover   { border-color: #62aef0 !important; }
+.kpi-green:hover  { border-color: #62c887 !important; }
+.kpi-orange:hover { border-color: #f0a35e !important; }
+.kpi-purple:hover { border-color: #a99bf0 !important; }
+.kpi-teal:hover   { border-color: #5fc7a4 !important; }
+.kpi-red:hover    { border-color: #e05c66 !important; }
+
+/* KPI icon chip with gradient fill */
+.kpi-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px -4px rgba(20, 30, 60, 0.25);
+  color: #fff;
+}
+
+/* Watermark icon in the corner of KPI cards */
+.kpi-watermark {
+  position: absolute;
+  right: -10px;
+  bottom: -12px;
+  width: 88px;
+  height: 88px;
+  opacity: 0.07;
+  pointer-events: none;
+  transform: rotate(-8deg);
+}
+
+/* Soft radial glow in the card corner */
+.kpi-glow {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 150px;
+  height: 150px;
+  border-radius: 9999px;
+  filter: blur(36px);
+  opacity: 0.16;
+  pointer-events: none;
+}
+
+/* Animated progress bar fill on view */
+@keyframes barGrow {
+  from { width: 0; }
+}
+.dash-bar > div { animation: barGrow 0.9s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* Modern pill tabs */
+.dashboard-tab {
+  border-radius: 9999px;
+  transition: color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+.dashboard-tab-active {
+  background-color: var(--color-primary);
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px -4px rgba(0, 117, 222, 0.45);
+}
+
 @theme {
     --color-canvas-soft: #f6f5f4;
     --color-hairline: #e6e6e6;
