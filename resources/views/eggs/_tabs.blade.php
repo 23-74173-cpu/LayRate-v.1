@@ -22,15 +22,6 @@
     </nav>
 
     {{--
-        Floating Action Button shared by all Egg Management pages. The menu is
-        populated at runtime (see the sync script below) from the hidden
-        templates, so the header stays clean and every tab shows only the
-        actions that apply to it. The FAB sits outside the #egg-content frame,
-        so it survives every frame swap untouched.
-    --}}
-    <x-fab menu-id="egg-fab-menu"></x-fab>
-
-    {{--
         Header sync payloads for tabs that need page-header actions. Kept as
         hidden templates, outside the frame, so they survive every frame swap
         untouched. The sync script below clones the one matching the active
@@ -87,12 +78,16 @@
 
             var menu = document.getElementById(MENU_ID);
             if (!menu) return;
+            var fab = menu.closest('.fab');
             var tpl = document.getElementById('egg-fab-actions-' + activeLink.dataset.tabKey);
-            menu.innerHTML = '';
-            if (tpl) {
-                menu.appendChild(tpl.content.cloneNode(true));
-                if (typeof lucide !== 'undefined') lucide.createIcons({ els: menu.querySelectorAll('[data-lucide]') });
+            if (!tpl) {
+                if (fab) fab.style.display = 'none';
+                return;
             }
+            if (fab) fab.style.display = '';
+            menu.innerHTML = '';
+            menu.appendChild(tpl.content.cloneNode(true));
+            if (typeof lucide !== 'undefined') lucide.createIcons({ els: menu.querySelectorAll('[data-lucide]') });
         }
 
         links.forEach(function(link) {
@@ -128,3 +123,22 @@
     })();
     </script>
 </div>
+
+{{--
+    Floating Action Button shared by all Egg Management pages. The menu is
+    populated at runtime (see the sync script above) from the hidden
+    templates. Rendered OUTSIDE the tabs wrapper (as a direct child of the
+    page's space-y-5, matching the Forecast FAB) because the global entrance
+    animation leaves a retained transform on its space-y-5 children — fill-mode
+    both keeps translateY(0), which creates a fixed-position containing block.
+    Inside that, the FAB is pinned to the tabs row instead of the viewport's
+    bottom-right corner. It sits outside the #egg-content frame, so it survives
+    every frame swap untouched.
+
+    Only the tabs that actually give the FAB menu actions render it (stocks,
+    pre-orders); on the rest the menu would be empty, so the FAB is omitted and
+    the client-side tab sync hides it if one is ever reached via navigation.
+--}}
+@if(in_array($activeTab ?? '', ['stocks', 'preorders']))
+    <x-fab menu-id="egg-fab-menu"></x-fab>
+@endif

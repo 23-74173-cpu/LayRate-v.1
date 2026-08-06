@@ -102,7 +102,7 @@
 
                 <div class="text-center mt-4 pt-4 border-t border-[#D9D9D9]">
                     <a href="{{ route('landing') }}"
-                       class="text-xs text-white/70 hover:text-white transition-colors">
+                       class="text-xs text-black/70 hover:text-black transition-colors">
                         What is LayRate?
                     </a>
                 </div>

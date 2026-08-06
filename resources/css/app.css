@@ -29,7 +29,7 @@
    per-page changes are needed. Hidden modals (display:none) and lazy frames
    are unaffected. */
 .page-wrapper > .space-y-5 > * {
-  animation: dashRise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: dashRise 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 .page-wrapper > .space-y-5 > *:nth-child(1) { animation-delay: 0ms; }
 .page-wrapper > .space-y-5 > *:nth-child(2) { animation-delay: 60ms; }

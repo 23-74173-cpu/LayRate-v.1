@@ -43,7 +43,7 @@ class HardwareItemController extends Controller
             'last_calibration_date' => 'nullable|date',
         ]);
 
-        $validator->after(function ($validator) use ($request) {
+        $validator->after(function ($validator) use ($request, $existing) {
             $data = $validator->validated();
             $deviceType = $data['device_type'] ?? null;
             $cageId = $data['cage_id'] ?? null;
@@ -73,12 +73,12 @@ class HardwareItemController extends Controller
                 }
 
                 if ($deviceType === 'DHT22' && $cageId && $status !== 'spare') {
-                    $existing = HardwareItem::where('device_type', 'DHT22')
+                    $duplicateExists = HardwareItem::where('device_type', 'DHT22')
                         ->where('cage_id', $cageId)
                         ->where('status', 'active')
                         ->when($existing, fn ($q) => $q->where('id', '!=', $existing->id))
                         ->exists();
-                    if ($existing) {
+                    if ($duplicateExists) {
                         $validator->errors()->add('cage_id', 'This cage already has an active DHT22 sensor. Replace or deactivate the existing one first.');
                     }
                 }
