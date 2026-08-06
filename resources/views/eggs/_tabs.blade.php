@@ -14,6 +14,7 @@
             @endphp
             <a href="{{ route($tab['route']) }}" class="{{ $classes }}"
                data-turbo-frame="egg-content"
+               data-turbo-prefetch
                data-tab-key="{{ $key }}" data-subtitle="{{ $tab['subtitle'] }}">
                 <i data-lucide="{{ $tab['icon'] }}" class="w-4 h-4 inline mr-1"></i>
                 {{ $tab['label'] }}
@@ -73,6 +74,17 @@
             });
             if (!activeLink) return;
 
+            // Active-tab highlight must always match the current URL. It is
+            // derived here (on every load/frame-load) instead of being set by a
+            // persistent window flag in the click handler, so returning to the
+            // section via the sidebar or the Back button restores it correctly.
+            links.forEach(function(a) {
+                a.classList.remove('border-[#002D5E]', 'text-[#002D5E]');
+                a.classList.add('border-transparent', 'text-[#6B7280]', 'hover:text-[#333]');
+            });
+            activeLink.classList.remove('border-transparent', 'text-[#6B7280]', 'hover:text-[#333]');
+            activeLink.classList.add('border-[#002D5E]', 'text-[#002D5E]');
+
             var subtitleEl = document.getElementById('egg-header-subtitle');
             if (subtitleEl) subtitleEl.textContent = activeLink.dataset.subtitle;
 
@@ -90,14 +102,15 @@
             if (typeof lucide !== 'undefined') lucide.createIcons({ els: menu.querySelectorAll('[data-lucide]') });
         }
 
+        // NOTE: no preventDefault() / persistent flag here. A window-level
+        // __eggActiveTab flag survives Turbo visits, so a later click on the
+        // same tab (after returning via the sidebar or the Back button) was
+        // swallowed by preventDefault and the page never loaded. The
+        // history.replaceState keeps the address bar in sync (Turbo frame
+        // visits in this app don't update the URL themselves); Turbo drives
+        // the frame content swap.
         links.forEach(function(link) {
             link.addEventListener('click', function(e) {
-                if (window.__eggActiveTab === this.getAttribute('href')) {
-                    e.preventDefault();
-                    return;
-                }
-                window.__eggActiveTab = this.getAttribute('href');
-
                 links.forEach(function(a) {
                     a.classList.remove('border-[#002D5E]', 'text-[#002D5E]');
                     a.classList.add('border-transparent', 'text-[#6B7280]', 'hover:text-[#333]');

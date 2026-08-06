@@ -61,6 +61,16 @@
                 @empty
                 <tr><td colspan="7" class="px-5 py-10 text-center text-sm text-[#6B7280]">No stock batches yet.</td></tr>
                 @endforelse
+                @if($batches->count() > 0)
+                {{-- Blank filler rows so a short last page still holds the full
+                     table height (perPage rows). Filled rows reduce these blanks
+                     as real batches are added. --}}
+                @for($i = 0; $i < $batches->perPage() - $batches->count(); $i++)
+                <tr class="empty-filler-row" aria-hidden="true">
+                    <td colspan="7" class="px-5 py-3.5">&nbsp;</td>
+                </tr>
+                @endfor
+                @endif
             </tbody>
         </table>
         </div>

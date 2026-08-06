@@ -47,7 +47,7 @@
     </div>
 
     {{-- ── Stock Table ── --}}
-    <turbo-frame id="eggs-stocks-live-data" src="{{ route('eggs.stocks.live-data') }}" loading="lazy" target="_top" class="block">
+    <turbo-frame id="eggs-stocks-live-data" src="{{ route('eggs.stocks.live-data') }}" loading="lazy" class="block">
         @include('eggs.stocks._live-data-skeleton')
     </turbo-frame>
 

@@ -30,7 +30,7 @@ class EggStockController extends Controller
         $batches = EggStockBatch::with(['cage', 'cageSlot', 'sourceProductionLog.cageSlot.cage'])
             ->orderByDesc('harvested_date')
             ->orderByDesc('created_at')
-            ->paginate(20)
+            ->paginate(5)
             ->withQueryString();
 
         $availablePools = EggStockBatch::getAvailablePools();
