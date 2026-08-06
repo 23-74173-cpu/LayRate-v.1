@@ -35,7 +35,7 @@ class PreOrderController extends Controller
             $query->where('requested_date', '<=', $toFilter);
         }
 
-        $orders = $query->paginate(20)->withQueryString();
+        $orders = $query->paginate(5)->withQueryString();
 
         return view('eggs.pre-orders._table', [
             'orders' => $orders,

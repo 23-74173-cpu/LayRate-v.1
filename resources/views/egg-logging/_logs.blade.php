@@ -78,6 +78,14 @@
                 @empty
                 <tr><td colspan="11" class="px-5 py-10 text-center text-sm" style="color: #a39e98;">No logs yet. Select a slot and save the first record.</td></tr>
                 @endforelse
+                @if($logs->count() > 0)
+                {{-- Blank filler rows to keep the table at a consistent height (perPage rows). --}}
+                @for($i = 0; $i < $logs->perPage() - $logs->count(); $i++)
+                <tr class="empty-filler-row" aria-hidden="true">
+                    <td colspan="11" class="px-5 py-3.5">&nbsp;</td>
+                </tr>
+                @endfor
+                @endif
             </tbody>
         </table>
     </div>

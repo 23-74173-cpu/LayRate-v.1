@@ -58,6 +58,14 @@
                 @empty
                 <tr><td colspan="8" class="px-5 py-10 text-center text-sm text-[#6B7280]">No pre-orders yet.</td></tr>
                 @endforelse
+                @if($orders->count() > 0)
+                {{-- Blank filler rows to keep the table at a consistent height (perPage rows). --}}
+                @for($i = 0; $i < $orders->perPage() - $orders->count(); $i++)
+                <tr class="empty-filler-row" aria-hidden="true">
+                    <td colspan="8" class="px-5 py-3.5">&nbsp;</td>
+                </tr>
+                @endfor
+                @endif
             </tbody>
         </table>
         </div>

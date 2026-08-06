@@ -117,6 +117,14 @@
                         <td class="px-5 py-3.5 text-sm text-right font-mono" style="color: #615d59;">{{ number_format($row['cumulative']) }}</td>
                     </tr>
                     @endforeach
+                    @if($timeline->count() > 0)
+                    {{-- Blank filler rows to keep the table at a consistent height (perPage rows). --}}
+                    @for($i = 0; $i < $timeline->perPage() - $timeline->count(); $i++)
+                    <tr class="empty-filler-row" aria-hidden="true">
+                        <td colspan="4" class="px-5 py-3.5">&nbsp;</td>
+                    </tr>
+                    @endfor
+                    @endif
                 </tbody>
             </table>
             <x-paginator :paginator="$timeline" />

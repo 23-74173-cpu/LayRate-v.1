@@ -92,7 +92,7 @@ class EggLoggingController extends Controller
     {
         $filters = $this->logFilters($request);
         $logsQuery = $this->buildFilteredLogsQuery($request);
-        $logs = $logsQuery->paginate(20)->withQueryString();
+        $logs = $logsQuery->paginate(5)->withQueryString();
 
         return view('egg-logging._logs', compact('logs', 'filters'));
     }

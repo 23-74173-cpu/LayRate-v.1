@@ -66,7 +66,7 @@ class EggProductionHistoryController extends Controller
         ));
     }
 
-    private function paginateCollection($items, Request $request, int $perPage = 30): LengthAwarePaginator
+    private function paginateCollection($items, Request $request, int $perPage = 5): LengthAwarePaginator
     {
         $page  = LengthAwarePaginator::resolveCurrentPage();
         $slice = $items->slice(($page - 1) * $perPage, $perPage)->values();
