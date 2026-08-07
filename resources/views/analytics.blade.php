@@ -9,6 +9,14 @@
 
     {{-- ── Cage Selector ── --}}
     <div class="flex items-center gap-0 border-b overflow-x-auto scrollbar-thin" style="border-color: #e6e6e6;">
+        @php $isPerfTab = $isPerformance; @endphp
+        <a href="{{ route('analytics', ['cage'=>'performance','period'=>$period]) }}"
+           data-cage-tab="performance"
+           class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0"
+           style="border-bottom-color: {{ $isPerfTab ? '#002D5E' : 'transparent' }}; color: {{ $isPerfTab ? '#1f1f1f' : '#6B7280' }};">
+            <i data-lucide="gauge" class="w-3.5 h-3.5 inline-block mr-1.5"></i>
+            Performance
+        </a>
         <a href="{{ route('analytics', ['cage'=>'all','period'=>$period]) }}"
            data-cage-tab="all"
            class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0"
@@ -28,7 +36,8 @@
         @endforeach
     </div>
 
-    {{-- ── Summary KPI Cards ── --}}
+    {{-- ── Summary KPI Cards (hidden on the Performance tab) ── --}}
+    @if(!$isPerformance)
     @php $kpiColor = $isAll ? '#333333' : $cage->color; @endphp
     <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
@@ -56,6 +65,7 @@
             <div id="kpi-flock-age" class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $isAll ? '—' : ($cage->hens->first() ? $cage->hens->first()->current_age_weeks . ' wks' : '—') }}</div>
         </div>
     </div>
+    @endif
 
     {{-- ── Period Selector ── --}}
     <div class="flex items-center gap-0 border-b overflow-x-auto scrollbar-thin" style="border-color: #e6e6e6;">
@@ -294,7 +304,7 @@ function whenAnalyticsFrameReady(cb) {
 // falls back to the 'all'/'week' defaults instead of the just-selected tab. Root
 // cause of "clicked CAGE-A then Month, ended up rendering All Cages' data".
 var __analyticsPeriod = (new URLSearchParams(window.location.search)).get('period') || 'week';
-var __analyticsCage = (new URLSearchParams(window.location.search)).get('cage') || 'all';
+var __analyticsCage = (new URLSearchParams(window.location.search)).get('cage') || 'performance';
 
 // Lets LayRateChart's self-heal (layouts/app.blade.php) recover a chart that failed
 // to paint by re-running the exact same path a manual tab click would. Live-tested
@@ -307,6 +317,7 @@ var __analyticsCage = (new URLSearchParams(window.location.search)).get('cage') 
 // current __analyticsCage, not a stale one from a prior render.
 if (window.LayRateChart) {
     window.LayRateChart.registerRecoveryHook(function() {
+        if (__analyticsCage === 'performance') return; // no charts to heal in Performance mode
         var cageTab = document.querySelector('[data-cage-tab="' + __analyticsCage + '"]');
         if (!cageTab) return;
         __analyticsCage = '__layratechart_recovery__';
@@ -326,6 +337,9 @@ if (!window.__analyticsListenersBound) {
     document.addEventListener('click', function(e) {
         var tab = e.target.closest('[data-period-tab]');
         if (!tab) return;
+        // Performance mode uses full-page navigation (HTML links carry ?cage=performance)
+        // rather than the per-cage AJAX charts.
+        if (__analyticsCage === 'performance') return;
         e.preventDefault();
         var period = tab.dataset.periodTab;
         if (period === __analyticsPeriod) return;
@@ -357,7 +371,7 @@ if (!window.__analyticsListenersBound) {
         var frameSrc = frame.getAttribute('src');
         if (!frameSrc) return;
         var params = new URLSearchParams(window.location.search);
-        var urlCage = params.get('cage') || 'all';
+        var urlCage = params.get('cage') || 'performance';
         var urlPeriod = params.get('period') || 'week';
         var frameUrl = new URL(frameSrc, window.location.origin);
         if (frameUrl.searchParams.get('cage') !== urlCage || frameUrl.searchParams.get('period') !== urlPeriod) {
@@ -371,6 +385,10 @@ if (!window.__analyticsListenersBound) {
     document.addEventListener('click', function(e) {
         var tab = e.target.closest('[data-cage-tab]');
         if (!tab) return;
+        // Performance mode uses full-page navigation (its links carry ?cage=performance)
+        // rather than the per-cage AJAX charts; also let period links inside the
+        // Performance view navigate normally.
+        if (tab.dataset.cageTab === 'performance' || __analyticsCage === 'performance') return;
         e.preventDefault();
         if (tab.dataset.cageTab === __analyticsCage) return;
 

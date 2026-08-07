@@ -14,12 +14,14 @@ class AnalyticsController extends Controller
     {
         $period   = $request->get('period', 'week');
 
-        $allCages = Cage::orderBy('cage_code')->get();
+        $allCages = Cage::with(['hens' => fn($q) => $q->where('is_active', 1)])
+            ->orderBy('cage_code')
+            ->get();
         if ($allCages->isEmpty()) {
             return ['redirect' => redirect()->route('dashboard')->with('error', 'No cages configured. Create a cage first.')];
         }
 
-        $cageCode = $request->get('cage', 'all');
+        $cageCode = $request->get('cage', 'performance');
 
         $days = match($period) {
             'month'   => 30,
@@ -28,6 +30,43 @@ class AnalyticsController extends Controller
         };
 
         $isAll = $cageCode === 'all';
+        $isPerformance = $cageCode === 'performance';
+
+        if ($isPerformance) {
+            $rows = ProductionLog::join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
+                ->join('cages', 'cages.id', '=', 'cage_slots.cage_id')
+                ->where('production_logs.log_date', '>=', now()->subDays($days))
+                ->groupBy('cages.id', 'cages.cage_code')
+                ->selectRaw('cages.id, cages.cage_code, ROUND(AVG(production_logs.hdep), 2) AS avg_hdep, COALESCE(SUM(production_logs.egg_count), 0) AS total_eggs')
+                ->orderByDesc('avg_hdep')
+                ->orderByDesc('total_eggs')
+                ->get();
+
+            $performance = $rows->map(function (object $r, int $i) use ($allCages): array {
+                $cage = $allCages->firstWhere('id', $r->id);
+                return [
+                    'rank'       => $i + 1,
+                    'cage_code'  => $r->cage_code,
+                    'color'      => $cage?->color ?? '#6B7280',
+                    'breed'      => ($cage && $cage->hens->isNotEmpty()) ? $cage->hens->first()->breed : '—',
+                    'avg_hdep'   => $r->avg_hdep !== null ? round((float) $r->avg_hdep, 1) : null,
+                    'total_eggs' => (int) $r->total_eggs,
+                ];
+            })->values();
+
+            $topEggsCage = $rows->isNotEmpty()
+                ? optional($rows->sortByDesc('total_eggs')->first())->cage_code
+                : null;
+
+            $cage = null;
+            $logs = collect();
+            $feedLogs = collect();
+            $avgHdep = '-';
+            $bestDay = '-';
+            $worstDay = '-';
+
+            return compact('cage', 'cageCode', 'period', 'logs', 'feedLogs', 'avgHdep', 'bestDay', 'worstDay', 'allCages', 'isAll', 'isPerformance', 'days', 'performance', 'topEggsCage');
+        }
 
         if ($isAll) {
             $cageIds = $allCages->pluck('id');
@@ -65,8 +104,11 @@ class AnalyticsController extends Controller
         $avgHdep  = $logs->count() ? round($logs->avg('hdep'), 1) : '-';
         $bestDay  = $logs->count() ? round($logs->max('hdep'), 1) : '-';
         $worstDay = $logs->count() ? round($logs->min('hdep'), 1) : '-';
+        $isPerformance = false;
+        $performance = collect();
+        $topEggsCage = null;
 
-        return compact('cage', 'cageCode', 'period', 'logs', 'feedLogs', 'avgHdep', 'bestDay', 'worstDay', 'allCages', 'isAll');
+        return compact('cage', 'cageCode', 'period', 'logs', 'feedLogs', 'avgHdep', 'bestDay', 'worstDay', 'allCages', 'isAll', 'isPerformance', 'days', 'performance', 'topEggsCage');
     }
 
     public function index(Request $request)
@@ -82,6 +124,10 @@ class AnalyticsController extends Controller
         $data = $this->cageOrAll($request);
         if (isset($data['redirect'])) return response('', 422);
 
+        if (($data['isPerformance'] ?? false)) {
+            return view('analytics._performance', $data);
+        }
+
         return view('analytics._charts', $data);
     }
 
@@ -89,6 +135,19 @@ class AnalyticsController extends Controller
     {
         $d = $this->cageOrAll($request);
         if (isset($d['redirect'])) return response()->json(['error' => 'No cages configured'], 422);
+
+        if (($d['isPerformance'] ?? false)) {
+            return response()->json([
+                'mode'       => 'performance',
+                'period'     => $d['period'],
+                'days'       => $d['days'],
+                'performance' => collect($d['performance'])->map(fn($p) => array_merge($p, [
+                    'avg_hdep'   => $p['avg_hdep'] === null ? null : (float) $p['avg_hdep'],
+                    'total_eggs' => (int) $p['total_eggs'],
+                ])),
+                'topEggsCage' => $d['topEggsCage'],
+            ]);
+        }
 
         $cageColor = $d['isAll'] ? '#002D5E' : $d['cage']->color;
 
