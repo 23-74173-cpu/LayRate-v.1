@@ -103,12 +103,12 @@ class DashboardController extends Controller
 
         // Attach today's stats to each cage
         $cages->each(function ($cage) use ($today) {
-            $todayLog = $cage->productionLogs->where('log_date', $today)->first();
-            $cage->today_hdep = $todayLog?->hdep ?? ($cage->latestProductionLog()?->hdep ?? 0);
             $cage->today_eggs = $cage->productionLogs
                 ->filter(fn ($l) => $l->log_date && $l->log_date->toDateString() === $today)
                 ->sum('egg_count');
             $cage->hen_count = $cage->hens->count();
+            // HDEP today = eggs collected again ÷ hens in the cage, as a percentage
+            $cage->today_hdep = $cage->hen_count > 0 ? round($cage->today_eggs / $cage->hen_count * 100, 1) : 0;
             $cage->breed = $cage->hens->first()?->breed ?? '—';
             $cage->has_sensor = $cage->cageSlots->contains(fn ($s) => $s->hasBreakbeam()) || $cage->hasDht22();
             $cage->sensor_status = $this->sensorStatusText($cage);
@@ -118,9 +118,8 @@ class DashboardController extends Controller
         if ($cageCode) {
             $totalHens = $cages->sum('hen_count');
             $todayLogs = $cages->flatMap->productionLogs->where('log_date', $today);
-            $todayHdep = $todayLogs->count()
-                ? round($todayLogs->avg('hdep'), 1)
-                : round($cages->avg('today_hdep'), 1);
+            // HDEP today = eggs collected today ÷ all hens in the selected cages, as a percentage
+            $todayHdep = $totalHens > 0 ? round($cages->sum('today_eggs') / $totalHens * 100, 1) : 0;
             $yesterdayLogs = $cages->flatMap->productionLogs->where('log_date', now()->subDay()->toDateString());
             $yesterdayHdep = $yesterdayLogs->count() ? round($yesterdayLogs->avg('hdep'), 1) : 0;
             $hdepDelta = round($todayHdep - $yesterdayHdep, 1);
@@ -129,9 +128,8 @@ class DashboardController extends Controller
         } else {
             $totalHens = \App\Models\Hen::where('is_active', 1)->count();
             $todayLogs = ProductionLog::whereDate('log_date', $today)->get();
-            $todayHdep = $todayLogs->count()
-                ? round($todayLogs->avg('hdep'), 1)
-                : round($cages->sum(fn ($c) => $c->today_hdep) / max($cages->count(), 1), 1);
+            // HDEP today = eggs collected today ÷ all hens in the cages, as a percentage
+            $todayHdep = $totalHens > 0 ? round($todayLogs->sum('egg_count') / $totalHens * 100, 1) : 0;
             $yesterdayLogs = ProductionLog::whereDate('log_date', now()->subDay()->toDateString())->get();
             $yesterdayHdep = $yesterdayLogs->count() ? round($yesterdayLogs->avg('hdep'), 1) : 0;
             $hdepDelta = round($todayHdep - $yesterdayHdep, 1);
