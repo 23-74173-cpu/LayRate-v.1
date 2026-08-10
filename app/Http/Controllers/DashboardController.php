@@ -105,7 +105,9 @@ class DashboardController extends Controller
         $cages->each(function ($cage) use ($today) {
             $todayLog = $cage->productionLogs->where('log_date', $today)->first();
             $cage->today_hdep = $todayLog?->hdep ?? ($cage->latestProductionLog()?->hdep ?? 0);
-            $cage->today_eggs = $todayLog?->egg_count ?? ($cage->latestProductionLog()?->egg_count ?? 0);
+            $cage->today_eggs = $cage->productionLogs
+                ->filter(fn ($l) => $l->log_date && $l->log_date->toDateString() === $today)
+                ->sum('egg_count');
             $cage->hen_count = $cage->hens->count();
             $cage->breed = $cage->hens->first()?->breed ?? '—';
             $cage->has_sensor = $cage->cageSlots->contains(fn ($s) => $s->hasBreakbeam()) || $cage->hasDht22();

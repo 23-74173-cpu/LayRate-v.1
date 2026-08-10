@@ -39,6 +39,22 @@
                 </div>
             </div>
 
+            {{-- ── Comparison bar charts with value-on-top labels ── --}}
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-5">
+                <div class="rounded-lg border border-[#D9D9D9] p-5">
+                    <div class="text-xs tracking-wider text-[#6B7280] mb-4">AVG HDEP BY CAGE — {{ $daysLabel }}-DAY</div>
+                    <div class="relative w-full h-[220px]">
+                        <canvas id="perfHdepChart" style="width: 100%; height: 100%; display: block;"></canvas>
+                    </div>
+                </div>
+                <div class="rounded-lg border border-[#D9D9D9] p-5">
+                    <div class="text-xs tracking-wider text-[#6B7280] mb-4">TOTAL EGGS COLLECTED BY CAGE — {{ $daysLabel }}-DAY</div>
+                    <div class="relative w-full h-[220px]">
+                        <canvas id="perfEggsChart" style="width: 100%; height: 100%; display: block;"></canvas>
+                    </div>
+                </div>
+            </div>
+
             <div class="overflow-x-auto rounded-lg border border-[#D9D9D9]">
                 <table class="w-full text-left border-collapse">
                     <thead>
@@ -122,6 +138,84 @@
                 try { window.lucide.createIcons(); } catch (e2) {}
             }
         });
+    }
+
+    // ── Comparison bar charts (avg HDEP & total eggs) with value-on-top labels ──
+    var perfData = @json($performance);
+    var perfLabels = perfData.map(function (p) { return p.cage_code; });
+    var perfHdeps = perfData.map(function (p) { return p.avg_hdep; });
+    var perfEggs = perfData.map(function (p) { return p.total_eggs; });
+    var perfColors = perfData.map(function (p) { return p.color; });
+
+    // Inline Chart.js plugin that draws each bar's value right above it.
+    function perfValueLabelPlugin() {
+        return {
+            id: 'perfValueLabels',
+            afterDatasetsDraw: function (chart) {
+                var ctx = chart.ctx;
+                chart.data.datasets.forEach(function (ds, di) {
+                    var meta = chart.getDatasetMeta(di);
+                    if (!meta.data || !meta.data.length) return;
+                    meta.data.forEach(function (bar, i) {
+                        var v = ds.data[i];
+                        if (v === null || v === undefined) return;
+                        ctx.save();
+                        ctx.font = '600 11px Inter, system-ui, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'bottom';
+                        ctx.fillStyle = '#1f1f1f';
+                        ctx.fillText(String(v), bar.x, bar.y - 5);
+                        ctx.restore();
+                    });
+                });
+            }
+        };
+    }
+
+    var perfGridColor = '#F0F0EC';
+    function perfBarOpts() {
+        return {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: { top: 16 } },
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+                y: { beginAtZero: true, grid: { color: perfGridColor }, ticks: { font: { size: 10 } } }
+            }
+        };
+    }
+
+    // Global so LayRateChart self-heal (layouts/app.blade.php) can rebuild these when a
+    // bar chart fails to paint (recovery already reloaded the Chart.js library).
+    window.renderPerformanceCharts = function () {
+        LayRateChart.create('perfHdepChart', {
+            type: 'bar',
+            data: { labels: perfLabels, datasets: [{ data: perfHdeps, backgroundColor: perfColors, borderRadius: 3 }] },
+            options: perfBarOpts(),
+            plugins: [perfValueLabelPlugin()]
+        });
+        LayRateChart.create('perfEggsChart', {
+            type: 'bar',
+            data: { labels: perfLabels, datasets: [{ data: perfEggs, backgroundColor: perfColors, borderRadius: 3 }] },
+            options: perfBarOpts(),
+            plugins: [perfValueLabelPlugin()]
+        });
+    };
+
+    // Initial render through the standard prepareForRender path (generation-guarded).
+    function doPerfRender() {
+        if (typeof window.renderPerformanceCharts === 'function') window.renderPerformanceCharts();
+    }
+    if (window.LayRateChart && typeof window.LayRateChart.prepareForRender === 'function') {
+        var perfPending = window.LayRateChart.prepareForRender();
+        var perfGen = window.LayRateChart._generation;
+        perfPending.then(function () {
+            if (window.LayRateChart._generation !== perfGen) return; // superseded
+            doPerfRender();
+        });
+    } else {
+        doPerfRender();
     }
     </script>
 </turbo-frame>

@@ -317,7 +317,14 @@ var __analyticsCage = (new URLSearchParams(window.location.search)).get('cage') 
 // current __analyticsCage, not a stale one from a prior render.
 if (window.LayRateChart) {
     window.LayRateChart.registerRecoveryHook(function() {
-        if (__analyticsCage === 'performance') return; // no charts to heal in Performance mode
+        if (__analyticsCage === 'performance') {
+            // Performance mode has no AJAX flow — the recovery path has already reloaded
+            // the Chart.js library, so rebuild its static comparison bars directly.
+            if (typeof window.renderPerformanceCharts === 'function') {
+                window.renderPerformanceCharts();
+            }
+            return;
+        }
         var cageTab = document.querySelector('[data-cage-tab="' + __analyticsCage + '"]');
         if (!cageTab) return;
         __analyticsCage = '__layratechart_recovery__';
