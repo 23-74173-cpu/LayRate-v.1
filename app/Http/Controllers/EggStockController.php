@@ -81,21 +81,21 @@ class EggStockController extends Controller
 
     public function index()
     {
-        $batches = EggStockBatch::with(['cage', 'cageSlot', 'sourceProductionLog.cageSlot.cage'])
-            ->orderByDesc('harvested_date')
-            ->orderByDesc('created_at')
-            ->get();
-
         $sizes = ['small', 'medium', 'large', 'jumbo', 'unsorted'];
+
+        $totalsBySize = EggStockBatch::selectRaw('egg_size, SUM(count) as total')
+            ->groupBy('egg_size')
+            ->pluck('total', 'egg_size');
 
         $totals = [];
         $trayTotals = [];
         foreach ($sizes as $size) {
-            $totals[$size] = $batches->where('egg_size', $size)->sum('count');
+            $totals[$size] = (int) ($totalsBySize[$size] ?? 0);
             $trayTotals[$size] = (int) ceil($totals[$size] / 30);
         }
 
-        $productionLogs = ProductionLog::with(['cageSlot.cage'])
+        $productionLogs = ProductionLog::select('id', 'cage_slot_id', 'log_date')
+            ->with(['cageSlot.cage:id,cage_code'])
             ->where('log_date', '>=', now()->subDays(30)->toDateString())
             ->orderByDesc('log_date')
             ->get()
@@ -115,7 +115,6 @@ class EggStockController extends Controller
         return view('eggs.stocks', [
             'activeTab' => 'stocks',
             'editBatch' => $editBatch,
-            'batches' => $batches,
             'totals' => $totals,
             'trayTotals' => $trayTotals,
             'availablePools' => $availablePools,

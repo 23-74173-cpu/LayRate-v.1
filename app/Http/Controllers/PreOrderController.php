@@ -67,20 +67,32 @@ class PreOrderController extends Controller
         $orders = $query->paginate(20)->withQueryString();
 
         $sizes = ['small', 'medium', 'large', 'jumbo'];
+
+        $loggedBySize = EggSizeLog::selectRaw('egg_size, SUM(count) as total')
+            ->groupBy('egg_size')
+            ->pluck('total', 'egg_size');
+        $stockedBySize = EggStockBatch::selectRaw('egg_size, SUM(count) as total')
+            ->groupBy('egg_size')
+            ->pluck('total', 'egg_size');
+        $committedBySize = PreOrder::where('status', 'pending')
+            ->selectRaw('egg_size, SUM(egg_count) as total')
+            ->groupBy('egg_size')
+            ->pluck('total', 'egg_size');
+        $forecastedBySize = $this->forecastSizes();
+
         $summary = [];
 
         foreach ($sizes as $size) {
-            $logged = EggSizeLog::where('egg_size', $size)->sum('count');
-            $stocked = EggStockBatch::where('egg_size', $size)->sum('count');
-            $committed = PreOrder::where('egg_size', $size)->where('status', 'pending')->sum('egg_count');
-            $forecasted = $this->forecastSize($size);
+            $logged = (int) ($loggedBySize[$size] ?? 0);
+            $stocked = (int) ($stockedBySize[$size] ?? 0);
+            $committed = (int) ($committedBySize[$size] ?? 0);
             $pool = $stocked - $committed;
 
             $summary[$size] = [
                 'logged' => $logged,
                 'stocked' => $stocked,
                 'committed' => $committed,
-                'forecasted' => $forecasted,
+                'forecasted' => $forecastedBySize[$size],
                 'available' => max(0, $pool),
                 'deficit' => $pool < 0 ? abs($pool) : 0,
             ];
@@ -198,13 +210,15 @@ class PreOrderController extends Controller
     }
 
     /**
-     * Forecast eggs for a given size over the next 7 days.
+     * Forecast eggs for each size over the next 7 days.
      * Uses ForecastController's algorithm: average last 14 days HDEP × total active hens,
      * then distribute proportionally across sizes based on egg_size_logs distribution.
      * If egg_size_logs is empty, assumes equal 25% split per size.
      */
-    private function forecastSize(string $size): int
+    private function forecastSizes(): array
     {
+        $sizes = ['small', 'medium', 'large', 'jumbo'];
+
         $historical = ProductionLog::selectRaw('log_date, SUM(egg_count) as egg_count, SUM(hen_count) as hen_count')
             ->groupBy('log_date')
             ->orderByDesc('log_date')
@@ -212,7 +226,7 @@ class PreOrderController extends Controller
             ->get();
 
         if ($historical->isEmpty()) {
-            return 0;
+            return array_fill_keys($sizes, 0);
         }
 
         $avgHdep = $historical->avg(function ($row) {
@@ -225,7 +239,12 @@ class PreOrderController extends Controller
 
         $sizeDistribution = $this->getSizeDistribution();
 
-        return (int) round($sevenDayTotal * $sizeDistribution[$size]);
+        $forecastedBySize = [];
+        foreach ($sizes as $size) {
+            $forecastedBySize[$size] = (int) round($sevenDayTotal * $sizeDistribution[$size]);
+        }
+
+        return $forecastedBySize;
     }
 
     /**
@@ -235,7 +254,11 @@ class PreOrderController extends Controller
     private function getSizeDistribution(): array
     {
         $sizes = ['small', 'medium', 'large', 'jumbo'];
-        $total = \App\Models\EggSizeLog::sum('count');
+
+        $counts = EggSizeLog::selectRaw('egg_size, SUM(count) as total')
+            ->groupBy('egg_size')
+            ->pluck('total', 'egg_size');
+        $total = array_sum(array_map('intval', $counts->all()));
 
         if ($total === 0) {
             return array_fill_keys($sizes, 0.25);
@@ -243,8 +266,7 @@ class PreOrderController extends Controller
 
         $distribution = [];
         foreach ($sizes as $size) {
-            $sizeCount = \App\Models\EggSizeLog::where('egg_size', $size)->sum('count');
-            $distribution[$size] = $sizeCount / $total;
+            $distribution[$size] = ((int) ($counts[$size] ?? 0)) / $total;
         }
 
         return $distribution;
