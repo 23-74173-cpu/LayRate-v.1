@@ -201,11 +201,16 @@ void handleCommandLine(const char* line) {
     Serial.println("CFM:RELAY:OK");
   } else if (strncmp(line, "THRESH:", 7) == 0) {
     // App-configured AUTO hysteresis thresholds from the bridge.
+    // Parsed with strtod rather than sscanf "%f" — the AVR toolchain does not
+    // link float scanf support by default, so %f silently parsed nothing.
     // Validation keeps the pair sane: ON strictly above OFF and both within a
     // plausible ambient range, so a malformed command can't break the fan.
-    float onT = 0.0, offT = 0.0;
-    int matched = sscanf(line + 7, "%f:%f", &onT, &offT);
-    if (matched == 2 && onT > offT && onT >= 5.0 && onT <= 60.0 && offT >= -10.0) {
+    char* end1 = NULL;
+    char* end2 = NULL;
+    float onT  = strtod(line + 7, &end1);
+    float offT = (end1 != line + 7 && *end1 == ':') ? strtod(end1 + 1, &end2) : 0.0f;
+    bool parsed = (end1 != line + 7 && *end1 == ':' && end2 != end1 + 1);
+    if (parsed && onT > offT && onT >= 5.0 && onT <= 60.0 && offT >= -10.0) {
       relayOnTemp  = onT;
       relayOffTemp = offT;
       Serial.println("CFM:THRESH:OK");

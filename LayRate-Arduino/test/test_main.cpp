@@ -56,6 +56,26 @@ static void test_invalid_thresh_is_rejected_and_keeps_last_values(void) {
     TEST_ASSERT(strstr(Serial.buffer, "CFM:THRESH:INVALID") != NULL);
 }
 
+static void test_malformed_thresh_is_rejected(void) {
+    handleCommandLine("THRESH:31.0:26.0");
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 31.0f, relayOnTemp);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 26.0f, relayOffTemp);
+
+    // Truncated: only one value — must be rejected, values unchanged.
+    Serial.reset();
+    handleCommandLine("THRESH:31.0");
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 31.0f, relayOnTemp);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 26.0f, relayOffTemp);
+    TEST_ASSERT(strstr(Serial.buffer, "CFM:THRESH:INVALID") != NULL);
+
+    // Non-numeric — rejected.
+    Serial.reset();
+    handleCommandLine("THRESH:abc:def");
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 31.0f, relayOnTemp);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 26.0f, relayOffTemp);
+    TEST_ASSERT(strstr(Serial.buffer, "CFM:THRESH:INVALID") != NULL);
+}
+
 static void test_hysteresis_uses_runtime_thresholds(void) {
     // Set an explicit pair so the test is independent of test execution order.
     handleCommandLine("THRESH:35.0:30.0"); // the boot-default equivalent
@@ -91,6 +111,7 @@ int main(void) {
     RUN_TEST(test_boot_defaults_match_historical_thresholds);
     RUN_TEST(test_thresh_command_updates_thresholds);
     RUN_TEST(test_invalid_thresh_is_rejected_and_keeps_last_values);
+    RUN_TEST(test_malformed_thresh_is_rejected);
     RUN_TEST(test_hysteresis_uses_runtime_thresholds);
     RUN_TEST(test_relay_commands_still_work_alongside_thresh);
     return UNITY_END();
