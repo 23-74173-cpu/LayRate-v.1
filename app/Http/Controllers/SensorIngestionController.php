@@ -46,6 +46,8 @@ class SensorIngestionController extends Controller
             'readings.*.temperature_c' => ['nullable', 'numeric'],
             'readings.*.humidity_pct' => ['nullable', 'numeric'],
             'readings.*.count' => ['nullable', 'integer', 'min:0'],
+            'readings.*.relay_status' => ['nullable', 'string', Rule::in(['on', 'off'])],
+            'readings.*.relay_safety' => ['nullable', 'boolean'],
             'recorded_at' => ['required', 'date'],
         ]);
 
@@ -206,6 +208,73 @@ class SensorIngestionController extends Controller
                         'type' => 'occupancy',
                         'cage_slot_id' => $slot->id,
                         'mismatch' => $reportedCount !== $actualOccupancy,
+                    ];
+                } elseif ($hardwareItem->device_type === 'relay') {
+                    if (! isset($reading['relay_status'])) {
+                        $errors[] = "Reading {$index}: relay reading requires relay_status.";
+                        continue;
+                    }
+
+                    $reportedStatus = $reading['relay_status'];
+                    $reportedSafety = (bool) ($reading['relay_safety'] ?? false);
+
+                    /*
+                     * OVERRIDE RULE — do not repeat the silent-overwrite bug.
+                     *
+                     * When a user has manually set the relay (control_mode =
+                     * manual) that value is the COMMANDED state and is
+                     * authoritative until the user returns to AUTO — the same
+                     * guarantee the ProductionLog `logged_via = 'manual'`
+                     * guard gives egg counts. The bridge-reported status is
+                     * accepted ONLY in auto mode.
+                     *
+                     * SAFETY DEFAULT — a safety-forced OFF (firmware reports
+                     * "OFF (SAFETY)" when the DHT22 read is invalid) is NOT a
+                     * normal manual-state confirmation and must NOT be applied
+                     * to relay_status nor flip control_mode back to auto.
+                     * Instead it is recorded in relay_safety so the UI can
+                     * show "commanded ON, currently safety-blocked". Only when
+                     * the command is already OFF is a safety report a no-op.
+                     */
+                    $wasOverride = $hardwareItem->control_mode === 'manual';
+
+                    if ($wasOverride) {
+                        $safetyBlocked = $reportedSafety && $hardwareItem->relay_status === 'on';
+
+                        if ($safetyBlocked) {
+                            logger()->warning('Relay safety-blocked: MANUAL ON but DHT22 invalid', [
+                                'hardware_item_id' => $hardwareItem->id,
+                                'serial_number' => $serial,
+                                'commanded_status' => $hardwareItem->relay_status,
+                            ]);
+                        } else {
+                            logger()->info('Relay reading skipped: manual override in effect', [
+                                'hardware_item_id' => $hardwareItem->id,
+                                'serial_number' => $serial,
+                                'commanded_status' => $hardwareItem->relay_status,
+                                'reported_status' => $reportedStatus,
+                            ]);
+                        }
+
+                        $hardwareItem->update([
+                            'relay_safety' => $safetyBlocked,
+                            'relay_seen_at' => now(),
+                        ]);
+                    } else {
+                        $hardwareItem->update([
+                            'relay_status' => $reportedStatus,
+                            'relay_safety' => false,
+                            'relay_seen_at' => now(),
+                        ]);
+                    }
+
+                    $processed[] = [
+                        'serial_number' => $serial,
+                        'type' => 'relay',
+                        'cage_id' => $hardwareItem->cage_id,
+                        'relay_status' => $reportedStatus,
+                        'relay_safety' => $reportedSafety,
+                        'override_skipped' => $wasOverride,
                     ];
                 } else {
                     $errors[] = "Reading {$index}: device type {$hardwareItem->device_type} is not ingestible.";

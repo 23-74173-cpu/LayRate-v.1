@@ -14,6 +14,7 @@ use App\Http\Controllers\EggLogsSseController;
 use App\Http\Controllers\EggProductionHistoryController;
 use App\Http\Controllers\EggStockController;
 use App\Http\Controllers\EnvironmentController;
+use App\Http\Controllers\EnvironmentRelaySseController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\ForecastController;
 use App\Http\Controllers\HardwareItemController;
@@ -133,6 +134,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/environment/logs',      [EnvironmentController::class, 'logs'])->name('environment.logs');
     Route::put('/environment/logs/{cageId}/{date}', [EnvironmentController::class, 'updateLog'])->name('environment.logs.update');
     Route::post('/environment/thresholds', [EnvironmentController::class, 'saveThresholds'])->name('environment.thresholds');
+    Route::post('/environment/relay', [EnvironmentController::class, 'controlRelay'])->name('environment.relay.control');
+    Route::get('/environment/relay-stream', [EnvironmentRelaySseController::class, 'stream'])->name('environment.relay-stream');
     Route::post('/eggs/stocks/egg-weights', [EggStockController::class, 'saveEggWeights'])->name('eggs.stocks.egg-weights');
     Route::post('/eggs/stocks/thresholds', [EggStockController::class, 'saveThresholds'])->name('eggs.stocks.thresholds');
 
