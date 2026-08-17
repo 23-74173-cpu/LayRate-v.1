@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Exports\ForecastExport;
 use App\Forecast\ForecastRules;
+use App\Jobs\GenerateForecastJob;
 use App\Models\Cage;
 use App\Models\Forecast;
+use App\Models\ForecastRun;
 use App\Models\Hen;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -293,72 +295,124 @@ class ForecastController extends Controller
                 ->withInput();
         }
 
-        try {
-            if ($scope === 'farm') {
-                $historical = $this->farmHistorical();
+        // Everything above is fast, synchronous validation — kept exactly as
+        // it was, so bad input still fails instantly. Everything below used
+        // to run the Python subprocess synchronously too (up to 300s per
+        // ForecastRules/executePythonForecast's own timeout), inside this
+        // same HTTP request. It now only resolves which cage/historical
+        // scope applies and hands off to GenerateForecastJob — see that
+        // class and ForecastRun for the rest of the flow. The actual
+        // generation logic (generateForecast/executePythonForecast/
+        // persistForecasts) is unchanged; the job just calls the same
+        // methods this method used to call directly.
+        $manualParams = $this->collectManualParams($request);
 
-                Forecast::whereNull('cage_id')->whereNull('breed')
-                    ->where('forecast_date', now()->toDateString())->delete();
-
-                $result = $this->generateForecast(null, 'ALL', null, $historical, $horizon, true, $startDate);
-
-                $successMessage = $startDate
-                    ? ($horizon > 1 ? "Whole-farm forecast generated for {$horizon} days." : 'Single-day whole-farm forecast generated.')
-                    : 'Whole-farm forecast generated.';
-                $redirectParams = $startDate
-                    ? ['scope' => 'farm', 'horizon' => $horizon, 'start_date' => $startDate, 'month' => \Carbon\Carbon::parse($startDate)->month, 'year' => \Carbon\Carbon::parse($startDate)->year]
-                    : ['scope' => 'farm', 'horizon' => $horizon];
-
-                return $this->respondAfterGenerate($request, $redirectParams, $successMessage, $result);
-            }
-
-            if ($scope === 'breed' && $breed) {
-                $historical = $this->breedHistorical($breed);
-
-                Forecast::whereNull('cage_id')->where('breed', $breed)
-                    ->where('forecast_date', now()->toDateString())->delete();
-
-                $result = $this->generateForecast(null, 'ALL', $breed, $historical, $horizon, true, $startDate);
-
-                $successMessage = $startDate
-                    ? ($horizon > 1 ? "{$breed} forecast generated for {$horizon} days." : "Single-day {$breed} forecast generated.")
-                    : "{$breed} forecast generated.";
-                $redirectParams = $startDate
-                    ? ['scope' => 'breed', 'breed' => $breed, 'horizon' => $horizon, 'start_date' => $startDate, 'month' => \Carbon\Carbon::parse($startDate)->month, 'year' => \Carbon\Carbon::parse($startDate)->year]
-                    : ['scope' => 'breed', 'breed' => $breed, 'horizon' => $horizon];
-
-                return $this->respondAfterGenerate($request, $redirectParams, $successMessage, $result);
-            }
-
-            $cage = Cage::where('cage_code', $cageCode)->first();
-
-            $historical = $this->cageHistorical($cageCode);
-
-            $forecastQuery = Forecast::whereNull('breed')
-                ->where('forecast_date', now()->toDateString());
-            if ($cage) {
-                $forecastQuery->where('cage_id', $cage->id)->delete();
-            } else {
-                $forecastQuery->whereNull('cage_id')->delete();
-            }
-
-            $result = $this->generateForecast($cage, $cageCode, null, $historical, $horizon, true, $startDate);
-
-            $successMessage = $startDate
-                ? ($horizon > 1 ? "Forecast generated for {$horizon} days." : 'Single-day forecast generated.')
-                : 'Forecast generated.';
+        if ($scope === 'farm') {
             $redirectParams = $startDate
-                ? ['scope' => 'cage', 'cage' => $cageCode, 'horizon' => $horizon, 'start_date' => $startDate, 'month' => \Carbon\Carbon::parse($startDate)->month, 'year' => \Carbon\Carbon::parse($startDate)->year]
-                : ['scope' => 'cage', 'cage' => $cageCode, 'horizon' => $horizon];
+                ? ['scope' => 'farm', 'horizon' => $horizon, 'start_date' => $startDate, 'month' => \Carbon\Carbon::parse($startDate)->month, 'year' => \Carbon\Carbon::parse($startDate)->year]
+                : ['scope' => 'farm', 'horizon' => $horizon];
 
-            return $this->respondAfterGenerate($request, $redirectParams, $successMessage, $result);
-        } catch (ProcessFailedException $e) {
-            return redirect()->back()
-                ->with('error', 'Forecast process failed: ' . $e->getMessage());
-        } catch (RuntimeException $e) {
-            return redirect()->back()
-                ->with('error', $e->getMessage());
+            $forecastRun = ForecastRun::create([
+                'user_id' => $request->user()?->id,
+                'scope' => 'farm',
+                'horizon' => $horizon,
+                'start_date' => $startDate,
+                'redirect_params' => $redirectParams,
+                // Set explicitly rather than relying on the migration's
+                // DB-side default: Eloquent doesn't re-fetch column defaults
+                // into the in-memory model after INSERT, so ->status would
+                // otherwise read as null here even though the DB row is
+                // correctly 'queued' — respondQueued() below serializes this
+                // same in-memory instance into the JSON response.
+                'status' => 'queued',
+            ]);
+
+            GenerateForecastJob::dispatch($forecastRun->id, 'farm', 'ALL', null, null, $horizon, $startDate, $manualParams);
+
+            return $this->respondQueued($request, $forecastRun, 'Whole-farm forecast');
         }
+
+        if ($scope === 'breed' && $breed) {
+            $redirectParams = $startDate
+                ? ['scope' => 'breed', 'breed' => $breed, 'horizon' => $horizon, 'start_date' => $startDate, 'month' => \Carbon\Carbon::parse($startDate)->month, 'year' => \Carbon\Carbon::parse($startDate)->year]
+                : ['scope' => 'breed', 'breed' => $breed, 'horizon' => $horizon];
+
+            $forecastRun = ForecastRun::create([
+                'user_id' => $request->user()?->id,
+                'scope' => 'breed',
+                'breed' => $breed,
+                'horizon' => $horizon,
+                'start_date' => $startDate,
+                'redirect_params' => $redirectParams,
+                'status' => 'queued', // see the farm-scope branch above for why this is explicit
+            ]);
+
+            GenerateForecastJob::dispatch($forecastRun->id, 'breed', 'ALL', null, $breed, $horizon, $startDate, $manualParams);
+
+            return $this->respondQueued($request, $forecastRun, "{$breed} forecast");
+        }
+
+        $cage = Cage::where('cage_code', $cageCode)->first();
+
+        $redirectParams = $startDate
+            ? ['scope' => 'cage', 'cage' => $cageCode, 'horizon' => $horizon, 'start_date' => $startDate, 'month' => \Carbon\Carbon::parse($startDate)->month, 'year' => \Carbon\Carbon::parse($startDate)->year]
+            : ['scope' => 'cage', 'cage' => $cageCode, 'horizon' => $horizon];
+
+        $forecastRun = ForecastRun::create([
+            'user_id' => $request->user()?->id,
+            'scope' => 'cage',
+            'cage_id' => $cage?->id,
+            'cage_code' => $cageCode,
+            'horizon' => $horizon,
+            'start_date' => $startDate,
+            'redirect_params' => $redirectParams,
+            'status' => 'queued', // see the farm-scope branch above for why this is explicit
+        ]);
+
+        GenerateForecastJob::dispatch($forecastRun->id, 'cage', $cageCode, $cage?->id, null, $horizon, $startDate, $manualParams);
+
+        return $this->respondQueued($request, $forecastRun, 'Forecast');
+    }
+
+    /**
+     * Response for a just-queued forecast run. JSON (forecast_run_id +
+     * poll_url) for the fetch-based submit in forecast.blade.php/
+     * _calendar.blade.php, which polls GET /forecast/status/{id} and
+     * Turbo-visits redirect_params' URL once status flips to completed.
+     * Falls back to a plain redirect for any caller that doesn't ask for
+     * JSON (e.g. a non-JS form post, or GateAdminTest's bare POST) — that
+     * caller won't see the result appear automatically, but the request
+     * still returns immediately either way, which is the actual fix here.
+     */
+    private function respondQueued(Request $request, ForecastRun $forecastRun, string $label)
+    {
+        if ($request->wantsJson()) {
+            return response()->json([
+                'forecast_run_id' => $forecastRun->id,
+                'status' => $forecastRun->status,
+                'poll_url' => route('forecast.status', $forecastRun),
+            ]);
+        }
+
+        return redirect()->route('forecast', $forecastRun->redirect_params)
+            ->with('success', "{$label} generation started — this can take a few minutes.");
+    }
+
+    /**
+     * Poll target for an in-flight forecast run. Mirrors the admin-only
+     * protection on forecast.generate itself.
+     */
+    public function status(ForecastRun $forecastRun)
+    {
+        return response()->json([
+            'status' => $forecastRun->status,
+            'error_message' => $forecastRun->error_message,
+            'metrics' => $forecastRun->result_metrics['metrics'] ?? null,
+            'recommended_model' => $forecastRun->result_metrics['recommended_model'] ?? null,
+            'redirect_url' => $forecastRun->status === 'completed'
+                ? route('forecast', $forecastRun->redirect_params ?? [])
+                : null,
+        ]);
     }
 
     public function import(Request $request)
@@ -638,7 +692,9 @@ class ForecastController extends Controller
         }
     }
 
-    private function farmHistorical(int $days = 14): Collection
+    // Public: called directly by GenerateForecastJob, which runs outside
+    // this controller's own request/response cycle (see generate() below).
+    public function farmHistorical(int $days = 14): Collection
     {
         return DB::table('forecast_input_records')
             ->select('date', DB::raw('SUM(egg_count) as egg_count'), DB::raw('SUM(hen_count) as hen_count'))
@@ -656,7 +712,8 @@ class ForecastController extends Controller
             ->values();
     }
 
-    private function breedHistorical(string $breed): Collection
+    // Public: called directly by GenerateForecastJob — see farmHistorical() above.
+    public function breedHistorical(string $breed): Collection
     {
         return DB::table('forecast_input_records')
             ->select('date', DB::raw('SUM(egg_count) as egg_count'), DB::raw('SUM(hen_count) as hen_count'))
@@ -675,7 +732,8 @@ class ForecastController extends Controller
             ->values();
     }
 
-    private function cageHistorical(string $cageCode): Collection
+    // Public: called directly by GenerateForecastJob — see farmHistorical() above.
+    public function cageHistorical(string $cageCode): Collection
     {
         return DB::table('forecast_input_records')
             ->select('date', DB::raw('SUM(egg_count) as egg_count'), DB::raw('SUM(hen_count) as hen_count'))
@@ -704,9 +762,16 @@ class ForecastController extends Controller
      * @param bool $save
      * @return array{forecasts: Collection, metrics: array, recommended_model: string}
      */
-    private function generateForecast(?Cage $cage, string $cageCode, ?string $breed, Collection $historical, int $horizon, bool $save = false, ?string $startDate = null): array
+    // Public + $manualParams now an explicit parameter (was previously read
+    // via $this->collectManualParams(request()) inline below): this method
+    // is called from GenerateForecastJob, which runs in a queue worker with
+    // no HTTP request matching the original submission — request() there
+    // would silently resolve to an empty/unrelated request and drop manual-
+    // mode params. Callers now capture manual params from the real request
+    // up front and pass them in; see generate()'s callers below.
+    public function generateForecast(?Cage $cage, string $cageCode, ?string $breed, Collection $historical, int $horizon, bool $save = false, ?string $startDate = null, array $manualParams = []): array
     {
-        $result = $this->executePythonForecast($cageCode, $breed, $horizon, $this->collectManualParams(request()), $startDate);
+        $result = $this->executePythonForecast($cageCode, $breed, $horizon, $manualParams, $startDate);
 
         Log::info('Forecast generation result', [
             'recommended_model' => $result['recommended_model'] ?? null,
@@ -810,9 +875,13 @@ class ForecastController extends Controller
 
         Log::info('Forecast runner output', [
             'command' => $command,
-            'scope' => request()->get('scope', 'cage'),
-            'cage' => request()->get('cage'),
-            'breed' => request()->get('breed'),
+            // Was request()->get('cage'/'breed') — read from the current
+            // HTTP request, which doesn't reflect this call's actual
+            // arguments when invoked from GenerateForecastJob (no matching
+            // request exists in a queue worker). $cageCode/$breed are this
+            // method's own parameters, so use those directly instead.
+            'cage' => $cageCode,
+            'breed' => $breed,
             'horizon' => $horizon,
             'stdout' => $output,
         ]);

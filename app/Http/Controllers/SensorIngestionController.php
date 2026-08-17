@@ -59,10 +59,7 @@ class SensorIngestionController extends Controller
             foreach ($data['readings'] as $index => $reading) {
                 $serial = $reading['serial_number'];
 
-                $hardwareItem = HardwareItem::where('serial_number', $serial)
-                    ->where('device_id', $device->id)
-                    ->where('status', 'active')
-                    ->first();
+                $hardwareItem = HardwareItem::findActiveForIngestion($serial, $device->id);
 
                 if (! $hardwareItem) {
                     $errors[] = "Reading {$index}: serial number {$serial} is not registered to this device or is not active.";
@@ -185,16 +182,27 @@ class SensorIngestionController extends Controller
                         }
 
                         $henCount = $slot->active_hen_count;
-                        ProductionLog::updateOrCreate(
-                            ['cage_slot_id' => $slot->id, 'log_date' => $logDate],
-                            [
-                                'egg_count' => $reportedCount,
-                                'hen_count' => $henCount,
-                                'hdep' => $henCount > 0 ? round(($reportedCount / $henCount) * 100, 2) : 0,
-                                'logged_via' => 'sensor',
-                                'notes' => 'Sensor reading',
-                            ]
-                        );
+                        $productionAttrs = [
+                            'egg_count' => $reportedCount,
+                            'hen_count' => $henCount,
+                            'hdep' => $henCount > 0 ? round(($reportedCount / $henCount) * 100, 2) : 0,
+                            'logged_via' => 'sensor',
+                            'notes' => 'Sensor reading',
+                        ];
+
+                        // $existingLog (fetched above for the manual-override
+                        // and regression checks) already IS the row
+                        // ProductionLog::updateOrCreate() would look up again
+                        // internally via the same (cage_slot_id, log_date)
+                        // match — update it in place instead of re-querying.
+                        if ($existingLog) {
+                            $existingLog->update($productionAttrs);
+                        } else {
+                            ProductionLog::create($productionAttrs + [
+                                'cage_slot_id' => $slot->id,
+                                'log_date' => $logDate,
+                            ]);
+                        }
                     }
 
                     if ($reportedCount !== $actualOccupancy) {

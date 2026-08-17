@@ -519,6 +519,109 @@
         recordForecastDuration();
     }
 
+    // ── Async forecast submission ───────────────────────────────────────────
+    // /forecast/generate used to be a native form POST that blocked on the
+    // server running a Python subprocess synchronously for up to 300s. It now
+    // returns immediately with a forecast_run_id; this polls
+    // GET /forecast/status/{id} until the job finishes, then Turbo-visits the
+    // results URL — reusing the exact page the old synchronous redirect used
+    // to land on, so nothing about how results are *displayed* changes, only
+    // how completion is *detected*. Shared between forecastForm (this file)
+    // and forecastDayForm (forecast/_calendar.blade.php) via window, since a
+    // Turbo Frame partial can't see this file's local scope.
+    var FORECAST_POLL_INTERVAL_MS = 2000;
+    // A bit above executePythonForecast()'s own 300s Process timeout, so a
+    // slow-but-legitimate run isn't abandoned client-side before the server
+    // itself would have given up.
+    var FORECAST_POLL_TIMEOUT_MS = 6 * 60 * 1000;
+
+    function resetForecastSubmitUi() {
+        _forecastIsSubmitting = false;
+        var overlay = document.getElementById('forecastLoadingOverlay');
+        var btn = document.getElementById('generateForecastBtn');
+        var btnText = document.getElementById('btnText');
+        if (overlay) overlay.style.display = 'none';
+        if (btn) btn.disabled = false;
+        if (btnText) btnText.textContent = 'Generate Forecast';
+    }
+
+    function pollForecastStatus(pollUrl) {
+        var deadline = Date.now() + FORECAST_POLL_TIMEOUT_MS;
+
+        function tick() {
+            fetch(pollUrl, { headers: { 'Accept': 'application/json' } })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.status === 'completed' && data.redirect_url) {
+                        // recordForecastDuration() is not called here — it
+                        // already runs via initForecastLoading() on the
+                        // turbo:load this visit triggers, same as it did
+                        // after the old synchronous redirect.
+                        if (window.Turbo) {
+                            window.Turbo.visit(data.redirect_url);
+                        } else {
+                            window.location.href = data.redirect_url;
+                        }
+                        return;
+                    }
+                    if (data.status === 'failed') {
+                        resetForecastSubmitUi();
+                        if (window.showNotification) {
+                            window.showNotification(data.error_message || 'Forecast generation failed.', 'error');
+                        }
+                        return;
+                    }
+                    if (Date.now() > deadline) {
+                        resetForecastSubmitUi();
+                        if (window.showNotification) {
+                            window.showNotification('Forecast is taking longer than expected. It will finish in the background — check back shortly.', 'warning');
+                        }
+                        return;
+                    }
+                    setTimeout(tick, FORECAST_POLL_INTERVAL_MS);
+                })
+                .catch(function() {
+                    // Transient network hiccup — keep polling instead of giving
+                    // up on the first failed request.
+                    if (Date.now() > deadline) {
+                        resetForecastSubmitUi();
+                        return;
+                    }
+                    setTimeout(tick, FORECAST_POLL_INTERVAL_MS);
+                });
+        }
+
+        tick();
+    }
+
+    window.submitForecastFormAsync = function(form) {
+        fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json'
+            },
+            body: new FormData(form)
+        })
+        .then(function(response) {
+            if (!response.ok) {
+                return response.json().catch(function() { return {}; }).then(function(body) {
+                    throw new Error(body.message || ('Failed to start forecast generation (' + response.status + ').'));
+                });
+            }
+            return response.json();
+        })
+        .then(function(data) {
+            pollForecastStatus(data.poll_url);
+        })
+        .catch(function(err) {
+            resetForecastSubmitUi();
+            if (window.showNotification) {
+                window.showNotification(err.message || 'Failed to start forecast generation.', 'error');
+            }
+        });
+    };
+
     // Use document-level delegation for the forecast form submit so it survives
     // Turbo Frame content replacement (standalone submit handler on the form
     // element is lost when the frame's innerHTML is swapped).
@@ -557,7 +660,7 @@
 
         requestAnimationFrame(function() {
             setTimeout(function() {
-                form.submit();
+                window.submitForecastFormAsync(form);
             }, 50);
         });
     });
