@@ -25,6 +25,42 @@
     {{-- ── LIVE DATA TAB ── --}}
     <div id="panelLiveData" class="{{ ($envTab ?? 'live') !== 'live' ? 'hidden' : '' }}">
 
+        <style>
+            @keyframes layrate-fan-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+            .layrate-fan-spinning { animation: layrate-fan-spin 1s linear infinite; }
+        </style>
+
+        {{-- ── Fan Control Card (SSE-driven — lives outside the polled turbo-frame) ── --}}
+        <div id="relayCard" class="bg-white rounded-xl border border-[#D9D9D9] p-5 mb-6">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div class="flex items-center gap-4">
+                    <div id="relayFanBubble" class="w-14 h-14 rounded-full flex items-center justify-center shrink-0 transition-colors"
+                         style="background:#F0F0F0; color:#615d59;">
+                        <i data-lucide="fan" class="w-7 h-7"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <div class="text-sm font-semibold text-[#1f1f1f]">Cooling Fan</div>
+                            <span id="relayStatusBadge" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold leading-none whitespace-nowrap"
+                                  style="background:#F0F0F0; color:#615d59; border:1px solid #E6E6E6;">—</span>
+                            <span id="relayModeBadge" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold leading-none whitespace-nowrap"
+                                  style="background:#eef2fb; color:#002D5E; border:1px solid #d6e0f2;">AUTO</span>
+                        </div>
+                        <div id="relaySubtext" class="text-xs text-[#6B7280] mt-1">Waiting for sensor signal…</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" data-relay-action="on"
+                            class="relay-action-btn inline-flex items-center justify-center rounded-lg border border-[#D9D9D9] px-4 py-2 text-sm font-medium text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">Fan ON</button>
+                    <button type="button" data-relay-action="off"
+                            class="relay-action-btn inline-flex items-center justify-center rounded-lg border border-[#D9D9D9] px-4 py-2 text-sm font-medium text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">Fan OFF</button>
+                    <button type="button" data-relay-action="auto"
+                            class="relay-action-btn inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors"
+                            style="background:#002D5E;">AUTO</button>
+                </div>
+            </div>
+        </div>
+
         {{-- Live Data (lazy): metrics, thresholds, sensor cards, trends --}}
         <turbo-frame id="environment-live-data" src="{{ route('environment.live-data') }}" loading="lazy">
             @include('environment._live-data-skeleton')
@@ -150,9 +186,11 @@ function switchEnvTab(tab) {
     });
     if (tab === 'live') {
         startLivePolling();
+        startRelaySSE();
         envRefreshNow();
     } else {
         stopLivePolling();
+        stopRelaySSE();
     }
 }
 
@@ -242,9 +280,185 @@ document.addEventListener('turbo:load', function() {
     var livePanel = document.getElementById('panelLiveData');
     if (livePanel && !livePanel.classList.contains('hidden')) {
         startLivePolling();
+        startRelaySSE();
     }
 });
-document.addEventListener('turbo:before-cache', stopLivePolling);
+document.addEventListener('turbo:before-cache', function() {
+    stopLivePolling();
+    stopRelaySSE();
+});
+
+// ── Relay / Fan — SSE-driven state + manual control ──
+var __relayInitial = @json($relayState ?? ['configured' => false]);
+
+function applyRelayState(state) {
+    if (!state) return;
+    var bubble = document.getElementById('relayFanBubble');
+    var badge = document.getElementById('relayStatusBadge');
+    var modeBadge = document.getElementById('relayModeBadge');
+    var subtext = document.getElementById('relaySubtext');
+    if (!badge || !modeBadge || !subtext) return;
+
+    if (!state.configured) {
+        if (bubble) { bubble.style.background = '#F0F0F0'; bubble.style.color = '#615d59'; bubble.classList.remove('layrate-fan-spinning'); }
+        badge.textContent = 'No Relay';
+        badge.style.background = '#F0F0F0'; badge.style.color = '#615d59'; badge.style.borderColor = '#E6E6E6';
+        modeBadge.textContent = '—';
+        modeBadge.style.background = '#F0F0F0'; modeBadge.style.color = '#615d59'; modeBadge.style.borderColor = '#E6E6E6';
+        subtext.textContent = 'No active relay device is registered.';
+        paintRelayButtons(null);
+        return;
+    }
+
+    var on = state.relay_status === 'on';
+    var online = !!state.online;
+    var blocked = !!state.relay_safety;
+
+    // Three states (not two): ON / OFF / safety-blocked. "Blocked" means the
+    // user commanded MANUAL ON but an invalid DHT22 read forced the fan off —
+    // shown with a warning, never as a plain OFF.
+    if (!online) {
+        if (bubble) { bubble.style.background = '#F0F0F0'; bubble.style.color = '#8a5a00'; bubble.classList.remove('layrate-fan-spinning'); }
+        badge.textContent = 'No Signal';
+        badge.style.background = '#fdf3e0'; badge.style.color = '#8a5a00'; badge.style.borderColor = '#f3e3bf';
+    } else if (blocked) {
+        if (bubble) { bubble.style.background = '#fbe4e6'; bubble.style.color = '#9b1c24'; bubble.classList.remove('layrate-fan-spinning'); }
+        badge.textContent = 'Safety Block';
+        badge.style.background = '#fbe4e6'; badge.style.color = '#9b1c24'; badge.style.borderColor = '#f3cdd0';
+    } else if (on) {
+        if (bubble) { bubble.style.background = '#e8f0fb'; bubble.style.color = '#002D5E'; bubble.classList.add('layrate-fan-spinning'); }
+        badge.textContent = 'Fan ON';
+        badge.style.background = '#e8f5ec'; badge.style.color = '#1f6b3a'; badge.style.borderColor = '#cfe8d6';
+    } else {
+        if (bubble) { bubble.style.background = '#F0F0F0'; bubble.style.color = '#615d59'; bubble.classList.remove('layrate-fan-spinning'); }
+        badge.textContent = 'Fan OFF';
+        badge.style.background = '#F0F0F0'; badge.style.color = '#615d59'; badge.style.borderColor = '#E6E6E6';
+    }
+
+    if (state.control_mode === 'manual') {
+        modeBadge.textContent = 'MANUAL';
+        modeBadge.style.background = '#fbe4e6'; modeBadge.style.color = '#9b1c24'; modeBadge.style.borderColor = '#f3cdd0';
+    } else {
+        modeBadge.textContent = 'AUTO';
+        modeBadge.style.background = '#eef2fb'; modeBadge.style.color = '#002D5E'; modeBadge.style.borderColor = '#d6e0f2';
+    }
+
+    if (!online) {
+        subtext.textContent = state.stale
+            ? 'Bridge unreachable — last signal a while ago. Auto-hysteresis still runs on the Arduino.'
+            : 'Waiting for the sensor bridge to report…';
+    } else if (blocked) {
+        subtext.textContent = 'MANUAL ON requested, but the DHT22 reading is invalid — the safety default forced the fan OFF. Check the sensor wiring.';
+    } else if (state.control_mode === 'manual') {
+        var by = state.last_changed_by ? ' by ' + state.last_changed_by : '';
+        subtext.textContent = 'Manual override' + by + '. Hysteresis is paused until you return to AUTO.';
+    } else if (state.temperature_c !== null && state.temperature_c !== undefined) {
+        subtext.textContent = state.temperature_c + '°C · auto-hysteresis · fan ' + (on ? 'on' : 'off');
+    } else {
+        subtext.textContent = 'Auto-hysteresis active.';
+    }
+
+    paintRelayButtons(state.control_mode === 'manual' ? (on ? 'on' : 'off') : 'auto');
+}
+
+function paintRelayButtons(activeAction) {
+    document.querySelectorAll('[data-relay-action]').forEach(function(btn) {
+        var action = btn.getAttribute('data-relay-action');
+        var active = action === activeAction;
+        if (active) {
+            btn.style.background = '#002D5E';
+            btn.style.color = '#ffffff';
+            btn.style.borderColor = '#002D5E';
+        } else {
+            btn.style.background = '#ffffff';
+            btn.style.color = '#6B7280';
+            btn.style.borderColor = '#D9D9D9';
+        }
+    });
+}
+
+function connectRelaySSE() {
+    var card = document.getElementById('relayCard');
+    if (!card) return;
+    if (window.__relaySource) window.__relaySource.close();
+    var url = '{{ route("environment.relay-stream") }}';
+    window.__relaySource = new EventSource(url);
+    window.__relaySource.addEventListener('relay_state', function(e) {
+        try { applyRelayState(JSON.parse(e.data)); } catch (err) {}
+    });
+    window.__relaySource.onerror = function() {
+        if (window.__relaySource && window.__relaySource.readyState === EventSource.CLOSED) {
+            setTimeout(function() {
+                if (document.getElementById('relayCard')) connectRelaySSE();
+            }, 3000);
+        }
+    };
+}
+
+function stopRelaySSE() {
+    if (window.__relaySource) {
+        window.__relaySource.close();
+        window.__relaySource = null;
+    }
+}
+
+function controlRelay(action) {
+    if (window.__relaySending) return;
+    window.__relaySending = true;
+
+    var form = new FormData();
+    form.append('_token', '{{ csrf_token() }}');
+    form.append('action', action);
+
+    fetch('{{ route("environment.relay.control") }}', {
+        method: 'POST',
+        body: form,
+        headers: { 'Accept': 'application/json' },
+    })
+    .then(function(r) {
+        return r.json().then(function(data) { return { ok: r.ok, status: r.status, data: data }; });
+    })
+    .then(function(res) {
+        if (res.ok && res.data && res.data.success) {
+            applyRelayState(res.data.relay);
+            if (typeof showNotification === 'function') {
+                showNotification('Relay set to ' + action.toUpperCase() + '.', 'success');
+            }
+        } else if (res.status === 404) {
+            if (typeof showNotification === 'function') {
+                showNotification((res.data && res.data.message) || 'No active relay registered.', 'error');
+            }
+        } else if (res.status === 422) {
+            var msg = Object.values(res.data.errors || {})[0]?.[0] || 'Validation failed.';
+            if (typeof showNotification === 'function') showNotification(msg, 'error');
+        } else {
+            throw new Error('Server returned ' + res.status);
+        }
+    })
+    .catch(function(err) {
+        if (typeof showNotification === 'function') {
+            showNotification('Failed to send relay command: ' + err.message, 'error');
+        }
+    })
+    .finally(function() {
+        window.__relaySending = false;
+    });
+}
+
+(function initRelayWidget() {
+    document.querySelectorAll('[data-relay-action]').forEach(function(btn) {
+        if (btn.__relayWired) return;
+        btn.__relayWired = true;
+        btn.addEventListener('click', function() {
+            controlRelay(btn.getAttribute('data-relay-action'));
+        });
+    });
+    applyRelayState(window.__relayInitial);
+    var livePanel = document.getElementById('panelLiveData');
+    if (livePanel && !livePanel.classList.contains('hidden')) {
+        connectRelaySSE();
+    }
+})();
 
 // ── Environment Log Override ──
 function openEnvLogOverride(cageId, date, currentTemp, currentHum, cageCode) {

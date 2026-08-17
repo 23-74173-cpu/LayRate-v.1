@@ -4,10 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Cage;
 use App\Models\EnvironmentalLog;
+use App\Models\HardwareItem;
 use App\Models\Setting;
 use App\Services\EnvironmentStatusService;
+use App\Services\RelayStateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class EnvironmentController extends Controller
 {
@@ -17,7 +20,10 @@ class EnvironmentController extends Controller
         $envTab = $request->query('envTab', 'live');
         $cages = \App\Models\Cage::orderBy('cage_code')->pluck('cage_code', 'id');
 
-        return view('environment', compact('thresholds', 'envTab', 'cages'));
+        $relay = $this->activeRelay();
+        $relayState = RelayStateService::payload($relay);
+
+        return view('environment', compact('thresholds', 'envTab', 'cages', 'relay', 'relayState'));
     }
 
     public function liveData(Request $request)
@@ -169,6 +175,70 @@ class EnvironmentController extends Controller
 
         return redirect()->route('environment')
             ->with('success', 'Thresholds saved.');
+    }
+
+    private function activeRelay(): ?HardwareItem
+    {
+        return HardwareItem::with('lastChangedBy')
+            ->where('device_type', 'relay')
+            ->where('status', 'active')
+            ->orderBy('id')
+            ->first();
+    }
+
+    /**
+     * Manual relay control: POST action=on|off|auto.
+     *
+     * Turn-off semantics: on/off set control_mode=manual (authoritative until
+     * the user explicitly returns to auto); auto hands control back to the
+     * firmware hysteresis loop. The bridge picks the new state up on its next
+     * poll of the command endpoint.
+     */
+    public function controlRelay(Request $request)
+    {
+        $validated = $request->validate([
+            'action' => ['required', 'string', Rule::in(['on', 'off', 'auto'])],
+        ]);
+        $action = $validated['action'];
+
+        $relay = $this->activeRelay();
+
+        if (! $relay) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No active relay device is registered.',
+                ], 404);
+            }
+
+            return back()->with('error', 'No active relay device is registered.');
+        }
+
+        if ($action === 'auto') {
+            $relay->update([
+                'control_mode' => 'auto',
+                'relay_safety' => false,
+                'last_changed_at' => now(),
+                'last_changed_by' => $request->user()?->id,
+            ]);
+        } else {
+            $relay->update([
+                'control_mode' => 'manual',
+                'relay_status' => $action,
+                'relay_safety' => false,
+                'last_changed_at' => now(),
+                'last_changed_by' => $request->user()?->id,
+            ]);
+        }
+
+        $relay->refresh();
+        $payload = RelayStateService::payload($relay);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'relay' => $payload]);
+        }
+
+        return back()->with('success', 'Relay set to ' . strtoupper($action) . '.');
     }
 }
 
