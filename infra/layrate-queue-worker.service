@@ -1,0 +1,28 @@
+[Unit]
+Description=LayRate Queue Worker - processes queued jobs (forecast generation, etc.)
+Documentation=https://github.com/anomalyco/LayRate-Main
+After=network.target mysql.service mariadb.service
+
+[Service]
+Type=simple
+User=layratepi
+Group=www-data
+WorkingDirectory=/var/www/layrate
+# --max-time restarts the worker hourly rather than letting one PHP process
+# run indefinitely — cheap insurance against slow memory growth on a
+# memory-constrained Pi. Restart= below immediately brings it back up when
+# that happens, so there's no gap in job processing.
+# --tries=1: a failed forecast run should surface as forecast_runs.status =
+# 'failed' (see GenerateForecastJob) and be re-triggered by the user from
+# the UI, not silently auto-retried by the queue and run the 5-minute
+# Python subprocess again unattended.
+ExecStart=/usr/bin/php /var/www/layrate/artisan queue:work --sleep=3 --tries=1 --max-time=3600
+Restart=always
+RestartSec=5
+
+# Requires QUEUE_CONNECTION=database in /var/www/layrate/.env — under the
+# default `sync` driver, dispatched jobs (GenerateForecastJob) run inline in
+# the HTTP request instead of here, and this worker has nothing to do.
+
+[Install]
+WantedBy=multi-user.target

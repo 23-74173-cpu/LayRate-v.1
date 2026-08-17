@@ -706,7 +706,7 @@
             window.startForecastProgress(expectedDuration);
 
             clearDaySelection();
-            setTimeout(function() { form.submit(); }, 80);
+            setTimeout(function() { window.submitForecastFormAsync(form); }, 80);
         });
     }
 </script>

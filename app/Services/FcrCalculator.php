@@ -88,9 +88,20 @@ class FcrCalculator
     /**
      * Timeline of FCR per period (day/week/month) across all active cages.
      *
+     * $since is optional and defaults to unbounded (existing callers/tests
+     * are unaffected) — but every current caller (FeedController's FCR tab)
+     * does call this with no bound at all, meaning it loads every
+     * production_logs + feed_consumption_logs row ever recorded, with
+     * eggSizeLogs eager-loaded per production row, on every view of that
+     * tab. Weighted egg-mass-per-size is business-critical enough that this
+     * intentionally does NOT change the SQL that computes it — only adds
+     * the option to bound the row-level fetch by date, which the caller can
+     * opt into once a sensible default window is decided (see the
+     * accompanying report — this is flagged, not silently changed).
+     *
      * @return Collection Each item: period, label, feed_kg, egg_mass_kg, fcr
      */
-    public static function timelineAll(string $groupBy): Collection
+    public static function timelineAll(string $groupBy, ?Carbon $since = null): Collection
     {
         if (! in_array($groupBy, ['day', 'week', 'month'])) {
             $groupBy = 'day';
@@ -98,10 +109,12 @@ class FcrCalculator
 
         $productionLogs = ProductionLog::with('eggSizeLogs')
             ->whereHas('cageSlot.cage', fn ($q) => $q->where('is_active', 1))
+            ->when($since, fn ($q) => $q->where('log_date', '>=', $since->toDateString()))
             ->orderBy('log_date')
             ->get();
 
         $feedLogs = FeedConsumptionLog::whereHas('cage', fn ($q) => $q->where('is_active', 1))
+            ->when($since, fn ($q) => $q->where('log_date', '>=', $since->toDateString()))
             ->orderBy('log_date')
             ->get();
 
@@ -132,9 +145,13 @@ class FcrCalculator
     /**
      * Timeline of FCR per period (day/week/month) for a cage.
      *
+     * $since is optional and defaults to unbounded — see the note on
+     * timelineAll() above; the same "flagged, not silently changed" reasoning
+     * applies here.
+     *
      * @return Collection Each item: period, label, feed_kg, egg_mass_kg, fcr
      */
-    public static function timeline(Cage $cage, string $groupBy): Collection
+    public static function timeline(Cage $cage, string $groupBy, ?Carbon $since = null): Collection
     {
         if (! in_array($groupBy, ['day', 'week', 'month'])) {
             $groupBy = 'day';
@@ -143,10 +160,12 @@ class FcrCalculator
         // Fetch all relevant logs for the cage.
         $productionLogs = ProductionLog::with('eggSizeLogs')
             ->whereHas('cageSlot', fn ($q) => $q->where('cage_id', $cage->id))
+            ->when($since, fn ($q) => $q->where('log_date', '>=', $since->toDateString()))
             ->orderBy('log_date')
             ->get();
 
         $feedLogs = FeedConsumptionLog::where('cage_id', $cage->id)
+            ->when($since, fn ($q) => $q->where('log_date', '>=', $since->toDateString()))
             ->orderBy('log_date')
             ->get();
 

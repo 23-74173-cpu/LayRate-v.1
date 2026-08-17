@@ -15,12 +15,18 @@ class DeviceController extends Controller
             'name' => 'required|string|max:100',
         ]);
 
-        $plainKey = 'lr_' . \Illuminate\Support\Str::random(40);
-
+        // api_key_hash is NOT NULL + unique, so the record needs a throwaway
+        // placeholder hash to satisfy the constraint on insert — the real,
+        // id-prefixed key (see Device::generateApiKey()) can only be built
+        // once the row exists and $device->id is known, so it's generated
+        // immediately after and overwrites this placeholder before anything
+        // reads it.
         $device = Device::create([
             'name' => $data['name'],
-            'api_key_hash' => \Illuminate\Support\Facades\Hash::make($plainKey),
+            'api_key_hash' => Hash::make(Str::random(40)),
         ]);
+
+        $plainKey = $device->generateApiKey();
 
         return redirect()->route('hardware.index')
             ->with('success', "Device {$device->name} created. Copy the key now — it will not be shown again.")

@@ -87,8 +87,16 @@ class DashboardController extends Controller
         $needsOnboarding = Setting::where('key', 'farm_grid_rows')->doesntExist()
             || Setting::where('key', 'farm_grid_cols')->doesntExist();
 
+        // 'productionLogs' used to be eager-loaded here unconditionally — every
+        // dashboard view (the most-visited page in the app) pulled every
+        // production_logs row ever recorded, for every cage, into PHP memory,
+        // just to filter it back down to "today's rows" per cage a few lines
+        // below. That grows without bound for the life of the deployment.
+        // Replaced with a single grouped SQL query below (today's per-cage
+        // totals) plus, for the cage-scoped branch, two more small aggregate
+        // queries (yesterday, lifetime) — nothing here loads a production_logs
+        // row into PHP anymore; only pre-aggregated SUM/AVG/COUNT results do.
         $cagesQuery = Cage::with([
-            'productionLogs',
             'latestEnvironmentLog',
             'cageSlots.hardwareItems',
             'hardwareItems',
@@ -100,12 +108,19 @@ class DashboardController extends Controller
         }
 
         $cages = $cagesQuery->get();
+        $cageIds = $cages->pluck('id');
+
+        $todayEggsByCage = ProductionLog::query()
+            ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
+            ->whereIn('cage_slots.cage_id', $cageIds)
+            ->whereDate('production_logs.log_date', $today)
+            ->selectRaw('cage_slots.cage_id as cage_id, SUM(production_logs.egg_count) as total')
+            ->groupBy('cage_slots.cage_id')
+            ->pluck('total', 'cage_id');
 
         // Attach today's stats to each cage
-        $cages->each(function ($cage) use ($today) {
-            $cage->today_eggs = $cage->productionLogs
-                ->filter(fn ($l) => $l->log_date && $l->log_date->toDateString() === $today)
-                ->sum('egg_count');
+        $cages->each(function ($cage) use ($todayEggsByCage) {
+            $cage->today_eggs = (int) ($todayEggsByCage[$cage->id] ?? 0);
             $cage->hen_count = $cage->hens->count();
             // HDEP today = eggs collected again ÷ hens in the cage, as a percentage
             $cage->today_hdep = $cage->hen_count > 0 ? round($cage->today_eggs / $cage->hen_count * 100, 1) : 0;
@@ -117,14 +132,27 @@ class DashboardController extends Controller
         // Total active hens
         if ($cageCode) {
             $totalHens = $cages->sum('hen_count');
-            $todayLogs = $cages->flatMap->productionLogs->where('log_date', $today);
             // HDEP today = eggs collected today ÷ all hens in the selected cages, as a percentage
             $todayHdep = $totalHens > 0 ? round($cages->sum('today_eggs') / $totalHens * 100, 1) : 0;
-            $yesterdayLogs = $cages->flatMap->productionLogs->where('log_date', now()->subDay()->toDateString());
-            $yesterdayHdep = $yesterdayLogs->count() ? round($yesterdayLogs->avg('hdep'), 1) : 0;
+
+            $yesterdayStats = ProductionLog::query()
+                ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
+                ->whereIn('cage_slots.cage_id', $cageIds)
+                ->whereDate('production_logs.log_date', now()->subDay()->toDateString())
+                ->selectRaw('COUNT(*) as log_count, AVG(production_logs.hdep) as avg_hdep')
+                ->first();
+            $yesterdayHdep = $yesterdayStats->log_count ? round((float) $yesterdayStats->avg_hdep, 1) : 0;
+
             $hdepDelta = round($todayHdep - $yesterdayHdep, 1);
-            $eggsToday = $todayLogs->sum('egg_count') ?: $cages->sum('today_eggs');
-            $lifetimeEggs = $cages->flatMap->productionLogs->sum('egg_count');
+            // Same source as today_eggs above (today's per-cage sum) — no
+            // longer two independently-computed values with one as a
+            // fallback for the other, since both used to derive from the
+            // same eager-loaded collection anyway.
+            $eggsToday = $cages->sum('today_eggs');
+            $lifetimeEggs = ProductionLog::query()
+                ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
+                ->whereIn('cage_slots.cage_id', $cageIds)
+                ->sum('production_logs.egg_count');
         } else {
             $totalHens = \App\Models\Hen::where('is_active', 1)->count();
             $todayLogs = ProductionLog::whereDate('log_date', $today)->get();

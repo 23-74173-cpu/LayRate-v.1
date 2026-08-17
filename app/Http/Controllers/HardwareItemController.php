@@ -7,6 +7,7 @@ use App\Models\CageSlot;
 use App\Models\Device;
 use App\Models\HardwareItem;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -151,15 +152,34 @@ class HardwareItemController extends Controller
             $data['cage_slot_id'] = null;
         }
 
+        // Capture the pre-update identity so the OLD (serial_number,
+        // device_id) pair's ingestion cache entry gets busted too — status,
+        // serial_number, and device_id (reassignment to a different Pi) can
+        // all change here, and any of them can make a cached lookup stale.
+        $this->forgetIngestionCache($hardwareItem->serial_number, $hardwareItem->device_id);
+
         $hardwareItem->update($data);
+
+        $this->forgetIngestionCache($hardwareItem->serial_number, $hardwareItem->device_id);
 
         return redirect()->route('hardware.index')->with('success', 'Hardware item updated.');
     }
 
     public function destroy(HardwareItem $hardwareItem)
     {
+        $this->forgetIngestionCache($hardwareItem->serial_number, $hardwareItem->device_id);
+
         $hardwareItem->delete();
 
         return redirect()->route('hardware.index')->with('success', 'Hardware item removed.');
+    }
+
+    private function forgetIngestionCache(string $serialNumber, ?int $deviceId): void
+    {
+        if ($deviceId === null) {
+            return;
+        }
+
+        Cache::forget(HardwareItem::ingestionCacheKey($serialNumber, $deviceId));
     }
 }

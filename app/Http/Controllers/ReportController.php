@@ -171,6 +171,17 @@ class ReportController extends Controller
         };
     }
 
+    // Each branch used to run 4 separate round trips against the same table
+    // with the same WHERE clause, one per aggregate function (SUM, then a
+    // fresh query for AVG, then another for COUNT DISTINCT, ...). Combined
+    // into one query per branch via selectRaw() with multiple aggregates —
+    // same filters, same computed values, fewer round trips. Two fallback
+    // behaviors from the original are preserved deliberately: Eloquent's
+    // sum() falls back to 0 on an empty result set (via its own internal
+    // `?: 0`) where a raw SUM() returns NULL instead, so those fields keep
+    // an explicit `?? 0`; avg()/count() already needed that fallback in the
+    // original code (avg()) or never needed it (count() is never null), and
+    // stay exactly as they were.
     private function buildSummary($type, $from, $to, $cageId, $reason, $allCages): ?object
     {
         $cageIds = $this->resolveCageIds($cageId, $allCages);
@@ -178,36 +189,70 @@ class ReportController extends Controller
         $hasRange = $from && $to;
 
         return match($type) {
-            'production' => (object) [
-                'total_eggs'  => ProductionLog::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->sum('egg_count'),
-                'avg_hdep'    => number_format(ProductionLog::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->avg('hdep') ?? 0, 1) . '%',
-                'total_hens'  => Hen::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->where('is_active', 1)->count(),
-                'days'        => ProductionLog::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->distinct('log_date')->count('log_date'),
-            ],
-            'feed' => (object) [
-                'total_kg'    => number_format(FeedConsumptionLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->sum('feed_consumed_kg'), 1),
-                'avg_per_day' => number_format(FeedConsumptionLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->avg('feed_consumed_kg') ?? 0, 1),
-                'batches'     => FeedConsumptionLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->distinct('feed_batch_id')->count('feed_batch_id'),
-                'days'        => FeedConsumptionLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->distinct('log_date')->count('log_date'),
-            ],
-            'environment' => (object) [
-                'avg_temp'    => number_format(EnvironmentalLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59']))->avg('temperature_c') ?? 0, 1) . '°C',
-                'avg_hum'     => number_format(EnvironmentalLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59']))->avg('humidity_pct') ?? 0, 1) . '%',
-                'readings'    => EnvironmentalLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59']))->count(),
-                'alerts'      => EnvironmentalLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59']))->where(fn($q) => $q->where('temperature_c', '>', 30)->orWhere('humidity_pct', '>', 70))->count(),
-            ],
-            'egg_stock' => (object) [
-                'total_stocked' => (int) $this->eggStockQuery($from, $to, $cageIds, $cageId)->sum('count'),
-                'batches'       => $this->eggStockQuery($from, $to, $cageIds, $cageId)->count(),
-                'top_size'      => ucfirst($this->eggStockQuery($from, $to, $cageIds, $cageId)->selectRaw('egg_size, SUM(`count`) as total')->groupBy('egg_size')->orderByDesc('total')->value('egg_size') ?? '—'),
-                'days'          => $this->eggStockQuery($from, $to, $cageIds, $cageId)->distinct('harvested_date')->count('harvested_date'),
-            ],
-            'mortality' => (object) [
-                'total_deaths'  => MortalityLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->sum('count'),
-                'top_cause'     => MortalityLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->selectRaw('reason, SUM(`count`) as total')->groupBy('reason')->orderByDesc('total')->value('reason') ?? '—',
-                'most_affected' => optional($allCages->find(MortalityLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->selectRaw('cage_id, SUM(`count`) as total')->groupBy('cage_id')->orderByDesc('total')->value('cage_id')))->cage_code ?? '—',
-                'days'          => MortalityLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->distinct('log_date')->count('log_date'),
-            ],
+            'production' => (function () use ($cageIds, $hasRange, $from, $to) {
+                $agg = ProductionLog::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))
+                    ->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))
+                    ->selectRaw('SUM(egg_count) as total_eggs, AVG(hdep) as avg_hdep, COUNT(DISTINCT log_date) as days')
+                    ->first();
+
+                return (object) [
+                    'total_eggs'  => $agg->total_eggs ?? 0,
+                    'avg_hdep'    => number_format($agg->avg_hdep ?? 0, 1) . '%',
+                    'total_hens'  => Hen::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->where('is_active', 1)->count(),
+                    'days'        => $agg->days ?? 0,
+                ];
+            })(),
+            'feed' => (function () use ($cageIds, $hasRange, $from, $to) {
+                $agg = FeedConsumptionLog::whereIn('cage_id', $cageIds)
+                    ->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))
+                    ->selectRaw('SUM(feed_consumed_kg) as total_kg, AVG(feed_consumed_kg) as avg_per_day, COUNT(DISTINCT feed_batch_id) as batches, COUNT(DISTINCT log_date) as days')
+                    ->first();
+
+                return (object) [
+                    'total_kg'    => number_format($agg->total_kg ?? 0, 1),
+                    'avg_per_day' => number_format($agg->avg_per_day ?? 0, 1),
+                    'batches'     => $agg->batches ?? 0,
+                    'days'        => $agg->days ?? 0,
+                ];
+            })(),
+            'environment' => (function () use ($cageIds, $hasRange, $from, $to) {
+                $agg = EnvironmentalLog::whereIn('cage_id', $cageIds)
+                    ->when($hasRange, fn($q) => $q->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59']))
+                    ->selectRaw('AVG(temperature_c) as avg_temp, AVG(humidity_pct) as avg_hum, COUNT(*) as readings, SUM(CASE WHEN temperature_c > 30 OR humidity_pct > 70 THEN 1 ELSE 0 END) as alerts')
+                    ->first();
+
+                return (object) [
+                    'avg_temp'    => number_format($agg->avg_temp ?? 0, 1) . '°C',
+                    'avg_hum'     => number_format($agg->avg_hum ?? 0, 1) . '%',
+                    'readings'    => $agg->readings ?? 0,
+                    'alerts'      => $agg->alerts ?? 0,
+                ];
+            })(),
+            'egg_stock' => (function () use ($from, $to, $cageIds, $cageId) {
+                $agg = $this->eggStockQuery($from, $to, $cageIds, $cageId)
+                    ->selectRaw('SUM(`count`) as total_stocked, COUNT(*) as batches, COUNT(DISTINCT harvested_date) as days')
+                    ->first();
+
+                return (object) [
+                    'total_stocked' => (int) ($agg->total_stocked ?? 0),
+                    'batches'       => $agg->batches ?? 0,
+                    'top_size'      => ucfirst($this->eggStockQuery($from, $to, $cageIds, $cageId)->selectRaw('egg_size, SUM(`count`) as total')->groupBy('egg_size')->orderByDesc('total')->value('egg_size') ?? '—'),
+                    'days'          => $agg->days ?? 0,
+                ];
+            })(),
+            'mortality' => (function () use ($cageIds, $hasRange, $from, $to, $allCages) {
+                $agg = MortalityLog::whereIn('cage_id', $cageIds)
+                    ->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))
+                    ->selectRaw('SUM(`count`) as total_deaths, COUNT(DISTINCT log_date) as days')
+                    ->first();
+
+                return (object) [
+                    'total_deaths'  => $agg->total_deaths ?? 0,
+                    'top_cause'     => MortalityLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->selectRaw('reason, SUM(`count`) as total')->groupBy('reason')->orderByDesc('total')->value('reason') ?? '—',
+                    'most_affected' => optional($allCages->find(MortalityLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->selectRaw('cage_id, SUM(`count`) as total')->groupBy('cage_id')->orderByDesc('total')->value('cage_id')))->cage_code ?? '—',
+                    'days'          => $agg->days ?? 0,
+                ];
+            })(),
             default => null,
         };
     }
