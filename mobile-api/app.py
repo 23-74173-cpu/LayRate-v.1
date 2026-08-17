@@ -309,6 +309,18 @@ def mark_alert_read(alert_id):
     return jsonify({"message": "Alert marked as read"}), 200
 
 
+@app.route("/api/alerts/read-all", methods=["PUT"])
+@require_auth
+def mark_all_alerts_read():
+    """Mark all unread alerts as read."""
+    conn = get_mysql()
+    with conn.cursor() as cursor:
+        cursor.execute("UPDATE alerts SET is_read = 1 WHERE is_read = 0")
+        affected = cursor.rowcount
+        conn.commit()
+    return jsonify({"message": "All alerts marked as read", "count": affected}), 200
+
+
 @app.route("/api/dashboard/status", methods=["GET"])
 @require_auth
 def dashboard_status():
@@ -340,10 +352,200 @@ def dashboard_status():
     ), 200
 
 
+@app.route("/api/environment/live", methods=["GET"])
+@require_auth
+def environment_live():
+    """Return per-cage environment data with status classification.
+
+    Mirrors the web UI's EnvironmentStatusService logic:
+      OK:     min < value < max   (strictly inside)
+      Watch:  value == min || value == max  (exactly at boundary)
+      Alert:  value < min || value > max   (strictly outside)
+    Combined status = worst of temp + hum (Alert > Watch > Normal).
+    """
+    # Default thresholds — will be replaced by GET /api/environment/thresholds once built.
+    TEMP_MIN, TEMP_MAX = 18.0, 30.0
+    HUM_MIN, HUM_MAX = 40.0, 70.0
+    STALE_MINUTES = 30
+
+    def classify(value, lo, hi):
+        if value < lo or value > hi:
+            return "Alert"
+        if value == lo or value == hi:
+            return "Watch"
+        return "OK"
+
+    def worst(*statuses):
+        if "Alert" in statuses:
+            return "Alert"
+        if "Watch" in statuses:
+            return "Watch"
+        return "Normal"
+
+    conn = get_mysql()
+    with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute(
+            """SELECT c.cage_code,
+                      e.temperature_c, e.humidity_pct, e.recorded_at
+               FROM cages c
+               LEFT JOIN environmental_logs e
+                 ON e.cage_id = c.id
+                 AND e.recorded_at = (
+                   SELECT MAX(e2.recorded_at)
+                   FROM environmental_logs e2
+                   WHERE e2.cage_id = c.id
+                 )
+               WHERE c.is_active = 1
+               ORDER BY c.cage_code"""
+        )
+        rows = cursor.fetchall()
+
+    from datetime import datetime, timezone, timedelta
+    now = datetime.now(timezone.utc)
+    stale_cutoff = timedelta(minutes=STALE_MINUTES)
+
+    cages = []
+    for r in rows:
+        temp = float(r["temperature_c"]) if r["temperature_c"] is not None else None
+        hum = float(r["humidity_pct"]) if r["humidity_pct"] is not None else None
+        recorded_at = r["recorded_at"]
+
+        if temp is not None and hum is not None and recorded_at is not None:
+            temp_status = classify(temp, TEMP_MIN, TEMP_MAX)
+            hum_status = classify(hum, HUM_MIN, HUM_MAX)
+            combined = worst(temp_status, hum_status)
+
+            if isinstance(recorded_at, datetime):
+                if recorded_at.tzinfo is None:
+                    recorded_at = recorded_at.replace(tzinfo=timezone.utc)
+                is_stale = (now - recorded_at) > stale_cutoff
+            else:
+                is_stale = True
+
+            cages.append({
+                "cageCode": r["cage_code"],
+                "temperature": temp,
+                "humidity": hum,
+                "tempStatus": temp_status,
+                "humStatus": hum_status,
+                "status": combined,
+                "lastReadingAt": recorded_at.isoformat(),
+                "isStale": is_stale,
+            })
+        else:
+            # Cage has no environmental data — include with defaults.
+            cages.append({
+                "cageCode": r["cage_code"],
+                "temperature": 0.0,
+                "humidity": 0.0,
+                "tempStatus": "Alert",
+                "humStatus": "Alert",
+                "status": "Alert",
+                "lastReadingAt": now.isoformat(),
+                "isStale": True,
+            })
+
+    return jsonify({"cages": cages}), 200
+
+
+@app.route("/api/environment/thresholds", methods=["GET"])
+@require_auth
+def get_thresholds():
+    """Return current environment threshold values."""
+    conn = get_mysql()
+    with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute(
+            "SELECT `key`, `value` FROM settings WHERE `key` IN ('temp_min','temp_max','hum_min','hum_max')"
+        )
+        rows = {r["key"]: r["value"] for r in cursor.fetchall()}
+
+    return jsonify({
+        "tempMin": float(rows.get("temp_min", 18)),
+        "tempMax": float(rows.get("temp_max", 30)),
+        "humMin": float(rows.get("hum_min", 40)),
+        "humMax": float(rows.get("hum_max", 70)),
+    }), 200
+
+
+@app.route("/api/environment/thresholds", methods=["PUT"])
+@require_auth
+def update_thresholds():
+    """Update environment threshold values."""
+    data = request.get_json(silent=True) or {}
+
+    fields = {
+        "tempMin": ("temp_min", 0, 50),
+        "tempMax": ("temp_max", 0, 50),
+        "humMin": ("hum_min", 0, 100),
+        "humMax": ("hum_max", 0, 100),
+    }
+
+    parsed = {}
+    for js_key, (db_key, lo, hi) in fields.items():
+        val = data.get(js_key)
+        if val is None:
+            return jsonify({"errors": {js_key: ["This field is required."]}}), 422
+        try:
+            val = float(val)
+        except (TypeError, ValueError):
+            return jsonify({"errors": {js_key: ["Must be a number."]}}), 422
+        if val < lo or val > hi:
+            return jsonify({"errors": {js_key: [f"Must be between {lo} and {hi}."]}}), 422
+        parsed[js_key] = val
+
+    # Cross-field validation.
+    if parsed["tempMax"] < parsed["tempMin"]:
+        return jsonify({"errors": {"tempMax": ["Must be greater than or equal to tempMin."]}}), 422
+    if parsed["humMax"] < parsed["humMin"]:
+        return jsonify({"errors": {"humMax": ["Must be greater than or equal to humMin."]}}), 422
+
+    conn = get_mysql()
+    with conn.cursor() as cursor:
+        for js_key, (db_key, _, _) in fields.items():
+            cursor.execute(
+                "INSERT INTO settings (`key`, `value`, `updated_at`) VALUES (%s, %s, NOW()) "
+                "ON DUPLICATE KEY UPDATE `value` = VALUES(`value`), `updated_at` = NOW()",
+                (db_key, str(parsed[js_key])),
+            )
+        conn.commit()
+
+    return jsonify({"success": True}), 200
+
+
 @app.route("/api/ping", methods=["GET"])
 def ping():
     """Unauthenticated endpoint used by the mobile app for auto-discovery."""
     return jsonify({"ok": True}), 200
+
+
+@app.route("/api/hardware/health", methods=["GET"])
+@require_auth
+def hardware_health():
+    """Return summary counts of hardware items by status and type."""
+    conn = get_mysql()
+    with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute("SELECT COUNT(*) AS total FROM hardware_items")
+        total = cursor.fetchone()["total"]
+
+        cursor.execute("SELECT COUNT(*) AS cnt FROM hardware_items WHERE status = 'active'")
+        active = cursor.fetchone()["cnt"]
+
+        cursor.execute("SELECT COUNT(*) AS cnt FROM hardware_items WHERE status = 'faulty'")
+        faulty = cursor.fetchone()["cnt"]
+
+        cursor.execute("SELECT COUNT(*) AS cnt FROM hardware_items WHERE status = 'active' AND device_type = 'DHT22'")
+        dht22 = cursor.fetchone()["cnt"]
+
+        cursor.execute("SELECT COUNT(*) AS cnt FROM hardware_items WHERE status = 'active' AND device_type = 'IR_breakbeam'")
+        breakbeam = cursor.fetchone()["cnt"]
+
+    return jsonify({
+        "total": total,
+        "active": active,
+        "faulty": faulty,
+        "dht22": dht22,
+        "breakbeam": breakbeam,
+    }), 200
 
 
 # ── Health check ────────────────────────────────────────────────────────────

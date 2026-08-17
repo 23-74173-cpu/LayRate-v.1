@@ -17,15 +17,26 @@ class HardwareItem extends Model
         'installation_date',
         'status',
         'last_calibration_date',
+        'relay_status',
+        'control_mode',
+        'relay_safety',
+        'last_changed_at',
+        'last_changed_by',
+        'relay_seen_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'installation_date'     => 'date',
+            'installation_date' => 'date',
             'last_calibration_date' => 'date',
+            'relay_safety' => 'boolean',
+            'last_changed_at' => 'datetime',
+            'relay_seen_at' => 'datetime',
         ];
     }
+
+    const CONTROL_MODES = ['auto', 'manual'];
 
     const DEVICE_TYPES = ['DHT22', 'IR_breakbeam', 'relay', 'other'];
 
@@ -44,6 +55,11 @@ class HardwareItem extends Model
     public function device(): BelongsTo
     {
         return $this->belongsTo(Device::class);
+    }
+
+    public function lastChangedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'last_changed_by');
     }
 
     public function latestOccupancyReading(): HasOne
