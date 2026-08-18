@@ -193,6 +193,45 @@ class DashboardControllerTest extends TestCase
         $response->assertSee("type: 'pie'", false);
     }
 
+    public function test_production_history_renders_line_chart_defaulting_to_7_days(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('dashboard.production-history'));
+        $response->assertOk();
+
+        $response->assertSee('Production History');
+        $response->assertSee('dashProductionHistoryChart');
+        $response->assertSee('Total Production');
+        $response->assertSee('7D');
+        $response->assertSee('14D');
+        $response->assertSee('30D');
+
+        // Default days filter is 7.
+        $response->assertViewHas('days', 7);
+    }
+
+    public function test_production_history_scopes_to_selected_cage(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('dashboard.production-history', ['cage' => 'CAGE-DASH-A']));
+        $response->assertOk();
+
+        $response->assertSee('CAGE-DASH-A Production');
+        $response->assertSee('dashProductionHistoryChart');
+    }
+
+    public function test_production_history_30_day_filter_is_accepted(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('dashboard.production-history', ['days' => 30]));
+        $response->assertOk();
+        $response->assertViewHas('days', 30);
+    }
+
+    public function test_production_history_invalid_days_filter_defaults_to_7(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('dashboard.production-history', ['days' => 99]));
+        $response->assertOk();
+        $response->assertViewHas('days', 7);
+    }
+
     private function extractEggsToday($response)
     {
         return $response->viewData('eggsToday');

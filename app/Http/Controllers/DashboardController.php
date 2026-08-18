@@ -86,6 +86,61 @@ class DashboardController extends Controller
         return view('dashboard._cage-performance', $data);
     }
 
+    public function productionHistory()
+    {
+        $cageCode = request('cage');
+        $days = (int) request('days', 7);
+        if (! in_array($days, [7, 14, 30])) {
+            $days = 7;
+        }
+
+        $endDate = now()->toDateString();
+        $startDate = now()->subDays($days - 1)->toDateString();
+
+        // Same query pattern as the egg-management calendar (proven reliable).
+        $scope = fn ($q) => $q->when($cageCode, fn ($cq) => $cq->whereHas('cageSlot.cage', fn ($c) => $c->where('cage_code', $cageCode)));
+
+        $logs = ProductionLog::query()
+            ->whereBetween('log_date', [$startDate, $endDate])
+            ->where($scope)
+            ->get()
+            ->groupBy(fn ($l) => $l->log_date->format('Y-m-d'))
+            ->map(fn ($g) => (int) $g->sum('egg_count'));
+
+        // Build date labels and data points, filling missing days with 0.
+        $labels = collect(range(0, $days - 1))
+            ->map(fn ($i) => now()->subDays($days - 1 - $i)->format('M j'))
+            ->values()
+            ->toArray();
+
+        $dataPoints = collect(range(0, $days - 1))
+            ->map(function ($i) use ($logs, $days) {
+                $date = now()->subDays($days - 1 - $i)->toDateString();
+                return $logs->get($date, 0);
+            })
+            ->values()
+            ->toArray();
+
+        $title = $cageCode ? $cageCode . ' Production' : 'Total Production';
+
+        $chartData = [
+            'labels' => $labels,
+            'datasets' => [[
+                'label' => $title,
+                'data' => $dataPoints,
+                'borderColor' => '#102A4C',
+                'backgroundColor' => 'rgba(16, 42, 76, 0.1)',
+                'tension' => 0.3,
+                'borderWidth' => 3,
+                'pointRadius' => 4,
+                'pointHoverRadius' => 6,
+                'fill' => true,
+            ]],
+        ];
+
+        return view('dashboard._production-history', compact('chartData', 'days', 'cageCode', 'title'));
+    }
+
     private function buildDashboardData(?string $cageCode = null): array
     {
         $today = now()->toDateString();

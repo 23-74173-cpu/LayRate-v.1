@@ -114,6 +114,7 @@ class Cage extends Model
             'CAGE-B' => '#1D4E8F',
             'CAGE-C' => '#C2703E',
             'CAGE-D' => '#6B4C8A',
+            'CAGE-E' => '#A78BCA',
             default => $this->generateColor(),
         };
     }
@@ -125,6 +126,7 @@ class Cage extends Model
             'CAGE-B' => '#dcebfa',
             'CAGE-C' => '#fae3d0',
             'CAGE-D' => '#e9e0f5',
+            'CAGE-E' => '#f0eaf8',
             default => $this->generateSoftColor(),
         };
     }

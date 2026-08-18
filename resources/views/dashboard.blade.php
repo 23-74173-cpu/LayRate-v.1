@@ -119,6 +119,11 @@
         @include('dashboard._cage-performance-skeleton')
     </turbo-frame>
 
+    {{-- ── Production History (total & per-cage, 7/14/30 day filter) ── --}}
+    <turbo-frame id="dashboard-production-history" src="{{ route('dashboard.production-history') }}" loading="lazy" class="block">
+        @include('dashboard._production-history-skeleton')
+    </turbo-frame>
+
     {{-- ── Feed Today (last section) ── --}}
     <turbo-frame id="dashboard-feed-mortality" src="{{ route('dashboard.feed-mortality') }}" loading="lazy" class="block">
         @include('dashboard._feed-mortality-skeleton')
@@ -240,6 +245,70 @@
         window.__dashboardClockTimer = setInterval(tick, 1000);
     })();
 
+    // ── Shared dashboard chart renderer ──
+    // Multiple lazy Turbo Frames on the dashboard load incrementally. Each frame
+    // used to call LayRateChart.prepareForRender() on its own, but that helper is
+    // global: it destroys every existing chart instance. Calling it for every new
+    // frame would wipe out charts that rendered earlier (e.g. Cage Performance's
+    // bar/pie charts disappear as soon as Production History loads). We therefore
+    // prepare Chart.js once for the whole dashboard, then render each subsequent
+    // chart individually. A recovery hook lets LayRateChart re-render everything
+    // if it ever has to reload Chart.js to clear a stuck-paint state.
+    window.DashboardChartRenderer = (function () {
+        var queue = [];
+        var preparePromise = null;
+        var prepared = false;
+        var knownConfigs = {};
+
+        function renderAll() {
+            Object.keys(knownConfigs).forEach(function (id) {
+                LayRateChart.create(id, knownConfigs[id]);
+            });
+        }
+
+        function flushQueue() {
+            queue.forEach(function (item) {
+                LayRateChart.create(item.id, item.config);
+            });
+            queue = [];
+        }
+
+        function runBatch() {
+            if (prepared) {
+                // Chart.js is already fresh; render only the newly requested chart(s)
+                // without touching the other dashboard charts.
+                flushQueue();
+                return;
+            }
+            if (!preparePromise) {
+                preparePromise = window.LayRateChart.prepareForRender();
+                var myGen = window.LayRateChart._generation;
+                preparePromise.then(function () {
+                    preparePromise = null;
+                    if (myGen !== window.LayRateChart._generation) return;
+                    prepared = true;
+                    flushQueue();
+                    // Register a recovery hook so stuck-paint recovery can redraw
+                    // every dashboard chart against the freshly loaded module.
+                    window.LayRateChart.registerRecoveryHook(function () {
+                        window.LayRateChart.prepareForRender().then(function () {
+                            renderAll();
+                        });
+                    });
+                });
+            }
+        }
+
+        return {
+            render: function (id, config) {
+                knownConfigs[id] = config;
+                queue.push({ id: id, config: config });
+                runBatch();
+            },
+            recover: renderAll
+        };
+    })();
+
     // ── Cage filter: reloads Turbo Frames with ?cage=CODE ──
     window.filterDashboard = function(code) {
         document.querySelectorAll('.dashboard-tab').forEach(function(tab) {
@@ -259,18 +328,22 @@
         var statsUrl = '{{ route('dashboard.stats') }}';
         var feedUrl  = '{{ route('dashboard.feed-mortality') }}';
         var perfUrl  = '{{ route('dashboard.cage-performance') }}';
+        var historyUrl = '{{ route('dashboard.production-history') }}';
         if (code !== 'all') {
             statsUrl += '?cage=' + encodeURIComponent(code);
             feedUrl  += '?cage=' + encodeURIComponent(code);
             perfUrl  += '?cage=' + encodeURIComponent(code);
+            historyUrl += '?cage=' + encodeURIComponent(code);
         }
 
         var statsFrame = document.getElementById('dashboard-stats');
         var feedFrame  = document.getElementById('dashboard-feed-mortality');
         var perfFrame  = document.getElementById('dashboard-cage-performance');
-        if (statsFrame) { statsFrame.src = statsUrl; statsFrame.reload(); }
-        if (feedFrame)  { feedFrame.src  = feedUrl;  feedFrame.reload();  }
-        if (perfFrame)  { perfFrame.src  = perfUrl;  perfFrame.reload();  }
+        var historyFrame = document.getElementById('dashboard-production-history');
+        if (statsFrame)   { statsFrame.src   = statsUrl;   statsFrame.reload();   }
+        if (feedFrame)    { feedFrame.src    = feedUrl;    feedFrame.reload();    }
+        if (perfFrame)    { perfFrame.src    = perfUrl;    perfFrame.reload();    }
+        if (historyFrame) { historyFrame.src = historyUrl; historyFrame.reload(); }
     };
     </script>
 

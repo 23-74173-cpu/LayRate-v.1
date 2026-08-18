@@ -221,55 +221,6 @@ function perfValueLabelPlugin() {
     };
 }
 
-// Pie/doughnut labels outside the slices with short leader lines.
-function perfPieLabelPlugin() {
-    return {
-        id: 'perfPieOutsideLabels',
-        afterDatasetsDraw: function (chart) {
-            var ctx = chart.ctx;
-            var ds = chart.data.datasets[0];
-            var meta = chart.getDatasetMeta(0);
-            if (!meta || !meta.data || !meta.data.length) return;
-            var total = ds.data.reduce(function (a, b) { return a + b; }, 0);
-            meta.data.forEach(function (arc, i) {
-                var v = ds.data[i];
-                if (!v) return;
-                var mid = arc.startAngle + (arc.endAngle - arc.startAngle) / 2;
-                var cx = arc.x, cy = arc.y;
-                var r = arc.outerRadius;
-                // Pull the label a bit outside the slice.
-                var lineLen = 12;
-                var labelR = r + lineLen + 4;
-                var x1 = cx + Math.cos(mid) * r;
-                var y1 = cy + Math.sin(mid) * r;
-                var x2 = cx + Math.cos(mid) * (r + lineLen);
-                var y2 = cy + Math.sin(mid) * (r + lineLen);
-                var x3 = x2 + (Math.cos(mid) >= 0 ? 6 : -6);
-                var y3 = y2;
-                var right = Math.cos(mid) >= 0;
-
-                ctx.save();
-                ctx.strokeStyle = perfColors[i] || '#6B7280';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(x1, y1);
-                ctx.lineTo(x2, y2);
-                ctx.lineTo(x3, y3);
-                ctx.stroke();
-
-                ctx.font = '500 11px Inter, system-ui, sans-serif';
-                ctx.fillStyle = '#31302e';
-                ctx.textAlign = right ? 'left' : 'right';
-                ctx.textBaseline = 'middle';
-                var pct = total > 0 ? Math.round((v / total) * 100) : 0;
-                var label = chart.data.labels[i] + ' · ' + v + ' (' + pct + '%)';
-                ctx.fillText(label, x3 + (right ? 3 : -3), y3);
-                ctx.restore();
-            });
-        }
-    };
-}
-
 var perfGridColor = '#F0F0EC';
 function perfBarOpts() {
     return {
@@ -288,9 +239,35 @@ function perfPieOpts() {
     return {
         responsive: true,
         maintainAspectRatio: false,
-        layout: { padding: { top: 12, bottom: 12, left: 12, right: 12 } },
+        layout: { padding: { top: 8, bottom: 8, left: 8, right: 8 } },
         plugins: {
-            legend: { display: false },
+            legend: {
+                display: true,
+                position: 'right',
+                labels: {
+                    boxWidth: 10,
+                    usePointStyle: true,
+                    pointStyle: 'circle',
+                    font: { size: 11, family: 'Inter, system-ui, sans-serif' },
+                    padding: 12,
+                    generateLabels: function (chart) {
+                        var data = chart.data;
+                        var total = data.datasets[0].data.reduce(function (a, b) { return a + b; }, 0);
+                        return data.labels.map(function (label, i) {
+                            var value = data.datasets[0].data[i];
+                            var pct = total > 0 ? Math.round((value / total) * 100) : 0;
+                            return {
+                                text: label + ' · ' + value + ' (' + pct + '%)',
+                                fillStyle: data.datasets[0].backgroundColor[i],
+                                strokeStyle: data.datasets[0].backgroundColor[i],
+                                lineWidth: 0,
+                                hidden: false,
+                                index: i
+                            };
+                        });
+                    }
+                }
+            },
             tooltip: {
                 callbacks: {
                     label: function (context) {
@@ -306,33 +283,34 @@ function perfPieOpts() {
 
 window.renderDashPerformanceCharts = function () {
     if (!perfData.length) return;
-    LayRateChart.create('dashHdepChart', {
-        type: 'bar',
-        data: { labels: perfLabels, datasets: [{ data: perfHdeps, backgroundColor: perfColors, borderRadius: 3 }] },
-        options: perfBarOpts(),
-        plugins: [perfValueLabelPlugin()]
-    });
-    LayRateChart.create('dashEggsChart', {
-        type: 'pie',
-        data: { labels: perfLabels, datasets: [{ data: perfEggs, backgroundColor: perfColors, borderWidth: 0 }] },
-        options: perfPieOpts(),
-        plugins: [perfPieLabelPlugin()]
-    });
+    if (typeof window.DashboardChartRenderer !== 'undefined') {
+        window.DashboardChartRenderer.render('dashHdepChart', {
+            type: 'bar',
+            data: { labels: perfLabels, datasets: [{ data: perfHdeps, backgroundColor: perfColors, borderRadius: 3 }] },
+            options: perfBarOpts(),
+            plugins: [perfValueLabelPlugin()]
+        });
+        window.DashboardChartRenderer.render('dashEggsChart', {
+            type: 'pie',
+            data: { labels: perfLabels, datasets: [{ data: perfEggs, backgroundColor: perfColors, borderWidth: 0 }] },
+            options: perfPieOpts()
+        });
+    } else {
+        // Fallback if the shared renderer is not available.
+        LayRateChart.create('dashHdepChart', {
+            type: 'bar',
+            data: { labels: perfLabels, datasets: [{ data: perfHdeps, backgroundColor: perfColors, borderRadius: 3 }] },
+            options: perfBarOpts(),
+            plugins: [perfValueLabelPlugin()]
+        });
+        LayRateChart.create('dashEggsChart', {
+            type: 'pie',
+            data: { labels: perfLabels, datasets: [{ data: perfEggs, backgroundColor: perfColors, borderWidth: 0 }] },
+            options: perfPieOpts()
+        });
+    }
 };
 
-function doDashPerfRender() {
-    if (typeof window.renderDashPerformanceCharts === 'function') window.renderDashPerformanceCharts();
-}
-
-if (window.LayRateChart && typeof window.LayRateChart.prepareForRender === 'function') {
-    var perfPending = window.LayRateChart.prepareForRender();
-    var perfGen = window.LayRateChart._generation;
-    perfPending.then(function () {
-        if (window.LayRateChart._generation !== perfGen) return;
-        doDashPerfRender();
-    });
-} else {
-    doDashPerfRender();
-}
+window.renderDashPerformanceCharts();
 </script>
 </turbo-frame>
