@@ -1,11 +1,11 @@
 <div class="border-b border-[#D9D9D9]">
     <nav class="-mb-px flex gap-6 overflow-x-auto overflow-y-hidden scrollbar-thin">
         @foreach([
+            'production-history' => ['label' => 'Production History', 'icon' => 'calendar-days', 'route' => 'eggs.production-history', 'subtitle' => 'Daily egg logs calendar'],
             'logging'     => ['label' => 'Egg Logging', 'icon' => 'egg',         'route' => 'eggs.logging',            'subtitle' => 'Log daily egg production per cage slot'],
             'recent-logs' => ['label' => 'Recent Logs', 'icon' => 'clipboard',   'route' => 'eggs.recent-logs',        'subtitle' => 'Review and manage egg production records'],
             'stocks'      => ['label' => 'Egg Stocks',  'icon' => 'package',     'route' => 'eggs.stocks',             'subtitle' => 'Track harvested egg inventory by size and freshness'],
             'preorders'        => ['label' => 'Pre-Orders',       'icon' => 'shopping-bag', 'route' => 'eggs.preorders',          'subtitle' => 'Customer orders and fulfillment tracking'],
-            'production-history' => ['label' => 'Production History', 'icon' => 'calendar-days', 'route' => 'eggs.production-history', 'subtitle' => 'Daily egg logs calendar'],
             'history'          => ['label' => 'History',          'icon' => 'history',      'route' => 'egg-production-history',  'subtitle' => 'Full timeline of eggs logged since day 1'],
         ] as $key => $tab)
             @php
