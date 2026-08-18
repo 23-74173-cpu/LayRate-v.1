@@ -213,7 +213,7 @@ function perfValueLabelPlugin() {
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'bottom';
                     ctx.fillStyle = perfColors[i] || '#1f1f1f';
-                    ctx.fillText(String(v), pos.x, pos.y - 5);
+                    ctx.fillText(String(v) + (isBar ? '%' : ''), pos.x, pos.y - 5);
                     ctx.restore();
                 });
             });

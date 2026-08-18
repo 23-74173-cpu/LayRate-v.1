@@ -232,6 +232,19 @@ class DashboardControllerTest extends TestCase
         $response->assertViewHas('days', 7);
     }
 
+    public function test_production_history_compare_mode_renders_multiple_datasets(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('dashboard.production-history', ['compare' => 1]));
+        $response->assertOk();
+
+        $response->assertSee('Cage Production Comparison');
+        $response->assertSee('Compare');
+        $chartData = $response->viewData('chartData');
+        $this->assertGreaterThan(1, count($chartData['datasets']));
+        $this->assertContains('CAGE-DASH-A', collect($chartData['datasets'])->pluck('label')->toArray());
+        $this->assertContains('CAGE-DASH-B', collect($chartData['datasets'])->pluck('label')->toArray());
+    }
+
     private function extractEggsToday($response)
     {
         return $response->viewData('eggsToday');

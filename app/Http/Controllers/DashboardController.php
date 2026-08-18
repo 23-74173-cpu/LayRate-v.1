@@ -90,6 +90,7 @@ class DashboardController extends Controller
     {
         $cageCode = request('cage');
         $days = (int) request('days', 7);
+        $compare = request('compare', false);
         if (! in_array($days, [7, 14, 30])) {
             $days = 7;
         }
@@ -97,35 +98,65 @@ class DashboardController extends Controller
         $endDate = now()->toDateString();
         $startDate = now()->subDays($days - 1)->toDateString();
 
-        // Same query pattern as the egg-management calendar (proven reliable).
-        $scope = fn ($q) => $q->when($cageCode, fn ($cq) => $cq->whereHas('cageSlot.cage', fn ($c) => $c->where('cage_code', $cageCode)));
-
-        $logs = ProductionLog::query()
-            ->whereBetween('log_date', [$startDate, $endDate])
-            ->where($scope)
-            ->get()
-            ->groupBy(fn ($l) => $l->log_date->format('Y-m-d'))
-            ->map(fn ($g) => (int) $g->sum('egg_count'));
-
         // Build date labels and data points, filling missing days with 0.
         $labels = collect(range(0, $days - 1))
             ->map(fn ($i) => now()->subDays($days - 1 - $i)->format('M j'))
             ->values()
             ->toArray();
 
-        $dataPoints = collect(range(0, $days - 1))
-            ->map(function ($i) use ($logs, $days) {
-                $date = now()->subDays($days - 1 - $i)->toDateString();
-                return $logs->get($date, 0);
-            })
-            ->values()
-            ->toArray();
+        $dateKeys = collect(range(0, $days - 1))
+            ->map(fn ($i) => now()->subDays($days - 1 - $i)->toDateString())
+            ->values();
 
-        $title = $cageCode ? $cageCode . ' Production' : 'Total Production';
+        if ($compare) {
+            // Multi-line comparison: one dataset per active cage.
+            $cages = Cage::query()
+                ->when($cageCode, fn ($q) => $q->where('cage_code', $cageCode))
+                ->where('is_active', 1)
+                ->orderBy('cage_code')
+                ->get();
 
-        $chartData = [
-            'labels' => $labels,
-            'datasets' => [[
+            $logs = ProductionLog::query()
+                ->with('cageSlot.cage')
+                ->whereBetween('log_date', [$startDate, $endDate])
+                ->when($cageCode, fn ($q) => $q->whereHas('cageSlot.cage', fn ($c) => $c->where('cage_code', $cageCode)))
+                ->get()
+                ->groupBy(fn ($l) => $l->cageSlot?->cage?->cage_code ?? 'Unknown')
+                ->map(fn ($group) => $group->groupBy(fn ($l) => $l->log_date->format('Y-m-d'))->map(fn ($g) => (int) $g->sum('egg_count')));
+
+            $datasets = $cages->map(function ($cage) use ($dateKeys, $logs) {
+                $cageLogs = $logs->get($cage->cage_code, collect());
+                $color = $cage->color;
+                return [
+                    'label' => $cage->cage_code,
+                    'data' => $dateKeys->map(fn ($date) => $cageLogs->get($date, 0))->values()->toArray(),
+                    'borderColor' => $color,
+                    'backgroundColor' => $color,
+                    'tension' => 0.3,
+                    'borderWidth' => 2,
+                    'pointRadius' => 3,
+                    'pointHoverRadius' => 5,
+                    'fill' => false,
+                ];
+            })->values()->toArray();
+
+            $title = $cageCode ? $cageCode . ' Production Comparison' : 'Cage Production Comparison';
+        } else {
+            // Same query pattern as the egg-management calendar (proven reliable).
+            $scope = fn ($q) => $q->when($cageCode, fn ($cq) => $cq->whereHas('cageSlot.cage', fn ($c) => $c->where('cage_code', $cageCode)));
+
+            $logs = ProductionLog::query()
+                ->whereBetween('log_date', [$startDate, $endDate])
+                ->where($scope)
+                ->get()
+                ->groupBy(fn ($l) => $l->log_date->format('Y-m-d'))
+                ->map(fn ($g) => (int) $g->sum('egg_count'));
+
+            $dataPoints = $dateKeys->map(fn ($date) => $logs->get($date, 0))->values()->toArray();
+
+            $title = $cageCode ? $cageCode . ' Production' : 'Total Production';
+
+            $datasets = [[
                 'label' => $title,
                 'data' => $dataPoints,
                 'borderColor' => '#102A4C',
@@ -135,10 +166,15 @@ class DashboardController extends Controller
                 'pointRadius' => 4,
                 'pointHoverRadius' => 6,
                 'fill' => true,
-            ]],
+            ]];
+        }
+
+        $chartData = [
+            'labels' => $labels,
+            'datasets' => $datasets,
         ];
 
-        return view('dashboard._production-history', compact('chartData', 'days', 'cageCode', 'title'));
+        return view('dashboard._production-history', compact('chartData', 'days', 'cageCode', 'title', 'compare'));
     }
 
     private function buildDashboardData(?string $cageCode = null): array
