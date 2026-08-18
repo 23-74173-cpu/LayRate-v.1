@@ -147,7 +147,8 @@
     var perfEggs = perfData.map(function (p) { return p.total_eggs; });
     var perfColors = perfData.map(function (p) { return p.color; });
 
-    // Inline Chart.js plugin that draws each bar's value right above it.
+    // Inline Chart.js plugin that draws each bar's value right above it,
+    // tinted with the same cage identity color used for the bar itself.
     function perfValueLabelPlugin() {
         return {
             id: 'perfValueLabels',
@@ -163,7 +164,7 @@
                         ctx.font = '600 11px Inter, system-ui, sans-serif';
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'bottom';
-                        ctx.fillStyle = '#1f1f1f';
+                        ctx.fillStyle = perfColors[i] || '#1f1f1f';
                         ctx.fillText(String(v), bar.x, bar.y - 5);
                         ctx.restore();
                     });

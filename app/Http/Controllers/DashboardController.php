@@ -79,6 +79,13 @@ class DashboardController extends Controller
         ));
     }
 
+    public function cagePerformance()
+    {
+        $data = $this->buildDashboardData(request('cage'));
+
+        return view('dashboard._cage-performance', $data);
+    }
+
     private function buildDashboardData(?string $cageCode = null): array
     {
         $today = now()->toDateString();

@@ -145,6 +145,54 @@ class DashboardControllerTest extends TestCase
         $this->assertGreaterThanOrEqual(11, $response->viewData('lifetimeEggs'));
     }
 
+    public function test_cage_performance_endpoint_returns_view_with_rankings(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('dashboard.cage-performance'));
+        $response->assertOk();
+
+        $cages = $response->viewData('cages');
+        $cageA = $cages->firstWhere('cage_code', 'CAGE-DASH-A');
+        $cageB = $cages->firstWhere('cage_code', 'CAGE-DASH-B');
+
+        $this->assertEquals(4, $cageA->today_eggs);
+        $this->assertEquals(100.0, $cageA->today_hdep);
+        $this->assertEquals(1, $cageB->today_eggs);
+        $this->assertEquals(50.0, $cageB->today_hdep);
+    }
+
+    public function test_cage_performance_ranks_cages_by_eggs_collected(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('dashboard.cage-performance'));
+        $response->assertOk();
+
+        // Cage A produced 4 eggs today vs Cage B's 1 egg, so A should be ranked #1.
+        $response->assertSee('CAGE-DASH-A');
+        $response->assertSee('100.0%');
+        $response->assertSee('4');
+    }
+
+    public function test_cage_performance_renders_comparison_charts(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('dashboard.cage-performance'));
+        $response->assertOk();
+
+        $response->assertSee('HDEP by Cage');
+        $response->assertSee('Eggs Share by Cage');
+        $response->assertSee('dashHdepChart');
+        $response->assertSee('dashEggsChart');
+
+        // Each cage's identity color must be passed to the chart datasets
+        // so the bars/slices match the cage dots/labels used elsewhere in the UI.
+        $cageA = $this->cageA->fresh();
+        $cageB = $this->cageB->fresh();
+        $response->assertSee($cageA->color, false);
+        $response->assertSee($cageB->color, false);
+
+        // HDEP remains a bar chart; eggs are rendered as a pie chart.
+        $response->assertSee("type: 'bar'", false);
+        $response->assertSee("type: 'pie'", false);
+    }
+
     private function extractEggsToday($response)
     {
         return $response->viewData('eggsToday');

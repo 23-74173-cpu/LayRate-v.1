@@ -114,7 +114,12 @@
     });
     </script>
 
-    {{-- ── Feed / Mortality ── --}}
+    {{-- ── Cage Performance Rankings (full width, expands right) ── --}}
+    <turbo-frame id="dashboard-cage-performance" src="{{ route('dashboard.cage-performance') }}" loading="lazy" class="block">
+        @include('dashboard._cage-performance-skeleton')
+    </turbo-frame>
+
+    {{-- ── Feed Today (last section) ── --}}
     <turbo-frame id="dashboard-feed-mortality" src="{{ route('dashboard.feed-mortality') }}" loading="lazy" class="block">
         @include('dashboard._feed-mortality-skeleton')
     </turbo-frame>
@@ -253,15 +258,19 @@
 
         var statsUrl = '{{ route('dashboard.stats') }}';
         var feedUrl  = '{{ route('dashboard.feed-mortality') }}';
+        var perfUrl  = '{{ route('dashboard.cage-performance') }}';
         if (code !== 'all') {
             statsUrl += '?cage=' + encodeURIComponent(code);
             feedUrl  += '?cage=' + encodeURIComponent(code);
+            perfUrl  += '?cage=' + encodeURIComponent(code);
         }
 
         var statsFrame = document.getElementById('dashboard-stats');
         var feedFrame  = document.getElementById('dashboard-feed-mortality');
+        var perfFrame  = document.getElementById('dashboard-cage-performance');
         if (statsFrame) { statsFrame.src = statsUrl; statsFrame.reload(); }
         if (feedFrame)  { feedFrame.src  = feedUrl;  feedFrame.reload();  }
+        if (perfFrame)  { perfFrame.src  = perfUrl;  perfFrame.reload();  }
     };
     </script>
 

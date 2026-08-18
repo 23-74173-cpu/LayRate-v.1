@@ -57,6 +57,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/stats', [DashboardController::class, 'stats'])->name('dashboard.stats');
     Route::get('/dashboard/feed-mortality', [DashboardController::class, 'feedMortality'])->name('dashboard.feed-mortality');
     Route::get('/dashboard/calendar', [DashboardController::class, 'calendar'])->name('dashboard.calendar');
+    Route::get('/dashboard/cage-performance', [DashboardController::class, 'cagePerformance'])->name('dashboard.cage-performance');
     Route::post('/settings/farm-layout', [SettingsController::class, 'storeFarmLayout'])->name('settings.farm-layout');
 
     // Cages — reads (all authenticated users)

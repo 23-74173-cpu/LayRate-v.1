@@ -106,7 +106,12 @@
         * { -webkit-tap-highlight-color: transparent; }
         html { height: 100%; height: -webkit-fill-available; }
         body { background-color: #F5F6F8; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; height: 100%; height: -webkit-fill-available; overflow: hidden; overscroll-behavior: none; }
-        .nav-active { background: rgba(255,255,255,.2); box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
+        .nav-active {
+            background: rgba(255,255,255,.18) !important;
+            box-shadow: inset 2px 0 0 0 rgba(255,255,255,0.9), inset 0 0 0 1px rgba(255,255,255,.22);
+            color: #ffffff !important;
+        }
+        .nav-active i, .nav-active .sidebar-label { color: #ffffff !important; }
         .scrollbar-thin::-webkit-scrollbar { width: 4px; height: 4px; }
         .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
         .scrollbar-thin::-webkit-scrollbar-thumb { background: #D9D9D9; border-radius: 9999px; }
@@ -295,7 +300,7 @@
                 @continue
             @endif
             <div class="mt-3 first:mt-0">
-                <div class="px-3 pb-0.5 text-[9px] uppercase tracking-widest text-white/45 font-semibold">{{ $sectionName }}</div>
+                <div class="px-3 pb-0.5 text-[9px] uppercase tracking-widest text-white/70 font-semibold">{{ $sectionName }}</div>
                 @foreach($visible as $item)
                 <a href="{{ route($item['route']) }}"
                    data-route="{{ $item['route'] === 'dashboard' ? 'dashboard' : explode('.', $item['route'])[0] }}"
@@ -316,7 +321,7 @@
         <div class="border-t border-white/10 py-4 px-3 shrink-0">
             <a href="{{ route('profile') }}"
                data-route="profile"
-               class="nav-link group flex items-center gap-3 px-3 py-2 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors"
+               class="nav-link group flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-white/85 hover:text-white hover:bg-white/10"
                title="Profile" aria-label="Profile">
                 <span class="flex items-center gap-3 min-w-0 transition-transform duration-200 ease-out group-hover:-translate-y-0.5 group-hover:translate-x-1">
                     <i data-lucide="user" class="w-[19px] h-[19px] shrink-0"></i>
