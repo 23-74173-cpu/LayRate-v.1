@@ -104,7 +104,7 @@
                             <div class="flex items-center justify-end gap-1.5">
                                 <span class="text-xs text-[#333333] whitespace-nowrap">{{ number_format($p['today_hdep'], 1) }}%</span>
                                 <div class="w-8 h-1.5 rounded-full overflow-hidden" style="background-color: #f0f0f0;">
-                                    <div class="perf-progress h-full rounded-full" style="width: {{ min(100, $p['today_hdep']) }}%; background-color: {{ $p['color'] }};"></div>
+                                    <div class="perf-progress h-full rounded-full" style="width: {{ min(100, $p['today_hdep']) }}%; background-color: {{ $p['color_soft'] }}; border: 1px solid {{ $p['color'] }};"></div>
                                 </div>
                             </div>
                         </td>
@@ -288,26 +288,26 @@ window.renderDashPerformanceCharts = function () {
     if (typeof window.DashboardChartRenderer !== 'undefined') {
         window.DashboardChartRenderer.render('dashHdepChart', {
             type: 'bar',
-            data: { labels: perfLabels, datasets: [{ data: perfHdeps, backgroundColor: perfSoftColors, borderRadius: 3 }] },
+            data: { labels: perfLabels, datasets: [{ data: perfHdeps, backgroundColor: perfSoftColors, borderColor: perfColors, borderWidth: 1, borderRadius: 3 }] },
             options: perfBarOpts(),
             plugins: [perfValueLabelPlugin()]
         });
         window.DashboardChartRenderer.render('dashEggsChart', {
             type: 'pie',
-            data: { labels: perfLabels, datasets: [{ data: perfEggs, backgroundColor: perfSoftColors, borderWidth: 0 }] },
+            data: { labels: perfLabels, datasets: [{ data: perfEggs, backgroundColor: perfSoftColors, borderColor: perfColors, borderWidth: 1 }] },
             options: perfPieOpts()
         });
     } else {
         // Fallback if the shared renderer is not available.
         LayRateChart.create('dashHdepChart', {
             type: 'bar',
-            data: { labels: perfLabels, datasets: [{ data: perfHdeps, backgroundColor: perfSoftColors, borderRadius: 3 }] },
+            data: { labels: perfLabels, datasets: [{ data: perfHdeps, backgroundColor: perfSoftColors, borderColor: perfColors, borderWidth: 1, borderRadius: 3 }] },
             options: perfBarOpts(),
             plugins: [perfValueLabelPlugin()]
         });
         LayRateChart.create('dashEggsChart', {
             type: 'pie',
-            data: { labels: perfLabels, datasets: [{ data: perfEggs, backgroundColor: perfSoftColors, borderWidth: 0 }] },
+            data: { labels: perfLabels, datasets: [{ data: perfEggs, backgroundColor: perfSoftColors, borderColor: perfColors, borderWidth: 1 }] },
             options: perfPieOpts()
         });
     }

@@ -127,15 +127,18 @@ class DashboardController extends Controller
             $datasets = $cages->map(function ($cage) use ($dateKeys, $logs) {
                 $cageLogs = $logs->get($cage->cage_code, collect());
                 $color = $cage->color;
+                $softColor = $cage->colorSoft;
                 return [
                     'label' => $cage->cage_code,
                     'data' => $dateKeys->map(fn ($date) => $cageLogs->get($date, 0))->values()->toArray(),
-                    'borderColor' => $color,
-                    'backgroundColor' => $color,
+                    'borderColor' => $softColor,
+                    'backgroundColor' => $softColor,
+                    'pointBorderColor' => $color,
+                    'pointBorderWidth' => 2,
                     'tension' => 0.3,
                     'borderWidth' => 2,
-                    'pointRadius' => 3,
-                    'pointHoverRadius' => 5,
+                    'pointRadius' => 4,
+                    'pointHoverRadius' => 6,
                     'fill' => false,
                 ];
             })->values()->toArray();
@@ -313,6 +316,7 @@ class DashboardController extends Controller
             return (object) [
                 'cage' => $cage->cage_code,
                 'color' => $cage->color,
+                'colorSoft' => $cage->colorSoft,
                 'temp' => $env->temperature_c . '°C',
                 'hum' => $env->humidity_pct . '%',
                 'status' => $status,

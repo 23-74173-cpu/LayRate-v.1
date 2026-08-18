@@ -176,29 +176,29 @@
     window.KPI_DATA = Object.assign(window.KPI_DATA || {}, {
         hens: {
             title: 'Hens per Cage',
-            rows: {!! $cages->map(fn($c) => ['label' => $c->cage_code, 'color' => $c->color, 'value' => number_format($c->hen_count) . ' hens · ' . $c->breed])->values()->toJson() !!}
+            rows: {!! $cages->map(fn($c) => ['label' => $c->cage_code, 'color' => $c->color, 'bgColor' => $c->colorSoft, 'value' => number_format($c->hen_count) . ' hens · ' . $c->breed])->values()->toJson() !!}
         },
         hdep: {
             title: "Today's HDEP by Cage",
-            rows: {!! $cages->map(fn($c) => ['label' => $c->cage_code, 'color' => $c->color, 'value' => number_format($c->today_hdep, 1) . '%'])->values()->toJson() !!}
+            rows: {!! $cages->map(fn($c) => ['label' => $c->cage_code, 'color' => $c->color, 'bgColor' => $c->colorSoft, 'value' => number_format($c->today_hdep, 1) . '%'])->values()->toJson() !!}
         },
         eggs: {
             title: 'Eggs Collected by Cage',
-            rows: {!! $cages->map(fn($c) => ['label' => $c->cage_code, 'color' => $c->color, 'value' => number_format($c->today_eggs) . ' eggs'])->values()->toJson() !!}
+            rows: {!! $cages->map(fn($c) => ['label' => $c->cage_code, 'color' => $c->color, 'bgColor' => $c->colorSoft, 'value' => number_format($c->today_eggs) . ' eggs'])->values()->toJson() !!}
         },
         'lifetime-eggs': {
             title: 'Lifetime Eggs by Cage',
-            rows: {!! $cages->map(fn($c) => ['label' => $c->cage_code, 'color' => $c->color, 'value' => number_format($c->productionLogs->sum('egg_count')) . ' eggs'])->values()->toJson() !!}
+            rows: {!! $cages->map(fn($c) => ['label' => $c->cage_code, 'color' => $c->color, 'bgColor' => $c->colorSoft, 'value' => number_format($c->productionLogs->sum('egg_count')) . ' eggs'])->values()->toJson() !!}
         },
         env: {
             title: 'Environment by Cage',
-            rows: {!! $liveReadings->map(fn($r) => ['label' => $r->cage, 'color' => $r->color, 'value' => $r->temp . ' · ' . $r->hum . ' · ' . $r->status])->values()->toJson() !!}
+            rows: {!! $liveReadings->map(fn($r) => ['label' => $r->cage, 'color' => $r->color, 'bgColor' => $r->colorSoft, 'value' => $r->temp . ' · ' . $r->hum . ' · ' . $r->status])->values()->toJson() !!}
         },
         mortality: {
             title: 'Mortality by Cage',
             rows: {!! $cages->map(function ($cage) use ($mortalityToday) {
                 $count = $mortalityToday[$cage->cage_code] ?? 0;
-                return ['label' => $cage->cage_code, 'color' => $cage->color, 'value' => $count . ' ' . Str::plural('hen', $count)];
+                return ['label' => $cage->cage_code, 'color' => $cage->color, 'bgColor' => $cage->colorSoft, 'value' => $count . ' ' . Str::plural('hen', $count)];
             })->values()->toJson() !!}
         }
     });

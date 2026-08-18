@@ -49,7 +49,7 @@
         <button type="button" onclick="filterDashboard('{{ $cage->cage_code }}')" class="dashboard-tab px-4 py-2 text-sm font-medium whitespace-nowrap"
                 data-tab="{{ $cage->cage_code }}"
                 style="background-color: #ffffff; color: #615d59; border: 1px solid #e6e6e6;">
-            <span class="inline-block w-2 h-2 rounded-full mr-1.5" style="background-color: {{ $cage->color }};"></span>
+            <span class="inline-block w-2 h-2 rounded-full mr-1.5" style="background-color: {{ $cage->colorSoft }}; border: 1px solid {{ $cage->color }};"></span>
             {{ $cage->cage_code }}
         </button>
         @endforeach
@@ -167,7 +167,8 @@
             left.className = 'flex items-center gap-2 shrink-0';
             var dot = document.createElement('span');
             dot.className = 'w-2 h-2 rounded-full inline-block';
-            dot.style.backgroundColor = row.color;
+            dot.style.backgroundColor = row.bgColor || row.color;
+            dot.style.border = '1px solid ' + row.color;
             var label = document.createElement('span');
             label.style.color = '#615d59';
             label.textContent = row.label;

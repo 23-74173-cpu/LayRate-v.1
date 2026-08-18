@@ -16,6 +16,7 @@
         <div class="max-h-[340px] overflow-y-auto pr-1 scrollbar-thin">
             @forelse($feedToday as $cageCode => $feed)
             @php
+                $fSoftColor = $feed->cage?->colorSoft ?? '#f3f4f6';
                 $fColor = $feed->cage?->color ?? '#6B7280';
                 $total = $feed->feed_target_kg;
                 $consumed = $feed->feed_consumed_kg;
@@ -28,7 +29,7 @@
                     <span class="text-xs" style="color: #615d59;">{{ number_format($consumed, 0) }} / {{ $total }} kg</span>
                 </div>
                 <div class="w-full h-1.5 rounded-full overflow-hidden dash-bar" style="background-color: #f0f0f0;">
-                    <div class="h-full rounded-full" style="width: {{ $pct }}%; background-color: {{ $fColor }};"></div>
+                    <div class="h-full rounded-full" style="width: {{ $pct }}%; background-color: {{ $fSoftColor }}; border: 1px solid {{ $fColor }};"></div>
                 </div>
                 <div class="text-xs mt-1 {{ $pct < 80 ? 'text-amber-600' : '' }}" style="color: {{ $pct >= 80 ? '#a39e98' : '' }};">{{ $pct }}% consumed</div>
             </div>
