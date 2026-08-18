@@ -270,7 +270,7 @@ class EggReportingAndHistoryTest extends TestCase
 
         $response = $this->get(route('egg-production-history'));
         $response->assertOk();
-        $response->assertSee('Egg Production History');
+        $response->assertSee('Lifetime Total');
         $response->assertSee(number_format($expected));
     }
 
@@ -345,6 +345,17 @@ class EggReportingAndHistoryTest extends TestCase
         $response->assertSee('large');
         $response->assertSee('jumbo');
         $response->assertSee(number_format($expectedSizeTotal));
+    }
+
+    /** @test */
+    public function production_history_page_renders_calendar_frame()
+    {
+        $this->actingAs($this->user);
+
+        $response = $this->get(route('eggs.production-history'));
+        $response->assertOk();
+        $response->assertSee('Production History');
+        $response->assertSee('dashboard-calendar');
     }
 
     /** @test */

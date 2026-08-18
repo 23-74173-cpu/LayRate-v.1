@@ -106,6 +106,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/eggs/logging/logs',                   [EggLoggingController::class, 'logs'])->name('eggs.logging.logs');
     Route::get('/eggs/recent-logs',                    [EggLoggingController::class, 'recentLogs'])->name('eggs.recent-logs');
     Route::get('/egg-production-history',              [EggProductionHistoryController::class, 'index'])->name('egg-production-history');
+    Route::get('/eggs/production-history',             [EggProductionHistoryController::class, 'productionHistory'])->name('eggs.production-history');
     Route::post('/eggs/logging',                       [EggLoggingController::class, 'store'])->name('eggs.logging.store');
     Route::post('/eggs/logging/verify-override',       [EggLoggingController::class, 'verifyOverride'])->name('eggs.logging.verify-override')->middleware('throttle:6,1');
     Route::put('/eggs/logging/{productionLog}',        [EggLoggingController::class, 'update'])->name('eggs.logging.update');

@@ -66,6 +66,11 @@ class EggProductionHistoryController extends Controller
         ));
     }
 
+    public function productionHistory()
+    {
+        return view('eggs.production-history', ['activeTab' => 'production-history']);
+    }
+
     private function paginateCollection($items, Request $request, int $perPage = 5): LengthAwarePaginator
     {
         $page  = LengthAwarePaginator::resolveCurrentPage();
