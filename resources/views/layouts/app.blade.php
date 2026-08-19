@@ -127,8 +127,10 @@
         @media (min-width: 1024px) {
             #sidebar.w-16 .sidebar-label,
             #sidebar.w-16 .logo-text,
+            #sidebar.w-16 .sidebar-section,
             .sidebar-collapsed #sidebar .sidebar-label,
-            .sidebar-collapsed #sidebar .logo-text { display: none !important; }
+            .sidebar-collapsed #sidebar .logo-text,
+            .sidebar-collapsed #sidebar .sidebar-section { display: none !important; }
             #sidebar.w-16 .nav-link,
             .sidebar-collapsed #sidebar .nav-link {
                 justify-content: center !important;
@@ -137,6 +139,18 @@
             }
             #sidebar.w-16 .logo-wrap,
             .sidebar-collapsed #sidebar .logo-wrap { justify-content: center !important; }
+
+            /* Collapsed: center the brand logo without cropping and drop the
+               side gutters so the 44px logo fits 64px of sidebar exactly. */
+            #sidebar.w-16 > .flex,
+            .sidebar-collapsed #sidebar > .flex {
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+                justify-content: center !important;
+            }
+
+            #sidebar.w-16 nav,
+            .sidebar-collapsed #sidebar nav { overflow-x: hidden !important; }
 
             /* Apply collapsed width synchronously before paint (Turbo-safe replacement for document.write) */
             html.sidebar-collapsed #sidebar { width: 4rem !important; }
@@ -300,7 +314,7 @@
                 @continue
             @endif
             <div class="mt-3 first:mt-0">
-                <div class="px-3 pb-0.5 text-[9px] uppercase tracking-widest text-white/70 font-semibold">{{ $sectionName }}</div>
+                <div class="sidebar-section px-3 pb-0.5 text-[9px] uppercase tracking-widest text-white/70 font-semibold whitespace-nowrap">{{ $sectionName }}</div>
                 @foreach($visible as $item)
                 <a href="{{ route($item['route']) }}"
                    data-route="{{ $item['route'] === 'dashboard' ? 'dashboard' : explode('.', $item['route'])[0] }}"
@@ -682,6 +696,12 @@
             navLinks.forEach(function(link) {
                 link.addEventListener('click', closeMobile);
             });
+
+            // ── Keep the full/collapsed state consistent across breakpoint
+            // crossings (resize laptop→tablet→laptop) without a full reload. ──
+            window.addEventListener('resize', function() {
+                applySidebarState();
+            }, { passive: true });
 
             // ── Header profile dropdown ──
             var profileBtn = document.getElementById('profileMenuBtn');
