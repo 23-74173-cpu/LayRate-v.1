@@ -10,6 +10,7 @@ use App\Models\ProductionLog;
 use App\Models\Setting;
 use App\Services\EnvironmentStatusService;
 use App\Services\ReportingDateService;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -83,7 +84,44 @@ class DashboardController extends Controller
 
     public function cagePerformance()
     {
-        $data = $this->buildDashboardData(request('cage'));
+        $cageCode = request('cage');
+        $days = (int) request('days', 1);
+        if (! in_array($days, [1, 7, 14, 30])) {
+            $days = 1;
+        }
+
+        $data = $this->buildDashboardData($cageCode);
+
+        // Override per-cage stats for the selected period.
+        $reportingDate = ReportingDateService::reportingDate();
+        $endDate = $reportingDate->toDateString();
+        $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
+
+        $cageIds = $data['cages']->pluck('id');
+
+        $periodStats = ProductionLog::query()
+            ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
+            ->whereIn('cage_slots.cage_id', $cageIds)
+            ->whereBetween('production_logs.log_date', [$startDate, $endDate])
+            ->selectRaw('cage_slots.cage_id as cage_id, SUM(production_logs.egg_count) as total_eggs, AVG(production_logs.hdep) as avg_hdep')
+            ->groupBy('cage_slots.cage_id')
+            ->get()
+            ->keyBy('cage_id');
+
+        $data['cages']->each(function ($cage) use ($periodStats, $days) {
+            $stats = $periodStats->get($cage->id);
+            $cage->period_eggs = (int) ($stats?->total_eggs ?? 0);
+            $cage->period_hdep = $cage->hen_count > 0 && $days > 0
+                ? round($cage->period_eggs / ($cage->hen_count * $days) * 100, 1)
+                : 0;
+            // Fall back to stored avg_hdep if available and computed value is zero but eggs exist.
+            if ($cage->period_hdep === 0.0 && $stats?->avg_hdep !== null) {
+                $cage->period_hdep = round((float) $stats->avg_hdep, 1);
+            }
+        });
+
+        $data['days'] = $days;
+        $data['cageCode'] = $cageCode;
 
         return view('dashboard._cage-performance', $data);
     }

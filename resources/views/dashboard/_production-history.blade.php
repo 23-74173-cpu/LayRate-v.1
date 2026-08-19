@@ -12,20 +12,22 @@
             </div>
             <div class="inline-flex items-center gap-1 rounded-lg p-1" style="background-color: #f3f4f6;">
                 @foreach([7, 14, 30] as $d)
-                <a href="{{ route('dashboard.production-history', ['days' => $d, 'cage' => $cageCode, 'compare' => $compare ? 1 : null]) }}"
-                   class="px-3 py-1.5 text-xs font-semibold rounded-md transition-all {{ $days === $d ? '' : 'text-[#6B7280] hover:bg-[#e5e7eb]' }}"
-                   {{ $days === $d ? 'style="background-color: #0075de; color: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.1);"' : '' }}
-                   data-turbo-frame="dashboard-production-history">
+                <button type="button"
+                   data-history-days="{{ $d }}"
+                   onclick="setProductionHistoryDays({{ $d }})"
+                   class="history-days-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all {{ $days === $d ? 'history-days-active' : 'text-[#6B7280] hover:bg-[#e5e7eb]' }}"
+                   {{ $days === $d ? 'style="background-color: #0075de; color: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.1);"' : '' }}>
                     {{ $d }}D
-                </a>
+                </button>
                 @endforeach
                 <span class="w-px h-3 mx-1" style="background-color: #d1d5db;"></span>
-                <a href="{{ route('dashboard.production-history', ['days' => $days, 'cage' => $cageCode, 'compare' => $compare ? null : 1]) }}"
-                   class="px-3 py-1.5 text-xs font-semibold rounded-md transition-all {{ $compare ? '' : 'text-[#6B7280] hover:bg-[#e5e7eb]' }}"
-                   {{ $compare ? 'style="background-color: #0075de; color: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.1);"' : '' }}
-                   data-turbo-frame="dashboard-production-history">
+                <button type="button"
+                   data-history-compare
+                   onclick="toggleProductionHistoryCompare()"
+                   class="history-compare-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all {{ $compare ? 'history-compare-active' : 'text-[#6B7280] hover:bg-[#e5e7eb]' }}"
+                   {{ $compare ? 'style="background-color: #0075de; color: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.1);"' : '' }}>
                     Compare
-                </a>
+                </button>
             </div>
         </div>
 

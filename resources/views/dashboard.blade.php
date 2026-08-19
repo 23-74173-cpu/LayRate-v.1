@@ -310,8 +310,120 @@
         };
     })();
 
+    // ── Track the active cage and period filters so sub-filter buttons can rebuild URLs ──
+    window.__dashboardCage = 'all';
+    window.__dashboardHistoryDays = 7;
+    window.__dashboardHistoryCompare = false;
+    window.__dashboardPerfDays = 1;
+
+    function buildFrameUrl(base, params) {
+        var query = Object.keys(params).map(function (k) {
+            var v = params[k];
+            if (v === null || v === undefined || v === '' || v === false) return '';
+            return encodeURIComponent(k) + '=' + encodeURIComponent(v);
+        }).filter(Boolean).join('&');
+        return query ? base + '?' + query : base;
+    }
+
+    // Reload a Turbo Frame without scrolling the page back to the frame.
+    function reloadFramePreservingScroll(frameId, url) {
+        var frame = document.getElementById(frameId);
+        if (!frame) return;
+
+        var scrollRoot = document.querySelector('.page-wrapper') || document.documentElement;
+        var savedScroll = scrollRoot.scrollTop || window.scrollY || 0;
+
+        function restoreScroll() {
+            if (scrollRoot.scrollTop !== undefined) scrollRoot.scrollTop = savedScroll;
+            window.scrollTo(0, savedScroll);
+        }
+
+        frame.addEventListener('turbo:frame-load', function handler() {
+            frame.removeEventListener('turbo:frame-load', handler);
+            restoreScroll();
+            requestAnimationFrame(restoreScroll);
+            setTimeout(restoreScroll, 0);
+        }, { once: true });
+
+        frame.src = url;
+        frame.reload();
+    }
+
+    function setButtonActive(btn, active) {
+        if (active) {
+            btn.classList.remove('text-[#6B7280]', 'hover:bg-[#e5e7eb]');
+            btn.style.backgroundColor = '#0075de';
+            btn.style.color = '#ffffff';
+            btn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.1)';
+        } else {
+            btn.classList.add('text-[#6B7280]', 'hover:bg-[#e5e7eb]');
+            btn.style.backgroundColor = '';
+            btn.style.color = '';
+            btn.style.boxShadow = '';
+        }
+    }
+
+    window.setProductionHistoryDays = function(days) {
+        window.__dashboardHistoryDays = days;
+
+        var frame = document.getElementById('dashboard-production-history');
+        if (frame) {
+            frame.querySelectorAll('[data-history-days]').forEach(function(btn) {
+                setButtonActive(btn, parseInt(btn.dataset.historyDays, 10) === days);
+            });
+        }
+
+        var url = buildFrameUrl('{{ route('dashboard.production-history') }}', {
+            cage: window.__dashboardCage === 'all' ? null : window.__dashboardCage,
+            days: days === 7 ? null : days,
+            compare: window.__dashboardHistoryCompare ? 1 : null
+        });
+
+        reloadFramePreservingScroll('dashboard-production-history', url);
+    };
+
+    window.toggleProductionHistoryCompare = function() {
+        var nextCompare = !window.__dashboardHistoryCompare;
+        window.__dashboardHistoryCompare = nextCompare;
+
+        var frame = document.getElementById('dashboard-production-history');
+        if (frame) {
+            frame.querySelectorAll('[data-history-compare]').forEach(function(btn) {
+                setButtonActive(btn, nextCompare);
+            });
+        }
+
+        var url = buildFrameUrl('{{ route('dashboard.production-history') }}', {
+            cage: window.__dashboardCage === 'all' ? null : window.__dashboardCage,
+            days: window.__dashboardHistoryDays === 7 ? null : window.__dashboardHistoryDays,
+            compare: nextCompare ? 1 : null
+        });
+
+        reloadFramePreservingScroll('dashboard-production-history', url);
+    };
+
+    window.setCagePerformanceDays = function(days) {
+        window.__dashboardPerfDays = days;
+
+        var frame = document.getElementById('dashboard-cage-performance');
+        if (frame) {
+            frame.querySelectorAll('[data-perf-days]').forEach(function(btn) {
+                setButtonActive(btn, parseInt(btn.dataset.perfDays, 10) === days);
+            });
+        }
+
+        var url = buildFrameUrl('{{ route('dashboard.cage-performance') }}', {
+            cage: window.__dashboardCage === 'all' ? null : window.__dashboardCage,
+            days: days === 1 ? null : days
+        });
+
+        reloadFramePreservingScroll('dashboard-cage-performance', url);
+    };
+
     // ── Cage filter: reloads Turbo Frames with ?cage=CODE ──
     window.filterDashboard = function(code) {
+        window.__dashboardCage = code;
+
         document.querySelectorAll('.dashboard-tab').forEach(function(tab) {
             if (tab.dataset.tab === code) {
                 tab.classList.add('dashboard-tab-active');
@@ -326,25 +438,20 @@
             }
         });
 
-        var statsUrl = '{{ route('dashboard.stats') }}';
-        var feedUrl  = '{{ route('dashboard.feed-mortality') }}';
-        var perfUrl  = '{{ route('dashboard.cage-performance') }}';
-        var historyUrl = '{{ route('dashboard.production-history') }}';
-        if (code !== 'all') {
-            statsUrl += '?cage=' + encodeURIComponent(code);
-            feedUrl  += '?cage=' + encodeURIComponent(code);
-            perfUrl  += '?cage=' + encodeURIComponent(code);
-            historyUrl += '?cage=' + encodeURIComponent(code);
-        }
+        var cageParam = code === 'all' ? null : code;
+        var statsUrl   = buildFrameUrl('{{ route('dashboard.stats') }}',           { cage: cageParam });
+        var feedUrl    = buildFrameUrl('{{ route('dashboard.feed-mortality') }}',  { cage: cageParam });
+        var perfUrl    = buildFrameUrl('{{ route('dashboard.cage-performance') }}', { cage: cageParam, days: window.__dashboardPerfDays === 1 ? null : window.__dashboardPerfDays });
+        var historyUrl = buildFrameUrl('{{ route('dashboard.production-history') }}', {
+            cage: cageParam,
+            days: window.__dashboardHistoryDays === 7 ? null : window.__dashboardHistoryDays,
+            compare: window.__dashboardHistoryCompare ? 1 : null
+        });
 
-        var statsFrame = document.getElementById('dashboard-stats');
-        var feedFrame  = document.getElementById('dashboard-feed-mortality');
-        var perfFrame  = document.getElementById('dashboard-cage-performance');
-        var historyFrame = document.getElementById('dashboard-production-history');
-        if (statsFrame)   { statsFrame.src   = statsUrl;   statsFrame.reload();   }
-        if (feedFrame)    { feedFrame.src    = feedUrl;    feedFrame.reload();    }
-        if (perfFrame)    { perfFrame.src    = perfUrl;    perfFrame.reload();    }
-        if (historyFrame) { historyFrame.src = historyUrl; historyFrame.reload(); }
+        reloadFramePreservingScroll('dashboard-stats', statsUrl);
+        reloadFramePreservingScroll('dashboard-feed-mortality', feedUrl);
+        reloadFramePreservingScroll('dashboard-cage-performance', perfUrl);
+        reloadFramePreservingScroll('dashboard-production-history', historyUrl);
     };
     </script>
 

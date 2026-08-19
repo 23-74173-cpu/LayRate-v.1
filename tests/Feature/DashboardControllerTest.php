@@ -154,10 +154,11 @@ class DashboardControllerTest extends TestCase
         $cageA = $cages->firstWhere('cage_code', 'CAGE-DASH-A');
         $cageB = $cages->firstWhere('cage_code', 'CAGE-DASH-B');
 
-        $this->assertEquals(4, $cageA->today_eggs);
-        $this->assertEquals(100.0, $cageA->today_hdep);
-        $this->assertEquals(1, $cageB->today_eggs);
-        $this->assertEquals(50.0, $cageB->today_hdep);
+        // Default view is Today only.
+        $this->assertEquals(4, $cageA->period_eggs);
+        $this->assertEquals(100.0, $cageA->period_hdep);
+        $this->assertEquals(1, $cageB->period_eggs);
+        $this->assertEquals(50.0, $cageB->period_hdep);
     }
 
     public function test_cage_performance_ranks_cages_by_eggs_collected(): void
@@ -165,10 +166,22 @@ class DashboardControllerTest extends TestCase
         $response = $this->actingAs($this->admin)->get(route('dashboard.cage-performance'));
         $response->assertOk();
 
-        // Cage A produced 4 eggs today vs Cage B's 1 egg, so A should be ranked #1.
+        // Default Today: Cage A = 4 eggs, Cage B = 1 egg, so A is #1.
         $response->assertSee('CAGE-DASH-A');
         $response->assertSee('100.0%');
         $response->assertSee('4');
+    }
+
+    public function test_cage_performance_7_day_filter_works(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('dashboard.cage-performance', ['days' => 7]));
+        $response->assertOk();
+
+        $cages = $response->viewData('cages');
+        $cageA = $cages->firstWhere('cage_code', 'CAGE-DASH-A');
+
+        $this->assertEquals(6, $cageA->period_eggs);
+        $this->assertEquals(21.4, $cageA->period_hdep);
     }
 
     public function test_cage_performance_renders_comparison_charts(): void

@@ -5,23 +5,23 @@
             'color' => $cage->color,
             'color_soft' => $cage->colorSoft,
             'breed' => $cage->breed,
-            'today_hdep' => $cage->today_hdep,
-            'today_eggs' => $cage->today_eggs,
+            'hdep' => $cage->period_hdep ?? $cage->today_hdep,
+            'eggs' => $cage->period_eggs ?? $cage->today_eggs,
             'hen_count' => $cage->hen_count,
         ];
     })->sort(function ($a, $b) {
         // Rank by production (eggs) first, then by HDEP efficiency.
-        if ($a['today_eggs'] !== $b['today_eggs']) {
-            return $b['today_eggs'] <=> $a['today_eggs'];
+        if ($a['eggs'] !== $b['eggs']) {
+            return $b['eggs'] <=> $a['eggs'];
         }
-        return $b['today_hdep'] <=> $a['today_hdep'];
+        return $b['hdep'] <=> $a['hdep'];
     })->values()->map(function ($item, $index) {
         $item['rank'] = $index + 1;
         return $item;
     });
 
-    $totalEggsToday = $performance->sum('today_eggs');
-    $hasData = $totalEggsToday > 0 || $performance->contains(fn ($p) => $p['today_hdep'] > 0);
+    $totalEggs = $performance->sum('eggs');
+    $hasData = $totalEggs > 0 || $performance->contains(fn ($p) => $p['hdep'] > 0);
 @endphp
 
 <turbo-frame id="dashboard-cage-performance">
@@ -53,19 +53,38 @@
 
 <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 dash-rise" style="animation-delay: 120ms;">
     {{-- Header --}}
-    <div class="flex items-start gap-3 mb-4">
-        <span class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style="background-color: #e8f3fe; color: #0075de;">
-            <i data-lucide="trophy" class="w-4 h-4"></i>
-        </span>
-        <div>
-            <div class="text-sm font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Cage Performance Rankings</div>
-            <p class="text-xs text-[#6B7280]">Today's HDEP and eggs collected, ranked by production.</p>
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <div class="flex items-start gap-3">
+            <span class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style="background-color: #e8f3fe; color: #0075de;">
+                <i data-lucide="trophy" class="w-4 h-4"></i>
+            </span>
+            <div>
+                <div class="text-sm font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Cage Performance Rankings</div>
+                <p class="text-xs text-[#6B7280]">
+                    @if($days === 1)
+                        Today's HDEP and eggs collected, ranked by production.
+                    @else
+                        HDEP and eggs over the last {{ $days }} days, ranked by production.
+                    @endif
+                </p>
+            </div>
+        </div>
+        <div class="inline-flex items-center gap-1 rounded-lg p-1 shrink-0" style="background-color: #f3f4f6;">
+            @foreach([1, 7, 14, 30] as $d)
+            <button type="button"
+               data-perf-days="{{ $d }}"
+               onclick="setCagePerformanceDays({{ $d }})"
+               class="perf-days-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all {{ $days === $d ? 'perf-days-active' : 'text-[#6B7280] hover:bg-[#e5e7eb]' }}"
+               {{ $days === $d ? 'style="background-color: #0075de; color: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.1);"' : '' }}>
+                {{ $d === 1 ? 'Today' : $d . 'D' }}
+            </button>
+            @endforeach
         </div>
     </div>
 
     @if(! $hasData)
         <div class="rounded-xl border py-8 text-center text-sm" style="background-color: #ffffff; border-color: #e6e6e6; color: #a39e98;">
-            No production data recorded today.
+            No production data recorded for the selected period.
         </div>
     @else
         {{-- Ranking table (top of section) --}}
@@ -102,13 +121,13 @@
                         <td class="px-3 py-2 text-xs text-[#333333] text-right">{{ $p['hen_count'] }}</td>
                         <td class="px-3 py-2 text-right">
                             <div class="flex items-center justify-end gap-1.5">
-                                <span class="text-xs text-[#333333] whitespace-nowrap">{{ number_format($p['today_hdep'], 1) }}%</span>
+                                <span class="text-xs text-[#333333] whitespace-nowrap">{{ number_format($p['hdep'], 1) }}%</span>
                                 <div class="w-8 h-1.5 rounded-full overflow-hidden" style="background-color: #f0f0f0;">
-                                    <div class="perf-progress h-full rounded-full" style="width: {{ min(100, $p['today_hdep']) }}%; background-color: {{ $p['color_soft'] }}; border: 1px solid {{ $p['color'] }};"></div>
+                                    <div class="perf-progress h-full rounded-full" style="width: {{ min(100, $p['hdep']) }}%; background-color: {{ $p['color_soft'] }}; border: 1px solid {{ $p['color'] }};"></div>
                                 </div>
                             </div>
                         </td>
-                        <td class="px-3 py-2 text-xs text-[#333333] text-right font-mono font-medium">{{ number_format($p['today_eggs']) }}</td>
+                        <td class="px-3 py-2 text-xs text-[#333333] text-right font-mono font-medium">{{ number_format($p['eggs']) }}</td>
                     </tr>
                     @endforeach
                 </tbody>
@@ -128,7 +147,7 @@
         {{-- Comparison charts side-by-side: HDEP bar (left), Eggs pie (right) --}}
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div class="perf-card rounded-xl border border-[#D9D9D9] p-4 bg-white">
-                <div class="text-[11px] font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-2">HDEP by Cage</div>
+                    <div class="text-[11px] font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-2">HDEP by Cage {{ $days === 1 ? '(Today)' : '(' . $days . 'D)' }}</div>
                 <div class="relative w-full h-[170px]">
                     <canvas id="dashHdepChart" style="width: 100%; height: 100%; display: block;"></canvas>
                 </div>
@@ -141,7 +160,13 @@
             </div>
         </div>
 
-        <div class="mt-3 text-xs text-[#6B7280]">Ranked by eggs collected today, then by HDEP.</div>
+        <div class="mt-3 text-xs text-[#6B7280]">
+            @if($days === 1)
+                Ranked by eggs collected today, then by HDEP.
+            @else
+                Ranked by eggs collected over the last {{ $days }} days, then by HDEP.
+            @endif
+        </div>
     @endif
 </div>
 
@@ -191,8 +216,8 @@ if (!window.__dashPerfToggleBound) {
 // ── Comparison bar charts (today's HDEP & eggs) with value-on-top labels ──
 var perfData = @json($performance);
 var perfLabels = perfData.map(function (p) { return p.cage_code; });
-var perfHdeps = perfData.map(function (p) { return p.today_hdep; });
-var perfEggs = perfData.map(function (p) { return p.today_eggs; });
+var perfHdeps = perfData.map(function (p) { return p.hdep; });
+var perfEggs = perfData.map(function (p) { return p.eggs; });
 var perfColors = perfData.map(function (p) { return p.color; });
 var perfSoftColors = perfData.map(function (p) { return p.color_soft; });
 
