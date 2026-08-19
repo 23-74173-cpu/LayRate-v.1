@@ -8,6 +8,7 @@ use App\Models\FarmFeedEntry;
 use App\Models\FeedBatch;
 use App\Models\FeedConsumptionLog;
 use App\Services\FcrCalculator;
+use App\Services\ReportingDateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -56,7 +57,8 @@ class FeedController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        $totalFeedWeek = FeedConsumptionLog::where('log_date', '>=', now()->subDays(7))
+        $reportingNow = ReportingDateService::now();
+        $totalFeedWeek = FeedConsumptionLog::where('log_date', '>=', $reportingNow->copy()->subDays(7)->toDateString())
             ->sum('feed_consumed_kg');
 
         $activeCagesCount = Cage::where('is_active', 1)->count();
@@ -64,7 +66,7 @@ class FeedController extends Controller
             ? round($totalFeedWeek / max($activeCagesCount, 1) / 7, 1)
             : 0;
 
-        $totalFeedCostMonth = FeedConsumptionLog::where('feed_consumption_logs.log_date', '>=', now()->startOfMonth())
+        $totalFeedCostMonth = FeedConsumptionLog::where('feed_consumption_logs.log_date', '>=', $reportingNow->copy()->startOfMonth()->toDateString())
             ->join('feed_batches', 'feed_consumption_logs.feed_batch_id', '=', 'feed_batches.id')
             ->selectRaw('SUM(feed_consumption_logs.feed_consumed_kg * feed_batches.unit_cost) as total')
             ->whereNotNull('feed_batches.unit_cost')
@@ -126,7 +128,8 @@ class FeedController extends Controller
         if ($cageId === 'all' || $cageId === null) {
             if ($cageId === 'all') {
                 $fcrCurrent  = FcrCalculator::forAllCages(
-                    now()->subDays($periodDays - 1)->startOfDay(), now()->endOfDay()
+                    ReportingDateService::reportingDayStart()->subDays($periodDays - 1),
+                    ReportingDateService::reportingDayEnd()->subSecond()
                 );
                 $fcrTimeline = FcrCalculator::timelineAll($groupBy);
                 $label       = 'All Cages';
@@ -143,7 +146,9 @@ class FeedController extends Controller
             if ($cage) {
                 $fcrTimeline = FcrCalculator::timeline($cage, $groupBy);
                 $fcrCurrent  = FcrCalculator::forCage(
-                    $cage, now()->subDays($periodDays - 1)->startOfDay(), now()->endOfDay()
+                    $cage,
+                    ReportingDateService::reportingDayStart()->subDays($periodDays - 1),
+                    ReportingDateService::reportingDayEnd()->subSecond()
                 );
                 $label = $cage->cage_code;
             } else {

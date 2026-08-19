@@ -23,6 +23,7 @@ use App\Http\Controllers\NoteController;
 use App\Http\Controllers\PreOrderController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\SystemTimeController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -51,7 +52,7 @@ Route::get('/_reset-opcache', function () {
 });
 
 // ─── Authenticated routes ──────────────────────────────────────
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'system-time-set'])->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/stats', [DashboardController::class, 'stats'])->name('dashboard.stats');
@@ -193,6 +194,9 @@ Route::middleware('auth')->group(function () {
     Route::put('/settings/users/{targetUser}',      [AccountController::class, 'updateUser'])->name('settings.users.update')->middleware('admin');
     Route::post('/settings/users/{targetUser}/toggle-active', [AccountController::class, 'toggleUserActive'])->name('settings.users.toggle-active')->middleware('admin');
     Route::post('/settings/backup', [SettingsController::class, 'backupNow'])->name('settings.backup.now')->middleware('admin');
+    Route::post('/settings/farm-time', [AccountController::class, 'updateFarmTime'])->name('settings.farm-time.update')->middleware('admin');
+    Route::get('/settings/system-time', [SystemTimeController::class, 'show'])->name('settings.system-time')->middleware('admin');
+    Route::post('/settings/system-time', [SystemTimeController::class, 'update'])->name('settings.system-time.update')->middleware('admin');
     Route::redirect('/account', '/profile', 301);
     Route::post('/account/password', [AccountController::class, 'updatePassword'])->name('account.password');
     Route::post('/account/pin',      [AccountController::class, 'updatePin'])->name('account.pin');

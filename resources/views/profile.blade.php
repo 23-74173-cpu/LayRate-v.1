@@ -344,6 +344,43 @@
             </div>
             @endif
 
+            {{-- Admin: farm day reset configuration --}}
+            @if(auth()->user()->isAdmin())
+            <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+                <h2 class="text-base font-medium text-[#333333] mb-1">Farm Day Reset</h2>
+                <p class="text-xs text-[#6B7280] mb-4">Reporting "today" starts after this time. The timezone is fixed to Asia/Manila; use System Time below to correct the Pi clock.</p>
+                <form method="POST" action="{{ route('settings.farm-time.update') }}" class="space-y-4">
+                    @csrf
+                    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                        <div class="w-full sm:w-1/2">
+                            <label for="day_reset_time" class="block text-sm text-[#333333] mb-1.5">Day Reset Time</label>
+                            <input id="day_reset_time" type="time" name="day_reset_time" required
+                                   value="{{ old('day_reset_time', $dayResetSetting ?? '06:00') }}"
+                                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#002D5E]">
+                            @error('day_reset_time')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
+                        </div>
+                        <button type="submit" class="bg-[#002D5E] text-white px-5 py-2.5 rounded-lg text-sm hover:bg-[#001F42] shrink-0">Save Day Reset Time</button>
+                    </div>
+                </form>
+            </div>
+            @endif
+
+            {{-- Admin: system time correction --}}
+            @if(auth()->user()->isAdmin())
+            <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+                <h2 class="text-base font-medium text-[#333333] mb-1">System Time</h2>
+                <p class="text-xs text-[#6B7280] mb-4">The Pi has no RTC and no internet. Correct the system clock here so logs and reports use the right farm date.</p>
+                <div class="flex items-center justify-between">
+                    <div class="text-sm text-[#333333]">
+                        Current: <span class="font-medium">{{ now()->format('l, F j, Y g:i A') }}</span>
+                    </div>
+                    <a href="{{ route('settings.system-time') }}" class="bg-[#002D5E] text-white px-5 py-2.5 rounded-lg text-sm hover:bg-[#001F42]">
+                        Set System Time
+                    </a>
+                </div>
+            </div>
+            @endif
+
             @if(auth()->user()->isAdmin())
             <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
                 <h2 class="text-base font-medium text-[#333333] mb-1">Database Backup</h2>

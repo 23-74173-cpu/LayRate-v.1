@@ -9,6 +9,7 @@ use App\Models\Cage;
 use App\Models\Forecast;
 use App\Models\ForecastRun;
 use App\Models\Hen;
+use App\Services\ReportingDateService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -32,9 +33,9 @@ class ForecastController extends Controller
         $scope     = $request->get('scope', 'cage');
         $horizon   = (int) $request->get('horizon', 7);
 
-        $calendarYear  = (int) $request->get('year', now()->year);
-        $calendarMonth = (int) $request->get('month', now()->month);
-        $calendarDate  = now()->setDate($calendarYear, max(1, min(12, $calendarMonth)), 1);
+        $calendarYear  = (int) $request->get('year', ReportingDateService::now()->year);
+        $calendarMonth = (int) $request->get('month', ReportingDateService::now()->month);
+        $calendarDate  = ReportingDateService::now()->copy()->setDate($calendarYear, max(1, min(12, $calendarMonth)), 1);
 
         $allCages  = DB::table('forecast_input_records')
             ->whereNotNull('cage_code')
@@ -81,7 +82,7 @@ class ForecastController extends Controller
 
         if ($scope === 'farm') {
             $historical = $this->farmHistorical();
-            $forecasts  = Forecast::where('forecast_date', now()->toDateString())
+            $forecasts  = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
                 ->whereNull('cage_id')->whereNull('breed')
                 ->whereNotNull('target_date')
                 ->orderBy('target_date')->limit($horizon)->get();
@@ -103,7 +104,7 @@ class ForecastController extends Controller
 
         if ($scope === 'breed' && $breed) {
             $historical = $this->breedHistorical($breed);
-            $forecasts  = Forecast::where('forecast_date', now()->toDateString())
+            $forecasts  = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
                 ->whereNull('cage_id')->where('breed', $breed)
                 ->whereNotNull('target_date')
                 ->orderBy('target_date')->limit($horizon)->get();
@@ -127,7 +128,7 @@ class ForecastController extends Controller
 
         $historical = $this->cageHistorical($cageCode);
 
-        $forecasts = Forecast::where('forecast_date', now()->toDateString())
+        $forecasts = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
             ->when($cage, fn($q) => $q->where('cage_id', $cage->id))
             ->when(!$cage, fn($q) => $q->whereNull('cage_id'))
             ->whereNull('breed')
@@ -1021,7 +1022,7 @@ class ForecastController extends Controller
     private function buildForecastCollection(array $result, ?Cage $cage, ?string $breed): Collection
     {
         $forecasts = collect();
-        $today = now()->toDateString();
+        $today = ReportingDateService::reportingDateString();
 
         foreach ($result['forecast'] ?? [] as $item) {
             $forecasts->push(new Forecast([
@@ -1042,7 +1043,7 @@ class ForecastController extends Controller
         $breed = $request->get('breed');
         $cageCode = $request->get('cage', 'ALL');
 
-        $query = Forecast::where('forecast_date', now()->toDateString());
+        $query = Forecast::where('forecast_date', ReportingDateService::reportingDateString());
 
         if ($scope === 'farm') {
             $query->whereNull('cage_id')->whereNull('breed');
@@ -1121,9 +1122,9 @@ class ForecastController extends Controller
         $scope     = $request->get('scope', 'cage');
         $horizon   = (int) $request->get('horizon', 7);
 
-        $calendarYear  = (int) $request->get('year', now()->year);
-        $calendarMonth = (int) $request->get('month', now()->month);
-        $calendarDate  = now()->setDate($calendarYear, max(1, min(12, $calendarMonth)), 1);
+        $calendarYear  = (int) $request->get('year', ReportingDateService::now()->year);
+        $calendarMonth = (int) $request->get('month', ReportingDateService::now()->month);
+        $calendarDate  = ReportingDateService::now()->copy()->setDate($calendarYear, max(1, min(12, $calendarMonth)), 1);
 
         $allCages  = DB::table('forecast_input_records')
             ->whereNotNull('cage_code')
@@ -1160,7 +1161,7 @@ class ForecastController extends Controller
 
         if ($scope === 'farm') {
             $historical = $this->farmHistorical();
-            $forecasts = Forecast::where('forecast_date', now()->toDateString())
+            $forecasts = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
                 ->whereNull('cage_id')->whereNull('breed')
                 ->whereNotNull('target_date')
                 ->orderBy('target_date')->limit($horizon)->get();
@@ -1171,7 +1172,7 @@ class ForecastController extends Controller
 
         if ($scope === 'breed' && $breed) {
             $historical = $this->breedHistorical($breed);
-            $forecasts = Forecast::where('forecast_date', now()->toDateString())
+            $forecasts = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
                 ->whereNull('cage_id')->where('breed', $breed)
                 ->whereNotNull('target_date')
                 ->orderBy('target_date')->limit($horizon)->get();
@@ -1183,7 +1184,7 @@ class ForecastController extends Controller
         $cage = Cage::where('cage_code', $cageCode)->first();
         $historical = $this->cageHistorical($cageCode);
 
-        $forecasts = Forecast::where('forecast_date', now()->toDateString())
+        $forecasts = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
             ->when($cage, fn($q) => $q->where('cage_id', $cage->id))
             ->when(!$cage, fn($q) => $q->whereNull('cage_id'))
             ->whereNull('breed')
@@ -1244,20 +1245,20 @@ class ForecastController extends Controller
 
         if ($scope === 'farm') {
             $historical = $this->farmHistorical();
-            $forecasts  = Forecast::where('forecast_date', now()->toDateString())
+            $forecasts  = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
                 ->whereNull('cage_id')->whereNull('breed')
                 ->whereNotNull('target_date')
                 ->orderBy('target_date')->limit($horizon)->get();
         } elseif ($scope === 'breed' && $breed) {
             $historical = $this->breedHistorical($breed);
-            $forecasts  = Forecast::where('forecast_date', now()->toDateString())
+            $forecasts  = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
                 ->whereNull('cage_id')->where('breed', $breed)
                 ->whereNotNull('target_date')
                 ->orderBy('target_date')->limit($horizon)->get();
         } else {
             $cage = Cage::where('cage_code', $cageCode)->first();
             $historical = $this->cageHistorical($cageCode);
-            $forecasts  = Forecast::where('forecast_date', now()->toDateString())
+            $forecasts  = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
                 ->when($cage, fn($q) => $q->where('cage_id', $cage->id))
                 ->when(!$cage, fn($q) => $q->whereNull('cage_id'))
                 ->whereNull('breed')
@@ -1311,7 +1312,7 @@ class ForecastController extends Controller
 
         ['scope' => $scope, 'cageCode' => $cageCode, 'breed' => $breed, 'horizon' => $horizon, 'forecasts' => $forecasts] = $data;
 
-        $filename = 'forecast-' . $scope . '-' . now()->format('Y-m-d') . '.csv';
+        $filename = 'forecast-' . $scope . '-' . ReportingDateService::reportingDateString() . '.csv';
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
@@ -1367,7 +1368,7 @@ class ForecastController extends Controller
 
         return Excel::download(
             new ForecastExport($forecasts, $scope, $cageCode, $breed, $imagePath),
-            'forecast-' . $scope . '-' . now()->format('Y-m-d') . '.xlsx'
+            'forecast-' . $scope . '-' . ReportingDateService::reportingDateString() . '.xlsx'
         );
     }
 
@@ -1394,12 +1395,12 @@ class ForecastController extends Controller
 
         try {
             $pdf = Pdf::loadView('forecast.pdf', compact('forecasts', 'scope', 'cageCode', 'breed', 'horizon', 'chartImage'));
-            return $pdf->download('forecast-' . $scope . '-' . now()->format('Y-m-d') . '.pdf');
+            return $pdf->download('forecast-' . $scope . '-' . ReportingDateService::reportingDateString() . '.pdf');
         } catch (\Exception $e) {
             Log::warning('PDF export failed with chart image, retrying without: ' . $e->getMessage());
             try {
                 $pdf = Pdf::loadView('forecast.pdf', compact('forecasts', 'scope', 'cageCode', 'breed', 'horizon') + ['chartImage' => null]);
-                return $pdf->download('forecast-' . $scope . '-' . now()->format('Y-m-d') . '.pdf');
+                return $pdf->download('forecast-' . $scope . '-' . ReportingDateService::reportingDateString() . '.pdf');
             } catch (\Exception $e2) {
                 Log::error('PDF export failed even without chart image: ' . $e2->getMessage());
                 return response()->json(['message' => 'PDF export failed. Please try exporting as Excel instead.'], 500);
@@ -1418,7 +1419,7 @@ class ForecastController extends Controller
             ->orderBy('cage_code')
             ->get();
 
-        $filename = 'production_data_' . now()->format('Y-m-d') . '.csv';
+        $filename = 'production_data_' . ReportingDateService::reportingDateString() . '.csv';
 
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
@@ -1472,18 +1473,18 @@ class ForecastController extends Controller
         $historical = collect();
         if ($scope === 'farm') {
             $historical = $this->farmHistorical();
-            $forecasts = Forecast::where('forecast_date', now()->toDateString())
+            $forecasts = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
                 ->whereNull('cage_id')->whereNull('breed')
                 ->orderBy('target_date')->limit($horizon)->get();
         } elseif ($scope === 'breed' && $breed) {
             $historical = $this->breedHistorical($breed);
-            $forecasts = Forecast::where('forecast_date', now()->toDateString())
+            $forecasts = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
                 ->whereNull('cage_id')->where('breed', $breed)
                 ->orderBy('target_date')->limit($horizon)->get();
         } else {
             $cage = $cageCode ? Cage::where('cage_code', $cageCode)->first() : null;
             $historical = $this->cageHistorical($cageCode ?? '');
-        $forecasts = Forecast::where('forecast_date', now()->toDateString())
+        $forecasts = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
             ->when($cage, fn($q) => $q->where('cage_id', $cage->id))
             ->when(!$cage, fn($q) => $q->whereNull('cage_id'))
             ->whereNull('breed')

@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use App\Services\ReportingDateService;
 
 class MortalityController extends Controller
 {
@@ -29,10 +30,11 @@ class MortalityController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        $todayTotal = MortalityLog::whereDate('log_date', today())->sum('count');
+        $today = ReportingDateService::reportingDateString();
+        $todayTotal = MortalityLog::whereDate('log_date', $today)->sum('count');
 
         $todayByCage = MortalityLog::with('cage')
-            ->whereDate('log_date', today())
+            ->whereDate('log_date', $today)
             ->get()
             ->groupBy(fn($l) => $l->cage?->cage_code ?? 'Deleted Cage')
             ->map(fn($g) => $g->sum('count'));

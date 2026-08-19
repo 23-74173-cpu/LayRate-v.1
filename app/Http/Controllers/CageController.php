@@ -16,6 +16,7 @@ use App\Models\Note;
 use App\Models\ProductionLog;
 use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
+use App\Services\ReportingDateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -572,7 +573,7 @@ class CageController extends Controller
 
         // Today's egg status for this slot (item 16)
         $todayLog = ProductionLog::where('cage_slot_id', $slot->id)
-            ->whereDate('log_date', today())
+            ->whereDate('log_date', ReportingDateService::reportingDateString())
             ->first();
         $occupancy = (int) $slot->current_occupancy;
         if ($todayLog === null) {

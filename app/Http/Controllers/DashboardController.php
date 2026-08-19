@@ -9,6 +9,7 @@ use App\Models\MortalityLog;
 use App\Models\ProductionLog;
 use App\Models\Setting;
 use App\Services\EnvironmentStatusService;
+use App\Services\ReportingDateService;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -37,9 +38,10 @@ class DashboardController extends Controller
     public function calendar()
     {
         $cageCode = request('cage');
-        $month = max(1, min(12, (int) request('month', now()->month)));
-        $year = max(2000, (int) request('year', now()->year));
-        $calendarMonth = now()->copy()->setDate($year, $month, 1)->startOfMonth();
+        $now = ReportingDateService::now();
+        $month = max(1, min(12, (int) request('month', $now->month)));
+        $year = max(2000, (int) request('year', $now->year));
+        $calendarMonth = $now->copy()->setDate($year, $month, 1)->startOfMonth();
 
         $monthStart = $calendarMonth->copy()->startOfMonth();
         $monthEnd = $calendarMonth->copy()->endOfMonth();
@@ -69,8 +71,8 @@ class DashboardController extends Controller
 
         // Year options for navigation: earliest recorded log .. next year.
         $firstLogDate = ProductionLog::query()->orderBy('log_date')->value('log_date');
-        $firstYear = $firstLogDate ? (int) date('Y', strtotime($firstLogDate)) : now()->year;
-        $yearOptions = range(max($firstYear, now()->year - 10), now()->year + 1);
+        $firstYear = $firstLogDate ? (int) date('Y', strtotime($firstLogDate)) : $now->year;
+        $yearOptions = range(max($firstYear, $now->year - 10), $now->year + 1);
 
         $cageOptions = Cage::query()->orderBy('cage_code')->get(['id', 'cage_code']);
 
@@ -95,17 +97,18 @@ class DashboardController extends Controller
             $days = 7;
         }
 
-        $endDate = now()->toDateString();
-        $startDate = now()->subDays($days - 1)->toDateString();
+        $reportingDate = ReportingDateService::reportingDate();
+        $endDate = $reportingDate->toDateString();
+        $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
 
         // Build date labels and data points, filling missing days with 0.
         $labels = collect(range(0, $days - 1))
-            ->map(fn ($i) => now()->subDays($days - 1 - $i)->format('M j'))
+            ->map(fn ($i) => $reportingDate->copy()->subDays($days - 1 - $i)->format('M j'))
             ->values()
             ->toArray();
 
         $dateKeys = collect(range(0, $days - 1))
-            ->map(fn ($i) => now()->subDays($days - 1 - $i)->toDateString())
+            ->map(fn ($i) => $reportingDate->copy()->subDays($days - 1 - $i)->toDateString())
             ->values();
 
         if ($compare) {
@@ -182,7 +185,8 @@ class DashboardController extends Controller
 
     private function buildDashboardData(?string $cageCode = null): array
     {
-        $today = now()->toDateString();
+        $today = ReportingDateService::reportingDateString();
+        $yesterday = ReportingDateService::reportingDate()->copy()->subDay()->toDateString();
         $thresholds = Setting::thresholds();
 
         $needsOnboarding = Setting::where('key', 'farm_grid_rows')->doesntExist()
@@ -239,7 +243,7 @@ class DashboardController extends Controller
             $yesterdayStats = ProductionLog::query()
                 ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
                 ->whereIn('cage_slots.cage_id', $cageIds)
-                ->whereDate('production_logs.log_date', now()->subDay()->toDateString())
+                ->whereDate('production_logs.log_date', $yesterday)
                 ->selectRaw('COUNT(*) as log_count, AVG(production_logs.hdep) as avg_hdep')
                 ->first();
             $yesterdayHdep = $yesterdayStats->log_count ? round((float) $yesterdayStats->avg_hdep, 1) : 0;
@@ -259,7 +263,7 @@ class DashboardController extends Controller
             $todayLogs = ProductionLog::whereDate('log_date', $today)->get();
             // HDEP today = eggs collected today ÷ all hens in the cages, as a percentage
             $todayHdep = $totalHens > 0 ? round($todayLogs->sum('egg_count') / $totalHens * 100, 1) : 0;
-            $yesterdayLogs = ProductionLog::whereDate('log_date', now()->subDay()->toDateString())->get();
+            $yesterdayLogs = ProductionLog::whereDate('log_date', $yesterday)->get();
             $yesterdayHdep = $yesterdayLogs->count() ? round($yesterdayLogs->avg('hdep'), 1) : 0;
             $hdepDelta = round($todayHdep - $yesterdayHdep, 1);
             $eggsToday = $todayLogs->sum('egg_count')
@@ -354,7 +358,7 @@ class DashboardController extends Controller
 
         if ($cage->hasDht22()) {
             $env = $cage->latestEnvironmentLog;
-            if ($env && $env->recorded_at->gt(now()->subMinutes(60))) {
+            if ($env && $env->recorded_at->gt(ReportingDateService::now()->subMinutes(60))) {
                 $text .= ' · DHT22 online — last reading ' . $env->recorded_at->diffForHumans();
             } elseif ($env) {
                 $since = $env->recorded_at->isToday()

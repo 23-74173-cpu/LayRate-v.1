@@ -4,14 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\EnvironmentalLog;
 use App\Models\ProductionLog;
-use Carbon\Carbon;
+use App\Services\ReportingDateService;
 use Illuminate\Http\JsonResponse;
 
 class MobileAppController extends Controller
 {
     public function dashboardStatus(): JsonResponse
     {
-        $today = Carbon::today();
+        $today = ReportingDateService::reportingDateString();
 
         $env = EnvironmentalLog::whereDate('recorded_at', $today)
             ->selectRaw('AVG(temperature_c) as avg_temp, AVG(humidity_pct) as avg_humidity')

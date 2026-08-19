@@ -7,6 +7,7 @@ use App\Models\EggSizeLog;
 use App\Models\EggStockBatch;
 use App\Models\ProductionLog;
 use App\Models\Setting;
+use App\Services\ReportingDateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -96,7 +97,7 @@ class EggStockController extends Controller
 
         $productionLogs = ProductionLog::select('id', 'cage_slot_id', 'log_date')
             ->with(['cageSlot.cage:id,cage_code'])
-            ->where('log_date', '>=', now()->subDays(30)->toDateString())
+            ->where('log_date', '>=', ReportingDateService::reportingDate()->copy()->subDays(30)->toDateString())
             ->orderByDesc('log_date')
             ->get()
             ->groupBy(fn($log) => $log->cageSlot?->cage?->id ?? 'unknown');

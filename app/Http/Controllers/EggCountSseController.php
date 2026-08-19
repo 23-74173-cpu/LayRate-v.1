@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Cage;
 use App\Models\CageSlot;
 use App\Models\ProductionLog;
+use App\Services\ReportingDateService;
 use Illuminate\Http\Request;
 
 class EggCountSseController extends Controller
@@ -39,7 +40,7 @@ class EggCountSseController extends Controller
         $start = time();
 
         while (! connection_aborted() && (time() - $start) < $maxRuntime) {
-            $today = now()->toDateString();
+            $today = ReportingDateService::reportingDateString();
 
             $logs = ProductionLog::whereIn('cage_slot_id', $slotIds)
                 ->where('log_date', $today)

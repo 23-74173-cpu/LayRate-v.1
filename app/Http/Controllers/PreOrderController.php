@@ -8,6 +8,7 @@ use App\Models\EggStockBatch;
 use App\Models\Hen;
 use App\Models\PreOrder;
 use App\Models\ProductionLog;
+use App\Services\ReportingDateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -187,7 +188,7 @@ class PreOrderController extends Controller
         $data = $validator->validated();
 
         if ($data['status'] === 'fulfilled' && empty($data['fulfillment_date'])) {
-            $data['fulfillment_date'] = now()->toDateString();
+            $data['fulfillment_date'] = ReportingDateService::reportingDateString();
         }
 
         try {
@@ -286,7 +287,7 @@ class PreOrderController extends Controller
                 $exists = Alert::where('alert_type', 'stock_depletion')
                     ->where('message', 'like', "%{$size}%")
                     ->where('is_read', 0)
-                    ->whereDate('triggered_at', now()->toDateString())
+                    ->whereDate('triggered_at', ReportingDateService::reportingDateString())
                     ->exists();
 
                 if (!$exists) {

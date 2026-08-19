@@ -8,6 +8,7 @@ use App\Models\EggSizeLog;
 use App\Models\Hen;
 use App\Models\MortalityLog;
 use App\Models\ProductionLog;
+use App\Services\ReportingDateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -17,7 +18,7 @@ class EggLoggingController extends Controller
 {
     public function index(Request $request)
     {
-        $today = now()->toDateString();
+        $today = ReportingDateService::reportingDateString();
         $cageFilter = $request->query('cage_id');
 
         $cages = Cage::where('is_active', 1)->orderBy('cage_code')->get();
@@ -167,7 +168,7 @@ class EggLoggingController extends Controller
         $isAjax = $request->wantsJson() || $request->ajax();
 
         $validator = Validator::make($request->all(), [
-            'log_date' => 'required|date|before_or_equal:'.now()->toDateString(),
+            'log_date' => 'required|date|before_or_equal:'.ReportingDateService::reportingDateString(),
             'cage_slot_ids' => 'nullable|array',
             'cage_slot_ids.*' => 'exists:cage_slots,id',
             'cage_slot_id' => 'nullable|exists:cage_slots,id',
@@ -305,7 +306,7 @@ class EggLoggingController extends Controller
     public function update(Request $request, ProductionLog $productionLog)
     {
         $validator = Validator::make($request->all(), [
-            'log_date' => 'required|date|before_or_equal:'.now()->toDateString(),
+            'log_date' => 'required|date|before_or_equal:'.ReportingDateService::reportingDateString(),
             'egg_count' => 'required|integer|min:0',
             'hen_count' => 'nullable|integer|min:0',
             'notes' => 'nullable|string',

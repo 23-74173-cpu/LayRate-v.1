@@ -9,6 +9,7 @@ use App\Models\HardwareItem;
 use App\Models\ProductionLog;
 use App\Models\SensorOccupancyReading;
 use App\Services\EnvironmentAlertService;
+use App\Services\ReportingDateService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -332,7 +333,7 @@ class SensorIngestionController extends Controller
         $exists = Alert::where('cage_id', $cage?->id)
             ->where('alert_type', 'sensor_reset')
             ->where('is_read', 0)
-            ->whereDate('triggered_at', today())
+            ->whereDate('triggered_at', ReportingDateService::reportingDateString())
             ->exists();
 
         if ($exists) {

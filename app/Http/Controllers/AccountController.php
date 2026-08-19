@@ -96,7 +96,9 @@ class AccountController extends Controller
             ],
         ] : null;
 
-        return view('profile', compact('staff', 'tab', 'team', 'activity', 'sessions', 'farmSettings'));
+        $dayResetSetting = Setting::get('day_reset_time', '06:00');
+
+        return view('profile', compact('staff', 'tab', 'team', 'activity', 'sessions', 'farmSettings', 'dayResetSetting'));
     }
 
     public function storeUser(Request $request)
@@ -267,5 +269,16 @@ class AccountController extends Controller
         $request->session()->put('password_hash_' . config('auth.defaults.guard', 'web'), $user->password);
 
         return redirect()->route('profile', ['tab' => 'settings'])->with('success', 'Signed out of all other devices.');
+    }
+
+    public function updateFarmTime(Request $request)
+    {
+        $data = $request->validate([
+            'day_reset_time' => ['required', 'regex:/^([01]?\d|2[0-3]):[0-5]\d$/'],
+        ]);
+
+        Setting::set('day_reset_time', $data['day_reset_time']);
+
+        return redirect()->route('profile', ['tab' => 'settings'])->with('success', 'Day reset time saved.');
     }
 }

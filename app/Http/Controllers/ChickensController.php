@@ -12,6 +12,7 @@ use App\Models\CullingLog;
 use App\Models\Removal;
 use App\Models\HealthEvent;
 use App\Models\WeightCheck;
+use App\Services\ReportingDateService;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -31,10 +32,11 @@ class ChickensController extends Controller
         $cages = Cage::with('cageSlots')->orderBy('cage_code')->get();
         $breeds = Hen::distinct()->pluck('breed')->filter()->sort()->values();
 
-        $todayTotal = MortalityLog::whereDate('log_date', today())->sum('count');
+        $today = ReportingDateService::reportingDateString();
+        $todayTotal = MortalityLog::whereDate('log_date', $today)->sum('count');
 
         $todayByCage = MortalityLog::with('cage')
-            ->whereDate('log_date', today())
+            ->whereDate('log_date', $today)
             ->get()
             ->groupBy(fn($l) => $l->cage?->cage_code ?? 'Deleted Cage')
             ->map(fn($g) => $g->sum('count'));
@@ -154,7 +156,7 @@ class ChickensController extends Controller
         $data['sex'] = 'hen';
 
         $quantity = (int) $data['quantity'];
-        $year = now()->format('Y');
+        $year = ReportingDateService::now()->format('Y');
         $prefix = "CHK-{$year}-%";
 
         $hens = DB::transaction(function () use ($quantity, $data, $year, $prefix) {
@@ -570,7 +572,7 @@ class ChickensController extends Controller
                 foreach ($mortalityByCage as $cageId => $cageHens) {
                     $log = MortalityLog::create([
                         'cage_id'     => $cageId,
-                        'log_date'    => now()->toDateString(),
+                        'log_date'    => ReportingDateService::reportingDateString(),
                         'count'       => $cageHens->count(),
                         'reason'      => $data['reason'],
                         'notes'       => $data['notes'] ?? null,
@@ -593,7 +595,7 @@ class ChickensController extends Controller
             });
 
             foreach (array_unique($mortalityCageIds) as $cageId) {
-                $this->checkMortalitySpike($cageId, now()->toDateString());
+                $this->checkMortalitySpike($cageId, ReportingDateService::reportingDateString());
             }
         }
 
