@@ -48,6 +48,18 @@
                         </span>
                     </div>
                     <span class="text-xs truncate" style="color: #615d59;">{{ $cage->formatted_location }}</span>
+                    @php $henCount = $henCountByCage[$cage->id] ?? 0; @endphp
+                    <div class="flex items-center gap-1.5 text-xs mt-0.5">
+                        @if($henCount === 0)
+                            <span class="inline-flex items-center gap-1 font-semibold" style="color: #9b1c24;">
+                                <i data-lucide="alert-circle" class="w-3 h-3"></i> Cage Empty
+                            </span>
+                        @else
+                            <span style="color: #1f6b3a;">
+                                <strong>{{ $henCount }}</strong> hen{{ $henCount !== 1 ? 's' : '' }}
+                            </span>
+                        @endif
+                    </div>
                     <div class="flex items-center gap-2 text-xs mt-auto" style="color: #a39e98;">
                         <span>Logged:</span>
                         <span class="font-semibold whitespace-nowrap cage-logged-count" id="cage-logged-{{ $cage->id }}"

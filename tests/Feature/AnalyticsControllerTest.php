@@ -153,6 +153,23 @@ class AnalyticsControllerTest extends TestCase
         $response->assertSee('CAGE-B');
     }
 
+    /** @test */
+    public function performance_tab_uses_dashboard_cage_performance_design()
+    {
+        $this->createLog($this->slotA1, 100.0, now()->subDay()->toDateString());
+        $this->createLog($this->slotB1, 50.0, now()->subDay()->toDateString());
+
+        $response = $this->actingAs($this->user)
+            ->get(route('analytics.charts', ['cage' => 'performance', 'period' => 'week']));
+
+        $response->assertOk();
+        $response->assertSee('Cage Performance Rankings');
+        $response->assertSee('HDEP by Cage');
+        $response->assertSee('Eggs Share by Cage');
+        $response->assertSee('CAGE-A');
+        $response->assertSee('CAGE-B');
+    }
+
     /**
      * Regression test for item #79: chart instances must be cached in a
      * namespaced store, never as window.<canvasId>. Bare window.hdepChart

@@ -221,7 +221,7 @@ class DashboardController extends Controller
         return view('dashboard._production-history', compact('chartData', 'days', 'cageCode', 'title', 'compare'));
     }
 
-    private function buildDashboardData(?string $cageCode = null): array
+    public function buildDashboardData(?string $cageCode = null): array
     {
         $today = ReportingDateService::reportingDateString();
         $yesterday = ReportingDateService::reportingDate()->copy()->subDay()->toDateString();

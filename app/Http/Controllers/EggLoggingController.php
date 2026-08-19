@@ -41,6 +41,10 @@ class EggLoggingController extends Controller
             $slot->today_egg_count = $todayLogs->get($slot->id)?->egg_count ?? 0;
         });
 
+        $henCountByCage = $cages->mapWithKeys(fn ($cage) => [
+            $cage->id => $cageSlots->where('cage_id', $cage->id)->sum(fn ($slot) => $slot->hens->count())
+        ]);
+
         $todayTotal = ProductionLog::where('log_date', $today)
             ->when($cageFilter, fn ($q) => $q->whereHas('cageSlot', fn ($s) => $s->where('cage_id', $cageFilter)))
             ->sum('egg_count');
@@ -61,7 +65,7 @@ class EggLoggingController extends Controller
         }
 
         return view('egg-logging', compact(
-            'cageSlots', 'cages', 'cageFilter', 'todayTotal', 'todayByCage', 'todayLoggedCountByCage', 'selectedCage', 'editLog'
+            'cageSlots', 'cages', 'cageFilter', 'todayTotal', 'todayByCage', 'todayLoggedCountByCage', 'selectedCage', 'editLog', 'henCountByCage'
         ));
     }
 

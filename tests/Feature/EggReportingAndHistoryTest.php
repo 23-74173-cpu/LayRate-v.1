@@ -348,6 +348,35 @@ class EggReportingAndHistoryTest extends TestCase
     }
 
     /** @test */
+    public function cage_overview_shows_hen_count_and_empty_indicator()
+    {
+        $this->actingAs($this->user);
+
+        $cageC = Cage::create([
+            'cage_code' => 'CAGE-C-EMPTY',
+            'location' => 'West',
+            'rows' => 1,
+            'slots_per_row' => 1,
+            'max_chickens_per_slot' => 4,
+            'total_capacity' => 4,
+            'is_active' => 1,
+        ]);
+        CageSlot::create([
+            'cage_id' => $cageC->id,
+            'slot_number' => 1,
+            'row_number' => 1,
+            'column_number' => 1,
+            'current_occupancy' => 0,
+        ]);
+
+        $response = $this->get(route('eggs.logging'));
+        $response->assertOk();
+
+        $response->assertSee('4 hens');
+        $response->assertSee('Cage Empty');
+    }
+
+    /** @test */
     public function production_history_page_renders_calendar_frame()
     {
         $this->actingAs($this->user);
