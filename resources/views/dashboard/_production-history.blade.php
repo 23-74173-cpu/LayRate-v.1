@@ -1,5 +1,14 @@
 <turbo-frame id="dashboard-production-history">
-    <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 dash-rise" style="animation-delay: 180ms;">
+    <style>
+        @keyframes chartFadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .chart-fade-in {
+            animation: chartFadeIn 0.35s ease-out both;
+        }
+    </style>
+    <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div class="flex items-start gap-3">
                 <span class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style="background-color: #e8f3fe; color: #0075de;">
@@ -36,7 +45,7 @@
                 No production data for the selected period.
             </div>
         @else
-            <div class="relative w-full h-[260px]">
+            <div class="relative w-full h-[260px] chart-fade-in">
                 <canvas id="dashProductionHistoryChart" style="width: 100%; height: 100%; display: block;"></canvas>
             </div>
         @endif
@@ -57,6 +66,10 @@
             interaction: {
                 mode: 'index',
                 intersect: false,
+            },
+            animation: {
+                duration: 600,
+                easing: 'easeOutQuart',
             },
             layout: { padding: { top: 10, right: 10, bottom: 0, left: 0 } },
             plugins: {

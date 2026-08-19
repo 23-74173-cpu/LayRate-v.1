@@ -30,6 +30,13 @@
         from { opacity: 0; transform: translateY(8px); }
         to { opacity: 1; transform: translateY(0); }
     }
+    @keyframes chartFadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    .chart-fade-in {
+        animation: chartFadeIn 0.35s ease-out both;
+    }
     .perf-animate-row {
         animation: perf-row-in 0.35s ease-out both;
     }
@@ -51,7 +58,7 @@
     }
 </style>
 
-<div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 dash-rise" style="animation-delay: 120ms;">
+<div class="bg-white rounded-2xl border border-[#e6e6e6] p-5">
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div class="flex items-start gap-3">
@@ -146,13 +153,13 @@
 
         {{-- Comparison charts side-by-side: HDEP bar (left), Eggs pie (right) --}}
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div class="perf-card rounded-xl border border-[#D9D9D9] p-4 bg-white">
-                    <div class="text-[11px] font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-2">HDEP by Cage {{ $days === 1 ? '(Today)' : '(' . $days . 'D)' }}</div>
+            <div class="perf-card rounded-xl border border-[#D9D9D9] p-4 bg-white chart-fade-in">
+                <div class="text-[11px] font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-2">HDEP by Cage {{ $days === 1 ? '(Today)' : '(' . $days . 'D)' }}</div>
                 <div class="relative w-full h-[170px]">
                     <canvas id="dashHdepChart" style="width: 100%; height: 100%; display: block;"></canvas>
                 </div>
             </div>
-            <div class="perf-card rounded-xl border border-[#D9D9D9] p-4 bg-white">
+            <div class="perf-card rounded-xl border border-[#D9D9D9] p-4 bg-white chart-fade-in">
                 <div class="text-[11px] font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-2">Eggs Share by Cage</div>
                 <div class="relative w-full h-[170px]">
                     <canvas id="dashEggsChart" style="width: 100%; height: 100%; display: block;"></canvas>
@@ -253,6 +260,7 @@ function perfBarOpts() {
     return {
         responsive: true,
         maintainAspectRatio: false,
+        animation: { duration: 600, easing: 'easeOutQuart' },
         layout: { padding: { top: 16 } },
         plugins: { legend: { display: false } },
         scales: {
@@ -266,6 +274,7 @@ function perfPieOpts() {
     return {
         responsive: true,
         maintainAspectRatio: false,
+        animation: { duration: 600, easing: 'easeOutQuart' },
         layout: { padding: { top: 8, bottom: 8, left: 8, right: 8 } },
         plugins: {
             legend: {
