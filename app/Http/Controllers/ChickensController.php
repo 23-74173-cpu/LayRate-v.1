@@ -75,7 +75,12 @@ class ChickensController extends Controller
             ->when($cageId, fn($q) => $q->whereHas('cageSlot', fn($q) => $q->where('cage_id', $cageId)))
             ->when($breed, fn($q) => $q->where('breed', $breed))
             ->when($isActive !== 'all', fn($q) => $q->where('is_active', $isActive === 'active'))
-            ->when($search, fn($q) => $q->where('tag_code', 'like', "%{$search}%"))
+            ->when($search, function ($q) use ($search) {
+                $q->where(function ($q) use ($search) {
+                    $q->where('tag_code', 'like', "%{$search}%")
+                      ->orWhere('chicken_id', 'like', "%{$search}%");
+                });
+            })
             ->when($cageId === null, fn($q) => $q->whereNotNull('cage_slot_id'))
             ->when(true, fn($q) => $this->applySort($q, $sort))
             ->get();
@@ -90,10 +95,15 @@ class ChickensController extends Controller
         if (! $cageId) {
             $unplacedHens = Hen::with(['cageSlot.cage'])
                 ->whereNull('cage_slot_id')
-                ->when($breed, fn($q) => $q->where('breed', $breed))
-                ->when($isActive !== 'all', fn($q) => $q->where('is_active', $isActive === 'active'))
-                ->when($search, fn($q) => $q->where('tag_code', 'like', "%{$search}%"))
-                ->when(true, fn($q) => $this->applySort($q, $sort))
+            ->when($breed, fn($q) => $q->where('breed', $breed))
+            ->when($isActive !== 'all', fn($q) => $q->where('is_active', $isActive === 'active'))
+            ->when($search, function ($q) use ($search) {
+                $q->where(function ($q) use ($search) {
+                    $q->where('tag_code', 'like', "%{$search}%")
+                      ->orWhere('chicken_id', 'like', "%{$search}%");
+                });
+            })
+            ->when(true, fn($q) => $this->applySort($q, $sort))
                 ->get();
         }
 
