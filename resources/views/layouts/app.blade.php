@@ -474,6 +474,12 @@
     if (window.__layoutScriptInitialized) return;
     window.__layoutScriptInitialized = true;
 
+    // Scroll-restore window: a saved scroll position (set on form submit) may
+    // only be re-applied by lazy turbo-frame loads while the page is still
+    // settling. Once the window expires, the saved value is cleared so a stale
+    // one can never yank the page back to the top on a later, unrelated frame load.
+    var restoreUntil = 0;
+
     // ── Shared Floating Action Button (delegated, bound once) ──
     // Used by every section's FAB (the shared fab component). The markup lives
     // in <main> and is re-rendered on every Turbo visit, so handlers are
@@ -574,6 +580,13 @@
                 var savedScroll = sessionStorage.getItem('scrollPos:' + location.pathname);
                 if (savedScroll !== null) {
                     mainContent.scrollTop = parseInt(savedScroll, 10) || 0;
+                    // Keep letting lazy frames nudge the restore while the page
+                    // is still growing, then clear it so it can't re-apply later.
+                    restoreUntil = Date.now() + 3000;
+                    setTimeout(function () {
+                        restoreUntil = 0;
+                        try { sessionStorage.removeItem('scrollPos:' + location.pathname); } catch (e) {}
+                    }, 3000);
                 }
             } catch (err) { /* sessionStorage unavailable — degrade to no-op */ }
         }
@@ -742,8 +755,10 @@
 
         // Re-apply any pending scroll restore — a lazy frame finishing load
         // can grow the page after the initial turbo:load attempt clamped short.
+        // Bounded to the restore window from turbo:load so this can never reset
+        // the page to a stale saved value on unrelated, later frame loads.
         var mainEl = document.querySelector('.page-wrapper');
-        if (mainEl) {
+        if (mainEl && Date.now() < restoreUntil) {
             try {
                 var savedScroll = sessionStorage.getItem('scrollPos:' + location.pathname);
                 if (savedScroll !== null) {
@@ -756,8 +771,9 @@
     // Note: deliberately NOT clearing the saved scroll value on turbo:before-visit —
     // that event also fires for the very redirect-following visit this value is
     // meant to be consumed by (redirect()->back() lands on the same path), which
-    // would wipe it before turbo:load ever gets to read it. Any stale leftover
-    // value is harmless: it's just overwritten by the next real submit on that path.
+    // would wipe it before turbo:load ever gets to read it. Instead the value is
+    // consumed ~3s after turbo:load (see restoreUntil above), after which it is
+    // removed so it can never be re-applied by unrelated lazy frame loads.
 
     // ── Prevent right-click context menu (bind once) ──
     document.addEventListener('contextmenu', function(e) {

@@ -345,8 +345,15 @@
             setTimeout(restoreScroll, 0);
         }, { once: true });
 
-        frame.src = url;
-        frame.reload();
+        // Setting .src triggers the frame reload in Turbo (src attribute change).
+        // Only fall back to reload() when the URL is unchanged, so the frame
+        // never loads twice (a second turbo:frame-load would sidestep the once
+        // handler above and let unrelated scroll handling run again).
+        if (frame.getAttribute('src') === url) {
+            frame.reload();
+        } else {
+            frame.src = url;
+        }
     }
 
     function setButtonActive(btn, active) {
