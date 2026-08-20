@@ -3,7 +3,7 @@
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeMoveModal()"></div>
 
     {{-- Card --}}
-    <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+    <div class="move-modal-card relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <form id="moveForm" method="POST" action="{{ route('chickens.move') }}" data-turbo="false">
             @csrf
 
@@ -167,9 +167,64 @@ function openMoveModal(henIds, count, sourceInfo, breed) {
     if (noSlots) noSlots.classList.add('hidden');
 
     document.getElementById('moveModal').style.display = 'flex';
+    positionMoveModalNearCagePopup();
 }
+
+// When opened from the cage info popup, anchor the move modal to the RIGHT of the
+// popup instead of centering over it, so the cage slot panel stays visible.
+function positionMoveModalNearCagePopup() {
+    var modal = document.getElementById('moveModal');
+    var popup = document.getElementById('cageInfoPopup');
+    var card = modal ? modal.querySelector('.move-modal-card') : null;
+    if (!modal || !card) return;
+    resetMoveModalPosition();
+    if (!popup || popup.classList.contains('hidden')) return;
+
+    var vw = window.innerWidth;
+    if (vw < 768) {
+        // Mobile/tablet: show as a normal centered modal, lifted above the popup so
+        // it is never tucked below or behind the cage slot panel.
+        modal.style.zIndex = '95';
+        return;
+    }
+    modal.style.zIndex = '';
+
+    var pr = popup.getBoundingClientRect();
+    var margin = 12;
+    var vh = window.innerHeight;
+    var width = Math.min(448, vw - margin * 2);
+
+    card.style.position = 'fixed';
+    card.style.width = width + 'px';
+    card.style.maxHeight = (vh - margin * 2) + 'px';
+
+    var left = pr.right + margin;
+    if (left + width > vw - margin) left = pr.left - width - margin;
+    if (left < margin) left = margin;
+
+    var top = pr.top;
+    if (top + card.offsetHeight > vh - margin) top = vh - card.offsetHeight - margin;
+    if (top < margin) top = margin;
+
+    card.style.left = left + 'px';
+    card.style.top = top + 'px';
+}
+
+function resetMoveModalPosition() {
+    var modal = document.getElementById('moveModal');
+    if (modal) modal.style.zIndex = '';
+    var card = document.querySelector('#moveModal .move-modal-card');
+    if (!card) return;
+    card.style.position = '';
+    card.style.left = '';
+    card.style.top = '';
+    card.style.width = '';
+    card.style.maxHeight = '';
+}
+
 function closeMoveModal() {
     document.getElementById('moveModal').style.display = 'none';
+    resetMoveModalPosition();
 }
 
 function loadDestSlots() {
@@ -342,6 +397,24 @@ function ajaxMove(form) {
                 var src = frame.src;
                 frame.src = '';
                 frame.src = src;
+            }
+            // Live-update the cages page (cards + open cage info popup) without a refresh
+            if (typeof window.refreshCagesAfterMove === 'function') {
+                var srcText = document.getElementById('moveSourceText').textContent || '';
+                var srcParts = srcText.split(' slot ');
+                var srcCode = srcParts.length === 2 ? srcParts[0].trim() : '';
+                var srcSlot = srcParts.length === 2 ? parseInt(srcParts[1]) : 0;
+                var destCageId = parseInt(document.getElementById('destCageSelect').value) || 0;
+                var destSlotId = parseInt(document.getElementById('destSlotSelect').value) || 0;
+                if (srcCode && srcSlot && destCageId && destSlotId) {
+                    window.refreshCagesAfterMove({
+                        srcCageCode: srcCode,
+                        srcSlotNumber: srcSlot,
+                        destCageId: destCageId,
+                        destSlotId: destSlotId,
+                        count: getToMove()
+                    });
+                }
             }
         } else {
             var errors = result.json.errors || {};

@@ -52,7 +52,7 @@
     <div class="rounded-xl border p-4 sm:p-6" style="background-color: #ffffff; border-color: #e6e6e6;">
         <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
             <h3 class="text-xs font-semibold tracking-[0.05em] uppercase" style="color: #615d59;">Farm Layout</h3>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap justify-end">
                 <button id="clearFilterBtn" class="hidden text-xs font-medium px-3 py-1 rounded-lg transition-colors" style="color: #0075de; border: 1px solid #0075de;" onclick="clearCanvasFilter()">Show all</button>
                 @if($isAdmin)
                 <button onclick="openGridSettings()"
@@ -110,7 +110,7 @@
                     $isTiny = $uc->rows == 1 && $uc->slots_per_row == 1;
                     $isSmall = $uc->rows <= 2 || $uc->slots_per_row <= 2;
                 @endphp
-                <div class="staging-tile rounded-lg border-2 px-4 py-2 flex flex-col items-center justify-center {{ $isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer' }}"
+                <div class="staging-tile rounded-lg border-2 px-5 py-3 sm:px-4 sm:py-2 min-h-[3rem] flex flex-col items-center justify-center {{ $isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer' }}"
                      style="border-color: {{ $uc->color }}; background-color: {{ $uc->colorSoft }};"
                      draggable="{{ $isAdmin ? 'true' : 'false' }}"
                      data-cage-id="{{ $uc->id }}"
@@ -135,6 +135,21 @@
 
         {{-- Error Toast --}}
         <div id="dragErrorToast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-lg px-4 py-2 text-sm font-medium text-white" style="background-color: #9b1c24;"></div>
+
+        {{-- Cage Info Popup (positioned via JS, lives outside scaled canvas) --}}
+        <style>
+            #cageInfoPopup { perspective: 1000px; }
+            #cageInfoPopup .icon-btn { width:28px; height:28px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; transition:background-color 0.15s ease, color 0.15s ease; }
+            #cageInfoPopup .icon-btn:hover { background-color:rgba(0,0,0,0.06); }
+            #cageInfoPopup .flipper { transform-style: preserve-3d; transition: transform 0.35s ease; display: grid; }
+            #cageInfoPopup .flipper.flipped { transform: rotateY(180deg); }
+            #cageInfoPopup .front-face,
+            #cageInfoPopup .back-face { grid-area: 1 / 1; backface-visibility: hidden; background-color: #ffffff; border-radius: 11px; }
+            #cageInfoPopup .back-face { transform: rotateY(180deg); }
+        </style>
+        <div id="cageInfoPopup" class="hidden fixed z-50 rounded-xl border bg-white shadow-lg p-0 w-64" style="border-color: #e6e6e6; max-width: calc(100vw - 2rem); max-height: calc(100vh - 1.5rem); overflow-y: auto;">
+            <div id="cageInfoPopupContent"></div>
+        </div>
     </div>
 
     {{-- ── Grid Settings Modal (resize canvas dimensions post-onboarding) ── --}}
@@ -178,16 +193,16 @@
         </div>
     </div>
 
-    {{-- ── Tab Bar (Notion underline style) ── --}}
-    <div class="flex items-center gap-0 border-b overflow-x-auto" style="border-color: #e6e6e6;">
-        <button type="button" onclick="filterCage('all')" class="cage-tab px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap cursor-pointer"
+    {{-- ── Tab Bar (Notion underline style, scrollable + hidden scrollbar on mobile) ── --}}
+    <div class="cage-tabs flex items-center gap-0 border-b overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]" style="border-color: #e6e6e6; -webkit-overflow-scrolling: touch;">
+        <button type="button" onclick="filterCage('all')" class="cage-tab px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap cursor-pointer"
                 data-tab="all"
                 style="border-bottom-color: #002D5E; color: #1f1f1f;">
             All
             <span class="ml-1 text-xs" style="color: #a39e98;">({{ $cages->count() }})</span>
         </button>
         @foreach($cages as $cage)
-        <button type="button" onclick="filterCage('{{ $cage->cage_code }}')" class="cage-tab px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap cursor-pointer"
+        <button type="button" onclick="filterCage('{{ $cage->cage_code }}')" class="cage-tab px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap cursor-pointer"
                 data-tab="{{ $cage->cage_code }}"
                 style="border-bottom-color: transparent; color: #615d59;">
             <span class="inline-block w-2 h-2 rounded-full mr-1.5" style="background-color: {{ $cage->color }};"></span>
@@ -257,7 +272,7 @@
                         </div>
                         {{-- Right: occupancy count (equal weight) + actions --}}
                         <div class="flex items-center gap-1 shrink-0">
-                            <span class="text-sm font-semibold" style="color:{{ $occupancyPct >= 90 ? '#9b1c24' : ($occupancyPct >= 75 ? '#c2703e' : '#1f1f1f') }};">{{ $currentHens }}/{{ $cage->total_capacity ?? '?' }}</span>
+                            <span id="occupancy-{{ $cage->id }}" class="text-sm font-semibold" style="color:{{ $occupancyPct >= 90 ? '#9b1c24' : ($occupancyPct >= 75 ? '#c2703e' : '#1f1f1f') }};">{{ $currentHens }}/{{ $cage->total_capacity ?? '?' }}</span>
                             <a href="{{ route('cages.bulk-add') }}?cage_id={{ $cage->id }}"
                                class="icon-btn" style="color:#0075de;" aria-label="Bulk add hens" title="Add hens">
                                 <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
@@ -306,9 +321,9 @@
                                 @endif
                                 <span class="slot-reorder-number hidden text-xs font-bold" style="color:#002D5E;">{{ $slot->slot_number }}</span>
                                 @if($occupancy > 0)
-                                <span class="text-xs font-semibold" style="color:{{ $isSensor ? '#1f6b3a' : '#1f1f1f' }};">{{ $occupancy }}</span>
+                                <span id="slot-occ-{{ $slot->id }}" class="text-xs font-semibold" style="color:{{ $isSensor ? '#1f6b3a' : '#1f1f1f' }};">{{ $occupancy }}</span>
                                 @else
-                                <span class="text-xs" style="color:#d1d5db;">—</span>
+                                <span id="slot-occ-{{ $slot->id }}" class="text-xs" style="color:#d1d5db;">—</span>
                                 @endif
                             </button>
                             @endforeach
@@ -770,7 +785,7 @@ function expandSlot(slotId, cageId, cageCode) {
             }
             let html = summary + '<div class="space-y-1.5">';
             data.hens.forEach(hen => {
-                html += '<div class="flex items-center gap-3 rounded border px-3 py-2 text-xs" style="background-color: #ffffff; border-color: #e6e6e6;">';
+                html += '<div class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded border px-3 py-2 text-xs" style="background-color: #ffffff; border-color: #e6e6e6;">';
                 html += '<span class="w-24 font-mono" style="color: #615d59;">' + (hen.tag_code || '—') + '</span>';
                 html += '<span class="w-32" style="color: #31302e;">' + hen.breed + '</span>';
                 html += '<span class="w-12" style="color: #615d59;">' + hen.current_age_weeks + 'w</span>';
@@ -798,6 +813,89 @@ function expandSlot(slotId, cageId, cageCode) {
 
 function closeSlotExpand(cageId) {
     document.getElementById('slotExpandPanel-' + cageId).classList.add('hidden');
+}
+
+// ── Cage Info Popup slot expansion (exact copy of the cage card's expandSlot) ──
+function expandSlotInPopup(btn) {
+    var slotId = parseInt(btn.dataset.slotId);
+    var cageId = parseInt(btn.dataset.cageId);
+    var cageCode = btn.dataset.cageCode;
+    const panel = document.getElementById('slotExpandPanel-popup');
+    const content = document.getElementById('slotPanelContent-popup');
+    const title = document.getElementById('slotPanelTitle-popup');
+    panel.classList.remove('hidden');
+
+    // Remember which slot is expanded so the popup can re-open it after a move
+    var anchorPopup = document.getElementById('cageInfoPopup');
+    if (anchorPopup) {
+        anchorPopup._openSlotId = slotId;
+        anchorPopup._openSlotCageId = cageId;
+    }
+
+    // Widen the popup so the panel renders like the cage cards below
+    var popup = document.getElementById('cageInfoPopup');
+    if (popup) {
+        popup.style.width = 'min(32rem, calc(100vw - 2rem))';
+        if (popup._cageInfoBtnEl) positionCageInfoPopup(popup, popup._cageInfoBtnEl.getBoundingClientRect());
+    }
+
+    fetch(`${cagesBase}/slots/${slotId}/hens-json`)
+        .then(r => r.json())
+        .then(data => {
+            title.textContent = cageCode + ' — Slot ' + data.slot.row_number + '-' + data.slot.column_number + ' (#' + data.slot.slot_number + ')';
+
+            // Slot summary: hen count + today's egg status + cage notes (item 16)
+            let summary = '<div class="flex flex-wrap items-center gap-2 mb-3 text-xs">';
+            summary += '<span class="px-2 py-1 rounded-lg" style="background-color: #ffffff; border: 1px solid #e6e6e6; color: #31302e;">' + data.slot.current_occupancy + ' hen(s)</span>';
+            summary += '<span class="px-2 py-1 rounded-lg" style="background-color: #ffffff; border: 1px solid #e6e6e6; color: #31302e;"><span style="color:#615d59;">Eggs today:</span> ' + data.slot.egg_status + '</span>';
+            summary += '</div>';
+            let notesHtml = '';
+            if (data.notes && data.notes.length > 0) {
+                notesHtml += '<div class="mt-3 pt-3 border-t" style="border-color: #e6e6e6;">';
+                notesHtml += '<div class="text-xs font-semibold mb-1.5" style="color: #615d59;">Notes tagged to ' + cageCode + '</div>';
+                data.notes.forEach(function(n) {
+                    notesHtml += '<div class="text-xs mb-1.5" style="color: #31302e;">' +
+                        '<span style="color:#a39e98;">' + n.created_at + ' — </span>' +
+                        n.body.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>';
+                });
+                notesHtml += '</div>';
+            }
+
+            if (data.hens.length === 0) {
+                content.innerHTML = summary + '<p class="text-xs text-center py-3" style="color: #a39e98;">No hens in this slot.</p>' + notesHtml;
+                return;
+            }
+            let html = summary + '<div class="space-y-1.5">';
+            data.hens.forEach(hen => {
+                html += '<div class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded border px-3 py-2 text-xs" style="background-color: #ffffff; border-color: #e6e6e6;">';
+                html += '<span class="w-24 font-mono" style="color: #615d59;">' + (hen.tag_code || '—') + '</span>';
+                html += '<span class="w-32" style="color: #31302e;">' + hen.breed + '</span>';
+                html += '<span class="w-12" style="color: #615d59;">' + hen.current_age_weeks + 'w</span>';
+                html += '<span class="flex-1">';
+                html += '<span class="text-xs px-1.5 py-0.5 rounded-full" style="background-color: ' + (hen.is_active ? '#e8f5ec' : '#f0f0f0') + '; color: ' + (hen.is_active ? '#1f6b3a' : '#615d59') + ';">';
+                html += (hen.is_active ? 'Active' : 'Inactive') + '</span></span>';
+                html += '<div class="flex items-center gap-1">';
+                html += '<button type="button" onclick="openMoveModal(\'' + hen.id + '\', 1, \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + hen.breed + '\')" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #615d59;" aria-label="Move hen"><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i></button>';
+                html += '<button type="button" onclick="openRemoveModal(\'' + hen.id + '\', 1, \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + hen.breed + '\')" class="p-1.5 rounded-full hover:bg-red-50 transition-colors" style="color: #9b1c24;" aria-label="Remove hen"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>';
+                html += '</div></div>';
+            });
+            html += '</div>';
+            html += '<div class="mt-3 flex items-center gap-2">';
+            const ids = data.hens.map(h => h.id).join(',');
+            html += '<button type="button" onclick="openMoveModal(\'' + ids + '\', ' + data.hens.length + ', \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + (data.hens[0]?.breed || '') + '\')" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #615d59;" aria-label="Move all (' + data.hens.length + ')"><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i></button>';
+            html += '<button type="button" onclick="openRemoveModal(\'' + ids + '\', ' + data.hens.length + ', \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + (data.hens[0]?.breed || '') + '\')" class="p-1.5 rounded-full hover:bg-red-50 transition-colors" style="color: #9b1c24;" aria-label="Remove all (' + data.hens.length + ')"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>';
+            html += '</div>';
+            content.innerHTML = html + notesHtml;
+            lucide.createIcons();
+        })
+        .catch(() => {
+            content.innerHTML = '<p class="text-xs text-center py-3" style="color: #9b1c24;">Failed to load hens.</p>';
+        })
+        .finally(repositionCageInfoPopup);
+}
+
+function closeSlotExpandPopup() {
+    document.getElementById('slotExpandPanel-popup').classList.add('hidden');
 }
 
 // ── Flip Card ─────────────────────────────────────────────
@@ -1197,15 +1295,30 @@ var activeFilterId = null;
 var pendingMoves = {};
 var savedPositions = {};
 var cageMeta = {!! $cages->mapWithKeys(fn($c) => [$c->id => [
+    'id' => $c->id,
     'code' => $c->cage_code,
     'color' => $c->color,
     'colorSoft' => $c->colorSoft,
     'breed' => \Illuminate\Support\Str::limit($c->hens->first()?->breed ?? '—', 16),
+    'primary_age_weeks' => $c->hens->first()?->current_age_weeks ?? null,
     'rows' => (int) ($c->rows ?? 1),
     'slots_per_row' => (int) ($c->slots_per_row ?? 1),
     'max_chickens_per_slot' => (int) ($c->max_chickens_per_slot ?? 4),
     'location_row' => $c->location_row,
     'location_col' => $c->location_column,
+    'is_active' => (bool) $c->is_active,
+    'total_capacity' => (int) ($c->total_capacity ?? 0),
+    'current_occupancy' => (int) $c->cageSlots->sum('current_occupancy'),
+    'slots' => $c->cageSlots->map(fn($s) => [
+        'id' => $s->id,
+        'row' => (int) $s->row_number,
+        'col' => (int) $s->column_number,
+        'number' => (int) $s->slot_number,
+        'occupancy' => (int) $s->current_occupancy,
+        'has_sensor' => $s->hasBreakbeam(),
+    ])->values(),
+    'bulk_add_url' => route('cages.bulk-add') . '?cage_id=' . $c->id,
+    'print_label_url' => route('cages.print-label', $c),
 ]])->toJson(JSON_UNESCAPED_UNICODE) !!};
 
 // ── Initialize placed cages state from server data ──
@@ -1232,6 +1345,13 @@ function tileLeft(col) { return GRID_PAD + col * (TILE_SIZE + TILE_GAP); }
 function tileTop(row) { return GRID_PAD + row * (TILE_SIZE + TILE_GAP); }
 function canvasW() { return GRID_PAD * 2 + GRID_COLS * (TILE_SIZE + TILE_GAP) - TILE_GAP; }
 function canvasH() { return GRID_PAD * 2 + GRID_ROWS * (TILE_SIZE + TILE_GAP) - TILE_GAP; }
+
+function getCanvasScale() {
+    var scaler = document.getElementById('canvasScaler');
+    if (!scaler) return 1;
+    var m = scaler.style.transform.match(/scale\(([^)]+)\)/);
+    return m ? parseFloat(m[1]) : 1;
+}
 
 // ── Overlap detection ──
 function rectsOverlap(a, b) {
@@ -1325,12 +1445,376 @@ function renderCageOverlays() {
             }, 300);
         });
     });
+    // Bind info popup buttons (toggle: click the same cage again to close)
+    layer.querySelectorAll('.cage-info-btn').forEach(function(el) {
+        el.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var id = parseInt(el.dataset.cageId);
+            var popup = document.getElementById('cageInfoPopup');
+            if (popup && !popup.classList.contains('hidden') && popup._cageInfoCageId === id) {
+                popup.classList.add('hidden');
+            } else {
+                openCageInfoPopup(id, el);
+            }
+        });
+    });
+
     // Bind drag events
     layer.querySelectorAll('.cage-drag-handle').forEach(function(el) {
         el.addEventListener('dragstart', function(e) { handleDragStart(e, parseInt(el.dataset.cageId)); });
     });
+    // Re-render lucide icons (drag/drop and select re-create the overlay markup,
+    // which leaves info/action icons as empty <i> until createIcons runs)
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        try { window.lucide.createIcons({ root: layer }); } catch (e) { try { window.lucide.createIcons(); } catch (e2) {} }
+    }
     updateCanvasSize();
 }
+
+// ── Cage Info Popup (mirrors the cage detail card: front slot grid + back details) ──
+function renderCageInfoPopupSlotGrid(m) {
+    var cols = Math.min(m.slots_per_row, 6);
+    var html = '<div class="grid gap-1" style="grid-template-columns:repeat(' + cols + ', 32px);justify-content:flex-start;">';
+    for (var i = 0; i < m.slots.length; i++) {
+        var s = m.slots[i];
+        var isSensor = s.has_sensor;
+        var occupancy = s.occupancy;
+        var maxPerSlot = m.max_chickens_per_slot || 4;
+        var fillRatio = maxPerSlot > 0 ? Math.min(1, occupancy / maxPerSlot) : 0;
+        var slotBg, slotBorder, slotContent;
+        if (isSensor) {
+            slotBg = '#d6f0e3';
+            slotBorder = '#2a9d6a';
+            slotContent = occupancy > 0 ? '<span class="text-xs font-semibold" style="color:#1f6b3a;">' + occupancy + '</span>' : '<span class="text-xs" style="color:#d1d5db;">—</span>';
+        } else if (occupancy > 0) {
+            var gray = Math.round(248 - (fillRatio * 40));
+            slotBg = 'rgb(' + gray + ',' + gray + ',' + gray + ')';
+            slotBorder = gray > 235 ? '#e6e6e6' : '#d1d5db';
+            slotContent = '<span class="text-xs font-semibold" style="color:#1f1f1f;">' + occupancy + '</span>';
+        } else {
+            slotBg = '#ffffff';
+            slotBorder = '#e6e6e6';
+            slotContent = '<span class="text-xs" style="color:#d1d5db;">—</span>';
+        }
+        var sensorDot = isSensor ? '<span class="absolute top-0 right-0 w-1.5 h-1.5 rounded-bl" style="background-color:#0075de;"></span>' : '';
+        html += '<button type="button" onclick="expandSlotInPopup(this)" class="slot-mini w-8 h-8 rounded flex flex-col items-center justify-center text-xs relative cursor-pointer transition-colors" data-cage-id="' + m.id + '" data-slot-id="' + s.id + '" data-cage-code="' + m.code.replace(/"/g, '&quot;') + '" style="background-color:' + slotBg + ';border:1px solid ' + slotBorder + ';" title="Slot ' + s.row + '-' + s.col + ': ' + occupancy + ' hens' + (isSensor ? ' (sensor equipped)' : '') + '" aria-label="Slot ' + s.row + '-' + s.col + ', ' + occupancy + ' hens">'
+            + sensorDot + slotContent + '</button>';
+    }
+    html += '</div>';
+    return html;
+}
+
+function renderCageInfoPopupContent(m) {
+    var occupancyPct = m.total_capacity > 0 ? Math.round((m.current_occupancy / m.total_capacity) * 100) : 0;
+    var accentColor;
+    if (!m.is_active) {
+        accentColor = '#a39e98';
+    } else if (occupancyPct > 100) {
+        accentColor = '#9b1c24';
+    } else if (occupancyPct >= 90) {
+        accentColor = '#c2703e';
+    } else {
+        accentColor = m.color;
+    }
+    var occupancyColor = occupancyPct >= 90 ? '#9b1c24' : (occupancyPct >= 75 ? '#c2703e' : '#1f1f1f');
+    var sensorCount = m.slots.filter(function(s) { return s.has_sensor; }).length;
+
+    var accentBar = '<div style="width:4px;align-self:stretch;background-color:' + accentColor + ';border-radius:3px;flex-shrink:0;"></div>';
+
+    // ── FRONT FACE ──
+    var frontHeader = '<div class="flex items-center gap-3 px-3 pt-3 pb-2 border-b" style="background-color:#f8f8f8;border-bottom-color:#e6e6e6;border-top-left-radius:11px;border-top-right-radius:11px;">'
+        + accentBar
+        + '<div class="flex items-center gap-2 min-w-0 flex-1">'
+        + '<span class="text-sm font-bold shrink-0" style="color:' + m.color + '">' + m.code + '</span>'
+        + '<span class="text-[10px] px-2 py-0.5 rounded-full shrink-0 font-semibold" style="background-color:' + (m.is_active ? '#e8f5ec' : '#f0f0f0') + ';color:' + (m.is_active ? '#1f6b3a' : '#615d59') + ';">' + (m.is_active ? 'Active' : 'Inactive') + '</span>'
+        + '</div>'
+        + '<div class="flex items-center gap-1 shrink-0">'
+        + '<span class="text-sm font-semibold" style="color:' + occupancyColor + ';">' + m.current_occupancy + '/' + (m.total_capacity || '?') + '</span>'
+        + '<a href="' + m.bulk_add_url + '" class="icon-btn" style="color:#0075de;" aria-label="Bulk add hens" title="Add hens"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i></a>'
+        + '<button onclick="flipCageInfoPopup()" class="icon-btn" style="color:#615d59;" aria-label="Show details" title="Details & settings"><i data-lucide="info" class="w-3.5 h-3.5"></i></button>'
+        + '</div>'
+        + '</div>';
+
+    var frontBody = '<div class="px-4 py-3">'
+        + renderCageInfoPopupSlotGrid(m)
+        + '<div id="slotExpandPanel-popup" class="hidden mt-3 border-t" style="border-color:#e6e6e6; background-color:#f6f5f4;">'
+        + '<div class="p-3">'
+        + '<div class="flex items-center justify-between mb-2">'
+        + '<span id="slotPanelTitle-popup" class="text-sm font-semibold" style="color:#1f1f1f;">Slot details</span>'
+        + '<button onclick="closeSlotExpandPopup()" class="p-1.5 rounded hover:bg-black/5 transition-colors" aria-label="Close"><i data-lucide="x" class="w-4 h-4" style="color:#615d59;"></i></button>'
+        + '</div>'
+        + '<div id="slotPanelContent-popup">'
+        + '<div class="text-xs text-center py-2" style="color:#a39e98;">Tap a slot above to see its hens.</div>'
+        + '</div>'
+        + '</div>'
+        + '</div>'
+        + '</div>';
+
+    var frontFooter = '<div class="flex items-center gap-3 px-4 py-2 border-t text-[10px] leading-none shrink-0" style="border-color:#e6e6e6;color:#a39e98;">'
+        + '<span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded" style="background-color:#d6f0e3;border:1px solid #2a9d6a;"></span> Sensor</span>'
+        + '<span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded" style="background-color:#f6f5f4;border:1px solid #e6e6e6;"></span> Occupied</span>'
+        + '<span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded" style="background-color:#ffffff;border:1px solid #e6e6e6;"></span> Empty</span>'
+        + '</div>';
+
+    var frontFace = '<div class="front-face flex flex-col" style="z-index:2;">' + frontHeader + frontBody + frontFooter + '</div>';
+
+    // ── BACK FACE ──
+    var backHeader = '<div class="flex items-center gap-3 px-3 pt-3 pb-2 border-b" style="background-color:#f8f8f8;border-bottom-color:#e6e6e6;border-top-left-radius:11px;border-top-right-radius:11px;">'
+        + accentBar
+        + '<span class="text-sm font-bold flex-1" style="color:' + m.color + ';">' + m.code + '</span>'
+        + '<button onclick="flipCageInfoPopup()" class="icon-btn" style="color:#615d59;" aria-label="Back" title="Back"><i data-lucide="arrow-left" class="w-3.5 h-3.5"></i></button>'
+        + '</div>';
+
+    var specs = '<div class="grid grid-cols-[60px_1fr] gap-x-2 gap-y-1.5 text-xs">'
+        + '<span class="font-medium" style="color:#a39e98;">Dims</span><span style="color:#1f1f1f;">' + (m.rows || '?') + '×' + (m.slots_per_row || '?') + ' · ' + m.slots.length + ' slots</span>'
+        + '<span class="font-medium" style="color:#a39e98;">Cap</span><span style="color:#1f1f1f;">' + m.current_occupancy + ' / ' + (m.total_capacity || '?') + ' hens</span>';
+    if (m.breed && m.breed !== '—') {
+        specs += '<span class="font-medium" style="color:#a39e98;">Breed</span><span style="color:#1f1f1f;">' + m.breed + (m.primary_age_weeks ? ' · ' + m.primary_age_weeks + 'w' : '') + '</span>';
+    }
+    if (sensorCount > 0) {
+        specs += '<span class="font-medium" style="color:#a39e98;">Sensor</span><span style="color:#1f1f1f;">' + sensorCount + ' slot' + (sensorCount > 1 ? 's' : '') + '</span>';
+    }
+    specs += '</div>';
+
+    var backBody = '<div class="flex-1 px-4 py-3 space-y-2.5 overflow-y-auto">' + specs + '</div>';
+
+    var backFooter = '<div class="flex items-center justify-around px-4 py-2 border-t shrink-0" style="border-color:#e6e6e6;">';
+    if (IS_ADMIN) {
+        backFooter += '<button onclick="closeCageInfoPopup(); openEditModal(' + m.id + ', \'' + m.code + '\', ' + (m.location_row !== null ? m.location_row : 'null') + ', ' + (m.location_col !== null ? m.location_col : 'null') + ', ' + m.rows + ', ' + m.slots_per_row + ', ' + m.max_chickens_per_slot + ', ' + (m.is_active ? 1 : 0) + ')" class="icon-btn" style="color:#615d59;" aria-label="Edit cage" title="Edit cage"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>';
+        backFooter += '<button onclick="closeCageInfoPopup(); toggleReorderMode(' + m.id + ')" class="icon-btn" style="color:#615d59;" aria-label="Renumber slots" title="Renumber slots"><i data-lucide="list-ordered" class="w-3.5 h-3.5"></i></button>';
+    }
+    backFooter += '<button onclick="closeCageInfoPopup(); window.open(\'' + m.print_label_url + '\', \'print-' + m.id + '\', \'width=900,height=700\')" class="icon-btn" style="color:#615d59;" aria-label="Print cage label" title="Print label"><i data-lucide="printer" class="w-3.5 h-3.5"></i></button>';
+    if (IS_ADMIN) {
+        backFooter += '<button onclick="closeCageInfoPopup(); openDeleteModal(' + m.id + ', \'' + m.code + '\')" class="icon-btn" style="color:#615d59;" aria-label="Delete cage" title="Delete cage"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>';
+    }
+    backFooter += '</div>';
+
+    var backFace = '<div class="back-face flex flex-col" style="z-index:1;">' + backHeader + backBody + backFooter + '</div>';
+
+    return '<div class="flipper" id="cageInfoFlipper">' + frontFace + backFace + '</div>';
+}
+
+function closeCageInfoPopup() {
+    var popup = document.getElementById('cageInfoPopup');
+    if (popup) {
+        popup.classList.add('hidden');
+        popup.style.transform = '';
+        popup.style.zIndex = '';
+    }
+}
+
+function flipCageInfoPopup() {
+    var flipper = document.getElementById('cageInfoFlipper');
+    if (flipper) flipper.classList.toggle('flipped');
+    repositionCageInfoPopup();
+    var popup = document.getElementById('cageInfoPopup');
+    if (window.lucide && typeof window.lucide.createIcons === 'function' && popup) {
+        try { window.lucide.createIcons({ root: popup }); } catch (e) {}
+    }
+}
+
+function positionCageInfoPopup(popup, targetRect) {
+    var margin = 8;
+    var viewportW = window.innerWidth;
+    var viewportH = window.innerHeight;
+
+    if (viewportW < 768) {
+        // Mobile/tablet: center it as a full-screen-style overlay above page content
+        // (same approach as the Move modal), width capped to viewport.
+        popup.style.width = 'calc(100vw - 2rem)';
+        popup.style.maxHeight = 'calc(100vh - 2rem)';
+        popup.style.left = '50%';
+        popup.style.top = '50%';
+        popup.style.transform = 'translate(-50%, -50%)';
+        popup.style.zIndex = '90';
+        return;
+    }
+
+    popup.style.transform = '';
+    popup.style.zIndex = '';
+
+    var popupRect = popup.getBoundingClientRect();
+    var left = targetRect.right + margin;
+    var top = targetRect.top;
+
+    if (left + popupRect.width > viewportW - margin) {
+        left = targetRect.left - popupRect.width - margin;
+    }
+    if (left < margin) {
+        left = margin;
+    }
+    if (top + popupRect.height > viewportH - margin) {
+        top = viewportH - popupRect.height - margin;
+    }
+    if (top < margin) {
+        top = margin;
+    }
+
+    popup.style.left = left + 'px';
+    popup.style.top = top + 'px';
+}
+
+function repositionCageInfoPopup() {
+    var popup = document.getElementById('cageInfoPopup');
+    if (popup && popup._cageInfoBtnEl) {
+        positionCageInfoPopup(popup, popup._cageInfoBtnEl.getBoundingClientRect());
+    }
+}
+
+function openCageInfoPopup(cageId, btnEl) {
+    var m = cageMeta[cageId];
+    if (!m) return;
+    var popup = document.getElementById('cageInfoPopup');
+    var content = document.getElementById('cageInfoPopupContent');
+    if (!popup || !content) return;
+
+    content.innerHTML = renderCageInfoPopupContent(m);
+    popup.classList.remove('hidden');
+    popup._cageInfoBtnEl = btnEl;
+    popup._cageInfoCageId = cageId;
+    popup.style.width = '16rem';
+
+    positionCageInfoPopup(popup, btnEl.getBoundingClientRect());
+
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        try { window.lucide.createIcons(); } catch (e) {}
+    }
+}
+
+// Close the cage info popup with Escape (keeps it open otherwise, so it does not
+// vanish when switching tabs, opening the move/remove modals, or navigating)
+if (!window.__cageInfoEscBound) {
+    window.__cageInfoEscBound = true;
+    document.addEventListener('keydown', function(e) {
+        if (e.key !== 'Escape') return;
+        var popup = document.getElementById('cageInfoPopup');
+        if (popup) popup.classList.add('hidden');
+    });
+}
+
+// Close the popup (and its open slot-details tab) when clicking outside it —
+// but not while interacting with the filter tabs or an open modal/menu.
+if (!window.__cageInfoOutsideBound) {
+    window.__cageInfoOutsideBound = true;
+    document.addEventListener('click', function(e) {
+        var popup = document.getElementById('cageInfoPopup');
+        if (!popup || popup.classList.contains('hidden')) return;
+        // Use composedPath() — createIcons() swaps icon <i> nodes mid-click, which
+        // detaches e.target and breaks popup.contains(). composedPath() is captured
+        // at dispatch time, so it still reflects the click's original route.
+        var inside = (typeof e.composedPath === 'function' && e.composedPath().includes(popup))
+            || popup.contains(e.target);
+        if (inside) return;
+        if (e.target.closest('.cage-tab, .cage-tabs')) return;
+        var dialog = e.target.closest('[role="dialog"]');
+        if (dialog && window.getComputedStyle(dialog).display !== 'none') return;
+        closeCageInfoPopup();
+    });
+}
+
+// ── Live update after a hen move ────────────────────────────────
+function recomputeCageMeta(id) {
+    var m = cageMeta[id];
+    if (!m) return;
+    m.current_occupancy = m.slots.reduce(function(t, s) { return t + (s.occupancy || 0); }, 0);
+}
+
+function updateCageCardDom(cageId) {
+    var m = cageMeta[cageId];
+    if (!m) return;
+    var card = document.querySelector('.cage-card[data-cage-code="' + m.code + '"]');
+    if (!card) return;
+
+    var occSpan = document.getElementById('occupancy-' + cageId);
+    if (occSpan) {
+        occSpan.textContent = m.current_occupancy + '/' + (m.total_capacity || '?');
+        var pct = m.total_capacity > 0 ? Math.round((m.current_occupancy / m.total_capacity) * 100) : 0;
+        occSpan.style.color = pct >= 90 ? '#9b1c24' : (pct >= 75 ? '#c2703e' : '#1f1f1f');
+    }
+
+    var grid = card.querySelector('.slot-grid-' + cageId);
+    if (!grid) return;
+    grid.querySelectorAll('.slot-mini').forEach(function(btn) {
+        var sid = parseInt(btn.dataset.slotId);
+        var s = m.slots.find(function(x) { return x.id === sid; });
+        if (!s) return;
+        var maxPerSlot = m.max_chickens_per_slot || 4;
+        var fillRatio = maxPerSlot > 0 ? Math.min(1, s.occupancy / maxPerSlot) : 0;
+        var bg, border;
+        if (s.has_sensor) {
+            bg = '#d6f0e3';
+            border = '#2a9d6a';
+        } else if (s.occupancy > 0) {
+            var gray = Math.round(248 - (fillRatio * 40));
+            bg = 'rgb(' + gray + ',' + gray + ',' + gray + ')';
+            border = gray > 235 ? '#e6e6e6' : '#d1d5db';
+        } else {
+            bg = '#ffffff';
+            border = '#e6e6e6';
+        }
+        btn.style.backgroundColor = bg;
+        btn.style.borderColor = border;
+        if (s.has_sensor) btn.style.color = '#1f6b3a';
+        var occ = document.getElementById('slot-occ-' + sid);
+        if (occ) {
+            occ.textContent = s.occupancy > 0 ? String(s.occupancy) : '—';
+            occ.className = s.occupancy > 0 ? 'text-xs font-semibold' : 'text-xs';
+            occ.style.color = s.has_sensor ? '#1f6b3a' : (s.occupancy > 0 ? '#1f1f1f' : '#d1d5db');
+        }
+    });
+}
+
+function refreshPopupAfterMove() {
+    var popup = document.getElementById('cageInfoPopup');
+    if (!popup || popup.classList.contains('hidden')) return;
+    var content = document.getElementById('cageInfoPopupContent');
+    if (!content) return;
+    var cageId = popup._cageInfoCageId;
+    var openSlotId = popup._openSlotId;
+    var btnEl = popup._cageInfoBtnEl;
+    var m = cageMeta[cageId];
+    if (!m) return;
+
+    content.innerHTML = renderCageInfoPopupContent(m);
+    if (btnEl && btnEl.isConnected) positionCageInfoPopup(popup, btnEl.getBoundingClientRect());
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        try { window.lucide.createIcons(); } catch (e) {}
+    }
+    if (openSlotId && openSlotId !== null) {
+        var btn = content.querySelector('.slot-mini[data-slot-id="' + openSlotId + '"]');
+        if (btn) expandSlotInPopup(btn);
+    }
+}
+
+function refreshCagesAfterMove(d) {
+    if (!d) return;
+    var srcCageId = null;
+    for (var id in cageMeta) {
+        var m = cageMeta[id];
+        if (m.code === d.srcCageCode && d.srcSlotNumber) {
+            srcCageId = parseInt(id);
+            m.slots.forEach(function(s) {
+                if (s.number === d.srcSlotNumber) s.occupancy = Math.max(0, (s.occupancy || 0) - d.count);
+            });
+        }
+        if (parseInt(id) === d.destCageId && d.destSlotId) {
+            m.slots.forEach(function(s) {
+                if (s.id === d.destSlotId) s.occupancy = (s.occupancy || 0) + d.count;
+            });
+        }
+    }
+    if (srcCageId) recomputeCageMeta(srcCageId);
+    recomputeCageMeta(d.destCageId);
+
+    var affected = [];
+    if (srcCageId) affected.push(srcCageId);
+    if (srcCageId !== d.destCageId && d.destCageId) affected.push(d.destCageId);
+    affected.forEach(updateCageCardDom);
+
+    refreshPopupAfterMove();
+}
+
+window.refreshCagesAfterMove = refreshCagesAfterMove;
 
 function cageLabelHtml(code, w, h, color) {
     var isTiny = (w === 1 && h === 1);
@@ -1357,7 +1841,11 @@ function cageOverlayHtml(cageId, c) {
     var borderWidth = isSelected ? 3 : 2;
     var shadow = isSelected ? '0 0 0 2px rgba(0,45,94,0.25)' : 'none';
     var btns = '';
+    // Info icon on the bottom-right, inside the cage card (transparent bg, cage color)
+    btns += '<button class="cage-info-btn w-6 h-6 rounded-full flex items-center justify-center z-20" data-cage-id="' + cageId + '" style="position:absolute; bottom:2px; right:2px; background-color:transparent; color:' + c.color + '; line-height:1;" title="Cage info" aria-label="Cage info">'
+        + '<i data-lucide="info" class="w-3 h-3"></i></button>';
     if (isSelected && IS_ADMIN) {
+        // Remove (×) on the top-right while dragging/selected
         btns += '<button class="cage-remove-btn absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white z-10" data-cage-id="' + cageId + '" style="background-color:#9b1c24;line-height:1;" title="Remove from canvas">×</button>';
     }
     return '<div class="cage-overlay absolute rounded-lg flex items-center justify-center" data-cage-id="' + cageId + '" style="left:' + left + 'px;top:' + top + 'px;width:' + w + 'px;height:' + h + 'px;border:' + borderWidth + 'px solid ' + borderColor + ';background:' + c.colorSoft + ';box-shadow:' + shadow + ';cursor:pointer;z-index:1;" title="' + c.code + ' — ' + c.width + '×' + c.height + '">'
@@ -1385,6 +1873,10 @@ function fitCanvasToWidth() {
     var containerW = canvas.clientWidth - 4;
     if (containerW < 1) return;
     var scale = Math.min(1, containerW / contentW);
+    // On narrow viewports, keep tiles readable and scroll horizontally instead of
+    // shrinking everything to an unusable size.
+    var minScale = window.innerWidth < 640 ? 0.65 : (window.innerWidth < 1024 ? 0.85 : 1);
+    scale = Math.max(minScale, scale);
     scaler.style.transform = 'scale(' + scale + ')';
     scaler.style.width = (contentW * scale) + 'px';
     scaler.style.height = (canvasH() * scale) + 'px';
@@ -1508,8 +2000,9 @@ function showGhost(e) {
     // Calculate snapped position relative to canvas content origin
     var canvas = document.getElementById('farmCanvas');
     var rect = canvas.getBoundingClientRect();
-    var mx = e.clientX - rect.left - GRID_PAD;
-    var my = e.clientY - rect.top - GRID_PAD;
+    var scale = getCanvasScale();
+    var mx = (e.clientX - rect.left + canvas.scrollLeft) / scale - GRID_PAD;
+    var my = (e.clientY - rect.top + canvas.scrollTop) / scale - GRID_PAD;
 
     // Floor-based snap from grab-offset-adjusted cursor position
     var snapCol = Math.floor((mx - grabOffsetCol * cellW) / cellW);
@@ -1519,10 +2012,10 @@ function showGhost(e) {
     snapRow = Math.max(0, Math.min(snapRow, GRID_ROWS - h));
 
     // Ghost positioned at snapped tile (viewport coordinates)
-    var ghostLeft = rect.left + tileLeft(snapCol);
-    var ghostTop = rect.top + tileTop(snapRow);
-    var ghostW = w * cellW - TILE_GAP;
-    var ghostH = h * cellH - TILE_GAP;
+    var ghostLeft = rect.left - canvas.scrollLeft + tileLeft(snapCol) * scale;
+    var ghostTop = rect.top - canvas.scrollTop + tileTop(snapRow) * scale;
+    var ghostW = (w * cellW - TILE_GAP) * scale;
+    var ghostH = (h * cellH - TILE_GAP) * scale;
 
     var valid = checkPlacement(cageId, snapRow, snapCol);
 
@@ -1585,8 +2078,9 @@ function handleCanvasDrop(e) {
     // Compute snap position at drop (same logic as showGhost for consistency)
     var canvas = document.getElementById('farmCanvas');
     var rect = canvas.getBoundingClientRect();
-    var mx = e.clientX - rect.left - GRID_PAD;
-    var my = e.clientY - rect.top - GRID_PAD;
+    var scale = getCanvasScale();
+    var mx = (e.clientX - rect.left + canvas.scrollLeft) / scale - GRID_PAD;
+    var my = (e.clientY - rect.top + canvas.scrollTop) / scale - GRID_PAD;
     var snapCol = Math.floor((mx - grabOffsetCol * cellW) / cellW);
     var snapRow = Math.floor((my - grabOffsetRow * cellH) / cellH);
     snapCol = Math.max(0, Math.min(snapCol, GRID_COLS - w));
