@@ -110,12 +110,13 @@
                     $isTiny = $uc->rows == 1 && $uc->slots_per_row == 1;
                     $isSmall = $uc->rows <= 2 || $uc->slots_per_row <= 2;
                 @endphp
-                <div class="staging-tile rounded-lg border-2 px-5 py-3 sm:px-4 sm:py-2 min-h-[3rem] flex flex-col items-center justify-center {{ $isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer' }}"
+                <div class="staging-tile relative rounded-lg border-2 px-5 py-3 sm:px-4 sm:py-2 min-h-[3rem] flex flex-col items-center justify-center {{ $isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer' }}"
                      style="border-color: {{ $uc->color }}; background-color: {{ $uc->colorSoft }};"
                      draggable="{{ $isAdmin ? 'true' : 'false' }}"
                      data-cage-id="{{ $uc->id }}"
                      data-cage-code="{{ $uc->cage_code }}"
                      @if($isAdmin) ondragstart="handleDragStart(event, {{ $uc->id }})" @endif>
+                    <button class="cage-info-btn w-6 h-6 rounded-full flex items-center justify-center" data-cage-id="{{ $uc->id }}" style="position:absolute; bottom:2px; right:2px; background-color:transparent; color: {{ $uc->color }}; line-height:1;" title="Cage info" aria-label="Cage info"><i data-lucide="info" class="w-3 h-3"></i></button>
                     @if($isTiny)
                     <span class="font-bold leading-none text-center" style="font-size:14px;color: {{ $uc->color }};overflow:hidden;text-overflow:ellipsis;max-width:100%;display:inline-block;">
                         {{ \Illuminate\Support\Str::after($uc->cage_code, 'CAGE-') }}
@@ -2172,15 +2173,38 @@ function addStagingTile(cageId) {
     if (!m) return;
     var area = document.getElementById('stagingArea');
     var tile = document.createElement('div');
-    tile.className = 'staging-tile rounded-lg border-2 px-4 py-2 flex items-center justify-center ' + (IS_ADMIN ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer');
+    tile.className = 'staging-tile relative rounded-lg border-2 px-4 py-2 flex items-center justify-center ' + (IS_ADMIN ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer');
     tile.draggable = IS_ADMIN;
     tile.dataset.cageId = cageId;
     tile.dataset.cageCode = m.code;
     tile.style.borderColor = m.color;
     tile.style.backgroundColor = m.colorSoft;
-    tile.innerHTML = '<span class="text-sm font-semibold" style="color:' + m.color + ';">' + m.code + '</span>';
+    tile.innerHTML = '<span class="text-sm font-semibold" style="color:' + m.color + ';">' + m.code + '</span>'
+        + '<button class="cage-info-btn w-6 h-6 rounded-full flex items-center justify-center" data-cage-id="' + cageId + '" style="position:absolute; bottom:2px; right:2px; background-color:transparent; color:' + m.color + '; line-height:1;" title="Cage info" aria-label="Cage info"><i data-lucide="info" class="w-3 h-3"></i></button>';
+    var infoBtn = tile.querySelector('.cage-info-btn');
+    if (infoBtn) bindCageInfoButton(infoBtn);
     tile.addEventListener('dragstart', function(e) { handleDragStart(e, cageId); });
     area.appendChild(tile);
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        try { window.lucide.createIcons({ root: tile }); } catch (e) {}
+    }
+}
+
+function bindCageInfoButton(btn) {
+    btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var id = parseInt(btn.dataset.cageId);
+        var popup = document.getElementById('cageInfoPopup');
+        if (popup && !popup.classList.contains('hidden') && popup._cageInfoCageId === id) {
+            popup.classList.add('hidden');
+        } else {
+            openCageInfoPopup(id, btn);
+        }
+    });
+}
+
+function bindStagingInfoButtons() {
+    document.querySelectorAll('#stagingArea .cage-info-btn').forEach(bindCageInfoButton);
 }
 
 // ── Clear All ──
@@ -2458,6 +2482,7 @@ function clearCanvasFilter() {
 
 // ── Init ──
 renderCanvas();
+bindStagingInfoButtons();
 
 // ── Delete Cage (uses shared confirmModal) ─────────────────
 var deleteTargetId = null;
