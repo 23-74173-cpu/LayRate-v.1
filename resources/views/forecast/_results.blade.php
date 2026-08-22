@@ -65,16 +65,16 @@
                 data: {
                     labels: allLabels,
                     datasets: [
-                        { label: 'Historical', data: histData, borderColor: '#333333', backgroundColor: 'transparent', tension: 0.3, pointRadius: 3, borderWidth: 2 },
+                        { label: 'Historical', data: histData, borderColor: '#31302e', backgroundColor: 'transparent', tension: 0.3, pointRadius: 3, borderWidth: 2 },
                         { label: 'Forecast', data: fcData, borderColor: cageColor, backgroundColor: cageColor + '22', tension: 0.3, borderDash: [5,3], pointRadius: 3, fill: true, borderWidth: 2 },
                     ]
                 },
                 options: {
                     responsive: true,
-                    plugins: { legend: { display: true, labels: { boxWidth: 10, font: { size: 10 } } } },
+                    plugins: { legend: { display: true } },
                     scales: {
-                        x: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } } },
-                        y: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } }, min: 0, max: 100 },
+                        x: {},
+                        y: { min: 0, max: 100 },
                     }
                 }
             });

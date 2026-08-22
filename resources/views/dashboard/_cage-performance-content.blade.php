@@ -259,7 +259,6 @@ function perfValueLabelPlugin() {
     };
 }
 
-var perfGridColor = '#F0F0EC';
 function perfBarOpts() {
     return {
         responsive: true,
@@ -268,8 +267,8 @@ function perfBarOpts() {
         layout: { padding: { top: 16 } },
         plugins: { legend: { display: false } },
         scales: {
-            x: { grid: { display: false }, ticks: { font: { size: 11, family: 'Inter, system-ui, sans-serif' } } },
-            y: { beginAtZero: true, grid: { color: perfGridColor }, ticks: { font: { size: 10, family: 'Inter, system-ui, sans-serif' } } }
+            x: {},
+            y: { beginAtZero: true }
         }
     };
 }
@@ -285,11 +284,6 @@ function perfPieOpts() {
                 display: true,
                 position: 'right',
                 labels: {
-                    boxWidth: 10,
-                    usePointStyle: true,
-                    pointStyle: 'circle',
-                    font: { size: 11, family: 'Inter, system-ui, sans-serif' },
-                    padding: 12,
                     generateLabels: function (chart) {
                         var data = chart.data;
                         var total = data.datasets[0].data.reduce(function (a, b) { return a + b; }, 0);

@@ -821,10 +821,15 @@ window.__applyChartDefaults = function(full) {
     if (typeof Chart === 'undefined') return;
     Chart.defaults.color = '#31302e';
     Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
-    Chart.defaults.set('plugins.legend.labels.font.size', 12);
+    // Single source of truth for axis-tick size — pages used to each hardcode their
+    // own (10, 11, or unset/12), which is exactly the "every graph looks different"
+    // drift this centralizes. Individual charts should stop repeating this value.
+    Chart.defaults.font.size = 10;
+    Chart.defaults.set('plugins.legend.labels.font.size', 11);
     Chart.defaults.plugins.legend.labels.usePointStyle = true;
     Chart.defaults.plugins.legend.labels.pointStyle = 'circle';
-    Chart.defaults.plugins.legend.labels.padding = 16;
+    Chart.defaults.plugins.legend.labels.boxWidth = 10;
+    Chart.defaults.plugins.legend.labels.padding = 12;
     Chart.defaults.elements.bar.borderRadius = 4;
     if (full !== false) {
         Chart.defaults.scale.grid = { color: 'rgba(0,0,0,0.06)' };
