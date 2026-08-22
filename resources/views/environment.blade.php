@@ -377,7 +377,7 @@ function paintRelayButtons(activeAction) {
     });
 }
 
-function connectRelaySSE() {
+function startRelaySSE() {
     var card = document.getElementById('relayCard');
     if (!card) return;
     if (window.__relaySource) window.__relaySource.close();
@@ -389,7 +389,7 @@ function connectRelaySSE() {
     window.__relaySource.onerror = function() {
         if (window.__relaySource && window.__relaySource.readyState === EventSource.CLOSED) {
             setTimeout(function() {
-                if (document.getElementById('relayCard')) connectRelaySSE();
+                if (document.getElementById('relayCard')) startRelaySSE();
             }, 3000);
         }
     };
@@ -456,7 +456,7 @@ function controlRelay(action) {
     applyRelayState(window.__relayInitial);
     var livePanel = document.getElementById('panelLiveData');
     if (livePanel && !livePanel.classList.contains('hidden')) {
-        connectRelaySSE();
+        startRelaySSE();
     }
 })();
 

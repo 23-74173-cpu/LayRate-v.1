@@ -825,7 +825,13 @@ window.__applyChartDefaults = function(full) {
     // own (10, 11, or unset/12), which is exactly the "every graph looks different"
     // drift this centralizes. Individual charts should stop repeating this value.
     Chart.defaults.font.size = 10;
-    Chart.defaults.set('plugins.legend.labels.font.size', 11);
+    // NOTE: never use Chart.defaults.set('plugins.legend.labels.font.size', 11) here.
+    // Chart.js 4.4.0's set() with a dotted path corrupts the legend font size into a
+    // bare object ({}), and every chart with a visible legend then dies during layout
+    // fitting with "Cannot convert object to primitive value" (spacing/box size math).
+    // Merge any existing props first, then assign the numeric size directly.
+    Chart.defaults.plugins.legend.labels.font = Object.assign({}, Chart.defaults.plugins.legend.labels.font || {});
+    Chart.defaults.plugins.legend.labels.font.size = 11;
     Chart.defaults.plugins.legend.labels.usePointStyle = true;
     Chart.defaults.plugins.legend.labels.pointStyle = 'circle';
     Chart.defaults.plugins.legend.labels.boxWidth = 10;
