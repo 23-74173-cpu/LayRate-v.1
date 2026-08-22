@@ -21,7 +21,7 @@
             <thead>
                 <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Date</th>
-                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Predicted HDEP</th>
+                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Predicted Eggs</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Confidence</th>
                 </tr>
             </thead>
@@ -29,7 +29,7 @@
                 @forelse($forecasts as $f)
                 <tr class="border-b border-[#F0F0F0] hover:bg-[#F5F6F8]">
                     <td class="px-5 py-3.5 text-sm text-[#333333] font-mono">{{ $f->target_date->format('Y-m-d') }}</td>
-                    <td class="px-5 py-3.5 text-sm text-[#333333]">{{ number_format($f->predicted_hdep,1) }}%</td>
+                    <td class="px-5 py-3.5 text-sm text-[#333333]">{{ number_format($f->predicted_egg_count, 1) }}</td>
                     <td class="px-5 py-3.5">
                         <span class="text-xs px-2.5 py-1 rounded-full" style="background:{{ $f->confidenceColor }}">
                             {{ $f->confidence }}%
@@ -48,7 +48,7 @@
     <script>
     (function() {
         const historical = @json($historical->map(fn($l) => ['date'=> is_object($l->log_date) ? $l->log_date->format('Y-m-d') : $l->log_date,'hdep'=>(float)$l->hdep]));
-        const forecasts  = @json($forecasts->map(fn($f) => ['date'=> is_object($f->target_date) ? $f->target_date->format('Y-m-d') : $f->target_date,'hdep'=>(float)$f->predicted_hdep]));
+        const forecasts  = @json($forecasts->map(fn($f) => ['date'=> is_object($f->target_date) ? $f->target_date->format('Y-m-d') : $f->target_date,'hdep'=>(float)$f->predicted_egg_count]));
         const cageColor  = '{{ $cageColor }}';
 
         const histLabels = historical.map((h, i) => 'H-' + (historical.length - i));

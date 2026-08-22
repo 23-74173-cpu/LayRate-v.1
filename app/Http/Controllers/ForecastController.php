@@ -1324,7 +1324,7 @@ class ForecastController extends Controller
             foreach ($forecasts as $f) {
                 fputcsv($handle, [
                     $f->target_date,
-                    $f->predicted_egg_count ?? $f->predicted_hdep ?? 0,
+                    $f->predicted_egg_count ?? 0,
                     $scope,
                     $cageCode ?? '',
                     $breed ?? '',
