@@ -120,15 +120,32 @@ no new alert.
 
 ## Prompt 5 — Manual sensor override not reflected after fetch
 
-**Status:** ⬜ Not started
+**Status:** ✅ Implemented against the local test DB only (not Pi / not shared MySQL). Awaiting deploy/backfill decision.
 
 **Root cause identified:**
+- Env-reading "manual override" (`EnvironmentController::updateLog`) persisted the override as an ordinary `EnvironmentalLog` row stamped `recorded_at = 12:00:00` (deleting the day's raws first) with **no marker flag**.
+- Live/current read (`Cage::latestEnvironmentLog`, `EnvironmentController::liveData`) returns the **newest row by recorded_at** — so the next bridge reading (every few seconds) becomes "latest" and **reverts the display to live**; a past-day override can never surface in live at all. There is no "override wins" precedence. (Egg-count manual override does this correctly via `logged_via='manual'` guarded at `SensorIngestionController:159`; relay manual mode correct via `control_mode`.)
+- TWO further latent bugs found (per item 4), both from sharing the `(cage_id, 12:00:00)` key:
+  - **Bug A:** nightly `environment:compute-daily-averages` upserts via `EnvironmentalLog::updateOrCreate(['cage_id', 'recorded_at'=>noon])` → would silently **overwrite the override row every night** (`ComputeDailyEnvironmentAverages.php:60-69`).
+  - **Bug B:** a DHT ingestion reading landing exactly on the noon second would `updateOrCreate` over the override (negligible probability, but real).
 
-**Fix applied:**
+**Fix applied (files + key lines):**
+- `database/migrations/2026_08_22_000003_add_is_override_to_environmental_logs.php` — add `is_override` boolean default false (no backfill).
+- `app/Models/EnvironmentalLog.php` — add `is_override` to fillable + boolean cast.
+- `app/Http/Controllers/EnvironmentController.php` — `updateLog` sets `is_override=true` on the noon row (:165); `liveData` prefers a current-reporting-day override over the newest raw via `ReportingDateService::reportingDayWindow` (import added; override fetch + `$overrideByCage` overlay, ~:44-58); `logs()` treats an override day as authoritative (CASE/MAX collapse avg/min/max/count, ~:109-124).
+- `app/Console/Commands/ComputeDailyEnvironmentAverages.php` — excludes `is_override=1` from AVG and **skips writing** for a day that has an override (fixes Bug A).
+- `app/Http/Controllers/SensorIngestionController.php` — guard so an exact-noon DHT collision can't clobber an override (mirrors `:159` egg pattern; fixes Bug B).
+- `tests/Feature/EnvironmentLogOverrideTest.php` — 5 tests (write path, current-day wins, nightly intact/excluded, past-day average, reporting-day boundary attribution).
 
-**Verified:**
+**Verified (local test DB = `layrate_testing`, MySQL):**
+- `is_override` column exists, `tinyint(1)` NOT NULL default 0.
+- New tests: **5 passed (16 assertions)**.
+- Full suite: **35 failed / 340 passed (1111 assertions)** vs baseline 35 failed / 335 passed (1095) → **+5 passing (the new test file), 0 new or different failures** (the 35 are the pre-existing set, e.g. PreOrderTest poolData, FeedBatch code-gen).
+- Item-2 check: **0 pre-existing `recorded_at = 12:00:00` rows** on both reachable DBs (local `layrate` and Pi prod) → no un-flagged legacy overrides exist, so **no backfill needed**.
 
 **Open questions / follow-ups:**
+- This is **not deployed or pushed** (local test DB only). Decide deploy timing (next driver commit pushes it to the Pi via deploy.yml).
+- No backfill warranted (0 noon rows found); if a legacy override ever shows up in the future WITHOUT the flag, it would look like a normal noon reading — flagged here, not acted on.
 
 ---
 
@@ -224,7 +241,7 @@ no new alert.
 | 2 | Alert dedup timezone mismatch | ✅ Done (Option A: reporting-day window; ChickensController caller agreement) |
 | 3 | Alert dedup DB unique constraint | ✅ Done (dry-run 0 msmt; backup db:backup; migrated MySQL layrate; e2e constraint-blocked dup; Pi prod pending its own run) |
 | 4 | low_stock cross-suppression | ✅ Done (split into low_stock_feed / low_stock_eggs; backfill migration; no regression) |
-| 5 | Manual sensor override not reflected | ⬜ |
+| 5 | Manual sensor override not reflected | ✅ local-test only (env override precedence + nightly/noon clobber fix); 0 noon rows → no backfill; pending deploy decision |
 | 6 | Hardware fault-detection audit | ⬜ |
 | 7 | predicted_hdep export bug | ⬜ |
 | 8 | GenerateForecastJob decoupling | ⬜ |

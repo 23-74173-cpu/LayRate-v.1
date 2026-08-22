@@ -75,6 +75,20 @@ class SensorIngestionController extends Controller
                         continue;
                     }
 
+                    // A real-time reading that (coincidentally) lands on the same
+                    // recorded_at as a manual override must not clobber the
+                    // override — mirror the egg-logging 'never overwrite manual'
+                    // guard. Only possible on an exact noon-second collision.
+                    $clobbersOverride = EnvironmentalLog::where('cage_id', $hardwareItem->cage_id)
+                        ->where('recorded_at', $recordedAt)
+                        ->where('is_override', 1)
+                        ->exists();
+
+                    if ($clobbersOverride) {
+                        $errors[] = "Reading {$index}: timestamp collides with a manual override for cage {$hardwareItem->cage_id}; skipped.";
+                        continue;
+                    }
+
                     $envLog = EnvironmentalLog::updateOrCreate(
                         [
                             'cage_id' => $hardwareItem->cage_id,

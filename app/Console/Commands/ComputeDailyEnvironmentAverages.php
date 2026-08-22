@@ -24,7 +24,9 @@ class ComputeDailyEnvironmentAverages extends Command
 
         $this->info("Computing daily averages for {$dateStr}...");
 
-        $dailySummaries = EnvironmentalLog::selectRaw("
+        $dailySummaries = EnvironmentalLog::whereDate('recorded_at', $dateStr)
+            ->where('is_override', 0)
+            ->selectRaw("
                 cage_id,
                 ROUND(AVG(temperature_c), 1) as avg_temp,
                 ROUND(AVG(humidity_pct), 0) as avg_hum,
@@ -34,9 +36,15 @@ class ComputeDailyEnvironmentAverages extends Command
                 ROUND(MAX(humidity_pct), 0) as max_hum,
                 COUNT(*) as reading_count
             ")
-            ->whereDate('recorded_at', $dateStr)
             ->groupBy('cage_id')
             ->get();
+
+        // A manual override for the day is authoritative — never overwrite it
+        // with a re-computed average (they share the same noon recorded_at key).
+        $overrideCageIds = EnvironmentalLog::whereDate('recorded_at', $dateStr)
+            ->where('is_override', 1)
+            ->pluck('cage_id')
+            ->all();
 
         if ($dailySummaries->isEmpty()) {
             $this->warn("No readings found for {$dateStr}.");
@@ -49,6 +57,11 @@ class ComputeDailyEnvironmentAverages extends Command
             $line = "  Cage #{$summary->cage_id}: avg {$summary->avg_temp}°C / {$summary->avg_hum}% "
                   . "({$summary->min_temp}–{$summary->max_temp}°C, {$summary->min_hum}–{$summary->max_hum}%, "
                   . "{$summary->reading_count} readings)";
+
+            if (in_array($summary->cage_id, $overrideCageIds)) {
+                $this->line("  Cage #{$summary->cage_id}: day has a manual override — keeping it authoritative, skipping average.");
+                continue;
+            }
 
             if ($this->option('dry-run')) {
                 $this->line("[DRY-RUN] {$line}");
