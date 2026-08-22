@@ -273,6 +273,21 @@ no new alert.
 
 ---
 
+## Security fix — unauthenticated opcache reset route
+
+**Status:** ✅ Done (2026-08-22) — verified, awaiting commit.
+
+**Root cause:** `routes/web.php:47` `GET /_reset-opcache` called `opcache_reset()` with **no auth middleware** — added in `744af8a` as a "Temporary" debugging leftover; documented in FEATURE-INVENTORY as "deliberately unauthenticated." Any anonymous visitor could force cache invalidation on demand (unnecessary attack surface / minor DoS vector).
+
+**Fix:** Gated behind the existing `auth` + `admin` middleware (reuses `EnsureAdmin`, which 403s non-admins — same pattern used by every other admin-only route; no new guard invented). Removed the "Temporary / no auth" comment; updated `docu/FEATURE-INVENTORY.md:29` to match.
+
+**Verified:**
+- `routes/web.php` lint clean.
+- New `tests/Feature/OpcacheResetRouteTest.php` (3 passed / 5 assertions): guest → redirect to login · non-admin authenticated user → **403** · admin → **200 "opcache reset done"**.
+- Full suite: **35 failed / 343 passed (1116 assertions)** vs baseline 35/340/1111 → +3 passing = exactly the new test; **no new or different failures**.
+
+**Open questions / follow-ups:** none (ops can still reset opcache as admin via this endpoint, or via CLI `php -r "opcache_reset()"`).
+
 ## Summary — outstanding items
 
 | # | Item | Status |
@@ -289,3 +304,4 @@ no new alert.
 | 10 | DESIGN-SYSTEM.md + shared components | ⬜ |
 | 11 | Delete verified dead code | ⬜ |
 | 12 | Forecast chart axis mismatch | ⬜ |
+| 13 | Unauthenticated /_reset-opcache route | ✅ Done (gated auth+admin; test 3/3; suite no new failures) |

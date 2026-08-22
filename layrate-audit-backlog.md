@@ -359,6 +359,16 @@ chart, a unit conversion, or separate charts, and fix it. Independent of the
 other prompts — safe to run standalone.
 ```
 
+## Prompt 13 — Security: gate the unauthenticated /_reset-opcache route (COMPLETED)
+
+```
+routes/web.php's GET /_reset-opcache called opcache_reset() with no auth
+(temporary debug leftover from 744af8a). Gated behind the existing
+'auth' + 'admin' middleware (EnsureAdmin, same pattern as other admin-only
+routes); FEATURE-INVENTORY updated. Verified: guest→login, non-admin→403,
+admin→200; suite baseline unchanged.
+```
+
 ## Sequencing notes
 
 - **Prompts 1–5, 7 are COMPLETED**; **Prompt 6** is design-complete (see report

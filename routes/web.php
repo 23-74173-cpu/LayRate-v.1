@@ -43,13 +43,13 @@ Route::middleware('guest')->group(function () {
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
-// Temporary: opcache reset endpoint (no auth required)
+// Admin-only opcache reset (no unauthenticated invalidation surface)
 Route::get('/_reset-opcache', function () {
     if (function_exists('opcache_reset')) {
         opcache_reset();
     }
     return 'opcache reset done';
-});
+})->middleware(['auth', 'admin']);
 
 // ─── Authenticated routes ──────────────────────────────────────
 Route::middleware(['auth', 'system-time-set'])->group(function () {
