@@ -808,26 +808,6 @@ class ForecastController extends Controller
             ->with('forecast_generated', false);
     }
 
-    private function respondAfterGenerate(Request $request, array $redirectParams, string $successMessage, array $result)
-    {
-        if ($this->wantsTurboStream($request)) {
-            $request->query->add($redirectParams);
-            $viewData = $this->buildForecastViewData($request);
-            $viewData['successMessage'] = $successMessage;
-            $viewData['metrics'] = $result['metrics'];
-            $viewData['recommendedModel'] = $result['recommended_model'];
-
-            session()->flash('forecast_generated', true);
-
-            return $this->renderTurboStream($viewData);
-        }
-
-        return redirect()->route('forecast', $redirectParams)
-            ->with('success', $successMessage)
-            ->with('forecast_generated', true)
-            ->with('forecast_metrics', $result['metrics'])
-            ->with('recommended_model', $result['recommended_model']);
-    }
 
     private function wantsTurboStream(Request $request): bool
     {

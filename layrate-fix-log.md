@@ -249,13 +249,23 @@ no new alert.
 
 ## Prompt 11 — Delete verified dead code
 
-**Status:** ⬜ Not started
+**Status:** ✅ Completed (2026-08-22) — verified, awaiting commit.
 
-**Verification method used:**
+**Verification method used:** per item, full-repo references across `app/ routes/ bootstrap/ config/ tests/ resources/ database/` (class-name + reference search, incl. route files, middleware aliases in `bootstrap/app.php`, tests). Verdicts: zero refs, or a found reference → held/reported.
 
 **Deleted:**
+1. `app/Models/IncubatorStatus.php` — zero references (table created then dropped in migrations; model unused).
+2. `app/Http/Middleware/ApiAuth.php` — zero references (not in routes/bootstrap aliases/config/tests; `DeviceAuth` is the used one).
+3. `ForecastController::respondAfterGenerate()` — **zero callers** (re-verified against the post-P8 file at its current line 811; `renderTurboStream` still used by another caller at `:803`, so not orphaned).
+4. `resources/views/cages/label.blade.php` — unrouted duplicate of `print-label`; no `view('cages.label')`/include anywhere.
+5. `MortalityController.php:272-275` — orphaned trailing doc-block before the class closing brace (not a real stub).
+6. `app/Http/Controllers/MobileAppController.php` **+ `tests/Feature/MobileAppControllerTest.php`** — held initially because the TEST was the only reference; user confirmed deleting **both together**. Verified the test is fully self-contained (no shared helpers/traits/assertions used by other tests — it only tests `dashboardStatus` via a test-only route), so removing the pair leaves nothing dangling.
 
-**Held back (found a live reference, did not delete):**
+**Verified:**
+- `php -l` clean on `ForecastController`, `MortalityController`; removed files gone.
+- Full suite: **35 failed / 340 passed (1109 assertions)** vs baseline 35/343 (1116) → delta is exactly the removed `MobileAppControllerTest` (−3 passing tests, −7 assertions); **no new or different failures**.
+
+**Open questions / follow-ups:** none. (Mortality threshold TODO housed in the removed doc-block was already tracked as a candidate backlog item — settings-configurable mortality threshold.)
 
 ---
 
