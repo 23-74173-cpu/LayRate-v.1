@@ -9,10 +9,10 @@
     ];
 
     $variantClasses = [
-        'primary'         => 'rounded-lg bg-[#002D5E] text-white hover:bg-[#001F42]',
-        'secondary'       => 'rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]',
-        'danger'          => 'rounded-full bg-[#9b1c24] text-white hover:bg-[#7a161d]',
-        'outline-primary' => 'rounded border border-[#002D5E] text-[#002D5E] hover:bg-[#002D5E]/5',
+        'primary'         => 'rounded-lg bg-navy text-white hover:brightness-90',
+        'secondary'       => 'rounded-lg border border-hairline text-ink-muted hover:bg-canvas-soft',
+        'danger'          => 'rounded-full bg-alert-text text-white hover:brightness-90',
+        'outline-primary' => 'rounded border border-navy text-navy hover:bg-navy/5',
         'outline-warning' => 'rounded border border-orange-400 text-orange-600 hover:bg-orange-50',
         'outline-danger'  => 'rounded border border-red-400 text-red-500 hover:bg-red-50',
     ];
