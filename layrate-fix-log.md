@@ -193,15 +193,25 @@ no new alert.
 
 ## Prompt 8 — Decouple GenerateForecastJob from ForecastController
 
-**Status:** ⬜ Not started
+**Status:** ✅ Completed (2026-08-22) — local verification only; **pending Pi deploy** (same pattern as Prompt 7 — Pi unreachable this session).
 
 **Extraction plan (what moved, what stayed):**
+- Moved → new `app/Services/ForecastGenerationService.php`: `farmHistorical/breedHistorical/cageHistorical`, `generateForecast`, `executePythonForecast`, `persistForecasts`, `buildForecastCollection`, plus `resolvePythonBinary`/`processEnv` (public, so the controller's other Python flows — downloadTemplate/import/importPreview/importConfirm — call the one source). Stays: `ForecastRules.php`, `checkForecastDataSufficiency`, all other ForecastController responsibilities. Pre-checked: no moved method relies on controller instance state (all data via params/config/statics); `resolvePythonBinary`/`processEnv` were identical across all callers (single method, 5 call sites).
 
-**Fix applied:**
+**Fix applied (files + line ranges):**
+- `app/Services/ForecastGenerationService.php` (new) — the 9 methods moved verbatim.
+- `app/Http/Controllers/ForecastController.php` — removed the 9 moved methods (−305 lines); added `use` + private `forecastService()` accessor; re-pointed historical call sites (`:84,106,129`, `:1163,1174,1185`, `:1247,1253,1260`, `:1475,1480,1486`) and python binary/env call sites (`:177,207`, `:435,461`, `:555,573`, `:638,658`) to the service.
+- `app/Jobs/GenerateForecastJob.php` — `handle(ForecastGenerationService $service)`; 4 calls swapped; controller import removed; docblock updated.
+- Untouched: `ForecastRules.php`, `checkForecastDataSufficiency`, imports/render/export logic.
 
 **Verified:**
+- Pre-flight greps: no instance-state in moved slice; binary/env handlers identical across flows; no leftover old `handle(controller)` / constructor usage anywhere.
+- `ForecastAsyncTest`: **9 passed (31 assertions)** — incl. the sync-queue `handle()` path exercising the new service injection.
+- Full suite: **35 failed / 340 passed (1111 assertions)** — identical baseline, **no new/different failures**.
 
 **Open questions / follow-ups:**
+- **Pending Pi deploy** (queue worker `layrate-queue-worker.service` will use the new service once deployed; behavior parity guaranteed since web + worker share the same service).
+- `app/Services` naming chosen over `app/Forecast` (ForecastRules is a tiny static helper, not the home).
 
 ---
 
@@ -274,7 +284,7 @@ no new alert.
 | 5 | Manual sensor override not reflected | ✅ local-test only (env override precedence + nightly/noon clobber fix); 0 noon rows → no backfill; pending deploy decision |
 | 6 | Hardware fault-detection audit | ✅ design (report + §5 resolutions) / ⬜ implementation pending |
 | 7 | predicted_hdep export bug | ✅ Done (exportCsv + _results view → predicted_egg_count; suite 35/340, no new failures) |
-| 8 | GenerateForecastJob decoupling | ⬜ |
+| 8 | GenerateForecastJob decoupling | ✅ Done (ForecastGenerationService; suite 35/340 no new failures; pending Pi deploy) |
 | 9 | JSON/error response contract | ⬜ |
 | 10 | DESIGN-SYSTEM.md + shared components | ⬜ |
 | 11 | Delete verified dead code | ⬜ |

@@ -9,6 +9,7 @@ use App\Models\Cage;
 use App\Models\Forecast;
 use App\Models\ForecastRun;
 use App\Models\Hen;
+use App\Services\ForecastGenerationService;
 use App\Services\ReportingDateService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -24,6 +25,11 @@ use Symfony\Component\Process\Exception\ProcessFailedException;
 
 class ForecastController extends Controller
 {
+    private function forecastService(): ForecastGenerationService
+    {
+        return app(ForecastGenerationService::class);
+    }
+
     public function index(Request $request)
     {
         if ($redirect = $this->ensureAdminOrRedirect($request)) {
@@ -81,7 +87,7 @@ class ForecastController extends Controller
         ]);
 
         if ($scope === 'farm') {
-            $historical = $this->farmHistorical();
+            $historical = $this->forecastService()->farmHistorical();
             $forecasts  = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
                 ->whereNull('cage_id')->whereNull('breed')
                 ->whereNotNull('target_date')
@@ -103,7 +109,7 @@ class ForecastController extends Controller
         }
 
         if ($scope === 'breed' && $breed) {
-            $historical = $this->breedHistorical($breed);
+            $historical = $this->forecastService()->breedHistorical($breed);
             $forecasts  = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
                 ->whereNull('cage_id')->where('breed', $breed)
                 ->whereNotNull('target_date')
@@ -126,7 +132,7 @@ class ForecastController extends Controller
 
         $cage = Cage::where('cage_code', $cageCode)->first();
 
-        $historical = $this->cageHistorical($cageCode);
+        $historical = $this->forecastService()->cageHistorical($cageCode);
 
         $forecasts = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
             ->when($cage, fn($q) => $q->where('cage_id', $cage->id))
@@ -174,7 +180,7 @@ class ForecastController extends Controller
         }
 
         try {
-            $pythonBinary = $this->resolvePythonBinary();
+            $pythonBinary = $this->forecastService()->resolvePythonBinary();
             $scriptPath = base_path('forecast-api/generate_forecast_sheet.py');
             $outputName = 'forecast_input_' . now()->format('Ymd_His') . '.xlsx';
             $outputPath = base_path('forecast-api/' . $outputName);
@@ -204,7 +210,7 @@ class ForecastController extends Controller
 
             $process = new Process($command, base_path('forecast-api'));
             $process->setTimeout(120);
-            $process->setEnv($this->processEnv());
+            $process->setEnv($this->forecastService()->processEnv());
             $process->run();
 
             if (!$process->isSuccessful()) {
@@ -432,7 +438,7 @@ class ForecastController extends Controller
                 throw new RuntimeException('Uploaded file not found at: ' . ($fullPath ?: 'unknown path'));
             }
 
-            $pythonBinary = $this->resolvePythonBinary();
+            $pythonBinary = $this->forecastService()->resolvePythonBinary();
             $scriptPath = base_path('forecast-api/import_forecast_input.py');
 
             Log::info('Forecast import (single-phase) starting', [
@@ -458,7 +464,7 @@ class ForecastController extends Controller
 
             $process = new Process($command, base_path());
             $process->setTimeout(300);
-            $process->setEnv($this->processEnv());
+            $process->setEnv($this->forecastService()->processEnv());
             $process->run();
 
             Log::info('Forecast import (single-phase) process result', [
@@ -552,7 +558,7 @@ class ForecastController extends Controller
             $tempPath = $tempDir . '/' . $tempName;
             $file->move($tempDir, $tempName);
 
-            $pythonBinary = $this->resolvePythonBinary();
+            $pythonBinary = $this->forecastService()->resolvePythonBinary();
             $scriptPath   = base_path('forecast-api/import_forecast_input.py');
 
             Log::info('Forecast preview starting', [
@@ -570,7 +576,7 @@ class ForecastController extends Controller
             $command = [$pythonBinary, $scriptPath, $tempPath, '--preview'];
             $process = new Process($command, base_path());
             $process->setTimeout(120);
-            $process->setEnv($this->processEnv());
+            $process->setEnv($this->forecastService()->processEnv());
             $process->run();
 
             if (!$process->isSuccessful()) {
@@ -635,7 +641,7 @@ class ForecastController extends Controller
                 throw new RuntimeException('Import file not found. Please re-upload.');
             }
 
-            $pythonBinary = $this->resolvePythonBinary();
+            $pythonBinary = $this->forecastService()->resolvePythonBinary();
             $scriptPath   = base_path('forecast-api/import_forecast_input.py');
 
             $command = [
@@ -655,7 +661,7 @@ class ForecastController extends Controller
 
             $process = new Process($command, base_path());
             $process->setTimeout(300);
-            $process->setEnv($this->processEnv());
+            $process->setEnv($this->forecastService()->processEnv());
             $process->run();
 
             Log::info('Forecast import confirm process result', [
@@ -693,106 +699,9 @@ class ForecastController extends Controller
         }
     }
 
-    // Public: called directly by GenerateForecastJob, which runs outside
-    // this controller's own request/response cycle (see generate() below).
-    public function farmHistorical(int $days = 14): Collection
-    {
-        return DB::table('forecast_input_records')
-            ->select('date', DB::raw('SUM(egg_count) as egg_count'), DB::raw('SUM(hen_count) as hen_count'))
-            ->groupBy('date')
-            ->orderByDesc('date')
-            ->limit($days)
-            ->get()
-            ->map(fn($row) => tap((object) [
-                'log_date'  => $row->date,
-                'egg_count' => (int) $row->egg_count,
-                'hen_count' => (int) $row->hen_count,
-                'hdep'      => $row->hen_count > 0 ? round(($row->egg_count / $row->hen_count) * 100, 2) : 0,
-            ], fn($r) => $r))
-            ->reverse()
-            ->values();
-    }
 
-    // Public: called directly by GenerateForecastJob — see farmHistorical() above.
-    public function breedHistorical(string $breed): Collection
-    {
-        return DB::table('forecast_input_records')
-            ->select('date', DB::raw('SUM(egg_count) as egg_count'), DB::raw('SUM(hen_count) as hen_count'))
-            ->where('breed', $breed)
-            ->groupBy('date')
-            ->orderByDesc('date')
-            ->limit(14)
-            ->get()
-            ->map(fn($row) => tap((object) [
-                'log_date'  => $row->date,
-                'egg_count' => (int) $row->egg_count,
-                'hen_count' => (int) $row->hen_count,
-                'hdep'      => $row->hen_count > 0 ? round(($row->egg_count / $row->hen_count) * 100, 2) : 0,
-            ], fn($r) => $r))
-            ->reverse()
-            ->values();
-    }
 
-    // Public: called directly by GenerateForecastJob — see farmHistorical() above.
-    public function cageHistorical(string $cageCode): Collection
-    {
-        return DB::table('forecast_input_records')
-            ->select('date', DB::raw('SUM(egg_count) as egg_count'), DB::raw('SUM(hen_count) as hen_count'))
-            ->where('cage_code', $cageCode)
-            ->groupBy('date')
-            ->orderByDesc('date')
-            ->limit(14)
-            ->get()
-            ->map(fn($row) => tap((object) [
-                'log_date'  => $row->date,
-                'egg_count' => (int) $row->egg_count,
-                'hen_count' => (int) $row->hen_count,
-                'hdep'      => $row->hen_count > 0 ? round(($row->egg_count / $row->hen_count) * 100, 2) : 0,
-            ], fn($r) => $r))
-            ->reverse()
-            ->values();
-    }
 
-    /**
-     * Execute the Python forecasting pipeline and optionally persist results.
-     *
-     * @param Cage|null $cage
-     * @param string|null $breed
-     * @param Collection $historical Kept for signature/backward compatibility; Python loads its own data.
-     * @param int $horizon
-     * @param bool $save
-     * @return array{forecasts: Collection, metrics: array, recommended_model: string}
-     */
-    // Public + $manualParams now an explicit parameter (was previously read
-    // via $this->collectManualParams(request()) inline below): this method
-    // is called from GenerateForecastJob, which runs in a queue worker with
-    // no HTTP request matching the original submission — request() there
-    // would silently resolve to an empty/unrelated request and drop manual-
-    // mode params. Callers now capture manual params from the real request
-    // up front and pass them in; see generate()'s callers below.
-    public function generateForecast(?Cage $cage, string $cageCode, ?string $breed, Collection $historical, int $horizon, bool $save = false, ?string $startDate = null, array $manualParams = []): array
-    {
-        $result = $this->executePythonForecast($cageCode, $breed, $horizon, $manualParams, $startDate);
-
-        Log::info('Forecast generation result', [
-            'recommended_model' => $result['recommended_model'] ?? null,
-            'metrics' => $result['metrics'] ?? [],
-            'forecast_values' => array_slice(array_map(fn($f) => [
-                'date' => $f['date'] ?? null,
-                'predicted_egg_count' => $f['predicted_egg_count'] ?? null,
-            ], $result['forecast'] ?? []), 0, 5),
-        ]);
-
-        $forecasts = $save
-            ? $this->persistForecasts($result, $cage, $breed)
-            : $this->buildForecastCollection($result, $cage, $breed);
-
-        return [
-            'forecasts'         => $forecasts,
-            'metrics'           => $result['metrics'] ?? [],
-            'recommended_model' => $result['recommended_model'] ?? 'Unknown',
-        ];
-    }
 
     /**
      * Build a manual parameter payload if all required fields are present.
@@ -819,86 +728,6 @@ class ForecastController extends Controller
         return count($filled) === count($manualFields) ? $filled : [];
     }
 
-    /**
-     * Execute the Python forecast runner via Symfony Process.
-     */
-    private function executePythonForecast(string $cageCode, ?string $breed, int $horizon, array $manualParams = [], ?string $startDate = null): array
-    {
-        $pythonBinary = $this->resolvePythonBinary();
-        $runnerPath = base_path('forecast-api/forecast_runner.py');
-
-        if (!file_exists($runnerPath)) {
-            throw new RuntimeException('Forecast runner not found at: ' . $runnerPath);
-        }
-
-        $command = [
-            $pythonBinary,
-            $runnerPath,
-            '--mode', empty($manualParams) ? 'auto' : 'manual',
-            '--cage', $cageCode,
-            '--breed', $breed ?? 'ALL',
-            '--horizon', (string) $horizon,
-        ];
-
-        if ($startDate) {
-            $command[] = '--start-date';
-            $command[] = $startDate;
-        }
-
-        foreach ($manualParams as $key => $value) {
-            $command[] = '--' . str_replace('_', '-', $key);
-            $command[] = (string) $value;
-        }
-
-        $process = new Process($command, base_path());
-        $process->setTimeout(300);
-        $process->setEnv($this->processEnv());
-
-        $process->run();
-
-        if (!$process->isSuccessful()) {
-            $errorOutput = trim($process->getErrorOutput());
-            $stdOutput = trim($process->getOutput());
-            $pythonError = $errorOutput ?: $stdOutput;
-
-            if (str_contains($pythonError, 'No module named')) {
-                throw new RuntimeException(
-                    'Forecast Python environment is missing required packages. ' .
-                    'Install dependencies with: pip install -r forecast-api/requirements.txt ' .
-                    "(using Python binary: {$pythonBinary})."
-                );
-            }
-
-            throw new ProcessFailedException($process);
-        }
-
-        $output = trim($process->getOutput());
-
-        Log::info('Forecast runner output', [
-            'command' => $command,
-            // Was request()->get('cage'/'breed') — read from the current
-            // HTTP request, which doesn't reflect this call's actual
-            // arguments when invoked from GenerateForecastJob (no matching
-            // request exists in a queue worker). $cageCode/$breed are this
-            // method's own parameters, so use those directly instead.
-            'cage' => $cageCode,
-            'breed' => $breed,
-            'horizon' => $horizon,
-            'stdout' => $output,
-        ]);
-
-        $data = json_decode($output, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new RuntimeException('Invalid JSON from forecast runner: ' . $output);
-        }
-
-        if (($data['success'] ?? false) !== true) {
-            throw new RuntimeException($data['error'] ?? 'Unknown forecast runner error.');
-        }
-
-        return $data;
-    }
 
     /**
      * Determine whether the forecast_input_records table has enough historical
@@ -937,105 +766,9 @@ class ForecastController extends Controller
         ];
     }
 
-    /**
-     * Resolve the Python interpreter to use for the forecast runner.
-     *
-     * Honors FORECAST_PYTHON_BINARY / services.forecast.python_binary first.
-     * If that value is a bare command (not an absolute path) and a project
-     * virtual environment exists, prefer the venv interpreter.
-     */
-    private function resolvePythonBinary(): string
-    {
-        $configured = config(
-            'services.forecast.python_binary',
-            env('FORECAST_PYTHON_BINARY', 'python')
-        );
 
-        // If an absolute or relative file path was configured and exists, use it.
-        if (str_contains($configured, DIRECTORY_SEPARATOR) && file_exists($configured)) {
-            return $configured;
-        }
 
-        // Look for a project-level virtual environment (both .venv/ and venv/).
-        $candidates = [
-            base_path('forecast-api/.venv/Scripts/python.exe'),
-            base_path('forecast-api/.venv/bin/python'),
-            base_path('forecast-api/venv/Scripts/python.exe'),
-            base_path('forecast-api/venv/bin/python'),
-            base_path('.venv/Scripts/python.exe'),
-            base_path('.venv/bin/python'),
-        ];
 
-        foreach ($candidates as $path) {
-            if (file_exists($path)) {
-                return $path;
-            }
-        }
-
-        return $configured;
-    }
-
-    /**
-     * Environment variables passed to the Python process.
-     *
-     * Includes DB credentials and preserves Windows system variables required
-     * for loading socket/asyncio extensions.
-     */
-    private function processEnv(): array
-    {
-        $env = [
-            'DB_HOST'     => config('database.connections.mysql.host', '127.0.0.1'),
-            'DB_PORT'     => (string) config('database.connections.mysql.port', 3306),
-            'DB_DATABASE' => config('database.connections.mysql.database', 'layrate'),
-            'DB_USERNAME' => config('database.connections.mysql.username', 'root'),
-            'DB_PASSWORD' => config('database.connections.mysql.password', ''),
-        ];
-
-        // Windows requires these to initialize Winsock / asyncio.
-        foreach (['SYSTEMROOT', 'SYSTEMDRIVE', 'WINDIR', 'PATH', 'USERPROFILE', 'TEMP', 'TMP'] as $key) {
-            $value = $_SERVER[$key] ?? $_ENV[$key] ?? getenv($key) ?? null;
-            if ($value !== null && $value !== '') {
-                $env[$key] = $value;
-            }
-        }
-
-        return $env;
-    }
-
-    /**
-     * Persist forecast rows returned by the Python runner.
-     */
-    private function persistForecasts(array $result, ?Cage $cage, ?string $breed): Collection
-    {
-        $collection = $this->buildForecastCollection($result, $cage, $breed);
-
-        foreach ($collection as $forecast) {
-            $forecast->save();
-        }
-
-        return $collection;
-    }
-
-    /**
-     * Build an in-memory collection of Forecast models from runner output.
-     */
-    private function buildForecastCollection(array $result, ?Cage $cage, ?string $breed): Collection
-    {
-        $forecasts = collect();
-        $today = ReportingDateService::reportingDateString();
-
-        foreach ($result['forecast'] ?? [] as $item) {
-            $forecasts->push(new Forecast([
-                'cage_id'             => $cage?->id,
-                'breed'               => $breed,
-                'forecast_date'       => $today,
-                'target_date'         => $item['date'],
-                'predicted_egg_count' => $item['predicted_egg_count'],
-            ]));
-        }
-
-        return $forecasts;
-    }
 
     public function clear(Request $request)
     {
@@ -1160,7 +893,7 @@ class ForecastController extends Controller
         $recommendedModel = null;
 
         if ($scope === 'farm') {
-            $historical = $this->farmHistorical();
+            $historical = $this->forecastService()->farmHistorical();
             $forecasts = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
                 ->whereNull('cage_id')->whereNull('breed')
                 ->whereNotNull('target_date')
@@ -1171,7 +904,7 @@ class ForecastController extends Controller
         }
 
         if ($scope === 'breed' && $breed) {
-            $historical = $this->breedHistorical($breed);
+            $historical = $this->forecastService()->breedHistorical($breed);
             $forecasts = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
                 ->whereNull('cage_id')->where('breed', $breed)
                 ->whereNotNull('target_date')
@@ -1182,7 +915,7 @@ class ForecastController extends Controller
         }
 
         $cage = Cage::where('cage_code', $cageCode)->first();
-        $historical = $this->cageHistorical($cageCode);
+        $historical = $this->forecastService()->cageHistorical($cageCode);
 
         $forecasts = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
             ->when($cage, fn($q) => $q->where('cage_id', $cage->id))
@@ -1244,20 +977,20 @@ class ForecastController extends Controller
         $forecasts  = collect();
 
         if ($scope === 'farm') {
-            $historical = $this->farmHistorical();
+            $historical = $this->forecastService()->farmHistorical();
             $forecasts  = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
                 ->whereNull('cage_id')->whereNull('breed')
                 ->whereNotNull('target_date')
                 ->orderBy('target_date')->limit($horizon)->get();
         } elseif ($scope === 'breed' && $breed) {
-            $historical = $this->breedHistorical($breed);
+            $historical = $this->forecastService()->breedHistorical($breed);
             $forecasts  = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
                 ->whereNull('cage_id')->where('breed', $breed)
                 ->whereNotNull('target_date')
                 ->orderBy('target_date')->limit($horizon)->get();
         } else {
             $cage = Cage::where('cage_code', $cageCode)->first();
-            $historical = $this->cageHistorical($cageCode);
+            $historical = $this->forecastService()->cageHistorical($cageCode);
             $forecasts  = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
                 ->when($cage, fn($q) => $q->where('cage_id', $cage->id))
                 ->when(!$cage, fn($q) => $q->whereNull('cage_id'))
@@ -1472,18 +1205,18 @@ class ForecastController extends Controller
 
         $historical = collect();
         if ($scope === 'farm') {
-            $historical = $this->farmHistorical();
+            $historical = $this->forecastService()->farmHistorical();
             $forecasts = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
                 ->whereNull('cage_id')->whereNull('breed')
                 ->orderBy('target_date')->limit($horizon)->get();
         } elseif ($scope === 'breed' && $breed) {
-            $historical = $this->breedHistorical($breed);
+            $historical = $this->forecastService()->breedHistorical($breed);
             $forecasts = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
                 ->whereNull('cage_id')->where('breed', $breed)
                 ->orderBy('target_date')->limit($horizon)->get();
         } else {
             $cage = $cageCode ? Cage::where('cage_code', $cageCode)->first() : null;
-            $historical = $this->cageHistorical($cageCode ?? '');
+            $historical = $this->forecastService()->cageHistorical($cageCode ?? '');
         $forecasts = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
             ->when($cage, fn($q) => $q->where('cage_id', $cage->id))
             ->when(!$cage, fn($q) => $q->whereNull('cage_id'))
