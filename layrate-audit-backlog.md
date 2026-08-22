@@ -48,7 +48,7 @@ Fix:
 
 ---
 
-## Prompt 2 — Alert dedup: fix the timezone/calendar mismatch
+## Prompt 2 — Alert dedup: fix the timezone/calendar mismatch (COMPLETED)
 
 ```
 Prior audit (do not re-investigate) found: 3 of 6 alert-dedup checks use an
@@ -88,7 +88,7 @@ code. Wait for my go-ahead.
 
 ---
 
-## Prompt 3 — Alert dedup: DB-level unique constraint
+## Prompt 3 — Alert dedup: DB-level unique constraint (COMPLETED)
 
 ```
 The `alerts` table has zero unique constraints — dedup is 100% application-level
@@ -119,7 +119,7 @@ column-based key as easily as the others.
 
 ---
 
-## Prompt 4 — Alert dedup: fix low_stock cross-suppression
+## Prompt 4 — Alert dedup: fix low_stock cross-suppression (COMPLETED)
 
 ```
 FeedController::checkLowStock and EggStockBatch::checkLowStock both create
@@ -145,7 +145,7 @@ changes.
 
 ---
 
-## Prompt 5 — Bug: manual sensor override value not reflected after fetch
+## Prompt 5 — Bug: manual sensor override value not reflected after fetch (COMPLETED)
 
 ```
 Bug: when I manually override a sensor reading (manual override mode), the
@@ -178,7 +178,13 @@ diagnosis is right.
 
 ---
 
-## Prompt 6 — Hardware disconnect/fault detection audit
+## Prompt 6 — Hardware disconnect/fault detection audit (DESIGN COMPLETE — IMPLEMENTATION PENDING)
+
+> Design doc: `/audit/hardware-fault-detection-report.md` — the 4 review open
+> questions (override-row interaction, cadence vs threshold, recovering-state
+> alerting, relay safety boundary) were resolved in §5, and §4 locked the
+> remaining decisions (health_state separate from status; Setting-backed
+> thresholds). Write any implementation prompt against the resolved design.
 
 ```
 I need to understand exactly how this system currently detects disconnected
@@ -218,7 +224,7 @@ I'll review before we build it.
 
 ---
 
-## Prompt 7 — Fix predicted_hdep export bug (dead column reference)
+## Prompt 7 — Fix predicted_hdep export bug (dead column reference) (COMPLETED)
 
 ```
 `ForecastController::exportCsv` (around line 1327) reads column `predicted_hdep`,
@@ -341,23 +347,32 @@ method before actually deleting anything.
 
 ---
 
+---
+
+## Prompt 12 — Fix forecast chart axis mismatch
+
+```
+`forecast/_results.blade.php`'s chart plots Historical HDEP% and Forecast
+egg-count on the same axis/scale — a unit mismatch flagged during Prompt 7
+but out of scope for that pass. Investigate whether this needs a dual-axis
+chart, a unit conversion, or separate charts, and fix it. Independent of the
+other prompts — safe to run standalone.
+```
+
 ## Sequencing notes
 
-- **Prompts 2 → 3** are dependent: #3's unique-constraint design needs the
-  "day" definition settled by #2's timezone decision. Run #2 first, confirm
-  the fix, then run #3.
-- **UPDATED — Prompt 4 now runs BEFORE Prompt 3 (reversed from the original
-  order).** Prompt 3's backfill derives `dedup_key` from `alert_type`
-  (post-split final types). If `low_stock` were split into
-  `low_stock_feed`/`low_stock_eggs` *after* that backfill, the keys would
-  need re-deriving. Do the split first so Prompt 3 backfills only once,
-  against final types.
-- **Prompts 5, 6, 7, 10, 11** are fully independent of the alert-dedup work
-  and of each other — safe to run in parallel across separate sessions if
-  you're managing context/usage limits.
-- **Prompt 8** touches ForecastController, which Prompt 7 also touches
-  (predicted_hdep fix). Run 7 before 8 to avoid the two changes conflicting
-  in the same file.
+- **Prompts 1–5, 7 are COMPLETED**; **Prompt 6** is design-complete (see report
+  §5) and awaiting an implementation prompt against the resolved design.
+- **Prompt 2 → 3 → 4 dependency** (alert-dedup): run in that resolved order —
+  already executed, kept here for the record. **Prompt 5** resolved the
+  override-vs-live precedence and landed with the dedup work; **Prompt 7**
+  (predicted_hdep) is done.
+- **Prompt 8 is now unblocked** — Prompt 7 finished first (both touch
+  ForecastController). Still run 8 after 7 (done) to avoid same-file conflicts.
+- **Prompt 12 is independent** of the alert-dedup work and of the other
+  prompts — safe to run standalone.
+- **Prompts 9, 10, 11** are pending and independent of each other and of the
+  alert-dedup work — safe to run in parallel across separate sessions.
 - **Prompt 9** is the most open-ended (picks which 3 endpoints to convert
   first) — expect back-and-forth before it writes any code.
 - Every prompt ends with "show me before touching/running anything" —

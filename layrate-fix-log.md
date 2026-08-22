@@ -151,27 +151,43 @@ no new alert.
 
 ## Prompt 6 — Hardware disconnect/fault detection audit
 
-**Status:** ⬜ Not started
+**Status:** ✅ Design complete — implementation pending (no implementation yet; awaiting review; implement against report §5 resolutions).
 
-**Current detection logic (as-built, not as-documented):**
+**Current detection logic (as-built):**
+- Entry: `serial-bridge/bridge.py` single-threaded loop (`POLL_INTERVAL 0.05 s`), POSTs to `/api/sensor-readings` (10 s timeout); 5 s reconnect on `SerialException`; no per-sensor liveness tracking at the edge.
+- Staleness: `hardware:check-staleness` cron (every 15 min, `CheckHardwareSensorStaleness`) — DHT22: cage-level quiet > 60 min → `status=faulty` + `sensor_stale`; IR: no occupancy reading > 24 h → faulty only if recent egg activity, else `sensor_no_activity`; calibration > 90 d → `calibration_overdue`. Status lives on `hardware_items.status`, not `cage_slots`.
+- Disconnected vs faulty: only binary active/faulty; the single nuance is IR idle-vs-faulty. No stuck/implausible/flapping detection.
+- Relay safety: firmware decides "invalid DHT → OFF (SAFETY)"; Laravel mirrors/derives (`relay_seen_at` online <2 min; `relay_safety` display), decision not centralized server-side.
+- UI: per-item + per-cage rows with >30-min "Stale" badges (threshold ≠ cron's 60-min/24-h), relay fan states; dashboard has no sensor indicator; polling only (10 s env), SSE only for relay.
 
-**Gaps found:**
+**Key gaps found:** stuck-value/out-of-range not detected; no auto-recovery (faulty is terminal — `findActiveForIngestion` drops non-active); threshold drift (30 vs 60/24); no device/bridge liveness; no debounce; safety decision firmware-only; partial-slot/unassigned cases.
 
-**Proposed device-health state machine:**
+**Proposed design (in report):** state machine `online / stale / disconnected / faulty / recovering`, `health_state` separate from admin `status`, `last_valid_reading_at` + `fault_issue`, `devices.last_seen_at`, 3-tick debounce, per-type thresholds, server-centralized safety, auto-recovery.
+
+**Deliverable:** `/audit/hardware-fault-detection-report.md`.
 
 **Open questions / follow-ups:**
+- Refinement pass (2026-08-22) resolved all four review points + locked both open questions — see report §5: (1) liveness MUST exclude `is_override=1` rows; (2) cadence = ingestion-triggered eval + 15-min backstop cron; (3) recovering emits one `health_recovering` notice via existing `Alert::createDeduped()` (key `{cage|0}:health_*`, `alert_day`=reporting date), fault re-entry needs its own 3-tick debounce; (4) relay safety = hard advisory-only constraint (never gates firmware control loop). Locked: `health_state` separate from admin `status`; thresholds `Setting`-backed per type.
 
 ---
 
 ## Prompt 7 — predicted_hdep export bug
 
-**Status:** ⬜ Not started
+**Status:** ✅ Completed (2026-08-22)
 
 **Findings:**
+- `2026_07_02_000000` indeed renamed `predicted_hdep` → `predicted_egg_count` (decimal 10,2) and the model only knows `predicted_egg_count`. The forecast now stores **egg count**, not HDEP %.
+- Stale refs in code (whole-repo grep, excl. migration `down()`): `ForecastController::exportCsv:1327` (`?? $f->predicted_hdep` dead fallback), and `forecast/_results.blade.php:32` (`number_format($f->predicted_hdep,1) }}%` → rendered "0.0%") and `:51` (JS chart data).
 
-**Fix applied:**
+**Fix applied (files + lines):**
+- `app/Http/Controllers/ForecastController.php:1327` — `$f->predicted_egg_count ?? 0` (dropped stale fallback).
+- `resources/views/forecast/_results.blade.php:24,32` — header → "Predicted Eggs"; cell → `number_format($f->predicted_egg_count,1)` (no stray `%`).
+- `resources/views/forecast/_results.blade.php:51` — JS chart value → `(float)$f->predicted_egg_count`.
 
-**Verified:**
+**Verified:** `php -l` clean; grep clean of `predicted_hdep` outside the rename migration. Full suite: **35 failed / 340 passed (1111 assertions)** — identical to the post-Prompt-5 baseline (35/340/1111) → **no new or different failures** (ForecastAsyncTest + SyncForecastInputRecordsTest in the passing set).
+
+**Open questions / follow-ups:**
+- The forecast chart still plots **Historical `hdep` (%)** against **Forecast `predicted_egg_count` (eggs)** on the same axis — a unit mismatch that predates this rename; flagged for a deliberate follow-up (not fixed here).
 
 ---
 
@@ -233,6 +249,20 @@ no new alert.
 
 ---
 
+## Prompt 12 — Forecast chart axis mismatch
+
+**Status:** ⬜ Not started
+
+**Root cause identified:**
+
+**Fix applied:**
+
+**Verified:**
+
+**Open questions / follow-ups:**
+
+---
+
 ## Summary — outstanding items
 
 | # | Item | Status |
@@ -242,9 +272,10 @@ no new alert.
 | 3 | Alert dedup DB unique constraint | ✅ Done (dry-run 0 msmt; backup db:backup; migrated MySQL layrate; e2e constraint-blocked dup; Pi prod pending its own run) |
 | 4 | low_stock cross-suppression | ✅ Done (split into low_stock_feed / low_stock_eggs; backfill migration; no regression) |
 | 5 | Manual sensor override not reflected | ✅ local-test only (env override precedence + nightly/noon clobber fix); 0 noon rows → no backfill; pending deploy decision |
-| 6 | Hardware fault-detection audit | ⬜ |
-| 7 | predicted_hdep export bug | ⬜ |
+| 6 | Hardware fault-detection audit | ✅ design (report + §5 resolutions) / ⬜ implementation pending |
+| 7 | predicted_hdep export bug | ✅ Done (exportCsv + _results view → predicted_egg_count; suite 35/340, no new failures) |
 | 8 | GenerateForecastJob decoupling | ⬜ |
 | 9 | JSON/error response contract | ⬜ |
 | 10 | DESIGN-SYSTEM.md + shared components | ⬜ |
 | 11 | Delete verified dead code | ⬜ |
+| 12 | Forecast chart axis mismatch | ⬜ |
