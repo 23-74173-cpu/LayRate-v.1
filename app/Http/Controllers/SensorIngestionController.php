@@ -223,7 +223,7 @@ class SensorIngestionController extends Controller
                     }
 
                     if ($reportedCount !== $actualOccupancy) {
-                        self::createOccupancyMismatchAlert($slot, $reportedCount, $actualOccupancy, $recordedAt);
+                        self::createOccupancyMismatchAlert($slot, $reportedCount, $actualOccupancy);
                     }
 
                     $processed[] = [
@@ -368,16 +368,17 @@ class SensorIngestionController extends Controller
         ]);
     }
 
-    private static function createOccupancyMismatchAlert($slot, int $reportedCount, int $actualOccupancy, string $recordedAt): void
+    private static function createOccupancyMismatchAlert($slot, int $reportedCount, int $actualOccupancy): void
     {
         $cage = $slot->cage;
         $cageCode = $cage?->cage_code ?? 'Unknown';
-        $date = now()->parse($recordedAt)->toDateString();
+        [$dayStart, $dayEnd] = ReportingDateService::reportingDayWindow(ReportingDateService::reportingDateString());
 
         $exists = Alert::where('cage_id', $cage?->id)
             ->where('alert_type', 'occupancy_mismatch')
             ->where('is_read', 0)
-            ->whereDate('triggered_at', $date)
+            ->where('triggered_at', '>=', $dayStart)
+            ->where('triggered_at', '<', $dayEnd)
             ->exists();
 
         if ($exists) {

@@ -192,7 +192,7 @@ class EggStockBatch extends Model
                 ->where('cage_id', null)
                 ->where('is_read', 0)
                 ->where('message', 'like', "%{$size}%")
-                ->whereDate('triggered_at', today())
+                ->whereBetween('triggered_at', \App\Services\ReportingDateService::reportingDayWindow(\App\Services\ReportingDateService::reportingDateString()))
                 ->exists();
 
             if ($exists) continue;

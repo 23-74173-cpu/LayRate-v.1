@@ -3,6 +3,14 @@ name: Deploy to Pi
 on:
   push:
     branches: [main]
+    # Doc-only pushes (markdown/audit/docs) skip the Pi deploy — a full
+    # pipeline for a README tweak is wasteful. Path filters apply per pushed
+    # commit's diff, so a mixed commit (doc + real code) still deploys; only
+    # PURE documentation commits are skipped.
+    paths-ignore:
+      - '*.md'
+      - 'audit/**'
+      - 'docs/**'
 
 jobs:
   deploy:

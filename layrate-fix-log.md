@@ -314,6 +314,18 @@ no new alert.
 
 **Open questions / follow-ups:** none (ops can still reset opcache as admin via this endpoint, or via CLI `php -r "opcache_reset()"`).
 
+## Sweep pass — B, C, D, F (2026-08-22)
+
+**B — Mortality threshold operator-configurable (done).** `Controller::checkMortalitySpike` now reads `Setting::get('mortality_spike_threshold', 3)` instead of the hardcoded `3` (default 3 = behavior unchanged unless set). Same Settings pattern as `egg_low_stock_threshold_*`. Verified: suite unchanged.
+
+**C — Align remaining dedup fast-paths to the reporting-day window (done).** The 3 fast-paths still on UTC-day (`whereDate('triggered_at', …)`) now use `ReportingDateService::reportingDayWindow(reportingDateString())` like P2/P3: `EnvironmentAlertService::createAlert` (dropped the recorded_at `$date`), `SensorIngestionController::createOccupancyMismatchAlert` (dropped `$recordedAt`/`$date`), `EggStockBatch::checkLowStock` and `FeedController::checkLowStock` (`today()` → window). The `is_read` filters and message-size scoping are untouched; the DB `UNIQUE(dedup_key, alert_day)` backstops regardless — lower-risk consistency alignment. Verified: suite unchanged.
+
+**D — Mortality form date default (done).** `mortality.blade.php` add-form `log_date` default `date('Y-m-d')` (UTC) → `ReportingDateService::reportingDateString()` (reporting date; fixes the Manila 00:00–08:00 one-day drift). View compiles. Verified: suite unchanged.
+
+**F — deploy.yml doc-only path filter (done).** Added `paths-ignore: ['*.md', 'audit/**', 'docs/**']` under push. Path filters are per-commit-diff, so a mixed commit (doc + code) still deploys; only pure doc-only pushes skip the pipeline. YAML validated by inspection (no yaml lib locally); will be smoke-tested on next push.
+
+**Combined verification:** full suite **35 failed / 343 passed (1125 assertions)** after each of B/C/D and the final F run — baseline unchanged, no new/different failures. Local-only; not pushed.
+
 ## Summary — outstanding items
 
 | # | Item | Status |

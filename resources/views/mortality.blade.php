@@ -44,7 +44,7 @@
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">DATE</label>
                     <input type="date" name="log_date" required
-                           value="{{ old('log_date', date('Y-m-d')) }}"
+                           value="{{ old('log_date', \App\Services\ReportingDateService::reportingDateString()) }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                     @error('log_date')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
                 </div>

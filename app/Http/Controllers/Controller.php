@@ -1,22 +1,25 @@
 <?php
 
 namespace App\Http\Controllers;
-
 use App\Models\Alert;
 use App\Models\MortalityLog;
+use App\Models\Setting;
 use App\Services\ReportingDateService;
 use App\Http\Controllers\Concerns\HandlesApiResponses;
 
 abstract class Controller
 {
     use HandlesApiResponses;
+
     protected function checkMortalitySpike(int $cageId, string $logDate): void
     {
+        $threshold = (int) Setting::get('mortality_spike_threshold', 3);
+
         $cageDailyTotal = MortalityLog::where('cage_id', $cageId)
             ->whereDate('log_date', $logDate)
             ->sum('count');
 
-        if ($cageDailyTotal < 3) {
+        if ($cageDailyTotal < $threshold) {
             return;
         }
 

@@ -525,7 +525,7 @@ class FeedController extends Controller
         $exists = Alert::where('alert_type', 'low_stock_feed')
             ->where('cage_id', null)
             ->where('is_read', 0)
-            ->whereDate('triggered_at', today())
+            ->whereBetween('triggered_at', ReportingDateService::reportingDayWindow(ReportingDateService::reportingDateString()))
             ->exists();
 
         if ($exists) {
