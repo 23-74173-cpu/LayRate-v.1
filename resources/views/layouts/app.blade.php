@@ -22,7 +22,7 @@
     <link rel="stylesheet" href="/css/inter.css">
 
     {{-- Tailwind CSS (compiled) --}}
-    <link href="/css/tailwind.css" rel="stylesheet">
+    <link href="/css/tailwind.css?v={{ @filemtime(public_path('css/tailwind.css')) }}" rel="stylesheet">
 
     {{-- Prevent white flash while styles load --}}
     <style>
