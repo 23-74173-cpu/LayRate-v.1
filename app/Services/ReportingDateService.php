@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Setting;
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 
 class ReportingDateService
 {
@@ -47,14 +48,29 @@ class ReportingDateService
      */
     public static function reportingDate(): Carbon
     {
-        $now = self::now();
-        $reset = Carbon::parse($now->format('Y-m-d') . ' ' . self::resetTime(), self::timezone());
+        return self::reportingDateFor(Carbon::now(self::timezone()));
+    }
 
-        if ($now->lt($reset)) {
-            return $now->copy()->subDay()->startOfDay();
+    /**
+     * The reporting date (start of day, in the farm timezone) for an
+     * arbitrary instant — the generalization of reportingDate(). Used by the
+     * dedup-key migration to classify existing alerts by when they fired.
+     */
+    public static function reportingDateFor(CarbonInterface|string $instant): Carbon
+    {
+        $manila = $instant instanceof CarbonInterface
+            ? $instant->copy()->setTimezone(self::timezone())
+            // Naive stored values (e.g. alerts.triggered_at) are wall-clock in
+            // the app timezone, not the farm timezone.
+            : Carbon::parse($instant, config('app.timezone', 'UTC'))->setTimezone(self::timezone());
+
+        $reset = Carbon::parse($manila->format('Y-m-d') . ' ' . self::resetTime(), self::timezone());
+
+        if ($manila->lt($reset)) {
+            return $manila->copy()->subDay()->startOfDay();
         }
 
-        return $now->copy()->startOfDay();
+        return $manila->copy()->startOfDay();
     }
 
     /**
@@ -98,5 +114,32 @@ class ReportingDateService
     public static function dateEnd(string $date): Carbon
     {
         return Carbon::parse($date . ' 23:59:59', self::timezone())->endOfDay();
+    }
+
+    /**
+     * The reporting-day window for a given reporting date, as a half-open
+     * [start, end) pair of naive datetime strings in the app timezone.
+     *
+     * A reporting day runs from the reset time (day_reset_time, default 06:00)
+     * on its date until the same time the following day — so an event at 02:00
+     * belongs to the *previous* reporting day, exactly matching what
+     * reportingDateString() returns at that moment.
+     *
+     * Used by alert dedup so the "already alerted for this day?" key and the
+     * stored `triggered_at` stamp (which is a naive instant in the app
+     * timezone via now()) always agree, regardless of clocks.
+     */
+    public static function reportingDayWindow(string $date): array
+    {
+        $day = Carbon::parse($date, self::timezone())->toDateString();
+        $start = Carbon::parse($day . ' ' . self::resetTime(), self::timezone());
+        $end = $start->copy()->addDay();
+
+        $appTz = config('app.timezone', 'UTC');
+
+        return [
+            $start->setTimezone($appTz)->toDateTimeString(),
+            $end->setTimezone($appTz)->toDateTimeString(),
+        ];
     }
 }

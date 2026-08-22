@@ -279,24 +279,33 @@ class PreOrderController extends Controller
     private function runDepletionCheck(array $summary): void
     {
         foreach ($summary as $size => $data) {
-            if ($data['available'] < 0) {
-                $shortfall = abs($data['available']);
+            // `available` is clamped to >= 0 upstream (index()), so it can never
+            // signal a shortfall — `deficit` (the negative part of the pool) is
+            // the depletion signal. Same value the UI already uses for its
+            // "shortfall" badge.
+            if (($data['deficit'] ?? 0) > 0) {
+                $shortfall = (int) $data['deficit'];
                 $trays = (int) ceil($shortfall / 30);
                 $message = "Pre-order demand for {$size} eggs exceeds supply by {$shortfall} eggs ({$trays} trays)";
+
+                [$dayStart, $dayEnd] = ReportingDateService::reportingDayWindow(ReportingDateService::reportingDateString());
 
                 $exists = Alert::where('alert_type', 'stock_depletion')
                     ->where('message', 'like', "%{$size}%")
                     ->where('is_read', 0)
-                    ->whereDate('triggered_at', ReportingDateService::reportingDateString())
+                    ->where('triggered_at', '>=', $dayStart)
+                    ->where('triggered_at', '<', $dayEnd)
                     ->exists();
 
                 if (!$exists) {
-                    Alert::create([
+                    Alert::createDeduped([
                         'cage_id' => null,
                         'alert_type' => 'stock_depletion',
                         'message' => $message,
                         'is_read' => 0,
                         'triggered_at' => now(),
+                        'dedup_key' => Alert::dedupKey(null, 'stock_depletion', $size),
+                        'alert_day' => ReportingDateService::reportingDateString(),
                     ]);
                 }
             }

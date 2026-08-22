@@ -522,7 +522,7 @@ class FeedController extends Controller
             return;
         }
 
-        $exists = Alert::where('alert_type', 'low_stock')
+        $exists = Alert::where('alert_type', 'low_stock_feed')
             ->where('cage_id', null)
             ->where('is_read', 0)
             ->whereDate('triggered_at', today())
@@ -532,12 +532,14 @@ class FeedController extends Controller
             return;
         }
 
-        Alert::create([
+        Alert::createDeduped([
             'cage_id' => null,
-            'alert_type' => 'low_stock',
+            'alert_type' => 'low_stock_feed',
             'message' => "Low stock: {$batch->batch_code} — {$batch->remaining_kg} kg remaining (threshold: {$batch->low_stock_threshold} kg)",
             'is_read' => 0,
             'triggered_at' => now(),
+            'dedup_key' => Alert::dedupKey(null, 'low_stock_feed'),
+            'alert_day' => ReportingDateService::reportingDateString(),
         ]);
     }
 }

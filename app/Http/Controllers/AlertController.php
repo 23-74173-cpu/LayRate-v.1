@@ -31,7 +31,7 @@ class AlertController extends Controller
             'Other'       => collect(),
         ];
 
-        $eggTypes = ['mortality_spike', 'stock_depletion', 'occupancy_mismatch', 'low_stock'];
+        $eggTypes = ['mortality_spike', 'stock_depletion', 'occupancy_mismatch', 'low_stock_feed', 'low_stock_eggs'];
         $tempTypes = ['temperature_low', 'temperature_high'];
         $humTypes = ['humidity_low', 'humidity_high'];
 

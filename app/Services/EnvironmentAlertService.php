@@ -60,12 +60,14 @@ class EnvironmentAlertService
             return;
         }
 
-        Alert::create([
+        Alert::createDeduped([
             'cage_id' => $cageId,
             'alert_type' => $type,
             'message' => $message,
             'is_read' => 0,
             'triggered_at' => now(),
+            'dedup_key' => Alert::dedupKey($cageId, $type),
+            'alert_day' => ReportingDateService::reportingDateString(),
         ]);
     }
 }

@@ -12,6 +12,7 @@ use App\Models\Hen;
 use App\Models\ProductionLog;
 use App\Models\User;
 use App\Services\FcrCalculator;
+use Carbon\Carbon;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -296,7 +297,7 @@ class FeedBatchManagementTest extends TestCase
         $this->assertEqualsWithDelta(5.0, $batch->fresh()->remaining_kg, 0.01);
         $this->assertTrue($batch->fresh()->is_low_stock);
 
-        $alert = Alert::where('alert_type', 'low_stock')
+        $alert = Alert::where('alert_type', 'low_stock_feed')
             ->whereDate('triggered_at', today())
             ->first();
 
@@ -325,7 +326,7 @@ class FeedBatchManagementTest extends TestCase
         // Remaining = 45.0, threshold = 10.0 → not low stock
         $this->assertFalse($batch->fresh()->is_low_stock);
 
-        $alert = Alert::where('alert_type', 'low_stock')->first();
+        $alert = Alert::where('alert_type', 'low_stock_feed')->first();
         $this->assertNull($alert);
     }
 
@@ -346,7 +347,7 @@ class FeedBatchManagementTest extends TestCase
             'feed_consumed_kg' => 45.0,
         ]);
 
-        $this->assertEquals(1, Alert::where('alert_type', 'low_stock')->count());
+        $this->assertEquals(1, Alert::where('alert_type', 'low_stock_feed')->count());
 
         // Second consumption on same day, still below threshold → no new alert
         $this->actingAs($this->user)->post('/feed/consumption', [
@@ -356,7 +357,7 @@ class FeedBatchManagementTest extends TestCase
             'feed_consumed_kg' => 50.0, // update existing, remaining still 0
         ]);
 
-        $this->assertEquals(1, Alert::where('alert_type', 'low_stock')->count(),
+        $this->assertEquals(1, Alert::where('alert_type', 'low_stock_feed')->count(),
             'Should not create duplicate alert for same batch same day');
     }
 
@@ -377,21 +378,36 @@ class FeedBatchManagementTest extends TestCase
             'feed_consumed_kg' => 45.0,
         ]);
 
-        $this->assertEquals(1, Alert::where('alert_type', 'low_stock')->count());
+        $this->assertEquals(1, Alert::where('alert_type', 'low_stock_feed')->count());
 
-        // Mark alert as read so a new one can be created on subsequent day
-        Alert::where('alert_type', 'low_stock')->update(['is_read' => 1]);
-
-        // Day 2: still below threshold → new alert (different day)
+        // Marking the alert read does NOT re-arm the same reporting day — a
+        // deliberate rule (one alert per dedup_key per reporting day, full stop).
+        Alert::where('alert_type', 'low_stock_feed')->update(['is_read' => 1]);
         $this->actingAs($this->user)->post('/feed/consumption', [
             'cage_id' => $this->testCage->id,
             'feed_batch_id' => $batch->id,
-            'log_date' => now()->addDay()->toDateString(),
+            'log_date' => today()->toDateString(),
             'feed_consumed_kg' => 1.0,
         ]);
 
-        $this->assertEquals(2, Alert::where('alert_type', 'low_stock')->count(),
-            'Should create new alert on subsequent day');
+        $this->assertEquals(1, Alert::where('alert_type', 'low_stock_feed')->count(),
+            'Read alert must not re-fire on the same reporting day');
+
+        // A genuinely new reporting day creates a fresh alert.
+        Carbon::setTestNow(now()->addDay());
+        try {
+            $this->actingAs($this->user)->post('/feed/consumption', [
+                'cage_id' => $this->testCage->id,
+                'feed_batch_id' => $batch->id,
+                'log_date' => today()->toDateString(),
+                'feed_consumed_kg' => 1.0,
+            ]);
+
+            $this->assertEquals(2, Alert::where('alert_type', 'low_stock_feed')->count(),
+                'Should create a new alert on a genuinely new reporting day');
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     // ─── 8. Consumption CRUD ────────────────────────────────────

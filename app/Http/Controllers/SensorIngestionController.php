@@ -330,22 +330,27 @@ class SensorIngestionController extends Controller
         $cage = $slot->cage;
         $cageCode = $cage?->cage_code ?? 'Unknown';
 
+        [$dayStart, $dayEnd] = ReportingDateService::reportingDayWindow(ReportingDateService::reportingDateString());
+
         $exists = Alert::where('cage_id', $cage?->id)
             ->where('alert_type', 'sensor_reset')
             ->where('is_read', 0)
-            ->whereDate('triggered_at', ReportingDateService::reportingDateString())
+            ->where('triggered_at', '>=', $dayStart)
+            ->where('triggered_at', '<', $dayEnd)
             ->exists();
 
         if ($exists) {
             return;
         }
 
-        Alert::create([
+        Alert::createDeduped([
             'cage_id' => $cage?->id,
             'alert_type' => 'sensor_reset',
             'message' => "IR sensor in {$cageCode} slot {$slot->row_number}-{$slot->column_number} likely reset: count dropped from {$previousCount} to {$reportedCount}",
             'is_read' => 0,
             'triggered_at' => now(),
+            'dedup_key' => Alert::dedupKey($cage?->id, 'sensor_reset'),
+            'alert_day' => ReportingDateService::reportingDateString(),
         ]);
     }
 
@@ -365,12 +370,14 @@ class SensorIngestionController extends Controller
             return;
         }
 
-        Alert::create([
+        Alert::createDeduped([
             'cage_id' => $cage?->id,
             'alert_type' => 'occupancy_mismatch',
             'message' => "Occupancy mismatch in {$cageCode} slot {$slot->row_number}-{$slot->column_number}: sensor reports {$reportedCount}, records show {$actualOccupancy}",
             'is_read' => 0,
             'triggered_at' => now(),
+            'dedup_key' => Alert::dedupKey($cage?->id, 'occupancy_mismatch'),
+            'alert_day' => ReportingDateService::reportingDateString(),
         ]);
     }
 }

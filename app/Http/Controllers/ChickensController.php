@@ -575,14 +575,20 @@ class ChickensController extends Controller
 
             $mortalityByCage = $mortalityHens->groupBy(fn($h) => $h->cageSlot->cage_id);
 
-            DB::transaction(function () use ($mortalityByCage, $data, &$mortalityCageIds) {
+            // Single source of the mortality date: the day the deaths are
+            // attributed to (the reporting date). Used both when writing each
+            // MortalityLog.row and as the checkMortalitySpike dedup key so the
+            // two callers of checkMortalitySpike use the same key definition.
+            $logDate = ReportingDateService::reportingDateString();
+
+            DB::transaction(function () use ($mortalityByCage, $data, $logDate, &$mortalityCageIds) {
                 $mortalityCageIds = [];
                 $henIdsToClear = [];
 
                 foreach ($mortalityByCage as $cageId => $cageHens) {
                     $log = MortalityLog::create([
                         'cage_id'     => $cageId,
-                        'log_date'    => ReportingDateService::reportingDateString(),
+                        'log_date'    => $logDate,
                         'count'       => $cageHens->count(),
                         'reason'      => $data['reason'],
                         'notes'       => $data['notes'] ?? null,
@@ -605,7 +611,7 @@ class ChickensController extends Controller
             });
 
             foreach (array_unique($mortalityCageIds) as $cageId) {
-                $this->checkMortalitySpike($cageId, ReportingDateService::reportingDateString());
+                $this->checkMortalitySpike($cageId, $logDate);
             }
         }
 
