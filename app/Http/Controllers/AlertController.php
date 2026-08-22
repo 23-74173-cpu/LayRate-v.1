@@ -83,8 +83,8 @@ class AlertController extends Controller
 
         $alerts = $query->get();
 
-        return response()->json([
-            'data' => $alerts->map(fn (Alert $a) => [
+        return $this->success([
+            'alerts' => $alerts->map(fn (Alert $a) => [
                 'id' => $a->id,
                 'cage_code' => $a->cage?->cage_code,
                 'alert_type' => $a->alert_type,
@@ -100,13 +100,7 @@ class AlertController extends Controller
     {
         $alert->update(['is_read' => true]);
 
-        return response()->json([
-            'message' => 'Alert marked as read.',
-            'data' => [
-                'id' => $alert->id,
-                'is_read' => true,
-            ],
-        ]);
+        return $this->success(['id' => $alert->id, 'is_read' => true]);
     }
 
     public function markRead(Alert $alert)

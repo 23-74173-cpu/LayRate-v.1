@@ -217,17 +217,29 @@ no new alert.
 
 ## Prompt 9 — JSON/error response contract
 
-**Status:** ⬜ Not started
+**Status:** ✅ Completed (2026-08-22) — verified, awaiting commit.
 
-**Contract defined (link to /docs/api-contract.md):**
+**Contract defined (link to /docs/api-contract.md):** v1 envelope — success `{success:true, data}` (201/207 reserved), error `{success:false, error:{message, errors?}}`, status table (200/201/207/400/403/404/422/500), 404-always-JSON rule, web-vs-JSON branch rule, SSE out of scope, consumers note (bridge parses top-level keys).
 
-**3 endpoints chosen and why:**
+**3 endpoints chosen and why:** (1) `SensorIngestionController::store` — highest traffic (~1 Hz) but bridge-consumer-dependent → **deferred** (revised scope) to a coordinated follow-up with `bridge.py`. (2) `RelayCommandController::show` — polled every 2 s, `{relay:...}` no envelope, bridge parses `.get('relay')` top-level → **deferred** same reason. (3) `AlertController::apiIndex/apiMarkRead` — device-facing alerts, no bridge consumer (Flask mobile reads MySQL directly) → **converted this pass** as the lowest-risk envelope validation.
 
-**Fix applied:**
+**Fix applied (files + line ranges):**
+- `app/Http/Controllers/Concerns/HandlesApiResponses.php` (new trait): `success/created/error/errorFromValidator`.
+- `app/Http/Controllers/Controller.php` — `use HandlesApiResponses;` on the base controller.
+- `app/Http/Controllers/AlertController.php` — `apiIndex` → `$this->success(['alerts'=>…,'total'=>…])`; `apiMarkRead` → `$this->success(['id','is_read'])`.
+- `docs/api-contract.md` — §6 open items (sensor/relay deferred + bridge lockstep; model-binding 404 default).
+- `tests/Feature/ApiContractAlertsTest.php` (new) — envelope tests.
 
 **Verified:**
+- Helper shapes via tinker: `errorFromValidator` → 422 `{success:false,error:{message,errors:{field:[...]}}}` ✓.
+- Contract tests: **3 passed (16 assertions)** — index envelope, markRead envelope, 404 (documents Laravel-default `{message}` 404 as open item).
+- Full suite: **35 failed / 343 passed (1125 assertions)** vs baseline 35/340 (1109) → +3 passing (+16) = exactly the new test; **no new/different failures**.
 
-**Open questions / follow-ups (remaining controllers to convert later):**
+**Open questions / follow-ups (remaining conversion, deferred per scope):**
+- **Sensor-ingestion + relay-command**: conversion designed but **deferred** — must ship with a coordinated `serial-bridge/bridge.py` update (parses top-level `message/accepted/processed/errors` and `relay`) in the **same** change/deploy, timed when the Pi/runner is reliably reachable.
+- **Model-binding 404s** return Laravel-default `{message}` — needs an exception-handler mapper (`ModelNotFoundException` on JSON) in the follow-up pass.
+- `DeviceAuth`'s 401 responses are also plain `{message}` — convert with the middleware in the API pass.
+- Remaining controllers (web-JSON: Dashboard::stats, Analytics::data, Report::data, pool-data, form `expectsJson` paths) — convert in a second pass after the contract is confirmed.
 
 ---
 

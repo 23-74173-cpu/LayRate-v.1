@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Alert;
 use App\Models\MortalityLog;
 use App\Services\ReportingDateService;
+use App\Http\Controllers\Concerns\HandlesApiResponses;
 
 abstract class Controller
 {
+    use HandlesApiResponses;
     protected function checkMortalitySpike(int $cageId, string $logDate): void
     {
         $cageDailyTotal = MortalityLog::where('cage_id', $cageId)
