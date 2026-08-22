@@ -72,7 +72,7 @@ return new class extends Migration
             ->select('dedup_key', 'alert_day', DB::raw('MAX(id) as keep_id'))
             ->whereNotNull('dedup_key')
             ->groupBy('dedup_key', 'alert_day')
-            ->having(DB::raw('COUNT(*) > 1'))
+            ->havingRaw('COUNT(*) > 1')
             ->get();
 
         foreach ($dupes as $dup) {
