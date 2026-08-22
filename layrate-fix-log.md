@@ -261,15 +261,19 @@ no new alert.
 
 ## Prompt 12 — Forecast chart axis mismatch
 
-**Status:** ⬜ Not started
+**Status:** ✅ Completed (2026-08-22) — verified, awaiting commit.
 
-**Root cause identified:**
+**Root cause:** `forecast/_results.blade.php`'s `forecastChart` plotted **Historical HDEP %** (`$l->hdep`) and **Forecast daily egg count** (`$f->predicted_egg_count`, per the P7 rename) on one linear y-axis hardcoded `min:0,max:100`. Real egg counts (spot-check on local dev MySQL: historical 124–228, forecast ~119–120) **always exceed 100**, so the forecast series was clipped/off-scale and the "% vs count" pair was misleading on a single axis.
 
-**Fix applied:**
+**Fix (view/chart-config only — ForecastGenerationService/Controller untouched, P8 not reopened):**
+- `resources/views/forecast/_results.blade.php`: title → "Historical vs Forecast Eggs"; historical series now maps `egg_count` (already present on historical rows) so **both series share a single egg-count axis**; `y: { min:0, max:100 }` → `y: { beginAtZero: true }` (dynamic max, baseline 0).
+- Stray-label scan: **no other "Hdep" references** remain in forecast views (title was the only one; the results-table header was already "Predicted Eggs" from P7).
 
 **Verified:**
+- `php artisan view:cache` compiles cleanly (all blade OK).
+- Full suite: **35 failed / 343 passed (1116 assertions)** — identical baseline, **no new or different failures**.
 
-**Open questions / follow-ups:**
+**Open questions / follow-ups:** none (units now consistent end-to-end: historical + forecast both eggs; dynamic axis fits real ranges).
 
 ---
 

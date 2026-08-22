@@ -11,7 +11,7 @@
 
     {{-- ── Chart Panel ── --}}
     <div class="xl:col-span-2 bg-white rounded-lg border border-[#D9D9D9] p-5 mb-8">
-        <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-4">Historical vs Forecast Hdep — {{ $scopeLabel }}</div>
+        <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-4">Historical vs Forecast Eggs — {{ $scopeLabel }}</div>
         <canvas id="forecastChart" height="160"></canvas>
     </div>
 
@@ -47,16 +47,16 @@
 
     <script>
     (function() {
-        const historical = @json($historical->map(fn($l) => ['date'=> is_object($l->log_date) ? $l->log_date->format('Y-m-d') : $l->log_date,'hdep'=>(float)$l->hdep]));
-        const forecasts  = @json($forecasts->map(fn($f) => ['date'=> is_object($f->target_date) ? $f->target_date->format('Y-m-d') : $f->target_date,'hdep'=>(float)$f->predicted_egg_count]));
+        const historical = @json($historical->map(fn($l) => ['date'=> is_object($l->log_date) ? $l->log_date->format('Y-m-d') : $l->log_date,'egg_count'=>(float)$l->egg_count]));
+        const forecasts  = @json($forecasts->map(fn($f) => ['date'=> is_object($f->target_date) ? $f->target_date->format('Y-m-d') : $f->target_date,'egg_count'=>(float)$f->predicted_egg_count]));
         const cageColor  = '{{ $cageColor }}';
 
         const histLabels = historical.map((h, i) => 'H-' + (historical.length - i));
         const fcLabels   = forecasts.map((_, i) => 'F+' + (i+1));
         const allLabels  = [...histLabels, ...fcLabels];
 
-        const histData = [...historical.map(h => h.hdep), ...Array(fcLabels.length).fill(null)];
-        const fcData   = [...Array(histLabels.length).fill(null), ...forecasts.map(f => f.hdep)];
+        const histData = [...historical.map(h => h.egg_count), ...Array(fcLabels.length).fill(null)];
+        const fcData   = [...Array(histLabels.length).fill(null), ...forecasts.map(f => f.egg_count)];
 
         function initForecastChart() {
             if (!document.getElementById('forecastChart')) return;
@@ -74,7 +74,7 @@
                     plugins: { legend: { display: true } },
                     scales: {
                         x: {},
-                        y: { min: 0, max: 100 },
+                        y: { beginAtZero: true },
                     }
                 }
             });
