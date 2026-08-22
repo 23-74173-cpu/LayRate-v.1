@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use App\Services\DeviceHealthEvaluator;
 
 class SensorIngestionController extends Controller
 {
@@ -40,6 +41,8 @@ class SensorIngestionController extends Controller
     {
         /** @var Device $device */
         $device = $request->attributes->get('device');
+
+        app(DeviceHealthEvaluator::class)->registerDeviceHeartbeat($device);
 
         $data = $request->validate([
             'readings' => ['required', 'array', 'min:1'],
@@ -102,6 +105,8 @@ class SensorIngestionController extends Controller
 
                     EnvironmentAlertService::check($envLog);
 
+                    app(DeviceHealthEvaluator::class)->registerDhtReading($hardwareItem, (float) $reading['temperature_c'], (float) $reading['humidity_pct']);
+
                     $processed[] = [
                         'serial_number' => $serial,
                         'type' => 'environment',
@@ -142,6 +147,10 @@ class SensorIngestionController extends Controller
                         && $lastReading->recorded_at->gt(now()->subSeconds(5))) {
                         continue;
                     }
+
+                    // Health heartbeat BEFORE the write so the jump check sees
+                    // the previous reading as its baseline (raw only).
+                    app(DeviceHealthEvaluator::class)->registerIrReading($hardwareItem, $reportedCount, $slot);
 
                     SensorOccupancyReading::updateOrCreate(
                         [
@@ -290,6 +299,9 @@ class SensorIngestionController extends Controller
                             'relay_seen_at' => now(),
                         ]);
                     }
+
+                    // Relay health: advisory only — never touches relay_safety.
+                    app(DeviceHealthEvaluator::class)->registerRelaySeen($hardwareItem, $hardwareItem->cage?->latestEnvironmentLog);
 
                     $processed[] = [
                         'serial_number' => $serial,

@@ -391,7 +391,7 @@ class DashboardController extends Controller
             return 'No sensors installed';
         }
 
-        $reporting = $assigned->where('status', 'active')->count();
+        $reporting = $assigned->where('health_state', 'online')->count();
         $text = "{$reporting} of {$total} sensor" . ($total > 1 ? 's' : '') . ' reporting';
 
         if ($cage->hasDht22()) {

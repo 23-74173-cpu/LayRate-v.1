@@ -98,7 +98,7 @@ class HardwareItemController extends Controller
         $breakbeamCount = (clone $query)->where('device_type', 'IR_breakbeam')->where('status', 'active')->count();
         $dht22Count = (clone $query)->where('device_type', 'DHT22')->where('status', 'active')->count();
         $activeCount = (clone $query)->where('status', 'active')->count();
-        $faultyCount = (clone $query)->where('status', 'faulty')->count();
+        $faultyCount = (clone $query)->where('health_state', 'faulty')->count();
 
         $items = $query->with(['cage.latestEnvironmentLog', 'cageSlot.cage', 'device', 'latestOccupancyReading'])
             ->orderBy('status')

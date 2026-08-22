@@ -151,7 +151,20 @@ no new alert.
 
 ## Prompt 6 — Hardware disconnect/fault detection audit
 
-**Status:** ✅ Design complete — implementation pending (no implementation yet; awaiting review; implement against report §5 resolutions).
+**Status:** ✅ Design complete — ✅ built + tested locally (2026-08-22); ⚠ **DEPLOY HELD** pending confirmation the earlier queued deploys (P7/P8/P9/P11/P12/security) land cleanly on the Pi. Do not push.
+
+**Implementation (2026-08-22):**
+- Migration `2026_08_22_000004_add_hardware_health_columns.php` — `hardware_items.health_state` (default `unknown`), `last_valid_reading_at`, `fault_issue`, `reading_signature`, `consecutive_same_readings`, `health_debounce_run`, index; `devices.last_seen_at`. Applied to **local test DB (`layrate_testing`) only**.
+- `app/Services/DeviceHealthEvaluator.php` — full state machine (online/stale/disconnected/faulty/recovering/unknown), Settings-backed thresholds (`health_*` keys, item-B pattern), ingestion registration + 15-min `runStalenessBackstop()`, 3-tick transition debounce via `health_debounce_run`, alerts via `Alert::createDeduped()` (`{cage|0}:health_*`, relay advisory → `health_safety_advisory`), relay advisory **never touches `relay_safety`**.
+- Scheduler cutover: removed `hardware:check-staleness` schedule + deleted `CheckHardwareSensorStaleness.php`; added `hardware:check-health` (same 15-min cadence) — no parallel execution.
+- (b)-repoints (from the audit list): `HardwareItemController` faultyCount → `health_state='faulty'`; `DashboardController::sensorStatusText` reporting → `health_state='online'`; `hardware/_live-data.blade.php` row badge → health pill (+ muted "admin: status" note when it diverges, per §5.6). All (a) consumers left untouched.
+- Ingestion wiring: `registerDeviceHeartbeat` + `registerDhtReading`/`registerIrReading` (jump check before the write)/`registerRelaySeen` from `SensorIngestionController` — raw rows only; **override rows never call these** (§5.1).
+- `HardwareItem` fillable/casts extended for the new columns.
+- Tests `tests/Feature/HardwareHealthStateMachineTest.php` — 7 tests/22 assertions (online→stale→disconnected, implausible fault, stuck fault + fingerprint distinctness, recovery 3-tick debounce, **override-row exclusion**, relay advisory-only).
+- **Bugs found during build:** (1) new columns weren't fillable → `update()` silently no-op'd (fixed); (2) `now()->diffInMinutes($last)` returns NEGATIVE for past timestamps (Carbon diff = other−this) → liveness ages were inverted (fixed to `$last->diffInMinutes(now())` with a floor at 0) — this stalled all elapsed transitions until fixed.
+- **Fingerprint packing (item 2):** `round(temp*10)*1000 + round(hum*10)` — temp/hum components in disjoint ranges, no cross-field aliasing.
+- Suite: full = **35 failed / 350 passed (1147)** vs baseline 35/343/1125 → +7 passing = exactly the new health tests; **no new/different failures.**
+- Open items: see report §3.4/§5 for the remaining design notes; UI polish (dashboard/environment health surfaces) can follow once deployed.
 
 **Current detection logic (as-built):**
 - Entry: `serial-bridge/bridge.py` single-threaded loop (`POLL_INTERVAL 0.05 s`), POSTs to `/api/sensor-readings` (10 s timeout); 5 s reconnect on `SerialException`; no per-sensor liveness tracking at the edge.
@@ -342,7 +355,7 @@ no new alert.
 | 3 | Alert dedup DB unique constraint | ✅ Done (dry-run 0 msmt; backup db:backup; migrated MySQL layrate; e2e constraint-blocked dup; Pi prod pending its own run) |
 | 4 | low_stock cross-suppression | ✅ Done (split into low_stock_feed / low_stock_eggs; backfill migration; no regression) |
 | 5 | Manual sensor override not reflected | ✅ local-test only (env override precedence + nightly/noon clobber fix); 0 noon rows → no backfill; pending deploy decision |
-| 6 | Hardware fault-detection audit | ✅ design (report + §5 resolutions) / ⬜ implementation pending |
+| 6 | Hardware fault-detection audit | ✅ built+tested locally / ⚠ DEPLOY HELD (awaiting earlier queued deploys) |
 | 7 | predicted_hdep export bug | ✅ Done (exportCsv + _results view → predicted_egg_count; suite 35/340, no new failures) |
 | 8 | GenerateForecastJob decoupling | ✅ Done (ForecastGenerationService; suite 35/340 no new failures; pending Pi deploy) |
 | 9 | JSON/error response contract | ⬜ |

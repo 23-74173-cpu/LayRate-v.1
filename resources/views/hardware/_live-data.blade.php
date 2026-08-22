@@ -14,7 +14,7 @@
             <div class="text-2xl font-bold leading-none tracking-[-0.5px]" style="color: #1D4E8F;">{{ $dht22Count }}</div>
         </div>
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Faulty</div>
+            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Health Faulty</div>
             <div class="text-2xl font-bold leading-none tracking-[-0.5px]" style="color: #9b1c24;">{{ $faultyCount }}</div>
         </div>
     </div>
@@ -88,7 +88,23 @@
                             @endif
                         </td>
                         <td class="px-5 py-3.5">
-                            <x-status-badge :status="$item->status" type="general" />
+                            @php
+                                $h = $item->health_state ?: 'unknown';
+                                $hMeta = [
+                                    'online'       => ['#1f6b3a', '#e8f5ec'],
+                                    'stale'        => ['#8a5a00', '#fdf3e0'],
+                                    'disconnected' => ['#615d59', '#F0F0EC'],
+                                    'faulty'       => ['#9b1c24', '#fbe4e6'],
+                                    'recovering'   => ['#0075de', '#e8f3fe'],
+                                    'unknown'      => ['#615d59', '#F0F0EC'],
+                                ];
+                                [$hc, $hb] = $hMeta[$h] ?? $hMeta['unknown'];
+                            @endphp
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap"
+                                  style="background:{{ $hb }};color:{{ $hc }};border:1px solid {{ $hc }}40;">{{ ucfirst($h) }}</span>
+                            @if($item->status !== 'active')
+                            <div class="text-[10px] text-[#615d59] mt-0.5">admin: {{ $item->status }}</div>
+                            @endif
                         </td>
                         <td class="px-5 py-3.5 text-sm font-mono" style="color: #615d59;">{{ $item->installation_date?->format('Y-m-d') ?? '—' }}</td>
                         <td class="px-5 py-3.5 text-sm font-mono" style="color: #615d59;">{{ $item->last_calibration_date?->format('Y-m-d') ?? '—' }}</td>
