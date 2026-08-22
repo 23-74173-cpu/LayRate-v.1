@@ -801,6 +801,57 @@
     });
 })();
 
+// ── Shared modal keyboard nav (Esc = close, Enter = submit) — bind once ──
+// Opt-in via `data-modal` (+ `data-modal-destructive` for Esc-only, and
+// optional `data-close="closeFnName"`). Nested overlays: when the shared
+// confirm modal (confirm-modal) is open on top of a data-modal, it OWNS the
+// keypress — this listener returns immediately so Esc and Enter never
+// double-fire into the parent modal underneath on the same keypress.
+(function () {
+    if (window.__modalKeyNavBound) return;
+    window.__modalKeyNavBound = true;
+
+    function visible(el) {
+        if (!el) return false;
+        return getComputedStyle(el).display !== 'none' && el.getAttribute('aria-hidden') !== 'true';
+    }
+    function confirmOpen() {
+        var el = document.getElementById('confirm-modal');
+        return !!(el && getComputedStyle(el).display !== 'none');
+    }
+    function topmostOpen() {
+        var all = document.querySelectorAll('[data-modal]');
+        var top = null;
+        for (var i = 0; i < all.length; i++) if (visible(all[i])) top = all[i];
+        return top;
+    }
+    function closeEl(el) {
+        var fn = el.getAttribute('data-close');
+        if (fn && typeof window[fn] === 'function') { window[fn](); return; }
+        el.style.display = 'none';
+    }
+
+    document.addEventListener('keydown', function (e) {
+        if (confirmOpen()) return;          // nested confirm owns Esc/Enter
+
+        var m = topmostOpen();
+        if (!m) return;
+
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            closeEl(m);
+            return;
+        }
+        if (e.key === 'Enter') {
+            if (m.hasAttribute('data-modal-destructive')) return;  // Esc-only
+            var ae = document.activeElement;
+            if (ae && (ae.tagName === 'TEXTAREA' || ae.tagName === 'BUTTON' || ae.tagName === 'A')) return;
+            var target = m.querySelector('[data-modal-enter]') || m.querySelector('button[type="submit"]');
+            if (target) { e.preventDefault(); target.click(); }
+        }
+    }, true);
+})();
+
 window.CAGE_COLORS = @json(\App\Models\Cage::getColorMap());
 
 // Factored out so it can be re-applied after a Chart.js library reload

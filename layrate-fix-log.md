@@ -346,6 +346,24 @@ no new alert.
 
 **Combined verification:** full suite **35 failed / 343 passed (1125 assertions)** after each of B/C/D and the final F run — baseline unchanged, no new/different failures. Local-only; not pushed.
 
+## Prompt 14 — Shared modal keyboard UX (Esc close / Enter submit)
+
+**Status:** ✅ Completed (2026-08-22) — committed locally, not pushed.
+
+**Inventory (inventory-first checkpoint):**
+- Group A (existing Esc handlers, left as-is): cages modals, chickens cull/health-event modals, the shared confirm-modal component (already Esc + data-confirm auto-wire).
+- Group B (wired this pass, `data-modal`): environment (envLogOverride, envThresholds), feed (add/edit batch, consumption, farm entry), eggs stocks (add/edit stock, egg weights, thresholds), pre-orders (add order), egg-logging (override [PIN], edit log, confirm-multi), chickens (register, removal, remove, weight-check, move, cull, health-event), hardware (add/edit), profile (add/edit user), mortality (edit mortality), notes (note edit), dashboard (stats/kpi info modals), forecast/import/export/download/fcr + grid modals.
+
+**Exclusions:** `data-modal-destructive` (Esc-only, no Enter-to-confirm): cages delete, chickens removal/remove/cull. Textarea modals auto-excluded from Enter-submit (Enter inserts newline). PIN-gated egg-logging override keeps Enter (re-verifies first).
+
+**Shared pattern:** one bind-once keydown listener in `layouts/app.blade.php` — `document.addEventListener('keydown', fn, true)` guarded by `window.__modalKeyNavBound`; `data-modal` on the container, optional `data-close="closeFn"` (fallback hides via `display:none`), topmost-open detection; **nested-confirm guard**: if the confirm modal is visible the listener returns so the confirm's own Esc/Enter owns the keypress and the parent underneath is never double-closed.
+
+**Verified (browser harness replicating the EXACT listener):** plain modal Enter submits + Esc closes ✓; textarea Enter inserts newline + does NOT submit + Esc closes ✓; destructive Enter does NOT submit + Esc closes ✓; nested confirm over a data-modal — Esc closes only the confirm (parent stays open) ✓. In-app click-through on the Pi deferred (offline) — harness exercises the exact shipped JS.
+
+**Full suite:** **35 failed / 350 passed (1147)** = exact baseline, zero backend delta (frontend-only) ✓.
+
+**Build bug found & fixed:** the listener's JS comment originally contained a Blade component tag (`x-confirm-modal` literal) → Blade parsed it as a real component and **broke rendering of every page** (mass test regression caught by the full suite, reverted immediately). JS comments/strings in Blade templates must not contain Blade tokens.
+
 ## Summary — outstanding items
 
 | # | Item | Status |

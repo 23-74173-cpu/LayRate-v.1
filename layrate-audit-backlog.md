@@ -369,6 +369,19 @@ routes); FEATURE-INVENTORY updated. Verified: guest→login, non-admin→403,
 admin→200; suite baseline unchanged.
 ```
 
+## Prompt 14 — Shared modal keyboard UX (Esc close / Enter submit) (COMPLETED)
+
+```
+Added a single bind-once keydown listener in layouts/app.blade.php driven by
+data-modal / data-modal-destructive / data-close opt-in attributes. Esc closes
+the topmost open modal; Enter submits its button EXCEPT on focused textareas
+(newline) or destructive-marked modals (Esc only). Nested confirm dialog owns
+its keypress (parent not double-closed). Applied to all ~19 group-B modal
+views. Verified via a browser harness (plain/textarea/destructive/nested
+cases) + full suite. Note: JS comments must never contain Blade component
+tags (<x-...>) — that broke page rendering until sanitized.
+```
+
 ## Sequencing notes
 
 - **Prompts 1–5, 7 are COMPLETED**; **Prompt 6** is design-complete (see report
