@@ -11,6 +11,7 @@
         <x-underline-tabs :tabs="[
             'profile'  => ['label' => 'Profile',         'icon' => 'user',     'onclick' => 'switchProfileTab(\'profile\')'],
             'settings' => ['label' => 'Settings', 'icon' => 'settings', 'onclick' => 'switchProfileTab(\'settings\')'],
+            'manual'   => ['label' => 'User Manual', 'icon' => 'book-open', 'onclick' => 'switchProfileTab(\'manual\')'],
         ]" active="{{ $tab }}" />
     </div>
 
@@ -436,6 +437,45 @@
 
         </div>
 
+        {{-- ============================================ --}}
+        {{-- USER MANUAL TAB --}}
+        {{-- ============================================ --}}
+        <div id="panelManual" class="{{ $tab !== 'manual' ? 'hidden' : '' }} space-y-5">
+
+        {{-- STEP 1: Create a cage and view its details --}}
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-8 h-8 rounded-full bg-[#002D5E] text-white flex items-center justify-center text-sm font-bold shrink-0">1</div>
+                <div>
+                    <h2 class="text-base font-medium text-[#333333]">Create a cage and view its details</h2>
+                    <p class="text-xs text-[#6B7280]">Start the guided walkthrough below.</p>
+                </div>
+            </div>
+
+            <p class="text-xs text-[#6B7280] mb-4">
+                This tutorial takes you through opening the action menu, adding a cage, configuring it, dragging it onto the Farm Layout, viewing its details,
+                exploring the cage icons (add hens, flip the card, edit, renumber, print, delete), and saving the layout.
+                You'll be taken to the Cages page and a popup will guide you, one action at a time.
+            </p>
+
+            <button type="button" onclick="window.location.href='{{ route('cages.index', ['walkthrough' => '1']) }}'"
+                    class="inline-flex items-center gap-2 text-sm font-medium text-white px-4 py-2.5 rounded-lg hover:brightness-95 transition-colors"
+                    style="background-color:#002D5E;">
+                <i data-lucide="play" class="w-4 h-4"></i> Start Walkthrough
+            </button>
+        </div>
+
+        {{-- STEP 2: (coming soon) --}}
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+            <div class="flex items-center gap-3 mb-2">
+                <div class="w-8 h-8 rounded-full bg-[#f0f0f0] text-[#615d59] flex items-center justify-center text-sm font-bold shrink-0">2</div>
+                <h2 class="text-base font-medium text-[#333333]">More tutorials</h2>
+            </div>
+            <p class="text-xs text-[#6B7280]">Additional step-by-step guides are coming soon.</p>
+        </div>
+
+    </div>
+
     </div>
 </div>
 
@@ -559,6 +599,7 @@
     function switchProfileTab(tab) {
         document.getElementById('panelProfile').classList.toggle('hidden', tab !== 'profile');
         document.getElementById('panelSettings').classList.toggle('hidden', tab !== 'settings');
+        document.getElementById('panelManual').classList.toggle('hidden', tab !== 'manual');
 
         const nav = document.getElementById('profile-tabs-nav');
         if (nav) {

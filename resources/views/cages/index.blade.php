@@ -49,7 +49,7 @@
     </x-fab>
 
     {{-- ── Farm Layout Canvas (tile-based floor-plan grid, fit-to-width on small screens) ── --}}
-    <div class="rounded-xl border p-4 sm:p-6" style="background-color: #ffffff; border-color: #e6e6e6;">
+    <div id="farmLayoutSection" class="rounded-xl border p-4 sm:p-6" style="background-color: #ffffff; border-color: #e6e6e6;">
         <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
             <h3 class="text-xs font-semibold tracking-[0.05em] uppercase" style="color: #615d59;">Farm Layout</h3>
             <div class="flex items-center gap-2 flex-wrap justify-end">
@@ -70,7 +70,7 @@
                     Clear All Cages
                 </button>
                 <div class="relative inline-flex items-center">
-                    <x-button id="saveLayoutBtn" onclick="saveLayout()" disabled class="text-xs px-4 py-1.5">
+                    <x-button id="saveLayoutBtn" onclick="saveLayout()" disabled class="text-xs px-4 py-1.5" style="background-color:#002D5E;color:#fff;">
                         Save Layout
                     </x-button>
                     <span id="unsavedDot" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full" style="background-color: #f59e0b; border: 2px solid #ffffff;"></span>
@@ -531,7 +531,7 @@
                             onmouseout="this.style.backgroundColor='transparent'">
                         Cancel
                     </button>
-                    <x-button type="submit" class="flex-1 py-2.5">
+                    <x-button type="submit" class="flex-1 py-2.5" style="background-color:#002D5E;color:#fff;">
                         Add Cage
                     </x-button>
                 </div>
@@ -717,7 +717,7 @@
                             onmouseout="this.style.backgroundColor='transparent'">
                         Cancel
                     </button>
-                    <x-button type="submit" class="flex-1 py-2.5">
+                    <x-button type="submit" class="flex-1 py-2.5" style="background-color:#002D5E;color:#fff;">
                         Save Changes
                     </x-button>
                 </div>
@@ -1647,6 +1647,11 @@ function positionCageInfoPopup(popup, targetRect) {
     popup.style.zIndex = '';
 
     var popupRect = popup.getBoundingClientRect();
+    // If the anchor rect is null/zero (e.g. a detached or hidden button after a
+    // re-render), keep the popup where it is instead of snapping to (0,0).
+    if (!targetRect || (targetRect.width === 0 && targetRect.height === 0)) {
+        return;
+    }
     var left = targetRect.right + margin;
     var top = targetRect.top;
 
@@ -1669,7 +1674,7 @@ function positionCageInfoPopup(popup, targetRect) {
 
 function repositionCageInfoPopup() {
     var popup = document.getElementById('cageInfoPopup');
-    if (popup && popup._cageInfoBtnEl) {
+    if (popup && popup._cageInfoBtnEl && popup._cageInfoBtnEl.isConnected) {
         positionCageInfoPopup(popup, popup._cageInfoBtnEl.getBoundingClientRect());
     }
 }
@@ -1719,6 +1724,9 @@ if (!window.__cageInfoOutsideBound) {
         var inside = (typeof e.composedPath === 'function' && e.composedPath().includes(popup))
             || popup.contains(e.target);
         if (inside) return;
+        // Ignore clicks on the walkthrough overlay: tapping Next/End tutorial is
+        // not an "outside" click and must not close the popup.
+        if (e.composedPath && e.composedPath().some(function(n) { return n.id === 'wtOverlay'; })) return;
         if (e.target.closest('.cage-tab, .cage-tabs')) return;
         var dialog = e.target.closest('[role="dialog"]');
         if (dialog && window.getComputedStyle(dialog).display !== 'none') return;
@@ -2329,6 +2337,7 @@ function saveLayout() {
             setSavingState(false);
             document.getElementById('clearAllMsg').classList.add('hidden');
             showToast('Layout saved', true);
+            window.__wtLayoutSaved = true;
         } else {
             setSavingState(false);
             showDragError(res.data.message || 'Failed to save layout');
@@ -2496,6 +2505,320 @@ function clearCanvasFilter() {
 // ── Init ──
 renderCanvas();
 bindStagingInfoButtons();
+
+// ── Guided Walkthrough (User Manual) ────────────────────────
+// Triggered when the user clicks "Start Walkthrough" on the profile page's
+// User Manual, which lands here with ?walkthrough=1. A spotlight coach-mark
+// highlights each target and shows a tooltip; each step waits until the user
+// actually completes the task before advancing.
+//
+// State is kept in sessionStorage so the walkthrough survives the full page
+// reload that happens after a cage is created (CageController redirects).
+(function() {
+    var STARTED = (new URLSearchParams(window.location.search)).get('walkthrough') === '1';
+    if (!STARTED && !sessionStorage.getItem('wt_active')) return;
+
+    var startAt = STARTED ? 0 : (parseInt(sessionStorage.getItem('wt_step') || '0', 10));
+    sessionStorage.setItem('wt_active', '1');
+    sessionStorage.setItem('wt_step', String(startAt));
+
+    // ── Overlay DOM ──
+    if (!document.getElementById('wtOverlay')) {
+        var ov = document.createElement('div');
+        ov.id = 'wtOverlay';
+        ov.style.cssText = 'position:fixed;inset:0;z-index:90;display:none;pointer-events:none;';
+        ov.innerHTML =
+            '<div id="wtSpotlight" style="position:fixed;border-radius:12px;border:3px solid #0075de;background:rgba(0,117,222,0.10);transition:all .2s ease;pointer-events:none;z-index:91;"></div>'
+            + '<div id="wtDimT" style="position:fixed;left:0;top:0;right:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
+            + '<div id="wtDimB" style="position:fixed;left:0;bottom:0;right:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
+            + '<div id="wtDimL" style="position:fixed;left:0;top:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
+            + '<div id="wtDimR" style="position:fixed;right:0;top:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
+            + '<div id="wtTooltip" style="position:fixed;max-width:340px;background:#fff;border:1px solid #e6e6e6;border-radius:14px;padding:16px 18px;box-shadow:0 20px 50px rgba(0,0,0,0.3);z-index:92;pointer-events:none;">'
+            + '<div id="wtStepLabel" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#0075de;margin-bottom:6px;"></div>'
+            + '<div id="wtStepText" style="font-size:14px;line-height:1.5;color:#1f1f1f;"></div>'
+            + '<button id="wtNext" style="display:none;margin-top:12px;padding:8px 16px;font-size:12px;font-weight:600;color:#fff;background:#002D5E;border:0;border-radius:8px;cursor:pointer;pointer-events:auto;">Next</button>'
+            + '</div>'
+            + '<div id="wtDone" style="display:none;position:fixed;inset:0;z-index:95;background:rgba(15,20,35,0.72);align-items:center;justify-content:center;pointer-events:auto;">'
+            + '<div style="max-width:380px;width:calc(100% - 2rem);background:#fff;border-radius:20px;padding:32px 28px;text-align:center;box-shadow:0 30px 70px rgba(0,0,0,0.45);">'
+            + '<div style="width:64px;height:64px;margin:0 auto 18px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#e8f5ec;color:#1f6b3a;" id="wtDoneIcon"><i data-lucide="check" style="width:34px;height:34px;"></i></div>'
+            + '<div style="font-size:20px;font-weight:700;color:#1f1f1f;" id="wtDoneTitle">Cage setup complete!</div>'
+            + '<div style="font-size:14px;color:#6B7280;margin-top:8px;" id="wtDoneText">You created, placed, and reviewed your cage. Great job!</div>'
+            + '<button id="wtDoneBtn" style="margin-top:24px;padding:11px 28px;font-size:14px;font-weight:600;color:#fff;background:#002D5E;border:0;border-radius:10px;cursor:pointer;">Done</button>'
+            + '</div>'
+            + '</div>'
+            + '<div id="wtSkip" style="position:fixed;top:16px;right:16px;z-index:93;background:#fff;border:1px solid #e6e6e6;color:#615d59;font-size:13px;padding:8px 14px;border-radius:999px;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,0.15);pointer-events:auto;">End tutorial</div>';
+        document.body.appendChild(ov);
+    }
+
+    var spotlight = document.getElementById('wtSpotlight');
+    var tooltip = document.getElementById('wtTooltip');
+    var skipBtn = document.getElementById('wtSkip');
+    var overlay = document.getElementById('wtOverlay');
+    var stepLabel = document.getElementById('wtStepLabel');
+    var stepText = document.getElementById('wtStepText');
+    var nextBtn = document.getElementById('wtNext');
+    var dimT = document.getElementById('wtDimT');
+    var dimB = document.getElementById('wtDimB');
+    var dimL = document.getElementById('wtDimL');
+    var dimR = document.getElementById('wtDimR');
+    var dims = [dimT, dimB, dimL, dimR];
+    var doneOverlay = document.getElementById('wtDone');
+    var doneTitle = document.getElementById('wtDoneTitle');
+    var doneText = document.getElementById('wtDoneText');
+    var doneIcon = document.getElementById('wtDoneIcon');
+    var doneBtn = document.getElementById('wtDoneBtn');
+
+    // ── Step definitions ──
+    // target(): returns the element to spotlight. done(): true when the user has
+    // completed the action; return false for purely informational steps (these
+    // use the Next button instead of auto-advancing). manual: true hides the
+    // auto-advance and shows Next.
+    var steps = [
+        {
+            text: '<strong>Open the FAB menu.</strong><br>Click the <em>+</em> floating button (bottom-right) to show the cage actions.',
+            target: function() { return document.querySelector('.fab-toggle'); },
+            done: function() {
+                var menu = document.querySelector('.fab .fab-menu');
+                return !!(menu && !menu.classList.contains('invisible'));
+            }
+        },
+        {
+            text: '<strong>Add a cage.</strong><br>Click the <em>Add Cage</em> button in the menu.',
+            target: function() {
+                var m = document.querySelector('.fab .fab-menu button[onclick="openAddModal()"]');
+                return m || document.querySelector('button[onclick="openAddModal()"]');
+            },
+            done: function() {
+                var m = document.getElementById('addCageModal');
+                return !!(m && m.style.display === 'flex');
+            }
+        },
+        {
+            text: '<strong>Configure the cage.</strong><br>Set the <em>Rows</em>, <em>Slots</em>, and <em>Max/Slot</em> values, then click <em>Add Cage</em> to create it.',
+            target: function() {
+                var m = document.getElementById('addCageModal');
+                if (!m) return null;
+                return m.querySelector('.relative') || m;
+            },
+            done: function() {
+                // Advances the moment the form is submitted (the page then
+                // reloads after the cage is created, resuming at Step 4).
+                return window.__wtCageSubmitted === true;
+            }
+        },
+        {
+            text: '<strong>Drag the cage onto the Farm Layout.</strong><br>Grab the new cage from <em>Unplaced Cages</em> and drag it into the highlighted Farm Layout grid to place it.',
+            target: function() {
+                return document.getElementById('farmLayoutSection') || document.getElementById('farmCanvas');
+            },
+            done: function() {
+                return document.querySelector('.cage-overlay') !== null;
+            }
+        },
+        {
+            text: '<strong>Open the cage details.</strong><br>Click the <em>info</em> icon on the placed cage (bottom-right) to see its details.',
+            target: function() {
+                return document.querySelector('.cage-overlay .cage-info-btn')
+                    || document.querySelector('.cage-info-btn');
+            },
+            done: function() {
+                var p = document.getElementById('cageInfoPopup');
+                return !!(p && !p.classList.contains('hidden'));
+            }
+        }
+    ];
+
+    // Append icon-introduction steps for the cage-details popup. Informational
+    // steps (manual) show a Next button; the flip step auto-advances once the
+    // card is actually rotated.
+    function iconStep(sel, text, done) {
+        var hasDone = typeof done === 'function';
+        return {
+            text: text,
+            target: function() { return document.querySelector(sel); },
+            done: hasDone ? done : function() { return false; },
+            manual: !hasDone
+        };
+    }
+    steps = steps.concat([
+        iconStep('#cageInfoPopup .front-face [title="Add hens"]',
+            '<strong>Add hens.</strong><br>Click the <em>plus-circle</em> to bulk-add hens to this cage.'),
+        iconStep('#cageInfoPopup .front-face [title="Details & settings"]',
+            '<strong>Flip the card.</strong><br>Click the <em>info</em> icon to flip the card over and reveal this cage\'s settings and actions.',
+            function() {
+                var f = document.getElementById('cageInfoFlipper');
+                return !!(f && f.classList.contains('flipped'));
+            }),
+        iconStep('#cageInfoPopup .back-face [title="Edit cage"]',
+            '<strong>Edit the cage.</strong><br>The <em>pencil</em> opens the cage editor to change rows, slots, and sensors.'),
+        iconStep('#cageInfoPopup .back-face [title="Renumber slots"]',
+            '<strong>Renumber slots.</strong><br>The <em>list</em> lets you drag slots to change their numbering.'),
+        iconStep('#cageInfoPopup .back-face [title="Print label"]',
+            '<strong>Print the label.</strong><br>The <em>printer</em> opens a printable cage label.'),
+        iconStep('#cageInfoPopup .back-face [title="Delete cage"]',
+            '<strong>Delete the cage.</strong><br>The <em>trash</em> deletes this cage and its configuration.')
+    ]);
+
+    // Final step: save the farm layout back to the server.
+    steps.push({
+        text: '<strong>Save the layout.</strong><br>Close the details card, then click <em>Save Layout</em> to persist your farm layout.',
+        target: function() { return document.getElementById('saveLayoutBtn'); },
+        done: function() {
+            return window.__wtLayoutSaved === true || !hasPendingChanges();
+        }
+    });
+
+    var idx = Math.min(startAt, steps.length - 1);
+    var pollTimer = null;
+
+    function positionOverlay() {
+        var s = steps[idx];
+        if (!s) return;
+        var el = s.target();
+        if (!el) {
+            tooltip.style.display = 'none';
+            spotlight.style.display = 'none';
+            dims.forEach(function(d) { d.style.display = 'none'; });
+            return;
+        }
+        var r = el.getBoundingClientRect();
+        var pad = 6;
+        var left = r.left - pad, top = r.top - pad;
+        var right = r.right + pad, bottom = r.bottom + pad;
+
+        spotlight.style.display = 'block';
+        spotlight.style.left = left + 'px';
+        spotlight.style.top = top + 'px';
+        spotlight.style.width = (r.width + pad * 2) + 'px';
+        spotlight.style.height = (r.height + pad * 2) + 'px';
+
+        // Four dim bars block + dim every region outside the highlighted target,
+        // leaving a "hole" over the element so it stays clickable. On manual
+        // (informational) steps the whole screen is blocked — the highlighted
+        // element is dimmed and NOT clickable; only the Next button advances.
+        if (s.manual) {
+            dimT.style.display = 'block';
+            dimT.style.left = '0px'; dimT.style.right = '0px';
+            dimT.style.top = '0px'; dimT.style.height = window.innerHeight + 'px';
+            dimB.style.display = 'none';
+            dimL.style.display = 'none';
+            dimR.style.display = 'none';
+        } else {
+            dimT.style.display = 'block';
+            dimT.style.left = '0px'; dimT.style.right = '0px';
+            dimT.style.top = '0px'; dimT.style.height = Math.max(0, top) + 'px';
+
+            dimB.style.display = 'block';
+            dimB.style.left = '0px'; dimB.style.right = '0px';
+            dimB.style.bottom = '0px'; dimB.style.height = Math.max(0, window.innerHeight - bottom) + 'px';
+
+            dimL.style.display = 'block';
+            dimL.style.left = '0px'; dimL.style.top = top + 'px';
+            dimL.style.width = Math.max(0, left) + 'px'; dimL.style.height = Math.max(0, bottom - top) + 'px';
+
+            dimR.style.display = 'block';
+            dimR.style.right = '0px'; dimR.style.top = top + 'px';
+            dimR.style.width = Math.max(0, window.innerWidth - right) + 'px';
+            dimR.style.height = Math.max(0, bottom - top) + 'px';
+        }
+
+        tooltip.style.display = 'block';
+        stepLabel.textContent = 'Step ' + (idx + 1) + ' of ' + steps.length;
+        stepText.innerHTML = s.text;
+        nextBtn.style.display = s.manual ? 'inline-block' : 'none';
+        var ttH = tooltip.offsetHeight;
+        var ttTop = bottom + 14;
+        if (ttTop + ttH > window.innerHeight - 20) {
+            ttTop = Math.max(12, top - ttH - 14);
+        }
+        tooltip.style.left = Math.max(12, Math.min(left, window.innerWidth - tooltip.offsetWidth - 12)) + 'px';
+        tooltip.style.top = ttTop + 'px';
+    }
+
+    function show() {
+        overlay.style.display = 'block';
+        skipBtn.style.display = 'block';
+        positionOverlay();
+        initPolling();
+    }
+
+    function advance() {
+        idx++;
+        if (idx >= steps.length) {
+            outro();
+        } else {
+            sessionStorage.setItem('wt_step', String(idx));
+            positionOverlay();
+        }
+    }
+
+    function outro() {
+        stopPolling();
+        // Hide the walkthrough chrome; show the completion screen.
+        overlay.querySelectorAll('#wtSpotlight, #wtTooltip, #wtSkip').forEach(function(n) { n.style.display = 'none'; });
+        if (window.lucide && document.getElementById('cageInfoPopup')) {
+            try { window.lucide.createIcons(); } catch (e) {}
+        }
+        doneTitle.textContent = 'Cage setup complete!';
+        doneText.textContent = 'You created, placed, and reviewed your cage. Great job!';
+        doneOverlay.style.display = 'flex';
+    }
+
+    function finish() {
+        stopPolling();
+        overlay.style.display = 'none';
+        skipBtn.style.display = 'none';
+        doneOverlay.style.display = 'none';
+        sessionStorage.removeItem('wt_active');
+        sessionStorage.removeItem('wt_step');
+        try {
+            history.replaceState({}, '', window.location.pathname);
+            if (window.showToast) showToast('Walkthrough complete', true);
+        } catch (e) {}
+    }
+
+    function initPolling() {
+        stopPolling();
+        pollTimer = setInterval(function() {
+            var s = steps[idx];
+            if (!s) return;
+            var el = s.target();
+            if (!el) { positionOverlay(); return; }
+            positionOverlay();
+            // On cage submission the page is about to reload; don't let the
+            // poller advance past the drag step before the redirect fires.
+            if (!s.manual && s.done() && !window.__wtCageSubmitted) advance();
+        }, 600);
+    }
+
+    function stopPolling() {
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    }
+
+    skipBtn.addEventListener('click', function() { finish(); });
+    nextBtn.addEventListener('click', function() { advance(); });
+    doneBtn.addEventListener('click', function() { finish(); });
+    window.addEventListener('resize', positionOverlay);
+    window.addEventListener('scroll', positionOverlay, true);
+
+    // When the cage is submitted, mark Step 3 done so the poller advances the
+    // walkthrough before the page reloads (resuming at the drag step).
+    var form = document.getElementById('addCageForm');
+    if (form && !form.__wtBound) {
+        form.__wtBound = true;
+        form.addEventListener('submit', function() {
+            window.__wtCageSubmitted = true;
+            sessionStorage.setItem('wt_step', '3'); // index of the drag step (Step 4)
+        });
+    }
+
+    var start = function() { show(); };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', start);
+    } else {
+        setTimeout(start, 400);
+    }
+})();
 
 // ── Delete Cage (uses shared confirmModal) ─────────────────
 var deleteTargetId = null;

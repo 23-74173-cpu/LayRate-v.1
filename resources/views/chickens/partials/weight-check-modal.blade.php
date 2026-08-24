@@ -47,7 +47,7 @@
                         class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">
                     Cancel
                 </button>
-                <x-button type="submit" class="flex-1 py-2.5">
+                <x-button type="submit" class="flex-1 py-2.5" style="background-color:#002D5E;color:#fff;">
                     Record
                 </x-button>
             </div>

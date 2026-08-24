@@ -32,7 +32,7 @@ class AccountController extends Controller
             ? User::orderBy('name')->get(['id', 'name', 'email', 'role', 'is_active'])
             : null;
 
-        $tab = in_array($request->get('tab'), ['profile', 'settings'], true)
+        $tab = in_array($request->get('tab'), ['profile', 'settings', 'manual'], true)
             ? $request->get('tab')
             : 'profile';
 
