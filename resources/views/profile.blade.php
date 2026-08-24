@@ -465,13 +465,26 @@
             </button>
         </div>
 
-        {{-- STEP 2: (coming soon) --}}
+        {{-- STEP 2: Add & place chickens --}}
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <div class="flex items-center gap-3 mb-2">
-                <div class="w-8 h-8 rounded-full bg-[#f0f0f0] text-[#615d59] flex items-center justify-center text-sm font-bold shrink-0">2</div>
-                <h2 class="text-base font-medium text-[#333333]">More tutorials</h2>
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-8 h-8 rounded-full bg-[#002D5E] text-white flex items-center justify-center text-sm font-bold shrink-0">2</div>
+                <div>
+                    <h2 class="text-base font-medium text-[#333333]">Add chickens and place them on cages</h2>
+                    <p class="text-xs text-[#6B7280]">Start the guided walkthrough below.</p>
+                </div>
             </div>
-            <p class="text-xs text-[#6B7280]">Additional step-by-step guides are coming soon.</p>
+
+            <p class="text-xs text-[#6B7280] mb-4">
+                This tutorial walks you through opening the action menu, registering new hens, then placing them into cages.
+                You'll be taken to the Chickens page and a popup will guide you, one action at a time.
+            </p>
+
+            <button type="button" onclick="window.location.href='{{ route('chickens.index', ['walkthrough2' => '1']) }}'"
+                    class="inline-flex items-center gap-2 text-sm font-medium text-white px-4 py-2.5 rounded-lg hover:brightness-95 transition-colors"
+                    style="background-color:#002D5E;">
+                <i data-lucide="play" class="w-4 h-4"></i> Start Walkthrough
+            </button>
         </div>
 
     </div>

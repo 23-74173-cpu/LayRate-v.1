@@ -2516,9 +2516,16 @@ bindStagingInfoButtons();
 // reload that happens after a cage is created (CageController redirects).
 (function() {
     var STARTED = (new URLSearchParams(window.location.search)).get('walkthrough') === '1';
-    if (!STARTED && !sessionStorage.getItem('wt_active')) return;
+    var inProgress = sessionStorage.getItem('wt_active') === '1';
+    if (!STARTED && !inProgress) return;
 
-    var startAt = STARTED ? 0 : (parseInt(sessionStorage.getItem('wt_step') || '0', 10));
+    // Resume from where the tutorial left off if it's already running; only
+    // start fresh at Step 1 on the very first trigger. This matters because the
+    // post-creation redirect keeps ?walkthrough=1 in the URL, which would
+    // otherwise reset the walkthrough to Step 1.
+    var startAt = (inProgress && sessionStorage.getItem('wt_step'))
+        ? parseInt(sessionStorage.getItem('wt_step'), 10)
+        : 0;
     sessionStorage.setItem('wt_active', '1');
     sessionStorage.setItem('wt_step', String(startAt));
 
@@ -2528,7 +2535,7 @@ bindStagingInfoButtons();
         ov.id = 'wtOverlay';
         ov.style.cssText = 'position:fixed;inset:0;z-index:90;display:none;pointer-events:none;';
         ov.innerHTML =
-            '<div id="wtSpotlight" style="position:fixed;border-radius:12px;border:3px solid #0075de;background:rgba(0,117,222,0.10);transition:all .2s ease;pointer-events:none;z-index:91;"></div>'
+            '<div id="wtSpotlight" style="position:fixed;border-radius:12px;border:3px solid #0075de;background:transparent;transition:all .2s ease;pointer-events:none;z-index:91;"></div>'
             + '<div id="wtDimT" style="position:fixed;left:0;top:0;right:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
             + '<div id="wtDimB" style="position:fixed;left:0;bottom:0;right:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
             + '<div id="wtDimL" style="position:fixed;left:0;top:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
@@ -2800,6 +2807,16 @@ bindStagingInfoButtons();
     doneBtn.addEventListener('click', function() { finish(); });
     window.addEventListener('resize', positionOverlay);
     window.addEventListener('scroll', positionOverlay, true);
+
+    // The dim/blocking bars intercept wheel events, so forward them to the page
+    // scroll container to let the user scroll while the walkthrough is open.
+    document.addEventListener('wheel', function(e) {
+        if (sessionStorage.getItem('wt_active') !== '1') return;
+        var sc = document.querySelector('.page-wrapper') || document.scrollingElement || document.documentElement;
+        if (!sc) return;
+        sc.scrollTop = Math.max(0, Math.min(sc.scrollHeight, sc.scrollTop + e.deltaY));
+        e.preventDefault();
+    }, { passive: false });
 
     // When the cage is submitted, mark Step 3 done so the poller advances the
     // walkthrough before the page reloads (resuming at the drag step).

@@ -43,7 +43,7 @@
         {{-- Hidden inputs --}}
         <input type="hidden" name="mode" id="modeInput" value="{{ old('mode', 'manual') }}">
         <input type="hidden" name="slot_ids" id="slotIdsInput" value="">
-        <input type="hidden" name="hen_ids" id="henIdsInput" value="{{ implode(',', $preselectedIds) }}">
+        <input type="hidden" name="hen_ids" id="henIdsInput" value="">
 
         {{-- ── Step 1: Select Hens ── --}}
         <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
@@ -57,7 +57,7 @@
                         Select all
                     </label>
                     <span class="text-xs text-[#6B7280]">
-                        <strong id="henCount" class="text-[#002D5E]">{{ count($preselectedIds) ?: 0 }}</strong> selected
+                        <strong id="henCount" class="text-[#002D5E]">0</strong> selected
                     </span>
                 </div>
                 <div class="flex items-center gap-2">
@@ -76,7 +76,6 @@
                        data-breed="{{ $hen->breed }}">
                     <input type="checkbox" class="hen-checkbox w-3.5 h-3.5 rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]"
                            value="{{ $hen->id }}"
-                           {{ in_array($hen->id, $preselectedIds) ? 'checked' : '' }}
                            onchange="updateHenSelection()">
                     <span class="w-28 font-mono text-[#6B7280]">{{ $hen->chicken_id ?? '—' }}</span>
                     <span class="w-32 text-[#333]">{{ $hen->breed }}</span>
@@ -107,8 +106,8 @@
         </div>
 
         {{-- ── Step 3: Choose Mode + Slot Grid ── --}}
-        <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
-            <div class="flex items-center gap-4 px-5 py-3 border-b border-[#D9D9D9]" style="background: #FAFAFA;">
+        <div id="step3Mode" class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
+            <div id="step3ModePicker" class="flex items-center gap-4 px-5 py-3 border-b border-[#D9D9D9]" style="background: #FAFAFA;">
                 <span class="text-xs font-semibold text-[#1D4E8F]">Step 3: Placement Mode</span>
                 <label class="flex items-center gap-1.5 text-xs cursor-pointer">
                     <input type="radio" name="mode_radio" value="manual" {{ old('mode', 'manual') === 'manual' ? 'checked' : '' }} onchange="switchMode('manual')"
@@ -120,6 +119,18 @@
                            class="w-3.5 h-3.5 text-[#002D5E]">
                     Auto-distribute
                 </label>
+            </div>
+
+            {{-- Placement mode info --}}
+            <div class="px-5 py-3 border-b border-[#D9D9D9]" style="background:#F0F4FF;">
+                <div class="flex gap-3 items-start">
+                    <i data-lucide="info" class="w-4 h-4 shrink-0 mt-0.5" style="color:#1D4E8F;"></i>
+                    <div class="text-xs leading-relaxed" style="color:#1D4E8F;">
+                        <div class="font-semibold mb-1">Choose a placement mode:</div>
+                        <div><strong>Manual slot pick</strong> — you click the exact slot cells where hens go. Click or click-and-drag across cells to select several.</div>
+                        <div class="mt-1"><strong>Auto-distribute</strong> — the system spreads the selected hens evenly across the cage's available slots for you.</div>
+                    </div>
+                </div>
             </div>
 
             {{-- Manual mode --}}
@@ -157,7 +168,7 @@
         {{-- ── Summary + Submit ── --}}
         <div class="bg-white rounded-lg border border-[#D9D9D9] px-5 py-4 flex items-center justify-between">
             <div class="flex items-center gap-4 text-sm text-[#6B7280]">
-                <span>Hens: <strong id="summaryHens" class="text-[#002D5E]">{{ count($preselectedIds) ?: 0 }}</strong></span>
+                <span>Hens: <strong id="summaryHens" class="text-[#002D5E]">0</strong></span>
                 <span>Slots: <strong id="summarySlots" class="text-[#002D5E]">0</strong></span>
                 <span class="text-red-500 hidden" id="summaryError"></span>
             </div>
@@ -188,7 +199,7 @@
     let currentMaxPerSlot = 0;
     let currentMode = '{{ old('mode', 'manual') }}';
 
-    // Pre-select hens from deep-link
+    // Hens start unselected (no deep-link pre-check); sync count/hidden input.
     updateHenSelection();
 
     if (!window.__bulkAddTurboLoadBound) {
@@ -529,6 +540,326 @@
     var initialCage = document.getElementById('cageSelect');
     if (initialCage && initialCage.value) {
         loadCageSlots();
+    }
+})();
+</script>
+@endpush
+
+@push('scripts')
+{{-- Guided Walkthrough #2 (phase 2) — Assign hens to cages (User Manual Step 2) --}}
+<script>
+(function() {
+    // Only run when the chickens-page walkthrough sent us here with a phase flag.
+    if (sessionStorage.getItem('wt2_phase') !== 'bulkadd') return;
+
+    var startAt = parseInt(sessionStorage.getItem('wt2_step') || '0', 10);
+    sessionStorage.setItem('wt2_active', '1');
+
+    // ── Overlay DOM ──
+    if (!document.getElementById('wt2bOverlay')) {
+        var ov = document.createElement('div');
+        ov.id = 'wt2bOverlay';
+        ov.style.cssText = 'position:fixed;inset:0;z-index:90;display:none;pointer-events:none;';
+        ov.innerHTML =
+            '<div id="wt2bSpotlight" style="position:fixed;border-radius:12px;border:3px solid #0075de;background:transparent;transition:all .2s ease;pointer-events:none;z-index:91;"></div>'
+            + '<div id="wt2bDimT" style="position:fixed;left:0;top:0;right:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
+            + '<div id="wt2bDimB" style="position:fixed;left:0;bottom:0;right:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
+            + '<div id="wt2bDimL" style="position:fixed;left:0;top:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
+            + '<div id="wt2bDimR" style="position:fixed;right:0;top:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
+            + '<div id="wt2bTooltip" style="position:fixed;max-width:340px;background:#fff;border:1px solid #e6e6e6;border-radius:14px;padding:16px 18px;box-shadow:0 20px 50px rgba(0,0,0,0.3);z-index:92;pointer-events:none;">'
+            + '<div id="wt2bStepLabel" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#0075de;margin-bottom:6px;"></div>'
+            + '<div id="wt2bStepText" style="font-size:14px;line-height:1.5;color:#1f1f1f;"></div>'
+            + '<button id="wt2bNext" style="display:none;margin-top:12px;padding:8px 16px;font-size:12px;font-weight:600;color:#fff;background:#002D5E;border:0;border-radius:8px;cursor:pointer;pointer-events:auto;">Next</button>'
+            + '</div>'
+            + '<div id="wt2bDone" style="display:none;position:fixed;inset:0;z-index:95;background:rgba(15,20,35,0.72);align-items:center;justify-content:center;pointer-events:auto;">'
+            + '<div style="max-width:380px;width:calc(100% - 2rem);background:#fff;border-radius:20px;padding:32px 28px;text-align:center;box-shadow:0 30px 70px rgba(0,0,0,0.45);">'
+            + '<div style="width:64px;height:64px;margin:0 auto 18px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#e8f5ec;color:#1f6b3a;"><i data-lucide="check" style="width:34px;height:34px;"></i></div>'
+            + '<div style="font-size:20px;font-weight:700;color:#1f1f1f;">Chickens placed!</div>'
+            + '<div style="font-size:14px;color:#6B7280;margin-top:8px;">Your hens are now assigned to the selected cage.</div>'
+            + '<button id="wt2bDoneBtn" style="margin-top:24px;padding:11px 28px;font-size:14px;font-weight:600;color:#fff;background:#002D5E;border:0;border-radius:10px;cursor:pointer;">Done</button>'
+            + '</div>'
+            + '</div>'
+            + '<div id="wt2bSkip" style="position:fixed;top:16px;right:16px;z-index:93;background:#fff;border:1px solid #e6e6e6;color:#615d59;font-size:13px;padding:8px 14px;border-radius:999px;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,0.15);pointer-events:auto;">End tutorial</div>';
+        document.body.appendChild(ov);
+    }
+
+    var spotlight = document.getElementById('wt2bSpotlight');
+    var tooltip = document.getElementById('wt2bTooltip');
+    var skipBtn = document.getElementById('wt2bSkip');
+    var overlay = document.getElementById('wt2bOverlay');
+    var stepLabel = document.getElementById('wt2bStepLabel');
+    var stepText = document.getElementById('wt2bStepText');
+    var nextBtn = document.getElementById('wt2bNext');
+    var doneOverlay = document.getElementById('wt2bDone');
+    var doneBtn = document.getElementById('wt2bDoneBtn');
+    var dimT = document.getElementById('wt2bDimT');
+    var dimB = document.getElementById('wt2bDimB');
+    var dimL = document.getElementById('wt2bDimL');
+    var dimR = document.getElementById('wt2bDimR');
+    var dims = [dimT, dimB, dimL, dimR];
+
+    function step1Card() {
+        var rows = document.querySelectorAll('.hen-row');
+        var card = rows.length ? rows[0].closest('.bg-white') : null;
+        return card || document.getElementById('henList') || document.getElementById('selectAllHens');
+    }
+
+    var steps = [
+        {
+            text: '<strong>Step 1: Select hens.</strong><br>Tick one or more hens to place, or click <em>Select all</em> to pick them all. Take your time to select multiple, then tap <em>Next</em>.',
+            target: step1Card,
+            done: function() { return false; },
+            canProceed: function() {
+                return document.querySelectorAll('.hen-checkbox:checked').length > 0;
+            },
+            manual: true,
+            interactive: true
+        },
+        {
+            text: '<strong>Step 2: Choose a cage.</strong><br>Select a destination cage from the dropdown.',
+            target: function() {
+                return document.getElementById('cageSelect');
+            },
+            done: function() {
+                var s = document.getElementById('cageSelect');
+                return !!(s && s.value);
+            }
+        },
+        {
+            text: '<strong>Step 3: Placement mode.</strong><br>Choose how to place the hens: <em>Manual slot pick</em> (you pick exact slot cells) or <em>Auto-distribute</em> (the system spreads them evenly).<br><br>Select a mode above, then tap <em>Next</em>.',
+            target: function() {
+                return document.getElementById('step3ModePicker')
+                    || document.getElementById('step3Mode');
+            },
+            done: function() { return false; },
+            canProceed: function() {
+                return document.querySelector('input[name="mode_radio"]:checked') !== null;
+            },
+            manual: true,
+            interactive: true
+        },
+        {
+            text: '<strong>Assign the hens.</strong><br>Click or click-and-drag the cage slot cells to select where the hens go — select as many as you need, then tap <em>Next</em>.',
+            target: function() {
+                return document.getElementById('slotGridContainer') || document.getElementById('manualMode');
+            },
+            done: function() { return false; },
+            // Only relevant in Manual slot pick mode. If Auto-distribute is
+            // selected, skip this step and go straight to the next one.
+            skipIf: function() {
+                var auto = document.getElementById('autoMode');
+                return !!(auto && !auto.classList.contains('hidden'));
+            },
+            canProceed: function() {
+                return document.querySelectorAll('[data-slot-id].ring-2').length > 0;
+            },
+            manual: true,
+            interactive: true
+        },
+        {
+            text: '<strong>Place the hens.</strong><br>Review your selection and click <em>Place Hens</em> to continue.',
+            target: function() {
+                return document.getElementById('submitBtn');
+            },
+            done: function() {
+                // Advances once the confirmation modal opens.
+                var m = document.getElementById('confirm-modal');
+                return !!(m && (m.classList.contains('flex') || !m.classList.contains('hidden')));
+            }
+        },
+        {
+            text: '<strong>Confirm the placement.</strong><br>Review the message and click <em>Place Hens</em> to confirm, or <em>Cancel</em> to go back.',
+            target: function() {
+                var m = document.getElementById('confirm-modal');
+                if (!m || m.classList.contains('hidden')) return null;
+                return m.querySelector('.relative') || m;
+            },
+            done: function() {
+                // Complete when confirmed (form submitted → page reloads).
+                return window.__wt2bPlaced === true;
+            }
+        }
+    ];
+
+    var idx = Math.min(startAt, steps.length - 1);
+    var pollTimer = null;
+
+    function positionOverlay() {
+        var s = steps[idx];
+        if (!s) return;
+        // Skip steps that are not applicable to the current mode (e.g. the slot
+        // pick step in Auto-distribute mode). Walk forward until a non-skipped
+        // step is found.
+        if (typeof s.skipIf === 'function' && s.skipIf()) {
+            idx++;
+            if (idx >= steps.length) { outro(); return; }
+            sessionStorage.setItem('wt2_step', String(idx));
+            positionOverlay();
+            return;
+        }
+        var el = s.target();
+        if (!el) {
+            tooltip.style.display = 'none'; spotlight.style.display = 'none';
+            dims.forEach(function(d) { d.style.display = 'none'; });
+            return;
+        }
+        var r = el.getBoundingClientRect();
+        var pad = 6;
+        var left = r.left - pad, top = r.top - pad;
+        var right = r.right + pad, bottom = r.bottom + pad;
+
+        spotlight.style.display = 'block';
+        spotlight.style.left = left + 'px'; spotlight.style.top = top + 'px';
+        spotlight.style.width = (r.width + pad * 2) + 'px';
+        spotlight.style.height = (r.height + pad * 2) + 'px';
+
+        if (s.manual && !s.interactive) {
+            dimT.style.display = 'block';
+            dimT.style.left = '0px'; dimT.style.right = '0px'; dimT.style.top = '0px'; dimT.style.height = window.innerHeight + 'px';
+            dimB.style.display = 'none'; dimL.style.display = 'none'; dimR.style.display = 'none';
+        } else {
+            dimT.style.display = 'block'; dimT.style.left = '0px'; dimT.style.right = '0px';
+            dimT.style.top = '0px'; dimT.style.height = Math.max(0, top) + 'px';
+            dimB.style.display = 'block'; dimB.style.left = '0px'; dimB.style.right = '0px';
+            dimB.style.bottom = '0px'; dimB.style.height = Math.max(0, window.innerHeight - bottom) + 'px';
+            dimL.style.display = 'block'; dimL.style.left = '0px'; dimL.style.top = top + 'px';
+            dimL.style.width = Math.max(0, left) + 'px'; dimL.style.height = Math.max(0, bottom - top) + 'px';
+            dimR.style.display = 'block'; dimR.style.right = '0px'; dimR.style.top = top + 'px';
+            dimR.style.width = Math.max(0, window.innerWidth - right) + 'px';
+            dimR.style.height = Math.max(0, bottom - top) + 'px';
+        }
+
+        tooltip.style.display = 'block';
+        stepLabel.textContent = 'Step ' + (idx + 1) + ' of ' + steps.length;
+        stepText.innerHTML = s.text;
+        nextBtn.style.display = s.manual ? 'inline-block' : 'none';
+        // Manual steps still need completion before proceeding (e.g. Step 1
+        // requires at least one hen selected). Disable Next until satisfied.
+        if (s.manual && typeof s.canProceed === 'function') {
+            nextBtn.disabled = !s.canProceed();
+            nextBtn.style.opacity = nextBtn.disabled ? '0.5' : '1';
+            nextBtn.style.cursor = nextBtn.disabled ? 'not-allowed' : 'pointer';
+        } else {
+            nextBtn.disabled = false;
+            nextBtn.style.opacity = '1';
+            nextBtn.style.cursor = 'pointer';
+        }
+        var ttH = tooltip.offsetHeight;
+        var ttTop = bottom + 14;
+        if (ttTop + ttH > window.innerHeight - 20) { ttTop = Math.max(12, top - ttH - 14); }
+        tooltip.style.left = Math.max(12, Math.min(left, window.innerWidth - tooltip.offsetWidth - 12)) + 'px';
+        tooltip.style.top = ttTop + 'px';
+    }
+
+    function show() {
+        overlay.style.display = 'block';
+        skipBtn.style.display = 'block';
+        positionOverlay();
+        initPolling();
+    }
+
+    function advance() {
+        idx++;
+        if (idx >= steps.length) {
+            outro();
+        } else {
+            sessionStorage.setItem('wt2_step', String(idx));
+            positionOverlay();
+        }
+    }
+
+    function outro() {
+        stopPolling();
+        overlay.querySelectorAll('#wt2bSpotlight, #wt2bTooltip, #wt2bSkip').forEach(function(n) { n.style.display = 'none'; });
+        try { window.lucide.createIcons(); } catch (e) {}
+        doneOverlay.style.display = 'flex';
+    }
+
+    function finish() {
+        stopPolling();
+        overlay.style.display = 'none';
+        skipBtn.style.display = 'none';
+        doneOverlay.style.display = 'none';
+        sessionStorage.removeItem('wt2_active');
+        sessionStorage.removeItem('wt2_step');
+        sessionStorage.removeItem('wt2_phase');
+        try {
+            history.replaceState({}, '', window.location.pathname);
+            if (window.showToast) showToast('Walkthrough complete', true);
+        } catch (e) {}
+    }
+
+    function initPolling() {
+        stopPolling();
+        pollTimer = setInterval(function() {
+            var s = steps[idx];
+            if (!s) return;
+            var el = s.target();
+            if (!el) { positionOverlay(); return; }
+            positionOverlay();
+            if (!s.manual && s.done() && !window.__wt2bPlaced) advance();
+        }, 600);
+    }
+
+    function stopPolling() {
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    }
+
+    skipBtn.addEventListener('click', function() { finish(); });
+    nextBtn.addEventListener('click', function() { advance(); });
+    doneBtn.addEventListener('click', function() { finish(); });
+    window.addEventListener('resize', positionOverlay);
+    window.addEventListener('scroll', positionOverlay, true);
+
+    // The dim/blocking bars intercept wheel events, so forward them to the page
+    // scroll container to let the user scroll while the walkthrough is open.
+    document.addEventListener('wheel', function(e) {
+        if (sessionStorage.getItem('wt2_active') !== '1') return;
+        var sc = document.querySelector('.page-wrapper') || document.scrollingElement || document.documentElement;
+        if (!sc) return;
+        sc.scrollTop = Math.max(0, Math.min(sc.scrollHeight, sc.scrollTop + e.deltaY));
+        e.preventDefault();
+    }, { passive: false });
+
+    // Mark placed when the user confirms in the confirmation modal. Note: the
+    // confirm modal submits the placement form via native form.submit(), which
+    // bypasses the submit event, so we hook the action button instead.
+    var placeBtn = document.getElementById('confirm-modal-action');
+    if (placeBtn && !placeBtn.__wt2bBound) {
+        placeBtn.__wt2bBound = true;
+        placeBtn.addEventListener('click', function() {
+            window.__wt2bPlaced = true;
+            // Placement submits and the page reloads; clear tutorial state so the
+            // reloaded page doesn't restart/resume the walkthrough.
+            sessionStorage.removeItem('wt2_active');
+            sessionStorage.removeItem('wt2_step');
+            sessionStorage.removeItem('wt2_phase');
+        });
+    }
+    // If the user cancels the confirmation, step back to the Place-hens step so
+    // they can retry instead of leaving the walkthrough stuck on the modal.
+    var cancelBtn = document.getElementById('confirm-modal-cancel');
+    if (cancelBtn && !cancelBtn.__wt2bBound) {
+        cancelBtn.__wt2bBound = true;
+        cancelBtn.addEventListener('click', function() {
+            if (window.__wt2bPlaced) return;
+            // Revert to the "Place the hens" step (index of submitBtn step).
+            var backIdx = steps.findIndex(function(s) {
+                return (s.target && s.target() && s.target().id === 'submitBtn');
+            });
+            if (backIdx >= 0 && backIdx < idx) {
+                idx = backIdx;
+                sessionStorage.setItem('wt2_step', String(idx));
+                positionOverlay();
+            }
+        });
+    }
+
+    var start = function() { show(); };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', start);
+    } else {
+        setTimeout(start, 400);
     }
 })();
 </script>

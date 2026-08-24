@@ -603,5 +603,298 @@ function mortalityAjaxSubmit(form) {
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeChickenCageModal();
 });
+
+// ── Guided Walkthrough #2 — Add & place chickens (User Manual Step 2) ──
+// Triggered from the profile User Manual via ?walkthrough2=1. State persists in
+// sessionStorage so it survives the page reload after hens are registered.
+(function() {
+    var STARTED = (new URLSearchParams(window.location.search)).get('walkthrough2') === '1';
+    var inProgress = sessionStorage.getItem('wt2_active') === '1';
+    if (!STARTED && !inProgress) return;
+
+    // Resume from wherever the tutorial left off if it's already running; only
+    // start fresh at Step 1 on the very first trigger. This matters because the
+    // post-registration redirect keeps ?walkthrough2=1 in the URL, which would
+    // otherwise reset the walkthrough to Step 1.
+    var startAt = (inProgress && sessionStorage.getItem('wt2_step'))
+        ? parseInt(sessionStorage.getItem('wt2_step'), 10)
+        : 0;
+    sessionStorage.setItem('wt2_active', '1');
+    sessionStorage.setItem('wt2_step', String(startAt));
+
+    // ── Overlay DOM ──
+    if (!document.getElementById('wt2Overlay')) {
+        var ov = document.createElement('div');
+        ov.id = 'wt2Overlay';
+        ov.style.cssText = 'position:fixed;inset:0;z-index:90;display:none;pointer-events:none;';
+        ov.innerHTML =
+            '<div id="wt2Spotlight" style="position:fixed;border-radius:12px;border:3px solid #0075de;background:transparent;transition:all .2s ease;pointer-events:none;z-index:91;"></div>'
+            + '<div id="wt2DimT" style="position:fixed;left:0;top:0;right:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
+            + '<div id="wt2DimB" style="position:fixed;left:0;bottom:0;right:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
+            + '<div id="wt2DimL" style="position:fixed;left:0;top:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
+            + '<div id="wt2DimR" style="position:fixed;right:0;top:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
+            + '<div id="wt2Tooltip" style="position:fixed;max-width:340px;background:#fff;border:1px solid #e6e6e6;border-radius:14px;padding:16px 18px;box-shadow:0 20px 50px rgba(0,0,0,0.3);z-index:92;pointer-events:none;">'
+            + '<div id="wt2StepLabel" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#0075de;margin-bottom:6px;"></div>'
+            + '<div id="wt2StepText" style="font-size:14px;line-height:1.5;color:#1f1f1f;"></div>'
+            + '<button id="wt2Next" style="display:none;margin-top:12px;padding:8px 16px;font-size:12px;font-weight:600;color:#fff;background:#002D5E;border:0;border-radius:8px;cursor:pointer;pointer-events:auto;">Next</button>'
+            + '</div>'
+            + '<div id="wt2Done" style="display:none;position:fixed;inset:0;z-index:95;background:rgba(15,20,35,0.72);align-items:center;justify-content:center;pointer-events:auto;">'
+            + '<div style="max-width:380px;width:calc(100% - 2rem);background:#fff;border-radius:20px;padding:32px 28px;text-align:center;box-shadow:0 30px 70px rgba(0,0,0,0.45);">'
+            + '<div style="width:64px;height:64px;margin:0 auto 18px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#e8f5ec;color:#1f6b3a;"><i data-lucide="check" style="width:34px;height:34px;"></i></div>'
+            + '<div style="font-size:20px;font-weight:700;color:#1f1f1f;">Chickens registered!</div>'
+            + '<div style="font-size:14px;color:#6B7280;margin-top:8px;">Your new hens are ready to be placed into cages.</div>'
+            + '<button id="wt2DoneBtn" style="margin-top:24px;padding:11px 28px;font-size:14px;font-weight:600;color:#fff;background:#002D5E;border:0;border-radius:10px;cursor:pointer;">Done</button>'
+            + '</div>'
+            + '</div>'
+            + '<div id="wt2Skip" style="position:fixed;top:16px;right:16px;z-index:93;background:#fff;border:1px solid #e6e6e6;color:#615d59;font-size:13px;padding:8px 14px;border-radius:999px;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,0.15);pointer-events:auto;">End tutorial</div>';
+        document.body.appendChild(ov);
+    }
+
+    var spotlight = document.getElementById('wt2Spotlight');
+    var tooltip = document.getElementById('wt2Tooltip');
+    var skipBtn = document.getElementById('wt2Skip');
+    var overlay = document.getElementById('wt2Overlay');
+    var stepLabel = document.getElementById('wt2StepLabel');
+    var stepText = document.getElementById('wt2StepText');
+    var nextBtn = document.getElementById('wt2Next');
+    var doneOverlay = document.getElementById('wt2Done');
+    var doneBtn = document.getElementById('wt2DoneBtn');
+    var dimT = document.getElementById('wt2DimT');
+    var dimB = document.getElementById('wt2DimB');
+    var dimL = document.getElementById('wt2DimL');
+    var dimR = document.getElementById('wt2DimR');
+    var dims = [dimT, dimB, dimL, dimR];
+
+    // ── Steps ── manual:true = informational (Next button); else auto-advance.
+    var steps = [
+        {
+            text: '<strong>Open the FAB menu.</strong><br>Click the <em>+</em> floating button (bottom-right) to show the hen actions.',
+            target: function() { return document.querySelector('.fab-toggle'); },
+            done: function() {
+                var menu = document.querySelector('.fab .fab-menu');
+                return !!(menu && !menu.classList.contains('invisible'));
+            }
+        },
+        {
+            text: '<strong>Register new hens.</strong><br>Click the <em>Register New Hens</em> button in the menu.',
+            target: function() {
+                var m = document.querySelector('.fab .fab-menu button[onclick="openRegisterModal()"]');
+                return m || document.querySelector('button[onclick="openRegisterModal()"]');
+            },
+            done: function() {
+                return !!(document.getElementById('registerModal') && document.getElementById('registerModal').style.display === 'flex');
+            }
+        },
+        {
+            text: '<strong>Register the hens.</strong><br>Set the <em>Quantity</em>, <em>Breed</em>, and details, then click <em>Register Hens</em> to create them.',
+            target: function() {
+                var m = document.getElementById('registerModal');
+                if (!m) return null;
+                return m.querySelector('.relative') || m;
+            },
+            done: function() {
+                // Advances the moment the form is submitted (page redirects back).
+                return window.__wt2Registered === true;
+            }
+        },
+        {
+            text: '<strong>View the new hens.</strong><br>Click the <em>Unplaced</em> toggle to expand the table of unplaced hens.',
+            target: function() {
+                return document.getElementById('unplacedCard')
+                    || document.querySelector('button[onclick="toggleUnplaced()"]')
+                    || document.getElementById('unplacedList');
+            },
+            done: function() {
+                var list = document.getElementById('unplacedList');
+                return !!(list && !list.classList.contains('hidden'));
+            }
+        },
+        {
+            text: '<strong>Your new hens.</strong><br>This table lists the hens you just registered. Review the breeds and chicken IDs shown.',
+            target: function() {
+                var list = document.getElementById('unplacedList');
+                if (list && !list.classList.contains('hidden')) return list;
+                return null;
+            },
+            done: function() { return false; },
+            manual: true
+        },
+        {
+            text: '<strong>Review the list.</strong><br>Use <em>Next</em> and <em>Prev</em> to page through the unplaced hens and confirm your registered flock.',
+            target: function() {
+                return document.querySelector('#unplacedPagination') || document.getElementById('unplacedList');
+            },
+            done: function() { return false; },
+            manual: true
+        },
+        {
+            text: '<strong>Place into cage.</strong><br>Click <em>Place into cage</em> to open the placement page and assign these hens to a cage.',
+            target: function() {
+                return document.querySelector('a[data-wt-place]') || document.querySelector('a[href*="bulk-add"]');
+            },
+            done: function() {
+                // Clicking the link navigates to the bulk-add page; the poller
+                // never sees it complete, so treat it as done when the phase flag
+                // is set right before navigation.
+                return window.__wt2Placing === true;
+            }
+        }
+    ];
+
+    var idx = Math.min(startAt, steps.length - 1);
+    var pollTimer = null;
+
+    function positionOverlay() {
+        var s = steps[idx];
+        if (!s) return;
+        var el = s.target();
+        if (!el) {
+            tooltip.style.display = 'none'; spotlight.style.display = 'none';
+            dims.forEach(function(d) { d.style.display = 'none'; });
+            return;
+        }
+        var r = el.getBoundingClientRect();
+        var pad = 6;
+        var left = r.left - pad, top = r.top - pad;
+        var right = r.right + pad, bottom = r.bottom + pad;
+
+        spotlight.style.display = 'block';
+        spotlight.style.left = left + 'px'; spotlight.style.top = top + 'px';
+        spotlight.style.width = (r.width + pad * 2) + 'px';
+        spotlight.style.height = (r.height + pad * 2) + 'px';
+
+        if (s.manual) {
+            dimT.style.display = 'block';
+            dimT.style.left = '0px'; dimT.style.right = '0px'; dimT.style.top = '0px';
+            dimT.style.height = window.innerHeight + 'px';
+            dimB.style.display = 'none'; dimL.style.display = 'none'; dimR.style.display = 'none';
+        } else {
+            dimT.style.display = 'block'; dimT.style.left = '0px'; dimT.style.right = '0px';
+            dimT.style.top = '0px'; dimT.style.height = Math.max(0, top) + 'px';
+            dimB.style.display = 'block'; dimB.style.left = '0px'; dimB.style.right = '0px';
+            dimB.style.bottom = '0px'; dimB.style.height = Math.max(0, window.innerHeight - bottom) + 'px';
+            dimL.style.display = 'block'; dimL.style.left = '0px'; dimL.style.top = top + 'px';
+            dimL.style.width = Math.max(0, left) + 'px'; dimL.style.height = Math.max(0, bottom - top) + 'px';
+            dimR.style.display = 'block'; dimR.style.right = '0px'; dimR.style.top = top + 'px';
+            dimR.style.width = Math.max(0, window.innerWidth - right) + 'px';
+            dimR.style.height = Math.max(0, bottom - top) + 'px';
+        }
+
+        tooltip.style.display = 'block';
+        stepLabel.textContent = 'Step ' + (idx + 1) + ' of ' + steps.length;
+        stepText.innerHTML = s.text;
+        nextBtn.style.display = s.manual ? 'inline-block' : 'none';
+        var ttH = tooltip.offsetHeight;
+        var ttTop = bottom + 14;
+        if (ttTop + ttH > window.innerHeight - 20) {
+            ttTop = Math.max(12, top - ttH - 14);
+        }
+        tooltip.style.left = Math.max(12, Math.min(left, window.innerWidth - tooltip.offsetWidth - 12)) + 'px';
+        tooltip.style.top = ttTop + 'px';
+    }
+
+    function show() {
+        overlay.style.display = 'block';
+        skipBtn.style.display = 'block';
+        positionOverlay();
+        initPolling();
+    }
+
+    function advance() {
+        idx++;
+        if (idx >= steps.length) {
+            outro();
+        } else {
+            sessionStorage.setItem('wt2_step', String(idx));
+            positionOverlay();
+        }
+    }
+
+    function outro() {
+        stopPolling();
+        overlay.querySelectorAll('#wt2Spotlight, #wt2Tooltip, #wt2Skip').forEach(function(n) { n.style.display = 'none'; });
+        try { window.lucide.createIcons(); } catch (e) {}
+        doneOverlay.style.display = 'flex';
+    }
+
+    function finish() {
+        stopPolling();
+        overlay.style.display = 'none';
+        skipBtn.style.display = 'none';
+        doneOverlay.style.display = 'none';
+        sessionStorage.removeItem('wt2_active');
+        sessionStorage.removeItem('wt2_step');
+        try {
+            history.replaceState({}, '', window.location.pathname);
+            if (window.showToast) showToast('Walkthrough complete', true);
+        } catch (e) {}
+    }
+
+    function initPolling() {
+        stopPolling();
+        pollTimer = setInterval(function() {
+            var s = steps[idx];
+            if (!s) return;
+            var el = s.target();
+            if (!el) { positionOverlay(); return; }
+            positionOverlay();
+            if (!s.manual && s.done()) advance();
+        }, 600);
+    }
+
+    function stopPolling() {
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    }
+
+    skipBtn.addEventListener('click', function() { finish(); });
+    nextBtn.addEventListener('click', function() { advance(); });
+    doneBtn.addEventListener('click', function() { finish(); });
+    window.addEventListener('resize', positionOverlay);
+    window.addEventListener('scroll', positionOverlay, true);
+
+    // The dim/blocking bars intercept wheel events, so forward them to the page
+    // scroll container to let the user scroll while the walkthrough is open.
+    document.addEventListener('wheel', function(e) {
+        if (sessionStorage.getItem('wt2_active') !== '1') return;
+        var sc = document.querySelector('.page-wrapper') || document.scrollingElement || document.documentElement;
+        if (!sc) return;
+        sc.scrollTop = Math.max(0, Math.min(sc.scrollHeight, sc.scrollTop + e.deltaY));
+        e.preventDefault();
+    }, { passive: false });
+
+    // When "Place into cage" is clicked, mark the phase so the bulk-add page's
+    // own walkthrough resumes at its Step 1. Delegated on document (not bound to
+    // the element at parse time) because the link lives inside the lazy-loaded
+    // Turbo frame and may not exist when this script first runs. Guarded to the
+    // tutorial so normal bulk-add navigation is unaffected.
+    document.addEventListener('click', function(e) {
+        if (sessionStorage.getItem('wt2_active') !== '1') return;
+        var a = e.target.closest('a[href*="bulk-add"]');
+        if (!a) return;
+        window.__wt2Placing = true;
+        sessionStorage.setItem('wt2_step', '0');
+        sessionStorage.setItem('wt2_phase', 'bulkadd');
+    });
+
+    // When the register form is submitted, mark it so the poller advances
+    // before the page reloads (redirect after registration), and persist the
+    // next step (view unplaced list) so the walkthrough resumes there.
+    var form = document.getElementById('registerModal') ?
+        document.getElementById('registerModal').querySelector('form') : null;
+    if (form && !form.__wt2Bound) {
+        form.__wt2Bound = true;
+        form.addEventListener('submit', function() {
+            window.__wt2Registered = true;
+            sessionStorage.setItem('wt2_step', '3'); // index of "View the new hens"
+        });
+    }
+
+    var start = function() { show(); };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', start);
+    } else {
+        setTimeout(start, 400);
+    }
+})();
 </script>
 @endpush

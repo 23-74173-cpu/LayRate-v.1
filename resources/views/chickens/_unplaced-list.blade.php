@@ -1,4 +1,4 @@
-<div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
+<div id="unplacedCard" class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
     <div class="flex items-center justify-between px-4 py-2.5"
          style="background: #F0F4FF; border-bottom: 1px solid #CCDDFF;">
         <button type="button" onclick="toggleUnplaced()"
