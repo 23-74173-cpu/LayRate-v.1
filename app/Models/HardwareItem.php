@@ -29,6 +29,12 @@ class HardwareItem extends Model
         'last_changed_at',
         'last_changed_by',
         'relay_seen_at',
+        'health_state',
+        'last_valid_reading_at',
+        'fault_issue',
+        'reading_signature',
+        'consecutive_same_readings',
+        'health_debounce_run',
     ];
 
     protected function casts(): array
@@ -39,6 +45,9 @@ class HardwareItem extends Model
             'relay_safety' => 'boolean',
             'last_changed_at' => 'datetime',
             'relay_seen_at' => 'datetime',
+            'last_valid_reading_at' => 'datetime',
+            'consecutive_same_readings' => 'integer',
+            'health_debounce_run' => 'integer',
         ];
     }
 

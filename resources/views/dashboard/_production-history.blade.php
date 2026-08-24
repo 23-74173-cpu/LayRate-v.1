@@ -75,14 +75,7 @@
             plugins: {
                 legend: {
                     display: true,
-                    position: 'bottom',
-                    labels: {
-                        boxWidth: 10,
-                        usePointStyle: true,
-                        pointStyle: 'circle',
-                        font: { size: 11, family: 'Inter, system-ui, sans-serif' },
-                        padding: 12
-                    }
+                    position: 'bottom'
                 },
                 tooltip: {
                     callbacks: {
@@ -93,15 +86,8 @@
                 }
             },
             scales: {
-                x: {
-                    grid: { display: false },
-                    ticks: { font: { size: 11, family: 'Inter, system-ui, sans-serif' } }
-                },
-                y: {
-                    beginAtZero: true,
-                    grid: { color: '#F0F0EC' },
-                    ticks: { font: { size: 10, family: 'Inter, system-ui, sans-serif' } }
-                }
+                x: {},
+                y: { beginAtZero: true }
             }
         }
     };

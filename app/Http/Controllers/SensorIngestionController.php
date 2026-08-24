@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use App\Services\DeviceHealthEvaluator;
 
 class SensorIngestionController extends Controller
 {
@@ -40,6 +41,8 @@ class SensorIngestionController extends Controller
     {
         /** @var Device $device */
         $device = $request->attributes->get('device');
+
+        app(DeviceHealthEvaluator::class)->registerDeviceHeartbeat($device);
 
         $data = $request->validate([
             'readings' => ['required', 'array', 'min:1'],
@@ -75,6 +78,20 @@ class SensorIngestionController extends Controller
                         continue;
                     }
 
+                    // A real-time reading that (coincidentally) lands on the same
+                    // recorded_at as a manual override must not clobber the
+                    // override — mirror the egg-logging 'never overwrite manual'
+                    // guard. Only possible on an exact noon-second collision.
+                    $clobbersOverride = EnvironmentalLog::where('cage_id', $hardwareItem->cage_id)
+                        ->where('recorded_at', $recordedAt)
+                        ->where('is_override', 1)
+                        ->exists();
+
+                    if ($clobbersOverride) {
+                        $errors[] = "Reading {$index}: timestamp collides with a manual override for cage {$hardwareItem->cage_id}; skipped.";
+                        continue;
+                    }
+
                     $envLog = EnvironmentalLog::updateOrCreate(
                         [
                             'cage_id' => $hardwareItem->cage_id,
@@ -87,6 +104,8 @@ class SensorIngestionController extends Controller
                     );
 
                     EnvironmentAlertService::check($envLog);
+
+                    app(DeviceHealthEvaluator::class)->registerDhtReading($hardwareItem, (float) $reading['temperature_c'], (float) $reading['humidity_pct']);
 
                     $processed[] = [
                         'serial_number' => $serial,
@@ -128,6 +147,10 @@ class SensorIngestionController extends Controller
                         && $lastReading->recorded_at->gt(now()->subSeconds(5))) {
                         continue;
                     }
+
+                    // Health heartbeat BEFORE the write so the jump check sees
+                    // the previous reading as its baseline (raw only).
+                    app(DeviceHealthEvaluator::class)->registerIrReading($hardwareItem, $reportedCount, $slot);
 
                     SensorOccupancyReading::updateOrCreate(
                         [
@@ -209,7 +232,7 @@ class SensorIngestionController extends Controller
                     }
 
                     if ($reportedCount !== $actualOccupancy) {
-                        self::createOccupancyMismatchAlert($slot, $reportedCount, $actualOccupancy, $recordedAt);
+                        self::createOccupancyMismatchAlert($slot, $reportedCount, $actualOccupancy);
                     }
 
                     $processed[] = [
@@ -277,6 +300,9 @@ class SensorIngestionController extends Controller
                         ]);
                     }
 
+                    // Relay health: advisory only — never touches relay_safety.
+                    app(DeviceHealthEvaluator::class)->registerRelaySeen($hardwareItem, $hardwareItem->cage?->latestEnvironmentLog);
+
                     $processed[] = [
                         'serial_number' => $serial,
                         'type' => 'relay',
@@ -330,47 +356,55 @@ class SensorIngestionController extends Controller
         $cage = $slot->cage;
         $cageCode = $cage?->cage_code ?? 'Unknown';
 
+        [$dayStart, $dayEnd] = ReportingDateService::reportingDayWindow(ReportingDateService::reportingDateString());
+
         $exists = Alert::where('cage_id', $cage?->id)
             ->where('alert_type', 'sensor_reset')
             ->where('is_read', 0)
-            ->whereDate('triggered_at', ReportingDateService::reportingDateString())
+            ->where('triggered_at', '>=', $dayStart)
+            ->where('triggered_at', '<', $dayEnd)
             ->exists();
 
         if ($exists) {
             return;
         }
 
-        Alert::create([
+        Alert::createDeduped([
             'cage_id' => $cage?->id,
             'alert_type' => 'sensor_reset',
             'message' => "IR sensor in {$cageCode} slot {$slot->row_number}-{$slot->column_number} likely reset: count dropped from {$previousCount} to {$reportedCount}",
             'is_read' => 0,
             'triggered_at' => now(),
+            'dedup_key' => Alert::dedupKey($cage?->id, 'sensor_reset'),
+            'alert_day' => ReportingDateService::reportingDateString(),
         ]);
     }
 
-    private static function createOccupancyMismatchAlert($slot, int $reportedCount, int $actualOccupancy, string $recordedAt): void
+    private static function createOccupancyMismatchAlert($slot, int $reportedCount, int $actualOccupancy): void
     {
         $cage = $slot->cage;
         $cageCode = $cage?->cage_code ?? 'Unknown';
-        $date = now()->parse($recordedAt)->toDateString();
+        [$dayStart, $dayEnd] = ReportingDateService::reportingDayWindow(ReportingDateService::reportingDateString());
 
         $exists = Alert::where('cage_id', $cage?->id)
             ->where('alert_type', 'occupancy_mismatch')
             ->where('is_read', 0)
-            ->whereDate('triggered_at', $date)
+            ->where('triggered_at', '>=', $dayStart)
+            ->where('triggered_at', '<', $dayEnd)
             ->exists();
 
         if ($exists) {
             return;
         }
 
-        Alert::create([
+        Alert::createDeduped([
             'cage_id' => $cage?->id,
             'alert_type' => 'occupancy_mismatch',
             'message' => "Occupancy mismatch in {$cageCode} slot {$slot->row_number}-{$slot->column_number}: sensor reports {$reportedCount}, records show {$actualOccupancy}",
             'is_read' => 0,
             'triggered_at' => now(),
+            'dedup_key' => Alert::dedupKey($cage?->id, 'occupancy_mismatch'),
+            'alert_day' => ReportingDateService::reportingDateString(),
         ]);
     }
 }

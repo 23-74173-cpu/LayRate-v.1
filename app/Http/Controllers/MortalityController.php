@@ -268,9 +268,4 @@ class MortalityController extends Controller
                 ->decrement('current_occupancy', $decrement);
         }
     }
-
-    /**
-     * Check if same-day same-cage mortality total exceeds threshold and create alert.
-     * TODO: Move threshold (3) to settings table for operator configurability.
-     */
 }

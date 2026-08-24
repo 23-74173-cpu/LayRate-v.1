@@ -29,10 +29,9 @@ Schedule::command('environment:compute-daily-averages')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/environment-daily-averages.log'));
 
-// Check active hardware sensors for staleness every 15 minutes.
-// Sensors with no environmental_log within the threshold (default 30 min)
-// are automatically marked as faulty.
-Schedule::command('hardware:check-staleness')
+// Hardware health state machine — 15-min backstop for elapsed-time
+// escalations only (online/stale is driven live by ingestion).
+Schedule::command('hardware:check-health')
     ->everyFifteenMinutes()
     ->withoutOverlapping()
-    ->appendOutputTo(storage_path('logs/hardware-staleness-check.log'));
+    ->appendOutputTo(storage_path('logs/hardware-health-check.log'));

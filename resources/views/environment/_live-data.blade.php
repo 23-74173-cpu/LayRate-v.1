@@ -160,10 +160,10 @@
             const chartOpts = {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { display: true, labels: { boxWidth: 10, font: { size: 10 } } } },
+                plugins: { legend: { display: true } },
                 scales: {
-                    x: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 }, autoSkip: true, maxRotation: 45, minRotation: 0 } },
-                    y: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } } },
+                    x: { ticks: { autoSkip: true, maxRotation: 45, minRotation: 0 } },
+                    y: {},
                 }
             };
 

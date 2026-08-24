@@ -273,7 +273,7 @@
             {
                 label: 'Historical',
                 data: histData,
-                borderColor: '#333333',
+                borderColor: '#31302e',
                 backgroundColor: 'transparent',
                 tension: 0.3,
                 pointRadius: 3,
@@ -305,11 +305,11 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { display: true, labels: { boxWidth: 10, font: { size: 10 } } }
+                    legend: { display: true }
                 },
                 scales: {
-                    x: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 45 } },
-                    y: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } }, min: 0, beginAtZero: true },
+                    x: { ticks: { maxRotation: 45, minRotation: 45 } },
+                    y: { min: 0, beginAtZero: true },
                 }
             }
         });

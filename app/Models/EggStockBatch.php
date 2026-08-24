@@ -188,21 +188,23 @@ class EggStockBatch extends Model
             if ($threshold <= 0) continue;
             if ($available > $threshold) continue;
 
-            $exists = \App\Models\Alert::where('alert_type', 'low_stock')
+            $exists = \App\Models\Alert::where('alert_type', 'low_stock_eggs')
                 ->where('cage_id', null)
                 ->where('is_read', 0)
                 ->where('message', 'like', "%{$size}%")
-                ->whereDate('triggered_at', today())
+                ->whereBetween('triggered_at', \App\Services\ReportingDateService::reportingDayWindow(\App\Services\ReportingDateService::reportingDateString()))
                 ->exists();
 
             if ($exists) continue;
 
-            \App\Models\Alert::create([
+            \App\Models\Alert::createDeduped([
                 'cage_id' => null,
-                'alert_type' => 'low_stock',
+                'alert_type' => 'low_stock_eggs',
                 'message' => "Low stock: " . ucfirst($size) . " eggs — {$available} remaining (threshold: {$threshold})",
                 'is_read' => 0,
                 'triggered_at' => now(),
+                'dedup_key' => \App\Models\Alert::dedupKey(null, 'low_stock_eggs', $size),
+                'alert_day' => \App\Services\ReportingDateService::reportingDateString(),
             ]);
         }
     }

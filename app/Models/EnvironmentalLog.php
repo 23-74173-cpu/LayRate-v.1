@@ -9,9 +9,9 @@ class EnvironmentalLog extends Model
 {
     public $timestamps = false;
 
-    protected $fillable = ['cage_id', 'recorded_at', 'temperature_c', 'humidity_pct'];
+    protected $fillable = ['cage_id', 'recorded_at', 'temperature_c', 'humidity_pct', 'is_override'];
 
-    protected $casts = ['recorded_at' => 'datetime', 'created_at' => 'datetime'];
+    protected $casts = ['recorded_at' => 'datetime', 'created_at' => 'datetime', 'is_override' => 'boolean'];
 
     public function cage(): BelongsTo
     {

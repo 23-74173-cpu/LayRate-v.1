@@ -1,4 +1,4 @@
-<div id="moveModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] items-center justify-center p-4" role="dialog" aria-modal="true" style="display: none;">
+<div id="moveModal" data-modal  data-close="closeMoveModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] items-center justify-center p-4" role="dialog" aria-modal="true" style="display: none;">
     {{-- Backdrop --}}
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeMoveModal()"></div>
 

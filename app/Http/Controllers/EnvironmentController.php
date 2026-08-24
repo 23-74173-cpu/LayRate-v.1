@@ -8,6 +8,7 @@ use App\Models\HardwareItem;
 use App\Models\Setting;
 use App\Services\EnvironmentStatusService;
 use App\Services\RelayStateService;
+use App\Services\ReportingDateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -40,8 +41,20 @@ class EnvironmentController extends Controller
         ];
         [$dateFormat, $since] = $trendDateFormats[$range] ?? $trendDateFormats['24h'];
 
-        $latestPerCage = $cages->map(function ($cage) use ($thresholds) {
-            $env = $cage->latestEnvironmentLog;
+        // Manual overrides on the current reporting day are preferred over the
+        // newest raw reading (see updateLog). Reporting-day window (Asia/Manila,
+        // 06:00 reset) matches the app's date convention (see Prompt 2 fix).
+        [$repStart, $repEnd] = ReportingDateService::reportingDayWindow(ReportingDateService::reportingDateString());
+        $overrideByCage = EnvironmentalLog::where('is_override', 1)
+            ->whereBetween('recorded_at', [$repStart, $repEnd])
+            ->get()
+            ->keyBy('cage_id');
+
+        $latestPerCage = $cages->map(function ($cage) use ($thresholds, $overrideByCage) {
+            // A manual override for the current reporting day is authoritative
+            // over the newest live reading. Past-day overrides only affect
+            // that day's average, not "current".
+            $env = $overrideByCage[$cage->id] ?? $cage->latestEnvironmentLog;
             if (! $env) return null;
 
             $tempStatus = EnvironmentStatusService::tempStatus($env->temperature_c, $thresholds);
@@ -94,13 +107,19 @@ class EnvironmentController extends Controller
         $query = EnvironmentalLog::selectRaw("
                 cage_id,
                 DATE(recorded_at) as log_date,
-                ROUND(AVG(temperature_c), 1) as avg_temp,
-                ROUND(AVG(humidity_pct), 0) as avg_hum,
-                ROUND(MIN(temperature_c), 1) as min_temp,
-                ROUND(MAX(temperature_c), 1) as max_temp,
-                ROUND(MIN(humidity_pct), 0) as min_hum,
-                ROUND(MAX(humidity_pct), 0) as max_hum,
-                COUNT(*) as reading_count
+                CASE WHEN MAX(is_override) = 1 THEN MAX(CASE WHEN is_override = 1 THEN temperature_c END)
+                     ELSE ROUND(AVG(temperature_c), 1) END as avg_temp,
+                CASE WHEN MAX(is_override) = 1 THEN MAX(CASE WHEN is_override = 1 THEN humidity_pct END)
+                     ELSE ROUND(AVG(humidity_pct), 0) END as avg_hum,
+                CASE WHEN MAX(is_override) = 1 THEN MAX(CASE WHEN is_override = 1 THEN temperature_c END)
+                     ELSE ROUND(MIN(temperature_c), 1) END as min_temp,
+                CASE WHEN MAX(is_override) = 1 THEN MAX(CASE WHEN is_override = 1 THEN temperature_c END)
+                     ELSE ROUND(MAX(temperature_c), 1) END as max_temp,
+                CASE WHEN MAX(is_override) = 1 THEN MAX(CASE WHEN is_override = 1 THEN humidity_pct END)
+                     ELSE ROUND(MIN(humidity_pct), 0) END as min_hum,
+                CASE WHEN MAX(is_override) = 1 THEN MAX(CASE WHEN is_override = 1 THEN humidity_pct END)
+                     ELSE ROUND(MAX(humidity_pct), 0) END as max_hum,
+                CASE WHEN MAX(is_override) = 1 THEN 1 ELSE COUNT(*) END as reading_count
             ")
             ->groupBy('cage_id', 'log_date')
             ->orderByDesc('log_date')
@@ -146,6 +165,7 @@ class EnvironmentController extends Controller
             'recorded_at' => $noon,
             'temperature_c' => $validated['temperature_c'],
             'humidity_pct' => $validated['humidity_pct'],
+            'is_override' => true,
         ]);
 
         if ($request->wantsJson()) {

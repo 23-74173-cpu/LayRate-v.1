@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Http\Controllers\ForecastController;
+use App\Services\ForecastGenerationService;
 use App\Models\Cage;
 use App\Models\Forecast;
 use App\Models\ForecastRun;
@@ -26,12 +26,11 @@ use Symfony\Component\Process\Exception\ProcessFailedException;
  * sensor-ingestion endpoint. This job moves that wait off the request
  * thread entirely.
  *
- * Reuses ForecastController's own generateForecast()/historical-data
- * methods rather than duplicating ~700 lines of forecast orchestration —
- * those methods were widened from private to public specifically so this
- * job could call them (see the comments at farmHistorical() etc.). The
- * controller itself is otherwise unchanged; this job runs the same code
- * path generate() used to run directly, just outside the request cycle.
+ * Delegates to ForecastGenerationService (extracted from ForecastController
+ * in Prompt 8) rather than duplicating ~700 lines of forecast orchestration
+ * or depending on a web controller from a queue worker. The controller and
+ * this job run the exact same service code path, just inside vs outside the
+ * request cycle.
  *
  * Requires QUEUE_CONNECTION=database (not sync — under sync this still
  * runs inline and provides no concurrency benefit) and a supervised
@@ -56,7 +55,7 @@ class GenerateForecastJob implements ShouldQueue
         public array $manualParams,
     ) {}
 
-    public function handle(ForecastController $controller): void
+    public function handle(ForecastGenerationService $service): void
     {
         $run = ForecastRun::find($this->forecastRunId);
         if (!$run) {
@@ -72,15 +71,15 @@ class GenerateForecastJob implements ShouldQueue
 
             [$historical, $todayDeleteQuery] = match ($this->scope) {
                 'farm' => [
-                    $controller->farmHistorical(),
+                    $service->farmHistorical(),
                     Forecast::whereNull('cage_id')->whereNull('breed'),
                 ],
                 'breed' => [
-                    $controller->breedHistorical($this->breed),
+                    $service->breedHistorical($this->breed),
                     Forecast::whereNull('cage_id')->where('breed', $this->breed),
                 ],
                 default => [
-                    $controller->cageHistorical($this->cageCode),
+                    $service->cageHistorical($this->cageCode),
                     $cage
                         ? Forecast::whereNull('breed')->where('cage_id', $cage->id)
                         : Forecast::whereNull('breed')->whereNull('cage_id'),
@@ -97,7 +96,7 @@ class GenerateForecastJob implements ShouldQueue
             // replaced.
             $todayDeleteQuery->where('forecast_date', now()->toDateString())->delete();
 
-            $result = $controller->generateForecast(
+            $result = $service->generateForecast(
                 $cage,
                 $this->cageCode,
                 $this->breed,

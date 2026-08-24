@@ -21,7 +21,6 @@ class EnvironmentAlertService
     {
         $thresholds = Setting::thresholds();
         $cageId = $log->cage_id;
-        $date = $log->recorded_at->toDateString();
 
         $temp = $log->temperature_c;
         $hum = $log->humidity_pct;
@@ -32,40 +31,45 @@ class EnvironmentAlertService
         $humMax = $thresholds['hum_max'] ?? null;
 
         if ($tempMin !== null && $temp < $tempMin) {
-            self::createAlert($cageId, 'temperature_low', "Temperature {$temp}°C is below minimum threshold ({$tempMin}°C)", $date);
+            self::createAlert($cageId, 'temperature_low', "Temperature {$temp}°C is below minimum threshold ({$tempMin}°C)");
         }
 
         if ($tempMax !== null && $temp > $tempMax) {
-            self::createAlert($cageId, 'temperature_high', "Temperature {$temp}°C is above maximum threshold ({$tempMax}°C)", $date);
+            self::createAlert($cageId, 'temperature_high', "Temperature {$temp}°C is above maximum threshold ({$tempMax}°C)");
         }
 
         if ($humMin !== null && $hum < $humMin) {
-            self::createAlert($cageId, 'humidity_low', "Humidity {$hum}% is below minimum threshold ({$humMin}%)", $date);
+            self::createAlert($cageId, 'humidity_low', "Humidity {$hum}% is below minimum threshold ({$humMin}%)");
         }
 
         if ($humMax !== null && $hum > $humMax) {
-            self::createAlert($cageId, 'humidity_high', "Humidity {$hum}% is above maximum threshold ({$humMax}%)", $date);
+            self::createAlert($cageId, 'humidity_high', "Humidity {$hum}% is above maximum threshold ({$humMax}%)");
         }
     }
 
-    private static function createAlert(?int $cageId, string $type, string $message, string $date): void
+    private static function createAlert(?int $cageId, string $type, string $message): void
     {
+        [$dayStart, $dayEnd] = ReportingDateService::reportingDayWindow(ReportingDateService::reportingDateString());
+
         $exists = Alert::where('cage_id', $cageId)
             ->where('alert_type', $type)
             ->where('is_read', 0)
-            ->whereDate('triggered_at', $date)
+            ->where('triggered_at', '>=', $dayStart)
+            ->where('triggered_at', '<', $dayEnd)
             ->exists();
 
         if ($exists) {
             return;
         }
 
-        Alert::create([
+        Alert::createDeduped([
             'cage_id' => $cageId,
             'alert_type' => $type,
             'message' => $message,
             'is_read' => 0,
             'triggered_at' => now(),
+            'dedup_key' => Alert::dedupKey($cageId, $type),
+            'alert_day' => ReportingDateService::reportingDateString(),
         ]);
     }
 }

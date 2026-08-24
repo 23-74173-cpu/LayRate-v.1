@@ -136,18 +136,15 @@ window.renderAnalyticsCharts = function(logs, feedLogs, cageColor, isAll, cageCo
                     labels: labels,
                     datasets: [{ data: hdeps, borderColor: cageColor, backgroundColor: cageColor+'22', tension: 0.3, pointRadius: 4, fill: true, borderWidth: 2 }]
                 },
-                options: (function() {
-                    var gridColor = '#F0F0EC';
-                    return {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            x: { grid: { color: gridColor }, ticks: { font: { size: 10 }, autoSkip: true, autoSkipPadding: 12, maxRotation: 45, minRotation: 0 } },
-                            y: { grid: { color: gridColor }, ticks: { font: { size: 10 } }, suggestedMin: 0 },
-                        }
-                    };
-                })()
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { autoSkip: true, autoSkipPadding: 12, maxRotation: 45, minRotation: 0 } },
+                        y: { suggestedMin: 0 },
+                    }
+                }
             });
         } else {
             LayRateChart.destroy('hdepChart');
@@ -169,8 +166,8 @@ window.renderAnalyticsCharts = function(logs, feedLogs, cageColor, isAll, cageCo
                     layout: { padding: { top: 4, bottom: 4, left: 4, right: 4 } },
                     plugins: { legend: { display: false } },
                     scales: {
-                        x: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 }, autoSkip: true, autoSkipPadding: 12, maxRotation: 45, minRotation: 0 } },
-                        y: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } } },
+                        x: { ticks: { autoSkip: true, autoSkipPadding: 12, maxRotation: 45, minRotation: 0 } },
+                        y: {},
                     }
                 }
             });
@@ -203,8 +200,8 @@ window.renderAnalyticsCharts = function(logs, feedLogs, cageColor, isAll, cageCo
                     layout: { padding: { top: 4, bottom: 4, left: 4, right: 4 } },
                     plugins: { legend: { display: false } },
                     scales: {
-                        x: { type: 'linear', grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } }, title: { display: true, text: 'kg', font: { size: 10 } } },
-                        y: { grid: { color: '#F0F0EC' }, ticks: { font: { size: 10 } }, title: { display: true, text: '%', font: { size: 10 } }, suggestedMin: 0, suggestedMax: Math.ceil(maxHdep / 10) * 10 + 10 },
+                        x: { type: 'linear', title: { display: true, text: 'kg' } },
+                        y: { title: { display: true, text: '%' }, suggestedMin: 0, suggestedMax: Math.ceil(maxHdep / 10) * 10 + 10 },
                     }
                 }
             });

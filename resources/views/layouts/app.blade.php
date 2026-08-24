@@ -22,7 +22,7 @@
     <link rel="stylesheet" href="/css/inter.css">
 
     {{-- Tailwind CSS (compiled) --}}
-    <link href="/css/tailwind.css" rel="stylesheet">
+    <link href="/css/tailwind.css?v={{ @filemtime(public_path('css/tailwind.css')) }}" rel="stylesheet">
 
     {{-- Prevent white flash while styles load --}}
     <style>
@@ -801,6 +801,57 @@
     });
 })();
 
+// ── Shared modal keyboard nav (Esc = close, Enter = submit) — bind once ──
+// Opt-in via `data-modal` (+ `data-modal-destructive` for Esc-only, and
+// optional `data-close="closeFnName"`). Nested overlays: when the shared
+// confirm modal (confirm-modal) is open on top of a data-modal, it OWNS the
+// keypress — this listener returns immediately so Esc and Enter never
+// double-fire into the parent modal underneath on the same keypress.
+(function () {
+    if (window.__modalKeyNavBound) return;
+    window.__modalKeyNavBound = true;
+
+    function visible(el) {
+        if (!el) return false;
+        return getComputedStyle(el).display !== 'none' && el.getAttribute('aria-hidden') !== 'true';
+    }
+    function confirmOpen() {
+        var el = document.getElementById('confirm-modal');
+        return !!(el && getComputedStyle(el).display !== 'none');
+    }
+    function topmostOpen() {
+        var all = document.querySelectorAll('[data-modal]');
+        var top = null;
+        for (var i = 0; i < all.length; i++) if (visible(all[i])) top = all[i];
+        return top;
+    }
+    function closeEl(el) {
+        var fn = el.getAttribute('data-close');
+        if (fn && typeof window[fn] === 'function') { window[fn](); return; }
+        el.style.display = 'none';
+    }
+
+    document.addEventListener('keydown', function (e) {
+        if (confirmOpen()) return;          // nested confirm owns Esc/Enter
+
+        var m = topmostOpen();
+        if (!m) return;
+
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            closeEl(m);
+            return;
+        }
+        if (e.key === 'Enter') {
+            if (m.hasAttribute('data-modal-destructive')) return;  // Esc-only
+            var ae = document.activeElement;
+            if (ae && (ae.tagName === 'TEXTAREA' || ae.tagName === 'BUTTON' || ae.tagName === 'A')) return;
+            var target = m.querySelector('[data-modal-enter]') || m.querySelector('button[type="submit"]');
+            if (target) { e.preventDefault(); target.click(); }
+        }
+    }, true);
+})();
+
 window.CAGE_COLORS = @json(\App\Models\Cage::getColorMap());
 
 // Factored out so it can be re-applied after a Chart.js library reload
@@ -821,10 +872,21 @@ window.__applyChartDefaults = function(full) {
     if (typeof Chart === 'undefined') return;
     Chart.defaults.color = '#31302e';
     Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
-    Chart.defaults.set('plugins.legend.labels.font.size', 12);
+    // Single source of truth for axis-tick size — pages used to each hardcode their
+    // own (10, 11, or unset/12), which is exactly the "every graph looks different"
+    // drift this centralizes. Individual charts should stop repeating this value.
+    Chart.defaults.font.size = 10;
+    // NOTE: never use Chart.defaults.set('plugins.legend.labels.font.size', 11) here.
+    // Chart.js 4.4.0's set() with a dotted path corrupts the legend font size into a
+    // bare object ({}), and every chart with a visible legend then dies during layout
+    // fitting with "Cannot convert object to primitive value" (spacing/box size math).
+    // Merge any existing props first, then assign the numeric size directly.
+    Chart.defaults.plugins.legend.labels.font = Object.assign({}, Chart.defaults.plugins.legend.labels.font || {});
+    Chart.defaults.plugins.legend.labels.font.size = 11;
     Chart.defaults.plugins.legend.labels.usePointStyle = true;
     Chart.defaults.plugins.legend.labels.pointStyle = 'circle';
-    Chart.defaults.plugins.legend.labels.padding = 16;
+    Chart.defaults.plugins.legend.labels.boxWidth = 10;
+    Chart.defaults.plugins.legend.labels.padding = 12;
     Chart.defaults.elements.bar.borderRadius = 4;
     if (full !== false) {
         Chart.defaults.scale.grid = { color: 'rgba(0,0,0,0.06)' };

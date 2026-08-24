@@ -3,13 +3,13 @@
 {{-- overflow-x-auto + shrink-0 + whitespace-nowrap: on narrow screens these
      scroll horizontally instead of wrapping to a second line or silently
      overflowing — there is no wrap fallback here on purpose. --}}
-<div class="border-b border-[#D9D9D9]">
+<div class="border-b border-hairline">
     <nav class="-mb-px flex gap-6 overflow-x-auto overflow-y-hidden scrollbar-thin">
         @foreach($tabs as $key => $tab)
             @php
                 $isActive = $key === $active;
                 $classes = 'pb-2 text-sm font-medium border-b-2 transition-colors shrink-0 whitespace-nowrap cursor-pointer ' .
-                    ($isActive ? 'border-[#002D5E] text-[#002D5E]' : 'border-transparent text-[#6B7280] hover:text-[#333]');
+                    ($isActive ? 'border-navy text-navy' : 'border-transparent text-ink-muted hover:text-ink');
             @endphp
             @if(isset($tab['route']))
                 <a href="{{ route($tab['route']) }}" class="{{ $classes }}" @if($turboFrame) data-turbo-frame="{{ $turboFrame }}" @endif>
