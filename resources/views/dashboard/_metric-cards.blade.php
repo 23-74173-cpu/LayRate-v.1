@@ -82,7 +82,10 @@
                     <div class="relative mt-4">
                         <div class="text-[11px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Eggs Today</div>
                         <div class="text-[28px] font-bold leading-none tracking-[-1px] text-[#102A4C] mt-2 kpi-count" data-target="{{ $eggsToday }}">0</div>
-                        <div class="text-xs mt-1.5" style="color: #5b6472;">collected today</div>
+                        <div class="text-xs font-medium mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5"
+                             style="color: {{ $eggsDelta >= 0 ? '#0f7a44' : '#b71c2c' }}; background-color: rgba(255,255,255,0.78); border: 1px solid {{ $eggsDelta >= 0 ? 'rgba(31,138,79,0.35)' : 'rgba(183,28,44,0.35)' }};">
+                            {{ $eggsDelta >= 0 ? '▲' : '▼' }} {{ abs($eggsDelta) }} vs yesterday
+                        </div>
                     </div>
                     <span class="kpi-accent" style="background-color: #fae3d0;"></span>
                 </div>

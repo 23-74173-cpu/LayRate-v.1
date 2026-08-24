@@ -342,7 +342,7 @@
                     {{-- Footer: legend bar pinned to bottom --}}
                     <div class="flex items-center gap-3 px-4 py-2 border-t text-[10px] leading-none shrink-0" style="border-color:#e6e6e6; color:#a39e98;">
                         <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded" style="background-color:#d6f0e3;border:1px solid #2a9d6a;"></span> Sensor</span>
-                        <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded" style="background-color:#f6f5f4;border:1px solid #e6e6e6;"></span> Occupied</span>
+<span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded" style="background-color:rgb(228,228,228);border:1px solid #d1d5db;"></span> Occupied</span>
                         <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded" style="background-color:#ffffff;border:1px solid #e6e6e6;"></span> Empty</span>
                     </div>
                 </div>
@@ -1475,7 +1475,7 @@ function renderCageOverlays() {
 // ── Cage Info Popup (mirrors the cage detail card: front slot grid + back details) ──
 function renderCageInfoPopupSlotGrid(m) {
     var cols = Math.min(m.slots_per_row, 6);
-    var html = '<div class="grid gap-1" style="grid-template-columns:repeat(' + cols + ', 32px);justify-content:flex-start;">';
+    var html = '<div class="grid gap-1 slot-grid-' + m.id + '" style="grid-template-columns:repeat(' + cols + ', 32px);justify-content:flex-start;">';
     for (var i = 0; i < m.slots.length; i++) {
         var s = m.slots[i];
         var isSensor = s.has_sensor;
@@ -1498,8 +1498,10 @@ function renderCageInfoPopupSlotGrid(m) {
             slotContent = '<span class="text-xs" style="color:#d1d5db;">—</span>';
         }
         var sensorDot = isSensor ? '<span class="absolute top-0 right-0 w-1.5 h-1.5 rounded-bl" style="background-color:#0075de;"></span>' : '';
-        html += '<button type="button" onclick="expandSlotInPopup(this)" class="slot-mini w-8 h-8 rounded flex flex-col items-center justify-center text-xs relative cursor-pointer transition-colors" data-cage-id="' + m.id + '" data-slot-id="' + s.id + '" data-cage-code="' + m.code.replace(/"/g, '&quot;') + '" style="background-color:' + slotBg + ';border:1px solid ' + slotBorder + ';" title="Slot ' + s.row + '-' + s.col + ': ' + occupancy + ' hens' + (isSensor ? ' (sensor equipped)' : '') + '" aria-label="Slot ' + s.row + '-' + s.col + ', ' + occupancy + ' hens">'
-            + sensorDot + slotContent + '</button>';
+        html += '<button type="button" onclick="expandSlotInPopup(this)" class="slot-mini w-8 h-8 rounded flex flex-col items-center justify-center text-xs relative cursor-pointer transition-colors" data-cage-id="' + m.id + '" data-slot-id="' + s.id + '" data-cage-code="' + m.code.replace(/"/g, '&quot;') + '" data-original-number="' + s.number + '" style="background-color:' + slotBg + ';border:1px solid ' + slotBorder + ';" title="Slot ' + s.row + '-' + s.col + ': ' + occupancy + ' hens' + (isSensor ? ' (sensor equipped)' : '') + '" aria-label="Slot ' + s.row + '-' + s.col + ', ' + occupancy + ' hens">'
+            + sensorDot
+            + '<span class="slot-reorder-number hidden text-[10px] font-bold" style="color:#002D5E;">' + s.number + '</span>'
+            + slotContent + '</button>';
     }
     html += '</div>';
     return html;
@@ -1538,6 +1540,13 @@ function renderCageInfoPopupContent(m) {
 
     var frontBody = '<div class="px-4 py-3">'
         + renderCageInfoPopupSlotGrid(m)
+        + '<div id="popupReorderBar-' + m.id + '" class="hidden mt-2 flex items-center justify-between text-xs" style="color:#615d59;">'
+        + '<span>Drag slots to renumber</span>'
+        + '<div class="flex items-center gap-2">'
+        + '<button onclick="savePopupReorder(' + m.id + ')" class="px-2 py-1 rounded text-white text-xs font-medium" style="background-color:#002D5E;">Save</button>'
+        + '<button onclick="cancelPopupReorder(' + m.id + ')" class="px-2 py-1 rounded text-xs" style="background-color:#e6e6e6;">Cancel</button>'
+        + '</div>'
+        + '</div>'
         + '<div id="slotExpandPanel-popup" class="hidden mt-3 border-t" style="border-color:#e6e6e6; background-color:#f6f5f4;">'
         + '<div class="p-3">'
         + '<div class="flex items-center justify-between mb-2">'
@@ -1553,7 +1562,7 @@ function renderCageInfoPopupContent(m) {
 
     var frontFooter = '<div class="flex items-center gap-3 px-4 py-2 border-t text-[10px] leading-none shrink-0" style="border-color:#e6e6e6;color:#a39e98;">'
         + '<span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded" style="background-color:#d6f0e3;border:1px solid #2a9d6a;"></span> Sensor</span>'
-        + '<span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded" style="background-color:#f6f5f4;border:1px solid #e6e6e6;"></span> Occupied</span>'
+        + '<span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded" style="background-color:rgb(228,228,228);border:1px solid #d1d5db;"></span> Occupied</span>'
         + '<span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded" style="background-color:#ffffff;border:1px solid #e6e6e6;"></span> Empty</span>'
         + '</div>';
 
@@ -1582,7 +1591,7 @@ function renderCageInfoPopupContent(m) {
     var backFooter = '<div class="flex items-center justify-around px-4 py-2 border-t shrink-0" style="border-color:#e6e6e6;">';
     if (IS_ADMIN) {
         backFooter += '<button onclick="closeCageInfoPopup(); openEditModal(' + m.id + ', \'' + m.code + '\', ' + (m.location_row !== null ? m.location_row : 'null') + ', ' + (m.location_col !== null ? m.location_col : 'null') + ', ' + m.rows + ', ' + m.slots_per_row + ', ' + m.max_chickens_per_slot + ', ' + (m.is_active ? 1 : 0) + ')" class="icon-btn" style="color:#615d59;" aria-label="Edit cage" title="Edit cage"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>';
-        backFooter += '<button onclick="closeCageInfoPopup(); toggleReorderMode(' + m.id + ')" class="icon-btn" style="color:#615d59;" aria-label="Renumber slots" title="Renumber slots"><i data-lucide="list-ordered" class="w-3.5 h-3.5"></i></button>';
+        backFooter += '<button onclick="togglePopupReorderMode(' + m.id + ')" class="icon-btn" style="color:#615d59;" aria-label="Renumber slots" title="Renumber slots"><i data-lucide="list-ordered" class="w-3.5 h-3.5"></i></button>';
     }
     backFooter += '<button onclick="closeCageInfoPopup(); window.open(\'' + m.print_label_url + '\', \'print-' + m.id + '\', \'width=900,height=700\')" class="icon-btn" style="color:#615d59;" aria-label="Print cage label" title="Print label"><i data-lucide="printer" class="w-3.5 h-3.5"></i></button>';
     if (IS_ADMIN) {
@@ -1602,6 +1611,9 @@ function closeCageInfoPopup() {
         popup.style.transform = '';
         popup.style.zIndex = '';
     }
+    popupReorderCageId = null;
+    popupReorderState = {};
+    window.__popupReorderBound = false;
 }
 
 function flipCageInfoPopup() {
@@ -1674,6 +1686,7 @@ function openCageInfoPopup(cageId, btnEl) {
     popup._cageInfoBtnEl = btnEl;
     popup._cageInfoCageId = cageId;
     popup.style.width = '16rem';
+    window.__popupReorderBound = false;
 
     positionCageInfoPopup(popup, btnEl.getBoundingClientRect());
 
@@ -2749,6 +2762,181 @@ function cancelReorder(cageId) {
 
     delete reorderState[cageId];
     lucide.createIcons();
+}
+
+// ── Slot Reorder inside the Cage Info Popup ───────────────
+var popupReorderCageId = null;
+var popupReorderState = {};   // { slotId: { current, original } }
+window.__popupReorderBound = false;
+
+function togglePopupReorderMode(cageId) {
+    if (popupReorderCageId === cageId && popupReorderState.active) {
+        cancelPopupReorder(cageId);
+        return;
+    }
+    // Reorder operates on the front-face slot grid, so come back to the front.
+    var flipper = document.getElementById('cageInfoFlipper');
+    if (flipper && flipper.classList.contains('flipped')) {
+        flipper.classList.remove('flipped');
+        repositionCageInfoPopup();
+    }
+    var slots = document.querySelectorAll('#cageInfoPopup .slot-grid-' + cageId + ' .slot-mini');
+    if (!slots.length) return;
+    var bar = document.getElementById('popupReorderBar-' + cageId);
+
+    popupReorderCageId = cageId;
+    popupReorderState = { active: true };
+    slots.forEach(function(btn) {
+        var id = parseInt(btn.dataset.slotId);
+        var orig = parseInt(btn.dataset.originalNumber);
+        if (isNaN(orig)) orig = id;
+        popupReorderState[id] = { current: orig, original: orig };
+    });
+
+    if (bar) bar.classList.remove('hidden');
+
+    slots.forEach(function(btn) {
+        var id = parseInt(btn.dataset.slotId);
+        var numSpan = btn.querySelector('.slot-reorder-number');
+        var occSpan = btn.querySelector('.text-xs.font-semibold');
+        var dashSpan = btn.querySelector('.text-xs');
+        if (numSpan) {
+            numSpan.textContent = popupReorderState[id].current;
+            numSpan.classList.remove('hidden');
+        }
+        if (occSpan && !occSpan.classList.contains('slot-reorder-number')) occSpan.style.display = 'none';
+        if (dashSpan && !dashSpan.classList.contains('slot-reorder-number') && !dashSpan.classList.contains('absolute')) dashSpan.style.display = 'none';
+        btn.draggable = true;
+        btn.classList.add('cursor-grab', 'active\\:cursor-grabbing');
+    });
+
+    setupPopupReorderDrag(cageId);
+    repositionCageInfoPopup();
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        try { window.lucide.createIcons({ root: document.getElementById('cageInfoPopup') }); } catch (e) {}
+    }
+}
+
+function setupPopupReorderDrag(cageId) {
+    if (window.__popupReorderBound) return;
+    window.__popupReorderBound = true;
+    var slots = document.querySelectorAll('#cageInfoPopup .slot-grid-' + cageId + ' .slot-mini');
+    var draggedId = null;
+
+    slots.forEach(function(btn) {
+        btn.addEventListener('dragstart', function(e) {
+            if (!popupReorderState.active) return;
+            draggedId = parseInt(this.dataset.slotId);
+            this.classList.add('opacity-50');
+            e.dataTransfer.effectAllowed = 'move';
+        });
+        btn.addEventListener('dragend', function(e) {
+            this.classList.remove('opacity-50');
+        });
+        btn.addEventListener('dragover', function(e) {
+            if (!popupReorderState.active) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+        btn.addEventListener('drop', function(e) {
+            if (!popupReorderState.active) return;
+            e.preventDefault();
+            var targetId = parseInt(this.dataset.slotId);
+            if (!draggedId || draggedId === targetId) return;
+            swapPopupSlotNumbers(draggedId, targetId);
+            draggedId = null;
+        });
+    });
+}
+
+function swapPopupSlotNumbers(idA, idB) {
+    var state = popupReorderState;
+    if (!state.active || !state[idA] || !state[idB]) return;
+
+    var temp = state[idA].current;
+    state[idA].current = state[idB].current;
+    state[idB].current = temp;
+
+    document.querySelectorAll('#cageInfoPopup .slot-mini').forEach(function(btn) {
+        var id = parseInt(btn.dataset.slotId);
+        var numSpan = btn.querySelector('.slot-reorder-number');
+        if (numSpan && state[id]) {
+            numSpan.textContent = state[id].current;
+        }
+    });
+}
+
+function savePopupReorder(cageId) {
+    var state = popupReorderState;
+    if (!state.active || popupReorderCageId !== cageId) return;
+
+    var slots = [];
+    var changed = false;
+    Object.keys(state).forEach(function(key) {
+        if (key === 'active') return;
+        var id = parseInt(key);
+        if (state[id].current !== state[id].original) changed = true;
+        slots.push({ id: id, slot_number: state[id].current });
+    });
+
+    if (!changed) {
+        cancelPopupReorder(cageId);
+        return;
+    }
+
+    var bar = document.getElementById('popupReorderBar-' + cageId);
+    var saveBtn = bar ? bar.querySelector('button') : null;
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving\u2026'; }
+
+    fetch(cagesBase + '/' + cageId + '/slots/reorder', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        },
+        body: JSON.stringify({ slots: slots }),
+    })
+    .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
+    .then(function(res) {
+        if (res.ok && res.data.success) {
+            showToast('Slot numbers updated', true);
+            closeCageInfoPopup();
+            Turbo.visit(window.location.href, { action: 'replace' });
+        } else {
+            showDragError(res.data.message || 'Failed to reorder slots');
+            if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
+        }
+    })
+    .catch(function() {
+        showDragError('Failed to reorder slots');
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
+    });
+}
+
+function cancelPopupReorder(cageId) {
+    if (popupReorderCageId !== cageId) return;
+
+    var bar = document.getElementById('popupReorderBar-' + cageId);
+    if (bar) bar.classList.add('hidden');
+
+    document.querySelectorAll('#cageInfoPopup .slot-mini').forEach(function(btn) {
+        var numSpan = btn.querySelector('.slot-reorder-number');
+        var occSpan = btn.querySelector('.text-xs.font-semibold');
+        var dashSpan = btn.querySelector('.text-xs');
+        if (numSpan) numSpan.classList.add('hidden');
+        if (occSpan && !occSpan.classList.contains('slot-reorder-number')) occSpan.style.display = '';
+        if (dashSpan && !dashSpan.classList.contains('slot-reorder-number') && !dashSpan.classList.contains('absolute')) dashSpan.style.display = '';
+        btn.draggable = false;
+        btn.classList.remove('cursor-grab', 'active\\:cursor-grabbing');
+    });
+
+    popupReorderCageId = null;
+    popupReorderState = {};
+    window.__popupReorderBound = false;
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        try { window.lucide.createIcons({ root: document.getElementById('cageInfoPopup') }); } catch (e) {}
+    }
 }
 
 // ── Auto-open edit modal on resize error ─────────────────
