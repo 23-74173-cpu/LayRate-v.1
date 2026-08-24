@@ -17,6 +17,15 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        // Mandatory first-run setup (admin only): send to the wizard until it
+        // has run once. Guarded by the zero-cage check so once setup is done
+        // (or cages already exist) users are never blocked.
+        if (auth()->user()?->isAdmin()
+            && Setting::get('setup_completed') != '1'
+            && Cage::count() === 0) {
+            return redirect()->route('setup');
+        }
+
         $data = $this->buildDashboardData();
 
         return view('dashboard', $data);

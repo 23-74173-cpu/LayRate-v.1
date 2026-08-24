@@ -23,6 +23,7 @@ use App\Http\Controllers\NoteController;
 use App\Http\Controllers\PreOrderController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\SetupController;
 use App\Http\Controllers\SystemTimeController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -56,6 +57,12 @@ Route::middleware(['auth', 'system-time-set'])->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/stats', [DashboardController::class, 'stats'])->name('dashboard.stats');
+
+    // Initial setup wizard — admin only, mandatory first run
+    Route::middleware('admin')->group(function () {
+        Route::get('/setup',       [SetupController::class, 'show'])->name('setup');
+        Route::post('/setup',      [SetupController::class, 'store'])->name('setup.store');
+    });
     Route::get('/dashboard/feed-mortality', [DashboardController::class, 'feedMortality'])->name('dashboard.feed-mortality');
     Route::get('/dashboard/calendar', [DashboardController::class, 'calendar'])->name('dashboard.calendar');
     Route::get('/dashboard/cage-performance', [DashboardController::class, 'cagePerformance'])->name('dashboard.cage-performance');
