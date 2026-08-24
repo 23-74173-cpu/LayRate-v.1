@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Setting;
+use App\Services\ReportingDateService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -10,9 +12,15 @@ Artisan::command('inspire', function () {
 
 // Sync daily farm records into forecast_input_records so the forecasting
 // module always has a continuously growing historical dataset.
+//
+// Runs at the farm's day-reset time so the just-closed reporting day is fully
+// captured the moment it closes. The reset time is admin-editable (Asia/Manila);
+// fall back to 06:00 if unset/invalid, and schedule in the farm timezone so a
+// Manila reset time maps correctly onto the server clock.
 Schedule::command('forecast:sync-input-records')
     ->daily()
-    ->at('02:00')
+    ->at(ReportingDateService::resetTime())
+    ->timezone(ReportingDateService::timezone())
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/forecast-sync.log'));
 

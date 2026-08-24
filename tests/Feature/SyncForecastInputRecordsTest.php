@@ -85,7 +85,10 @@ class SyncForecastInputRecordsTest extends TestCase
     {
         $this->artisan('forecast:sync-input-records')->assertExitCode(0);
 
-        $this->assertDatabaseCount('forecast_input_records', 3);
+        // Only cage A on day1 has environmental logs. Rows without env data
+        // (cage A day2, cage B day1) must be skipped — a forecast input row
+        // must contain temperature and humidity.
+        $this->assertDatabaseCount('forecast_input_records', 1);
 
         $day1 = now()->subDays(2)->toDateString();
         $day2 = now()->subDay()->toDateString();
@@ -95,22 +98,15 @@ class SyncForecastInputRecordsTest extends TestCase
         $this->assertEquals(10, $rowA1->egg_count);
         $this->assertEquals('ISA Brown', $rowA1->breed, 'Must pick the lower-id hen (h1) deterministically.');
         $this->assertEquals(25.0, (float) $rowA1->temperature_c, '', 0.01); // AVG(30, 20)
+        $this->assertEquals(55.0, (float) $rowA1->humidity_percent, '', 0.01); // AVG(60, 50)
         $this->assertContains((float) $rowA1->feed_consumed_kg, [10.0, 3.0], 'Must be ONE of the two feed rows, not their sum (13.0).');
         $this->assertNotEquals(13.0, (float) $rowA1->feed_consumed_kg, 'Feed value must not silently become a SUM.');
         $this->assertEquals(3, $rowA1->mortality_count, 'Mortality genuinely sums: 2 + 1 = 3.');
 
-        $rowA2 = DB::table('forecast_input_records')->where('cage_code', 'CAGE-SYNC-A')->where('date', $day2)->first();
-        $this->assertNotNull($rowA2);
-        $this->assertEquals(8, $rowA2->egg_count);
-        $this->assertNull($rowA2->temperature_c, 'No environmental log exists for day2 — must be null, not 0 or leaked from day1.');
-        $this->assertEquals(0, $rowA2->mortality_count);
-
-        $rowB1 = DB::table('forecast_input_records')->where('cage_code', 'CAGE-SYNC-B')->where('date', $day1)->first();
-        $this->assertNotNull($rowB1);
-        $this->assertEquals(6, $rowB1->egg_count);
-        $this->assertEquals('Dekalb White', $rowB1->breed);
-        $this->assertNull($rowB1->temperature_c, 'Cage B has no environmental logs — must not pick up cage A\'s readings.');
-        $this->assertEquals(0, $rowB1->mortality_count, 'Cage B mortality must not be conflated with cage A\'s.');
+        // Rows whose (cage, date) has no environmental logs are omitted.
+        $this->assertDatabaseMissing('forecast_input_records', ['cage_code' => 'CAGE-SYNC-A', 'date' => $day2]);
+        $this->assertDatabaseMissing('forecast_input_records', ['cage_code' => 'CAGE-SYNC-B', 'date' => $day1]);
+        $this->assertDatabaseMissing('forecast_input_records', ['cage_code' => 'CAGE-SYNC-B', 'date' => $day2]);
     }
 
     public function test_dry_run_makes_no_database_changes(): void
@@ -121,10 +117,17 @@ class SyncForecastInputRecordsTest extends TestCase
 
     public function test_cage_filter_option_scopes_to_one_cage(): void
     {
-        $this->artisan('forecast:sync-input-records', ['--cage' => 'CAGE-SYNC-B'])->assertExitCode(0);
+        $this->artisan('forecast:sync-input-records', ['--cage' => 'CAGE-SYNC-A'])->assertExitCode(0);
 
         $this->assertDatabaseCount('forecast_input_records', 1);
-        $this->assertDatabaseHas('forecast_input_records', ['cage_code' => 'CAGE-SYNC-B']);
-        $this->assertDatabaseMissing('forecast_input_records', ['cage_code' => 'CAGE-SYNC-A']);
+        $this->assertDatabaseHas('forecast_input_records', ['cage_code' => 'CAGE-SYNC-A']);
+        $this->assertNotEquals(0, DB::table('forecast_input_records')->count());
+    }
+
+    public function test_cage_without_environmental_data_skips_all_rows(): void
+    {
+        // Cage B has no environmental logs, so filtering to it must insert nothing.
+        $this->artisan('forecast:sync-input-records', ['--cage' => 'CAGE-SYNC-B'])->assertExitCode(0);
+        $this->assertDatabaseCount('forecast_input_records', 0);
     }
 }

@@ -140,15 +140,19 @@ class SyncForecastInputRecords extends Command
             $feedInfo = $feedByCageDate->get($key);
             $mortalityInfo = $mortalityByCageDate->get($key);
 
-            // Nullsafe (?->) throughout: unlike the per-record queries this
-            // replaced, a GROUP BY batch simply omits a (cage, date) key
-            // entirely when zero underlying rows exist for it — there is no
-            // row-with-null-columns the way a single ungrouped aggregate
-            // query would return for that same empty case. Every one of
-            // these four lookups can legitimately be null (a cage with no
-            // active hens, a date with no environmental/feed/mortality
-            // logs), which is an entirely normal, expected gap, not an
-            // error condition.
+            // Only sync a (cage, date) that has environmental data. A forecast
+            // input row must contain temperature and humidity, so an env gap
+            // skips the row entirely rather than inserting NULLs.
+            $temperature = $envInfo?->temperature_c;
+            $humidity = $envInfo?->humidity_percent;
+            if ($temperature === null || $humidity === null) {
+                continue;
+            }
+
+            // Nullsafe (?->) elsewhere: breed/feed/mortality can legitimately
+            // be missing for a (cage, date) — a cage with no active hens, or a
+            // date with no feed/mortality logs. Those are normal gaps, not
+            // errors, and are stored as NULL.
             $upsertData[] = [
                 'date' => $date,
                 'cage_code' => $cageCode,
@@ -156,8 +160,8 @@ class SyncForecastInputRecords extends Command
                 'flock_age_weeks' => $henInfo?->flock_age_weeks,
                 'hen_count' => (int) $record->hen_count,
                 'egg_count' => (int) $record->egg_count,
-                'temperature_c' => $envInfo?->temperature_c !== null ? round($envInfo->temperature_c, 2) : null,
-                'humidity_percent' => $envInfo?->humidity_percent !== null ? round($envInfo->humidity_percent, 2) : null,
+                'temperature_c' => round($temperature, 2),
+                'humidity_percent' => round($humidity, 2),
                 'crude_protein_percent' => $feedInfo?->crude_protein_percent !== null ? round($feedInfo->crude_protein_percent, 2) : null,
                 'feed_consumed_kg' => $feedInfo?->feed_consumed_kg !== null ? round($feedInfo->feed_consumed_kg, 2) : null,
                 'mortality_count' => (int) ($mortalityInfo?->mortality_count ?? 0),
