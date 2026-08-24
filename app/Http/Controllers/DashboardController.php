@@ -282,9 +282,10 @@ class DashboardController extends Controller
                 ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
                 ->whereIn('cage_slots.cage_id', $cageIds)
                 ->whereDate('production_logs.log_date', $yesterday)
-                ->selectRaw('COUNT(*) as log_count, AVG(production_logs.hdep) as avg_hdep')
+                ->selectRaw('COUNT(*) as log_count, AVG(production_logs.hdep) as avg_hdep, SUM(production_logs.egg_count) as total_eggs')
                 ->first();
             $yesterdayHdep = $yesterdayStats->log_count ? round((float) $yesterdayStats->avg_hdep, 1) : 0;
+            $eggsYesterday = (int) ($yesterdayStats->total_eggs ?? 0);
 
             $hdepDelta = round($todayHdep - $yesterdayHdep, 1);
             // Same source as today_eggs above (today's per-cage sum) — no
@@ -306,8 +307,11 @@ class DashboardController extends Controller
             $hdepDelta = round($todayHdep - $yesterdayHdep, 1);
             $eggsToday = $todayLogs->sum('egg_count')
                 ?: $cages->sum(fn ($c) => $c->today_eggs);
+            $eggsYesterday = $yesterdayLogs->sum('egg_count');
             $lifetimeEggs = ProductionLog::sum('egg_count');
         }
+
+        $eggsDelta = round($eggsToday - $eggsYesterday);
 
         // Coop environment averages
         $latestEnv = EnvironmentalLog::whereIn('cage_id', $cages->pluck('id'))
@@ -367,7 +371,7 @@ class DashboardController extends Controller
 
         return compact(
             'cages', 'totalHens', 'todayHdep', 'hdepDelta',
-            'eggsToday', 'lifetimeEggs', 'avgTemp', 'avgHum', 'feedToday',
+            'eggsToday', 'eggsDelta', 'lifetimeEggs', 'avgTemp', 'avgHum', 'feedToday',
             'mortalityToday', 'mortalityTodayTotal',
             'liveReadings', 'today',
             'needsOnboarding'
