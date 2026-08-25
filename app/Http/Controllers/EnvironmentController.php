@@ -176,6 +176,47 @@ class EnvironmentController extends Controller
             ->with('success', "Environment log for Cage #{$cageId} on {$date} overridden.");
     }
 
+    /**
+     * Manual live reading entry from the Environment page. Stores an override
+     * reading for the selected cage at the current reporting day's noon, so it
+     * takes precedence over sensor readings in live data.
+     */
+    public function storeManual(Request $request)
+    {
+        $validated = $request->validate([
+            'cage_id'        => 'required|integer|exists:cages,id',
+            'temperature_c'  => 'required|numeric|min:-10|max:60',
+            'humidity_pct'   => 'required|numeric|min:0|max:100',
+        ]);
+
+        $cageId = $validated['cage_id'];
+        $noon = ReportingDateService::reportingDayStart()->copy()->addHours(12);
+        [$repStart, $repEnd] = ReportingDateService::reportingDayWindow(
+            ReportingDateService::reportingDateString()
+        );
+
+        // Replace any existing override for this cage on the current reporting
+        // day so the manual entry is the authoritative reading.
+        EnvironmentalLog::where('cage_id', $cageId)
+            ->where('is_override', 1)
+            ->whereBetween('recorded_at', [$repStart, $repEnd])
+            ->delete();
+
+        EnvironmentalLog::create([
+            'cage_id'        => $cageId,
+            'recorded_at'    => $noon,
+            'temperature_c'  => $validated['temperature_c'],
+            'humidity_pct'   => $validated['humidity_pct'],
+            'is_override'    => true,
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->route('environment')->with('success', 'Manual reading saved.');
+    }
+
     public function saveThresholds(Request $request)
     {
         $data = $request->validate([

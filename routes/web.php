@@ -144,6 +144,7 @@ Route::middleware(['auth', 'system-time-set'])->group(function () {
     Route::get('/environment/live-data', [EnvironmentController::class, 'liveData'])->name('environment.live-data');
     Route::get('/environment/logs',      [EnvironmentController::class, 'logs'])->name('environment.logs');
     Route::put('/environment/logs/{cageId}/{date}', [EnvironmentController::class, 'updateLog'])->name('environment.logs.update');
+    Route::post('/environment/manual',   [EnvironmentController::class, 'storeManual'])->name('environment.manual');
     Route::post('/environment/thresholds', [EnvironmentController::class, 'saveThresholds'])->name('environment.thresholds');
     Route::post('/environment/relay', [EnvironmentController::class, 'controlRelay'])->name('environment.relay.control');
     Route::get('/environment/relay-stream', [EnvironmentRelaySseController::class, 'stream'])->name('environment.relay-stream');

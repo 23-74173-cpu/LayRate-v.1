@@ -61,6 +61,48 @@
             </div>
         </div>
 
+        {{-- ── Manual Reading Entry ── --}}
+        <div class="bg-white rounded-xl border border-[#D9D9D9] p-5 mb-6">
+            <div class="flex items-center gap-2 mb-1">
+                <i data-lucide="pen-line" class="w-4 h-4" style="color:#002D5E;"></i>
+                <h3 class="text-sm font-semibold text-[#1f1f1f]">Manual Reading Entry</h3>
+            </div>
+            <p class="text-xs text-[#6B7280] mb-3">Enter a reading by hand when a sensor is unavailable. This overrides the sensor reading for the selected cage for today.</p>
+            <form id="envManualForm" method="POST" action="{{ route('environment.manual') }}" data-turbo="false" class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                @csrf
+                <div>
+                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color:#615d59;">Cage</label>
+                    <select name="cage_id" id="envManualCage" required
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            style="border-color:#e6e6e6;color:#1f1f1f;">
+                        <option value="">Select cage…</option>
+                        @foreach($cages as $id => $code)
+                        <option value="{{ $id }}">{{ $code }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color:#615d59;">Temperature (°C)</label>
+                    <input type="number" name="temperature_c" id="envManualTemp" step="0.1" min="-10" max="60" required
+                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                           style="border-color:#e6e6e6;color:#1f1f1f;">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color:#615d59;">Humidity (%)</label>
+                    <input type="number" name="humidity_pct" id="envManualHum" step="1" min="0" max="100" required
+                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                           style="border-color:#e6e6e6;color:#1f1f1f;">
+                </div>
+                <div class="sm:col-span-3">
+                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white hover:brightness-95 transition-colors"
+                            style="background-color:#002D5E;">
+                        <i data-lucide="save" class="w-4 h-4"></i> Save Reading
+                    </button>
+                </div>
+            </form>
+            <div id="envManualMsg" class="hidden mt-3 text-sm"></div>
+        </div>
+
         {{-- Live Data (lazy): metrics, thresholds, sensor cards, trends --}}
         <turbo-frame id="environment-live-data" src="{{ route('environment.live-data') }}" loading="lazy">
             @include('environment._live-data-skeleton')
@@ -244,6 +286,67 @@ function envRefreshNow() {
         })
         .catch(function() { /* silent — polling will retry */ });
 }
+
+// Manual reading entry — POST then refresh the live-data frame.
+(function() {
+    var form = document.getElementById('envManualForm');
+    if (!form || form.__envManualBound) return;
+    form.__envManualBound = true;
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var msg = document.getElementById('envManualMsg');
+        var btn = form.querySelector('button[type="submit"]');
+
+        if (btn) { btn.disabled = true; btn.textContent = 'Saving\u2026'; }
+        if (msg) { msg.classList.add('hidden'); }
+
+        fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            },
+            body: new FormData(form),
+        })
+        .then(function(r) {
+            return r.json().then(function(data) { return { ok: r.ok, data: data }; });
+        })
+        .then(function(res) {
+            if (res.ok && res.data.success) {
+                if (msg) {
+                    msg.textContent = 'Manual reading saved for the selected cage.';
+                    msg.className = 'mt-3 text-sm';
+                    msg.style.color = '#1f6b3a';
+                    msg.classList.remove('hidden');
+                }
+                form.reset();
+                form.querySelector('select[name="cage_id"]').value = '';
+                envRefreshNow();
+            } else {
+                var first = (res.data.errors ? Object.values(res.data.errors)[0]?.[0] : null) || 'Failed to save.';
+                if (msg) {
+                    msg.textContent = first;
+                    msg.className = 'mt-3 text-sm';
+                    msg.style.color = '#9b1c24';
+                    msg.classList.remove('hidden');
+                }
+            }
+        })
+        .catch(function(err) {
+            if (msg) {
+                msg.textContent = 'Network error — please try again.';
+                msg.className = 'mt-3 text-sm';
+                msg.style.color = '#9b1c24';
+                msg.classList.remove('hidden');
+            }
+        })
+        .finally(function() {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i> Save Reading'; }
+            if (window.lucide) try { lucide.createIcons(); } catch (e) {}
+        });
+    });
+})();
 
 var _livePollTimer = null;
 
