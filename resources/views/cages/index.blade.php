@@ -70,7 +70,7 @@
                     Clear All Cages
                 </button>
                 <div class="relative inline-flex items-center">
-                    <x-button id="saveLayoutBtn" onclick="saveLayout()" disabled class="text-xs px-4 py-1.5" style="background-color:#002D5E;color:#fff;">
+                    <x-button id="saveLayoutBtn" onclick="saveLayout()" disabled class="text-xs px-4 py-1.5">
                         Save Layout
                     </x-button>
                     <span id="unsavedDot" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full" style="background-color: #f59e0b; border: 2px solid #ffffff;"></span>
@@ -531,7 +531,7 @@
                             onmouseout="this.style.backgroundColor='transparent'">
                         Cancel
                     </button>
-                    <x-button type="submit" class="flex-1 py-2.5" style="background-color:#002D5E;color:#fff;">
+                    <x-button type="submit" class="flex-1 py-2.5">
                         Add Cage
                     </x-button>
                 </div>
@@ -717,7 +717,7 @@
                             onmouseout="this.style.backgroundColor='transparent'">
                         Cancel
                     </button>
-                    <x-button type="submit" class="flex-1 py-2.5" style="background-color:#002D5E;color:#fff;">
+                    <x-button type="submit" class="flex-1 py-2.5">
                         Save Changes
                     </x-button>
                 </div>

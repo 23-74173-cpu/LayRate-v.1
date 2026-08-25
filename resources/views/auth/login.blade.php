@@ -96,7 +96,7 @@
                     <label for="remember" class="text-xs text-[#6B7280]">Remember me</label>
                 </div>
 
-                <x-button type="submit" class="w-full py-2.5 mt-2" style="background-color:#213183;color:#fff;">
+                <x-button type="submit" class="w-full py-2.5 mt-2">
                     Sign In
                 </x-button>
 

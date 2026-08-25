@@ -74,7 +74,7 @@
             <div class="flex gap-3 mt-5">
                 <button type="button" onclick="closeRemovalModal()"
                         class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">Cancel</button>
-                <x-button type="button" onclick="submitRemoval(this.form)" class="flex-1 py-2.5" style="background-color:#002D5E;color:#fff;">
+                <x-button type="button" onclick="submitRemoval(this.form)" class="flex-1 py-2.5">
                     Confirm Removal
                 </x-button>
             </div>
