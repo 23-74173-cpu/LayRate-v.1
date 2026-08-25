@@ -30,7 +30,7 @@
             <span class="w-28 shrink-0 whitespace-nowrap">Chicken ID</span>
             <span class="w-32 shrink-0 whitespace-nowrap hidden sm:inline">Breed</span>
             <span class="w-12 shrink-0 whitespace-nowrap hidden sm:inline">Age</span>
-            <span class="flex-1">Status</span>
+            <span class="flex-1"></span>
             <span class="shrink-0 w-full sm:w-auto">Actions</span>
         </div>
         @foreach($unplacedHens as $hen)
@@ -42,20 +42,16 @@
             <span class="w-28 shrink-0 whitespace-nowrap font-mono text-[#6B7280]">{{ $hen->chicken_id ?? '—' }}</span>
             <span class="w-32 shrink-0 whitespace-nowrap text-[#333] hidden sm:inline">{{ $hen->breed }}</span>
             <span class="w-12 shrink-0 whitespace-nowrap text-[#6B7280] hidden sm:inline">{{ $hen->current_age_weeks }}w</span>
-            <span class="flex-1">
-                <x-status-badge :status="$hen->is_active ? 'Active' : 'Inactive'" type="general" />
-            </span>
+            <span class="flex-1"></span>
             <div class="flex items-center gap-1 shrink-0 w-full sm:w-auto justify-end sm:justify-start pt-1 sm:pt-0 border-t border-[#F5F5F5] sm:border-t-0">
                 <a href="{{ route('cages.bulk-add', ['hen_ids' => $hen->id]) }}"
                    class="p-1.5 rounded-full hover:bg-blue-50 transition-colors" style="color: #a39e98;" aria-label="Place into cage">
                     <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
                 </a>
-                @if($hen->is_active)
                 <x-icon-button icon="crosshair" label="Cull hen" color="orange"
                     onclick="openCullModal('{{ $hen->id }}', '{{ $hen->chicken_id }} (unplaced)')" />
                 <x-icon-button icon="log-out" label="Remove hen" color="purple"
                     onclick="openRemovalModal('{{ $hen->id }}', '{{ $hen->chicken_id }} (unplaced)')" />
-                @endif
             </div>
         </div>
         @endforeach

@@ -93,10 +93,12 @@ class ChickensController extends Controller
         // Separate unplaced hens (cage_slot_id = null) — only when not filtering by cage
         $unplacedHens = collect();
         if (! $cageId) {
+            // Only active (avail/placed-eligible) hens appear in the unplaced
+            // bucket; inactive (culled/removed/mortality) hens are excluded.
             $unplacedHens = Hen::with(['cageSlot.cage'])
                 ->whereNull('cage_slot_id')
+                ->where('is_active', 1)
             ->when($breed, fn($q) => $q->where('breed', $breed))
-            ->when($isActive !== 'all', fn($q) => $q->where('is_active', $isActive === 'active'))
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($q) use ($search) {
                     $q->where('tag_code', 'like', "%{$search}%")
