@@ -190,7 +190,8 @@
                         <input type="hidden" name="cage_slot_ids" id="cageSlotIdsInput" value="">
                         <input type="hidden" name="cage_slot_id" id="cageSlotId" value="">
 
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div id="logEntryFields">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {{-- Date --}}
                             <div>
                                 <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Date</label>
@@ -280,6 +281,7 @@
                                 </div>
                             </div>
                             <div id="sizeSumMsg" class="mt-2 text-xs" style="color: #a39e98;">Sum: 0 <span id="sizeSumStatus" style="color: #a39e98;">—</span></div>
+                        </div>
                         </div>
 
                         <div class="flex items-center gap-3 mt-4">
@@ -1265,3 +1267,312 @@
 </turbo-frame>
 </div>
 @endsection
+
+@push('scripts')
+{{-- Guided Walkthrough #3 — Log daily egg production (User Manual Step 3) --}}
+<script>
+(function() {
+    var STARTED = (new URLSearchParams(window.location.search)).get('walkthrough3') === '1';
+    var inProgress = sessionStorage.getItem('wt3_active') === '1';
+    if (!STARTED && !inProgress) return;
+
+    var startAt = (inProgress && sessionStorage.getItem('wt3_step'))
+        ? parseInt(sessionStorage.getItem('wt3_step'), 10) : 0;
+    sessionStorage.setItem('wt3_active', '1');
+    sessionStorage.setItem('wt3_step', String(startAt));
+
+    // ── Overlay DOM ──
+    if (!document.getElementById('wt3Overlay')) {
+        var ov = document.createElement('div');
+        ov.id = 'wt3Overlay';
+        ov.style.cssText = 'position:fixed;inset:0;z-index:90;display:none;pointer-events:none;';
+        ov.innerHTML =
+            '<div id="wt3Spotlight" style="position:fixed;border-radius:12px;border:3px solid #0075de;background:transparent;transition:all .2s ease;pointer-events:none;z-index:91;"></div>'
+            + '<div id="wt3DimT" style="position:fixed;left:0;top:0;right:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
+            + '<div id="wt3DimB" style="position:fixed;left:0;bottom:0;right:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
+            + '<div id="wt3DimL" style="position:fixed;left:0;top:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
+            + '<div id="wt3DimR" style="position:fixed;right:0;top:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
+            + '<div id="wt3Tooltip" style="position:fixed;max-width:340px;background:#fff;border:1px solid #e6e6e6;border-radius:14px;padding:16px 18px;box-shadow:0 20px 50px rgba(0,0,0,0.3);z-index:92;pointer-events:none;">'
+            + '<div id="wt3StepLabel" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#0075de;margin-bottom:6px;"></div>'
+            + '<div id="wt3StepText" style="font-size:14px;line-height:1.5;color:#1f1f1f;"></div>'
+            + '<button id="wt3Next" style="display:none;margin-top:12px;padding:8px 16px;font-size:12px;font-weight:600;color:#fff;background:#002D5E;border:0;border-radius:8px;cursor:pointer;pointer-events:auto;">Next</button>'
+            + '</div>'
+            + '<div id="wt3Done" style="display:none;position:fixed;inset:0;z-index:95;background:rgba(15,20,35,0.72);align-items:center;justify-content:center;pointer-events:auto;">'
+            + '<div style="max-width:380px;width:calc(100% - 2rem);background:#fff;border-radius:20px;padding:32px 28px;text-align:center;box-shadow:0 30px 70px rgba(0,0,0,0.45);">'
+            + '<div style="width:64px;height:64px;margin:0 auto 18px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#e8f5ec;color:#1f6b3a;"><i data-lucide="check" style="width:34px;height:34px;"></i></div>'
+            + '<div style="font-size:20px;font-weight:700;color:#1f1f1f;">Egg record saved!</div>'
+            + '<div style="font-size:14px;color:#6B7280;margin-top:8px;">Your daily egg production for this cage slot is logged.</div>'
+            + '<button id="wt3DoneBtn" style="margin-top:24px;padding:11px 28px;font-size:14px;font-weight:600;color:#fff;background:#002D5E;border:0;border-radius:10px;cursor:pointer;">Done</button>'
+            + '</div>'
+            + '</div>'
+            + '<div id="wt3Skip" style="position:fixed;top:16px;right:16px;z-index:93;background:#fff;border:1px solid #e6e6e6;color:#615d59;font-size:13px;padding:8px 14px;border-radius:999px;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,0.15);pointer-events:auto;">End tutorial</div>';
+        document.body.appendChild(ov);
+    }
+
+    var spotlight = document.getElementById('wt3Spotlight');
+    var tooltip = document.getElementById('wt3Tooltip');
+    var skipBtn = document.getElementById('wt3Skip');
+    var overlay = document.getElementById('wt3Overlay');
+    var stepLabel = document.getElementById('wt3StepLabel');
+    var stepText = document.getElementById('wt3StepText');
+    var nextBtn = document.getElementById('wt3Next');
+    var doneOverlay = document.getElementById('wt3Done');
+    var doneBtn = document.getElementById('wt3DoneBtn');
+    var dimT = document.getElementById('wt3DimT');
+    var dimB = document.getElementById('wt3DimB');
+    var dimL = document.getElementById('wt3DimL');
+    var dimR = document.getElementById('wt3DimR');
+    var dims = [dimT, dimB, dimL, dimR];
+
+    // ── Steps ── manual:true = informational (Next button); else auto-advance.
+    // interactive:true keeps the target clickable (4-bar dim with a hole).
+    var steps = [
+        {
+            text: '<strong>Choose a cage.</strong><br>Click a <em>cage card</em> above (e.g. a cage with hens) to open its slot grid.',
+            target: function() { return document.querySelector('.cage-overview-card'); },
+            done: function() {
+                return document.querySelector('.cage-grid:not(.hidden)') !== null;
+            },
+            interactive: true
+        },
+        {
+            text: '<strong>Select the slot(s) to log.</strong><br>Click any cage <em>slot</em> to select it, or <em>click-and-drag</em> across several slots to select multiple at once. The same egg count will apply to all selected slots.<br><br>When you are done selecting, tap <em>Next</em>.',
+            target: function() {
+                // Highlight the whole currently-open cage grid so every slot is
+                // visible and draggable for one-at-a-time or drag-multi select.
+                return document.querySelector('.cage-grid:not(.hidden)');
+            },
+            done: function() { return false; },
+            canProceed: function() {
+                // At least one slot selected (selected cards get .ring-2).
+                return document.querySelectorAll('.slot-card.ring-2').length > 0;
+            },
+            manual: true,
+            interactive: true
+        },
+        {
+            text: '<strong>Understand the form fields.</strong><br>'
+                + '<em>Date</em> — the day the eggs were recorded (defaults to today).<br>'
+                + '<em>Egg Count</em> — how many eggs were laid in the selected slot(s).<br>'
+                + '<em>Hen Count</em> — hens present in the slot (read from the slot).<br>'
+                + '<strong>HDEP</strong> — Hen-Day Egg Production = (eggs ÷ hens) × 100%, a measure of how many eggs each hen laid that day.<br>'
+                + '<em>Notes</em> — optional comments (e.g. broken eggs).<br>'
+                + '<em>Size Breakdown</em> (optional) — split the eggs by Small / Medium / Large / Jumbo; leave blank to skip.<br><br>Tap <em>Next</em> to continue.',
+            target: function() {
+                // Highlight only the field area (Date through Size Breakdown),
+                // excluding the Save Record / Cancel buttons below.
+                return document.getElementById('logEntryFields') || document.getElementById('eggCount');
+            },
+            done: function() { return false; },
+            manual: true,
+            interactive: true
+        },
+        {
+            text: '<strong>Enter the egg count.</strong><br>Type the number of eggs laid for today.',
+            target: function() { return document.getElementById('eggCount'); },
+            done: function() {
+                var e = document.getElementById('eggCount');
+                var v = e ? parseInt(e.value, 10) : 0;
+                return v > 0;
+            },
+            interactive: true
+        },
+        {
+            text: '<strong>Save the record.</strong><br>If you picked one slot, click <em>Save Record</em>. If you picked multiple, a confirm popup will appear.',
+            target: function() { return document.getElementById('saveBtn'); },
+            done: function() {
+                // Multi-slot: advances when the confirm modal opens.
+                var m = document.getElementById('confirmMultiModal');
+                if (m && m.style.display === 'flex') return true;
+                // Single-slot: advances when the record is saved.
+                return window.__wt3Saved === true;
+            }
+        },
+        {
+            text: '<strong>Confirm the save.</strong><br>Review the totals and click <em>Confirm Save</em> to record the eggs for the selected slot(s).',
+            target: function() {
+                var m = document.getElementById('confirmMultiModal');
+                if (!m || m.style.display !== 'flex') return null;
+                return m.querySelector('.relative') || m;
+            },
+            skipIf: function() {
+                // Only relevant when a confirmation modal appears (multi-slot);
+                // skip when saving a single slot (no popup).
+                var m = document.getElementById('confirmMultiModal');
+                return !(m && m.style.display === 'flex');
+            },
+            done: function() {
+                return window.__wt3Confirmed === true;
+            }
+        }
+    ];
+
+    var idx = Math.min(startAt, steps.length - 1);
+    var pollTimer = null;
+
+    function positionOverlay() {
+        var s = steps[idx];
+        if (!s) return;
+        if (typeof s.skipIf === 'function' && s.skipIf()) {
+            idx++;
+            if (idx >= steps.length) { outro(); return; }
+            sessionStorage.setItem('wt3_step', String(idx));
+            positionOverlay();
+            return;
+        }
+        var el = s.target();
+        if (!el) {
+            tooltip.style.display = 'none'; spotlight.style.display = 'none';
+            dims.forEach(function(d) { d.style.display = 'none'; });
+            return;
+        }
+        var r = el.getBoundingClientRect();
+        var pad = 6;
+        var left = r.left - pad, top = r.top - pad;
+        var right = r.right + pad, bottom = r.bottom + pad;
+
+        spotlight.style.display = 'block';
+        spotlight.style.left = left + 'px'; spotlight.style.top = top + 'px';
+        spotlight.style.width = (r.width + pad * 2) + 'px';
+        spotlight.style.height = (r.height + pad * 2) + 'px';
+
+        if (s.manual && !s.interactive) {
+            dimT.style.display = 'block';
+            dimT.style.left = '0px'; dimT.style.right = '0px'; dimT.style.top = '0px'; dimT.style.height = window.innerHeight + 'px';
+            dimB.style.display = 'none'; dimL.style.display = 'none'; dimR.style.display = 'none';
+        } else {
+            dimT.style.display = 'block'; dimT.style.left = '0px'; dimT.style.right = '0px';
+            dimT.style.top = '0px'; dimT.style.height = Math.max(0, top) + 'px';
+            dimB.style.display = 'block'; dimB.style.left = '0px'; dimB.style.right = '0px';
+            dimB.style.bottom = '0px'; dimB.style.height = Math.max(0, window.innerHeight - bottom) + 'px';
+            dimL.style.display = 'block'; dimL.style.left = '0px'; dimL.style.top = top + 'px';
+            dimL.style.width = Math.max(0, left) + 'px'; dimL.style.height = Math.max(0, bottom - top) + 'px';
+            dimR.style.display = 'block'; dimR.style.right = '0px'; dimR.style.top = top + 'px';
+            dimR.style.width = Math.max(0, window.innerWidth - right) + 'px';
+            dimR.style.height = Math.max(0, bottom - top) + 'px';
+        }
+
+        tooltip.style.display = 'block';
+        stepLabel.textContent = 'Step ' + (idx + 1) + ' of ' + steps.length;
+        stepText.innerHTML = s.text;
+        nextBtn.style.display = s.manual ? 'inline-block' : 'none';
+        if (s.manual && typeof s.canProceed === 'function') {
+            nextBtn.disabled = !s.canProceed();
+            nextBtn.style.opacity = nextBtn.disabled ? '0.5' : '1';
+            nextBtn.style.cursor = nextBtn.disabled ? 'not-allowed' : 'pointer';
+        } else {
+            nextBtn.disabled = false;
+            nextBtn.style.opacity = '1';
+            nextBtn.style.cursor = 'pointer';
+        }
+        var ttH = tooltip.offsetHeight;
+        var ttTop = bottom + 14;
+        if (ttTop + ttH > window.innerHeight - 20) { ttTop = Math.max(12, top - ttH - 14); }
+        tooltip.style.left = Math.max(12, Math.min(left, window.innerWidth - tooltip.offsetWidth - 12)) + 'px';
+        tooltip.style.top = ttTop + 'px';
+    }
+
+    function show() {
+        overlay.style.display = 'block';
+        skipBtn.style.display = 'block';
+        positionOverlay();
+        initPolling();
+    }
+
+    function advance() {
+        idx++;
+        if (idx >= steps.length) {
+            outro();
+        } else {
+            sessionStorage.setItem('wt3_step', String(idx));
+            positionOverlay();
+        }
+    }
+
+    function outro() {
+        stopPolling();
+        overlay.querySelectorAll('#wt3Spotlight, #wt3Tooltip, #wt3Skip').forEach(function(n) { n.style.display = 'none'; });
+        try { window.lucide.createIcons(); } catch (e) {}
+        doneOverlay.style.display = 'flex';
+        // Tutorial completed naturally — clear session so a refresh doesn't
+        // resume a finished walkthrough.
+        sessionStorage.removeItem('wt3_active');
+        sessionStorage.removeItem('wt3_step');
+    }
+
+    function finish() {
+        stopPolling();
+        overlay.style.display = 'none';
+        skipBtn.style.display = 'none';
+        doneOverlay.style.display = 'none';
+        sessionStorage.removeItem('wt3_active');
+        sessionStorage.removeItem('wt3_step');
+        try {
+            history.replaceState({}, '', window.location.pathname);
+            if (window.showToast) showToast('Walkthrough complete', true);
+        } catch (e) {}
+    }
+
+    function initPolling() {
+        stopPolling();
+        pollTimer = setInterval(function() {
+            var s = steps[idx];
+            if (!s) return;
+            var el = s.target();
+            if (!el) { positionOverlay(); return; }
+            positionOverlay();
+            if (!s.manual && s.done()) advance();
+        }, 600);
+    }
+
+    function stopPolling() {
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    }
+
+    skipBtn.addEventListener('click', function() { finish(); });
+    nextBtn.addEventListener('click', function() { advance(); });
+    doneBtn.addEventListener('click', function() { finish(); });
+    window.addEventListener('resize', positionOverlay);
+    window.addEventListener('scroll', positionOverlay, true);
+
+    // Forward wheel scrolling so the user can scroll during the tutorial.
+    document.addEventListener('wheel', function(e) {
+        if (sessionStorage.getItem('wt3_active') !== '1') return;
+        var sc = document.querySelector('.page-wrapper') || document.scrollingElement || document.documentElement;
+        if (!sc) return;
+        sc.scrollTop = Math.max(0, Math.min(sc.scrollHeight, sc.scrollTop + e.deltaY));
+        e.preventDefault();
+    }, { passive: false });
+
+    // Detect save attempt. For a single slot this is the direct save; for a
+    // multi-slot selection this fires when the confirmation popup is shown.
+    // The tutorial session is cleared only at completion (outro/finish).
+    var eggForm = document.getElementById('eggForm');
+    if (eggForm && !eggForm.__wt3Bound) {
+        eggForm.__wt3Bound = true;
+        eggForm.addEventListener('submit', function() {
+            window.__wt3Saved = true;
+        });
+    }
+
+    // Multi-slot confirms via #confirmMultiModal → #confirmMultiSaveBtn →
+    // executeMultiSave(). Hook that to mark the tutorial complete.
+    var confirmMultiSave = document.getElementById('confirmMultiSaveBtn');
+    if (confirmMultiSave && !confirmMultiSave.__wt3Bound) {
+        confirmMultiSave.__wt3Bound = true;
+        confirmMultiSave.addEventListener('click', function() {
+            window.__wt3Confirmed = true;
+            sessionStorage.removeItem('wt3_active');
+            sessionStorage.removeItem('wt3_step');
+        });
+    }
+
+    var start = function() { show(); };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', start);
+    } else {
+        setTimeout(start, 400);
+    }
+})();
+</script>
+@endpush

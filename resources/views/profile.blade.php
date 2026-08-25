@@ -487,6 +487,28 @@
             </button>
         </div>
 
+        {{-- STEP 3: Log eggs --}}
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-8 h-8 rounded-full bg-[#002D5E] text-white flex items-center justify-center text-sm font-bold shrink-0">3</div>
+                <div>
+                    <h2 class="text-base font-medium text-[#333333]">Log daily egg production</h2>
+                    <p class="text-xs text-[#6B7280]">Start the guided walkthrough below.</p>
+                </div>
+            </div>
+
+            <p class="text-xs text-[#6B7280] mb-4">
+                This tutorial walks you through choosing a cage, selecting a slot, entering today's egg count, and saving the record.
+                You'll be taken to the Egg Logging page and a popup will guide you, one action at a time.
+            </p>
+
+            <button type="button" onclick="window.location.href='{{ route('eggs.logging', ['walkthrough3' => '1']) }}'"
+                    class="inline-flex items-center gap-2 text-sm font-medium text-white px-4 py-2.5 rounded-lg hover:brightness-95 transition-colors"
+                    style="background-color:#002D5E;">
+                <i data-lucide="play" class="w-4 h-4"></i> Start Walkthrough
+            </button>
+        </div>
+
     </div>
 
     </div>
