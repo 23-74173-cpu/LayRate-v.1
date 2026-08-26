@@ -657,7 +657,7 @@
             interactive: true
         },
         {
-            text: '<strong>Place the hens.</strong><br>Review your selection and click <em>Place Hens</em> to continue.',
+            text: '<strong>Place the hens.</strong><br>Review your selection, then click <em>Place Hens</em>. A confirmation popup will appear.',
             target: function() {
                 return document.getElementById('submitBtn');
             },
@@ -665,7 +665,11 @@
                 // Advances once the confirmation modal opens.
                 var m = document.getElementById('confirm-modal');
                 return !!(m && (m.classList.contains('flex') || !m.classList.contains('hidden')));
-            }
+            },
+            // Manual so the user reviews before advancing; Next then lights the
+            // confirmation step. The lit hole keeps the button clickable.
+            manual: true,
+            interactive: true
         },
         {
             text: '<strong>Confirm the placement.</strong><br>Review the message and click <em>Place Hens</em> to confirm, or <em>Cancel</em> to go back.',
@@ -674,10 +678,14 @@
                 if (!m || m.classList.contains('hidden')) return null;
                 return m.querySelector('.relative') || m;
             },
-            done: function() {
-                // Complete when confirmed (form submitted → page reloads).
+            done: function() { return false; },
+            // Only let the user continue to the congratulations after the
+            // placement is actually confirmed.
+            canProceed: function() {
                 return window.__wt2bPlaced === true;
-            }
+            },
+            manual: true,
+            interactive: true
         }
     ];
 
@@ -829,6 +837,9 @@
         placeBtn.__wt2bBound = true;
         placeBtn.addEventListener('click', function() {
             window.__wt2bPlaced = true;
+            // Show the congratulations right after confirming (the placement
+            // then submits and the page reloads).
+            outro();
             // Placement submits and the page reloads; clear tutorial state so the
             // reloaded page doesn't restart/resume the walkthrough.
             sessionStorage.removeItem('wt2_active');

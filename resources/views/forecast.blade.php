@@ -44,26 +44,104 @@
         $pct = min(100, ($forecastCount / 90) * 100);
     @endphp
     @if(!($hasEnoughData ?? true))
-    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
-        <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600 shrink-0 mt-0.5"></i>
-        <div class="flex-1">
-            <div class="text-sm font-medium text-amber-800">Insufficient forecast data</div>
-            <div class="text-sm text-amber-700 mt-1">Need at least 90 days of records to generate a forecast.</div>
-            <div class="mt-3">
-                <div class="flex items-center justify-between text-xs text-amber-700 mb-1">
-                    <span>{{ $scopeLabel }}: {{ $forecastCount }}/90 days collected</span>
+    <style>
+        /* Lock only the main content, not the sidebar. Desktop sidebar is in
+           flow at 16rem (collapsed: 4rem); on mobile the sidebar is a drawer
+           so the overlay spans full width. */
+        #forecastLockOverlay {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        #forecastLockOverlay > .backdrop {
+            position: absolute;
+            inset: 0;
+            background-color: rgba(35,39,50,0.55);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+        }
+        @media (min-width: 1024px) {
+            #forecastLockOverlay { left: 16rem; }
+            html.sidebar-collapsed #forecastLockOverlay { left: 4rem; }
+        }
+        #forecastLockOverlay { pointer-events: auto; }
+    </style>
+    <div id="forecastLockOverlay" role="dialog" aria-modal="true">
+        <div class="backdrop"></div>
+
+        <div class="relative w-full max-w-md rounded-2xl p-6 text-center"
+             style="background-color: #ffffff; box-shadow: 0 24px 64px rgba(0,0,0,0.35);">
+            <div class="w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: #fdf3e0;">
+                <i data-lucide="hourglass" class="w-7 h-7" style="color: #8a5a00;"></i>
+            </div>
+            <h2 class="text-lg font-semibold" style="color: #1f1f1f;">Insufficient Forecast Data</h2>
+            <p class="text-sm mt-2" style="color: #615d59;">
+                You need at least <strong>90 days</strong> of production records to generate a forecast.
+            </p>
+
+            <div class="mt-5">
+                <div class="flex items-center justify-between text-xs mb-1" style="color: #615d59;">
+                    <span>{{ $scopeLabel }}: <strong style="color:#8a5a00;">{{ $forecastCount }}</strong>/90 days collected</span>
                     <span>{{ number_format($pct, 0) }}%</span>
                 </div>
-                <div class="w-full bg-amber-200 rounded-full h-2 overflow-hidden">
-                    <div class="bg-amber-500 h-2 rounded-full transition-all" style="width: {{ $pct }}%"></div>
+                <div class="w-full rounded-full h-2 overflow-hidden" style="background-color: #f3e3bf;">
+                    <div class="h-2 rounded-full transition-all" style="width: {{ $pct }}%; background-color: #c2703e;"></div>
                 </div>
             </div>
-            <div class="text-xs text-amber-600 mt-2">
-                Download the forecast input sheet, fill it with historical data, and import it.
+
+            <div class="mt-5 text-xs leading-relaxed" style="color: #6B7280;">
+                Keep logging eggs daily. Each recorded day adds to your history.
+                You can also download the forecast input sheet, fill it with historical data,
+                and import it to reach 90 days faster.
+            </div>
+
+            <div class="mt-5 grid grid-cols-1 gap-2 text-center">
+                <button type="button" id="lockDownloadBtn"
+                        class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white hover:brightness-95 transition-colors"
+                        style="background-color:#002D5E;">
+                    <i data-lucide="download" class="w-4 h-4"></i> Download forecast sheet
+                </button>
+                <button type="button" id="lockInputRecordsBtn"
+                        class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                        style="color:#002D5E; border:1px solid #d6e0f2; background-color:#eef2fb;">
+                    <i data-lucide="table" class="w-4 h-4"></i> View input records status
+                </button>
+                <button type="button" id="lockImportBtn"
+                        class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                        style="color:#1f6b3a; border:1px solid #cfe8d6; background-color:#e8f5ec;">
+                    <i data-lucide="upload" class="w-4 h-4"></i> Import function
+                </button>
             </div>
         </div>
     </div>
     @endif
+
+    {{-- View forecast input records status --}}
+    <div id="inputRecordsModal" class="fixed inset-0 min-h-screen min-h-[100dvh] bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-auto overflow-hidden max-h-[85vh] flex flex-col">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-[#F0F0F0]">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-[#002D5E]/10 flex items-center justify-center">
+                        <i data-lucide="database" class="w-4 h-4 text-[#002D5E]"></i>
+                    </div>
+                    <h3 class="text-base font-semibold text-[#333333]">Forecast Input Records</h3>
+                </div>
+                <button type="button" id="closeInputRecords" class="text-[#6B7280] hover:text-[#333333] transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-5 overflow-y-auto">
+                <div id="inputRecordsContent" class="text-center py-8 text-[#6B7280] text-sm">
+                    <i data-lucide="loader" class="w-6 h-6 mx-auto mb-2 animate-spin" style="color:#0075de;"></i>
+                    Loading records…
+                </div>
+            </div>
+        </div>
+    </div>
 
     {{-- ── Forecast Workspace (Inputs + Chart + Metrics) ── --}}
     @include('forecast._workspace')
@@ -152,6 +230,12 @@
                 <i data-lucide="database" class="w-4 h-4 text-[#C2703E]"></i>
             </div>
         </a>
+        <button type="button" id="fabInputRecordsBtn" class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>View input records status</span>
+            <div class="w-8 h-8 rounded-full bg-[#0075de]/10 flex items-center justify-center">
+                <i data-lucide="table" class="w-4 h-4 text-[#0075de]"></i>
+            </div>
+        </button>
         <button type="button" id="fabImportBtn" class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Import production data</span>
             <div class="w-8 h-8 rounded-full bg-[#2D7D46]/10 flex items-center justify-center">
@@ -969,6 +1053,10 @@
         const downloadTemplateModal = document.getElementById('downloadTemplateModal');
         const fabDownloadBtn = document.getElementById('fabDownloadBtn');
         const closeDownloadTemplateModalBtn = document.getElementById('closeDownloadTemplateModal');
+        const fabInputRecordsBtn = document.getElementById('fabInputRecordsBtn');
+        const inputRecordsModal = document.getElementById('inputRecordsModal');
+        const closeInputRecordsBtn = document.getElementById('closeInputRecords');
+        const inputRecordsContent = document.getElementById('inputRecordsContent');
 
         function openImportModal() {
             if (importModal) {
@@ -1045,6 +1133,114 @@
 
         if (closeDownloadTemplateModalBtn) {
             closeDownloadTemplateModalBtn.addEventListener('click', closeDownloadTemplateModalFn);
+        }
+
+        // "View input records status" — fetch + render the records table.
+        function openInputRecordsFn() {
+            if (!inputRecordsModal) return;
+            inputRecordsModal.style.display = 'flex';
+            if (inputRecordsContent) {
+                inputRecordsContent.innerHTML = '<div class="text-center py-8 text-[#6B7280] text-sm"><i data-lucide="loader" class="w-6 h-6 mx-auto mb-2 animate-spin" style="color:#0075de;"></i>Loading records…</div>';
+                if (window.lucide) lucide.createIcons();
+            }
+            fetch('{{ route("forecast.input-records") }}', { headers: { 'Accept': 'application/json' } })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    renderInputRecords(data);
+                })
+                .catch(function() {
+                    if (inputRecordsContent) {
+                        inputRecordsContent.innerHTML = '<div class="text-center py-8 text-[#9b1c24] text-sm">Failed to load records.</div>';
+                    }
+                });
+        }
+
+        function closeInputRecordsFn() {
+            if (inputRecordsModal) inputRecordsModal.style.display = 'none';
+        }
+
+        function renderInputRecords(data) {
+            if (!inputRecordsContent) return;
+            var s = data.summary || {};
+            var rows = data.rows || [];
+
+            var html = '<div class="mb-4 p-3 rounded-lg flex items-start gap-2 text-xs" style="background-color:#eef2fb; color:#002D5E; border:1px solid #d6e0f2;">'
+                + '<i data-lucide="info" class="w-4 h-4 shrink-0 mt-0.5"></i>'
+                + '<span>The system fills this table automatically each day (at the day-reset time). Every recorded production day is added so the forecast has enough history.</span>'
+                + '</div>';
+
+            html += '<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4 text-center">'
+                + '<div class="bg-[#F5F6F8] rounded-lg p-3"><div class="text-lg font-bold text-[#002D5E]">' + (s.total_records ?? 0) + '</div><div class="text-[10px] uppercase tracking-wider text-[#6B7280]">Records</div></div>'
+                + '<div class="bg-[#F5F6F8] rounded-lg p-3"><div class="text-lg font-bold text-[#002D5E]">' + (s.distinct_days ?? 0) + '</div><div class="text-[10px] uppercase tracking-wider text-[#6B7280]">Days</div></div>'
+                + '<div class="bg-[#F5F6F8] rounded-lg p-3"><div class="text-sm font-bold text-[#002D5E]">' + (s.min_date ?? '—') + '</div><div class="text-[10px] uppercase tracking-wider text-[#6B7280]">From</div></div>'
+                + '<div class="bg-[#F5F6F8] rounded-lg p-3"><div class="text-sm font-bold text-[#002D5E]">' + (s.max_date ?? '—') + '</div><div class="text-[10px] uppercase tracking-wider text-[#6B7280]">To</div></div>'
+                + '</div>';
+
+            if (!rows.length) {
+                html += '<div class="text-center py-10 text-sm text-[#6B7280]">No forecast input records yet. Log eggs daily or import a sheet.</div>';
+                inputRecordsContent.innerHTML = html;
+                return;
+            }
+
+            // Scrollable table showing every column of forecast_input_records.
+            html += '<div class="overflow-auto border rounded-lg max-h-[55vh]">'
+                + '<table class="w-full text-xs whitespace-nowrap">'
+                + '<thead class="sticky top-0"><tr class="bg-[#F5F6F8] text-[#6B7280] uppercase tracking-wider">'
+                + '<th class="text-left p-2.5 sticky left-0 bg-[#F5F6F8]">Date</th>'
+                + '<th class="text-left p-2.5">Cage</th><th class="text-left p-2.5">Breed</th><th class="text-right p-2.5">Flk Age</th>'
+                + '<th class="text-right p-2.5">Hens</th><th class="text-right p-2.5">Eggs</th><th class="text-right p-2.5">Temp</th><th class="text-right p-2.5">Hum</th>'
+                + '<th class="text-right p-2.5">CP%</th><th class="text-right p-2.5">Feed</th><th class="text-right p-2.5">Mort</th>'
+                + '<th class="text-left p-2.5">Source</th><th class="text-left p-2.5">Updated</th><th class="text-right p-2.5">ID</th>'
+                + '</tr></thead><tbody>';
+            rows.forEach(function(r) {
+                html += '<tr class="border-t border-[#F0F0F0]">'
+                    + '<td class="p-2.5 font-mono text-[#333] sticky left-0 bg-white">' + (r.date || '—') + '</td>'
+                    + '<td class="p-2.5 text-[#333]">' + (r.cage_code || '—') + '</td>'
+                    + '<td class="p-2.5 text-[#333]">' + (r.breed || '—') + '</td>'
+                    + '<td class="p-2.5 text-right text-[#333]">' + (r.flock_age_weeks ?? '') + '</td>'
+                    + '<td class="p-2.5 text-right text-[#333]">' + (r.hen_count ?? '') + '</td>'
+                    + '<td class="p-2.5 text-right text-[#333]">' + (r.egg_count ?? '') + '</td>'
+                    + '<td class="p-2.5 text-right text-[#333]">' + (r.temperature_c ?? '') + '</td>'
+                    + '<td class="p-2.5 text-right text-[#333]">' + (r.humidity_percent ?? '') + '</td>'
+                    + '<td class="p-2.5 text-right text-[#333]">' + (r.crude_protein_percent ?? '') + '</td>'
+                    + '<td class="p-2.5 text-right text-[#333]">' + (r.feed_consumed_kg ?? '') + '</td>'
+                    + '<td class="p-2.5 text-right text-[#333]">' + (r.mortality_count ?? '') + '</td>'
+                    + '<td class="p-2.5 text-[#333]">' + (r.source_file || '—') + '</td>'
+                    + '<td class="p-2.5 text-[#333]">' + (r.updated_at || '—') + '</td>'
+                    + '<td class="p-2.5 text-right text-[#6B7280]">' + (r.id ?? '') + '</td>'
+                    + '</tr>';
+            });
+            html += '</tbody></table></div>';
+            inputRecordsContent.innerHTML = html;
+        }
+
+        if (fabInputRecordsBtn) {
+            fabInputRecordsBtn.addEventListener('click', function() {
+                openInputRecordsFn();
+                toggleFab();
+            });
+        }
+        if (closeInputRecordsBtn) {
+            closeInputRecordsBtn.addEventListener('click', closeInputRecordsFn);
+        }
+        if (inputRecordsModal) {
+            inputRecordsModal.addEventListener('click', function(e) {
+                if (e.target === inputRecordsModal) closeInputRecordsFn();
+            });
+        }
+
+        // Buttons on the insufficient-data lock popup.
+        var lockDownloadBtn = document.getElementById('lockDownloadBtn');
+        var lockInputRecordsBtn = document.getElementById('lockInputRecordsBtn');
+        var lockImportBtn = document.getElementById('lockImportBtn');
+        if (lockDownloadBtn) {
+            lockDownloadBtn.addEventListener('click', function() { openDownloadTemplateModal(); });
+        }
+        if (lockInputRecordsBtn) {
+            lockInputRecordsBtn.addEventListener('click', function() { openInputRecordsFn(); });
+        }
+        if (lockImportBtn) {
+            lockImportBtn.addEventListener('click', function() { openImportModal(); });
         }
 
         if (importModal) {

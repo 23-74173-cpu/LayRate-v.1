@@ -194,6 +194,7 @@ Route::middleware(['auth', 'system-time-set'])->group(function () {
     Route::match(['GET', 'POST'], '/forecast/excel', [ForecastController::class, 'exportExcel'])->name('forecast.excel');
     Route::match(['GET', 'POST'], '/forecast/pdf',   [ForecastController::class, 'exportPdf'])->name('forecast.pdf');
     Route::get('/forecast/input-records/download', [ForecastController::class, 'downloadProductionData'])->name('forecast.input-records.download');
+    Route::get('/forecast/input-records',          [ForecastController::class, 'inputRecords'])->name('forecast.input-records');
 
     Route::get('/profile',                         [AccountController::class, 'profile'])->name('profile');
     Route::post('/profile',                        [AccountController::class, 'updateProfile'])->name('profile.update');

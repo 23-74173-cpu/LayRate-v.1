@@ -1163,6 +1163,39 @@ class ForecastController extends Controller
         return response()->stream($callback, 200, $headers);
     }
 
+    /**
+     * JSON list of forecast_input_records for the "View input records status"
+     * FAB modal on the forecast page. Read-only; returns recent rows + a summary
+     * (count, distinct days, min/max date) so the user can gauge data depth.
+     */
+    public function inputRecords(Request $request)
+    {
+        if ($redirect = $this->ensureAdminOrRedirect($request)) {
+            return $redirect;
+        }
+
+        $count = DB::table('forecast_input_records')->count();
+        $distinctDays = DB::table('forecast_input_records')->distinct()->count('date');
+        $minDate = DB::table('forecast_input_records')->min('date');
+        $maxDate = DB::table('forecast_input_records')->max('date');
+
+        $rows = DB::table('forecast_input_records')
+            ->select('id', 'date', 'cage_code', 'breed', 'flock_age_weeks', 'hen_count', 'egg_count', 'temperature_c', 'humidity_percent', 'crude_protein_percent', 'feed_consumed_kg', 'mortality_count', 'source_file', 'created_at', 'updated_at')
+            ->orderByDesc('date')
+            ->orderBy('cage_code')
+            ->get();
+
+        return response()->json([
+            'rows' => $rows,
+            'summary' => [
+                'total_records'    => $count,
+                'distinct_days'    => $distinctDays,
+                'min_date'         => $minDate,
+                'max_date'         => $maxDate,
+            ],
+        ]);
+    }
+
     // Export requests are fired via fetch() with default redirect-following —
     // a redirect() response here used to be silently followed to GET /forecast,
     // whose HTML then got downloaded and saved as "forecast-export-pdf-....pdf"
