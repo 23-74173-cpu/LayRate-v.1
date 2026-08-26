@@ -30,10 +30,10 @@ use Illuminate\Support\Facades\Route;
 
 // ─── Public landing page ───────────────────────────────────────
 Route::get('/', function () {
-    if (Auth::check()) {
-        return redirect()->route('dashboard');
+    if (! Auth::check()) {
+        return redirect()->route('login');
     }
-    return view('landing');
+    return redirect()->route('dashboard');
 })->name('landing');
 
 // ─── Guest routes ─────────────────────────────────────────────
