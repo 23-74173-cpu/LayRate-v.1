@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exports\ForecastExport;
+use App\Exports\ProductionDataExport;
 use App\Forecast\ForecastRules;
 use App\Jobs\GenerateForecastJob;
 use App\Models\Cage;
@@ -1132,35 +1133,9 @@ class ForecastController extends Controller
             ->orderBy('cage_code')
             ->get();
 
-        $filename = 'production_data_' . ReportingDateService::reportingDateString() . '.csv';
+        $filename = 'production_data_' . ReportingDateService::reportingDateString() . '.xlsx';
 
-        $headers = [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-        ];
-
-        $callback = function () use ($records) {
-            $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['date', 'cage_code', 'breed', 'flock_age_weeks', 'hen_count', 'egg_count', 'temperature_c', 'humidity_percent', 'crude_protein_percent', 'feed_consumed_kg', 'mortality_count']);
-            foreach ($records as $row) {
-                fputcsv($handle, [
-                    $row->date,
-                    $row->cage_code,
-                    $row->breed,
-                    $row->flock_age_weeks,
-                    $row->hen_count,
-                    $row->egg_count,
-                    $row->temperature_c,
-                    $row->humidity_percent,
-                    $row->crude_protein_percent,
-                    $row->feed_consumed_kg,
-                    $row->mortality_count,
-                ]);
-            }
-            fclose($handle);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        return Excel::download(new ProductionDataExport($records), $filename);
     }
 
     /**
