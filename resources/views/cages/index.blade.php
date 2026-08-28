@@ -768,6 +768,67 @@ function filterCage(code) {
 }
 
 // ── Slot Expand Panel ────────────────────────────────────
+function buildSlotHenListHtml(data, cageCode) {
+    // Summary badges
+    let summary = '<div class="flex flex-wrap items-center gap-2 mb-3 text-xs">';
+    summary += '<span class="px-2 py-1 rounded-lg" style="background-color: #ffffff; border: 1px solid #e6e6e6; color: #31302e;">' + data.slot.current_occupancy + ' hen(s)</span>';
+    summary += '<span class="px-2 py-1 rounded-lg" style="background-color: #ffffff; border: 1px solid #e6e6e6; color: #31302e;"><span style="color:#615d59;">Eggs today:</span> ' + data.slot.egg_status + '</span>';
+    summary += '</div>';
+
+    // Notes
+    let notesHtml = '';
+    if (data.notes && data.notes.length > 0) {
+        notesHtml = '<div class="mt-3 pt-3 border-t" style="border-color: #e6e6e6;">'
+            + '<div class="text-xs font-semibold mb-1.5" style="color: #615d59;">Notes tagged to ' + cageCode + '</div>';
+        data.notes.forEach(function(n) {
+            notesHtml += '<div class="text-xs mb-1.5" style="color: #31302e;">'
+                + '<span style="color:#a39e98;">' + n.created_at + ' — </span>'
+                + n.body.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>';
+        });
+        notesHtml += '</div>';
+    }
+
+    if (data.hens.length === 0) {
+        return summary + '<p class="text-xs text-center py-3" style="color: #a39e98;">No hens in this slot.</p>' + notesHtml;
+    }
+
+    // Column headers
+    let html = summary
+        + '<div class="flex items-center gap-x-3 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-t" style="color: #a39e98; border-bottom: 1px solid #e6e6e6;">'
+        + '<span class="w-10">ID</span>'
+        + '<span class="w-32 text-left">Breed</span>'
+        + '<span class="w-12 text-center">Age</span>'
+        + '<span class="flex-1 text-center">Status</span>'
+        + '<span class="w-20 text-right">Actions</span>'
+        + '</div>';
+
+    // Hen rows
+    html += '<div class="divide-y" style="border: 1px solid #e6e6e6; border-top: none; border-radius: 0 0 8px 8px; overflow: hidden;">';
+    data.hens.forEach(hen => {
+        html += '<div class="flex items-center gap-x-3 px-3 py-1.5 text-xs" style="background-color: #ffffff;">';
+        html += '<span class="w-10 font-mono truncate" style="color: #615d59;" title="' + (hen.tag_code || hen.id || '—') + '">' + (hen.tag_code || hen.id || '—') + '</span>';
+        html += '<span class="w-32 text-left truncate" style="color: #31302e;">' + hen.breed + '</span>';
+        html += '<span class="w-12 text-center" style="color: #615d59;">' + hen.current_age_weeks + 'w</span>';
+        html += '<span class="flex-1 text-center">';
+        html += '<span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style="background-color: ' + (hen.is_active ? '#e8f5ec' : '#f0f0f0') + '; color: ' + (hen.is_active ? '#1f6b3a' : '#615d59') + ';">';
+        html += (hen.is_active ? 'Active' : 'Inactive') + '</span></span>';
+        html += '<div class="w-20 flex items-center justify-end gap-2">';
+        html += '<button type="button" onclick="openMoveModal(\'' + hen.id + '\', 1, \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + hen.breed + '\')" class="p-1 rounded hover:bg-black/5 transition-colors" style="color: #615d59;" aria-label="Move hen" title="Move hen"><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i></button>';
+        html += '<button type="button" onclick="openRemoveModal(\'' + hen.id + '\', 1, \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + hen.breed + '\')" class="p-1 rounded hover:bg-red-50 transition-colors" style="color: #9b1c24;" aria-label="Remove hen" title="Remove hen"><i data-lucide="trash-2" class="w-3 h-3"></i></button>';
+        html += '</div></div>';
+    });
+    html += '</div>';
+
+    // Move All / Remove All buttons
+    const ids = data.hens.map(h => h.id).join(',');
+    html += '<div class="mt-3 flex items-center gap-2">';
+    html += '<button type="button" onclick="openMoveModal(\'' + ids + '\', ' + data.hens.length + ', \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + (data.hens[0]?.breed || '') + '\')" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors" style="color: #002D5E; border: 1px solid #002D5E; background-color: #ffffff;" onmouseover="this.style.backgroundColor=#f0f7ff" onmouseout="this.style.backgroundColor=#ffffff"><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i> Move All</button>';
+    html += '<button type="button" onclick="openRemoveModal(\'' + ids + '\', ' + data.hens.length + ', \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + (data.hens[0]?.breed || '') + '\')" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors" style="color: #9b1c24; border: 1px solid #f0c8cb; background-color: #ffffff;" onmouseover="this.style.backgroundColor=#fbe4e6" onmouseout="this.style.backgroundColor=#ffffff"><i data-lucide="trash-2" class="w-3 h-3"></i> Remove All</button>';
+    html += '</div>';
+
+    return html + notesHtml;
+}
+
 function expandSlot(slotId, cageId, cageCode) {
     const panel = document.getElementById('slotExpandPanel-' + cageId);
     const content = document.getElementById('slotPanelContent-' + cageId);
@@ -777,49 +838,7 @@ function expandSlot(slotId, cageId, cageCode) {
         .then(r => r.json())
         .then(data => {
             title.textContent = cageCode + ' — Slot ' + data.slot.row_number + '-' + data.slot.column_number + ' (#' + data.slot.slot_number + ')';
-
-            // Slot summary: hen count + today's egg status + cage notes (item 16)
-            let summary = '<div class="flex flex-wrap items-center gap-2 mb-3 text-xs">';
-            summary += '<span class="px-2 py-1 rounded-lg" style="background-color: #ffffff; border: 1px solid #e6e6e6; color: #31302e;">' + data.slot.current_occupancy + ' hen(s)</span>';
-            summary += '<span class="px-2 py-1 rounded-lg" style="background-color: #ffffff; border: 1px solid #e6e6e6; color: #31302e;"><span style="color:#615d59;">Eggs today:</span> ' + data.slot.egg_status + '</span>';
-            summary += '</div>';
-            let notesHtml = '';
-            if (data.notes && data.notes.length > 0) {
-                notesHtml += '<div class="mt-3 pt-3 border-t" style="border-color: #e6e6e6;">';
-                notesHtml += '<div class="text-xs font-semibold mb-1.5" style="color: #615d59;">Notes tagged to ' + cageCode + '</div>';
-                data.notes.forEach(function(n) {
-                    notesHtml += '<div class="text-xs mb-1.5" style="color: #31302e;">' +
-                        '<span style="color:#a39e98;">' + n.created_at + ' — </span>' +
-                        n.body.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>';
-                });
-                notesHtml += '</div>';
-            }
-
-            if (data.hens.length === 0) {
-                content.innerHTML = summary + '<p class="text-xs text-center py-3" style="color: #a39e98;">No hens in this slot.</p>' + notesHtml;
-                return;
-            }
-            let html = summary + '<div class="space-y-1.5">';
-            data.hens.forEach(hen => {
-                html += '<div class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded border px-3 py-2 text-xs" style="background-color: #ffffff; border-color: #e6e6e6;">';
-                html += '<span class="w-24 font-mono" style="color: #615d59;">' + (hen.tag_code || '—') + '</span>';
-                html += '<span class="w-32" style="color: #31302e;">' + hen.breed + '</span>';
-                html += '<span class="w-12" style="color: #615d59;">' + hen.current_age_weeks + 'w</span>';
-                html += '<span class="flex-1">';
-                html += '<span class="text-xs px-1.5 py-0.5 rounded-full" style="background-color: ' + (hen.is_active ? '#e8f5ec' : '#f0f0f0') + '; color: ' + (hen.is_active ? '#1f6b3a' : '#615d59') + ';">';
-                html += (hen.is_active ? 'Active' : 'Inactive') + '</span></span>';
-                html += '<div class="flex items-center gap-1">';
-                html += '<button type="button" onclick="openMoveModal(\'' + hen.id + '\', 1, \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + hen.breed + '\')" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #615d59;" aria-label="Move hen"><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i></button>';
-                html += '<button type="button" onclick="openRemoveModal(\'' + hen.id + '\', 1, \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + hen.breed + '\')" class="p-1.5 rounded-full hover:bg-red-50 transition-colors" style="color: #9b1c24;" aria-label="Remove hen"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>';
-                html += '</div></div>';
-            });
-            html += '</div>';
-            html += '<div class="mt-3 flex items-center gap-2">';
-            const ids = data.hens.map(h => h.id).join(',');
-            html += '<button type="button" onclick="openMoveModal(\'' + ids + '\', ' + data.hens.length + ', \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + (data.hens[0]?.breed || '') + '\')" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #615d59;" aria-label="Move all (' + data.hens.length + ')"><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i></button>';
-            html += '<button type="button" onclick="openRemoveModal(\'' + ids + '\', ' + data.hens.length + ', \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + (data.hens[0]?.breed || '') + '\')" class="p-1.5 rounded-full hover:bg-red-50 transition-colors" style="color: #9b1c24;" aria-label="Remove all (' + data.hens.length + ')"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>';
-            html += '</div>';
-            content.innerHTML = html + notesHtml;
+            content.innerHTML = buildSlotHenListHtml(data, cageCode);
             lucide.createIcons();
         })
         .catch(() => {
@@ -831,7 +850,7 @@ function closeSlotExpand(cageId) {
     document.getElementById('slotExpandPanel-' + cageId).classList.add('hidden');
 }
 
-// ── Cage Info Popup slot expansion (exact copy of the cage card's expandSlot) ──
+// ── Cage Info Popup slot expansion ──
 function expandSlotInPopup(btn) {
     var slotId = parseInt(btn.dataset.slotId);
     var cageId = parseInt(btn.dataset.cageId);
@@ -859,49 +878,7 @@ function expandSlotInPopup(btn) {
         .then(r => r.json())
         .then(data => {
             title.textContent = cageCode + ' — Slot ' + data.slot.row_number + '-' + data.slot.column_number + ' (#' + data.slot.slot_number + ')';
-
-            // Slot summary: hen count + today's egg status + cage notes (item 16)
-            let summary = '<div class="flex flex-wrap items-center gap-2 mb-3 text-xs">';
-            summary += '<span class="px-2 py-1 rounded-lg" style="background-color: #ffffff; border: 1px solid #e6e6e6; color: #31302e;">' + data.slot.current_occupancy + ' hen(s)</span>';
-            summary += '<span class="px-2 py-1 rounded-lg" style="background-color: #ffffff; border: 1px solid #e6e6e6; color: #31302e;"><span style="color:#615d59;">Eggs today:</span> ' + data.slot.egg_status + '</span>';
-            summary += '</div>';
-            let notesHtml = '';
-            if (data.notes && data.notes.length > 0) {
-                notesHtml += '<div class="mt-3 pt-3 border-t" style="border-color: #e6e6e6;">';
-                notesHtml += '<div class="text-xs font-semibold mb-1.5" style="color: #615d59;">Notes tagged to ' + cageCode + '</div>';
-                data.notes.forEach(function(n) {
-                    notesHtml += '<div class="text-xs mb-1.5" style="color: #31302e;">' +
-                        '<span style="color:#a39e98;">' + n.created_at + ' — </span>' +
-                        n.body.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>';
-                });
-                notesHtml += '</div>';
-            }
-
-            if (data.hens.length === 0) {
-                content.innerHTML = summary + '<p class="text-xs text-center py-3" style="color: #a39e98;">No hens in this slot.</p>' + notesHtml;
-                return;
-            }
-            let html = summary + '<div class="space-y-1.5">';
-            data.hens.forEach(hen => {
-                html += '<div class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded border px-3 py-2 text-xs" style="background-color: #ffffff; border-color: #e6e6e6;">';
-                html += '<span class="w-24 font-mono" style="color: #615d59;">' + (hen.tag_code || '—') + '</span>';
-                html += '<span class="w-32" style="color: #31302e;">' + hen.breed + '</span>';
-                html += '<span class="w-12" style="color: #615d59;">' + hen.current_age_weeks + 'w</span>';
-                html += '<span class="flex-1">';
-                html += '<span class="text-xs px-1.5 py-0.5 rounded-full" style="background-color: ' + (hen.is_active ? '#e8f5ec' : '#f0f0f0') + '; color: ' + (hen.is_active ? '#1f6b3a' : '#615d59') + ';">';
-                html += (hen.is_active ? 'Active' : 'Inactive') + '</span></span>';
-                html += '<div class="flex items-center gap-1">';
-                html += '<button type="button" onclick="openMoveModal(\'' + hen.id + '\', 1, \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + hen.breed + '\')" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #615d59;" aria-label="Move hen"><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i></button>';
-                html += '<button type="button" onclick="openRemoveModal(\'' + hen.id + '\', 1, \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + hen.breed + '\')" class="p-1.5 rounded-full hover:bg-red-50 transition-colors" style="color: #9b1c24;" aria-label="Remove hen"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>';
-                html += '</div></div>';
-            });
-            html += '</div>';
-            html += '<div class="mt-3 flex items-center gap-2">';
-            const ids = data.hens.map(h => h.id).join(',');
-            html += '<button type="button" onclick="openMoveModal(\'' + ids + '\', ' + data.hens.length + ', \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + (data.hens[0]?.breed || '') + '\')" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #615d59;" aria-label="Move all (' + data.hens.length + ')"><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i></button>';
-            html += '<button type="button" onclick="openRemoveModal(\'' + ids + '\', ' + data.hens.length + ', \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + (data.hens[0]?.breed || '') + '\')" class="p-1.5 rounded-full hover:bg-red-50 transition-colors" style="color: #9b1c24;" aria-label="Remove all (' + data.hens.length + ')"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>';
-            html += '</div>';
-            content.innerHTML = html + notesHtml;
+            content.innerHTML = buildSlotHenListHtml(data, cageCode);
             lucide.createIcons();
         })
         .catch(() => {
