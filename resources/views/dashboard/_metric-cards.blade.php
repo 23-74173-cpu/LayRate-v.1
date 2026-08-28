@@ -12,7 +12,7 @@
                 <i data-lucide="factory" class="w-3.5 h-3.5 inline-block mr-1.5 -mt-0.5" style="color:#0075de;"></i>
                 Production
             </h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {{-- Total Hens --}}
                 <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-5 cursor-pointer"
                      style="background-color: #f8f8f8; border-color: #e6e6e6; animation-delay: 0ms;"
@@ -121,7 +121,7 @@
                 <i data-lucide="heart-pulse" class="w-3.5 h-3.5 inline-block mr-1.5 -mt-0.5" style="color:#0891b2;"></i>
                 Environment &amp; Health
             </h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {{-- Coop Temperature --}}
                 <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-5 cursor-pointer"
                      style="background-color: #f8f8f8; border-color: #e6e6e6; animation-delay: 240ms;"
@@ -173,7 +173,7 @@
                 </div>
 
                 {{-- Mortality Today --}}
-                <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-5 cursor-pointer"
+                <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-5 cursor-pointer col-span-2 sm:col-span-1"
                      style="background-color: #f8f8f8; border-color: #e6e6e6; animation-delay: 360ms;"
                      role="link" tabindex="0" aria-label="Go to Mortality"
                      data-nav="{{ route('chickens.index', ['tab' => 'mortality']) }}" data-kpi="mortality">
