@@ -289,7 +289,7 @@
                 ],
                 'Production' => [
                     ['icon'=>'feather',       'label'=>'Cages',              'route'=>'cages.index'],
-                    ['icon'=>'bird',          'label'=>'Chickens',           'route'=>'chickens.index'],
+                    ['icon'=>'bird',          'label'=>'Hens',               'route'=>'chickens.index'],
                     ['icon'=>'egg',           'label'=>'Egg Management',     'route'=>'eggs.logging'],
                     ['icon'=>'leaf',          'label'=>'Feed & Nutrition',   'route'=>'feed'],
                 ],
@@ -756,7 +756,7 @@
 
         // ── Breadcrumb (client-side, since the header is data-turbo-permanent) ──
         var SECTION_LABELS = {
-            'dashboard': 'Dashboard',   'cages': 'Cages',            'chickens': 'Chickens',
+            'dashboard': 'Dashboard',   'cages': 'Cages',            'chickens': 'Hens',
             'eggs': 'Egg Management',   'egg-production-history': 'Egg History',
             'environment': 'Environment','hardware': 'Hardware',
             'feed': 'Feed & Nutrition', 'analytics': 'Analytics',    'forecast': 'Forecast',

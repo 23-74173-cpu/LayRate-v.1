@@ -4,7 +4,7 @@
         <form method="POST" action="{{ route('chickens.cull') }}" data-turbo="false">
             @csrf
             <div class="flex items-center justify-between mb-5">
-                <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Cull <span id="cullModalTitle">Chicken</span></h2>
+                <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Cull <span id="cullModalTitle">Hen</span></h2>
                 <button type="button" onclick="closeCullModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                     <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
                 </button>
@@ -56,7 +56,7 @@
 function openCullModal(henId, henLabel) {
     document.getElementById('cullHenId').value = henId;
     document.getElementById('cullHenText').textContent = henLabel;
-    document.getElementById('cullModalTitle').textContent = henId.indexOf(',') > -1 ? 'Hens' : 'Chicken';
+    document.getElementById('cullModalTitle').textContent = henId.indexOf(',') > -1 ? 'Hens' : 'Hen';
     document.getElementById('cullModal').classList.remove('hidden');
     document.getElementById('cullModal').classList.add('flex');
 }

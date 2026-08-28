@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Chicken Inventory')
+@section('title', 'Hen Inventory')
 
 @section('content')
 <style>
@@ -9,7 +9,7 @@
 </style>
 <div class="space-y-5">
 
-    <x-page-header title="Chickens" subtitle="Manage hen inventory, movements, and mortality records" />
+    <x-page-header title="Hens" subtitle="Manage hen inventory, movements, and mortality records" />
 
     <x-fab>
         <button type="button" onclick="openRegisterModal()"
@@ -89,8 +89,8 @@
                 <div>
                     <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Sort</label>
                     <select name="sort" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="filterInventory()">
-                        <option value="" {{ $sort === '' ? 'selected' : '' }}>Chicken ID (A-Z)</option>
-                        <option value="chicken_id_desc" {{ $sort === 'chicken_id_desc' ? 'selected' : '' }}>Chicken ID (Z-A)</option>
+                        <option value="" {{ $sort === '' ? 'selected' : '' }}>Hen ID (A-Z)</option>
+                        <option value="chicken_id_desc" {{ $sort === 'chicken_id_desc' ? 'selected' : '' }}>Hen ID (Z-A)</option>
                         <option value="age_asc" {{ $sort === 'age_asc' ? 'selected' : '' }}>Age (Youngest)</option>
                         <option value="age_desc" {{ $sort === 'age_desc' ? 'selected' : '' }}>Age (Oldest)</option>
                         <option value="breed_asc" {{ $sort === 'breed_asc' ? 'selected' : '' }}>Breed (A-Z)</option>
@@ -641,7 +641,7 @@ document.addEventListener('keydown', function(e) {
             + '<div id="wt2Done" style="display:none;position:fixed;inset:0;z-index:95;background:rgba(15,20,35,0.72);align-items:center;justify-content:center;pointer-events:auto;">'
             + '<div style="max-width:380px;width:calc(100% - 2rem);background:#fff;border-radius:20px;padding:32px 28px;text-align:center;box-shadow:0 30px 70px rgba(0,0,0,0.45);">'
             + '<div style="width:64px;height:64px;margin:0 auto 18px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#e8f5ec;color:#1f6b3a;"><i data-lucide="check" style="width:34px;height:34px;"></i></div>'
-            + '<div style="font-size:20px;font-weight:700;color:#1f1f1f;">Chickens registered!</div>'
+            + '<div style="font-size:20px;font-weight:700;color:#1f1f1f;">Hens registered!</div>'
             + '<div style="font-size:14px;color:#6B7280;margin-top:8px;">Your new hens are ready to be placed into cages.</div>'
             + '<button id="wt2DoneBtn" style="margin-top:24px;padding:11px 28px;font-size:14px;font-weight:600;color:#fff;background:#002D5E;border:0;border-radius:10px;cursor:pointer;">Done</button>'
             + '</div>'
@@ -710,7 +710,7 @@ document.addEventListener('keydown', function(e) {
             }
         },
         {
-            text: '<strong>Your new hens.</strong><br>This table lists the hens you just registered. Review the breeds and chicken IDs shown.',
+            text: '<strong>Your new hens.</strong><br>This table lists the hens you just registered. Review the breeds and hen IDs shown.',
             target: function() {
                 var list = document.getElementById('unplacedList');
                 if (list && !list.classList.contains('hidden')) return list;

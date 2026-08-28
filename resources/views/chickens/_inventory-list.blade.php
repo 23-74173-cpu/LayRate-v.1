@@ -16,7 +16,7 @@
             <x-slot:headerSlot>
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div>
-                        <h2 class="text-lg font-semibold" style="color: #1f1f1f;">Chicken Overview</h2>
+                        <h2 class="text-lg font-semibold" style="color: #1f1f1f;">Hen Overview</h2>
                         <p class="text-sm" style="color: #6B7280;">Overview of all cages</p>
                     </div>
                     <span class="text-sm font-medium whitespace-nowrap" style="color: #31302e;">
@@ -211,7 +211,7 @@
 
                     {{-- ══ RIGHT: chicken list ══ --}}
                     <div class="min-w-0">
-                        <div class="mb-2 text-xs font-semibold uppercase tracking-wider" style="color: #6B7280;">Chickens in slot</div>
+                        <div class="mb-2 text-xs font-semibold uppercase tracking-wider" style="color: #6B7280;">Hens in slot</div>
 
                         <div class="slot-panel-placeholder rounded-xl border p-8 text-center text-sm" style="border-color: #e6e6e6; background-color: #FAFAFA; color: #a39e98;">
                             <i data-lucide="mouse-pointer-2" class="w-6 h-6 mx-auto mb-2" style="color: #d1d5db;"></i>
@@ -271,7 +271,7 @@
                                             <input type="checkbox" onchange="toggleAllInSlot(this)"
                                                    class="w-3 h-3 rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]">
                                         </label>
-                                        <span data-col="id" class="min-w-0 flex-1 sm:flex-none sm:w-24 shrink sm:shrink-0 truncate col-toggle">Chicken ID</span>
+                                        <span data-col="id" class="min-w-0 flex-1 sm:flex-none sm:w-24 shrink sm:shrink-0 truncate col-toggle">Hen ID</span>
                                         <span data-col="breed" class="w-24 shrink-0 truncate col-toggle hidden sm:inline">Breed</span>
                                         <span data-col="age" class="w-10 shrink-0 col-toggle hidden sm:inline">Age</span>
                                         <span data-col="flock" class="w-12 shrink-0 col-toggle hidden sm:inline">Flock</span>

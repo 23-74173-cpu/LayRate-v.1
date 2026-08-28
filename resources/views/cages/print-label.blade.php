@@ -101,7 +101,7 @@
         <thead>
             <tr>
                 <th>Slot</th>
-                <th>Chicken ID</th>
+                <th>Hen ID</th>
                 <th>Breed</th>
                 <th>Age (weeks)</th>
                 <th>Flock Age</th>

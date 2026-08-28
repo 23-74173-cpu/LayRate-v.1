@@ -16,7 +16,7 @@
                 {{-- Total Hens --}}
                 <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-5 cursor-pointer"
                      style="background-color: #f8f8f8; border-color: #e6e6e6; animation-delay: 0ms;"
-                     role="link" tabindex="0" aria-label="Go to Chickens"
+                     role="link" tabindex="0" aria-label="Go to Hens"
                      data-nav="{{ route('chickens.index') }}" data-kpi="hens">
                     <span class="kpi-watermark" style="color:#CDD2DA;"><i data-lucide="bird" class="w-full h-full"></i></span>
                     <div class="relative flex items-start justify-between">

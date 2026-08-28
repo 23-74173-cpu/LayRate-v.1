@@ -574,7 +574,7 @@
             + '<div id="wt2bDone" style="display:none;position:fixed;inset:0;z-index:95;background:rgba(15,20,35,0.72);align-items:center;justify-content:center;pointer-events:auto;">'
             + '<div style="max-width:380px;width:calc(100% - 2rem);background:#fff;border-radius:20px;padding:32px 28px;text-align:center;box-shadow:0 30px 70px rgba(0,0,0,0.45);">'
             + '<div style="width:64px;height:64px;margin:0 auto 18px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#e8f5ec;color:#1f6b3a;"><i data-lucide="check" style="width:34px;height:34px;"></i></div>'
-            + '<div style="font-size:20px;font-weight:700;color:#1f1f1f;">Chickens placed!</div>'
+            + '<div style="font-size:20px;font-weight:700;color:#1f1f1f;">Hens placed!</div>'
             + '<div style="font-size:14px;color:#6B7280;margin-top:8px;">Your hens are now assigned to the selected cage.</div>'
             + '<button id="wt2bDoneBtn" style="margin-top:24px;padding:11px 28px;font-size:14px;font-weight:600;color:#fff;background:#002D5E;border:0;border-radius:10px;cursor:pointer;">Done</button>'
             + '</div>'

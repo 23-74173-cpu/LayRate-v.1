@@ -32,7 +32,7 @@
     <x-fab>
         <a href="{{ route('cages.bulk-add') }}"
            class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
-            <span>Bulk Add Chickens</span>
+            <span>Bulk Add Hens</span>
             <div class="w-8 h-8 rounded-full bg-[#002D5E]/10 flex items-center justify-center">
                 <i data-lucide="bird" class="w-4 h-4 text-[#002D5E]"></i>
             </div>
@@ -565,13 +565,13 @@
         <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeNoChickensModal()"></div>
         <div class="relative w-full max-w-sm rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
             <div class="flex items-center justify-between mb-5">
-                <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">No Unplaced Chickens</h2>
+                <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">No Unplaced Hens</h2>
                 <button onclick="closeNoChickensModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                     <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
                 </button>
             </div>
             <p class="text-sm" style="color: #6B7280;">
-                All registered chickens are already assigned to cages. Register new chickens before using bulk placement.
+                All registered hens are already assigned to cages. Register new hens before using bulk placement.
             </p>
             <div class="flex gap-3 mt-5">
                 <button type="button" onclick="closeNoChickensModal()"
@@ -586,7 +586,7 @@
                         style="color: #ffffff; background-color: #002D5E;"
                         onmouseover="this.style.backgroundColor='#0a3d7a'"
                         onmouseout="this.style.backgroundColor='#002D5E'">
-                    Register Chickens
+                    Register Hens
                 </button>
             </div>
         </div>
@@ -2902,7 +2902,7 @@ function openDeleteModal(id, code) {
         '<div style="font-weight:500;margin-bottom:8px;color:#31302e;">Hens in this cage (<span id="delHenCount">…</span> active)</div>' +
         '<label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;color:#615d59;">' +
         '<input type="radio" name="delHensAction" value="move" checked style="accent-color:#0075de;">' +
-        'Move to unplaced (return to chicken inventory)</label>' +
+        'Move to unplaced (return to hen inventory)</label>' +
         '<label style="display:flex;align-items:center;gap:8px;color:#615d59;">' +
         '<input type="radio" name="delHensAction" value="delete" style="accent-color:#9b1c24;">' +
         'Delete permanently</label>' +

@@ -27,7 +27,7 @@
                 <input type="checkbox" onchange="toggleAllInSlot(this)"
                        class="w-3 h-3 rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]">
             </label>
-            <span class="w-28 shrink-0 whitespace-nowrap">Chicken ID</span>
+            <span class="w-28 shrink-0 whitespace-nowrap">Hen ID</span>
             <span class="w-32 shrink-0 whitespace-nowrap hidden sm:inline">Breed</span>
             <span class="w-12 shrink-0 whitespace-nowrap hidden sm:inline">Age</span>
             <span class="flex-1"></span>

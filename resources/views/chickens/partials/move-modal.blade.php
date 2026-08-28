@@ -9,7 +9,7 @@
 
             {{-- Header --}}
             <div class="flex items-center justify-between mb-5">
-                <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Move Chickens</h2>
+                <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Move Hens</h2>
                 <button type="button" onclick="event.stopPropagation(); closeMoveModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                     <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
                 </button>
@@ -118,7 +118,7 @@
                     Cancel
                 </button>
                 <x-button type="button" id="moveSubmitBtn" disabled onclick="submitMove(this.form)" class="flex-1 py-2.5">
-                    Move Chickens
+                    Move Hens
                 </x-button>
             </div>
 

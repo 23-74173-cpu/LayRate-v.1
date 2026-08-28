@@ -8,7 +8,7 @@
                 <thead>
                     <tr class="bg-[#FAFAFA] text-left">
                         <th class="px-3 py-2 text-[#9CA3AF] font-medium">Date</th>
-                        <th class="px-3 py-2 text-[#9CA3AF] font-medium">Chicken ID</th>
+                        <th class="px-3 py-2 text-[#9CA3AF] font-medium">Hen ID</th>
                         <th class="px-3 py-2 text-[#9CA3AF] font-medium">Cage</th>
                         <th class="px-3 py-2 text-[#9CA3AF] font-medium">Reason</th>
                         <th class="px-3 py-2 text-[#9CA3AF] font-medium">Destination</th>
