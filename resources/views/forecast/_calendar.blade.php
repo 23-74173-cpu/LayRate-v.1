@@ -693,6 +693,8 @@
             e.preventDefault();
 
             if ((window.__forecastDataDays || 0) < 90) {
+                var dayModal = document.getElementById('forecastDayModal');
+                if (dayModal) dayModal.style.display = 'none';
                 if (window.showLockOverlay) window.showLockOverlay();
                 else {
                     var lo = document.getElementById('forecastLockOverlay');
