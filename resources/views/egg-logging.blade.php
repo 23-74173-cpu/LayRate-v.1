@@ -1,6 +1,20 @@
 @extends('layouts.app')
 @section('title', 'Egg Management')
 
+@push('head')
+<style>
+    @media (max-width: 639px) {
+        .cage-slot-grid {
+            grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)) !important;
+        }
+        .slot-card {
+            min-height: 52px;
+            font-size: 11px;
+        }
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="space-y-5">
 
@@ -98,8 +112,8 @@
                         if ($totalSlots % $i === 0) { $gridCols = $i; break; }
                     }
                 @endphp
-                <div class="cage-grid hidden" data-cage-id="{{ $cage->id }}">
-                    <div class="grid gap-1.5" style="grid-template-columns: repeat({{ $gridCols }}, minmax(80px, 110px));">
+                <div class="cage-grid hidden overflow-x-auto" data-cage-id="{{ $cage->id }}">
+                    <div class="grid gap-1.5 cage-slot-grid" style="grid-template-columns: repeat({{ $gridCols }}, minmax(60px, 100px));">
                         @foreach($cageSlotsForThis as $slot)
                         @php
                             $primaryHen = $slot->primaryHen();
@@ -579,9 +593,53 @@
             }
         }
 
+        // ── Touch drag-to-select (mobile) ──
+        var touchDragging = false;
+        var touchDragMoved = false;
+
+        function getSlotCardFromTouch(touch) {
+            var el = document.elementFromPoint(touch.clientX, touch.clientY);
+            if (!el) return null;
+            return el.closest('.slot-card');
+        }
+
+        function onSlotTouchStart(e) {
+            var el = e.currentTarget;
+            if (el.dataset.empty === '1') return;
+            touchDragging = true;
+            touchDragMoved = false;
+            clearAllSlotSelections();
+            toggleSlotSelection(el);
+            e.preventDefault();
+        }
+
+        function onSlotTouchMove(e) {
+            if (!touchDragging) return;
+            e.preventDefault();
+            var touch = e.touches[0];
+            var card = getSlotCardFromTouch(touch);
+            if (!card || card.dataset.empty === '1') return;
+            touchDragMoved = true;
+            toggleSlotSelection(card);
+        }
+
+        function onSlotTouchEnd() {
+            if (!touchDragging) return;
+            touchDragging = false;
+            if (selectedSlotIds.size === 0) {
+                clearSlotSelection();
+            } else if (touchDragMoved) {
+                updateFormForMultiSelect();
+            } else {
+                var card = document.querySelector('.slot-card[data-slot-id="' + Array.from(selectedSlotIds)[0] + '"]');
+                if (card) selectSingleSlot(card);
+            }
+        }
+
         if (!window.__eggLoggingDragBound) {
             window.__eggLoggingDragBound = true;
             document.addEventListener('mouseup', onGlobalMouseUp);
+            document.addEventListener('touchend', onSlotTouchEnd);
         }
 
         function switchCage(cageId) {
@@ -1030,6 +1088,8 @@
                     el.__dragWired = true;
                     el.addEventListener('mousedown', onSlotMouseDown);
                     el.addEventListener('mouseenter', onSlotMouseEnter);
+                    el.addEventListener('touchstart', onSlotTouchStart, { passive: false });
+                    el.addEventListener('touchmove', onSlotTouchMove, { passive: false });
                 }
             });
 
