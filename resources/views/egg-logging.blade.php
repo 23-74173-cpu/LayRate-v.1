@@ -596,6 +596,10 @@
         // ── Touch drag-to-select (mobile) ──
         var touchDragging = false;
         var touchDragMoved = false;
+        var touchLastSlotId = null;
+        var touchLastSlotEl = null;
+        var touchLastTime = 0;
+        var TOUCH_THROTTLE_MS = 25;
 
         function getSlotCardFromTouch(touch) {
             var el = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -603,11 +607,31 @@
             return el.closest('.slot-card');
         }
 
+        // Select all slots between two slots using row/col positions
+        function selectSlotsBetween(slotA, slotB) {
+            if (!slotA || !slotB) return;
+            var aRow = parseInt(slotA.dataset.row), aCol = parseInt(slotA.dataset.col);
+            var bRow = parseInt(slotB.dataset.row), bCol = parseInt(slotB.dataset.col);
+            var rMin = Math.min(aRow, bRow), rMax = Math.max(aRow, bRow);
+            var cMin = Math.min(aCol, bCol), cMax = Math.max(aCol, bCol);
+            var cageId = slotA.dataset.cageId;
+            document.querySelectorAll('.slot-card[data-cage-id="' + cageId + '"]').forEach(function(el) {
+                if (el.dataset.empty === '1') return;
+                var r = parseInt(el.dataset.row), c = parseInt(el.dataset.col);
+                if (r >= rMin && r <= rMax && c >= cMin && c <= cMax) {
+                    toggleSlotSelection(el);
+                }
+            });
+        }
+
         function onSlotTouchStart(e) {
             var el = e.currentTarget;
             if (el.dataset.empty === '1') return;
             touchDragging = true;
             touchDragMoved = false;
+            touchLastSlotId = el.dataset.slotId;
+            touchLastSlotEl = el;
+            touchLastTime = Date.now();
             clearAllSlotSelections();
             toggleSlotSelection(el);
             e.preventDefault();
@@ -616,16 +640,27 @@
         function onSlotTouchMove(e) {
             if (!touchDragging) return;
             e.preventDefault();
+            var now = Date.now();
+            if (now - touchLastTime < TOUCH_THROTTLE_MS) return;
+            touchLastTime = now;
+
             var touch = e.touches[0];
             var card = getSlotCardFromTouch(touch);
             if (!card || card.dataset.empty === '1') return;
+            if (card.dataset.slotId === touchLastSlotId) return;
+
             touchDragMoved = true;
-            toggleSlotSelection(card);
+            // Fill in any slots between last position and current
+            selectSlotsBetween(touchLastSlotEl, card);
+            touchLastSlotId = card.dataset.slotId;
+            touchLastSlotEl = card;
         }
 
         function onSlotTouchEnd() {
             if (!touchDragging) return;
             touchDragging = false;
+            touchLastSlotId = null;
+            touchLastSlotEl = null;
             if (selectedSlotIds.size === 0) {
                 clearSlotSelection();
             } else if (touchDragMoved) {
