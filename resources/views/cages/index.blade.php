@@ -148,6 +148,9 @@
             #cageInfoPopup .back-face { grid-area: 1 / 1; backface-visibility: hidden; background-color: #ffffff; border-radius: 11px; }
             #cageInfoPopup .back-face { transform: rotateY(180deg); }
             #cageInfoBackdrop { transition: opacity 0.2s ease; }
+            #cageInfoPopup .slot-mini { transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease; }
+            #cageInfoPopup .slot-mini:hover { transform: scale(1.15); box-shadow: 0 2px 8px rgba(0,0,0,0.15); border-color: #0075de !important; z-index: 1; }
+            #cageInfoPopup .slot-mini:active { transform: scale(1.05); }
         </style>
         <div id="cageInfoBackdrop" class="hidden fixed inset-0 z-40" style="background-color: rgba(107,114,128,0.45); backdrop-filter: blur(4px);" onclick="closeCageInfoPopup()"></div>
         <div id="cageInfoPopup" class="hidden fixed z-50 rounded-xl border bg-white shadow-lg p-0 w-64" style="border-color: #e6e6e6; max-width: calc(100vw - 2rem); max-height: calc(100vh - 1.5rem); overflow-y: auto;">
@@ -1563,6 +1566,7 @@ function renderCageInfoPopupContent(m) {
 
     var frontBody = '<div class="px-4 py-3">'
         + renderCageInfoPopupSlotGrid(m)
+        + '<p class="text-[10px] mt-1.5 flex items-center gap-1" style="color:#a39e98;"><i data-lucide="mouse-pointer-click" class="w-3 h-3"></i> Click a slot to view details</p>'
         + '<div id="popupReorderBar-' + m.id + '" class="hidden mt-2 flex items-center justify-between text-xs" style="color:#615d59;">'
         + '<span>Drag slots to renumber</span>'
         + '<div class="flex items-center gap-2">'
