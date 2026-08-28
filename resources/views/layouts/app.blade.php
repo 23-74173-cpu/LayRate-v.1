@@ -26,8 +26,8 @@
 
     {{-- Prevent white flash while styles load --}}
     <style>
-      html { background-color: #D7D7D7; }
-      body { background-color: #D7D7D7; }
+      html { background-color: #E5E5E5; }
+      body { background-color: #E5E5E5; }
     </style>
 
     {{-- Turbo Drive --}}
@@ -42,7 +42,7 @@
         #app-loading-overlay {
             position: fixed; inset: 0; z-index: 10000;
             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
-            background: rgba(215, 215, 215, 0.92); backdrop-filter: blur(2px);
+            background: rgba(229, 229, 229, 0.92); backdrop-filter: blur(2px);
             opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
         }
         #app-loading-overlay.visible { opacity: 1; pointer-events: auto; }
@@ -105,7 +105,7 @@
     <style>
         * { -webkit-tap-highlight-color: transparent; }
         html { height: 100%; height: -webkit-fill-available; }
-        body { background-color: #D7D7D7; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; height: 100%; height: -webkit-fill-available; overflow: hidden; overscroll-behavior: none; }
+        body { background-color: #E5E5E5; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; height: 100%; height: -webkit-fill-available; overflow: hidden; overscroll-behavior: none; }
         .nav-active {
             background: rgba(255,255,255,.18) !important;
             box-shadow: inset 2px 0 0 0 rgba(255,255,255,0.9), inset 0 0 0 1px rgba(255,255,255,.22);
@@ -188,7 +188,7 @@
 
     @stack('head')
 </head>
-<body class="h-screen overflow-hidden bg-[#D7D7D7] select-none">
+<body class="h-screen overflow-hidden bg-[#E5E5E5] select-none">
 
 {{-- ── Turbo navigation loading bar ─────────────────────────────────────── --}}
 <style>
