@@ -60,7 +60,7 @@ $hasData = $totalEggs > 0 || $performance->contains(fn ($p) => $p['hdep'] > 0);
     }
 </style>
 
-<div class="bg-white rounded-2xl border border-[#e6e6e6] p-5">
+<div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 h-full flex flex-col">
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div class="flex items-start gap-3">

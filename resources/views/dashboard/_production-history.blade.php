@@ -8,7 +8,7 @@
             animation: chartFadeIn 0.35s ease-out both;
         }
     </style>
-    <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5">
+    <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 h-full flex flex-col">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div class="flex items-start gap-3">
                 <span class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style="background-color: #e8f3fe; color: #0075de;">
@@ -45,7 +45,7 @@
                 No production data for the selected period.
             </div>
         @else
-            <div class="relative w-full h-[260px] chart-fade-in">
+            <div class="relative w-full flex-1 min-h-[300px] chart-fade-in">
                 <canvas id="dashProductionHistoryChart" style="width: 100%; height: 100%; display: block;"></canvas>
             </div>
         @endif

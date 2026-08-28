@@ -114,20 +114,22 @@
     });
     </script>
 
-    {{-- ── Cage Performance Rankings (full width, expands right) ── --}}
-    <turbo-frame id="dashboard-cage-performance" src="{{ route('dashboard.cage-performance') }}" loading="lazy" class="block">
-        @include('dashboard._cage-performance-skeleton')
-    </turbo-frame>
+    {{-- ── Cage Performance + Production History + Feed Today (side by side) ── --}}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 px-2 lg:px-4 items-stretch">
+        <turbo-frame id="dashboard-cage-performance" src="{{ route('dashboard.cage-performance') }}" loading="lazy" class="block">
+            @include('dashboard._cage-performance-skeleton')
+        </turbo-frame>
 
-    {{-- ── Production History (total & per-cage, 7/14/30 day filter) ── --}}
-    <turbo-frame id="dashboard-production-history" src="{{ route('dashboard.production-history') }}" loading="lazy" class="block">
-        @include('dashboard._production-history-skeleton')
-    </turbo-frame>
+        <div class="flex flex-col gap-8">
+            <turbo-frame id="dashboard-production-history" src="{{ route('dashboard.production-history') }}" loading="lazy" class="block flex-[2]">
+                @include('dashboard._production-history-skeleton')
+            </turbo-frame>
 
-    {{-- ── Feed Today (last section) ── --}}
-    <turbo-frame id="dashboard-feed-mortality" src="{{ route('dashboard.feed-mortality') }}" loading="lazy" class="block">
-        @include('dashboard._feed-mortality-skeleton')
-    </turbo-frame>
+            <turbo-frame id="dashboard-feed-mortality" src="{{ route('dashboard.feed-mortality') }}" loading="lazy" class="block flex-1">
+                @include('dashboard._feed-mortality-skeleton')
+            </turbo-frame>
+        </div>
+    </div>
 
     {{-- ── KPI Breakdown Modal (shared by all metric cards — item 9) ── --}}
     <div id="kpiModal" data-modal  data-close="closeKpiModal" style="display: none;" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
