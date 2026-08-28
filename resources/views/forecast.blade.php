@@ -43,11 +43,7 @@
         $forecastCount = $forecastDataDays ?? 0;
         $pct = min(100, ($forecastCount / 90) * 100);
     @endphp
-    @if(!($hasEnoughData ?? true))
     <style>
-        /* Lock only the main content, not the sidebar. Desktop sidebar is in
-           flow at 16rem (collapsed: 4rem); on mobile the sidebar is a drawer
-           so the overlay spans full width. */
         #forecastLockOverlay {
             position: fixed;
             top: 0;
@@ -78,11 +74,14 @@
         }
         #forecastLockOverlay { pointer-events: auto; }
     </style>
-    <div id="forecastLockOverlay" role="dialog" aria-modal="true">
+    <div id="forecastLockOverlay" role="dialog" aria-modal="true" {{ ($hasEnoughData ?? true) ? 'style="display:none"' : '' }}>
         <div class="backdrop"></div>
 
         <div class="relative w-full max-w-md rounded-2xl p-6 text-center"
              style="background-color: #ffffff; box-shadow: 0 24px 64px rgba(0,0,0,0.35);">
+            <button type="button" id="lockDismissBtn" onclick="document.getElementById('forecastLockOverlay').style.display='none'" class="absolute top-3 right-3 p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Dismiss">
+                <i data-lucide="x" class="w-4 h-4" style="color: #615d59;"></i>
+            </button>
             <div class="w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: #fdf3e0;">
                 <i data-lucide="hourglass" class="w-7 h-7" style="color: #8a5a00;"></i>
             </div>
@@ -126,7 +125,15 @@
             </div>
         </div>
     </div>
-    @endif
+
+    <script>
+    window.__forecastDataDays = {{ $forecastCount }};
+    window.showLockOverlay = function() {
+        var overlay = document.getElementById('forecastLockOverlay');
+        if (overlay) overlay.style.display = 'flex';
+        if (window.lucide) { try { lucide.createIcons(); } catch(e) {} }
+    };
+    </script>
 
     {{-- View forecast input records status --}}
     <div id="inputRecordsModal" class="fixed inset-0 min-h-screen min-h-[100dvh] bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
@@ -722,6 +729,12 @@
         if (e.target.id !== 'forecastForm') return;
         if (_forecastIsSubmitting) {
             e.preventDefault();
+            return;
+        }
+
+        if ((window.__forecastDataDays || 0) < 90) {
+            e.preventDefault();
+            window.showLockOverlay();
             return;
         }
 

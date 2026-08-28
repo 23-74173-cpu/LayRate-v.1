@@ -691,6 +691,16 @@
         document.addEventListener('submit', function(e) {
             if (e.target.id !== 'forecastDayForm') return;
             e.preventDefault();
+
+            if ((window.__forecastDataDays || 0) < 90) {
+                if (window.showLockOverlay) window.showLockOverlay();
+                else {
+                    var lo = document.getElementById('forecastLockOverlay');
+                    if (lo) { lo.style.display = 'flex'; if (window.lucide) { try { lucide.createIcons(); } catch(ex) {} } }
+                }
+                return;
+            }
+
             const form = e.target;
             const overlay = document.getElementById('forecastLoadingOverlay');
             if (!overlay) return;
