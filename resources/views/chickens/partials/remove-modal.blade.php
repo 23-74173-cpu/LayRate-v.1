@@ -1,6 +1,6 @@
 <div id="removeModal" data-modal  data-modal-destructive data-close="closeRemoveModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] items-center justify-center p-4" role="dialog" aria-modal="true" style="display: none;">
     {{-- Backdrop --}}
-    <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeRemoveModal()"></div>
+    <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="event.stopPropagation(); closeRemoveModal()"></div>
 
     {{-- Card --}}
     <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
@@ -10,7 +10,7 @@
             {{-- Header --}}
             <div class="flex items-center justify-between mb-5">
                 <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Remove Chickens</h2>
-                <button type="button" onclick="closeRemoveModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                <button type="button" onclick="event.stopPropagation(); closeRemoveModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                     <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
                 </button>
             </div>
@@ -66,7 +66,7 @@
 
             {{-- Footer --}}
             <div class="flex gap-3 mt-5">
-                <button type="button" onclick="closeRemoveModal()"
+                <button type="button" onclick="event.stopPropagation(); closeRemoveModal()"
                         class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">
                     Cancel
                 </button>
@@ -114,7 +114,13 @@ window.closeRemoveModal = closeRemoveModal;
     if (window.__removeModalEscapeBound) return;
     window.__removeModalEscapeBound = true;
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') closeRemoveModal();
+        if (e.key === 'Escape') {
+            var modal = document.getElementById('removeModal');
+            if (modal && modal.style.display !== 'none') {
+                e.stopPropagation();
+                closeRemoveModal();
+            }
+        }
     });
 })();
 

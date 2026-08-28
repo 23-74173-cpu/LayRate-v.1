@@ -147,7 +147,9 @@
             #cageInfoPopup .front-face,
             #cageInfoPopup .back-face { grid-area: 1 / 1; backface-visibility: hidden; background-color: #ffffff; border-radius: 11px; }
             #cageInfoPopup .back-face { transform: rotateY(180deg); }
+            #cageInfoBackdrop { transition: opacity 0.2s ease; }
         </style>
+        <div id="cageInfoBackdrop" class="hidden fixed inset-0 z-40" style="background-color: rgba(107,114,128,0.45); backdrop-filter: blur(4px);" onclick="closeCageInfoPopup()"></div>
         <div id="cageInfoPopup" class="hidden fixed z-50 rounded-xl border bg-white shadow-lg p-0 w-64" style="border-color: #e6e6e6; max-width: calc(100vw - 2rem); max-height: calc(100vh - 1.5rem); overflow-y: auto;">
             <div id="cageInfoPopupContent"></div>
         </div>
@@ -194,8 +196,17 @@
         </div>
     </div>
 
-    {{-- ── Tab Bar (Notion underline style, scrollable + hidden scrollbar on mobile) ── --}}
-    <div class="cage-tabs flex items-center gap-0 border-b overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]" style="border-color: #e6e6e6; -webkit-overflow-scrolling: touch;">
+    {{-- ── Toggle + All Cages Section ── --}}
+    <div>
+        <button id="toggleAllCagesBtn" onclick="toggleAllCages()" class="flex items-center gap-2 text-sm font-medium mb-3 transition-colors" style="color: #615d59;">
+            <i data-lucide="layout-grid" class="w-4 h-4" style="color: #0075de;"></i>
+            <span>Show All Cages</span>
+            <i data-lucide="chevron-down" id="toggleAllCagesIcon" class="w-4 h-4 transition-transform duration-200"></i>
+        </button>
+
+        <div id="allCagesSection" class="hidden">
+            {{-- ── Tab Bar (Notion underline style, scrollable + hidden scrollbar on mobile) ── --}}
+            <div class="cage-tabs flex items-center gap-0 border-b overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]" style="border-color: #e6e6e6; -webkit-overflow-scrolling: touch;">
         <button type="button" onclick="filterCage('all')" class="cage-tab px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap cursor-pointer"
                 data-tab="all"
                 style="border-bottom-color: #002D5E; color: #1f1f1f;">
@@ -443,6 +454,7 @@
             No cages yet. Click "+ Add Cage" to get started.
         </div>
         @endforelse
+    </div>
     </div>
 
     {{-- ── Add Cage Modal (full complexity with live preview) ── --}}
@@ -1258,6 +1270,17 @@ function closeEditModal() {
     clearResizeCollisionHighlight();
 }
 
+// ── Toggle All Cages Section ──────────────────────────────────
+function toggleAllCages() {
+    var section = document.getElementById('allCagesSection');
+    var icon = document.getElementById('toggleAllCagesIcon');
+    var btn = document.getElementById('toggleAllCagesBtn');
+    var isHidden = section.classList.contains('hidden');
+    section.classList.toggle('hidden');
+    btn.querySelector('span').textContent = isHidden ? 'Hide All Cages' : 'Show All Cages';
+    icon.style.transform = isHidden ? 'rotate(180deg)' : '';
+}
+
 // ── Keyboard: Escape closes modals (bind once) ───────────
 // Guarded on window, not a local var, because Turbo re-parses this inline
 // script on every visit to this page — a local flag would reset each time
@@ -1606,11 +1629,13 @@ function renderCageInfoPopupContent(m) {
 
 function closeCageInfoPopup() {
     var popup = document.getElementById('cageInfoPopup');
+    var backdrop = document.getElementById('cageInfoBackdrop');
     if (popup) {
         popup.classList.add('hidden');
         popup.style.transform = '';
         popup.style.zIndex = '';
     }
+    if (backdrop) backdrop.classList.add('hidden');
     popupReorderCageId = null;
     popupReorderState = {};
     window.__popupReorderBound = false;
@@ -1684,10 +1709,12 @@ function openCageInfoPopup(cageId, btnEl) {
     if (!m) return;
     var popup = document.getElementById('cageInfoPopup');
     var content = document.getElementById('cageInfoPopupContent');
+    var backdrop = document.getElementById('cageInfoBackdrop');
     if (!popup || !content) return;
 
     content.innerHTML = renderCageInfoPopupContent(m);
     popup.classList.remove('hidden');
+    if (backdrop) backdrop.classList.remove('hidden');
     popup._cageInfoBtnEl = btnEl;
     popup._cageInfoCageId = cageId;
     popup.style.width = '16rem';
@@ -1706,8 +1733,13 @@ if (!window.__cageInfoEscBound) {
     window.__cageInfoEscBound = true;
     document.addEventListener('keydown', function(e) {
         if (e.key !== 'Escape') return;
+        var moveModal = document.getElementById('moveModal');
+        var removeModal = document.getElementById('removeModal');
+        if ((moveModal && moveModal.style.display !== 'none') || (removeModal && removeModal.style.display !== 'none')) return;
         var popup = document.getElementById('cageInfoPopup');
+        var backdrop = document.getElementById('cageInfoBackdrop');
         if (popup) popup.classList.add('hidden');
+        if (backdrop) backdrop.classList.add('hidden');
     });
 }
 
