@@ -24,6 +24,17 @@ Schedule::command('forecast:sync-input-records')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/forecast-sync.log'));
 
+// Backstop: run 6 hours after the primary sync window. Catches cases where
+// the server was off during the primary time and came back online later.
+// The sync command detects missed runs via last_forecast_sync_at and logs
+// a warning when catch-up is triggered.
+Schedule::command('forecast:sync-input-records --catch-up')
+    ->daily()
+    ->at(now()->setTimeFromTimeString(ReportingDateService::resetTime())->addHours(6)->format('H:i'))
+    ->timezone(ReportingDateService::timezone())
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/forecast-sync.log'));
+
 // Check environmental log thresholds for violations every 15 minutes.
 Schedule::command('alerts:check-environment')
     ->everyFifteenMinutes()

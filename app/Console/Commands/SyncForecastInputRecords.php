@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Setting;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -16,7 +17,8 @@ class SyncForecastInputRecords extends Command
                             {--cage= : Sync only a specific cage code}
                             {--from= : Start date (Y-m-d)}
                             {--to= : End date (Y-m-d)}
-                            {--dry-run : Show what would be synced without saving}';
+                            {--dry-run : Show what would be synced without saving}
+                            {--catch-up : Force catch-up mode regardless of last sync time}';
 
     /**
      * The console command description.
@@ -31,6 +33,29 @@ class SyncForecastInputRecords extends Command
     public function handle(): int
     {
         $dryRun = $this->option('dry-run');
+
+        // --- Catch-up detection ------------------------------------------------
+        // Check when the last successful sync ran. If it was more than 24 hours
+        // ago, the server was likely off during the previous scheduled window.
+        // Log a warning so operators can see missed syncs in the log file.
+        $lastSyncAt = Setting::get('last_forecast_sync_at');
+        if ($lastSyncAt) {
+            $hoursSince = now()->diffInHours(now()->parse($lastSyncAt));
+            if ($hoursSince > 24 || $this->option('catch-up')) {
+                $this->warn("Last sync was {$hoursSince}h ago — running catch-up.");
+            }
+        }
+
+        // --- Date filter from last sync ----------------------------------------
+        // When no explicit --from is provided and a previous sync exists, start
+        // from the day after the last sync to avoid re-processing already-synced
+        // days. The upsert is idempotent so re-processing is safe, but skipping
+        // it is faster for large historical datasets.
+        $fromOption = $this->option('from');
+        if ($fromOption === null && $lastSyncAt && !$this->option('catch-up')) {
+            $fromOption = now()->parse($lastSyncAt)->addDay()->format('Y-m-d');
+            $this->info("Auto-setting --from={$fromOption} (last sync: {$lastSyncAt}).");
+        }
 
         // Base query: aggregate production logs by cage and date.
         $query = DB::table('production_logs as pl')
@@ -50,8 +75,8 @@ class SyncForecastInputRecords extends Command
             $query->where('c.cage_code', $cage);
         }
 
-        if ($from = $this->option('from')) {
-            $query->where('pl.log_date', '>=', $from);
+        if ($fromOption) {
+            $query->where('pl.log_date', '>=', $fromOption);
         }
 
         if ($to = $this->option('to')) {
@@ -196,6 +221,10 @@ class SyncForecastInputRecords extends Command
                 'updated_at',
             ]
         );
+
+        // Record the sync timestamp so the next scheduled run can detect if we
+        // missed a window (server was off) and trigger catch-up automatically.
+        Setting::set('last_forecast_sync_at', now()->toDateTimeString());
 
         $this->info('Synced ' . count($upsertData) . ' records into forecast_input_records.');
         $this->info('Historical data is now continuous and can grow beyond 90 days.');
