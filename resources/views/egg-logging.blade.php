@@ -607,7 +607,7 @@
             return el.closest('.slot-card');
         }
 
-        // Select all slots between two slots using row/col positions
+        // Select all slots between two slots using row/col positions (add only, no toggle)
         function selectSlotsBetween(slotA, slotB) {
             if (!slotA || !slotB) return;
             var aRow = parseInt(slotA.dataset.row), aCol = parseInt(slotA.dataset.col);
@@ -617,11 +617,14 @@
             var cageId = slotA.dataset.cageId;
             document.querySelectorAll('.slot-card[data-cage-id="' + cageId + '"]').forEach(function(el) {
                 if (el.dataset.empty === '1') return;
+                if (selectedSlotIds.has(el.dataset.slotId)) return;
                 var r = parseInt(el.dataset.row), c = parseInt(el.dataset.col);
                 if (r >= rMin && r <= rMax && c >= cMin && c <= cMax) {
-                    toggleSlotSelection(el);
+                    selectedSlotIds.add(el.dataset.slotId);
+                    el.classList.add('ring-2', 'ring-[#0075de]', 'ring-offset-1', 'bg-[#0075de]/10');
                 }
             });
+            document.getElementById('cageSlotIdsInput').value = Array.from(selectedSlotIds).join(',');
         }
 
         function onSlotTouchStart(e) {
