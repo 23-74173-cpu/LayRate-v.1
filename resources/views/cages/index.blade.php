@@ -115,7 +115,7 @@
                      draggable="{{ $isAdmin ? 'true' : 'false' }}"
                      data-cage-id="{{ $uc->id }}"
                      data-cage-code="{{ $uc->cage_code }}"
-                     @if($isAdmin) ondragstart="handleDragStart(event, {{ $uc->id }})" @endif>
+                     @if($isAdmin) ondragstart="handleDragStart(event, {{ $uc->id }})" ontouchstart="if(!event.target.closest('.cage-info-btn')){handleTouchDragStart({{ $uc->id }}, event.touches[0], false);event.preventDefault();}" @endif>
                     <button class="cage-info-btn w-6 h-6 rounded-full flex items-center justify-center" data-cage-id="{{ $uc->id }}" style="position:absolute; bottom:2px; right:2px; background-color:transparent; color: {{ $uc->color }}; line-height:1;" title="Cage info" aria-label="Cage info"><i data-lucide="info" class="w-3 h-3"></i></button>
                     @if($isTiny)
                     <span class="font-bold leading-none text-center" style="font-size:14px;color: {{ $uc->color }};overflow:hidden;text-overflow:ellipsis;max-width:100%;display:inline-block;">
@@ -1466,6 +1466,7 @@ function renderCageOverlays() {
     // Bind drag events
     layer.querySelectorAll('.cage-drag-handle').forEach(function(el) {
         el.addEventListener('dragstart', function(e) { handleDragStart(e, parseInt(el.dataset.cageId)); });
+        el.addEventListener('touchstart', function(e) { handleTouchDragStart(parseInt(el.dataset.cageId), e.touches[0], true); e.preventDefault(); }, { passive: false });
     });
     // Re-render lucide icons (drag/drop and select re-create the overlay markup,
     // which leaves info/action icons as empty <i> until createIcons runs)
@@ -2021,6 +2022,160 @@ function unbindDragListeners() {
     dragListenersBound = false;
 }
 
+// ── Touch Drag (mobile) ──────────────────────────────────────────
+var touchDragState = { active: false, cageId: null, fromCanvas: false, grabOffsetCol: 0, grabOffsetRow: 0 };
+
+function bindTouchDragListeners() {
+    document.addEventListener('touchmove', onTouchDragMove, { passive: false });
+    document.addEventListener('touchend', onTouchDragEnd, { passive: false });
+    document.addEventListener('touchcancel', onTouchDragEnd, { passive: false });
+}
+
+function unbindTouchDragListeners() {
+    document.removeEventListener('touchmove', onTouchDragMove);
+    document.removeEventListener('touchend', onTouchDragEnd);
+    document.removeEventListener('touchcancel', onTouchDragEnd);
+}
+
+function handleTouchDragStart(cageId, touch, fromCanvas) {
+    if (!IS_ADMIN) return;
+    draggedCageId = cageId;
+    draggedFromCanvas = fromCanvas;
+    var m = cageMeta[cageId];
+    if (!m) return;
+
+    var cellW = TILE_SIZE + TILE_GAP;
+    var cellH = TILE_SIZE + TILE_GAP;
+
+    if (fromCanvas) {
+        var overlay = document.querySelector('.cage-overlay[data-cage-id="' + cageId + '"]');
+        if (overlay) {
+            overlay.style.opacity = '0.35';
+            var overlayRect = overlay.getBoundingClientRect();
+            touchDragState.grabOffsetCol = (touch.clientX - overlayRect.left) / cellW;
+            touchDragState.grabOffsetRow = (touch.clientY - overlayRect.top) / cellH;
+        }
+    } else {
+        var tile = document.querySelector('.staging-tile[data-cage-id="' + cageId + '"]');
+        if (tile) {
+            var tileRect = tile.getBoundingClientRect();
+            touchDragState.grabOffsetCol = (touch.clientX - tileRect.left) / cellW;
+            touchDragState.grabOffsetRow = (touch.clientY - tileRect.top) / cellH;
+        } else {
+            touchDragState.grabOffsetCol = (m.slots_per_row * cellW) / 2 / cellW;
+            touchDragState.grabOffsetRow = (m.rows * cellH) / 2 / cellH;
+        }
+    }
+
+    touchDragState.grabOffsetCol = Math.max(0, Math.min(touchDragState.grabOffsetCol, m.slots_per_row));
+    touchDragState.grabOffsetRow = Math.max(0, Math.min(touchDragState.grabOffsetRow, m.rows));
+    touchDragState.active = true;
+    touchDragState.cageId = cageId;
+    touchDragState.fromCanvas = fromCanvas;
+
+    bindTouchDragListeners();
+}
+
+function onTouchDragMove(e) {
+    if (!touchDragState.active) return;
+    e.preventDefault();
+    var touch = e.touches[0];
+    var ghost = document.getElementById('dragGhost');
+    if (!ghost) return;
+    var cageId = draggedCageId;
+    if (!cageId || !cageMeta[cageId]) { ghost.classList.add('hidden'); return; }
+    var m = cageMeta[cageId];
+    var w = m.slots_per_row;
+    var h = m.rows;
+    var cellW = TILE_SIZE + TILE_GAP;
+    var cellH = TILE_SIZE + TILE_GAP;
+
+    var canvas = document.getElementById('farmCanvas');
+    var rect = canvas.getBoundingClientRect();
+    var scale = getCanvasScale();
+    var mx = (touch.clientX - rect.left + canvas.scrollLeft) / scale - GRID_PAD;
+    var my = (touch.clientY - rect.top + canvas.scrollTop) / scale - GRID_PAD;
+
+    var snapCol = Math.floor((mx - touchDragState.grabOffsetCol * cellW) / cellW);
+    var snapRow = Math.floor((my - touchDragState.grabOffsetRow * cellH) / cellH);
+    snapCol = Math.max(0, Math.min(snapCol, GRID_COLS - w));
+    snapRow = Math.max(0, Math.min(snapRow, GRID_ROWS - h));
+
+    var ghostLeft = rect.left - canvas.scrollLeft + tileLeft(snapCol) * scale;
+    var ghostTop = rect.top - canvas.scrollTop + tileTop(snapRow) * scale;
+    var ghostW = (w * cellW - TILE_GAP) * scale;
+    var ghostH = (h * cellH - TILE_GAP) * scale;
+
+    var valid = checkPlacement(cageId, snapRow, snapCol);
+
+    var snapChanged = (window._lastSnap === undefined ||
+                       window._lastSnap.row !== snapRow ||
+                       window._lastSnap.col !== snapCol);
+    if (!snapChanged && ghost.classList.contains('hidden') === false) return;
+
+    window._lastSnap = { row: snapRow, col: snapCol };
+
+    ghost.style.left = ghostLeft + 'px';
+    ghost.style.top = ghostTop + 'px';
+    ghost.style.width = ghostW + 'px';
+    ghost.style.height = ghostH + 'px';
+    ghost.style.borderColor = valid ? m.color : '#9b1c24';
+    ghost.style.backgroundColor = valid ? m.colorSoft : '#fbe4e6';
+    ghost.innerHTML = cageLabelHtml(m.code, m.slots_per_row, m.rows, valid ? m.color : '#9b1c24');
+    ghost.classList.remove('hidden');
+
+    clearGridHighlights();
+    if (valid) {
+        for (var r = snapRow; r < snapRow + h; r++) {
+            for (var c = snapCol; c < snapCol + w; c++) {
+                var tiles = document.querySelectorAll('.tile-bg');
+                var idx = r * GRID_COLS + c;
+                if (idx >= 0 && idx < tiles.length) {
+                    tiles[idx].style.backgroundColor = '#dcebfa';
+                }
+            }
+        }
+    }
+}
+
+function onTouchDragEnd(e) {
+    if (!touchDragState.active) return;
+    var cageId = draggedCageId;
+    var m = cageMeta[cageId];
+    if (m) {
+        var cellW = TILE_SIZE + TILE_GAP;
+        var cellH = TILE_SIZE + TILE_GAP;
+        var w = m.slots_per_row;
+        var h = m.rows;
+
+        var touch = e.changedTouches[0];
+        var canvas = document.getElementById('farmCanvas');
+        var rect = canvas.getBoundingClientRect();
+        var scale = getCanvasScale();
+        var mx = (touch.clientX - rect.left + canvas.scrollLeft) / scale - GRID_PAD;
+        var my = (touch.clientY - rect.top + canvas.scrollTop) / scale - GRID_PAD;
+        var snapCol = Math.floor((mx - touchDragState.grabOffsetCol * cellW) / cellW);
+        var snapRow = Math.floor((my - touchDragState.grabOffsetRow * cellH) / cellH);
+        snapCol = Math.max(0, Math.min(snapCol, GRID_COLS - w));
+        snapRow = Math.max(0, Math.min(snapRow, GRID_ROWS - h));
+
+        var canDrop = snapCol >= 0 && snapRow >= 0 && snapCol + w <= GRID_COLS && snapRow + h <= GRID_ROWS;
+        if (canDrop && checkPlacement(cageId, snapRow, snapCol)) {
+            placeCage(cageId, snapRow, snapCol);
+        } else if (!canDrop) {
+            showDragError('Cannot place here — cage extends beyond the grid edge');
+        } else {
+            showDragError('Cannot place here — tiles overlap with another cage');
+        }
+    }
+
+    hideGhost();
+    unbindTouchDragListeners();
+    resetDragState();
+    touchDragState.active = false;
+    touchDragState.cageId = null;
+}
+
 function showGhost(e) {
     var ghost = document.getElementById('dragGhost');
     if (!ghost) return;
@@ -2218,6 +2373,7 @@ function addStagingTile(cageId) {
     var infoBtn = tile.querySelector('.cage-info-btn');
     if (infoBtn) bindCageInfoButton(infoBtn);
     tile.addEventListener('dragstart', function(e) { handleDragStart(e, cageId); });
+    tile.addEventListener('touchstart', function(e) { if(!e.target.closest('.cage-info-btn')){handleTouchDragStart(cageId, e.touches[0], false);e.preventDefault();} }, { passive: false });
     area.appendChild(tile);
     if (window.lucide && typeof window.lucide.createIcons === 'function') {
         try { window.lucide.createIcons({ root: tile }); } catch (e) {}
