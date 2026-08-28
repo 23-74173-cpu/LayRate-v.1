@@ -121,7 +121,7 @@
                 <button type="button" id="lockImportBtn"
                         class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
                         style="color:#1f6b3a; border:1px solid #cfe8d6; background-color:#e8f5ec;">
-                    <i data-lucide="upload" class="w-4 h-4"></i> Import function
+                    <i data-lucide="upload" class="w-4 h-4"></i> Import Production Record
                 </button>
             </div>
         </div>
@@ -177,7 +177,8 @@
             </p>
             <form method="GET" action="{{ route('forecast.template') }}" id="downloadTemplateForm" data-turbo="false">
                 @php
-                    $defaultEndDate = now()->format('Y-m-d');
+                    $lastRecordDate = \Illuminate\Support\Facades\DB::table('forecast_input_records')->max('date');
+                    $defaultEndDate = $lastRecordDate ? \Carbon\Carbon::parse($lastRecordDate)->subDay()->format('Y-m-d') : now()->format('Y-m-d');
                     $defaultStartDate = now()->subDays(89)->format('Y-m-d');
                 @endphp
                 <input type="hidden" name="end_date" value="{{ $defaultEndDate }}">
@@ -191,7 +192,7 @@
                     <label for="templateEndDate" class="block text-sm text-[#333333] mb-1">End date</label>
                     <input type="date" id="templateEndDate" value="{{ $defaultEndDate }}" readonly
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-[#F5F6F8] text-[#6B7280] cursor-not-allowed">
-                    <p class="text-xs text-[#6B7280] mt-1">The sheet always ends today.</p>
+                    <p class="text-xs text-[#6B7280] mt-1">Ends at the last recorded production date.</p>
                 </div>
                 <button type="submit" class="w-full bg-[#002D5E] text-white py-3 rounded-lg text-sm font-medium hover:bg-[#001F42] transition-colors flex items-center justify-center gap-2">
                     <i data-lucide="download" class="w-5 h-5 shrink-0"></i>
