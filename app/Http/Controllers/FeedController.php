@@ -53,7 +53,7 @@ class FeedController extends Controller
         $consumptionLogs = FeedConsumptionLog::with(['cage', 'feedBatch', 'farmFeedEntry'])
             ->when($preselectedCageId, fn ($q) => $q->where('cage_id', $preselectedCageId))
             ->orderByDesc('log_date')
-            ->orderBy('log_time')
+            ->orderByDesc('log_time')
             ->paginate(20)
             ->withQueryString();
 
@@ -235,7 +235,7 @@ class FeedController extends Controller
             'cage_id' => 'required|exists:cages,id',
             'feed_batch_id' => 'required|exists:feed_batches,id',
             'log_date' => 'required|date',
-            'log_time' => 'nullable|date_format:H:i',
+            'log_time' => 'required|date_format:H:i',
             'feed_consumed_kg' => 'required|numeric|min:0',
         ];
     }
@@ -331,7 +331,7 @@ class FeedController extends Controller
         return [
             'feed_batch_id' => 'required|exists:feed_batches,id',
             'log_date' => 'required|date',
-            'log_time' => 'nullable|date_format:H:i',
+            'log_time' => 'required|date_format:H:i',
             'total_kg' => 'required|numeric|min:0',
             'unit_cost' => 'nullable|numeric|min:0',
         ];
@@ -468,7 +468,7 @@ class FeedController extends Controller
                 'cage_id' => $share['cage']->id,
                 'feed_batch_id' => $entry->feed_batch_id,
                 'log_date' => $entry->log_date,
-                'log_time' => $entry->log_time,
+                'log_time' => $entry->log_time?->format('H:i:s'),
                 'feed_consumed_kg' => $kg,
                 'source' => 'distributed',
                 'farm_feed_entry_id' => $entry->id,

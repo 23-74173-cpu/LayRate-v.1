@@ -266,10 +266,10 @@
              tab, so they're full-size primary buttons up top, not small/muted
              secondary ones a barn worker could miss on a tablet. --}}
         <div class="flex flex-wrap items-center justify-end gap-3 mb-4">
-            <x-button onclick="openFarmEntryModal(null, null, '{{ now()->toDateString() }}', null, null)">
+            <x-button onclick="openFarmEntryModal(null, null, '{{ now()->toDateString() }}', '{{ now()->format('H:i') }}', null)">
                 <i data-lucide="scale" class="w-4 h-4"></i> Log Whole-Farm Feeding
             </x-button>
-            <x-button onclick="openConsumptionModal(null, null, '{{ now()->toDateString() }}', null, null, null)">
+            <x-button onclick="openConsumptionModal(null, null, '{{ now()->toDateString() }}', '{{ now()->format('H:i') }}', null, null)">
                 <i data-lucide="plus" class="w-4 h-4"></i> Add Consumption
             </x-button>
         </div>

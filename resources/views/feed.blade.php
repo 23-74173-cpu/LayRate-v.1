@@ -201,7 +201,7 @@
                 </div>
                 <div>
                     <label class="block text-sm text-[#333333] mb-1.5">Time</label>
-                    <input name="log_time" type="time" value="{{ old('log_time') }}"
+                    <input name="log_time" type="time" value="{{ old('log_time', now()->format('H:i')) }}" required
                            class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
                 </div>
             </div>
@@ -277,7 +277,7 @@
                 </div>
                 <div>
                     <label class="block text-sm text-[#333333] mb-1.5">Time</label>
-                    <input name="log_time" type="time" value="{{ old('log_time') }}"
+                    <input name="log_time" type="time" value="{{ old('log_time', now()->format('H:i')) }}" required
                            class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
                 </div>
             </div>
@@ -396,7 +396,12 @@ function closeAllFeedModals() {
 
 function feedReloadLiveData() {
     var frame = document.getElementById('feed-live-data');
-    if (frame && frame.src) frame.src = frame.src;
+    if (!frame) return;
+    window.__feedActiveTab = null;
+    var url = new URL(frame.src, window.location.origin);
+    var cur = new URL(window.location);
+    cur.searchParams.forEach(function(v, k) { url.searchParams.set(k, v); });
+    frame.src = url.toString();
 }
 
 function openEditBatch(id, brand, cp, qty, cost, threshold, notes) {
@@ -444,7 +449,7 @@ function openConsumptionModal(cageId, batchId, date, time, kg, entryId) {
     var dateInput = document.querySelector('#consumptionModal input[name="log_date"]');
     if (dateInput) dateInput.value = date || '{{ now()->toDateString() }}';
     var timeInput = document.querySelector('#consumptionModal input[name="log_time"]');
-    if (timeInput) timeInput.value = time || '';
+    if (timeInput) timeInput.value = time || '{{ now()->format("H:i") }}';
     var kgInput = document.querySelector('#consumptionModal input[name="feed_consumed_kg"]');
     if (kgInput) kgInput.value = kg || '';
 
@@ -477,7 +482,7 @@ function openFarmEntryModal(entryId, batchId, date, time, totalKg) {
     var farmDate = document.querySelector('#farmEntryModal input[name="log_date"]');
     if (farmDate) farmDate.value = date || '{{ now()->toDateString() }}';
     var farmTime = document.querySelector('#farmEntryModal input[name="log_time"]');
-    if (farmTime) farmTime.value = time || '';
+    if (farmTime) farmTime.value = time || '{{ now()->format("H:i") }}';
     var farmKg = document.querySelector('#farmEntryModal input[name="total_kg"]');
     if (farmKg) farmKg.value = totalKg || '';
 
