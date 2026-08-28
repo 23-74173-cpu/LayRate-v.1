@@ -50,7 +50,10 @@
            so the overlay spans full width. */
         #forecastLockOverlay {
             position: fixed;
-            inset: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
             z-index: 50;
             display: flex;
             align-items: center;
@@ -58,15 +61,20 @@
             padding: 1rem;
         }
         #forecastLockOverlay > .backdrop {
-            position: absolute;
-            inset: 0;
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
             background-color: rgba(35,39,50,0.55);
             backdrop-filter: blur(6px);
             -webkit-backdrop-filter: blur(6px);
         }
         @media (min-width: 1024px) {
             #forecastLockOverlay { left: 16rem; }
+            #forecastLockOverlay > .backdrop { left: 16rem; }
             html.sidebar-collapsed #forecastLockOverlay { left: 4rem; }
+            html.sidebar-collapsed #forecastLockOverlay > .backdrop { left: 4rem; }
         }
         #forecastLockOverlay { pointer-events: auto; }
     </style>
