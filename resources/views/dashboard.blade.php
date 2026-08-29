@@ -145,6 +145,72 @@
         </div>
     </div>
 
+    {{-- ── Yesterday's Production Record Popup ── --}}
+    <div id="yesterdaySummaryModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+        <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeYesterdaySummary()"></div>
+        <div class="relative w-full max-w-sm rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h3 class="text-[18px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Yesterday's Production Record</h3>
+                    <p class="text-xs mt-0.5" style="color: #a39e98;">{{ \Carbon\Carbon::yesterday()->format('l, F j, Y') }}</p>
+                </div>
+                <button onclick="closeYesterdaySummary()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                    <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                {{-- Eggs Collected --}}
+                <div class="flex items-center justify-between py-2.5 px-3 rounded-xl" style="background-color: #f9f7f4;">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: #e8f4fd;">
+                            <i data-lucide="egg" class="w-4 h-4" style="color: #0075de;"></i>
+                        </span>
+                        <span class="text-sm font-medium" style="color: #615d59;">Eggs Collected</span>
+                    </div>
+                    <span class="text-[18px] font-bold" style="color: #1f1f1f;">{{ number_format($eggsYesterday) }}</span>
+                </div>
+
+                {{-- HDEP --}}
+                <div class="flex items-center justify-between py-2.5 px-3 rounded-xl" style="background-color: #f9f7f4;">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: #fef3e2;">
+                            <i data-lucide="percent" class="w-4 h-4" style="color: #e09c00;"></i>
+                        </span>
+                        <span class="text-sm font-medium" style="color: #615d59;">HDEP</span>
+                    </div>
+                    <span class="text-[18px] font-bold" style="color: #1f1f1f;">{{ $yesterdayHdep }}%</span>
+                </div>
+
+                {{-- Feed Consumed --}}
+                <div class="flex items-center justify-between py-2.5 px-3 rounded-xl" style="background-color: #f9f7f4;">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: #e6f6ee;">
+                            <i data-lucide="wheat" class="w-4 h-4" style="color: #16a34a;"></i>
+                        </span>
+                        <span class="text-sm font-medium" style="color: #615d59;">Feed Consumed</span>
+                    </div>
+                    <span class="text-[18px] font-bold" style="color: #1f1f1f;">{{ number_format($yesterdayFeedTotal, 2) }} kg</span>
+                </div>
+
+                {{-- Mortality --}}
+                <div class="flex items-center justify-between py-2.5 px-3 rounded-xl" style="background-color: #f9f7f4;">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: {{ $yesterdayMortalityTotal > 0 ? '#fde8e8' : '#e6f6ee' }};">
+                            <i data-lucide="heart-crack" class="w-4 h-4" style="color: {{ $yesterdayMortalityTotal > 0 ? '#dc2626' : '#16a34a' }};"></i>
+                        </span>
+                        <span class="text-sm font-medium" style="color: #615d59;">Mortality</span>
+                    </div>
+                    <span class="text-[18px] font-bold" style="color: {{ $yesterdayMortalityTotal > 0 ? '#dc2626' : '#1f1f1f' }};">{{ $yesterdayMortalityTotal }} {{ Str::plural('hen', $yesterdayMortalityTotal) }}</span>
+                </div>
+            </div>
+
+            <button onclick="closeYesterdaySummary()" class="w-full mt-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors" style="background-color: #0075de;">
+                Got it
+            </button>
+        </div>
+    </div>
+
     <script>
     // KPI_DATA is populated by the lazily loaded metric-cards frame.
     window.KPI_DATA = window.KPI_DATA || {};
@@ -462,6 +528,40 @@
         reloadFramePreservingScroll('dashboard-cage-performance', perfUrl);
         reloadFramePreservingScroll('dashboard-production-history', historyUrl);
     };
+
+    // ── Yesterday's Production Record popup ──
+    // Shows once per reporting day. Uses localStorage keyed by the server's
+    // reporting date so the popup reappears after the daily rollover.
+    function closeYesterdaySummary() {
+        var m = document.getElementById('yesterdaySummaryModal');
+        if (m) m.style.display = 'none';
+    }
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeYesterdaySummary();
+    });
+
+    (function() {
+        var reportingDate = '{{ $today }}';
+        var storageKey = 'yesterdaySummaryShown_' + reportingDate;
+        if (localStorage.getItem(storageKey)) return;
+
+        var eggsYesterday = {{ (int) $eggsYesterday }};
+        var yesterdayMortalityTotal = {{ (int) $yesterdayMortalityTotal }};
+        var yesterdayHdep = {{ (float) $yesterdayHdep }};
+        var yesterdayFeedTotal = {{ (float) $yesterdayFeedTotal }};
+
+        var hasAnyData = eggsYesterday > 0 || yesterdayMortalityTotal > 0 || yesterdayHdep > 0 || yesterdayFeedTotal > 0;
+        if (!hasAnyData) return;
+
+        setTimeout(function() {
+            var m = document.getElementById('yesterdaySummaryModal');
+            if (m) {
+                m.style.display = 'flex';
+                lucide.createIcons();
+                localStorage.setItem(storageKey, '1');
+            }
+        }, 800);
+    })();
     </script>
 
 </div>

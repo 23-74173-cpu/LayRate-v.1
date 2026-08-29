@@ -355,6 +355,16 @@ class DashboardController extends Controller
             ->map(fn ($g) => $g->sum('count'));
         $mortalityTodayTotal = $mortalityToday->sum();
 
+        // Yesterday's mortality
+        $yesterdayMortalityTotal = MortalityLog::whereDate('log_date', $yesterday)
+            ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
+            ->sum('count');
+
+        // Yesterday's feed consumed
+        $yesterdayFeedTotal = FeedConsumptionLog::whereDate('log_date', $yesterday)
+            ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
+            ->sum('feed_consumed_kg');
+
         // Live readings per cage
         $liveReadings = $cages->map(function ($cage) use ($thresholds) {
             $env = $cage->latestEnvironmentLog;
@@ -382,6 +392,7 @@ class DashboardController extends Controller
             'cages', 'totalHens', 'todayHdep', 'hdepDelta',
             'eggsToday', 'eggsDelta', 'lifetimeEggs', 'avgTemp', 'avgHum', 'feedToday',
             'mortalityToday', 'mortalityTodayTotal',
+            'yesterdayHdep', 'eggsYesterday', 'yesterdayMortalityTotal', 'yesterdayFeedTotal',
             'liveReadings', 'today',
             'needsOnboarding'
         );
