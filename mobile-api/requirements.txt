@@ -1,6 +1,5 @@
-Flask>=3.0.0
-Flask-CORS>=4.0.0
-bcrypt>=4.0.0
-Werkzeug>=3.0.0
-PyMySQL>=1.0.0
-zeroconf>=0.132.0
+flask
+flask-cors
+bcrypt
+pymysql
+zeroconf

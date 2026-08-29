@@ -1,0 +1,86 @@
+# LayRate — General Requirements
+# ================================
+# This file lists every dependency needed before running the web app.
+# It is documentation (not auto-installed) — see "Install" commands per section.
+#
+# Stack overview:
+#   - Laravel 12 web app + API          (PHP / Composer)
+#   - Vite frontend build               (Node.js / npm)
+#   - Mobile API service                (Python, mobile-api/)
+#   - Serial bridge for Arduino sensors (Python, serial-bridge/)
+#   - MariaDB/MySQL database
+
+# ------------------------------------------------------------------------------
+# 1. SYSTEM PACKAGES (Arch Linux package names in parentheses)
+# ------------------------------------------------------------------------------
+# PHP >= 8.2                      (php)
+# Composer >= 2                   (composer)
+# Node.js + npm                   (nodejs npm)
+# MariaDB / MySQL server          (mariadb)
+#
+# Required PHP extensions (must appear in `php -m`):
+#   gd        -> PDF report chart images via dompdf      (php-gd)
+#   zip       -> Excel export via maatwebsite/excel
+#                (bundled with the php package; enable with `extension=zip`)
+#   mbstring, pdo_mysql / mysqli, curl, dom, xml, xmlwriter,
+#   iconv, openssl, pcntl, tokenizer, ctype, filter, hash, session
+#
+# Arch install:
+#   sudo pacman -S php composer nodejs npm mariadb
+#
+# NOTE (this machine): no root access was available, so gd is provided by a
+# prebuilt extension bundled in .dev/php-ext/ and enabled project-locally via
+# .dev/php-conf.d/ (gd.ini + zip.ini). To use it, PHP must run with:
+#   export LD_LIBRARY_PATH="$PWD/.dev/php-ext:$LD_LIBRARY_PATH"
+#   export PHP_INI_SCAN_DIR="/etc/php/conf.d:$PWD/.dev/php-conf.d"
+# scripts/serve-local.sh already does this. Alternatively install php-gd
+# system-wide and the bundled copy becomes unnecessary.
+
+# ------------------------------------------------------------------------------
+# 2. PHP COMPOSER PACKAGES  (install: composer install)
+#    Source of truth: composer.json / composer.lock
+# ------------------------------------------------------------------------------
+php >= 8.2
+laravel/framework ^12.0
+barryvdh/laravel-dompdf ^3.1        # PDF reports (requires ext-gd)
+maatwebsite/excel ^3.1              # Excel import/export (requires ext-zip)
+doctrine/dbal ^4.4
+laravel/tinker ^2.10.1
+# dev: fakerphp/faker, laravel/pail, laravel/pint, laravel/sail,
+#      mockery/mockery, nunomaduro/collision, phpunit/phpunit
+
+# ------------------------------------------------------------------------------
+# 3. NODE PACKAGES  (install: npm install && npm run build)
+#    Source of truth: package.json / package-lock.json
+# ------------------------------------------------------------------------------
+# Vite + Laravel Vite plugin, Tailwind CSS, Alpine/Axios et al.
+# (see package.json for exact versions)
+
+# ------------------------------------------------------------------------------
+# 4. PYTHON — MOBILE API SERVICE  (mobile-api/, run on port 5000)
+#    install: pip install -r mobile-api/requirements.txt
+#    (no requirements file exists yet — packages listed from imports)
+# ------------------------------------------------------------------------------
+flask
+flask-cors
+bcrypt
+pymysql
+zeroconf
+
+# ------------------------------------------------------------------------------
+# 5. PYTHON — SERIAL BRIDGE  (serial-bridge/)
+#    install: pip install -r serial-bridge/requirements.txt
+# ------------------------------------------------------------------------------
+pyserial >= 3.5
+requests >= 2.31
+
+# ------------------------------------------------------------------------------
+# 6. SETUP SEQUENCE (fresh machine)
+# ------------------------------------------------------------------------------
+# 1. Install system packages (section 1) and verify extensions: php -m | grep -E 'gd|zip'
+# 2. cp .env.example .env  &&  php artisan key:generate
+# 3. Configure DB_* values in .env, create the database, then:
+#       composer install && npm install && npm run build
+# 4. php artisan migrate
+# 5. Optional demo data:  php artisan db:seed --class=DemoDataSeeder
+# 6. Run everything:      composer dev     (or ./scripts/serve-local.sh for web only)
