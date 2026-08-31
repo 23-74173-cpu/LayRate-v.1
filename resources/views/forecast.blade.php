@@ -180,7 +180,7 @@
 
     {{-- View forecast input records status --}}
     <div id="inputRecordsModal" class="fixed inset-0 min-h-screen min-h-[100dvh] bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-auto overflow-hidden max-h-[85vh] flex flex-col">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-auto overflow-hidden max-h-[85vh] flex flex-col">
             <div class="flex items-center justify-between px-5 py-4 border-b border-[#F0F0F0]">
                 <div class="flex items-center gap-2">
                     <div class="w-8 h-8 rounded-lg bg-[#002D5E]/10 flex items-center justify-center">
@@ -1264,17 +1264,17 @@
 
             // Scrollable table — Date, Total Eggs, Records per day.
             html += '<div class="overflow-auto border rounded-lg max-h-[55vh]">'
-                + '<table class="w-full text-xs">'
+                + '<table class="text-xs border-collapse">'
                 + '<thead class="sticky top-0"><tr class="bg-[#F5F6F8] text-[#6B7280] uppercase tracking-wider">'
-                + '<th class="text-left p-2.5">Date</th>'
-                + '<th class="text-right p-2.5">Total Eggs</th>'
-                + '<th class="text-right p-2.5">Records</th>'
+                + '<th class="text-left px-4 py-2">Date</th>'
+                + '<th class="text-right px-4 py-2">Total Eggs</th>'
+                + '<th class="text-right px-4 py-2">Records</th>'
                 + '</tr></thead><tbody>';
             rows.forEach(function(r) {
                 html += '<tr class="border-t border-[#F0F0F0]">'
-                    + '<td class="p-2.5 font-mono text-[#333]">' + (r.date || '—') + '</td>'
-                    + '<td class="p-2.5 text-right text-[#333]">' + (r.total_eggs ?? 0) + '</td>'
-                    + '<td class="p-2.5 text-right text-[#6B7280]">' + (r.record_count ?? 0) + '</td>'
+                    + '<td class="px-4 py-2 font-mono text-[#333]">' + (r.date || '—') + '</td>'
+                    + '<td class="px-4 py-2 text-right text-[#333]">' + (r.total_eggs ?? 0) + '</td>'
+                    + '<td class="px-4 py-2 text-right text-[#6B7280]">' + (r.record_count ?? 0) + '</td>'
                     + '</tr>';
             });
             html += '</tbody></table></div>';
