@@ -20,21 +20,19 @@ class SetupWizardTest extends TestCase
             ->get(route('setup'))
             ->assertOk()
             ->assertSee('Initial Setup')
-            ->assertSee('Day Reset Time')
+            ->assertSee('Set the Date')
             ->assertDontSee('Farm Grid');
     }
 
-    public function test_setup_store_saves_reset_time_and_marks_complete(): void
+    public function test_setup_store_saves_and_marks_complete(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
 
         $this->actingAs($admin)->post(route('setup.store'), [
-            'system_time'    => now()->format('Y-m-d\TH:i'),
-            'day_reset_time' => '05:30',
+            'system_time' => now()->format('Y-m-d\TH:i'),
         ])->assertRedirect(route('dashboard'));
 
         $this->assertEquals('1', Setting::get('setup_completed'));
-        $this->assertEquals('05:30', Setting::get('day_reset_time'));
     }
 
     public function test_dashboard_redirects_admin_to_setup_when_incomplete(): void
@@ -59,14 +57,12 @@ class SetupWizardTest extends TestCase
             ->assertOk();
     }
 
-    public function test_setup_submit_requires_all_fields(): void
+    public function test_setup_submit_requires_system_time(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
 
         $this->actingAs($admin)
-            ->post(route('setup.store'), [
-                'day_reset_time' => '05:30',
-            ])
+            ->post(route('setup.store'), [])
             ->assertSessionHasErrors(['system_time']);
     }
 }

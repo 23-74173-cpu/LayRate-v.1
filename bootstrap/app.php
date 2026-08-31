@@ -27,6 +27,36 @@ return Application::configure(basePath: dirname(__DIR__))
             ->daily()
             ->withoutOverlapping()
             ->appendOutputTo(storage_path('logs/occupancy-reconcile.log'));
+
+        $schedule->command('forecast:sync-input-records')
+            ->daily()
+            ->at('00:05')
+            ->timezone(\App\Services\ReportingDateService::timezone())
+            ->withoutOverlapping()
+            ->appendOutputTo(storage_path('logs/forecast-sync.log'));
+
+        $schedule->command('forecast:sync-input-records --catch-up')
+            ->daily()
+            ->at('06:05')
+            ->timezone(\App\Services\ReportingDateService::timezone())
+            ->withoutOverlapping()
+            ->appendOutputTo(storage_path('logs/forecast-sync.log'));
+
+        $schedule->command('alerts:check-environment')
+            ->everyFifteenMinutes()
+            ->withoutOverlapping()
+            ->appendOutputTo(storage_path('logs/alerts-check-environment.log'));
+
+        $schedule->command('environment:compute-daily-averages')
+            ->daily()
+            ->at('03:00')
+            ->withoutOverlapping()
+            ->appendOutputTo(storage_path('logs/environment-daily-averages.log'));
+
+        $schedule->command('hardware:check-health')
+            ->everyFifteenMinutes()
+            ->withoutOverlapping()
+            ->appendOutputTo(storage_path('logs/hardware-health-check.log'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

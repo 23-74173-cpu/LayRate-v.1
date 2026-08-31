@@ -96,9 +96,7 @@ class AccountController extends Controller
             ],
         ] : null;
 
-        $dayResetSetting = Setting::get('day_reset_time', '06:00');
-
-        return view('profile', compact('staff', 'tab', 'team', 'activity', 'sessions', 'farmSettings', 'dayResetSetting'));
+        return view('profile', compact('staff', 'tab', 'team', 'activity', 'sessions', 'farmSettings'));
     }
 
     public function storeUser(Request $request)
@@ -271,14 +269,15 @@ class AccountController extends Controller
         return redirect()->route('profile', ['tab' => 'settings'])->with('success', 'Signed out of all other devices.');
     }
 
-    public function updateFarmTime(Request $request)
+    /**
+     * [TESTING] Manually sync production data into forecast_input_records.
+     * TODO: remove after testing.
+     */
+    public function syncForecastInput()
     {
-        $data = $request->validate([
-            'day_reset_time' => ['required', 'regex:/^([01]?\d|2[0-3]):[0-5]\d$/'],
-        ]);
+        $count = \App\Services\ForecastInputSync::run([], catchUp: true);
 
-        Setting::set('day_reset_time', $data['day_reset_time']);
-
-        return redirect()->route('profile', ['tab' => 'settings'])->with('success', 'Day reset time saved.');
+        return back()->with('success', "Synced {$count} records into forecast_input_records.");
     }
+
 }

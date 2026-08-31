@@ -10,15 +10,11 @@ use Illuminate\Http\Request;
 /**
  * Mandatory first-run setup wizard (admin only, no skip).
  *
- * Two steps, each with a short tutorial, collected on one page and saved
- * together:
- *   1. Date & Time     -> sets the system clock via timedatectl (Pi only)
- *   2. Day Reset Time  -> setting key `day_reset_time`
+ * Single step: set the system clock via timedatectl (Pi only).
  *
  * On save it writes the `setup_completed` setting so the wizard never auto-
  * runs again. The date/time step is best-effort: on a machine without
- * `sudo timedatectl` (e.g. local Windows dev) it warns but does not block
- * the other step.
+ * `sudo timedatectl` (e.g. local Windows dev) it warns but does not block.
  */
 class SetupController extends Controller
 {
@@ -29,21 +25,16 @@ class SetupController extends Controller
         $current = Carbon::now(ReportingDateService::timezone());
 
         return view('setup', [
-            'current'     => $current,
-            'timezone'    => ReportingDateService::timezone(),
-            'resetTime'   => ReportingDateService::resetTime(),
+            'current'  => $current,
+            'timezone' => ReportingDateService::timezone(),
         ]);
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
-            'system_time'    => ['required', 'date_format:Y-m-d\TH:i'],
-            'day_reset_time' => ['required', 'regex:/^([01]?\d|2[0-3]):[0-5]\d$/'],
+            'system_time' => ['required', 'date_format:Y-m-d\TH:i'],
         ]);
-
-        // ── Day reset time ────────────────────────────────────────
-        Setting::set('day_reset_time', $data['day_reset_time']);
 
         // ── Date & time (best-effort, Pi only) ────────────────────
         $clockWarning = $this->applySystemTime($data['system_time']);
@@ -82,7 +73,7 @@ class SetupController extends Controller
 
         if (! empty($errors)) {
             return 'Set the date & time successfully is not possible on this machine — ' . implode('; ', $errors) .
-                '. Your day reset time and setup are already saved; adjust the clock from Account settings.';
+                '. Your setup is already saved; adjust the clock from Account settings.';
         }
 
         return null;

@@ -295,7 +295,7 @@ class EggLoggingController extends Controller
         }
 
         if ($isAjax) {
-            $response = ['success' => true, 'message' => 'Production log saved.'];
+            $response = ['success' => true, 'message' => 'Production log saved.', 'reminder' => true];
             if ($isMulti) {
                 $response['logs'] = $savedLogs;
             } else {
@@ -304,7 +304,9 @@ class EggLoggingController extends Controller
             return response()->json($response);
         }
 
-        return redirect()->route('eggs.logging')->with('success', 'Production log saved.');
+        return redirect()->route('eggs.logging')
+            ->with('success', 'Production log saved.')
+            ->with('showFeedEnvReminder', true);
     }
 
     public function update(Request $request, ProductionLog $productionLog)

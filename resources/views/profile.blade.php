@@ -345,27 +345,6 @@
             </div>
             @endif
 
-            {{-- Admin: farm day reset configuration --}}
-            @if(auth()->user()->isAdmin())
-            <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-                <h2 class="text-base font-medium text-[#333333] mb-1">Farm Day Reset</h2>
-                <p class="text-xs text-[#6B7280] mb-4">Reporting "today" starts after this time. The timezone is fixed to Asia/Manila; use System Time below to correct the Pi clock.</p>
-                <form method="POST" action="{{ route('settings.farm-time.update') }}" class="space-y-4">
-                    @csrf
-                    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-                        <div class="w-full sm:w-1/2">
-                            <label for="day_reset_time" class="block text-sm text-[#333333] mb-1.5">Day Reset Time</label>
-                            <input id="day_reset_time" type="time" name="day_reset_time" required
-                                   value="{{ old('day_reset_time', $dayResetSetting ?? '06:00') }}"
-                                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#002D5E]">
-                            @error('day_reset_time')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
-                        </div>
-                        <button type="submit" class="bg-[#002D5E] text-white px-5 py-2.5 rounded-lg text-sm hover:bg-[#001F42] shrink-0">Save Day Reset Time</button>
-                    </div>
-                </form>
-            </div>
-            @endif
-
             {{-- Admin: system time correction --}}
             @if(auth()->user()->isAdmin())
             <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
@@ -398,6 +377,40 @@
                         Backup Database Now
                     </button>
                 </form>
+            </div>
+            @endif
+
+            {{-- [TESTING] Forecast Sync — TODO: remove after testing --}}
+            @if(auth()->user()->isAdmin())
+            @php $forecastCount = \DB::table('forecast_input_records')->count(); @endphp
+            <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+                <h2 class="text-base font-medium text-[#333333] mb-1">Forecast Input Sync</h2>
+                <p class="text-xs text-[#6B7280] mb-4">[TESTING] Manually push all collected records into forecast_input_records for the forecasting module.</p>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-1.5">
+                            @if($forecastCount > 0)
+                                <span class="inline-block w-2.5 h-2.5 rounded-full bg-green-500"></span>
+                                <span class="text-sm text-green-700 font-medium">{{ number_format($forecastCount) }} records ready</span>
+                            @else
+                                <span class="inline-block w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                                <span class="text-sm text-amber-700 font-medium">No records yet — sync to populate</span>
+                            @endif
+                        </div>
+                    </div>
+                    <form method="POST" action="{{ route('settings.sync-forecast') }}" data-turbo="false"
+                          onsubmit="var btn=this.querySelector('button[type=submit]');btn.disabled=true;btn.textContent='Syncing\u2026';">
+                        @csrf
+                        <button type="submit"
+                                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+                                style="color: #0075de; border: 1px solid #0075de;"
+                                onmouseover="this.style.backgroundColor='#f0f7ff'"
+                                onmouseout="this.style.backgroundColor='transparent'">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                            Sync Now
+                        </button>
+                    </form>
+                </div>
             </div>
             @endif
 

@@ -60,7 +60,7 @@ class MortalityController extends Controller
     {
         $data = $request->validate([
             'cage_id'  => 'required|exists:cages,id',
-            'log_date' => 'required|date',
+            'log_date' => 'required|date|before_or_equal:'.\App\Services\ReportingDateService::reportingDateString(),
             'count'    => 'required|integer|min:1',
             'reason'   => 'required|in:' . implode(',', MortalityLog::REASONS),
             'notes'    => 'nullable|string|max:1000',
@@ -128,7 +128,7 @@ class MortalityController extends Controller
     public function update(Request $request, MortalityLog $mortalityLog)
     {
         $validator = Validator::make($request->all(), [
-            'log_date' => 'required|date',
+            'log_date' => 'required|date|before_or_equal:'.\App\Services\ReportingDateService::reportingDateString(),
             'count'    => 'required|integer|min:1',
             'reason'   => 'required|in:' . implode(',', MortalityLog::REASONS),
             'notes'    => 'nullable|string|max:1000',

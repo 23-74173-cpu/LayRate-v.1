@@ -195,7 +195,7 @@
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-sm text-[#333333] mb-1.5">Date <span class="text-[#9B1C24]">*</span></label>
-                    <input name="log_date" type="date" value="{{ old('log_date', now()->toDateString()) }}" required
+                    <input name="log_date" type="date" value="{{ old('log_date', \App\Services\ReportingDateService::reportingDateString()) }}" required
                            class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
                     <x-input-error name="log_date" />
                 </div>
@@ -271,7 +271,7 @@
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-sm text-[#333333] mb-1.5">Date <span class="text-[#9B1C24]">*</span></label>
-                    <input name="log_date" type="date" value="{{ old('log_date', now()->toDateString()) }}" required
+                    <input name="log_date" type="date" value="{{ old('log_date', \App\Services\ReportingDateService::reportingDateString()) }}" required
                            class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
                     <x-input-error name="log_date" />
                 </div>

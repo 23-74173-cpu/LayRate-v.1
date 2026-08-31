@@ -883,6 +883,13 @@
                         showNotification(resp.body.message || 'Production log saved.', 'success');
                     }
 
+                    // Prompt user to log feed and environment data
+                    if (resp.body.reminder && typeof showNotification === 'function') {
+                        setTimeout(function() {
+                            showNotification('Don\'t forget to log feed and environment data for today.', 'info');
+                        }, 1500);
+                    }
+
                     var logs = resp.body.logs || [];
                     var cageDeltas = {};
                     var grandDelta = 0;
@@ -1197,6 +1204,13 @@
                         if (resp.ok && resp.body.success) {
                             if (typeof showNotification === 'function') {
                                 showNotification(resp.body.message || 'Production log saved.', 'success');
+                            }
+
+                            // Prompt user to log feed and environment data
+                            if (resp.body.reminder && typeof showNotification === 'function') {
+                                setTimeout(function() {
+                                    showNotification('Don\'t forget to log feed and environment data for today.', 'info');
+                                }, 1500);
                             }
 
                             if (resp.body.logs) {

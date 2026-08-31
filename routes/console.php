@@ -13,24 +13,20 @@ Artisan::command('inspire', function () {
 // Sync daily farm records into forecast_input_records so the forecasting
 // module always has a continuously growing historical dataset.
 //
-// Runs at the farm's day-reset time so the just-closed reporting day is fully
-// captured the moment it closes. The reset time is admin-editable (Asia/Manila);
-// fall back to 06:00 if unset/invalid, and schedule in the farm timezone so a
-// Manila reset time maps correctly onto the server clock.
+// Runs just after midnight so the previous calendar day is fully captured.
+// Scheduled in the farm timezone (Asia/Manila).
 Schedule::command('forecast:sync-input-records')
     ->daily()
-    ->at(ReportingDateService::resetTime())
+    ->at('00:05')
     ->timezone(ReportingDateService::timezone())
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/forecast-sync.log'));
 
-// Backstop: run 6 hours after the primary sync window. Catches cases where
-// the server was off during the primary time and came back online later.
-// The sync command detects missed runs via last_forecast_sync_at and logs
-// a warning when catch-up is triggered.
+// Backstop: run 6 hours after midnight. Catches cases where the server
+// was off during midnight and came back online later.
 Schedule::command('forecast:sync-input-records --catch-up')
     ->daily()
-    ->at(now()->setTimeFromTimeString(ReportingDateService::resetTime())->addHours(6)->format('H:i'))
+    ->at('06:05')
     ->timezone(ReportingDateService::timezone())
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/forecast-sync.log'));

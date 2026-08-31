@@ -234,7 +234,7 @@ class FeedController extends Controller
         return [
             'cage_id' => 'required|exists:cages,id',
             'feed_batch_id' => 'required|exists:feed_batches,id',
-            'log_date' => 'required|date',
+            'log_date' => 'required|date|before_or_equal:'.\App\Services\ReportingDateService::reportingDateString(),
             'log_time' => 'required|date_format:H:i',
             'feed_consumed_kg' => 'required|numeric|min:0',
         ];
@@ -330,7 +330,7 @@ class FeedController extends Controller
     {
         return [
             'feed_batch_id' => 'required|exists:feed_batches,id',
-            'log_date' => 'required|date',
+            'log_date' => 'required|date|before_or_equal:'.\App\Services\ReportingDateService::reportingDateString(),
             'log_time' => 'required|date_format:H:i',
             'total_kg' => 'required|numeric|min:0',
             'unit_cost' => 'nullable|numeric|min:0',

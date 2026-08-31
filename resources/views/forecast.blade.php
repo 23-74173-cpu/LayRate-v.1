@@ -1188,7 +1188,7 @@
 
             var html = '<div class="mb-4 p-3 rounded-lg flex items-start gap-2 text-xs" style="background-color:#eef2fb; color:#002D5E; border:1px solid #d6e0f2;">'
                 + '<i data-lucide="info" class="w-4 h-4 shrink-0 mt-0.5"></i>'
-                + '<span>The system fills this table automatically each day (at the day-reset time). Every recorded production day is added so the forecast has enough history.</span>'
+                + '<span>The system fills this table automatically each day (after midnight). Every recorded production day is added so the forecast has enough history.</span>'
                 + '</div>';
 
             html += '<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4 text-center">'

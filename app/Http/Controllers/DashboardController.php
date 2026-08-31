@@ -388,13 +388,92 @@ class DashboardController extends Controller
             ];
         })->filter();
 
+        // Daily data completeness — check which active cages have logged data
+        // for the current reporting day across the 4 data types needed for
+        // forecast_input_records sync.
+        $activeCageCodes = $cages->pluck('cage_code')->values();
+        $totalActiveCages = $activeCageCodes->count();
+
+        $cagesWithEggs = ProductionLog::query()
+            ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
+            ->join('cages', 'cages.id', '=', 'cage_slots.cage_id')
+            ->whereIn('cages.cage_code', $activeCageCodes)
+            ->whereDate('production_logs.log_date', $today)
+            ->distinct('cages.cage_code')
+            ->count('cages.cage_code');
+
+        // Env logs store recorded_at as calendar datetime, but we need to
+        // match by reporting date. Fetch the range and convert in PHP.
+        $envLogsForRange = EnvironmentalLog::query()
+            ->join('cages', 'cages.id', '=', 'environmental_logs.cage_id')
+            ->whereIn('cages.cage_code', $activeCageCodes)
+            ->whereBetween(DB::raw('DATE(environmental_logs.recorded_at)'), [$yesterday, now('Asia/Manila')->toDateString()])
+            ->select('cages.cage_code', 'environmental_logs.recorded_at')
+            ->get()
+            ->map(fn ($r) => [
+                'cage_code' => $r->cage_code,
+                'reporting_date' => ReportingDateService::reportingDateFor($r->recorded_at)->toDateString(),
+            ]);
+
+        $cagesWithEnv = $envLogsForRange->where('reporting_date', $today)
+            ->pluck('cage_code')->unique()->count();
+
+        // Feed logs now store log_date as reporting date (like production_logs).
+        $cagesWithFeed = FeedConsumptionLog::query()
+            ->join('cages', 'cages.id', '=', 'feed_consumption_logs.cage_id')
+            ->whereIn('cages.cage_code', $activeCageCodes)
+            ->whereDate('feed_consumption_logs.log_date', $today)
+            ->distinct()
+            ->pluck('cages.cage_code')
+            ->count();
+
+        $dataCompleteness = [
+            'eggs'        => ['logged' => $cagesWithEggs, 'total' => $totalActiveCages, 'complete' => $cagesWithEggs >= $totalActiveCages && $totalActiveCages > 0],
+            'environment' => ['logged' => $cagesWithEnv,  'total' => $totalActiveCages, 'complete' => $cagesWithEnv >= $totalActiveCages && $totalActiveCages > 0],
+            'feed'        => ['logged' => $cagesWithFeed, 'total' => $totalActiveCages, 'complete' => $cagesWithFeed >= $totalActiveCages && $totalActiveCages > 0],
+            'mortality'   => ['logged' => $mortalityTodayTotal, 'total' => 0, 'complete' => true], // optional, always OK
+        ];
+
+        // Previous day completeness — warn when yesterday had eggs but was missing
+        // env or feed data (sync will skip those records).
+        $yesterdayMissingEnv = false;
+        $yesterdayMissingFeed = false;
+        if ($yesterday && $totalActiveCages > 0) {
+            $yesterdayCagesWithEggs = ProductionLog::query()
+                ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
+                ->join('cages', 'cages.id', '=', 'cage_slots.cage_id')
+                ->whereIn('cages.cage_code', $activeCageCodes)
+                ->whereDate('production_logs.log_date', $yesterday)
+                ->distinct('cages.cage_code')
+                ->count('cages.cage_code');
+
+            if ($yesterdayCagesWithEggs > 0) {
+                $yesterdayCagesWithEnv = $envLogsForRange->where('reporting_date', $yesterday)
+                    ->pluck('cage_code')->unique()->count();
+
+                $yesterdayCagesWithFeed = FeedConsumptionLog::query()
+                    ->join('cages', 'cages.id', '=', 'feed_consumption_logs.cage_id')
+                    ->whereIn('cages.cage_code', $activeCageCodes)
+                    ->whereDate('feed_consumption_logs.log_date', $yesterday)
+                    ->distinct()
+                    ->pluck('cages.cage_code')
+                    ->count();
+
+                $yesterdayMissingEnv = $yesterdayCagesWithEnv < $yesterdayCagesWithEggs;
+                $yesterdayMissingFeed = $yesterdayCagesWithFeed < $yesterdayCagesWithEggs;
+            }
+        }
+
+        $dayComplete = true;
+
         return compact(
             'cages', 'totalHens', 'todayHdep', 'hdepDelta',
             'eggsToday', 'eggsDelta', 'lifetimeEggs', 'avgTemp', 'avgHum', 'feedToday',
             'mortalityToday', 'mortalityTodayTotal',
             'yesterdayHdep', 'eggsYesterday', 'yesterdayMortalityTotal', 'yesterdayFeedTotal',
-            'liveReadings', 'today',
-            'needsOnboarding'
+            'liveReadings', 'today', 'dataCompleteness',
+            'yesterdayMissingEnv', 'yesterdayMissingFeed',
+            'needsOnboarding', 'dayComplete'
         );
     }
 

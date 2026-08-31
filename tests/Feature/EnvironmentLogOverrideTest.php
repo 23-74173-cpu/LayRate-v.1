@@ -21,7 +21,6 @@ class EnvironmentLogOverrideTest extends TestCase
     {
         parent::setUp();
         $this->user = User::factory()->create(['role' => 'admin']);
-        Setting::set('day_reset_time', '06:00');
     }
 
     private function cage(string $code): Cage

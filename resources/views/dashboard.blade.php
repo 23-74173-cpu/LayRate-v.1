@@ -60,6 +60,33 @@
         @include('dashboard._metric-cards-skeleton')
     </turbo-frame>
 
+    {{-- ── Daily Data Completeness Checklist ── --}}
+    @include('dashboard._data-checklist')
+
+    {{-- ── Yesterday's Incomplete Data Warning ── --}}
+    @if($yesterdayMissingEnv || $yesterdayMissingFeed)
+    <div class="rounded-xl px-4 py-3 flex items-start gap-3" style="background-color: #fef2f2; border: 1px solid #fecaca;" id="yesterdayWarning">
+        <span class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5" style="background-color: #fde8e8;">
+            <i data-lucide="alert-triangle" class="w-4 h-4" style="color: #dc2626;"></i>
+        </span>
+        <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold" style="color: #991b1b;">Yesterday's data is incomplete</p>
+            <p class="text-xs mt-0.5" style="color: #b91c1c;">
+                Forecast accuracy may be affected.
+                @if($yesterdayMissingEnv)
+                    Missing environment data.
+                @endif
+                @if($yesterdayMissingFeed)
+                    Missing feed data.
+                @endif
+            </p>
+        </div>
+        <button onclick="this.closest('#yesterdayWarning').remove()" class="p-1 rounded-full hover:bg-black/5 transition-colors shrink-0" aria-label="Dismiss">
+            <i data-lucide="x" class="w-4 h-4" style="color: #dc2626;"></i>
+        </button>
+    </div>
+    @endif
+
     {{-- ─ Stats Modal (vanilla JS) ── --}}
     <div id="statsModal" data-modal  data-close="closeStatsModal" style="display: none;" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
         <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeStatsModal()"></div>
@@ -206,6 +233,21 @@
             </div>
 
             <button onclick="closeYesterdaySummary()" class="w-full mt-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors" style="background-color: #0075de;">
+                Got it
+            </button>
+        </div>
+    </div>
+
+    {{-- ── Day Production Complete Popup ── --}}
+    <div id="dayCompleteModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+        <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeDayComplete()"></div>
+        <div class="relative w-full max-w-sm rounded-2xl p-6 text-center" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+            <div class="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center" style="background-color: #e6f6ee;">
+                <i data-lucide="check-circle" class="w-8 h-8" style="color: #16a34a;"></i>
+            </div>
+            <h3 class="text-lg font-semibold mb-1" style="color: #1f1f1f;">Day Production Complete</h3>
+            <p class="text-sm mb-5" style="color: #a39e98;">Reporting day has ended. Data for today is locked.</p>
+            <button onclick="closeDayComplete()" class="w-full py-2.5 rounded-xl text-sm font-medium text-white transition-colors" style="background-color: #16a34a;">
                 Got it
             </button>
         </div>
@@ -561,6 +603,33 @@
                 localStorage.setItem(storageKey, '1');
             }
         }, 800);
+    })();
+
+    // ── Day Production Complete popup ──
+    function closeDayComplete() {
+        var m = document.getElementById('dayCompleteModal');
+        if (m) m.style.display = 'none';
+    }
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeDayComplete();
+    });
+
+    (function() {
+        var dayComplete = {{ $dayComplete ? 'true' : 'false' }};
+        if (!dayComplete) return;
+
+        var reportingDate = '{{ $today }}';
+        var storageKey = 'dayCompleteShown_' + reportingDate;
+        if (localStorage.getItem(storageKey)) return;
+
+        setTimeout(function() {
+            var m = document.getElementById('dayCompleteModal');
+            if (m) {
+                m.style.display = 'flex';
+                lucide.createIcons();
+                localStorage.setItem(storageKey, '1');
+            }
+        }, 1200);
     })();
     </script>
 
