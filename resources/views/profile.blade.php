@@ -10,7 +10,8 @@
     <div id="profile-tabs-nav">
         <x-underline-tabs :tabs="[
             'profile'  => ['label' => 'Profile',         'icon' => 'user',     'onclick' => 'switchProfileTab(\'profile\')'],
-            'settings' => ['label' => 'Settings', 'icon' => 'settings', 'onclick' => 'switchProfileTab(\'settings\')'],
+            'settings' => ['label' => 'Profile Settings', 'icon' => 'settings', 'onclick' => 'switchProfileTab(\'settings\')'],
+            'system'   => ['label' => 'System Settings', 'icon' => 'server',  'onclick' => 'switchProfileTab(\'system\')'],
             'manual'   => ['label' => 'User Manual', 'icon' => 'book-open', 'onclick' => 'switchProfileTab(\'manual\')'],
         ]" active="{{ $tab }}" />
     </div>
@@ -319,6 +320,47 @@
                 </div>
             </div>
 
+            {{-- Danger Zone --}}
+            <div class="bg-white rounded-lg border border-red-200 p-5">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                        <i data-lucide="alert-triangle" class="w-5 h-5 text-red-600"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-medium text-[#9b1c24]">Danger Zone</h2>
+                        <p class="text-sm text-[#6B7280]">Sensitive actions that affect your account security.</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <h3 class="text-sm font-medium text-[#9b1c24] mb-1">Sign out of all other devices</h3>
+                        <p class="text-xs text-[#6B7280] mb-3">This will invalidate all other active sessions for your account. Your current session will remain active.</p>
+                        <form method="POST" action="{{ route('profile.logout-other-devices') }}" class="space-y-3">
+                            @csrf
+                            <div class="input-with-toggle relative">
+                                <input type="password" name="logout_password" placeholder="Enter current password to confirm" required
+                                       class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-[#002D5E]">
+                                <button type="button" onclick="toggleVisibility(this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] hover:text-[#333333] transition-colors" aria-label="Show password">
+                                    <i data-lucide="eye" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                            @error('logout_password')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
+                            <button type="submit" class="w-full sm:w-auto border border-red-300 text-red-700 bg-white hover:bg-red-50 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                                Sign out of all other devices
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        {{-- ============================================ --}}
+        {{-- SYSTEM SETTINGS TAB --}}
+        {{-- ============================================ --}}
+        <div id="panelSystem" class="{{ $tab !== 'system' ? 'hidden' : '' }} space-y-5">
+
             {{-- Admin: farm configuration overview --}}
             @if($farmSettings)
             <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
@@ -361,6 +403,7 @@
             </div>
             @endif
 
+            {{-- Admin: database backup --}}
             @if(auth()->user()->isAdmin())
             <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
                 <h2 class="text-base font-medium text-[#333333] mb-1">Database Backup</h2>
@@ -413,40 +456,6 @@
                 </div>
             </div>
             @endif
-
-            {{-- Danger Zone --}}
-            <div class="bg-white rounded-lg border border-red-200 p-5">
-                <div class="flex items-center gap-3 mb-4">
-                    <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-                        <i data-lucide="alert-triangle" class="w-5 h-5 text-red-600"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-base font-medium text-[#9b1c24]">Danger Zone</h2>
-                        <p class="text-sm text-[#6B7280]">Sensitive actions that affect your account security.</p>
-                    </div>
-                </div>
-
-                <div class="space-y-4">
-                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
-                        <h3 class="text-sm font-medium text-[#9b1c24] mb-1">Sign out of all other devices</h3>
-                        <p class="text-xs text-[#6B7280] mb-3">This will invalidate all other active sessions for your account. Your current session will remain active.</p>
-                        <form method="POST" action="{{ route('profile.logout-other-devices') }}" class="space-y-3">
-                            @csrf
-                            <div class="input-with-toggle relative">
-                                <input type="password" name="logout_password" placeholder="Enter current password to confirm" required
-                                       class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-[#002D5E]">
-                                <button type="button" onclick="toggleVisibility(this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] hover:text-[#333333] transition-colors" aria-label="Show password">
-                                    <i data-lucide="eye" class="w-4 h-4"></i>
-                                </button>
-                            </div>
-                            @error('logout_password')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
-                            <button type="submit" class="w-full sm:w-auto border border-red-300 text-red-700 bg-white hover:bg-red-50 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors">
-                                Sign out of all other devices
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
 
         </div>
 
@@ -644,10 +653,11 @@
     });
     @endif
 
-    function switchProfileTab(tab) {
-        document.getElementById('panelProfile').classList.toggle('hidden', tab !== 'profile');
-        document.getElementById('panelSettings').classList.toggle('hidden', tab !== 'settings');
-        document.getElementById('panelManual').classList.toggle('hidden', tab !== 'manual');
+        function switchProfileTab(tab) {
+            document.getElementById('panelProfile').classList.toggle('hidden', tab !== 'profile');
+            document.getElementById('panelSettings').classList.toggle('hidden', tab !== 'settings');
+            document.getElementById('panelSystem').classList.toggle('hidden', tab !== 'system');
+            document.getElementById('panelManual').classList.toggle('hidden', tab !== 'manual');
 
         const nav = document.getElementById('profile-tabs-nav');
         if (nav) {
