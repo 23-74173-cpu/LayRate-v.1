@@ -1185,9 +1185,9 @@ class ForecastController extends Controller
             ]);
 
         $rows = DB::table('forecast_input_records')
-            ->select('id', 'date', 'cage_code', 'breed', 'flock_age_weeks', 'hen_count', 'egg_count', 'temperature_c', 'humidity_percent', 'crude_protein_percent', 'feed_consumed_kg', 'mortality_count', 'source_file', 'created_at', 'updated_at')
+            ->select('date', DB::raw('SUM(COALESCE(egg_count, 0)) as total_eggs'), DB::raw('COUNT(*) as record_count'))
+            ->groupBy('date')
             ->orderByDesc('date')
-            ->orderBy('cage_code')
             ->get();
 
         return response()->json([

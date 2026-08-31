@@ -1262,32 +1262,19 @@
                 return;
             }
 
-            // Scrollable table showing every column of forecast_input_records.
+            // Scrollable table — Date, Total Eggs, Records per day.
             html += '<div class="overflow-auto border rounded-lg max-h-[55vh]">'
-                + '<table class="w-full text-xs whitespace-nowrap">'
+                + '<table class="w-full text-xs">'
                 + '<thead class="sticky top-0"><tr class="bg-[#F5F6F8] text-[#6B7280] uppercase tracking-wider">'
-                + '<th class="text-left p-2.5 sticky left-0 bg-[#F5F6F8]">Date</th>'
-                + '<th class="text-left p-2.5">Cage</th><th class="text-left p-2.5">Breed</th><th class="text-right p-2.5">Flk Age</th>'
-                + '<th class="text-right p-2.5">Hens</th><th class="text-right p-2.5">Eggs</th><th class="text-right p-2.5">Temp</th><th class="text-right p-2.5">Hum</th>'
-                + '<th class="text-right p-2.5">CP%</th><th class="text-right p-2.5">Feed</th><th class="text-right p-2.5">Mort</th>'
-                + '<th class="text-left p-2.5">Source</th><th class="text-left p-2.5">Updated</th><th class="text-right p-2.5">ID</th>'
+                + '<th class="text-left p-2.5">Date</th>'
+                + '<th class="text-right p-2.5">Total Eggs</th>'
+                + '<th class="text-right p-2.5">Records</th>'
                 + '</tr></thead><tbody>';
             rows.forEach(function(r) {
                 html += '<tr class="border-t border-[#F0F0F0]">'
-                    + '<td class="p-2.5 font-mono text-[#333] sticky left-0 bg-white">' + (r.date || '—') + '</td>'
-                    + '<td class="p-2.5 text-[#333]">' + (r.cage_code || '—') + '</td>'
-                    + '<td class="p-2.5 text-[#333]">' + (r.breed || '—') + '</td>'
-                    + '<td class="p-2.5 text-right text-[#333]">' + (r.flock_age_weeks ?? '') + '</td>'
-                    + '<td class="p-2.5 text-right text-[#333]">' + (r.hen_count ?? '') + '</td>'
-                    + '<td class="p-2.5 text-right text-[#333]">' + (r.egg_count ?? '') + '</td>'
-                    + '<td class="p-2.5 text-right text-[#333]">' + (r.temperature_c ?? '') + '</td>'
-                    + '<td class="p-2.5 text-right text-[#333]">' + (r.humidity_percent ?? '') + '</td>'
-                    + '<td class="p-2.5 text-right text-[#333]">' + (r.crude_protein_percent ?? '') + '</td>'
-                    + '<td class="p-2.5 text-right text-[#333]">' + (r.feed_consumed_kg ?? '') + '</td>'
-                    + '<td class="p-2.5 text-right text-[#333]">' + (r.mortality_count ?? '') + '</td>'
-                    + '<td class="p-2.5 text-[#333]">' + (r.source_file || '—') + '</td>'
-                    + '<td class="p-2.5 text-[#333]">' + (r.updated_at || '—') + '</td>'
-                    + '<td class="p-2.5 text-right text-[#6B7280]">' + (r.id ?? '') + '</td>'
+                    + '<td class="p-2.5 font-mono text-[#333]">' + (r.date || '—') + '</td>'
+                    + '<td class="p-2.5 text-right text-[#333]">' + (r.total_eggs ?? 0) + '</td>'
+                    + '<td class="p-2.5 text-right text-[#6B7280]">' + (r.record_count ?? 0) + '</td>'
                     + '</tr>';
             });
             html += '</tbody></table></div>';
