@@ -434,36 +434,6 @@ class DashboardController extends Controller
             'mortality'   => ['logged' => $mortalityTodayTotal, 'total' => 0, 'complete' => true], // optional, always OK
         ];
 
-        // Previous day completeness — warn when yesterday had eggs but was missing
-        // env or feed data (sync will skip those records).
-        $yesterdayMissingEnv = false;
-        $yesterdayMissingFeed = false;
-        if ($yesterday && $totalActiveCages > 0) {
-            $yesterdayCagesWithEggs = ProductionLog::query()
-                ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
-                ->join('cages', 'cages.id', '=', 'cage_slots.cage_id')
-                ->whereIn('cages.cage_code', $activeCageCodes)
-                ->whereDate('production_logs.log_date', $yesterday)
-                ->distinct('cages.cage_code')
-                ->count('cages.cage_code');
-
-            if ($yesterdayCagesWithEggs > 0) {
-                $yesterdayCagesWithEnv = $envLogsForRange->where('reporting_date', $yesterday)
-                    ->pluck('cage_code')->unique()->count();
-
-                $yesterdayCagesWithFeed = FeedConsumptionLog::query()
-                    ->join('cages', 'cages.id', '=', 'feed_consumption_logs.cage_id')
-                    ->whereIn('cages.cage_code', $activeCageCodes)
-                    ->whereDate('feed_consumption_logs.log_date', $yesterday)
-                    ->distinct()
-                    ->pluck('cages.cage_code')
-                    ->count();
-
-                $yesterdayMissingEnv = $yesterdayCagesWithEnv < $yesterdayCagesWithEggs;
-                $yesterdayMissingFeed = $yesterdayCagesWithFeed < $yesterdayCagesWithEggs;
-            }
-        }
-
         $dayComplete = true;
 
         return compact(
@@ -472,7 +442,6 @@ class DashboardController extends Controller
             'mortalityToday', 'mortalityTodayTotal',
             'yesterdayHdep', 'eggsYesterday', 'yesterdayMortalityTotal', 'yesterdayFeedTotal',
             'liveReadings', 'today', 'dataCompleteness',
-            'yesterdayMissingEnv', 'yesterdayMissingFeed',
             'needsOnboarding', 'dayComplete'
         );
     }

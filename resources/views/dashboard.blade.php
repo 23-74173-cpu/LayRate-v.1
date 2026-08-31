@@ -63,29 +63,7 @@
     {{-- ── Daily Data Completeness Checklist ── --}}
     @include('dashboard._data-checklist')
 
-    {{-- ── Yesterday's Incomplete Data Warning ── --}}
-    @if($yesterdayMissingEnv || $yesterdayMissingFeed)
-    <div class="rounded-xl px-4 py-3 flex items-start gap-3" style="background-color: #fef2f2; border: 1px solid #fecaca;" id="yesterdayWarning">
-        <span class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5" style="background-color: #fde8e8;">
-            <i data-lucide="alert-triangle" class="w-4 h-4" style="color: #dc2626;"></i>
-        </span>
-        <div class="flex-1 min-w-0">
-            <p class="text-sm font-semibold" style="color: #991b1b;">Yesterday's data is incomplete</p>
-            <p class="text-xs mt-0.5" style="color: #b91c1c;">
-                Forecast accuracy may be affected.
-                @if($yesterdayMissingEnv)
-                    Missing environment data.
-                @endif
-                @if($yesterdayMissingFeed)
-                    Missing feed data.
-                @endif
-            </p>
-        </div>
-        <button onclick="this.closest('#yesterdayWarning').remove()" class="p-1 rounded-full hover:bg-black/5 transition-colors shrink-0" aria-label="Dismiss">
-            <i data-lucide="x" class="w-4 h-4" style="color: #dc2626;"></i>
-        </button>
-    </div>
-    @endif
+
 
     {{-- ─ Stats Modal (vanilla JS) ── --}}
     <div id="statsModal" data-modal  data-close="closeStatsModal" style="display: none;" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
