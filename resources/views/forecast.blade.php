@@ -1264,7 +1264,7 @@
 
             // Scrollable table — Date, Total Eggs, Records per day.
             html += '<div class="overflow-auto border rounded-lg max-h-[55vh]">'
-                + '<table class="text-xs border-collapse">'
+                + '<table class="w-full text-xs border-collapse">'
                 + '<thead class="sticky top-0"><tr class="bg-[#F5F6F8] text-[#6B7280] uppercase tracking-wider">'
                 + '<th class="text-left px-4 py-2">Date</th>'
                 + '<th class="text-right px-4 py-2">Total Eggs</th>'
