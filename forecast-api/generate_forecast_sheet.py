@@ -143,6 +143,7 @@ def generate_forecast_sheet(
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         df.to_excel(writer, index=False, sheet_name="Forecast Input")
         ws = writer.sheets["Forecast Input"]
+        ws.column_dimensions['A'].width = 14
 
         # Unlock the editable cells in data rows (row 1 is the header).
         for row in range(2, ws.max_row + 1):
