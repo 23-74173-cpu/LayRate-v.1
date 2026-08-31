@@ -149,6 +149,11 @@
                 and import it to reach 90 days faster.
             </div>
 
+            <div id="syncCountdown" class="mt-3 p-2.5 rounded-lg text-center" style="background-color:#f0f4ff; border:1px solid #d6e0f2;">
+                <div class="text-[10px] uppercase tracking-wider font-medium mb-1" style="color:#6B7280;">Next automatic sync</div>
+                <div id="syncCountdownTimer" class="text-lg font-bold tabular-nums" style="color:#002D5E;">--:--:--</div>
+            </div>
+
             <div class="mt-5 grid grid-cols-1 gap-2 text-center">
                 <button type="button" id="lockDownloadBtn"
                         class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white hover:brightness-95 transition-colors"
@@ -176,6 +181,35 @@
         if (overlay) overlay.style.display = 'flex';
         if (window.lucide) { try { lucide.createIcons(); } catch(e) {} }
     };
+
+    (function() {
+        var SYNC_HOUR = 0, SYNC_MIN = 5;
+        var SYNC_TZ = 'Asia/Manila';
+        function getNextSyncTime() {
+            var now = new Date();
+            var manilaStr = now.toLocaleString('en-US', { timeZone: SYNC_TZ });
+            var manila = new Date(manilaStr);
+            var next = new Date(manila);
+            next.setHours(SYNC_HOUR, SYNC_MIN, 0, 0);
+            if (manila >= next) next.setDate(next.getDate() + 1);
+            return next;
+        }
+        function tick() {
+            var now = new Date();
+            var manilaStr = now.toLocaleString('en-US', { timeZone: SYNC_TZ });
+            var manila = new Date(manilaStr);
+            var next = getNextSyncTime();
+            var diff = next - manila;
+            if (diff < 0) diff = 0;
+            var h = Math.floor(diff / 3600000);
+            var m = Math.floor((diff % 3600000) / 60000);
+            var s = Math.floor((diff % 60000) / 1000);
+            var el = document.getElementById('syncCountdownTimer');
+            if (el) el.textContent = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+        }
+        tick();
+        setInterval(tick, 1000);
+    })();
     </script>
 
     {{-- View forecast input records status --}}

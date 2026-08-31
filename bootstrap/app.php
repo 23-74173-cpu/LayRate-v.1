@@ -23,21 +23,16 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withSchedule(function (Illuminate\Console\Scheduling\Schedule $schedule) {
-        $schedule->command('layrate:reconcile-occupancy --apply')
-            ->daily()
-            ->withoutOverlapping()
-            ->appendOutputTo(storage_path('logs/occupancy-reconcile.log'));
-
-        $schedule->command('forecast:sync-input-records')
-            ->daily()
-            ->at('00:05')
+        $schedule->call(function () {
+            \App\Services\ForecastInputSync::run([], catchUp: true);
+        })->name('forecast:sync-input-records')->daily()->at('00:05')
             ->timezone(\App\Services\ReportingDateService::timezone())
             ->withoutOverlapping()
             ->appendOutputTo(storage_path('logs/forecast-sync.log'));
 
-        $schedule->command('forecast:sync-input-records --catch-up')
-            ->daily()
-            ->at('06:05')
+        $schedule->call(function () {
+            \App\Services\ForecastInputSync::run([], catchUp: true);
+        })->name('forecast:sync-input-records-catchup')->daily()->at('06:05')
             ->timezone(\App\Services\ReportingDateService::timezone())
             ->withoutOverlapping()
             ->appendOutputTo(storage_path('logs/forecast-sync.log'));
