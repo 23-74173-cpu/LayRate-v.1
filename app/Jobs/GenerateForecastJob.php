@@ -2,10 +2,10 @@
 
 namespace App\Jobs;
 
-use App\Services\ForecastGenerationService;
 use App\Models\Cage;
 use App\Models\Forecast;
 use App\Models\ForecastRun;
+use App\Services\ForecastGenerationService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -58,7 +58,7 @@ class GenerateForecastJob implements ShouldQueue
     public function handle(ForecastGenerationService $service): void
     {
         $run = ForecastRun::find($this->forecastRunId);
-        if (!$run) {
+        if (! $run) {
             // Deleted (e.g. by an admin clearing forecast history) before
             // the worker picked it up — nothing to report to, nothing to do.
             return;
@@ -116,7 +116,7 @@ class GenerateForecastJob implements ShouldQueue
                 ],
             ]);
         } catch (ProcessFailedException $e) {
-            $this->fail($run, 'Forecast process failed: ' . $e->getMessage());
+            $this->fail($run, 'Forecast process failed: '.$e->getMessage());
         } catch (RuntimeException $e) {
             $this->fail($run, $e->getMessage());
         } catch (\Throwable $e) {

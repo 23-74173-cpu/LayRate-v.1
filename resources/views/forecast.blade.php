@@ -42,6 +42,8 @@
         $scopeLabel = match($scope) { 'farm' => 'Whole Farm', 'breed' => $breed ?? '', default => $cageCode ?? '' };
         $forecastCount = $forecastDataDays ?? 0;
         $pct = min(100, ($forecastCount / 90) * 100);
+        $daysRemaining = $dataSufficiency['days_remaining'] ?? max(0, 90 - $forecastCount);
+        $perCage = $dataSufficiency['per_cage'] ?? [];
     @endphp
     <style>
         #forecastLockOverlay {
@@ -87,7 +89,7 @@
             </div>
             <h2 class="text-lg font-semibold" style="color: #1f1f1f;">Insufficient Forecast Data</h2>
             <p class="text-sm mt-2" style="color: #615d59;">
-                You need at least <strong>90 days</strong> of production records to generate a forecast.
+                Both SARIMA and XGBoost require <strong>90 days</strong> of production records to generate a forecast.
             </p>
 
             <div class="mt-5">
@@ -98,7 +100,48 @@
                 <div class="w-full rounded-full h-2 overflow-hidden" style="background-color: #f3e3bf;">
                     <div class="h-2 rounded-full transition-all" style="width: {{ $pct }}%; background-color: #c2703e;"></div>
                 </div>
+                <div class="text-center mt-1">
+                    <span class="text-[10px]" style="color: #9ca3af;">
+                        {{ $daysRemaining > 0 ? $daysRemaining . ' days remaining' : 'Ready to generate' }}
+                    </span>
+                </div>
             </div>
+
+            @if(count($perCage) > 1)
+            <div class="mt-4 text-left">
+                <div class="text-xs font-semibold mb-2" style="color: #333333;">Per-cage data status</div>
+                <div class="rounded-lg border border-[#E5E7EB] overflow-hidden">
+                    <table class="w-full text-xs">
+                        <thead>
+                            <tr style="background-color: #F9FAFB;">
+                                <th class="px-3 py-1.5 text-left font-medium" style="color: #6B7280;">Cage</th>
+                                <th class="px-3 py-1.5 text-right font-medium" style="color: #6B7280;">Days</th>
+                                <th class="px-3 py-1.5 text-center font-medium" style="color: #6B7280;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($perCage as $cage => $days)
+                            <tr style="border-top: 1px solid #F3F4F6;">
+                                <td class="px-3 py-1.5 font-medium" style="color: #333333;">{{ $cage }}</td>
+                                <td class="px-3 py-1.5 text-right" style="color: #615d59;">{{ $days }}/90</td>
+                                <td class="px-3 py-1.5 text-center">
+                                    @if($days >= 90)
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-medium" style="color: #16a34a;">
+                                            <i data-lucide="check-circle" class="w-3 h-3"></i> Ready
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-medium" style="color: #dc2626;">
+                                            <i data-lucide="x-circle" class="w-3 h-3"></i> {{ 90 - $days }} days remaining
+                                        </span>
+                                    @endif
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @endif
 
             <div class="mt-5 text-xs leading-relaxed" style="color: #6B7280;">
                 Keep logging eggs daily. Each recorded day adds to your history.
@@ -184,11 +227,9 @@
             </p>
             <form method="GET" action="{{ route('forecast.template') }}" id="downloadTemplateForm" data-turbo="false">
                 @php
-                    $lastRecordDate = \Illuminate\Support\Facades\DB::table('forecast_input_records')->max('date');
-                    $defaultEndDate = $lastRecordDate ? \Carbon\Carbon::parse($lastRecordDate)->subDay()->format('Y-m-d') : now()->format('Y-m-d');
+                    $defaultEndDate = now()->format('Y-m-d');
                     $defaultStartDate = now()->subDays(89)->format('Y-m-d');
                 @endphp
-                <input type="hidden" name="end_date" value="{{ $defaultEndDate }}">
                 <div class="mb-4">
                     <label for="templateStartDate" class="block text-sm text-[#333333] mb-1">Start date</label>
                     <input type="date" name="start_date" id="templateStartDate" required
@@ -197,9 +238,9 @@
                 </div>
                 <div class="mb-4">
                     <label for="templateEndDate" class="block text-sm text-[#333333] mb-1">End date</label>
-                    <input type="date" id="templateEndDate" value="{{ $defaultEndDate }}" readonly
-                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-[#F5F6F8] text-[#6B7280] cursor-not-allowed">
-                    <p class="text-xs text-[#6B7280] mt-1">Ends at the last recorded production date.</p>
+                    <input type="date" name="end_date" id="templateEndDate" required
+                           value="{{ $defaultEndDate }}"
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#002D5E]">
                 </div>
                 <button type="submit" class="w-full bg-[#002D5E] text-white py-3 rounded-lg text-sm font-medium hover:bg-[#001F42] transition-colors flex items-center justify-center gap-2">
                     <i data-lucide="download" class="w-5 h-5 shrink-0"></i>
@@ -1185,6 +1226,7 @@
             if (!inputRecordsContent) return;
             var s = data.summary || {};
             var rows = data.rows || [];
+            var perCage = s.per_cage || [];
 
             var html = '<div class="mb-4 p-3 rounded-lg flex items-start gap-2 text-xs" style="background-color:#eef2fb; color:#002D5E; border:1px solid #d6e0f2;">'
                 + '<i data-lucide="info" class="w-4 h-4 shrink-0 mt-0.5"></i>'
@@ -1197,6 +1239,22 @@
                 + '<div class="bg-[#F5F6F8] rounded-lg p-3"><div class="text-sm font-bold text-[#002D5E]">' + (s.min_date ?? '—') + '</div><div class="text-[10px] uppercase tracking-wider text-[#6B7280]">From</div></div>'
                 + '<div class="bg-[#F5F6F8] rounded-lg p-3"><div class="text-sm font-bold text-[#002D5E]">' + (s.max_date ?? '—') + '</div><div class="text-[10px] uppercase tracking-wider text-[#6B7280]">To</div></div>'
                 + '</div>';
+
+            if (perCage.length > 0) {
+                html += '<div class="mb-4 p-3 rounded-lg border border-[#E5E7EB]">'
+                    + '<div class="text-xs font-semibold mb-2" style="color: #333333;">Per-cage data status</div>'
+                    + '<div class="space-y-1.5">';
+                perCage.forEach(function(cage) {
+                    var statusColor = cage.ready ? '#16a34a' : '#dc2626';
+                    var statusText = cage.ready ? 'Ready' : (90 - cage.unique_dates) + ' days remaining';
+                    html += '<div class="flex items-center justify-between text-xs">'
+                        + '<span class="font-medium" style="color:#333;">' + cage.cage_code + '</span>'
+                        + '<span style="color:#615d59;">' + cage.unique_dates + '/90 days</span>'
+                        + '<span style="color:' + statusColor + ';">' + statusText + '</span>'
+                        + '</div>';
+                });
+                html += '</div></div>';
+            }
 
             if (!rows.length) {
                 html += '<div class="text-center py-10 text-sm text-[#6B7280]">No forecast input records yet. Log eggs daily or import a sheet.</div>';

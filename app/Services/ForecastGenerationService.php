@@ -29,12 +29,12 @@ class ForecastGenerationService
             ->orderByDesc('date')
             ->limit($days)
             ->get()
-            ->map(fn($row) => tap((object) [
-                'log_date'  => $row->date,
+            ->map(fn ($row) => tap((object) [
+                'log_date' => $row->date,
                 'egg_count' => (int) $row->egg_count,
                 'hen_count' => (int) $row->hen_count,
-                'hdep'      => $row->hen_count > 0 ? round(($row->egg_count / $row->hen_count) * 100, 2) : 0,
-            ], fn($r) => $r))
+                'hdep' => $row->hen_count > 0 ? round(($row->egg_count / $row->hen_count) * 100, 2) : 0,
+            ], fn ($r) => $r))
             ->reverse()
             ->values();
     }
@@ -48,12 +48,12 @@ class ForecastGenerationService
             ->orderByDesc('date')
             ->limit(14)
             ->get()
-            ->map(fn($row) => tap((object) [
-                'log_date'  => $row->date,
+            ->map(fn ($row) => tap((object) [
+                'log_date' => $row->date,
                 'egg_count' => (int) $row->egg_count,
                 'hen_count' => (int) $row->hen_count,
-                'hdep'      => $row->hen_count > 0 ? round(($row->egg_count / $row->hen_count) * 100, 2) : 0,
-            ], fn($r) => $r))
+                'hdep' => $row->hen_count > 0 ? round(($row->egg_count / $row->hen_count) * 100, 2) : 0,
+            ], fn ($r) => $r))
             ->reverse()
             ->values();
     }
@@ -67,12 +67,12 @@ class ForecastGenerationService
             ->orderByDesc('date')
             ->limit(14)
             ->get()
-            ->map(fn($row) => tap((object) [
-                'log_date'  => $row->date,
+            ->map(fn ($row) => tap((object) [
+                'log_date' => $row->date,
                 'egg_count' => (int) $row->egg_count,
                 'hen_count' => (int) $row->hen_count,
-                'hdep'      => $row->hen_count > 0 ? round(($row->egg_count / $row->hen_count) * 100, 2) : 0,
-            ], fn($r) => $r))
+                'hdep' => $row->hen_count > 0 ? round(($row->egg_count / $row->hen_count) * 100, 2) : 0,
+            ], fn ($r) => $r))
             ->reverse()
             ->values();
     }
@@ -80,11 +80,7 @@ class ForecastGenerationService
     /**
      * Execute the Python forecasting pipeline and optionally persist results.
      *
-     * @param Cage|null $cage
-     * @param string|null $breed
-     * @param Collection $historical Kept for signature/backward compatibility; Python loads its own data.
-     * @param int $horizon
-     * @param bool $save
+     * @param  Collection  $historical  Kept for signature/backward compatibility; Python loads its own data.
      * @return array{forecasts: Collection, metrics: array, recommended_model: string}
      *
      * $manualParams are captured from the real HTTP request up front and passed
@@ -98,7 +94,7 @@ class ForecastGenerationService
         Log::info('Forecast generation result', [
             'recommended_model' => $result['recommended_model'] ?? null,
             'metrics' => $result['metrics'] ?? [],
-            'forecast_values' => array_slice(array_map(fn($f) => [
+            'forecast_values' => array_slice(array_map(fn ($f) => [
                 'date' => $f['date'] ?? null,
                 'predicted_egg_count' => $f['predicted_egg_count'] ?? null,
             ], $result['forecast'] ?? []), 0, 5),
@@ -109,8 +105,8 @@ class ForecastGenerationService
             : $this->buildForecastCollection($result, $cage, $breed);
 
         return [
-            'forecasts'         => $forecasts,
-            'metrics'           => $result['metrics'] ?? [],
+            'forecasts' => $forecasts,
+            'metrics' => $result['metrics'] ?? [],
             'recommended_model' => $result['recommended_model'] ?? 'Unknown',
         ];
     }
@@ -142,7 +138,7 @@ class ForecastGenerationService
         }
 
         foreach ($manualParams as $key => $value) {
-            $command[] = '--' . str_replace('_', '-', $key);
+            $command[] = '--'.str_replace('_', '-', $key);
             $command[] = (string) $value;
         }
 
@@ -152,15 +148,15 @@ class ForecastGenerationService
 
         $process->run();
 
-        if (!$process->isSuccessful()) {
+        if (! $process->isSuccessful()) {
             $errorOutput = trim($process->getErrorOutput());
             $stdOutput = trim($process->getOutput());
             $pythonError = $errorOutput ?: $stdOutput;
 
             if (str_contains($pythonError, 'No module named')) {
                 throw new RuntimeException(
-                    'Forecast Python environment is missing required packages. ' .
-                    'Install dependencies with: pip install -r forecast-api/requirements.txt ' .
+                    'Forecast Python environment is missing required packages. '.
+                    'Install dependencies with: pip install -r forecast-api/requirements.txt '.
                     "(using Python binary: {$pythonBinary})."
                 );
             }
@@ -181,7 +177,7 @@ class ForecastGenerationService
         $data = json_decode($output, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new RuntimeException('Invalid JSON from forecast runner: ' . $output);
+            throw new RuntimeException('Invalid JSON from forecast runner: '.$output);
         }
 
         if (($data['success'] ?? false) !== true) {
@@ -238,8 +234,8 @@ class ForecastGenerationService
     public function processEnv(): array
     {
         $env = [
-            'DB_HOST'     => config('database.connections.mysql.host', '127.0.0.1'),
-            'DB_PORT'     => (string) config('database.connections.mysql.port', 3306),
+            'DB_HOST' => config('database.connections.mysql.host', '127.0.0.1'),
+            'DB_PORT' => (string) config('database.connections.mysql.port', 3306),
             'DB_DATABASE' => config('database.connections.mysql.database', 'layrate'),
             'DB_USERNAME' => config('database.connections.mysql.username', 'root'),
             'DB_PASSWORD' => config('database.connections.mysql.password', ''),
@@ -280,10 +276,10 @@ class ForecastGenerationService
 
         foreach ($result['forecast'] ?? [] as $item) {
             $forecasts->push(new Forecast([
-                'cage_id'             => $cage?->id,
-                'breed'               => $breed,
-                'forecast_date'       => $today,
-                'target_date'         => $item['date'],
+                'cage_id' => $cage?->id,
+                'breed' => $breed,
+                'forecast_date' => $today,
+                'target_date' => $item['date'],
                 'predicted_egg_count' => $item['predicted_egg_count'],
             ]));
         }

@@ -427,6 +427,12 @@
             {{ session('error') }}
         </div>
         @endif
+        @if(session('forecast_warning'))
+        <div class="mx-4 mt-3 flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-2.5 rounded-lg text-sm">
+            <i data-lucide="alert-circle" class="w-4 h-4 text-amber-600 shrink-0"></i>
+            {{ session('forecast_warning') }}
+        </div>
+        @endif
 
         {{-- SCROLLABLE PAGE CONTENT --}}
         <main class="page-wrapper flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-4 lg:px-6 py-4 scrollbar-thin" style="overscroll-behavior: none;">
