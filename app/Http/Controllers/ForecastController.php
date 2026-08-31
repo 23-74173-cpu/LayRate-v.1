@@ -637,7 +637,9 @@ class ForecastController extends Controller
             // Security: ensure the path is inside our temp directory.
             $tempDir = realpath(storage_path('app/private/forecast-imports'));
             $realPath = realpath($tempPath);
-            if ($tempDir === false || $realPath === false || ! str_starts_with($realPath, $tempDir.'/')) {
+            $normDir = str_replace('\\', '/', $tempDir ?? '');
+            $normFile = str_replace('\\', '/', $realPath ?? '');
+            if ($tempDir === false || $realPath === false || ! str_starts_with($normFile, $normDir.'/')) {
                 throw new RuntimeException('Invalid or expired import session.');
             }
 
