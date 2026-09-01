@@ -113,6 +113,97 @@
             </div>
         </div>
 
+        {{-- Feed --}}
+        <div>
+            <h3 class="text-[11px] font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-2">
+                <i data-lucide="wheat" class="w-3.5 h-3.5 inline-block mr-1.5 -mt-0.5" style="color:#16a34a;"></i>
+                Feed &amp; Nutrition
+            </h3>
+            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {{-- Avg CP% This Week --}}
+                <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-5 cursor-pointer"
+                     style="background-color: #f8f8f8; border-color: #e6e6e6; animation-delay: 120ms;"
+                     role="link" tabindex="0" aria-label="Go to Feed"
+                     data-nav="{{ route('feed') }}">
+                    <span class="kpi-watermark" style="color:#CDD2DA;"><i data-lucide="flask-conical" class="w-full h-full"></i></span>
+                    <div class="relative flex items-start justify-between">
+                        <span class="kpi-chip" style="background-color: #e6f6ee; color: #16a34a; border: 1px solid #16a34a;">
+                            <i data-lucide="flask-conical" class="w-5 h-5"></i>
+                        </span>
+                    </div>
+                    <div class="relative mt-4">
+                        <div class="text-[11px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Avg CP% This Week</div>
+                        <div class="text-[28px] font-bold leading-none tracking-[-1px] text-[#102A4C] mt-2">{{ number_format($avgCp, 1) }}%</div>
+                        <div class="text-xs mt-1.5" style="color: #5b6472;">all batches</div>
+                    </div>
+                    <span class="kpi-accent" style="background-color: #e6f6ee;"></span>
+                </div>
+
+                {{-- Avg Feed/Cage/Day --}}
+                <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-5 cursor-pointer"
+                     style="background-color: #f8f8f8; border-color: #e6e6e6; animation-delay: 160ms;"
+                     role="link" tabindex="0" aria-label="Go to Feed"
+                     data-nav="{{ route('feed') }}">
+                    <span class="kpi-watermark" style="color:#CDD2DA;"><i data-lucide="scale" class="w-full h-full"></i></span>
+                    <div class="relative flex items-start justify-between">
+                        <span class="kpi-chip" style="background-color: #e6f6ee; color: #16a34a; border: 1px solid #16a34a;">
+                            <i data-lucide="scale" class="w-5 h-5"></i>
+                        </span>
+                    </div>
+                    <div class="relative mt-4">
+                        <div class="text-[11px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Avg Feed/Cage/Day</div>
+                        <div class="text-[28px] font-bold leading-none tracking-[-1px] text-[#102A4C] mt-2 kpi-count" data-target="{{ $avgFeedPerCage }}" data-decimals="1">0</div>
+                        <div class="text-xs mt-1.5" style="color: #5b6472;">kg per cage (7-day avg)</div>
+                    </div>
+                    <span class="kpi-accent" style="background-color: #e6f6ee;"></span>
+                </div>
+
+                {{-- Total Feed Used --}}
+                <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-5 cursor-pointer"
+                     style="background-color: #f8f8f8; border-color: #e6e6e6; animation-delay: 200ms;"
+                     role="link" tabindex="0" aria-label="Go to Feed"
+                     data-nav="{{ route('feed') }}">
+                    <span class="kpi-watermark" style="color:#CDD2DA;"><i data-lucide="package" class="w-full h-full"></i></span>
+                    <div class="relative flex items-start justify-between">
+                        <span class="kpi-chip" style="background-color: #e6f6ee; color: #16a34a; border: 1px solid #16a34a;">
+                            <i data-lucide="package" class="w-5 h-5"></i>
+                        </span>
+                    </div>
+                    <div class="relative mt-4">
+                        <div class="text-[11px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Total Feed Used</div>
+                        <div class="text-[28px] font-bold leading-none tracking-[-1px] text-[#102A4C] mt-2 kpi-count" data-target="{{ round($totalFeedWeek, 1) }}" data-decimals="1">0</div>
+                        <div class="text-xs mt-1.5" style="color: #5b6472;">kg this week</div>
+                    </div>
+                    <span class="kpi-accent" style="background-color: #e6f6ee;"></span>
+                </div>
+
+                {{-- Feed Cost This Month --}}
+                <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-5 cursor-pointer"
+                     style="background-color: #f8f8f8; border-color: #e6e6e6; animation-delay: 240ms;"
+                     role="link" tabindex="0" aria-label="Go to Feed"
+                     data-nav="{{ route('feed') }}">
+                    <span class="kpi-watermark" style="color:#CDD2DA;"><i data-lucide="banknote" class="w-full h-full"></i></span>
+                    <div class="relative flex items-start justify-between">
+                        <span class="kpi-chip" style="background-color: #e6f6ee; color: #16a34a; border: 1px solid #16a34a;">
+                            <i data-lucide="banknote" class="w-5 h-5"></i>
+                        </span>
+                    </div>
+                    <div class="relative mt-4">
+                        <div class="text-[11px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Feed Cost This Month</div>
+                        <div class="text-[28px] font-bold leading-none tracking-[-1px] text-[#102A4C] mt-2">
+                            @if($totalFeedCostMonth !== null && $totalFeedCostMonth > 0)
+                                ₱{{ number_format($totalFeedCostMonth, 2) }}
+                            @else
+                                <span class="text-lg text-[#9CA3AF]">&mdash;</span>
+                            @endif
+                        </div>
+                        <div class="text-xs mt-1.5" style="color: #5b6472;">₱ month to date</div>
+                    </div>
+                    <span class="kpi-accent" style="background-color: #e6f6ee;"></span>
+                </div>
+            </div>
+        </div>
+
         {{-- Environment & Health --}}
         <div>
             <h3 class="text-[11px] font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-2">
@@ -224,7 +315,7 @@
                 $count = $mortalityToday[$cage->cage_code] ?? 0;
                 return ['label' => $cage->cage_code, 'color' => $cage->color, 'bgColor' => $cage->colorSoft, 'value' => $count . ' ' . Str::plural('hen', $count)];
             })->values()->toJson() !!}
-        }
+        },
     });
     if (typeof bindKpiCards === 'function') bindKpiCards(document.getElementById('dashboard-stats'));
 

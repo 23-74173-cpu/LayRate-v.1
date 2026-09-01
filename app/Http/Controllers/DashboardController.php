@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Cage;
 use App\Models\EnvironmentalLog;
+use App\Models\FeedBatch;
 use App\Models\FeedConsumptionLog;
 use App\Models\MortalityLog;
 use App\Models\ProductionLog;
@@ -253,6 +254,7 @@ class DashboardController extends Controller
             'cageSlots.hardwareItems',
             'hardwareItems',
             'hens' => fn ($q) => $q->where('is_active', 1),
+            'feedConsumptionLogs',
         ]);
 
         if ($cageCode) {
@@ -345,6 +347,27 @@ class DashboardController extends Controller
                 'hen_count' => $g->first()->cage?->hens->where('is_active', 1)->count() ?? 0,
                 'feed_target_kg' => round($g->first()->cage?->hens->where('is_active', 1)->count() ?? 0, 2) * $feedPerHenKg,
             ]);
+
+        // Total feed consumed (lifetime)
+        $totalFeedConsumed = FeedConsumptionLog::sum('feed_consumed_kg');
+
+        // Feed & Nutrition summary cards
+        $allBatches = FeedBatch::orderByDesc('date_received')->get();
+        $avgCp = round($allBatches->avg('crude_protein') ?? 0, 1);
+
+        $totalFeedWeek = FeedConsumptionLog::where('log_date', '>=', now()->subDays(7)->toDateString())
+            ->sum('feed_consumed_kg');
+
+        $activeCagesCount = Cage::where('is_active', 1)->count();
+        $avgFeedPerCage = $activeCagesCount
+            ? round($totalFeedWeek / max($activeCagesCount, 1) / 7, 1)
+            : 0;
+
+        $totalFeedCostMonth = FeedConsumptionLog::where('feed_consumption_logs.log_date', '>=', now()->startOfMonth()->toDateString())
+            ->join('feed_batches', 'feed_consumption_logs.feed_batch_id', '=', 'feed_batches.id')
+            ->selectRaw('SUM(feed_consumption_logs.feed_consumed_kg * feed_batches.unit_cost) as total')
+            ->whereNotNull('feed_batches.unit_cost')
+            ->value('total');
 
         // Mortality (today or period)
         $mortalityStartDate = $mortalityDays === 1
@@ -444,6 +467,7 @@ class DashboardController extends Controller
             'cages', 'totalHens', 'todayHdep', 'hdepDelta',
             'eggsToday', 'eggsDelta', 'lifetimeEggs', 'avgTemp', 'avgHum', 'feedToday',
             'mortalityToday', 'mortalityTodayTotal', 'mortalityDays',
+            'totalFeedConsumed', 'avgCp', 'avgFeedPerCage', 'totalFeedWeek', 'totalFeedCostMonth',
             'yesterdayHdep', 'eggsYesterday', 'yesterdayMortalityTotal', 'yesterdayFeedTotal',
             'liveReadings', 'today', 'dataCompleteness',
             'needsOnboarding', 'dayComplete'

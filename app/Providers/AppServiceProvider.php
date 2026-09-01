@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Alert;
+use App\Services\ForecastInputSync;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
@@ -62,7 +63,7 @@ class AppServiceProvider extends ServiceProvider
         }
         if ($shouldSync) {
             try {
-                \Illuminate\Support\Facades\Artisan::call('forecast:sync-input-records');
+                ForecastInputSync::run([], catchUp: true);
                 file_put_contents($lockFile, (string) time());
                 Log::info('Forecast input records synced on server startup');
             } catch (\Throwable $e) {
