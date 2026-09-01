@@ -107,6 +107,10 @@
                     <div class="relative mt-4">
                         <div class="text-[11px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Lifetime Eggs</div>
                         <div class="text-[28px] font-bold leading-none tracking-[-1px] text-[#102A4C] mt-2 kpi-count" data-target="{{ $lifetimeEggs }}">0</div>
+                        <div class="text-xs font-medium mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5"
+                             style="color: #0f7a44; background-color: rgba(255,255,255,0.78); border: 1px solid rgba(31,138,79,0.35);">
+                            ▲ +{{ number_format($eggsToday) }} today
+                        </div>
                     </div>
                     <span class="kpi-accent" style="background-color: #e9e0f5;"></span>
                 </div>
@@ -124,17 +128,21 @@
                 <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-5 cursor-pointer"
                      style="background-color: #f8f8f8; border-color: #e6e6e6; animation-delay: 120ms;"
                      role="link" tabindex="0" aria-label="Go to Feed"
-                     data-nav="{{ route('feed') }}">
+                     data-nav="{{ route('feed') }}" data-kpi="feed-avg-cp">
                     <span class="kpi-watermark" style="color:#CDD2DA;"><i data-lucide="flask-conical" class="w-full h-full"></i></span>
                     <div class="relative flex items-start justify-between">
                         <span class="kpi-chip" style="background-color: #e6f6ee; color: #16a34a; border: 1px solid #16a34a;">
                             <i data-lucide="flask-conical" class="w-5 h-5"></i>
                         </span>
+                        <button type="button" class="p-1 rounded-full hover:bg-black/5 transition-colors -mt-1 -mr-1"
+                                onclick="event.stopPropagation(); openKpiModal('feed-avg-cp')" aria-label="Avg CP% breakdown">
+                            <i data-lucide="info" class="w-4 h-4 text-[#9CA3AF]"></i>
+                        </button>
                     </div>
                     <div class="relative mt-4">
                         <div class="text-[11px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Avg CP% This Week</div>
                         <div class="text-[28px] font-bold leading-none tracking-[-1px] text-[#102A4C] mt-2">{{ number_format($avgCp, 1) }}%</div>
-                        <div class="text-xs mt-1.5" style="color: #5b6472;">all batches</div>
+
                     </div>
                     <span class="kpi-accent" style="background-color: #e6f6ee;"></span>
                 </div>
@@ -143,17 +151,21 @@
                 <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-5 cursor-pointer"
                      style="background-color: #f8f8f8; border-color: #e6e6e6; animation-delay: 160ms;"
                      role="link" tabindex="0" aria-label="Go to Feed"
-                     data-nav="{{ route('feed') }}">
+                     data-nav="{{ route('feed') }}" data-kpi="feed-avg-cage-day">
                     <span class="kpi-watermark" style="color:#CDD2DA;"><i data-lucide="scale" class="w-full h-full"></i></span>
                     <div class="relative flex items-start justify-between">
                         <span class="kpi-chip" style="background-color: #e6f6ee; color: #16a34a; border: 1px solid #16a34a;">
                             <i data-lucide="scale" class="w-5 h-5"></i>
                         </span>
+                        <button type="button" class="p-1 rounded-full hover:bg-black/5 transition-colors -mt-1 -mr-1"
+                                onclick="event.stopPropagation(); openKpiModal('feed-avg-cage-day')" aria-label="Avg feed per cage breakdown">
+                            <i data-lucide="info" class="w-4 h-4 text-[#9CA3AF]"></i>
+                        </button>
                     </div>
                     <div class="relative mt-4">
                         <div class="text-[11px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Avg Feed/Cage/Day</div>
                         <div class="text-[28px] font-bold leading-none tracking-[-1px] text-[#102A4C] mt-2 kpi-count" data-target="{{ $avgFeedPerCage }}" data-decimals="1">0</div>
-                        <div class="text-xs mt-1.5" style="color: #5b6472;">kg per cage (7-day avg)</div>
+
                     </div>
                     <span class="kpi-accent" style="background-color: #e6f6ee;"></span>
                 </div>
@@ -162,17 +174,25 @@
                 <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-5 cursor-pointer"
                      style="background-color: #f8f8f8; border-color: #e6e6e6; animation-delay: 200ms;"
                      role="link" tabindex="0" aria-label="Go to Feed"
-                     data-nav="{{ route('feed') }}">
+                     data-nav="{{ route('feed') }}" data-kpi="feed-total-week">
                     <span class="kpi-watermark" style="color:#CDD2DA;"><i data-lucide="package" class="w-full h-full"></i></span>
                     <div class="relative flex items-start justify-between">
                         <span class="kpi-chip" style="background-color: #e6f6ee; color: #16a34a; border: 1px solid #16a34a;">
                             <i data-lucide="package" class="w-5 h-5"></i>
                         </span>
+                        <button type="button" class="p-1 rounded-full hover:bg-black/5 transition-colors -mt-1 -mr-1"
+                                onclick="event.stopPropagation(); openKpiModal('feed-total-week')" aria-label="Total feed used per cage breakdown">
+                            <i data-lucide="info" class="w-4 h-4 text-[#9CA3AF]"></i>
+                        </button>
                     </div>
                     <div class="relative mt-4">
                         <div class="text-[11px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Total Feed Used</div>
                         <div class="text-[28px] font-bold leading-none tracking-[-1px] text-[#102A4C] mt-2 kpi-count" data-target="{{ round($totalFeedWeek, 1) }}" data-decimals="1">0</div>
-                        <div class="text-xs mt-1.5" style="color: #5b6472;">kg this week</div>
+                        <div class="text-xs font-medium mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5"
+                             style="color: #0f7a44; background-color: rgba(255,255,255,0.78); border: 1px solid rgba(31,138,79,0.35);">
+                            ▲ +{{ number_format(round($feedTodayKg, 1), 1) }} kg today
+                        </div>
+
                     </div>
                     <span class="kpi-accent" style="background-color: #e6f6ee;"></span>
                 </div>
@@ -181,12 +201,16 @@
                 <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-5 cursor-pointer"
                      style="background-color: #f8f8f8; border-color: #e6e6e6; animation-delay: 240ms;"
                      role="link" tabindex="0" aria-label="Go to Feed"
-                     data-nav="{{ route('feed') }}">
+                     data-nav="{{ route('feed') }}" data-kpi="feed-cost-month">
                     <span class="kpi-watermark" style="color:#CDD2DA;"><i data-lucide="banknote" class="w-full h-full"></i></span>
                     <div class="relative flex items-start justify-between">
                         <span class="kpi-chip" style="background-color: #e6f6ee; color: #16a34a; border: 1px solid #16a34a;">
                             <i data-lucide="banknote" class="w-5 h-5"></i>
                         </span>
+                        <button type="button" class="p-1 rounded-full hover:bg-black/5 transition-colors -mt-1 -mr-1"
+                                onclick="event.stopPropagation(); openKpiModal('feed-cost-month')" aria-label="Feed cost per cage breakdown">
+                            <i data-lucide="info" class="w-4 h-4 text-[#9CA3AF]"></i>
+                        </button>
                     </div>
                     <div class="relative mt-4">
                         <div class="text-[11px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Feed Cost This Month</div>
@@ -197,7 +221,11 @@
                                 <span class="text-lg text-[#9CA3AF]">&mdash;</span>
                             @endif
                         </div>
-                        <div class="text-xs mt-1.5" style="color: #5b6472;">₱ month to date</div>
+                        <div class="text-xs font-medium mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5"
+                             style="color: #0f7a44; background-color: rgba(255,255,255,0.78); border: 1px solid rgba(31,138,79,0.35);">
+                            ▲ +₱{{ number_format($feedCostToday ?? 0, 2) }} today
+                        </div>
+
                     </div>
                     <span class="kpi-accent" style="background-color: #e6f6ee;"></span>
                 </div>
@@ -315,6 +343,22 @@
                 $count = $mortalityToday[$cage->cage_code] ?? 0;
                 return ['label' => $cage->cage_code, 'color' => $cage->color, 'bgColor' => $cage->colorSoft, 'value' => $count . ' ' . Str::plural('hen', $count)];
             })->values()->toJson() !!}
+        },
+        'feed-avg-cp': {
+            title: 'Crude Protein % by Batch',
+            rows: {!! $allBatches->map(fn($b) => ['label' => $b->batch_code . ($b->brand ? ' (' . $b->brand . ')' : ''), 'color' => '#16a34a', 'bgColor' => '#e6f6ee', 'value' => number_format($b->crude_protein, 1) . '%'])->values()->toJson() !!}
+        },
+        'feed-avg-cage-day': {
+            title: 'Avg Feed/Cage/Day (7-Day)',
+            rows: {!! $feedWeekByCage->map(fn($r) => ['label' => $r->cage_code, 'color' => $r->color, 'bgColor' => $r->color_soft, 'value' => number_format(round($r->feed_kg / 7, 1), 1) . ' kg/day'])->values()->toJson() !!}
+        },
+        'feed-total-week': {
+            title: 'Total Feed Used This Week by Cage',
+            rows: {!! $feedWeekByCage->map(fn($r) => ['label' => $r->cage_code, 'color' => $r->color, 'bgColor' => $r->color_soft, 'value' => number_format($r->feed_kg, 2) . ' kg'])->values()->toJson() !!}
+        },
+        'feed-cost-month': {
+            title: 'Feed Cost This Month by Cage',
+            rows: {!! $feedCostByCage->map(fn($r) => ['label' => $r->cage_code, 'color' => $r->color, 'bgColor' => $r->color_soft, 'value' => '₱' . number_format($r->cost, 2)])->values()->toJson() !!}
         },
     });
     if (typeof bindKpiCards === 'function') bindKpiCards(document.getElementById('dashboard-stats'));

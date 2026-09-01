@@ -356,7 +356,26 @@ class DashboardController extends Controller
         $avgCp = round($allBatches->avg('crude_protein') ?? 0, 1);
 
         $totalFeedWeek = FeedConsumptionLog::where('log_date', '>=', now()->subDays(7)->toDateString())
+            ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
             ->sum('feed_consumed_kg');
+
+        $feedTodayKg = FeedConsumptionLog::where('log_date', $today)
+            ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
+            ->sum('feed_consumed_kg');
+
+        $feedWeekByCage = FeedConsumptionLog::where('log_date', '>=', now()->subDays(7)->toDateString())
+            ->join('cages', 'feed_consumption_logs.cage_id', '=', 'cages.id')
+            ->when($cageCode, fn ($q) => $q->where('cages.cage_code', $cageCode))
+            ->selectRaw('cages.id as cage_id, cages.cage_code, ROUND(SUM(feed_consumption_logs.feed_consumed_kg), 2) as feed_kg')
+            ->groupBy('cages.id', 'cages.cage_code')
+            ->orderBy('cages.cage_code')
+            ->get()
+            ->map(function ($row) {
+                $cage = Cage::find($row->cage_id);
+                $row->color = $cage->color;
+                $row->color_soft = $cage->color_soft;
+                return $row;
+            });
 
         $activeCagesCount = Cage::where('is_active', 1)->count();
         $avgFeedPerCage = $activeCagesCount
@@ -365,9 +384,34 @@ class DashboardController extends Controller
 
         $totalFeedCostMonth = FeedConsumptionLog::where('feed_consumption_logs.log_date', '>=', now()->startOfMonth()->toDateString())
             ->join('feed_batches', 'feed_consumption_logs.feed_batch_id', '=', 'feed_batches.id')
+            ->join('cages', 'feed_consumption_logs.cage_id', '=', 'cages.id')
             ->selectRaw('SUM(feed_consumption_logs.feed_consumed_kg * feed_batches.unit_cost) as total')
             ->whereNotNull('feed_batches.unit_cost')
+            ->when($cageCode, fn ($q) => $q->where('cages.cage_code', $cageCode))
             ->value('total');
+
+        $feedCostToday = FeedConsumptionLog::where('feed_consumption_logs.log_date', $today)
+            ->join('feed_batches', 'feed_consumption_logs.feed_batch_id', '=', 'feed_batches.id')
+            ->whereNotNull('feed_batches.unit_cost')
+            ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
+            ->selectRaw('ROUND(SUM(feed_consumption_logs.feed_consumed_kg * feed_batches.unit_cost), 2) as total')
+            ->value('total') ?? 0;
+
+        $feedCostByCage = FeedConsumptionLog::where('feed_consumption_logs.log_date', '>=', now()->startOfMonth()->toDateString())
+            ->join('feed_batches', 'feed_consumption_logs.feed_batch_id', '=', 'feed_batches.id')
+            ->join('cages', 'feed_consumption_logs.cage_id', '=', 'cages.id')
+            ->whereNotNull('feed_batches.unit_cost')
+            ->when($cageCode, fn ($q) => $q->where('cages.cage_code', $cageCode))
+            ->selectRaw('cages.id as cage_id, cages.cage_code, ROUND(SUM(feed_consumption_logs.feed_consumed_kg * feed_batches.unit_cost), 2) as cost')
+            ->groupBy('cages.id', 'cages.cage_code')
+            ->orderBy('cages.cage_code')
+            ->get()
+            ->map(function ($row) {
+                $cage = Cage::find($row->cage_id);
+                $row->color = $cage->color;
+                $row->color_soft = $cage->color_soft;
+                return $row;
+            });
 
         // Mortality (today or period)
         $mortalityStartDate = $mortalityDays === 1
@@ -467,7 +511,8 @@ class DashboardController extends Controller
             'cages', 'totalHens', 'todayHdep', 'hdepDelta',
             'eggsToday', 'eggsDelta', 'lifetimeEggs', 'avgTemp', 'avgHum', 'feedToday',
             'mortalityToday', 'mortalityTodayTotal', 'mortalityDays',
-            'totalFeedConsumed', 'avgCp', 'avgFeedPerCage', 'totalFeedWeek', 'totalFeedCostMonth',
+            'totalFeedConsumed', 'avgCp', 'avgFeedPerCage',             'totalFeedWeek', 'totalFeedCostMonth', 'feedTodayKg', 'feedCostToday',
+            'feedWeekByCage', 'feedCostByCage', 'allBatches',
             'yesterdayHdep', 'eggsYesterday', 'yesterdayMortalityTotal', 'yesterdayFeedTotal',
             'liveReadings', 'today', 'dataCompleteness',
             'needsOnboarding', 'dayComplete'

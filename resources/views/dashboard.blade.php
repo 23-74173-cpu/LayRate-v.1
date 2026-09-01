@@ -39,14 +39,14 @@
 
     {{-- ── Cage Filter Tabs ── --}}
     <div class="flex items-center gap-2 overflow-x-auto pb-1 dash-rise" style="animation-delay: 40ms;">
-        <button type="button" onclick="filterDashboard('all')" class="dashboard-tab dashboard-tab-active px-4 py-2 text-sm font-semibold whitespace-nowrap"
+        <button type="button" onclick="filterDashboard('all')" class="dashboard-tab px-4 py-2 text-sm font-semibold whitespace-nowrap rounded-full transition-all duration-200 ease-out hover:scale-[1.04] hover:shadow-md active:scale-[0.97]"
                 data-tab="all"
-                style="background-color: #0075de; color: #ffffff;">
+                style="background-color: #0d47a1; color: #ffffff; border: 1px solid #0d47a1;">
             All
             <span class="ml-1 text-xs opacity-80">({{ $cages->count() }})</span>
         </button>
         @foreach($cages as $cage)
-        <button type="button" onclick="filterDashboard('{{ $cage->cage_code }}')" class="dashboard-tab px-4 py-2 text-sm font-medium whitespace-nowrap"
+        <button type="button" onclick="filterDashboard('{{ $cage->cage_code }}')" class="dashboard-tab px-4 py-2 text-sm font-medium whitespace-nowrap rounded-full transition-all duration-200 ease-out hover:scale-[1.04] hover:shadow-md active:scale-[0.97]"
                 data-tab="{{ $cage->cage_code }}"
                 style="background-color: #ffffff; color: #615d59; border: 1px solid #e6e6e6;">
             <span class="inline-block w-2 h-2 rounded-full mr-1.5" style="background-color: {{ $cage->colorSoft }}; border: 1px solid {{ $cage->color }};"></span>
@@ -577,9 +577,9 @@
         document.querySelectorAll('.dashboard-tab').forEach(function(tab) {
             if (tab.dataset.tab === code) {
                 tab.classList.add('dashboard-tab-active');
-                tab.style.backgroundColor = '#0075de';
+                tab.style.backgroundColor = '#0d47a1';
                 tab.style.color = '#ffffff';
-                tab.style.borderColor = '#0075de';
+                tab.style.borderColor = '#0d47a1';
             } else {
                 tab.classList.remove('dashboard-tab-active');
                 tab.style.backgroundColor = '#ffffff';
