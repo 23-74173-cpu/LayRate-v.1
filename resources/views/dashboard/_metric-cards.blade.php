@@ -31,7 +31,6 @@
                     <div class="relative mt-4">
                         <div class="text-[11px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Total Hens</div>
                         <div class="text-[28px] font-bold leading-none tracking-[-1px] text-[#102A4C] mt-2 kpi-count" data-target="{{ $totalHens }}">0</div>
-                        <div class="text-xs mt-1.5" style="color: #5b6472;">across {{ $cages->count() }} {{ Str::plural('cage', $cages->count()) }}</div>
                     </div>
                     <span class="kpi-accent" style="background-color: #d6f0e3;"></span>
                 </div>
@@ -108,7 +107,6 @@
                     <div class="relative mt-4">
                         <div class="text-[11px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Lifetime Eggs</div>
                         <div class="text-[28px] font-bold leading-none tracking-[-1px] text-[#102A4C] mt-2 kpi-count" data-target="{{ $lifetimeEggs }}">0</div>
-                        <div class="text-xs mt-1.5" style="color: #5b6472;">total since day 1</div>
                     </div>
                     <span class="kpi-accent" style="background-color: #e9e0f5;"></span>
                 </div>
@@ -138,11 +136,10 @@
                         </button>
                     </div>
                     <div class="relative mt-4">
-                        <div class="text-[11px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Coop Temp</div>
+                        <div class="text-[11px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Average Coop Temperature</div>
                         <div class="text-[28px] font-bold leading-none tracking-[-1px] text-[#102A4C] mt-2">
                             <span class="kpi-count" data-target="{{ $avgTemp }}" data-decimals="1">0</span>°
                         </div>
-                        <div class="text-xs mt-1.5" style="color: #5b6472;">avg across cages</div>
                     </div>
                     <span class="kpi-accent" style="background-color: #f7e3cf;"></span>
                 </div>
@@ -163,11 +160,10 @@
                         </button>
                     </div>
                     <div class="relative mt-4">
-                        <div class="text-[11px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Humidity</div>
+                        <div class="text-[11px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Average Humidity</div>
                         <div class="text-[28px] font-bold leading-none tracking-[-1px] text-[#102A4C] mt-2">
                             <span class="kpi-count" data-target="{{ $avgHum }}" data-decimals="1">0</span>%
                         </div>
-                        <div class="text-xs mt-1.5" style="color: #5b6472;">avg across cages</div>
                     </div>
                     <span class="kpi-accent" style="background-color: #d5ecf4;"></span>
                 </div>
@@ -192,7 +188,6 @@
                         <div class="text-[28px] font-bold leading-none tracking-[-1px] mt-2 {{ $mortalityTodayTotal > 0 ? 'text-[#9b1c24]' : 'text-[#102A4C]' }}">
                             {{ number_format($mortalityTodayTotal) }}
                         </div>
-                        <div class="text-xs mt-1.5" style="color: #5b6472;">{{ $mortalityTodayTotal === 1 ? 'hen today' : 'hens today' }}</div>
                     </div>
                     <span class="kpi-accent" style="background-color: #fadfe3;"></span>
                 </div>
@@ -224,7 +219,7 @@
             rows: {!! $liveReadings->map(fn($r) => ['label' => $r->cage, 'color' => $r->color, 'bgColor' => $r->colorSoft, 'value' => $r->temp . ' · ' . $r->hum . ' · ' . $r->status])->values()->toJson() !!}
         },
         mortality: {
-            title: 'Mortality by Cage',
+            title: 'Mortality by Cage{{ ($mortalityDays ?? 1) > 1 ? " (Last {$mortalityDays} Days)" : "" }}',
             rows: {!! $cages->map(function ($cage) use ($mortalityToday) {
                 $count = $mortalityToday[$cage->cage_code] ?? 0;
                 return ['label' => $cage->cage_code, 'color' => $cage->color, 'bgColor' => $cage->colorSoft, 'value' => $count . ' ' . Str::plural('hen', $count)];

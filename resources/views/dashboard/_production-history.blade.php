@@ -16,7 +16,6 @@
                 </span>
                 <div>
                     <div class="text-sm font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Egg Production History</div>
-                    <p class="text-xs text-[#6B7280]">{{ $title }} over the last {{ $days }} days.</p>
                 </div>
             </div>
             <div class="inline-flex items-center gap-1 rounded-lg p-1" style="background-color: #f3f4f6;">

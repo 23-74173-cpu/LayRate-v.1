@@ -33,7 +33,7 @@ class DashboardController extends Controller
 
     public function stats()
     {
-        $data = $this->buildDashboardData(request('cage'));
+        $data = $this->buildDashboardData(request('cage'), (int) request('mortality_days', 1));
 
         return view('dashboard._metric-cards', $data);
     }
@@ -230,7 +230,7 @@ class DashboardController extends Controller
         return view('dashboard._production-history', compact('chartData', 'days', 'cageCode', 'title', 'compare'));
     }
 
-    public function buildDashboardData(?string $cageCode = null): array
+    public function buildDashboardData(?string $cageCode = null, int $mortalityDays = 1): array
     {
         $today = ReportingDateService::reportingDateString();
         $yesterday = ReportingDateService::reportingDate()->copy()->subDay()->toDateString();
@@ -346,9 +346,13 @@ class DashboardController extends Controller
                 'feed_target_kg' => round($g->first()->cage?->hens->where('is_active', 1)->count() ?? 0, 2) * $feedPerHenKg,
             ]);
 
-        // Mortality today
+        // Mortality (today or period)
+        $mortalityStartDate = $mortalityDays === 1
+            ? $today
+            : ReportingDateService::reportingDate()->copy()->subDays($mortalityDays - 1)->toDateString();
         $mortalityToday = MortalityLog::with('cage')
-            ->whereDate('log_date', $today)
+            ->whereDate('log_date', '>=', $mortalityStartDate)
+            ->whereDate('log_date', '<=', $today)
             ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
             ->get()
             ->groupBy(fn ($l) => $l->cage?->cage_code ?? 'Deleted Cage')
@@ -439,7 +443,7 @@ class DashboardController extends Controller
         return compact(
             'cages', 'totalHens', 'todayHdep', 'hdepDelta',
             'eggsToday', 'eggsDelta', 'lifetimeEggs', 'avgTemp', 'avgHum', 'feedToday',
-            'mortalityToday', 'mortalityTodayTotal',
+            'mortalityToday', 'mortalityTodayTotal', 'mortalityDays',
             'yesterdayHdep', 'eggsYesterday', 'yesterdayMortalityTotal', 'yesterdayFeedTotal',
             'liveReadings', 'today', 'dataCompleteness',
             'needsOnboarding', 'dayComplete'

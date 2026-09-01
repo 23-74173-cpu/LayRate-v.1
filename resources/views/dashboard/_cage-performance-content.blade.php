@@ -69,13 +69,6 @@ $hasData = $totalEggs > 0 || $performance->contains(fn ($p) => $p['hdep'] > 0);
             </span>
             <div>
                 <div class="text-sm font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Cage Performance Rankings</div>
-                <p class="text-xs text-[#6B7280]">
-                    @if($days === 1 && $showDayFilter)
-                        Today's HDEP and eggs collected, ranked by production.
-                    @else
-                        HDEP and eggs over the last {{ $days }} days, ranked by production.
-                    @endif
-                </p>
             </div>
         </div>
         @if($showDayFilter)

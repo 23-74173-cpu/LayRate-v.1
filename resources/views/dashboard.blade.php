@@ -241,6 +241,41 @@
         document.getElementById('kpiModalTitle').textContent = data.title;
         var container = document.getElementById('kpiModalRows');
         container.innerHTML = '';
+
+        if (data.subtitle) {
+            var sub = document.createElement('p');
+            sub.className = 'text-xs mb-3';
+            sub.style.color = '#a39e98';
+            sub.textContent = data.subtitle;
+            container.appendChild(sub);
+        }
+
+        if (key === 'mortality') {
+            var filterWrap = document.createElement('div');
+            filterWrap.className = 'inline-flex items-center gap-1 rounded-lg p-1 mb-3';
+            filterWrap.style.backgroundColor = '#f3f4f6';
+            [1, 7, 14, 30].forEach(function(d) {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.dataset.mortDays = d;
+                btn.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all';
+                var isActive = (window.__dashboardMortalityDays || 1) === d;
+                if (isActive) {
+                    btn.style.backgroundColor = '#C2405C';
+                    btn.style.color = '#ffffff';
+                    btn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.1)';
+                } else {
+                    btn.classList.add('text-[#6B7280]');
+                    btn.onmouseover = function() { this.style.backgroundColor = '#e5e7eb'; };
+                    btn.onmouseout = function() { this.style.backgroundColor = ''; };
+                }
+                btn.textContent = d === 1 ? 'Today' : d + 'D';
+                btn.onclick = function() { setMortalityDays(d); };
+                filterWrap.appendChild(btn);
+            });
+            container.appendChild(filterWrap);
+        }
+
         if (data.rows.length === 0) {
             var empty = document.createElement('p');
             empty.className = 'text-sm';
@@ -403,6 +438,7 @@
     window.__dashboardHistoryDays = 7;
     window.__dashboardHistoryCompare = false;
     window.__dashboardPerfDays = 1;
+    window.__dashboardMortalityDays = {{ $mortalityDays ?? 1 }};
 
     function buildFrameUrl(base, params) {
         var query = Object.keys(params).map(function (k) {
@@ -515,6 +551,25 @@
         reloadFramePreservingScroll('dashboard-cage-performance', url);
     };
 
+    window.setMortalityDays = function(days) {
+        window.__dashboardMortalityDays = days;
+
+        var url = buildFrameUrl('{{ route('dashboard.stats') }}', {
+            cage: window.__dashboardCage === 'all' ? null : window.__dashboardCage,
+            mortality_days: days === 1 ? null : days
+        });
+
+        var frame = document.getElementById('dashboard-stats');
+        if (frame) {
+            frame.addEventListener('turbo:frame-load', function handler() {
+                frame.removeEventListener('turbo:frame-load', handler);
+                setTimeout(function() { openKpiModal('mortality'); }, 50);
+            }, { once: true });
+        }
+
+        reloadFramePreservingScroll('dashboard-stats', url);
+    };
+
     // ── Cage filter: reloads Turbo Frames with ?cage=CODE ──
     window.filterDashboard = function(code) {
         window.__dashboardCage = code;
@@ -534,7 +589,7 @@
         });
 
         var cageParam = code === 'all' ? null : code;
-        var statsUrl   = buildFrameUrl('{{ route('dashboard.stats') }}',           { cage: cageParam });
+        var statsUrl   = buildFrameUrl('{{ route('dashboard.stats') }}',           { cage: cageParam, mortality_days: window.__dashboardMortalityDays === 1 ? null : window.__dashboardMortalityDays });
         var feedUrl    = buildFrameUrl('{{ route('dashboard.feed-mortality') }}',  { cage: cageParam });
         var perfUrl    = buildFrameUrl('{{ route('dashboard.cage-performance') }}', { cage: cageParam, days: window.__dashboardPerfDays === 1 ? null : window.__dashboardPerfDays });
         var historyUrl = buildFrameUrl('{{ route('dashboard.production-history') }}', {
