@@ -98,6 +98,39 @@
                 <h3 class="text-lg font-semibold" style="color: #1f1f1f;">Log Entry</h3>
             </div>
 
+                {{-- Log Entry Type Selection --}}
+                <div id="logTypeSelection" class="text-center py-8 hidden">
+                    <p class="text-sm mb-4" style="color: #615d59;">Select a cage above, then choose log type:</p>
+                    <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                        <button type="button" onclick="startManualLog()" id="manualLogBtn"
+                                class="w-full sm:w-auto px-6 py-4 rounded-xl border-2 text-left transition-all hover:shadow-md"
+                                style="border-color: #e6e6e6; background: #fff;">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color: #e8f0fe;">
+                                    <i data-lucide="mouse-pointer-click" class="w-5 h-5" style="color: #0075de;"></i>
+                                </div>
+                                <div>
+                                    <div class="font-semibold text-sm" style="color: #1f1f1f;">Manual Log</div>
+                                    <div class="text-xs" style="color: #615d59;">Drag & select per slot</div>
+                                </div>
+                            </div>
+                        </button>
+                        <button type="button" onclick="startTotalCageLog()" id="totalCageLogBtn"
+                                class="w-full sm:w-auto px-6 py-4 rounded-xl border-2 text-left transition-all hover:shadow-md"
+                                style="border-color: #e6e6e6; background: #fff;">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color: #e8f4e8;">
+                                    <i data-lucide="layout-grid" class="w-5 h-5" style="color: #16a34a;"></i>
+                                </div>
+                                <div>
+                                    <div class="font-semibold text-sm" style="color: #1f1f1f;">Total Cage Log</div>
+                                    <div class="text-xs" style="color: #615d59;">Input total, auto-distribute</div>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
                 {{-- Cage selection via overview cards (click a card above) --}}
 
                 {{-- Per-cage slot grids (hidden; shown via dropdown) --}}
@@ -172,7 +205,7 @@
                 {{-- Empty state --}}
                 <div id="slotFormPlaceholder" class="text-center py-10 text-sm" style="color: #a39e98;">
                     <i data-lucide="mouse-pointer-2" class="w-6 h-6 mx-auto mb-2" style="color: #d1d5db;"></i>
-                    Click a cage card above, then click a slot to log.
+                    Click a cage card above to start logging.
                 </div>
 
                 {{-- Active form --}}
@@ -364,6 +397,61 @@
         </div>
     </div>
 
+    {{-- ── Total Cage Log Modal ── --}}
+    <div id="totalCageLogModal" data-modal data-close="closeTotalCageLogModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" style="display: none;" role="dialog" aria-modal="true">
+        <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeTotalCageLogModal()"></div>
+        <div class="relative w-full max-w-sm rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Total Cage Log</h2>
+                <button onclick="closeTotalCageLogModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3 text-sm mb-4">
+                <div class="flex justify-between">
+                    <span style="color: #615d59;">Cage</span>
+                    <span id="tcCageCode" class="font-semibold" style="color: #1f1f1f;"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span style="color: #615d59;">Breed</span>
+                    <span id="tcBreed" style="color: #1f1f1f;"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span style="color: #615d59;">Total Hens</span>
+                    <span id="tcTotalHens" class="font-semibold" style="color: #1f1f1f;"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span style="color: #615d59;">Date</span>
+                    <span id="tcDate" style="color: #1f1f1f;"></span>
+                </div>
+            </div>
+
+            <div class="border-t pt-4" style="border-color: #e6e6e6;">
+                <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Total Eggs</label>
+                <input type="number" id="tcTotalEggs" min="0" placeholder="0"
+                       oninput="validateTotalCageLog()"
+                       class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                       style="border-color: #e6e6e6; color: #1f1f1f;">
+                <p id="tcError" class="hidden text-xs mt-1" style="color: #9b1c24;"></p>
+                <p id="tcSlotHint" class="text-xs mt-1" style="color: #a39e98;">Eggs will be distributed across slots (max per slot = hens in that slot).</p>
+            </div>
+
+            <div class="flex items-center gap-3 mt-5">
+                <button type="button" onclick="closeTotalCageLogModal()"
+                        class="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+                        style="color: #1f1f1f; border: 1px solid #e6e6e6;"
+                        onmouseover="this.style.backgroundColor='#f6f5f4'"
+                        onmouseout="this.style.backgroundColor='transparent'">
+                    Cancel
+                </button>
+                <x-button type="button" id="tcSaveBtn" onclick="submitTotalCageLog()" disabled class="px-6 py-2">
+                    Save Record
+                </x-button>
+            </div>
+        </div>
+    </div>
+
     {{-- ── Multi-Save Confirmation Modal ── --}}
     <div id="confirmMultiModal" data-modal  data-close="closeConfirmMultiModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" style="display: none;" role="dialog" aria-modal="true">
         <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeConfirmMultiModal()"></div>
@@ -440,8 +528,143 @@
             clearAllSlotSelections();
             document.getElementById('slotFormPlaceholder').classList.remove('hidden');
             document.getElementById('slotForm').classList.add('hidden');
+            if (currentCageId && !logMode) {
+                document.getElementById('logTypeSelection').classList.remove('hidden');
+            }
             checkSizeSum();
             validateForm();
+        }
+
+        var currentCageId = null;
+        var logMode = null; // 'manual' or 'total'
+
+        window.startManualLog = function() {
+            logMode = 'manual';
+            document.getElementById('logTypeSelection').classList.add('hidden');
+            if (currentCageId) {
+                var target = document.querySelector('.cage-grid[data-cage-id="' + currentCageId + '"]');
+                if (target) target.classList.remove('hidden');
+            }
+        };
+
+        window.startTotalCageLog = function() {
+            if (!currentCageId) return;
+            logMode = 'total';
+            document.getElementById('logTypeSelection').classList.add('hidden');
+            window.openTotalCageLogModal();
+        };
+
+        window.openTotalCageLogModal = function() {
+            var cageCard = document.querySelector('.cage-overview-card[data-cage-id="' + currentCageId + '"]');
+            if (!cageCard) return;
+
+            var cageCode = cageCard.querySelector('[data-cage-code]')?.dataset.cageCode || '';
+            var slots = document.querySelectorAll('.slot-card[data-cage-id="' + currentCageId + '"]');
+            var totalHens = 0;
+            var breeds = {};
+            var slotData = [];
+
+            slots.forEach(function(slot) {
+                var hens = parseInt(slot.dataset.hens) || 0;
+                var breed = slot.dataset.breed || '—';
+                totalHens += hens;
+                if (breed !== '—') breeds[breed] = (breeds[breed] || 0) + hens;
+                slotData.push({ id: slot.dataset.slotId, hens: hens });
+            });
+
+            var mainBreed = Object.keys(breeds).sort(function(a,b) { return breeds[b] - breeds[a]; })[0] || '—';
+            var reportingDate = '{{ \App\Services\ReportingDateService::reportingDateString() }}';
+
+            document.getElementById('tcCageCode').textContent = cageCode;
+            document.getElementById('tcBreed').textContent = mainBreed;
+            document.getElementById('tcTotalHens').textContent = totalHens;
+            document.getElementById('tcDate').textContent = reportingDate;
+            document.getElementById('tcTotalEggs').value = '';
+            document.getElementById('tcTotalEggs').max = totalHens;
+            document.getElementById('tcError').classList.add('hidden');
+            document.getElementById('tcSaveBtn').disabled = true;
+
+            window._tcSlotData = slotData;
+            window._tcTotalHens = totalHens;
+
+            document.getElementById('totalCageLogModal').style.display = 'flex';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        window.closeTotalCageLogModal = function() {
+            document.getElementById('totalCageLogModal').style.display = 'none';
+        };
+
+        window.validateTotalCageLog = function() {
+            var input = document.getElementById('tcTotalEggs');
+            var error = document.getElementById('tcError');
+            var saveBtn = document.getElementById('tcSaveBtn');
+            var totalHens = window._tcTotalHens || 0;
+            var val = parseInt(input.value) || 0;
+
+            if (val > totalHens) {
+                error.textContent = 'Total eggs cannot exceed ' + totalHens + ' hens.';
+                error.classList.remove('hidden');
+                saveBtn.disabled = true;
+            } else if (val < 0) {
+                error.textContent = 'Cannot be negative.';
+                error.classList.remove('hidden');
+                saveBtn.disabled = true;
+            } else {
+                error.classList.add('hidden');
+                saveBtn.disabled = val === 0;
+            }
+        }
+
+        window.submitTotalCageLog = function() {
+            var totalEggs = parseInt(document.getElementById('tcTotalEggs').value) || 0;
+            if (totalEggs === 0) return;
+
+            var slots = window._tcSlotData || [];
+            var totalHens = window._tcTotalHens || 0;
+            if (totalHens === 0 || slots.length === 0) return;
+
+            var remaining = totalEggs;
+            var distributions = [];
+
+            // Fill each slot up to its hen count, proportionally
+            slots.forEach(function(slot, i) {
+                if (i === slots.length - 1) {
+                    distributions.push({ id: slot.id, eggs: remaining });
+                } else {
+                    var proportional = Math.round((slot.hens / totalHens) * totalEggs);
+                    var capped = Math.min(proportional, slot.hens, remaining);
+                    distributions.push({ id: slot.id, eggs: capped });
+                    remaining -= capped;
+                }
+            });
+
+            // Submit each distribution via AJAX
+            var date = '{{ \App\Services\ReportingDateService::reportingDateString() }}';
+            var promises = distributions.filter(function(d) { return d.eggs > 0; }).map(function(d) {
+                var slotInfo = slots.find(function(s) { return s.id == d.id; });
+                var henCount = slotInfo ? slotInfo.hens : d.eggs;
+                var formData = new FormData();
+                formData.append('cage_slot_id', d.id);
+                formData.append('log_date', date);
+                formData.append('egg_count', d.eggs);
+                formData.append('hen_count', henCount);
+                formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
+
+                return fetch('{{ route("eggs.logging.store") }}', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+            });
+
+            Promise.all(promises).then(function() {
+                closeTotalCageLogModal();
+                location.reload();
+            }).catch(function() {
+                document.getElementById('tcError').textContent = 'An error occurred. Please try again.';
+                document.getElementById('tcError').classList.remove('hidden');
+            });
         }
 
         function clearAllSlotSelections() {
@@ -682,6 +905,8 @@
 
         function switchCage(cageId) {
             clearSlotSelection();
+            currentCageId = cageId;
+            logMode = null;
 
             document.querySelectorAll('.cage-overview-card').forEach(function(card) {
                 var isSelected = card.dataset.cageId == cageId;
@@ -700,10 +925,9 @@
                 g.classList.add('hidden');
             });
 
-            if (cageId) {
-                var target = document.querySelector('.cage-grid[data-cage-id="' + cageId + '"]');
-                if (target) target.classList.remove('hidden');
-            }
+            document.getElementById('logTypeSelection').classList.remove('hidden');
+            document.getElementById('slotFormPlaceholder').classList.add('hidden');
+            document.getElementById('slotForm').classList.add('hidden');
 
             checkSizeSum();
             validateForm();

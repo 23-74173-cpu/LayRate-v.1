@@ -1,10 +1,81 @@
 @extends('layouts.app')
 @section('title', 'Dashboard')
+@section('header-clock', now()->format('l, F j') . ' — ' . now()->format('g:i A'))
 
 @section('content')
 <div class="space-y-5">
 
-    <x-page-header title="Dashboard" subtitle="{{ now()->format('l, F j') }} — {{ now()->format('g:i A') }}" subtitle-id="dashboardClock" subtitle-class="whitespace-nowrap text-xs sm:text-sm" />
+    {{-- ── Dashboard Header with Integrated Tabs ── --}}
+    <div class="relative overflow-hidden rounded-lg flex items-center justify-between" id="dashHeader" style="min-height: 72px; background: linear-gradient(to right, #2e4a9e, #213183, #1a2342); transition: background 0.35s ease;">
+        {{-- Decorative egg bubbles --}}
+        <div class="page-header-egg-decor" aria-hidden="true"
+             style="position:absolute; inset:0; z-index:0; pointer-events:none; color:#9ca3af;"></div>
+
+        <script>
+        (function () {
+            var decor = document.querySelector('.page-header-egg-decor');
+            if (!decor || decor.getAttribute('data-eggs')) return;
+            decor.setAttribute('data-eggs', '1');
+            var opacities = ['0.30', '0.38', '0.46', '0.55'];
+            var count = 34;
+            for (var i = 0; i < count; i++) {
+                var egg = document.createElement('div');
+                egg.style.position = 'absolute';
+                egg.style.left = (45 + Math.random() * 55).toFixed(2) + '%';
+                egg.style.top = (Math.random() * 100).toFixed(2) + '%';
+                egg.style.width = (12 + Math.random() * 24).toFixed(1) + 'px';
+                egg.style.height = (12 + Math.random() * 24).toFixed(1) + 'px';
+                egg.style.opacity = opacities[i % opacities.length];
+                egg.style.transform = 'rotate(' + (Math.random() * 360).toFixed(0) + 'deg)';
+                egg.innerHTML = '<i data-lucide="egg" class="w-full h-full"></i>';
+                decor.appendChild(egg);
+            }
+            decor.style.webkitMaskImage = 'linear-gradient(to right, transparent 0%, black 40%)';
+            decor.style.maskImage = 'linear-gradient(to right, transparent 0%, black 40%)';
+            if (window.lucide) lucide.createIcons();
+        })();
+        </script>
+
+        {{-- Left: Dashboard tab (active) + subtitle --}}
+        <div class="relative z-[1] py-4" style="padding-left: 35px;">
+            <button type="button" onclick="switchDashTab('dashboard')" class="dash-header-tab active" data-header-tab="dashboard">
+                Dashboard
+            </button>
+        </div>
+
+        {{-- Right: Analytics tab --}}
+        <div class="relative z-[1] py-4" style="padding-right: 35px;">
+            <button type="button" onclick="switchDashTab('analytics')" class="dash-header-tab" data-header-tab="analytics">
+                Analytics
+            </button>
+        </div>
+    </div>
+
+    <style>
+        .dash-header-tab {
+            font-size: 20px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.45);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 6px 16px;
+            border-radius: 10px;
+            transition: all 0.25s ease;
+            line-height: 1.4;
+        }
+        .dash-header-tab:hover {
+            transform: scale(1.08);
+        }
+        .dash-header-tab:hover:not(.active) {
+            color: rgba(255,255,255,0.7);
+        }
+        .dash-header-tab.active {
+            color: #fff;
+        }
+        .dash-tab-panel { display: none; }
+        .dash-tab-panel.active { display: block; }
+    </style>
 
     {{-- Onboarding Modal --}}
     @if($needsOnboarding)
@@ -55,18 +126,142 @@
         @endforeach
     </div>
 
-    {{-- ── Metric Cards (lazy) ── --}}
-    <turbo-frame id="dashboard-stats" src="{{ route('dashboard.stats') }}" loading="lazy" class="mb-8 block">
-        @include('dashboard._metric-cards-skeleton')
-    </turbo-frame>
+    {{-- Tab 1: Dashboard (KPI Cards) --}}
+    <div class="dash-tab-panel active" data-tab-panel="dashboard">
+        <div class="space-y-5">
+            <turbo-frame id="dashboard-stats" src="{{ route('dashboard.stats') }}" loading="lazy" class="block">
+                @include('dashboard._metric-cards-skeleton')
+            </turbo-frame>
+            @include('dashboard._data-checklist')
+        </div>
+    </div>
 
-    {{-- ── Daily Data Completeness Checklist ── --}}
-    @include('dashboard._data-checklist')
+    {{-- Tab 2: Analytics (Charts + Checklist) --}}
+    <div class="dash-tab-panel" data-tab-panel="analytics">
+                <div class="space-y-8">
+            @include('dashboard._data-checklist')
+            {{-- ═══ SECTION 1 — Production Performance ═══ --}}
+            <div>
+                <h3 class="text-xs font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-3">
+                    <i data-lucide="bar-chart-3" class="w-4 h-4 inline-block mr-1.5 -mt-0.5" style="color:#0075de;"></i>
+                    Production Performance
+                </h3>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+                    <div class="flex flex-col gap-8">
+                        <turbo-frame id="dashboard-cage-performance" src="{{ route('dashboard.cage-performance') }}" loading="lazy" class="block">
+                            @include('dashboard._cage-performance-skeleton')
+                        </turbo-frame>
 
+                        <turbo-frame id="dashboard-heat-stress" src="{{ route('dashboard.heat-stress') }}" loading="lazy" class="block">
+                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
+                                <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
+                                <div class="h-[280px] bg-gray-100 rounded-xl"></div>
+                            </div>
+                        </turbo-frame>
+                    </div>
 
+                    <div class="flex flex-col gap-8">
+                        <turbo-frame id="dashboard-production-history" src="{{ route('dashboard.production-history') }}" loading="lazy" class="block flex-[2]">
+                            @include('dashboard._production-history-skeleton')
+                        </turbo-frame>
 
-    {{-- ─ Stats Modal (vanilla JS) ── --}}
-    <div id="statsModal" data-modal  data-close="closeStatsModal" style="display: none;" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+                        <turbo-frame id="dashboard-egg-collection-time" src="{{ route('dashboard.egg-collection-time') }}" loading="lazy" class="block flex-1">
+                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
+                                <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
+                                <div class="h-[260px] bg-gray-100 rounded-xl"></div>
+                            </div>
+                        </turbo-frame>
+
+                        <turbo-frame id="dashboard-hen-age-layrate" src="{{ route('dashboard.hen-age-layrate') }}" loading="lazy" class="block flex-1">
+                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
+                                <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
+                                <div class="h-[260px] bg-gray-100 rounded-xl"></div>
+                            </div>
+                        </turbo-frame>
+                    </div>
+                </div>
+            </div>
+
+            {{-- ═══ SECTION 2 — Environmental Analytics ═══ --}}
+            <div>
+                <h3 class="text-xs font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-3">
+                    <i data-lucide="thermometer" class="w-4 h-4 inline-block mr-1.5 -mt-0.5" style="color:#0891b2;"></i>
+                    Environmental Analytics
+                </h3>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+                    <turbo-frame id="dashboard-temp-vs-hdep" src="{{ route('dashboard.temp-vs-hdep') }}" loading="lazy" class="block">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
+                            <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
+                            <div class="h-[220px] bg-gray-100 rounded-xl"></div>
+                        </div>
+                    </turbo-frame>
+
+                    <turbo-frame id="dashboard-hum-vs-hdep" src="{{ route('dashboard.hum-vs-hdep') }}" loading="lazy" class="block">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
+                            <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
+                            <div class="h-[220px] bg-gray-100 rounded-xl"></div>
+                        </div>
+                    </turbo-frame>
+                </div>
+            </div>
+
+            {{-- ═══ SECTION 3 — Feed Analytics ═══ --}}
+            <div>
+                <h3 class="text-xs font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-3">
+                    <i data-lucide="wheat" class="w-4 h-4 inline-block mr-1.5 -mt-0.5" style="color:#16a34a;"></i>
+                    Feed Analytics
+                </h3>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+                    <turbo-frame id="dashboard-feed-by-cage" src="{{ route('dashboard.feed-by-cage') }}" loading="lazy" class="block">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
+                            <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
+                            <div class="h-[220px] bg-gray-100 rounded-xl"></div>
+                        </div>
+                    </turbo-frame>
+
+                    <turbo-frame id="dashboard-feed-vs-egg" src="{{ route('dashboard.feed-vs-egg') }}" loading="lazy" class="block">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
+                            <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
+                            <div class="h-[220px] bg-gray-100 rounded-xl"></div>
+                        </div>
+                    </turbo-frame>
+                </div>
+            </div>
+
+            {{-- ═══ SECTION 4 — Flock Analytics ═══ --}}
+            <div>
+                <h3 class="text-xs font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-3">
+                    <i data-lucide="heart-pulse" class="w-4 h-4 inline-block mr-1.5 -mt-0.5" style="color:#db2777;"></i>
+                    Flock Analytics
+                </h3>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+                    <turbo-frame id="dashboard-breed-analytics" src="{{ route('dashboard.breed-analytics') }}" loading="lazy" class="block">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
+                            <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
+                            <div class="h-[220px] bg-gray-100 rounded-xl"></div>
+                        </div>
+                    </turbo-frame>
+
+                    <turbo-frame id="dashboard-mortality-by-cause" src="{{ route('dashboard.mortality-by-cause') }}" loading="lazy" class="block">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
+                            <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
+                            <div class="h-[220px] bg-gray-100 rounded-xl"></div>
+                        </div>
+                    </turbo-frame>
+
+                    <turbo-frame id="dashboard-mortality-trend" src="{{ route('dashboard.mortality-trend') }}" loading="lazy" class="block lg:col-span-2">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
+                            <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
+                            <div class="h-[280px] bg-gray-100 rounded-xl"></div>
+                        </div>
+                    </turbo-frame>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ─ Stats Modal ── --}}
+    <div id="statsModal" data-modal data-close="closeStatsModal" style="display: none;" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
         <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeStatsModal()"></div>
         <div class="relative w-full max-w-sm rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
             <div class="flex items-center justify-between mb-4">
@@ -119,22 +314,6 @@
     });
     </script>
 
-    {{-- ── Cage Performance + Production History + Feed Today (side by side) ── --}}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 px-2 lg:px-4 items-stretch">
-        <turbo-frame id="dashboard-cage-performance" src="{{ route('dashboard.cage-performance') }}" loading="lazy" class="block">
-            @include('dashboard._cage-performance-skeleton')
-        </turbo-frame>
-
-        <div class="flex flex-col gap-8">
-            <turbo-frame id="dashboard-production-history" src="{{ route('dashboard.production-history') }}" loading="lazy" class="block flex-[2]">
-                @include('dashboard._production-history-skeleton')
-            </turbo-frame>
-
-            <turbo-frame id="dashboard-feed-mortality" src="{{ route('dashboard.feed-mortality') }}" loading="lazy" class="block flex-1">
-                @include('dashboard._feed-mortality-skeleton')
-            </turbo-frame>
-        </div>
-    </div>
 
     {{-- ── KPI Breakdown Modal (shared by all metric cards — item 9) ── --}}
     <div id="kpiModal" data-modal  data-close="closeKpiModal" style="display: none;" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
@@ -505,7 +684,6 @@
         }
 
         var url = buildFrameUrl('{{ route('dashboard.production-history') }}', {
-            cage: window.__dashboardCage === 'all' ? null : window.__dashboardCage,
             days: days === 7 ? null : days,
             compare: window.__dashboardHistoryCompare ? 1 : null
         });
@@ -525,7 +703,6 @@
         }
 
         var url = buildFrameUrl('{{ route('dashboard.production-history') }}', {
-            cage: window.__dashboardCage === 'all' ? null : window.__dashboardCage,
             days: window.__dashboardHistoryDays === 7 ? null : window.__dashboardHistoryDays,
             compare: nextCompare ? 1 : null
         });
@@ -593,7 +770,6 @@
         var feedUrl    = buildFrameUrl('{{ route('dashboard.feed-mortality') }}',  { cage: cageParam });
         var perfUrl    = buildFrameUrl('{{ route('dashboard.cage-performance') }}', { cage: cageParam, days: window.__dashboardPerfDays === 1 ? null : window.__dashboardPerfDays });
         var historyUrl = buildFrameUrl('{{ route('dashboard.production-history') }}', {
-            cage: cageParam,
             days: window.__dashboardHistoryDays === 7 ? null : window.__dashboardHistoryDays,
             compare: window.__dashboardHistoryCompare ? 1 : null
         });
@@ -664,6 +840,23 @@
             }
         }, 1200);
     })();
+
+    // ── Dashboard tabs ──
+    function switchDashTab(tab) {
+        document.querySelectorAll('.dash-header-tab').forEach(function(b) { b.classList.remove('active'); });
+        document.querySelectorAll('.dash-tab-panel').forEach(function(p) { p.classList.remove('active'); });
+        var btn = document.querySelector('[data-header-tab="' + tab + '"]');
+        var panel = document.querySelector('[data-tab-panel="' + tab + '"]');
+        if (btn) btn.classList.add('active');
+        if (panel) panel.classList.add('active');
+        var header = document.getElementById('dashHeader');
+        if (header) {
+            header.style.background = tab === 'analytics'
+                ? 'linear-gradient(to right, #1a2342, #213183, #2e4a9e)'
+                : 'linear-gradient(to right, #2e4a9e, #213183, #1a2342)';
+        }
+        lucide.createIcons();
+    }
     </script>
 
 </div>

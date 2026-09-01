@@ -378,6 +378,9 @@
             </div>
 
             <div class="flex items-center gap-3">
+                @hasSection('header-clock')
+                <span class="text-xs text-ink-muted whitespace-nowrap hidden sm:inline">@yield('header-clock')</span>
+                @endif
                 <a href="{{ route('notifications.index') }}" class="relative text-ink hover:text-ink-muted transition-colors" aria-label="Notifications">
                     <i data-lucide="bell" class="w-4 h-4"></i>
                     @if($globalAlertCount > 0)
@@ -602,6 +605,7 @@
                     mainContent.scrollTop = parseInt(savedScroll, 10) || 0;
                     // Keep letting lazy frames nudge the restore while the page
                     // is still growing, then clear it so it can't re-apply later.
+                    window.__scrollRestored = false;
                     restoreUntil = Date.now() + 3000;
                     setTimeout(function () {
                         restoreUntil = 0;
@@ -779,15 +783,16 @@
     document.addEventListener('turbo:frame-load', function() {
         lucide.createIcons();
 
-        // Re-apply any pending scroll restore — a lazy frame finishing load
-        // can grow the page after the initial turbo:load attempt clamped short.
-        // Bounded to the restore window from turbo:load so this can never reset
-        // the page to a stale saved value on unrelated, later frame loads.
-        var mainEl = document.querySelector('.page-wrapper');
-        if (mainEl && Date.now() < restoreUntil) {
+        // Re-apply scroll restore only ONCE after turbo:load — lazy frames
+        // finishing load can grow the page after the initial turbo:load attempt
+        // clamped short. A flag ensures we don't keep yanking scroll back on
+        // every subsequent frame load within the restore window.
+        if (restoreUntil && Date.now() < restoreUntil && !window.__scrollRestored) {
+            window.__scrollRestored = true;
             try {
+                var mainEl = document.querySelector('.page-wrapper');
                 var savedScroll = sessionStorage.getItem('scrollPos:' + location.pathname);
-                if (savedScroll !== null) {
+                if (mainEl && savedScroll !== null) {
                     mainEl.scrollTop = parseInt(savedScroll, 10) || 0;
                 }
             } catch (err) { /* sessionStorage unavailable — degrade to no-op */ }

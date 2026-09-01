@@ -67,6 +67,16 @@ Route::middleware(['auth', 'system-time-set'])->group(function () {
     Route::get('/dashboard/calendar', [DashboardController::class, 'calendar'])->name('dashboard.calendar');
     Route::get('/dashboard/cage-performance', [DashboardController::class, 'cagePerformance'])->name('dashboard.cage-performance');
     Route::get('/dashboard/production-history', [DashboardController::class, 'productionHistory'])->name('dashboard.production-history');
+    Route::get('/dashboard/egg-collection-time', [DashboardController::class, 'eggCollectionTime'])->name('dashboard.egg-collection-time');
+    Route::get('/dashboard/hen-age-layrate', [DashboardController::class, 'henAgeLayrate'])->name('dashboard.hen-age-layrate');
+    Route::get('/dashboard/temp-vs-hdep', [DashboardController::class, 'tempVsHdep'])->name('dashboard.temp-vs-hdep');
+    Route::get('/dashboard/hum-vs-hdep', [DashboardController::class, 'humVsHdep'])->name('dashboard.hum-vs-hdep');
+    Route::get('/dashboard/breed-analytics', [DashboardController::class, 'breedAnalytics'])->name('dashboard.breed-analytics');
+    Route::get('/dashboard/mortality-by-cause', [DashboardController::class, 'mortalityByCause'])->name('dashboard.mortality-by-cause');
+    Route::get('/dashboard/mortality-trend', [DashboardController::class, 'mortalityTrend'])->name('dashboard.mortality-trend');
+    Route::get('/dashboard/feed-vs-egg', [DashboardController::class, 'feedVsEgg'])->name('dashboard.feed-vs-egg');
+    Route::get('/dashboard/feed-by-cage', [DashboardController::class, 'feedByCage'])->name('dashboard.feed-by-cage');
+    Route::get('/dashboard/heat-stress', [DashboardController::class, 'heatStress'])->name('dashboard.heat-stress');
     Route::post('/settings/farm-layout', [SettingsController::class, 'storeFarmLayout'])->name('settings.farm-layout');
 
     // Cages — reads (all authenticated users)

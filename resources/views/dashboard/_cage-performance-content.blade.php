@@ -65,10 +65,10 @@ $hasData = $totalEggs > 0 || $performance->contains(fn ($p) => $p['hdep'] > 0);
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div class="flex items-start gap-3">
             <span class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style="background-color: #e8f3fe; color: #0075de;">
-                <i data-lucide="trophy" class="w-4 h-4"></i>
+                <i data-lucide="layout-grid" class="w-4 h-4"></i>
             </span>
             <div>
-                <div class="text-sm font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Cage Performance Rankings</div>
+                <div class="text-sm font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Cage Performance Overview</div>
             </div>
         </div>
         @if($showDayFilter)
@@ -157,7 +157,7 @@ $hasData = $totalEggs > 0 || $performance->contains(fn ($p) => $p['hdep'] > 0);
                 </div>
             </div>
             <div class="perf-card rounded-xl border border-[#D9D9D9] p-4 bg-white chart-fade-in">
-                <div class="text-[11px] font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-2">Eggs Share by Cage</div>
+                <div class="text-[11px] font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-2">Eggs Distribution by Cage</div>
                 <div class="relative w-full h-[170px]">
                     <canvas id="dashEggsChart" style="width: 100%; height: 100%; display: block;"></canvas>
                 </div>

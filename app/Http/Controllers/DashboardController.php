@@ -182,15 +182,15 @@ class DashboardController extends Controller
                 return [
                     'label' => $cage->cage_code,
                     'data' => $dateKeys->map(fn ($date) => $cageLogs->get($date, 0))->values()->toArray(),
-                    'borderColor' => $softColor,
+                    'borderColor' => $color,
                     'backgroundColor' => $softColor,
                     'pointBorderColor' => $color,
                     'pointBorderWidth' => 2,
-                    'tension' => 0.3,
-                    'borderWidth' => 2,
-                    'pointRadius' => 4,
-                    'pointHoverRadius' => 6,
-                    'fill' => false,
+                    'tension' => 0.4,
+                    'borderWidth' => 2.5,
+                    'pointRadius' => 0,
+                    'pointHoverRadius' => 5,
+                    'fill' => true,
                 ];
             })->values()->toArray();
 
@@ -229,6 +229,474 @@ class DashboardController extends Controller
         ];
 
         return view('dashboard._production-history', compact('chartData', 'days', 'cageCode', 'title', 'compare'));
+    }
+
+    public function eggCollectionTime()
+    {
+        $reportingDate = ReportingDateService::reportingDate();
+        $days = 7;
+
+        $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
+        $endDate = $reportingDate->toDateString();
+
+        // Group egg counts by hour of day using created_at timestamp
+        $hourly = ProductionLog::whereBetween('log_date', [$startDate, $endDate])
+            ->selectRaw('HOUR(created_at) as hour, SUM(egg_count) as total_eggs')
+            ->groupBy('hour')
+            ->orderBy('hour')
+            ->pluck('total_eggs', 'hour')
+            ->toArray();
+
+        // Build 24-hour labels (12AM–11PM)
+        $labels = [];
+        $data = [];
+        for ($h = 0; $h < 24; $h++) {
+            $labels[] = $h === 0 ? '12AM' : ($h < 12 ? $h . 'AM' : ($h === 12 ? '12PM' : ($h - 12) . 'PM'));
+            $data[] = $hourly[$h] ?? 0;
+        }
+
+        $chartData = [
+            'labels' => $labels,
+            'data' => $data,
+            'total' => array_sum($data),
+        ];
+
+        return view('dashboard._egg-collection-time', compact('chartData', 'days'));
+    }
+
+    public function henAgeLayrate()
+    {
+        $reportingDate = ReportingDateService::reportingDate();
+        $days = 90;
+        $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
+        $endDate = $reportingDate->toDateString();
+
+        // Get production logs with their cage_slot's hens
+        $logs = ProductionLog::query()
+            ->with('cageSlot.hens')
+            ->whereBetween('log_date', [$startDate, $endDate])
+            ->where('hen_count', '>', 0)
+            ->where('hdep', '>', 0)
+            ->get();
+
+        // Group by hen age in weeks → average HDEP
+        $ageData = [];
+        foreach ($logs as $log) {
+            $hens = $log->cageSlot->hens ?? collect();
+            $activeHens = $hens->where('is_active', true);
+            if ($activeHens->isEmpty()) continue;
+
+            foreach ($activeHens as $hen) {
+                $placementDate = $hen->placement_date ?? $hen->date_acquired;
+                if (! $placementDate) continue;
+
+                $ageWeeks = (int) floor($placementDate->copy()->diffInWeeks($log->log_date));
+                $ageWeeks = max(0, $ageWeeks + (int) ($hen->age_at_placement_weeks ?? 0));
+
+                if ($ageWeeks < 1 || $ageWeeks > 120) continue;
+
+                $ageData[$ageWeeks][] = (float) $log->hdep;
+            }
+        }
+
+        // Build chart data: age weeks → average HDEP
+        $allLabels = [];
+        $allData = [];
+        $allCounts = [];
+        ksort($ageData);
+        foreach ($ageData as $ageWeek => $hdeps) {
+            $allLabels[] = $ageWeek;
+            $allData[] = round(array_sum($hdeps) / count($hdeps), 1);
+            $allCounts[] = count($hdeps);
+        }
+
+        // Find peak
+        $peakIdx = $allData ? array_search(max($allData), $allData) : null;
+        $peakAge = $peakIdx !== null ? $allLabels[$peakIdx] : null;
+
+        // Crop to ±15 weeks around peak, but show all data if narrow range
+        $margin = 15;
+        if ($peakAge !== null && (max($allLabels) - min($allLabels)) > $margin * 2) {
+            $minAge = max(0, $peakAge - $margin);
+            $maxAge = $peakAge + $margin;
+        } else {
+            $minAge = $allLabels ? min($allLabels) : 0;
+            $maxAge = $allLabels ? max($allLabels) : 60;
+        }
+
+        $labels = [];
+        $data = [];
+        $counts = [];
+        foreach ($allLabels as $i => $ageWeek) {
+            if ($ageWeek < $minAge || $ageWeek > $maxAge) continue;
+            $labels[] = 'Wk ' . $ageWeek;
+            $data[] = $allData[$i];
+            $counts[] = $allCounts[$i];
+        }
+
+        // Recalculate peak index in cropped array
+        $croppedPeakIdx = $data ? array_search(max($data), $data) : null;
+
+        $chartData = [
+            'labels' => $labels,
+            'data' => $data,
+            'counts' => $counts,
+            'peak_age' => $croppedPeakIdx,
+            'peak_hdep' => $data ? max($data) : 0,
+            'peak_label' => $peakAge !== null ? 'Week ' . $peakAge : '—',
+            'all_ages_count' => count($allLabels),
+        ];
+
+        return view('dashboard._hen-age-layrate', compact('chartData'));
+    }
+
+    public function tempVsHdep()
+    {
+        $cageCode = request('cage');
+        $days = (int) request('days', 30);
+        $reportingDate = ReportingDateService::reportingDate();
+        $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
+        $endDate = $reportingDate->toDateString();
+
+        $cageIds = Cage::query()
+            ->when($cageCode, fn ($q) => $q->where('cage_code', $cageCode))
+            ->pluck('id');
+
+        $points = EnvironmentalLog::select('cage_id', DB::raw('DATE(recorded_at) as log_date'), DB::raw('AVG(temperature_c) as avg_temp'))
+            ->whereIn('cage_id', $cageIds)
+            ->whereBetween(DB::raw('DATE(recorded_at)'), [$startDate, $endDate])
+            ->groupBy('cage_id', 'log_date')
+            ->get();
+
+        $prodByCageDate = ProductionLog::query()
+            ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
+            ->whereIn('cage_slots.cage_id', $cageIds)
+            ->whereBetween('production_logs.log_date', [$startDate, $endDate])
+            ->where('hdep', '>', 0)
+            ->selectRaw('cage_slots.cage_id as cage_id, production_logs.log_date as log_date, AVG(production_logs.hdep) as avg_hdep')
+            ->groupBy('cage_slots.cage_id', 'production_logs.log_date')
+            ->get()
+            ->keyBy(fn ($r) => $r->cage_id . '|' . $r->log_date);
+
+        $scatterData = [];
+        foreach ($points as $p) {
+            $key = $p->cage_id . '|' . $p->log_date;
+            $prod = $prodByCageDate->get($key);
+            if ($prod && $prod->avg_hdep > 0) {
+                $scatterData[] = ['x' => round((float) $p->avg_temp, 1), 'y' => round((float) $prod->avg_hdep, 1)];
+            }
+        }
+
+        $insight = 'Insufficient data for analysis.';
+        if (count($scatterData) >= 5) {
+            $temps = array_column($scatterData, 'x');
+            $hdeps = array_column($scatterData, 'y');
+            $n = count($scatterData);
+            $sumX = array_sum($temps); $sumY = array_sum($hdeps);
+            $sumXY = 0; $sumX2 = 0;
+            for ($i = 0; $i < $n; $i++) { $sumXY += $temps[$i] * $hdeps[$i]; $sumX2 += $temps[$i] * $temps[$i]; }
+            $denom = $n * $sumX2 - $sumX * $sumX;
+            $r = $denom != 0 ? ($n * $sumXY - $sumX * $sumY) / sqrt($denom * ($n * array_sum(array_map(fn($v) => $v * $v, $hdeps)) - $sumY * $sumY)) : 0;
+            if ($r < -0.3) $insight = 'HDEP tends to decrease as temperature increases.';
+            elseif ($r > 0.3) $insight = 'HDEP tends to increase with temperature.';
+            else $insight = 'No clear relationship detected between temperature and HDEP.';
+        }
+
+        return view('dashboard._temp-vs-hdep', compact('scatterData', 'insight'));
+    }
+
+    public function humVsHdep()
+    {
+        $cageCode = request('cage');
+        $days = (int) request('days', 30);
+        $reportingDate = ReportingDateService::reportingDate();
+        $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
+        $endDate = $reportingDate->toDateString();
+
+        $cageIds = Cage::query()
+            ->when($cageCode, fn ($q) => $q->where('cage_code', $cageCode))
+            ->pluck('id');
+
+        $points = EnvironmentalLog::select('cage_id', DB::raw('DATE(recorded_at) as log_date'), DB::raw('AVG(humidity_pct) as avg_hum'))
+            ->whereIn('cage_id', $cageIds)
+            ->whereBetween(DB::raw('DATE(recorded_at)'), [$startDate, $endDate])
+            ->groupBy('cage_id', 'log_date')
+            ->get();
+
+        $prodByCageDate = ProductionLog::query()
+            ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
+            ->whereIn('cage_slots.cage_id', $cageIds)
+            ->whereBetween('production_logs.log_date', [$startDate, $endDate])
+            ->where('hdep', '>', 0)
+            ->selectRaw('cage_slots.cage_id as cage_id, production_logs.log_date as log_date, AVG(production_logs.hdep) as avg_hdep')
+            ->groupBy('cage_slots.cage_id', 'production_logs.log_date')
+            ->get()
+            ->keyBy(fn ($r) => $r->cage_id . '|' . $r->log_date);
+
+        $scatterData = [];
+        foreach ($points as $p) {
+            $key = $p->cage_id . '|' . $p->log_date;
+            $prod = $prodByCageDate->get($key);
+            if ($prod && $prod->avg_hdep > 0) {
+                $scatterData[] = ['x' => round((float) $p->avg_hum, 1), 'y' => round((float) $prod->avg_hdep, 1)];
+            }
+        }
+
+        $insight = 'Insufficient data for analysis.';
+        if (count($scatterData) >= 5) {
+            $hums = array_column($scatterData, 'x');
+            $hdeps = array_column($scatterData, 'y');
+            $n = count($scatterData);
+            $sumX = array_sum($hums); $sumY = array_sum($hdeps);
+            $sumXY = 0; $sumX2 = 0;
+            for ($i = 0; $i < $n; $i++) { $sumXY += $hums[$i] * $hdeps[$i]; $sumX2 += $hums[$i] * $hums[$i]; }
+            $denom = $n * $sumX2 - $sumX * $sumX;
+            $r = $denom != 0 ? ($n * $sumXY - $sumX * $sumY) / sqrt($denom * ($n * array_sum(array_map(fn($v) => $v * $v, $hdeps)) - $sumY * $sumY)) : 0;
+            if ($r < -0.3) $insight = 'HDEP tends to decrease as humidity increases.';
+            elseif ($r > 0.3) $insight = 'HDEP tends to increase with humidity.';
+            else $insight = 'No clear relationship detected between humidity and HDEP.';
+        }
+
+        return view('dashboard._hum-vs-hdep', compact('scatterData', 'insight'));
+    }
+
+    public function breedAnalytics()
+    {
+        $cageCode = request('cage');
+        $days = (int) request('days', 30);
+        $reportingDate = ReportingDateService::reportingDate();
+        $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
+        $endDate = $reportingDate->toDateString();
+
+        $breedData = ProductionLog::query()
+            ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
+            ->join('hens', 'hens.cage_slot_id', '=', 'cage_slots.id')
+            ->where('hens.is_active', 1)
+            ->whereBetween('production_logs.log_date', [$startDate, $endDate])
+            ->where('production_logs.hdep', '>', 0)
+            ->when($cageCode, fn ($q) => $q->whereHas('cageSlot.cage', fn ($c) => $c->where('cage_code', $cageCode)))
+            ->selectRaw('hens.breed as breed, AVG(production_logs.hdep) as avg_hdep, COUNT(*) as log_count')
+            ->groupBy('hens.breed')
+            ->orderByDesc('avg_hdep')
+            ->get()
+            ->filter(fn ($r) => $r->avg_hdep > 0);
+
+        $labels = $breedData->pluck('breed')->values()->toArray();
+        $data = $breedData->pluck('avg_hdep')->map(fn ($v) => round($v, 1))->values()->toArray();
+        $bestBreed = $breedData->first();
+
+        return view('dashboard._breed-analytics', compact('labels', 'data', 'bestBreed'));
+    }
+
+    public function mortalityByCause()
+    {
+        $cageCode = request('cage');
+        $days = (int) request('days', 30);
+        $reportingDate = ReportingDateService::reportingDate();
+        $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
+        $endDate = $reportingDate->toDateString();
+
+        $causeData = MortalityLog::query()
+            ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
+            ->whereBetween('log_date', [$startDate, $endDate])
+            ->selectRaw('reason, SUM(count) as total')
+            ->groupBy('reason')
+            ->orderByDesc('total')
+            ->get()
+            ->filter(fn ($r) => $r->total > 0);
+
+        $labels = $causeData->pluck('reason')->values()->toArray();
+        $data = $causeData->pluck('total')->values()->toArray();
+        $totalDeaths = array_sum($data);
+        $topCause = $causeData->first();
+
+        return view('dashboard._mortality-by-cause', compact('labels', 'data', 'totalDeaths', 'topCause'));
+    }
+
+    public function mortalityTrend()
+    {
+        $cageCode = request('cage');
+        $days = (int) request('days', 30);
+        $reportingDate = ReportingDateService::reportingDate();
+        $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
+        $endDate = $reportingDate->toDateString();
+
+        $labels = collect(range(0, $days - 1))
+            ->map(fn ($i) => $reportingDate->copy()->subDays($days - 1 - $i)->format('M j'))
+            ->values()->toArray();
+
+        $dateKeys = collect(range(0, $days - 1))
+            ->map(fn ($i) => $reportingDate->copy()->subDays($days - 1 - $i)->toDateString())
+            ->values();
+
+        $dailyCounts = MortalityLog::query()
+            ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
+            ->whereBetween('log_date', [$startDate, $endDate])
+            ->selectRaw('log_date, SUM(count) as total')
+            ->groupBy('log_date')
+            ->pluck('total', 'log_date');
+
+        $data = $dateKeys->map(fn ($d) => (int) ($dailyCounts->get($d, 0)))->values()->toArray();
+        $peakVal = max($data);
+        $peakIdx = array_search($peakVal, $data);
+        $peakLabel = $labels[$peakIdx] ?? '';
+        $avgDaily = $days > 0 ? round(array_sum($data) / $days, 1) : 0;
+
+        return view('dashboard._mortality-trend', compact('labels', 'data', 'peakVal', 'peakLabel', 'avgDaily'));
+    }
+
+    public function feedVsEgg()
+    {
+        $cageCode = request('cage');
+        $days = (int) request('days', 30);
+        $reportingDate = ReportingDateService::reportingDate();
+        $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
+        $endDate = $reportingDate->toDateString();
+
+        $feedByCageDate = FeedConsumptionLog::query()
+            ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
+            ->whereBetween('log_date', [$startDate, $endDate])
+            ->selectRaw('cage_id, log_date, SUM(feed_consumed_kg) as feed_kg')
+            ->groupBy('cage_id', 'log_date')
+            ->get()
+            ->keyBy(fn ($r) => $r->cage_id . '|' . $r->log_date);
+
+        $prodByCageDate = ProductionLog::query()
+            ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
+            ->when($cageCode, fn ($q) => $q->whereHas('cage_slots.cage', fn ($c) => $c->where('cage_code', $cageCode)))
+            ->whereBetween('production_logs.log_date', [$startDate, $endDate])
+            ->selectRaw('cage_slots.cage_id as cage_id, production_logs.log_date as log_date, SUM(production_logs.egg_count) as eggs')
+            ->groupBy('cage_slots.cage_id', 'production_logs.log_date')
+            ->get()
+            ->keyBy(fn ($r) => $r->cage_id . '|' . $r->log_date);
+
+        $scatterData = [];
+        foreach ($feedByCageDate as $key => $f) {
+            $p = $prodByCageDate->get($key);
+            if ($p && $f->feed_kg > 0 && $p->eggs > 0) {
+                $scatterData[] = ['x' => round((float) $f->feed_kg, 2), 'y' => (int) $p->eggs];
+            }
+        }
+
+        $insight = 'Insufficient data for analysis.';
+        if (count($scatterData) >= 5) {
+            $xs = array_column($scatterData, 'x');
+            $ys = array_column($scatterData, 'y');
+            $n = count($scatterData);
+            $sumX = array_sum($xs); $sumY = array_sum($ys);
+            $sumXY = 0; $sumX2 = 0;
+            for ($i = 0; $i < $n; $i++) { $sumXY += $xs[$i] * $ys[$i]; $sumX2 += $xs[$i] * $xs[$i]; }
+            $denom = $n * $sumX2 - $sumX * $sumX;
+            $r = $denom != 0 ? ($n * $sumXY - $sumX * $sumY) / sqrt($denom * ($n * array_sum(array_map(fn($v) => $v * $v, $ys)) - $sumY * $sumY)) : 0;
+            if ($r > 0.3) $insight = 'Feed consumption shows a positive relationship with egg production.';
+            elseif ($r < -0.3) $insight = 'Feed consumption shows a negative relationship with egg production.';
+            else $insight = 'No clear relationship detected between feed consumption and egg production.';
+        }
+
+        return view('dashboard._feed-vs-egg', compact('scatterData', 'insight'));
+    }
+
+    public function feedByCage()
+    {
+        $cageCode = request('cage');
+        $days = (int) request('days', 7);
+        $reportingDate = ReportingDateService::reportingDate();
+        $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
+        $endDate = $reportingDate->toDateString();
+
+        $feedData = FeedConsumptionLog::query()
+            ->join('cages', 'cages.id', '=', 'feed_consumption_logs.cage_id')
+            ->when($cageCode, fn ($q) => $q->where('cages.cage_code', $cageCode))
+            ->whereBetween('feed_consumption_logs.log_date', [$startDate, $endDate])
+            ->selectRaw('cages.cage_code as cage_code, cages.id as cage_id, SUM(feed_consumption_logs.feed_consumed_kg) as total_feed, COUNT(DISTINCT feed_consumption_logs.log_date) as days_logged')
+            ->groupBy('cages.id', 'cages.cage_code')
+            ->orderBy('cages.cage_code')
+            ->get()
+            ->map(function ($r) use ($days) {
+                $r->avg_daily = $r->days_logged > 0 ? round($r->total_feed / $r->days_logged, 2) : 0;
+                $r->hen_count = Cage::find($r->cage_id)?->hens->where('is_active', 1)->count() ?? 0;
+                return $r;
+            });
+
+        $labels = $feedData->pluck('cage_code')->values()->toArray();
+        $data = $feedData->pluck('avg_daily')->values()->toArray();
+        $highest = $feedData->sortByDesc('avg_daily')->first();
+
+        return view('dashboard._feed-by-cage', compact('labels', 'data', 'highest', 'feedData'));
+    }
+
+    public function heatStress()
+    {
+        $cageCode = request('cage');
+        $days = (int) request('days', 30);
+        $reportingDate = ReportingDateService::reportingDate();
+        $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
+        $endDate = $reportingDate->toDateString();
+
+        $thresholds = Setting::thresholds();
+        $tempMax = (float) ($thresholds['temp_max'] ?? 30);
+
+        $cageIds = Cage::query()
+            ->when($cageCode, fn ($q) => $q->where('cage_code', $cageCode))
+            ->pluck('id');
+
+        $envByCageDate = EnvironmentalLog::select('cage_id', DB::raw('DATE(recorded_at) as log_date'), DB::raw('AVG(temperature_c) as avg_temp'), DB::raw('AVG(humidity_pct) as avg_hum'))
+            ->whereIn('cage_id', $cageIds)
+            ->whereBetween(DB::raw('DATE(recorded_at)'), [$startDate, $endDate])
+            ->groupBy('cage_id', 'log_date')
+            ->get();
+
+        $prodByCageDate = ProductionLog::query()
+            ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
+            ->whereIn('cage_slots.cage_id', $cageIds)
+            ->whereBetween('production_logs.log_date', [$startDate, $endDate])
+            ->where('hdep', '>', 0)
+            ->selectRaw('cage_slots.cage_id as cage_id, production_logs.log_date as log_date, AVG(production_logs.hdep) as avg_hdep')
+            ->groupBy('cage_slots.cage_id', 'production_logs.log_date')
+            ->get()
+            ->keyBy(fn ($r) => $r->cage_id . '|' . $r->log_date);
+
+        $mortByDate = MortalityLog::query()
+            ->whereIn('cage_id', $cageIds)
+            ->whereBetween('log_date', [$startDate, $endDate])
+            ->selectRaw('log_date, SUM(count) as total')
+            ->groupBy('log_date')
+            ->pluck('total', 'log_date');
+
+        $levels = ['Normal' => [], 'Moderate' => [], 'High' => []];
+        $peakTemp = 0;
+
+        foreach ($envByCageDate as $e) {
+            $temp = (float) $e->avg_temp;
+            if ($temp > $peakTemp) $peakTemp = $temp;
+
+            $level = 'Normal';
+            if ($temp > $tempMax + 4) $level = 'High';
+            elseif ($temp > $tempMax) $level = 'Moderate';
+
+            $key = $e->cage_id . '|' . $e->log_date;
+            $prod = $prodByCageDate->get($key);
+            $hdep = $prod ? (float) $prod->avg_hdep : null;
+            $mort = (int) ($mortByDate->get($e->log_date, 0));
+
+            $levels[$level][] = ['hdep' => $hdep, 'mortality' => $mort, 'temp' => $temp];
+        }
+
+        $summary = [];
+        foreach ($levels as $label => $rows) {
+            $hdeps = array_filter(array_column($rows, 'hdep'), fn ($v) => $v > 0);
+            $summary[$label] = [
+                'count' => count($rows),
+                'avg_hdep' => count($hdeps) > 0 ? round(array_sum($hdeps) / count($hdeps), 1) : null,
+                'mortality' => array_sum(array_column($rows, 'mortality')),
+            ];
+        }
+
+        $highEvents = count($levels['High']);
+        $highHdeps = array_filter(array_column($levels['High'], 'hdep'), fn ($v) => $v > 0);
+        $highAvgHdep = count($highHdeps) > 0 ? round(array_sum($highHdeps) / count($highHdeps), 1) : null;
+
+        return view('dashboard._heat-stress', compact('summary', 'highEvents', 'highAvgHdep', 'peakTemp', 'tempMax'));
     }
 
     public function buildDashboardData(?string $cageCode = null, int $mortalityDays = 1): array
