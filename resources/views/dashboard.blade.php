@@ -142,26 +142,30 @@
             @include('dashboard._data-checklist')
 
             {{-- Section Filter Tabs --}}
-            <div class="flex items-center gap-1 p-1 rounded-lg w-fit flex-wrap mb-6 pt-4" style="background-color: #f3f4f6;">
-                <button type="button" onclick="filterAnalytics('production')" class="analytics-section-tab active px-3 py-1.5 text-xs font-semibold rounded-md transition-all inline-flex items-center gap-1.5" data-section="production">
-                    <i data-lucide="bar-chart-3" class="w-3 h-3"></i> Production Performance
+            <div class="flex items-center gap-2 mb-6 pt-4 flex-wrap">
+                <button type="button" onclick="filterAnalytics('production')" class="analytics-section-tab active text-xs font-semibold uppercase tracking-[0.125px] px-3 py-1.5 rounded-md transition-all inline-flex items-center gap-1.5" data-section="production">
+                    <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Production Performance
                 </button>
-                <button type="button" onclick="filterAnalytics('environmental')" class="analytics-section-tab px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb] inline-flex items-center gap-1.5" data-section="environmental">
-                    <i data-lucide="thermometer" class="w-3 h-3"></i> Environmental Analytics
+                <button type="button" onclick="filterAnalytics('environmental')" class="analytics-section-tab px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.125px] rounded-md transition-all text-[#6B7280] hover:text-[#374151] hover:bg-[#e5e7eb] inline-flex items-center gap-1.5" data-section="environmental">
+                    <i data-lucide="thermometer" class="w-4 h-4"></i> Environmental Analytics
                 </button>
-                <button type="button" onclick="filterAnalytics('feed')" class="analytics-section-tab px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb] inline-flex items-center gap-1.5" data-section="feed">
-                    <i data-lucide="wheat" class="w-3 h-3"></i> Feed Analytics
+                <button type="button" onclick="filterAnalytics('feed')" class="analytics-section-tab px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.125px] rounded-md transition-all text-[#6B7280] hover:text-[#374151] hover:bg-[#e5e7eb] inline-flex items-center gap-1.5" data-section="feed">
+                    <i data-lucide="wheat" class="w-4 h-4"></i> Feed Analytics
                 </button>
-                <button type="button" onclick="filterAnalytics('flock')" class="analytics-section-tab px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb] inline-flex items-center gap-1.5" data-section="flock">
-                    <i data-lucide="heart-pulse" class="w-3 h-3"></i> Flock Analytics
+                <button type="button" onclick="filterAnalytics('flock')" class="analytics-section-tab px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.125px] rounded-md transition-all text-[#6B7280] hover:text-[#374151] hover:bg-[#e5e7eb] inline-flex items-center gap-1.5" data-section="flock">
+                    <i data-lucide="heart-pulse" class="w-4 h-4"></i> Flock Analytics
                 </button>
             </div>
 
             <style>
                 .analytics-section-tab.active {
-                    background-color: #0075de;
-                    color: #ffffff;
-                    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+                    color: #111827;
+                    font-size: 14px;
+                    letter-spacing: 0.125px;
+                }
+                .analytics-section-tab.active i {
+                    width: 16px;
+                    height: 16px;
                 }
                 .analytics-section { display: none; }
                 .analytics-section.active-section { display: block; }
@@ -171,14 +175,18 @@
             function filterAnalytics(section) {
                 document.querySelectorAll('.analytics-section-tab').forEach(function(btn) {
                     btn.classList.remove('active');
-                    btn.style.backgroundColor = '';
-                    btn.style.color = '#6B7280';
-                    btn.style.boxShadow = '';
+                    btn.style.color = '';
+                    btn.style.fontSize = '';
+                    btn.style.letterSpacing = '';
+                    btn.querySelector('i').style.width = '';
+                    btn.querySelector('i').style.height = '';
                     if (btn.dataset.section === section) {
                         btn.classList.add('active');
-                        btn.style.backgroundColor = '#0075de';
-                        btn.style.color = '#ffffff';
-                        btn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.1)';
+                        btn.style.color = '#111827';
+                        btn.style.fontSize = '14px';
+                        btn.style.letterSpacing = '0.125px';
+                        btn.querySelector('i').style.width = '16px';
+                        btn.querySelector('i').style.height = '16px';
                     }
                 });
                 document.querySelectorAll('.analytics-section').forEach(function(el) {
