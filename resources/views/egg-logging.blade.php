@@ -335,12 +335,12 @@
 
             {{-- Total Cage Log Tab --}}
             <div id="logTabTotalContent" class="log-tab-content hidden">
-                <div id="totalCageLogEmpty" class="text-center py-6 text-sm" style="color: #a39e98;">
-                    <i data-lucide="layout-grid" class="w-5 h-5 mx-auto mb-1.5" style="color: #d1d5db;"></i>
+                <div id="totalCageLogEmpty" class="text-center py-10 text-sm" style="color: #a39e98;">
+                    <i data-lucide="layout-grid" class="w-6 h-6 mx-auto mb-2" style="color: #d1d5db;"></i>
                     Select a cage above to log total eggs.
                 </div>
                 <div id="totalCageLogForm" class="hidden">
-                    <div class="space-y-1.5 text-sm mb-3 p-3 rounded-lg" style="background-color: #f6f5f4;">
+                    <div class="space-y-3 text-sm mb-4 p-4 rounded-lg" style="background-color: #f6f5f4;">
                         <div class="flex justify-between">
                             <span style="color: #615d59;">Cage</span>
                             <span id="tcCageCode" class="font-semibold" style="color: #1f1f1f;"></span>
@@ -359,25 +359,25 @@
                         </div>
                     </div>
 
-                    <div class="border-t pt-3" style="border-color: #e6e6e6;">
-                        <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1" style="color: #615d59;">Total Eggs</label>
+                    <div class="border-t pt-4" style="border-color: #e6e6e6;">
+                        <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Total Eggs</label>
                         <input type="number" id="tcTotalEggs" min="0" placeholder="0"
                                oninput="validateTotalCageLog()"
-                               class="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                                style="border-color: #e6e6e6; color: #1f1f1f;">
-                        <p id="tcError" class="hidden text-xs mt-0.5" style="color: #9b1c24;"></p>
-                        <p class="text-xs mt-0.5" style="color: #a39e98;">Eggs distributed across slots (max per slot = hens in that slot).</p>
+                        <p id="tcError" class="hidden text-xs mt-1" style="color: #9b1c24;"></p>
+                        <p class="text-xs mt-1" style="color: #a39e98;">Eggs will be distributed across slots (max per slot = hens in that slot).</p>
                     </div>
 
-                    <div class="flex items-center gap-3 mt-3">
+                    <div class="flex items-center gap-3 mt-4">
                         <button type="button" onclick="clearTotalCageLog()"
-                                class="px-4 py-1.5 text-sm font-medium rounded-lg transition-colors"
+                                class="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
                                 style="color: #1f1f1f; border: 1px solid #e6e6e6;"
                                 onmouseover="this.style.backgroundColor='#f6f5f4'"
                                 onmouseout="this.style.backgroundColor='transparent'">
                             Cancel
                         </button>
-                        <x-button type="button" id="tcSaveBtn" onclick="submitTotalCageLog()" disabled class="px-6 py-1.5">
+                        <x-button type="button" id="tcSaveBtn" onclick="submitTotalCageLog()" disabled class="px-6 py-2">
                             Save Record
                         </x-button>
                     </div>
