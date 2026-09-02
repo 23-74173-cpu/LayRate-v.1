@@ -159,7 +159,7 @@
 
             <style>
                 .analytics-section-tab.active {
-                    color: #111827;
+                    color: #111827 !important;
                     font-size: 14px;
                     letter-spacing: 0.125px;
                 }
@@ -167,8 +167,8 @@
                     width: 16px;
                     height: 16px;
                 }
-                .analytics-section { display: none; }
-                .analytics-section.active-section { display: block; }
+                .analytics-section { display: none !important; }
+                .analytics-section.active-section { display: block !important; }
             </style>
 
             <script>
@@ -178,15 +178,20 @@
                     btn.style.color = '';
                     btn.style.fontSize = '';
                     btn.style.letterSpacing = '';
-                    btn.querySelector('i').style.width = '';
-                    btn.querySelector('i').style.height = '';
+                    var icon = btn.querySelector('i');
+                    if (icon) {
+                        icon.style.width = '';
+                        icon.style.height = '';
+                    }
                     if (btn.dataset.section === section) {
                         btn.classList.add('active');
                         btn.style.color = '#111827';
                         btn.style.fontSize = '14px';
                         btn.style.letterSpacing = '0.125px';
-                        btn.querySelector('i').style.width = '16px';
-                        btn.querySelector('i').style.height = '16px';
+                        if (icon) {
+                            icon.style.width = '16px';
+                            icon.style.height = '16px';
+                        }
                     }
                 });
                 document.querySelectorAll('.analytics-section').forEach(function(el) {
@@ -899,6 +904,10 @@
             header.style.background = tab === 'analytics'
                 ? 'linear-gradient(to right, #1a2342, #213183, #2e4a9e)'
                 : 'linear-gradient(to right, #2e4a9e, #213183, #1a2342)';
+        }
+        if (tab === 'analytics' && typeof filterAnalytics === 'function') {
+            var activeBtn = document.querySelector('.analytics-section-tab.active');
+            filterAnalytics(activeBtn ? activeBtn.dataset.section : 'production');
         }
         lucide.createIcons();
     }
