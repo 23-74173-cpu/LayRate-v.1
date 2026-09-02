@@ -1,44 +1,4 @@
 <turbo-frame id="chickens-culling-records">
-    <div class="flex items-center justify-between mb-3">
-        <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Culling Records</span>
-            <span class="text-xs px-1.5 py-0.5 rounded-full bg-white/80 text-[#6B7280] border border-[#D9D9D9]">
-                {{ $cullingLogs->total() }} total
-            </span>
-        </div>
-        <div class="flex items-center gap-2">
-            <select id="cullHenSelect"
-                    class="border border-[#D9D9D9] rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#002D5E] max-w-[200px]">
-                <option value="">Select hen to cull...</option>
-                @foreach($activeHens as $hen)
-                    <option value="{{ $hen->id }}"
-                            data-label="{{ $hen->chicken_id ?? '—' }}{{ $hen->cageSlot?->cage ? ' (' . $hen->cageSlot->cage->cage_code . ')' : ' (unplaced)' }}">
-                        {{ $hen->chicken_id ?? '—' }} — {{ $hen->breed }}{{ $hen->cageSlot?->cage ? ' [' . $hen->cageSlot->cage->cage_code . ']' : ' [unplaced]' }}
-                    </option>
-                @endforeach
-            </select>
-            <button type="button" onclick="cullFromDropdown()"
-                    class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 transition-colors">
-                <i data-lucide="crosshair" class="w-3 h-3"></i> Cull
-            </button>
-        </div>
-    </div>
-
-    <script>
-    function cullFromDropdown() {
-        var sel = document.getElementById('cullHenSelect');
-        if (!sel || !sel.value) {
-            if (typeof showNotification === 'function') showNotification('Please select a hen first.', 'warning');
-            return;
-        }
-        var opt = sel.options[sel.selectedIndex];
-        var label = opt.dataset.label || opt.text;
-        openCullModal(sel.value, label);
-        sel.value = '';
-    }
-    window.cullFromDropdown = cullFromDropdown;
-    </script>
-
     @if($cullingLogs->isEmpty())
     <div class="bg-white rounded-lg border border-[#D9D9D9] p-10 text-center text-sm text-[#9CA3AF]">No culling records found.</div>
     @else
