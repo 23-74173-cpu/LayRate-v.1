@@ -102,7 +102,7 @@
         <x-card>
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                 <h3 class="text-lg font-semibold" style="color: #1f1f1f;">Log Entry</h3>
-                <div class="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                <div id="logTabs" class="hidden flex items-center gap-1 bg-gray-100 rounded-lg p-1">
                     <button type="button" onclick="switchLogTab('manual')" id="logTabManual"
                             class="log-tab-btn active px-4 py-1.5 text-sm font-medium rounded-md transition-all"
                             style="background: #fff; color: #1f1f1f; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
@@ -520,11 +520,25 @@
 
         window.switchLogTab = function(tab) {
             logMode = tab;
-            document.querySelectorAll('.log-tab-btn').forEach(function(btn) { btn.classList.remove('active'); });
+
+            var manualBtn = document.getElementById('logTabManual');
+            var totalBtn = document.getElementById('logTabTotal');
+            manualBtn.classList.remove('active');
+            totalBtn.classList.remove('active');
+            manualBtn.style.background = 'transparent';
+            manualBtn.style.color = '#6b7280';
+            manualBtn.style.boxShadow = 'none';
+            totalBtn.style.background = 'transparent';
+            totalBtn.style.color = '#6b7280';
+            totalBtn.style.boxShadow = 'none';
+
             document.querySelectorAll('.log-tab-content').forEach(function(c) { c.classList.add('hidden'); });
 
             if (tab === 'manual') {
-                document.getElementById('logTabManual').classList.add('active');
+                manualBtn.classList.add('active');
+                manualBtn.style.background = '#fff';
+                manualBtn.style.color = '#1f1f1f';
+                manualBtn.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
                 document.getElementById('logTabManualContent').classList.remove('hidden');
                 if (currentCageId) {
                     var target = document.querySelector('.cage-grid[data-cage-id="' + currentCageId + '"]');
@@ -532,7 +546,10 @@
                     document.getElementById('slotFormPlaceholder').classList.remove('hidden');
                 }
             } else {
-                document.getElementById('logTabTotal').classList.add('active');
+                totalBtn.classList.add('active');
+                totalBtn.style.background = '#fff';
+                totalBtn.style.color = '#1f1f1f';
+                totalBtn.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
                 document.getElementById('logTabTotalContent').classList.remove('hidden');
                 document.querySelectorAll('.cage-grid').forEach(g => g.classList.add('hidden'));
                 document.getElementById('slotFormPlaceholder').classList.add('hidden');
@@ -918,14 +935,16 @@
                 g.classList.add('hidden');
             });
 
-            // Show the active tab content
-            var activeTab = document.getElementById('logTabManual').classList.contains('active') ? 'manual' : 'total';
-            if (activeTab === 'manual') {
-                document.getElementById('slotFormPlaceholder').classList.remove('hidden');
-                document.getElementById('slotForm').classList.add('hidden');
-            } else {
-                window.showTotalCageLogForm();
-            }
+            document.getElementById('logTabs').classList.remove('hidden');
+            document.getElementById('slotFormPlaceholder').classList.remove('hidden');
+            document.getElementById('slotForm').classList.add('hidden');
+            document.getElementById('totalCageLogEmpty').classList.remove('hidden');
+            document.getElementById('totalCageLogForm').classList.add('hidden');
+            document.getElementById('logTabManualContent').classList.remove('hidden');
+            document.getElementById('logTabTotalContent').classList.add('hidden');
+
+            // Reset tabs to Manual
+            window.switchLogTab('manual');
 
             checkSizeSum();
             validateForm();
