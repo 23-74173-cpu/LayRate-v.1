@@ -7,8 +7,12 @@
             <div>
                 <div class="text-sm font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Mortality by Cause</div>
                 <div class="text-xs mt-0.5" style="color: #9CA3AF;">{{ number_format($totalDeaths) }} total deaths</div>
+                <button type="button" onclick="this.closest('.bg-white').querySelector('.interpretation-panel').classList.toggle('hidden')" class="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all hover:opacity-80" style="color: #6366f1; background-color: rgba(99,102,241,0.08);">
+                    <i data-lucide="sparkles" class="w-2.5 h-2.5"></i> Interpretation
+                </button>
             </div>
         </div>
+        <div class="interpretation-panel hidden mb-3 px-3 py-2.5 rounded-lg text-xs leading-relaxed" style="background-color: #f0f0ff; color: #3730a3; border: 1px solid rgba(99,102,241,0.15);">{{ $insight }}</div>
         @if(empty($data))
             <div class="rounded-xl border py-8 text-center text-sm flex-1" style="background-color: #ffffff; border-color: #e6e6e6; color: #a39e98;">
                 No mortality records for the selected period.
@@ -21,7 +25,7 @@
                 </span>
             </div>
             @endif
-            <div class="relative w-full flex-1 min-h-[200px]">
+            <div class="relative w-full flex-1 min-h-[160px]">
                 <canvas id="mortalityByCauseChart" style="width: 100%; height: 100%; display: block;"></canvas>
             </div>
         @endif
@@ -62,4 +66,5 @@
         else if (window.LayRateChart) { LayRateChart.create('mortalityByCauseChart', config); }
     })();
     </script>
+    <script>if(window.lucide) try{ lucide.createIcons(); }catch(e){}</script>
 </turbo-frame>

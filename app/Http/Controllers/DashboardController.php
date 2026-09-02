@@ -228,7 +228,44 @@ class DashboardController extends Controller
             'datasets' => $datasets,
         ];
 
-        return view('dashboard._production-history', compact('chartData', 'days', 'cageCode', 'title', 'compare'));
+        $insight = 'No production data available for analysis.';
+        if (! empty($datasets)) {
+            $allPoints = [];
+            foreach ($datasets as $ds) {
+                foreach ($ds['data'] as $v) {
+                    if ($v > 0) $allPoints[] = $v;
+                }
+            }
+            if (count($allPoints) >= 2) {
+                $total = array_sum($allPoints);
+                $peak = max($allPoints);
+                $avg = round($total / count($allPoints));
+                $min = min($allPoints);
+                $firstHalf = array_slice($allPoints, 0, intdiv(count($allPoints), 2));
+                $secondHalf = array_slice($allPoints, intdiv(count($allPoints), 2));
+                $firstAvg = count($firstHalf) > 0 ? round(array_sum($firstHalf) / count($firstHalf)) : 0;
+                $secondAvg = count($secondHalf) > 0 ? round(array_sum($secondHalf) / count($secondHalf)) : 0;
+
+                $insight = "Over the last {$days} days, daily egg production averaged {$avg} eggs (peak: {$peak}).";
+                if ($secondAvg > $firstAvg * 1.1 && $firstAvg > 0) {
+                    $insight .= " Production is trending upward — a positive signal.";
+                } elseif ($firstAvg > $secondAvg * 1.1 && $secondAvg > 0) {
+                    $insight .= " Production is declining in the recent period — investigate possible causes.";
+                } else {
+                    $insight .= " Production levels have been relatively stable.";
+                }
+                if ($peak > 0 && $min > 0) {
+                    $range = round(($peak - $min) / $peak * 100);
+                    if ($range > 30) {
+                        $insight .= " Day-to-day variation is high ({$range}% range), suggesting inconsistent collection or production.";
+                    }
+                }
+            } elseif (count($allPoints) === 1) {
+                $insight = "Only one day of data recorded ({$allPoints[0]} eggs).";
+            }
+        }
+
+        return view('dashboard._production-history', compact('chartData', 'days', 'cageCode', 'title', 'compare', 'insight'));
     }
 
     public function eggCollectionTime()
@@ -261,7 +298,21 @@ class DashboardController extends Controller
             'total' => array_sum($data),
         ];
 
-        return view('dashboard._egg-collection-time', compact('chartData', 'days'));
+        $insight = 'No collection data available for analysis.';
+        if (array_sum($data) > 0) {
+            $peakVal = max($data);
+            $peakIdx = array_search($peakVal, $data);
+            $peakHour = $labels[$peakIdx];
+            $pctAtPeak = round($peakVal / array_sum($data) * 100, 1);
+            $morningTotal = array_sum(array_slice($data, 5, 7));
+            $morningPct = round($morningTotal / array_sum($data) * 100, 1);
+            $insight = "Peak collection is at {$peakHour} with {$pctAtPeak}% of total eggs. Morning hours (6AM–12PM) account for {$morningPct}% of daily production.";
+            if ($pctAtPeak > 25) {
+                $insight .= " Eggs are heavily concentrated at one time — consider spreading collection across more hours to reduce breakage.";
+            }
+        }
+
+        return view('dashboard._egg-collection-time', compact('chartData', 'days', 'insight'));
     }
 
     public function henAgeLayrate()
@@ -347,7 +398,28 @@ class DashboardController extends Controller
             'all_ages_count' => count($allLabels),
         ];
 
-        return view('dashboard._hen-age-layrate', compact('chartData'));
+        $insight = 'No age data available for analysis.';
+        if (! empty($data) && $peakAge !== null) {
+            $insight = "Production peaks at Week {$peakAge} with {$chartData['peak_hdep']}% HDEP, based on {$chartData['all_ages_count']} age weeks tracked.";
+            if ($peakAge >= 25 && $peakAge <= 35) {
+                $insight .= " This is within the typical peak production window (25–35 weeks).";
+            } elseif ($peakAge < 25) {
+                $insight .= " The early peak may indicate younger hens are outperforming expectations.";
+            } elseif ($peakAge > 40) {
+                $insight .= " The late peak suggests older hens are still productive — monitor for upcoming decline.";
+            }
+            if (count($data) >= 3) {
+                $afterPeak = array_slice($data, $croppedPeakIdx + 1);
+                if (! empty($afterPeak)) {
+                    $decline = round($chartData['peak_hdep'] - max($afterPeak), 1);
+                    if ($decline > 10) {
+                        $insight .= " Production drops by {$decline} points after the peak — plan flock rotation accordingly.";
+                    }
+                }
+            }
+        }
+
+        return view('dashboard._hen-age-layrate', compact('chartData', 'insight'));
     }
 
     public function tempVsHdep()
@@ -485,7 +557,19 @@ class DashboardController extends Controller
         $data = $breedData->pluck('avg_hdep')->map(fn ($v) => round($v, 1))->values()->toArray();
         $bestBreed = $breedData->first();
 
-        return view('dashboard._breed-analytics', compact('labels', 'data', 'bestBreed'));
+        $insight = 'No breed data available for analysis.';
+        if (count($breedData) === 1) {
+            $insight = "Only one breed ({$bestBreed->breed}) is represented in the data with an average HDEP of {$bestBreed->avg_hdep}%.";
+        } elseif (count($breedData) >= 2) {
+            $worst = $breedData->last();
+            $gap = round($bestBreed->avg_hdep - $worst->avg_hdep, 1);
+            $insight = "{$bestBreed->breed} is the top performer at {$bestBreed->avg_hdep}% HDEP, outperforming {$worst->breed} by {$gap} percentage points.";
+            if ($gap > 10) {
+                $insight .= " The large gap suggests {$worst->breed} may need management adjustments.";
+            }
+        }
+
+        return view('dashboard._breed-analytics', compact('labels', 'data', 'bestBreed', 'insight'));
     }
 
     public function mortalityByCause()
@@ -510,7 +594,21 @@ class DashboardController extends Controller
         $totalDeaths = array_sum($data);
         $topCause = $causeData->first();
 
-        return view('dashboard._mortality-by-cause', compact('labels', 'data', 'totalDeaths', 'topCause'));
+        $insight = 'No mortality data available for analysis.';
+        if ($totalDeaths > 0 && $topCause) {
+            $topPct = round($topCause->total / $totalDeaths * 100);
+            $insight = "{$topCause->reason} is the leading cause of death, accounting for {$topPct}% of all losses ({$topCause->total} of {$totalDeaths}).";
+            if (count($causeData) >= 2) {
+                $second = $causeData[1];
+                if ($topPct >= 60) {
+                    $insight .= " Focus prevention efforts on {$topCause->reason} for the greatest impact.";
+                } else {
+                    $insight .= " Losses are spread across multiple causes, so a broad approach to prevention is recommended.";
+                }
+            }
+        }
+
+        return view('dashboard._mortality-by-cause', compact('labels', 'data', 'totalDeaths', 'topCause', 'insight'));
     }
 
     public function mortalityTrend()
@@ -542,7 +640,27 @@ class DashboardController extends Controller
         $peakLabel = $labels[$peakIdx] ?? '';
         $avgDaily = $days > 0 ? round(array_sum($data) / $days, 1) : 0;
 
-        return view('dashboard._mortality-trend', compact('labels', 'data', 'peakVal', 'peakLabel', 'avgDaily'));
+        $insight = 'No mortality data available for analysis.';
+        if (array_sum($data) > 0) {
+            $firstHalf = array_slice($data, 0, intdiv(count($data), 2));
+            $secondHalf = array_slice($data, intdiv(count($data), 2));
+            $firstAvg = count($firstHalf) > 0 ? round(array_sum($firstHalf) / count($firstHalf), 1) : 0;
+            $secondAvg = count($secondHalf) > 0 ? round(array_sum($secondHalf) / count($secondHalf), 1) : 0;
+
+            $insight = "Average daily mortality is {$avgDaily} deaths over the last {$days} days.";
+            if ($peakVal > $avgDaily * 2 && $peakVal > 0) {
+                $insight .= " A spike of {$peakVal} deaths on {$peakLabel} was well above average — investigate potential causes.";
+            }
+            if ($secondAvg > $firstAvg * 1.3 && $firstAvg > 0) {
+                $insight .= " Mortality is trending upward in the recent half.";
+            } elseif ($firstAvg > $secondAvg * 1.3 && $secondAvg > 0) {
+                $insight .= " Mortality is trending downward — a positive sign.";
+            } else {
+                $insight .= " Mortality levels have been relatively stable.";
+            }
+        }
+
+        return view('dashboard._mortality-trend', compact('labels', 'data', 'peakVal', 'peakLabel', 'avgDaily', 'insight'));
     }
 
     public function feedVsEgg()
@@ -622,7 +740,25 @@ class DashboardController extends Controller
         $data = $feedData->pluck('avg_daily')->values()->toArray();
         $highest = $feedData->sortByDesc('avg_daily')->first();
 
-        return view('dashboard._feed-by-cage', compact('labels', 'data', 'highest', 'feedData'));
+        $insight = 'No feed data available for analysis.';
+        if ($feedData->isNotEmpty() && $highest) {
+            $avgFeed = round($data ? array_sum($data) / count($data) : 0, 2);
+            $insight = "{$highest->cage_code} has the highest feed consumption at {$highest->avg_daily} kg/day.";
+            if ($highest->hen_count > 0) {
+                $perHen = round($highest->avg_daily / $highest->hen_count * 1000, 1);
+                $insight .= " That's {$perHen}g per hen per day.";
+            }
+            if (count($feedData) >= 2) {
+                $pctAbove = $avgFeed > 0 ? round(($highest->avg_daily - $avgFeed) / $avgFeed * 100) : 0;
+                if ($pctAbove > 20) {
+                    $insight .= " This is {$pctAbove}% above the cage average — check for overfeeding or waste.";
+                } else {
+                    $insight .= " Consumption is fairly balanced across cages.";
+                }
+            }
+        }
+
+        return view('dashboard._feed-by-cage', compact('labels', 'data', 'highest', 'feedData', 'insight'));
     }
 
     public function heatStress()
@@ -696,7 +832,24 @@ class DashboardController extends Controller
         $highHdeps = array_filter(array_column($levels['High'], 'hdep'), fn ($v) => $v > 0);
         $highAvgHdep = count($highHdeps) > 0 ? round(array_sum($highHdeps) / count($highHdeps), 1) : null;
 
-        return view('dashboard._heat-stress', compact('summary', 'highEvents', 'highAvgHdep', 'peakTemp', 'tempMax'));
+        $insight = 'No temperature data available for analysis.';
+        if (count($envByCageDate) > 0) {
+            $normalHdeps = array_filter(array_column($levels['Normal'], 'hdep'), fn ($v) => $v > 0);
+            $normalAvg = count($normalHdeps) > 0 ? round(array_sum($normalHdeps) / count($normalHdeps), 1) : null;
+            $insight = "Analyzed " . count($envByCageDate) . " cage-day temperature records against the {$tempMax}°C threshold.";
+            if ($highEvents > 0 && $highAvgHdep !== null && $normalAvg !== null) {
+                $diff = round($normalAvg - $highAvgHdep, 1);
+                $insight .= " During high heat stress events, HDEP dropped to {$highAvgHdep}% compared to {$normalAvg}% under normal conditions — a {$diff} point reduction.";
+                $highMort = array_sum(array_column($levels['High'], 'mortality'));
+                if ($highMort > 0) {
+                    $insight .= " {$highMort} deaths also occurred during high stress days.";
+                }
+            } elseif ($highEvents === 0) {
+                $insight .= " No high heat stress events were recorded during this period.";
+            }
+        }
+
+        return view('dashboard._heat-stress', compact('summary', 'highEvents', 'highAvgHdep', 'peakTemp', 'tempMax', 'insight'));
     }
 
     public function buildDashboardData(?string $cageCode = null, int $mortalityDays = 1): array

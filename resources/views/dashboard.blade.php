@@ -238,21 +238,21 @@
                     <turbo-frame id="dashboard-breed-analytics" src="{{ route('dashboard.breed-analytics') }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
-                            <div class="h-[220px] bg-gray-100 rounded-xl"></div>
+                            <div class="h-[160px] bg-gray-100 rounded-xl"></div>
                         </div>
                     </turbo-frame>
 
                     <turbo-frame id="dashboard-mortality-by-cause" src="{{ route('dashboard.mortality-by-cause') }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
-                            <div class="h-[220px] bg-gray-100 rounded-xl"></div>
+                            <div class="h-[160px] bg-gray-100 rounded-xl"></div>
                         </div>
                     </turbo-frame>
 
                     <turbo-frame id="dashboard-mortality-trend" src="{{ route('dashboard.mortality-trend') }}" loading="lazy" class="block lg:col-span-2">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
-                            <div class="h-[280px] bg-gray-100 rounded-xl"></div>
+                            <div class="h-[180px] bg-gray-100 rounded-xl"></div>
                         </div>
                     </turbo-frame>
                 </div>
