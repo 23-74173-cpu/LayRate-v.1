@@ -43,20 +43,30 @@ class ChickensController extends Controller
 
         $tab = $request->query('tab', 'inventory');
 
-        $activeHensByCage = Hen::where('is_active', 1)
+        $hens = Hen::where('is_active', 1)
             ->whereNotNull('cage_slot_id')
             ->whereHas('cageSlot', fn($q) => $q->whereNotNull('cage_id'))
             ->with('cageSlot.cage')
-            ->get()
-            ->groupBy(fn($h) => $h->cageSlot->cage?->cage_code ?? 'Unassigned')
-            ->map(fn($hens) => $hens->sortBy('chicken_id')->values())
-            ->sortKeys()
-            ->all();
+            ->get();
+
+        $henPickerData = [];
+        foreach ($hens as $hen) {
+            $cageCode = $hen->cageSlot->cage?->cage_code ?? 'Unassigned';
+            $slotLabel = $hen->cageSlot->row_number . '-' . $hen->cageSlot->column_number;
+            $henPickerData[$cageCode][$slotLabel][] = [
+                'id' => $hen->id,
+                'chicken_id' => $hen->chicken_id,
+                'tag_code' => $hen->tag_code,
+                'breed' => $hen->breed,
+            ];
+        }
+        ksort($henPickerData);
+        foreach ($henPickerData as &$slots) { ksort($slots); }
 
         return view('chickens.index', compact(
             'cages', 'breeds', 'todayTotal', 'todayByCage', 'tab',
             'cageId', 'breed', 'isActive', 'search', 'sort', 'preselectedCageId',
-            'activeHensByCage'
+            'henPickerData'
         ));
     }
 

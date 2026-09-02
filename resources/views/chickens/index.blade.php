@@ -246,33 +246,28 @@
                 <i data-lucide="x" class="w-4 h-4" style="color: #615d59;"></i>
             </button>
         </div>
-        <div id="henPickerList" class="flex-1 overflow-y-auto px-5 py-3" style="scrollbar-width: thin;">
-            @forelse($activeHensByCage as $cageCode => $hens)
-            <div class="mb-3 last:mb-0">
-                <div class="flex items-center gap-2 px-3 py-1.5 bg-[#F5F6F8] rounded-lg mb-1">
-                    <input type="checkbox" id="cageAll_{{ $cageCode }}" class="cage-all-check rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]/30"
-                           onchange="toggleCageHens('{{ $cageCode }}', this.checked)">
-                    <label for="cageAll_{{ $cageCode }}" class="text-xs font-semibold text-[#333333] cursor-pointer">{{ $cageCode }} <span class="text-[#9CA3AF] font-normal">({{ $hens->count() }})</span></label>
+        <div class="px-5 pt-4 pb-3 space-y-3 border-b border-[#E6E6E6]">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[10px] font-semibold uppercase tracking-wider text-[#6B7280] mb-1">Cage</label>
+                    <select id="pickerCageSelect" onchange="onPickerCageChange()" class="w-full border border-[#D9D9D9] rounded-lg px-2.5 py-1.5 text-xs text-[#333333] bg-white focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]">
+                        <option value="">All cages</option>
+                    </select>
                 </div>
-                <div class="divide-y divide-[#F0F0F0] border border-[#E6E6E6] rounded-lg overflow-hidden">
-                    @foreach($hens as $hen)
-                    <label class="flex items-center gap-2.5 px-3 py-1.5 hover:bg-[#FAFAFA] cursor-pointer transition-colors hen-row" data-cage="{{ $cageCode }}">
-                        <input type="checkbox" data-hen-id="{{ $hen->id }}" data-cage-code="{{ $cageCode }}"
-                               class="hen-cage-check rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]/30"
-                               onchange="updateCageAllCheck('{{ $cageCode }}'); updateModalHenCount();">
-                        <span class="text-xs text-[#333333]">{{ $hen->chicken_id }}</span>
-                        @if($hen->tag_code)
-                        <span class="text-[10px] text-[#9CA3AF]">({{ $hen->tag_code }})</span>
-                        @endif
-                        <span class="text-[10px] text-[#9CA3AF] ml-auto">{{ $hen->breed }}</span>
-                    </label>
-                    @endforeach
+                <div>
+                    <label class="block text-[10px] font-semibold uppercase tracking-wider text-[#6B7280] mb-1">Slot</label>
+                    <select id="pickerSlotSelect" onchange="onPickerFilterChange()" class="w-full border border-[#D9D9D9] rounded-lg px-2.5 py-1.5 text-xs text-[#333333] bg-white focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]" disabled>
+                        <option value="">All slots</option>
+                    </select>
                 </div>
             </div>
-            @empty
-            <div class="py-8 text-center text-sm text-[#9CA3AF]">No active hens available.</div>
-            @endforelse
+            <div class="relative">
+                <i data-lucide="search" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style="color: #9CA3AF;"></i>
+                <input type="text" id="pickerSearch" placeholder="Search by ID..." oninput="onPickerFilterChange()"
+                       class="w-full border border-[#D9D9D9] rounded-lg pl-8 pr-2.5 py-1.5 text-xs text-[#333333] bg-white focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]">
+            </div>
         </div>
+        <div id="henPickerList" class="flex-1 overflow-y-auto px-5 py-3" style="scrollbar-width: thin;"></div>
         <div class="flex items-center justify-between px-5 py-3 border-t border-[#E6E6E6] bg-[#FAFAFA] rounded-b-xl">
             <span id="modalHenCount" class="text-xs font-semibold text-[#002D5E]">0 selected</span>
             <div class="flex gap-2">
@@ -570,37 +565,43 @@ function toggleColumns(btn) {
 }
 
 function toggleCageHens(cageCode, checked) {
-    document.querySelectorAll('#henPickerModal .hen-row[data-cage="' + cageCode + '"] .hen-cage-check').forEach(function(cb) {
-        cb.checked = checked;
+    document.querySelectorAll('#henPickerList .hen-cage-check').forEach(function(cb) {
+        if (cb.closest('.hen-row')) cb.checked = checked;
     });
     updateModalHenCount();
 }
 
-function updateCageAllCheck(cageCode) {
-    var all = document.querySelectorAll('#henPickerModal .hen-row[data-cage="' + cageCode + '"] .hen-cage-check');
-    var checked = document.querySelectorAll('#henPickerModal .hen-row[data-cage="' + cageCode + '"] .hen-cage-check:checked');
-    var toggle = document.getElementById('cageAll_' + cageCode);
-    if (toggle) toggle.checked = all.length > 0 && all.length === checked.length;
-}
+function updateCageAllCheck() {}
 
 function updateModalHenCount() {
-    var n = document.querySelectorAll('#henPickerModal .hen-cage-check:checked').length;
+    var n = document.querySelectorAll('#henPickerList .hen-cage-check:checked').length;
     var el = document.getElementById('modalHenCount');
     if (el) el.textContent = n + ' selected';
 }
+
+var henPickerData = @json($henPickerData ?? []);
 
 function openHenPickerModal() {
     var modal = document.getElementById('henPickerModal');
     var hidden = document.getElementById('mortalityHenIds');
     var savedIds = hidden.value ? hidden.value.split(',').map(Number) : [];
 
-    document.querySelectorAll('#henPickerModal .hen-cage-check').forEach(function(cb) {
-        cb.checked = savedIds.indexOf(parseInt(cb.dataset.henId)) !== -1;
+    var cageSelect = document.getElementById('pickerCageSelect');
+    cageSelect.innerHTML = '<option value="">All cages</option>';
+    Object.keys(henPickerData).sort().forEach(function(cage) {
+        var total = 0;
+        Object.values(henPickerData[cage]).forEach(function(hens) { total += hens.length; });
+        var opt = document.createElement('option');
+        opt.value = cage;
+        opt.textContent = cage + ' (' + total + ')';
+        cageSelect.appendChild(opt);
     });
 
-    document.querySelectorAll('#henPickerModal .cage-all-check').forEach(function(toggle) {
-        var cageCode = toggle.id.replace('cageAll_', '');
-        updateCageAllCheck(cageCode);
+    var savedCage = cageSelect.value;
+    onPickerCageChange(savedCage);
+
+    document.querySelectorAll('#henPickerList .hen-cage-check').forEach(function(cb) {
+        cb.checked = savedIds.indexOf(parseInt(cb.dataset.henId)) !== -1;
     });
 
     updateModalHenCount();
@@ -615,15 +616,103 @@ function closeHenPickerModal() {
     modal.classList.remove('flex');
 }
 
+function onPickerCageChange() {
+    var cageCode = document.getElementById('pickerCageSelect').value;
+    var slotSelect = document.getElementById('pickerSlotSelect');
+    slotSelect.innerHTML = '<option value="">All slots</option>';
+    slotSelect.disabled = !cageCode;
+
+    if (cageCode && henPickerData[cageCode]) {
+        Object.keys(henPickerData[cageCode]).sort().forEach(function(slot) {
+            var opt = document.createElement('option');
+            opt.value = slot;
+            opt.textContent = 'Slot ' + slot + ' (' + henPickerData[cageCode][slot].length + ')';
+            slotSelect.appendChild(opt);
+        });
+    }
+
+    document.getElementById('pickerSearch').value = '';
+    onPickerFilterChange();
+}
+
+function onPickerFilterChange() {
+    var cageCode = document.getElementById('pickerCageSelect').value;
+    var slotCode = document.getElementById('pickerSlotSelect').value;
+    var search = document.getElementById('pickerSearch').value.toLowerCase().trim();
+    var list = document.getElementById('henPickerList');
+
+    var hens = [];
+    if (cageCode) {
+        var slots = slotCode ? { [slotCode]: henPickerData[cageCode][slotCode] || [] } : (henPickerData[cageCode] || {});
+        Object.entries(slots).forEach(function(entry) {
+            var slot = entry[0], slotHens = entry[1];
+            slotHens.forEach(function(h) { h._slot = slot; h._cage = cageCode; hens.push(h); });
+        });
+    } else {
+        Object.entries(henPickerData).forEach(function(cageEntry) {
+            var c = cageEntry[0], slots = cageEntry[1];
+            Object.entries(slots).forEach(function(slotEntry) {
+                var slot = slotEntry[0], slotHens = slotEntry[1];
+                slotHens.forEach(function(h) { h._slot = slot; h._cage = c; hens.push(h); });
+            });
+        });
+    }
+
+    if (search) {
+        hens = hens.filter(function(h) {
+            return (h.chicken_id && h.chicken_id.toLowerCase().indexOf(search) !== -1) ||
+                   (h.tag_code && h.tag_code.toLowerCase().indexOf(search) !== -1) ||
+                   (h.breed && h.breed.toLowerCase().indexOf(search) !== -1);
+        });
+    }
+
+    var savedIds = (document.getElementById('mortalityHenIds').value || '').split(',').map(Number).filter(Boolean);
+
+    if (hens.length === 0) {
+        list.innerHTML = '<div class="py-8 text-center text-sm text-[#9CA3AF]">No hens found.</div>';
+        return;
+    }
+
+    var grouped = {};
+    hens.forEach(function(h) {
+        var key = h._cage;
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(h);
+    });
+
+    var html = '';
+    Object.entries(grouped).forEach(function(entry) {
+        var cage = entry[0], cageHens = entry[1];
+        html += '<div class="mb-3 last:mb-0">';
+        html += '<div class="flex items-center gap-2 px-3 py-1.5 bg-[#F5F6F8] rounded-lg mb-1">';
+        html += '<input type="checkbox" class="cage-all-check rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]/30" onchange="toggleCageHens(\'' + cage + '\', this.checked)">';
+        html += '<span class="text-xs font-semibold text-[#333333]">' + cage + ' <span class="text-[#9CA3AF] font-normal">(' + cageHens.length + ')</span></span>';
+        html += '</div>';
+        html += '<div class="divide-y divide-[#F0F0F0] border border-[#E6E6E6] rounded-lg overflow-hidden">';
+        cageHens.forEach(function(h) {
+            var checked = savedIds.indexOf(h.id) !== -1 ? 'checked' : '';
+            html += '<label class="flex items-center gap-2.5 px-3 py-1.5 hover:bg-[#FAFAFA] cursor-pointer transition-colors hen-row">';
+            html += '<input type="checkbox" class="hen-cage-check rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]/30" data-hen-id="' + h.id + '" ' + checked + ' onchange="updateModalHenCount()">';
+            html += '<span class="text-xs text-[#333333]">' + h.chicken_id + '</span>';
+            if (h.tag_code) html += ' <span class="text-[10px] text-[#9CA3AF]">(' + h.tag_code + ')</span>';
+            html += '<span class="text-[10px] text-[#9CA3AF]">Slot ' + h._slot + '</span>';
+            html += '<span class="text-[10px] text-[#9CA3AF] ml-auto">' + h.breed + '</span>';
+            html += '</label>';
+        });
+        html += '</div></div>';
+    });
+
+    list.innerHTML = html;
+    updateModalHenCount();
+}
+
 function confirmHenSelection() {
-    var checked = document.querySelectorAll('#henPickerModal .hen-cage-check:checked');
+    var checked = document.querySelectorAll('#henPickerList .hen-cage-check:checked');
     var henIds = Array.from(checked).map(function(cb) { return cb.dataset.henId; });
-    var labels = Array.from(checked).map(function(cb) { return cb.closest('.hen-row').querySelector('.text-xs.text-\\[\\#333333\\]').textContent.trim(); });
 
     var hidden = document.getElementById('mortalityHenIds');
     hidden.value = henIds.join(',');
 
-    var btn = document.getElementById('henPickerBtn');
     var label = document.getElementById('henPickerLabel');
     if (henIds.length === 0) {
         label.textContent = 'Click to select hens...';
