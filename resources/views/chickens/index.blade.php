@@ -449,61 +449,6 @@ function showSlotHens(cageId, slotId) {
     lucide.createIcons();
 }
 
-let unplacedPage = 0;
-const UNPLACED_PAGE_SIZE = 4;
-
-function toggleUnplaced() {
-    const list = document.getElementById('unplacedList');
-    const chevron = document.getElementById('unplacedChevron');
-    const pagination = document.getElementById('unplacedPagination');
-    if (!list) return;
-    const isHidden = list.classList.contains('hidden');
-    list.classList.toggle('hidden', !isHidden);
-    if (pagination) pagination.classList.toggle('hidden', !isHidden);
-    if (chevron) chevron.style.transform = isHidden ? 'rotate(90deg)' : '';
-    lucide.createIcons();
-}
-
-function initUnplacedPagination() {
-    const list = document.querySelector('[data-unplaced-list]');
-    if (!list) return;
-    const rows = list.querySelectorAll('.unplaced-row');
-    const prevBtn = document.querySelector('[data-unplaced-prev]');
-    const nextBtn = document.querySelector('[data-unplaced-next]');
-    const rangeEl = document.querySelector('[data-unplaced-range]');
-    const totalPages = Math.max(1, Math.ceil(rows.length / UNPLACED_PAGE_SIZE));
-    if (unplacedPage >= totalPages) unplacedPage = totalPages - 1;
-    if (unplacedPage < 0) unplacedPage = 0;
-
-    rows.forEach(row => {
-        const page = Math.floor(parseInt(row.dataset.unplacedIndex, 10) / UNPLACED_PAGE_SIZE);
-        row.classList.toggle('hidden', page !== unplacedPage);
-    });
-
-    if (rangeEl) {
-        const start = unplacedPage * UNPLACED_PAGE_SIZE + 1;
-        const end = Math.min((unplacedPage + 1) * UNPLACED_PAGE_SIZE, rows.length);
-        rangeEl.textContent = `Showing ${start}–${end} of ${rows.length} unplaced`;
-    }
-    if (prevBtn) prevBtn.disabled = unplacedPage <= 0;
-    if (nextBtn) nextBtn.disabled = unplacedPage >= totalPages - 1;
-}
-
-function unplacedPageMove(dir) {
-    unplacedPage += dir;
-    initUnplacedPagination();
-}
-
-document.addEventListener('turbo:frame-load', function(e) {
-    if (e.target && e.target.id === 'chickens-inventory-list') {
-        unplacedPage = 0;
-        initUnplacedPagination();
-    }
-});
-document.addEventListener('DOMContentLoaded', function() {
-    initUnplacedPagination();
-});
-
 function updateBulkBar() {
     const checked = document.querySelectorAll('.hen-checkbox:checked');
     const bar = document.getElementById('bulkActionBar');
