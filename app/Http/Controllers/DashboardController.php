@@ -776,10 +776,10 @@ class DashboardController extends Controller
             ->when($cageCode, fn ($q) => $q->where('cage_code', $cageCode))
             ->pluck('id');
 
-        $envByCageDate = EnvironmentalLog::select('cage_id', DB::raw('DATE(recorded_at) as log_date'), DB::raw('AVG(temperature_c) as avg_temp'), DB::raw('AVG(humidity_pct) as avg_hum'))
+        $envByCageDate = EnvironmentalLog::select('cage_id', 'recorded_at', DB::raw('AVG(temperature_c) as avg_temp'), DB::raw('AVG(humidity_pct) as avg_hum'))
             ->whereIn('cage_id', $cageIds)
             ->whereBetween(DB::raw('DATE(recorded_at)'), [$startDate, $endDate])
-            ->groupBy('cage_id', 'log_date')
+            ->groupBy('cage_id', 'recorded_at')
             ->get();
 
         $prodByCageDate = ProductionLog::query()
@@ -810,10 +810,11 @@ class DashboardController extends Controller
             if ($temp > $tempMax + 4) $level = 'High';
             elseif ($temp > $tempMax) $level = 'Moderate';
 
-            $key = $e->cage_id . '|' . $e->log_date;
+            $reportingDate = ReportingDateService::reportingDateFor($e->recorded_at)->toDateString();
+            $key = $e->cage_id . '|' . $reportingDate;
             $prod = $prodByCageDate->get($key);
             $hdep = $prod ? (float) $prod->avg_hdep : null;
-            $mort = (int) ($mortByDate->get($e->log_date, 0));
+            $mort = (int) ($mortByDate->get($reportingDate, 0));
 
             $levels[$level][] = ['hdep' => $hdep, 'mortality' => $mort, 'temp' => $temp];
         }
