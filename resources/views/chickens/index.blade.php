@@ -173,9 +173,38 @@
                                class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]">
                     </div>
                     <div>
-                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">NUMBER OF DEATHS <span class="text-red-500">*</span></label>
-                        <input type="number" name="count" min="1" required placeholder="e.g. 2"
-                               class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]">
+                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">SELECT HENS <span class="text-red-500">*</span></label>
+                        <div id="henPicker" class="border border-[#D9D9D9] rounded-lg max-h-56 overflow-y-auto bg-white" style="scrollbar-width: thin;">
+                            @forelse($activeHensByCage as $cageCode => $hens)
+                            <div class="hen-cage-group">
+                                <div class="flex items-center gap-2 px-3 py-1.5 bg-[#F5F6F8] border-b border-[#E6E6E6] sticky top-0 z-10">
+                                    <input type="checkbox" id="cageAll_{{ $cageCode }}" class="cage-all-check rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]/30"
+                                           onchange="toggleCageHens('{{ $cageCode }}', this.checked)">
+                                    <label for="cageAll_{{ $cageCode }}" class="text-xs font-semibold text-[#333333] cursor-pointer">{{ $cageCode }} <span class="text-[#9CA3AF] font-normal">({{ $hens->count() }})</span></label>
+                                </div>
+                                <div class="divide-y divide-[#F0F0F0]">
+                                    @foreach($hens as $hen)
+                                    <label class="flex items-center gap-2.5 px-3 py-1.5 hover:bg-[#FAFAFA] cursor-pointer transition-colors hen-row" data-cage="{{ $cageCode }}">
+                                        <input type="checkbox" name="hen_ids[]" value="{{ $hen->id }}"
+                                               class="hen-cage-check rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]/30"
+                                               onchange="updateCageAllCheck('{{ $cageCode }}')">
+                                        <span class="text-xs text-[#333333]">{{ $hen->chicken_id }}</span>
+                                        @if($hen->tag_code)
+                                        <span class="text-[10px] text-[#9CA3AF]">({{ $hen->tag_code }})</span>
+                                        @endif
+                                        <span class="text-[10px] text-[#9CA3AF] ml-auto">{{ $hen->breed }}</span>
+                                    </label>
+                                    @endforeach
+                                </div>
+                            </div>
+                            @empty
+                            <div class="px-3 py-6 text-center text-sm text-[#9CA3AF]">No active hens available.</div>
+                            @endforelse
+                        </div>
+                        <div class="flex items-center justify-between mt-1.5">
+                            <p class="text-xs text-[#9CA3AF]">Select individual hens across cages</p>
+                            <span id="henCount" class="text-xs font-semibold text-[#002D5E]">0 selected</span>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CAUSE OF DEATH <span class="text-red-500">*</span></label>
@@ -513,26 +542,59 @@ function toggleColumns(btn) {
     btn.querySelector('i').dataset.toggled = isToggled ? '' : '1';
 }
 
+function toggleCageHens(cageCode, checked) {
+    document.querySelectorAll('.hen-cage-check[data-cage="' + cageCode + '"], .hen-row[data-cage="' + cageCode + '"] .hen-cage-check').forEach(function(cb) {
+        cb.checked = checked;
+    });
+    updateHenCount();
+}
+
+function updateCageAllCheck(cageCode) {
+    var all = document.querySelectorAll('.hen-row[data-cage="' + cageCode + '"] .hen-cage-check');
+    var checked = document.querySelectorAll('.hen-row[data-cage="' + cageCode + '"] .hen-cage-check:checked');
+    var toggle = document.getElementById('cageAll_' + cageCode);
+    if (toggle) toggle.checked = all.length > 0 && all.length === checked.length;
+    updateHenCount();
+}
+
+function updateHenCount() {
+    var n = document.querySelectorAll('.hen-cage-check:checked').length;
+    var el = document.getElementById('henCount');
+    if (el) el.textContent = n + ' selected';
+}
+
 function submitMortality(form) {
     var cageSelect = form.querySelector('select[name="cage_id"]');
-    var countInput = form.querySelector('input[name="count"]');
+    var checked = form.querySelectorAll('.hen-cage-check:checked');
     var cageCode = 'selected cage';
     if (cageSelect && cageSelect.selectedIndex > 0) {
         cageCode = cageSelect.options[cageSelect.selectedIndex].text.split('\u2014')[0].trim();
     }
-    var count = countInput && countInput.value ? countInput.value : '(?)';
+    var count = checked.length;
+
+    if (count === 0) {
+        confirmModal('Please select at least one hen.', {}, 'OK');
+        return;
+    }
 
     confirmModal(
-        'Record mortality: ' + count + ' hen(s) in ' + cageCode + '? The affected hen(s) will be deactivated and slot occupancy updated.',
+        'Record mortality: ' + count + ' hen(s) in ' + cageCode + '? The selected hen(s) will be deactivated.',
         { submit: function() { mortalityAjaxSubmit(form); } },
         'Record', 'destructive'
     );
 }
 
 function mortalityAjaxSubmit(form) {
-    var formData = new FormData(form);
-    var data = {};
-    formData.forEach(function(value, key) { data[key] = value; });
+    var checked = form.querySelectorAll('.hen-cage-check:checked');
+    var henIds = Array.from(checked).map(function(cb) { return parseInt(cb.value); });
+
+    var data = {
+        cage_id: form.querySelector('select[name="cage_id"]').value,
+        log_date: form.querySelector('input[name="log_date"]').value,
+        hen_ids: henIds,
+        reason: form.querySelector('select[name="reason"]').value,
+        notes: form.querySelector('textarea[name="notes"]').value || ''
+    };
 
     form.querySelectorAll('.mortality-error').forEach(function(el) { el.remove(); });
     form.querySelectorAll('.has-mortality-error').forEach(function(el) {
@@ -571,13 +633,15 @@ function mortalityAjaxSubmit(form) {
                 }
             }
 
-            form.reset();
+            form.querySelectorAll('.hen-cage-check:checked').forEach(function(cb) { cb.checked = false; });
+            form.querySelectorAll('.cage-all-check:checked').forEach(function(cb) { cb.checked = false; });
+            updateHenCount();
             var dateInput = form.querySelector('input[type="date"]');
             if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
         } else {
             var errors = result.json.errors || {};
             Object.keys(errors).forEach(function(field) {
-                var input = form.querySelector('[name="' + field + '"]');
+                var input = form.querySelector('[name="' + field + '"]') || form.querySelector('#henPicker');
                 if (!input) return;
                 var wrapper = input.closest('div');
                 if (!wrapper) return;

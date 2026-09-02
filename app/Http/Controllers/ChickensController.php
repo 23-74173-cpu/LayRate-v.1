@@ -43,9 +43,20 @@ class ChickensController extends Controller
 
         $tab = $request->query('tab', 'inventory');
 
+        $activeHensByCage = Hen::where('is_active', 1)
+            ->whereNotNull('cage_slot_id')
+            ->whereHas('cageSlot', fn($q) => $q->whereNotNull('cage_id'))
+            ->with('cageSlot.cage')
+            ->get()
+            ->groupBy(fn($h) => $h->cageSlot->cage?->cage_code ?? 'Unassigned')
+            ->map(fn($hens) => $hens->sortBy('chicken_id')->values())
+            ->sortKeys()
+            ->all();
+
         return view('chickens.index', compact(
             'cages', 'breeds', 'todayTotal', 'todayByCage', 'tab',
-            'cageId', 'breed', 'isActive', 'search', 'sort', 'preselectedCageId'
+            'cageId', 'breed', 'isActive', 'search', 'sort', 'preselectedCageId',
+            'activeHensByCage'
         ));
     }
 

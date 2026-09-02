@@ -138,11 +138,11 @@
 
     {{-- Tab 2: Analytics (Charts + Checklist) --}}
     <div class="dash-tab-panel" data-tab-panel="analytics">
-                <div class="space-y-8">
+                <div class="space-y-12">
             @include('dashboard._data-checklist')
             {{-- ═══ SECTION 1 — Production Performance ═══ --}}
             <div>
-                <h3 class="text-xs font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-3">
+                <h3 class="text-xs font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-6 pt-4">
                     <i data-lucide="bar-chart-3" class="w-4 h-4 inline-block mr-1.5 -mt-0.5" style="color:#0075de;"></i>
                     Production Performance
                 </h3>
@@ -184,7 +184,7 @@
 
             {{-- ═══ SECTION 2 — Environmental Analytics ═══ --}}
             <div>
-                <h3 class="text-xs font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-3">
+                <h3 class="text-xs font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-6 pt-4">
                     <i data-lucide="thermometer" class="w-4 h-4 inline-block mr-1.5 -mt-0.5" style="color:#0891b2;"></i>
                     Environmental Analytics
                 </h3>
@@ -207,7 +207,7 @@
 
             {{-- ═══ SECTION 3 — Feed Analytics ═══ --}}
             <div>
-                <h3 class="text-xs font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-3">
+                <h3 class="text-xs font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-6 pt-4">
                     <i data-lucide="wheat" class="w-4 h-4 inline-block mr-1.5 -mt-0.5" style="color:#16a34a;"></i>
                     Feed Analytics
                 </h3>
@@ -230,7 +230,7 @@
 
             {{-- ═══ SECTION 4 — Flock Analytics ═══ --}}
             <div>
-                <h3 class="text-xs font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-3">
+                <h3 class="text-xs font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-6 pt-4">
                     <i data-lucide="heart-pulse" class="w-4 h-4 inline-block mr-1.5 -mt-0.5" style="color:#db2777;"></i>
                     Flock Analytics
                 </h3>

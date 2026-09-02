@@ -49,14 +49,41 @@
                     @error('log_date')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
                 </div>
 
-                {{-- Count --}}
+                {{-- Hens --}}
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">NUMBER OF DEATHS</label>
-                    <input type="number" name="count" id="mortalityCountInput" min="1" required
-                           value="{{ old('count', 1) }}"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                    <p id="mortalityExceedsWarning" class="hidden text-xs text-red-500 mt-1"></p>
-                    @error('count')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">SELECT HENS <span class="text-red-500">*</span></label>
+                    <div id="henPicker" class="border border-[#D9D9D9] rounded-lg max-h-56 overflow-y-auto bg-white" style="scrollbar-width: thin;">
+                        @forelse($activeHensByCage as $cageCode => $hens)
+                        <div class="hen-cage-group">
+                            <div class="flex items-center gap-2 px-3 py-1.5 bg-[#F5F6F8] border-b border-[#E6E6E6] sticky top-0 z-10">
+                                <input type="checkbox" id="cageAll_{{ $cageCode }}" class="cage-all-check rounded border-[#D9D9D9] text-[#102A4C] focus:ring-[#102A4C]/30"
+                                       onchange="toggleCageHens('{{ $cageCode }}', this.checked)">
+                                <label for="cageAll_{{ $cageCode }}" class="text-xs font-semibold text-[#333333] cursor-pointer">{{ $cageCode }} <span class="text-[#9CA3AF] font-normal">({{ $hens->count() }})</span></label>
+                            </div>
+                            <div class="divide-y divide-[#F0F0F0]">
+                                @foreach($hens as $hen)
+                                <label class="flex items-center gap-2.5 px-3 py-1.5 hover:bg-[#FAFAFA] cursor-pointer transition-colors hen-row" data-cage="{{ $cageCode }}">
+                                    <input type="checkbox" name="hen_ids[]" value="{{ $hen->id }}"
+                                           class="hen-cage-check rounded border-[#D9D9D9] text-[#102A4C] focus:ring-[#102A4C]/30"
+                                           onchange="updateCageAllCheck('{{ $cageCode }}'); updateHenCount();">
+                                    <span class="text-xs text-[#333333]">{{ $hen->chicken_id }}</span>
+                                    @if($hen->tag_code)
+                                    <span class="text-[10px] text-[#9CA3AF]">({{ $hen->tag_code }})</span>
+                                    @endif
+                                    <span class="text-[10px] text-[#9CA3AF] ml-auto">{{ $hen->breed }}</span>
+                                </label>
+                                @endforeach
+                            </div>
+                        </div>
+                        @empty
+                        <div class="px-3 py-6 text-center text-sm text-[#9CA3AF]">No active hens available.</div>
+                        @endforelse
+                    </div>
+                    <div class="flex items-center justify-between mt-1.5">
+                        <p class="text-xs text-[#9CA3AF]">Select individual hens across cages</p>
+                        <span id="henCount" class="text-xs font-semibold text-[#102A4C]">0 selected</span>
+                    </div>
+                    @error('hen_ids')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
                 </div>
 
                 {{-- Reason dropdown --}}
@@ -209,6 +236,27 @@
 
 @push('scripts')
 <script>
+function toggleCageHens(cageCode, checked) {
+    document.querySelectorAll('#henPicker .hen-row[data-cage="' + cageCode + '"] .hen-cage-check').forEach(function(cb) {
+        cb.checked = checked;
+    });
+    updateHenCount();
+}
+
+function updateCageAllCheck(cageCode) {
+    var all = document.querySelectorAll('#henPicker .hen-row[data-cage="' + cageCode + '"] .hen-cage-check');
+    var checked = document.querySelectorAll('#henPicker .hen-row[data-cage="' + cageCode + '"] .hen-cage-check:checked');
+    var toggle = document.getElementById('cageAll_' + cageCode);
+    if (toggle) toggle.checked = all.length > 0 && all.length === checked.length;
+    updateHenCount();
+}
+
+function updateHenCount() {
+    var n = document.querySelectorAll('#henPicker .hen-cage-check:checked').length;
+    var el = document.getElementById('henCount');
+    if (el) el.textContent = n + ' selected';
+}
+
 function openEditMortality(id, date, count, reason, notes) {
     document.getElementById('editMortalityForm').action = '/mortality/' + id;
     document.getElementById('editMortDate').value = date;
@@ -231,37 +279,6 @@ function closeEditMortalityModal() {
             closeEditMortalityModal();
         }
     });
-})();
-
-(function() {
-    // Live "count exceeds active hens in this cage" check — mirrors
-    // MortalityController::store()'s server-side guard, surfaced before submit.
-    var cageSelect = document.getElementById('mortalityCageSelect');
-    var countInput = document.getElementById('mortalityCountInput');
-    var warningEl = document.getElementById('mortalityExceedsWarning');
-    var submitBtn = document.getElementById('mortalitySubmitBtn');
-    if (!cageSelect || !countInput || !warningEl || !submitBtn) return;
-
-    function check() {
-        var opt = cageSelect.options[cageSelect.selectedIndex];
-        var activeHens = opt && opt.value ? parseInt(opt.getAttribute('data-active-hens') || '0') : null;
-        var entered = parseInt(countInput.value) || 0;
-
-        if (activeHens !== null && entered > activeHens) {
-            warningEl.textContent = 'Only ' + activeHens + ' active hen(s) in this cage — cannot record ' + entered + ' death(s).';
-            warningEl.classList.remove('hidden');
-            submitBtn.disabled = true;
-            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
-        } else {
-            warningEl.classList.add('hidden');
-            submitBtn.disabled = false;
-            submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        }
-    }
-
-    cageSelect.addEventListener('change', check);
-    countInput.addEventListener('input', check);
-    check();
 })();
 </script>
 @endpush

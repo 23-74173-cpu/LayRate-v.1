@@ -41,7 +41,17 @@ class MortalityController extends Controller
 
         $preselectedCageId = (int) request('cage_id');
 
-        return view('mortality', compact('cages', 'logs', 'todayTotal', 'todayByCage', 'preselectedCageId'));
+        $activeHensByCage = Hen::where('is_active', 1)
+            ->whereNotNull('cage_slot_id')
+            ->whereHas('cageSlot', fn($q) => $q->whereNotNull('cage_id'))
+            ->with('cageSlot.cage')
+            ->get()
+            ->groupBy(fn($h) => $h->cageSlot->cage?->cage_code ?? 'Unassigned')
+            ->map(fn($hens) => $hens->sortBy('chicken_id')->values())
+            ->sortKeys()
+            ->all();
+
+        return view('mortality', compact('cages', 'logs', 'todayTotal', 'todayByCage', 'preselectedCageId', 'activeHensByCage'));
     }
 
     public function logs()
@@ -61,7 +71,8 @@ class MortalityController extends Controller
         $data = $request->validate([
             'cage_id'  => 'required|exists:cages,id',
             'log_date' => 'required|date|before_or_equal:'.\App\Services\ReportingDateService::reportingDateString(),
-            'count'    => 'required|integer|min:1',
+            'hen_ids'  => 'required|array|min:1',
+            'hen_ids.*' => 'integer|exists:hens,id',
             'reason'   => 'required|in:' . implode(',', MortalityLog::REASONS),
             'notes'    => 'nullable|string|max:1000',
         ]);
@@ -70,33 +81,32 @@ class MortalityController extends Controller
         $cageCode = Cage::where('id', $data['cage_id'])->value('cage_code');
 
         DB::transaction(function () use ($data, &$error) {
-            $slots = CageSlot::with(['hens' => fn($q) => $q->where('is_active', 1)])
-                ->where('cage_id', $data['cage_id'])
+            $henIds = array_map('intval', $data['hen_ids']);
+
+            $hensToDeactivate = Hen::whereIn('id', $henIds)
+                ->where('is_active', 1)
+                ->whereHas('cageSlot', fn($q) => $q->where('cage_id', $data['cage_id']))
                 ->lockForUpdate()
                 ->get();
 
-            $activeHens = $slots->flatMap(fn($slot) => $slot->hens)
-                ->sortBy(fn($h) => [$h->cage_slot_id, $h->placement_date ?? $h->date_acquired])
-                ->values();
-
-            if ($activeHens->count() < $data['count']) {
-                $error = "Only {$activeHens->count()} active hen(s) available, but {$data['count']} deaths recorded.";
+            if ($hensToDeactivate->count() !== count($henIds)) {
+                $foundIds = $hensToDeactivate->pluck('id')->toArray();
+                $invalidIds = array_diff($henIds, $foundIds);
+                $error = "Some selected hens are inactive or do not belong to the selected cage (IDs: " . implode(', ', $invalidIds) . ").";
                 return;
             }
-
-            $hensToDeactivate = $activeHens->take($data['count']);
 
             $log = MortalityLog::create([
                 'cage_id'     => $data['cage_id'],
                 'log_date'    => $data['log_date'],
-                'count'       => $data['count'],
+                'count'       => $hensToDeactivate->count(),
                 'reason'      => $data['reason'],
                 'notes'       => $data['notes'] ?? null,
                 'recorded_by' => auth()->id(),
             ]);
 
             foreach ($hensToDeactivate as $hen) {
-                $hen->update(['is_active' => false]);
+                $hen->update(['is_active' => false, 'deactivation_cause' => 'mortality']);
 
                 $pivot = new MortalityLogHen;
                 $pivot->mortality_log_id = $log->id;
@@ -110,15 +120,15 @@ class MortalityController extends Controller
 
         if ($error) {
             if ($request->expectsJson()) {
-                return response()->json(['success' => false, 'errors' => ['count' => [$error]]], 422);
+                return response()->json(['success' => false, 'errors' => ['hen_ids' => [$error]]], 422);
             }
-            return back()->withErrors(['count' => $error])->withInput();
+            return back()->withErrors(['hen_ids' => $error])->withInput();
         }
 
         $this->checkMortalitySpike($data['cage_id'], $data['log_date']);
 
         if ($request->expectsJson()) {
-            return response()->json(['success' => true, 'cage_code' => $cageCode, 'count' => $data['count']]);
+            return response()->json(['success' => true, 'cage_code' => $cageCode, 'count' => count($data['hen_ids'])]);
         }
 
         return redirect()->back()
