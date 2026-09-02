@@ -174,37 +174,12 @@
                     </div>
                     <div>
                         <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">SELECT HENS <span class="text-red-500">*</span></label>
-                        <div id="henPicker" class="border border-[#D9D9D9] rounded-lg max-h-56 overflow-y-auto bg-white" style="scrollbar-width: thin;">
-                            @forelse($activeHensByCage as $cageCode => $hens)
-                            <div class="hen-cage-group">
-                                <div class="flex items-center gap-2 px-3 py-1.5 bg-[#F5F6F8] border-b border-[#E6E6E6] sticky top-0 z-10">
-                                    <input type="checkbox" id="cageAll_{{ $cageCode }}" class="cage-all-check rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]/30"
-                                           onchange="toggleCageHens('{{ $cageCode }}', this.checked)">
-                                    <label for="cageAll_{{ $cageCode }}" class="text-xs font-semibold text-[#333333] cursor-pointer">{{ $cageCode }} <span class="text-[#9CA3AF] font-normal">({{ $hens->count() }})</span></label>
-                                </div>
-                                <div class="divide-y divide-[#F0F0F0]">
-                                    @foreach($hens as $hen)
-                                    <label class="flex items-center gap-2.5 px-3 py-1.5 hover:bg-[#FAFAFA] cursor-pointer transition-colors hen-row" data-cage="{{ $cageCode }}">
-                                        <input type="checkbox" name="hen_ids[]" value="{{ $hen->id }}"
-                                               class="hen-cage-check rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]/30"
-                                               onchange="updateCageAllCheck('{{ $cageCode }}')">
-                                        <span class="text-xs text-[#333333]">{{ $hen->chicken_id }}</span>
-                                        @if($hen->tag_code)
-                                        <span class="text-[10px] text-[#9CA3AF]">({{ $hen->tag_code }})</span>
-                                        @endif
-                                        <span class="text-[10px] text-[#9CA3AF] ml-auto">{{ $hen->breed }}</span>
-                                    </label>
-                                    @endforeach
-                                </div>
-                            </div>
-                            @empty
-                            <div class="px-3 py-6 text-center text-sm text-[#9CA3AF]">No active hens available.</div>
-                            @endforelse
-                        </div>
-                        <div class="flex items-center justify-between mt-1.5">
-                            <p class="text-xs text-[#9CA3AF]">Select individual hens across cages</p>
-                            <span id="henCount" class="text-xs font-semibold text-[#002D5E]">0 selected</span>
-                        </div>
+                        <input type="hidden" name="hen_ids" id="mortalityHenIds" value="">
+                        <button type="button" onclick="openHenPickerModal()" id="henPickerBtn"
+                                class="w-full flex items-center justify-between border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white text-left focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E] transition-colors hover:border-[#9CA3AF]">
+                            <span id="henPickerLabel" class="text-[#9CA3AF]">Click to select hens...</span>
+                            <i data-lucide="chevron-right" class="w-4 h-4 text-[#9CA3AF]"></i>
+                        </button>
                     </div>
                     <div>
                         <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CAUSE OF DEATH <span class="text-red-500">*</span></label>
@@ -261,6 +236,58 @@
 @include('chickens.partials.weight-check-modal')
 @include('chickens.partials.cull-modal')
 @include('chickens.partials.removal-modal')
+
+{{-- Hen Picker Modal --}}
+<div id="henPickerModal" class="fixed inset-0 z-[60] hidden items-center justify-center" style="background:rgba(0,0,0,0.4);backdrop-filter:blur(2px);">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 flex flex-col" style="max-height: 80vh;">
+        <div class="flex items-center justify-between px-5 py-3.5 border-b border-[#E6E6E6]">
+            <h3 class="text-sm font-semibold text-[#333333]">Select Hens</h3>
+            <button type="button" onclick="closeHenPickerModal()" class="p-1 rounded hover:bg-[#F0F0F0] transition-colors">
+                <i data-lucide="x" class="w-4 h-4" style="color: #615d59;"></i>
+            </button>
+        </div>
+        <div id="henPickerList" class="flex-1 overflow-y-auto px-5 py-3" style="scrollbar-width: thin;">
+            @forelse($activeHensByCage as $cageCode => $hens)
+            <div class="mb-3 last:mb-0">
+                <div class="flex items-center gap-2 px-3 py-1.5 bg-[#F5F6F8] rounded-lg mb-1">
+                    <input type="checkbox" id="cageAll_{{ $cageCode }}" class="cage-all-check rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]/30"
+                           onchange="toggleCageHens('{{ $cageCode }}', this.checked)">
+                    <label for="cageAll_{{ $cageCode }}" class="text-xs font-semibold text-[#333333] cursor-pointer">{{ $cageCode }} <span class="text-[#9CA3AF] font-normal">({{ $hens->count() }})</span></label>
+                </div>
+                <div class="divide-y divide-[#F0F0F0] border border-[#E6E6E6] rounded-lg overflow-hidden">
+                    @foreach($hens as $hen)
+                    <label class="flex items-center gap-2.5 px-3 py-1.5 hover:bg-[#FAFAFA] cursor-pointer transition-colors hen-row" data-cage="{{ $cageCode }}">
+                        <input type="checkbox" data-hen-id="{{ $hen->id }}" data-cage-code="{{ $cageCode }}"
+                               class="hen-cage-check rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]/30"
+                               onchange="updateCageAllCheck('{{ $cageCode }}'); updateModalHenCount();">
+                        <span class="text-xs text-[#333333]">{{ $hen->chicken_id }}</span>
+                        @if($hen->tag_code)
+                        <span class="text-[10px] text-[#9CA3AF]">({{ $hen->tag_code }})</span>
+                        @endif
+                        <span class="text-[10px] text-[#9CA3AF] ml-auto">{{ $hen->breed }}</span>
+                    </label>
+                    @endforeach
+                </div>
+            </div>
+            @empty
+            <div class="py-8 text-center text-sm text-[#9CA3AF]">No active hens available.</div>
+            @endforelse
+        </div>
+        <div class="flex items-center justify-between px-5 py-3 border-t border-[#E6E6E6] bg-[#FAFAFA] rounded-b-xl">
+            <span id="modalHenCount" class="text-xs font-semibold text-[#002D5E]">0 selected</span>
+            <div class="flex gap-2">
+                <button type="button" onclick="closeHenPickerModal()"
+                        class="px-4 py-1.5 text-xs font-medium rounded-lg border border-[#D9D9D9] text-[#333333] hover:bg-[#F0F0F0] transition-colors">
+                    Cancel
+                </button>
+                <button type="button" onclick="confirmHenSelection()"
+                        class="px-4 py-1.5 text-xs font-medium rounded-lg bg-[#002D5E] text-white hover:bg-[#1D4E8F] transition-colors">
+                    Confirm Selection
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 @if(session('reopen_register'))
 <x-modal-reopen modal-id="registerModal" session-key="reopen_register" guard="registerHens">
@@ -543,50 +570,98 @@ function toggleColumns(btn) {
 }
 
 function toggleCageHens(cageCode, checked) {
-    document.querySelectorAll('.hen-cage-check[data-cage="' + cageCode + '"], .hen-row[data-cage="' + cageCode + '"] .hen-cage-check').forEach(function(cb) {
+    document.querySelectorAll('#henPickerModal .hen-row[data-cage="' + cageCode + '"] .hen-cage-check').forEach(function(cb) {
         cb.checked = checked;
     });
-    updateHenCount();
+    updateModalHenCount();
 }
 
 function updateCageAllCheck(cageCode) {
-    var all = document.querySelectorAll('.hen-row[data-cage="' + cageCode + '"] .hen-cage-check');
-    var checked = document.querySelectorAll('.hen-row[data-cage="' + cageCode + '"] .hen-cage-check:checked');
+    var all = document.querySelectorAll('#henPickerModal .hen-row[data-cage="' + cageCode + '"] .hen-cage-check');
+    var checked = document.querySelectorAll('#henPickerModal .hen-row[data-cage="' + cageCode + '"] .hen-cage-check:checked');
     var toggle = document.getElementById('cageAll_' + cageCode);
     if (toggle) toggle.checked = all.length > 0 && all.length === checked.length;
-    updateHenCount();
 }
 
-function updateHenCount() {
-    var n = document.querySelectorAll('.hen-cage-check:checked').length;
-    var el = document.getElementById('henCount');
+function updateModalHenCount() {
+    var n = document.querySelectorAll('#henPickerModal .hen-cage-check:checked').length;
+    var el = document.getElementById('modalHenCount');
     if (el) el.textContent = n + ' selected';
+}
+
+function openHenPickerModal() {
+    var modal = document.getElementById('henPickerModal');
+    var hidden = document.getElementById('mortalityHenIds');
+    var savedIds = hidden.value ? hidden.value.split(',').map(Number) : [];
+
+    document.querySelectorAll('#henPickerModal .hen-cage-check').forEach(function(cb) {
+        cb.checked = savedIds.indexOf(parseInt(cb.dataset.henId)) !== -1;
+    });
+
+    document.querySelectorAll('#henPickerModal .cage-all-check').forEach(function(toggle) {
+        var cageCode = toggle.id.replace('cageAll_', '');
+        updateCageAllCheck(cageCode);
+    });
+
+    updateModalHenCount();
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    if (window.lucide) lucide.createIcons();
+}
+
+function closeHenPickerModal() {
+    var modal = document.getElementById('henPickerModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+function confirmHenSelection() {
+    var checked = document.querySelectorAll('#henPickerModal .hen-cage-check:checked');
+    var henIds = Array.from(checked).map(function(cb) { return cb.dataset.henId; });
+    var labels = Array.from(checked).map(function(cb) { return cb.closest('.hen-row').querySelector('.text-xs.text-\\[\\#333333\\]').textContent.trim(); });
+
+    var hidden = document.getElementById('mortalityHenIds');
+    hidden.value = henIds.join(',');
+
+    var btn = document.getElementById('henPickerBtn');
+    var label = document.getElementById('henPickerLabel');
+    if (henIds.length === 0) {
+        label.textContent = 'Click to select hens...';
+        label.classList.add('text-[#9CA3AF]');
+        label.classList.remove('text-[#333333]');
+    } else {
+        label.textContent = henIds.length + ' hen(s) selected';
+        label.classList.remove('text-[#9CA3AF]');
+        label.classList.add('text-[#333333]');
+    }
+
+    closeHenPickerModal();
 }
 
 function submitMortality(form) {
     var cageSelect = form.querySelector('select[name="cage_id"]');
-    var checked = form.querySelectorAll('.hen-cage-check:checked');
+    var hidden = document.getElementById('mortalityHenIds');
+    var henIds = hidden.value ? hidden.value.split(',').filter(Boolean) : [];
     var cageCode = 'selected cage';
     if (cageSelect && cageSelect.selectedIndex > 0) {
         cageCode = cageSelect.options[cageSelect.selectedIndex].text.split('\u2014')[0].trim();
     }
-    var count = checked.length;
 
-    if (count === 0) {
+    if (henIds.length === 0) {
         confirmModal('Please select at least one hen.', {}, 'OK');
         return;
     }
 
     confirmModal(
-        'Record mortality: ' + count + ' hen(s) in ' + cageCode + '? The selected hen(s) will be deactivated.',
+        'Record mortality: ' + henIds.length + ' hen(s) in ' + cageCode + '? The selected hen(s) will be deactivated.',
         { submit: function() { mortalityAjaxSubmit(form); } },
         'Record', 'destructive'
     );
 }
 
 function mortalityAjaxSubmit(form) {
-    var checked = form.querySelectorAll('.hen-cage-check:checked');
-    var henIds = Array.from(checked).map(function(cb) { return parseInt(cb.value); });
+    var hidden = document.getElementById('mortalityHenIds');
+    var henIds = hidden.value ? hidden.value.split(',').map(Number).filter(Boolean) : [];
 
     var data = {
         cage_id: form.querySelector('select[name="cage_id"]').value,
@@ -633,15 +708,17 @@ function mortalityAjaxSubmit(form) {
                 }
             }
 
-            form.querySelectorAll('.hen-cage-check:checked').forEach(function(cb) { cb.checked = false; });
-            form.querySelectorAll('.cage-all-check:checked').forEach(function(cb) { cb.checked = false; });
-            updateHenCount();
+            hidden.value = '';
+            var label = document.getElementById('henPickerLabel');
+            label.textContent = 'Click to select hens...';
+            label.classList.add('text-[#9CA3AF]');
+            label.classList.remove('text-[#333333]');
             var dateInput = form.querySelector('input[type="date"]');
             if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
         } else {
             var errors = result.json.errors || {};
             Object.keys(errors).forEach(function(field) {
-                var input = form.querySelector('[name="' + field + '"]') || form.querySelector('#henPicker');
+                var input = form.querySelector('[name="' + field + '"]') || document.getElementById('henPickerBtn');
                 if (!input) return;
                 var wrapper = input.closest('div');
                 if (!wrapper) return;
@@ -665,7 +742,10 @@ function mortalityAjaxSubmit(form) {
 }
 
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeChickenCageModal();
+    if (e.key === 'Escape') {
+        closeChickenCageModal();
+        closeHenPickerModal();
+    }
 });
 
 // ── Guided Walkthrough #2 — Add & place chickens (User Manual Step 2) ──
