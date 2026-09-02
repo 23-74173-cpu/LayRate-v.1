@@ -142,7 +142,7 @@
             @include('dashboard._data-checklist')
 
             {{-- Section Filter Tabs --}}
-            <div class="flex items-center gap-1 p-1 rounded-lg w-fit flex-wrap" style="background-color: #f3f4f6;">
+            <div class="flex items-center gap-1 p-1 rounded-lg w-fit flex-wrap mb-6 pt-4" style="background-color: #f3f4f6;">
                 <button type="button" onclick="filterAnalytics('production')" class="analytics-section-tab active px-3 py-1.5 text-xs font-semibold rounded-md transition-all inline-flex items-center gap-1.5" data-section="production">
                     <i data-lucide="bar-chart-3" class="w-3 h-3"></i> Production Performance
                 </button>
@@ -194,11 +194,7 @@
             </script>
 
             {{-- ═══ SECTION 1 — Production Performance ═══ --}}
-            <div class="analytics-section" data-analytics-section="production">
-                <h3 class="text-xs font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-6 pt-4">
-                    <i data-lucide="bar-chart-3" class="w-4 h-4 inline-block mr-1.5 -mt-0.5" style="color:#0075de;"></i>
-                    Production Performance
-                </h3>
+            <div class="analytics-section active-section" data-analytics-section="production">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
                     <div class="flex flex-col gap-8">
                         <turbo-frame id="dashboard-cage-performance" src="{{ route('dashboard.cage-performance') }}" loading="lazy" class="block">
@@ -237,10 +233,6 @@
 
             {{-- ═══ SECTION 2 — Environmental Analytics ═══ --}}
             <div class="analytics-section" data-analytics-section="environmental">
-                <h3 class="text-xs font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-6 pt-4">
-                    <i data-lucide="thermometer" class="w-4 h-4 inline-block mr-1.5 -mt-0.5" style="color:#0891b2;"></i>
-                    Environmental Analytics
-                </h3>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
                     <turbo-frame id="dashboard-temp-vs-hdep" src="{{ route('dashboard.temp-vs-hdep') }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
@@ -260,10 +252,6 @@
 
             {{-- ═══ SECTION 3 — Feed Analytics ═══ --}}
             <div class="analytics-section" data-analytics-section="feed">
-                <h3 class="text-xs font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-6 pt-4">
-                    <i data-lucide="wheat" class="w-4 h-4 inline-block mr-1.5 -mt-0.5" style="color:#16a34a;"></i>
-                    Feed Analytics
-                </h3>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
                     <turbo-frame id="dashboard-feed-by-cage" src="{{ route('dashboard.feed-by-cage') }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
@@ -283,10 +271,6 @@
 
             {{-- ═══ SECTION 4 — Flock Analytics ═══ --}}
             <div class="analytics-section" data-analytics-section="flock">
-                <h3 class="text-xs font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-6 pt-4">
-                    <i data-lucide="heart-pulse" class="w-4 h-4 inline-block mr-1.5 -mt-0.5" style="color:#db2777;"></i>
-                    Flock Analytics
-                </h3>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
                     <turbo-frame id="dashboard-breed-analytics" src="{{ route('dashboard.breed-analytics') }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
