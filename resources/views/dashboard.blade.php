@@ -142,7 +142,7 @@
             @include('dashboard._data-checklist')
 
             {{-- Section Filter Tabs --}}
-            <div class="flex items-center gap-2 mb-6 pt-4 flex-wrap">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2 mb-6 pt-4">
                 <button type="button" onclick="filterAnalytics('production')" class="analytics-section-tab px-3 py-1.5 text-sm font-bold uppercase tracking-[0.125px] rounded-md transition-all inline-flex items-center gap-1.5 text-[#6B7280]" data-section="production">
                     <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Production Performance
                 </button>
@@ -233,36 +233,36 @@
 
             {{-- ═══ SECTION 1 — Production Performance ═══ --}}
             <div class="analytics-section active-section" data-analytics-section="production">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
-                    <div class="flex flex-col gap-8">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+                    <div class="flex flex-col gap-4">
                         <turbo-frame id="dashboard-cage-performance" src="{{ route('dashboard.cage-performance') }}" loading="lazy" class="block">
                             @include('dashboard._cage-performance-skeleton')
                         </turbo-frame>
 
                         <turbo-frame id="dashboard-heat-stress" src="{{ route('dashboard.heat-stress') }}" loading="lazy" class="block">
-                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
+                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                                 <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
-                                <div class="h-[280px] bg-gray-100 rounded-xl"></div>
+                                <div class="h-[110px] bg-gray-100 rounded-xl"></div>
                             </div>
                         </turbo-frame>
                     </div>
 
-                    <div class="flex flex-col gap-8">
+                    <div class="flex flex-col gap-4">
                         <turbo-frame id="dashboard-production-history" src="{{ route('dashboard.production-history') }}" loading="lazy" class="block flex-[2]">
                             @include('dashboard._production-history-skeleton')
                         </turbo-frame>
 
                         <turbo-frame id="dashboard-egg-collection-time" src="{{ route('dashboard.egg-collection-time') }}" loading="lazy" class="block flex-1">
-                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
+                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                                 <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
-                                <div class="h-[260px] bg-gray-100 rounded-xl"></div>
+                                <div class="h-[120px] bg-gray-100 rounded-xl"></div>
                             </div>
                         </turbo-frame>
 
                         <turbo-frame id="dashboard-hen-age-layrate" src="{{ route('dashboard.hen-age-layrate') }}" loading="lazy" class="block flex-1">
-                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
+                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                                 <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
-                                <div class="h-[260px] bg-gray-100 rounded-xl"></div>
+                                <div class="h-[120px] bg-gray-100 rounded-xl"></div>
                             </div>
                         </turbo-frame>
                     </div>
@@ -271,18 +271,18 @@
 
             {{-- ═══ SECTION 2 — Environmental Analytics ═══ --}}
             <div class="analytics-section" data-analytics-section="environmental">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
                     <turbo-frame id="dashboard-temp-vs-hdep" src="{{ route('dashboard.temp-vs-hdep') }}" loading="lazy" class="block">
-                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
-                            <div class="h-[220px] bg-gray-100 rounded-xl"></div>
+                            <div class="h-[110px] bg-gray-100 rounded-xl"></div>
                         </div>
                     </turbo-frame>
 
                     <turbo-frame id="dashboard-hum-vs-hdep" src="{{ route('dashboard.hum-vs-hdep') }}" loading="lazy" class="block">
-                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
-                            <div class="h-[220px] bg-gray-100 rounded-xl"></div>
+                            <div class="h-[110px] bg-gray-100 rounded-xl"></div>
                         </div>
                     </turbo-frame>
                 </div>
@@ -290,18 +290,18 @@
 
             {{-- ═══ SECTION 3 — Feed Analytics ═══ --}}
             <div class="analytics-section" data-analytics-section="feed">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
                     <turbo-frame id="dashboard-feed-by-cage" src="{{ route('dashboard.feed-by-cage') }}" loading="lazy" class="block">
-                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
-                            <div class="h-[220px] bg-gray-100 rounded-xl"></div>
+                            <div class="h-[110px] bg-gray-100 rounded-xl"></div>
                         </div>
                     </turbo-frame>
 
                     <turbo-frame id="dashboard-feed-vs-egg" src="{{ route('dashboard.feed-vs-egg') }}" loading="lazy" class="block">
-                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
-                            <div class="h-[220px] bg-gray-100 rounded-xl"></div>
+                            <div class="h-[110px] bg-gray-100 rounded-xl"></div>
                         </div>
                     </turbo-frame>
                 </div>
@@ -309,25 +309,25 @@
 
             {{-- ═══ SECTION 4 — Flock Analytics ═══ --}}
             <div class="analytics-section" data-analytics-section="flock">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
                     <turbo-frame id="dashboard-breed-analytics" src="{{ route('dashboard.breed-analytics') }}" loading="lazy" class="block">
-                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
-                            <div class="h-[160px] bg-gray-100 rounded-xl"></div>
+                            <div class="h-[120px] bg-gray-100 rounded-xl"></div>
                         </div>
                     </turbo-frame>
 
                     <turbo-frame id="dashboard-mortality-by-cause" src="{{ route('dashboard.mortality-by-cause') }}" loading="lazy" class="block">
-                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
-                            <div class="h-[160px] bg-gray-100 rounded-xl"></div>
+                            <div class="h-[120px] bg-gray-100 rounded-xl"></div>
                         </div>
                     </turbo-frame>
 
                     <turbo-frame id="dashboard-mortality-trend" src="{{ route('dashboard.mortality-trend') }}" loading="lazy" class="block lg:col-span-2">
-                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 animate-pulse">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
-                            <div class="h-[180px] bg-gray-100 rounded-xl"></div>
+                            <div class="h-[110px] bg-gray-100 rounded-xl"></div>
                         </div>
                     </turbo-frame>
                 </div>

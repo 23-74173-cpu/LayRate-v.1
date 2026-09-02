@@ -1,11 +1,11 @@
 <turbo-frame id="dashboard-feed-vs-egg">
-    <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 h-full flex flex-col">
-        <div class="flex items-start gap-3 mb-3">
-            <span class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style="background-color: #fef3cd; color: #b45309;">
+    <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 h-full flex flex-col">
+        <div class="flex items-start gap-3 mb-2">
+            <span class="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style="background-color: #fef3cd; color: #b45309;">
                 <i data-lucide="wheat" class="w-4 h-4"></i>
             </span>
             <div>
-                <div class="text-sm font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Feed vs Egg Production</div>
+                <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Feed vs Egg Production</div>
                 <div class="text-xs mt-0.5" style="color: #9CA3AF;">Feed consumption vs egg output per cage-day</div>
                 <button type="button" onclick="this.closest('.bg-white').querySelector('.interpretation-panel').classList.toggle('hidden')" class="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all hover:opacity-80" style="color: #6366f1; background-color: rgba(99,102,241,0.08);">
                     <i data-lucide="sparkles" class="w-2.5 h-2.5"></i> Interpretation

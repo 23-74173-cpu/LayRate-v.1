@@ -1,11 +1,11 @@
 <turbo-frame id="dashboard-heat-stress">
-    <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 h-full flex flex-col">
-        <div class="flex items-start gap-3 mb-3">
-            <span class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style="background-color: #fee2e2; color: #dc2626;">
+    <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 h-full flex flex-col">
+        <div class="flex items-start gap-3 mb-2">
+            <span class="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style="background-color: #fee2e2; color: #dc2626;">
                 <i data-lucide="thermometer-sun" class="w-4 h-4"></i>
             </span>
             <div>
-                <div class="text-sm font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Heat Stress Analytics</div>
+                <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Heat Stress Analytics</div>
                 <div class="text-xs mt-0.5" style="color: #9CA3AF;">HDEP by temperature level (threshold: {{ $tempMax }}°C)</div>
                 <button type="button" onclick="this.closest('.bg-white').querySelector('.interpretation-panel').classList.toggle('hidden')" class="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all hover:opacity-80" style="color: #6366f1; background-color: rgba(99,102,241,0.08);">
                     <i data-lucide="sparkles" class="w-2.5 h-2.5"></i> Interpretation
@@ -15,18 +15,18 @@
         <div class="interpretation-panel hidden mb-3 px-3 py-2.5 rounded-lg text-xs leading-relaxed" style="background-color: #f0f0ff; color: #3730a3; border: 1px solid rgba(99,102,241,0.15);">{{ $insight }}</div>
 
         {{-- KPI Row --}}
-        <div class="grid grid-cols-3 gap-3 mb-4">
-            <div class="rounded-lg p-3 text-center" style="background-color: #fef2f2;">
-                <div class="text-lg font-bold" style="color: #dc2626;">{{ $highEvents }}</div>
-                <div class="text-[10px] font-semibold uppercase" style="color: #9CA3AF;">High Stress Events</div>
+        <div class="grid grid-cols-3 gap-2 mb-3">
+            <div class="rounded-lg p-2 text-center" style="background-color: #fef2f2;">
+                <div class="text-base font-bold" style="color: #dc2626;">{{ $highEvents }}</div>
+                <div class="text-[9px] font-semibold uppercase" style="color: #9CA3AF;">High Stress Events</div>
             </div>
-            <div class="rounded-lg p-3 text-center" style="background-color: #fef2f2;">
-                <div class="text-lg font-bold" style="color: #dc2626;">{{ $highAvgHdep !== null ? $highAvgHdep . '%' : '—' }}</div>
-                <div class="text-[10px] font-semibold uppercase" style="color: #9CA3AF;">Avg HDEP During Stress</div>
+            <div class="rounded-lg p-2 text-center" style="background-color: #fef2f2;">
+                <div class="text-base font-bold" style="color: #dc2626;">{{ $highAvgHdep !== null ? $highAvgHdep . '%' : '—' }}</div>
+                <div class="text-[9px] font-semibold uppercase" style="color: #9CA3AF;">Avg HDEP During Stress</div>
             </div>
-            <div class="rounded-lg p-3 text-center" style="background-color: #fef2f2;">
-                <div class="text-lg font-bold" style="color: #dc2626;">{{ $peakTemp > 0 ? $peakTemp . '°C' : '—' }}</div>
-                <div class="text-[10px] font-semibold uppercase" style="color: #9CA3AF;">Peak Temperature</div>
+            <div class="rounded-lg p-2 text-center" style="background-color: #fef2f2;">
+                <div class="text-base font-bold" style="color: #dc2626;">{{ $peakTemp > 0 ? $peakTemp . '°C' : '—' }}</div>
+                <div class="text-[9px] font-semibold uppercase" style="color: #9CA3AF;">Peak Temperature</div>
             </div>
         </div>
 
