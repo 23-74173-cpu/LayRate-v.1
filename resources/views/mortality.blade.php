@@ -21,24 +21,9 @@
             </h2>
 
             <form action="{{ route('mortality.store') }}" method="POST" class="space-y-4"
-                  data-confirm="Record this mortality? The affected hen(s) will be deactivated and slot occupancy updated."
+                  data-confirm="Record this mortality? The selected hen(s) will be deactivated."
                   data-confirm-action="Record" data-confirm-severity="destructive">
                 @csrf
-
-                {{-- Cage --}}
-                <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CAGE</label>
-                    <select name="cage_id" id="mortalityCageSelect" required
-                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                        <option value="">Select cage…</option>
-                        @foreach($cages as $cage)
-                        <option value="{{ $cage->id }}" data-active-hens="{{ $cage->active_hens_count }}" {{ (old('cage_id') ?: ($preselectedCageId ?? 0)) == $cage->id ? 'selected' : '' }}>
-                            {{ $cage->cage_code }} — {{ $cage->formatted_location }}
-                        </option>
-                        @endforeach
-                    </select>
-                    @error('cage_id')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
-                </div>
 
                 {{-- Date --}}
                 <div>

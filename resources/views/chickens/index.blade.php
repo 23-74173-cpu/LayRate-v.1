@@ -158,16 +158,6 @@
                 <form method="POST" action="{{ route('mortality.store') }}" class="space-y-4">
                     @csrf
                     <div>
-                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CAGE <span class="text-red-500">*</span></label>
-                        <select name="cage_id" required
-                                class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]">
-                            <option value="">Select cage…</option>
-                            @foreach($cages as $c)
-                            <option value="{{ $c->id }}" {{ $preselectedCageId === $c->id ? 'selected' : '' }}>{{ $c->cage_code }} — {{ $c->formatted_location }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div>
                         <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">DATE <span class="text-red-500">*</span></label>
                         <input type="date" name="log_date" required value="{{ today()->toDateString() }}"
                                class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]">
@@ -728,13 +718,8 @@ function confirmHenSelection() {
 }
 
 function submitMortality(form) {
-    var cageSelect = form.querySelector('select[name="cage_id"]');
     var hidden = document.getElementById('mortalityHenIds');
     var henIds = hidden.value ? hidden.value.split(',').filter(Boolean) : [];
-    var cageCode = 'selected cage';
-    if (cageSelect && cageSelect.selectedIndex > 0) {
-        cageCode = cageSelect.options[cageSelect.selectedIndex].text.split('\u2014')[0].trim();
-    }
 
     if (henIds.length === 0) {
         confirmModal('Please select at least one hen.', {}, 'OK');
@@ -742,7 +727,7 @@ function submitMortality(form) {
     }
 
     confirmModal(
-        'Record mortality: ' + henIds.length + ' hen(s) in ' + cageCode + '? The selected hen(s) will be deactivated.',
+        'Record mortality: ' + henIds.length + ' hen(s)? The selected hen(s) will be deactivated.',
         { submit: function() { mortalityAjaxSubmit(form); } },
         'Record', 'destructive'
     );
@@ -753,7 +738,6 @@ function mortalityAjaxSubmit(form) {
     var henIds = hidden.value ? hidden.value.split(',').map(Number).filter(Boolean) : [];
 
     var data = {
-        cage_id: form.querySelector('select[name="cage_id"]').value,
         log_date: form.querySelector('input[name="log_date"]').value,
         hen_ids: henIds,
         reason: form.querySelector('select[name="reason"]').value,

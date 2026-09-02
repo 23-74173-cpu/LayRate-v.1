@@ -79,7 +79,6 @@ class MortalityController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'cage_id'  => 'required|exists:cages,id',
             'log_date' => 'required|date|before_or_equal:'.\App\Services\ReportingDateService::reportingDateString(),
             'hen_ids'  => 'required|array|min:1',
             'hen_ids.*' => 'integer|exists:hens,id',
@@ -88,26 +87,38 @@ class MortalityController extends Controller
         ]);
 
         $error = null;
-        $cageCode = Cage::where('id', $data['cage_id'])->value('cage_code');
+        $cageId = null;
+        $cageCode = null;
 
-        DB::transaction(function () use ($data, &$error) {
+        DB::transaction(function () use ($data, &$error, &$cageId, &$cageCode) {
             $henIds = array_map('intval', $data['hen_ids']);
 
             $hensToDeactivate = Hen::whereIn('id', $henIds)
                 ->where('is_active', 1)
-                ->whereHas('cageSlot', fn($q) => $q->where('cage_id', $data['cage_id']))
+                ->whereHas('cageSlot', fn($q) => $q->whereNotNull('cage_id'))
+                ->with('cageSlot.cage')
                 ->lockForUpdate()
                 ->get();
 
             if ($hensToDeactivate->count() !== count($henIds)) {
                 $foundIds = $hensToDeactivate->pluck('id')->toArray();
                 $invalidIds = array_diff($henIds, $foundIds);
-                $error = "Some selected hens are inactive or do not belong to the selected cage (IDs: " . implode(', ', $invalidIds) . ").";
+                $error = "Some selected hens are inactive or not placed in a cage (IDs: " . implode(', ', $invalidIds) . ").";
                 return;
             }
 
+            $cageIds = $hensToDeactivate->pluck('cageSlot.cage_id')->unique();
+            if ($cageIds->count() > 1) {
+                $codes = $hensToDeactivate->pluck('cageSlot.cage.cage_code')->unique()->implode(', ');
+                $error = "Selected hens belong to multiple cages ({$codes}). Please select hens from a single cage.";
+                return;
+            }
+
+            $cageId = $cageIds->first();
+            $cageCode = $hensToDeactivate->first()->cageSlot->cage->cage_code;
+
             $log = MortalityLog::create([
-                'cage_id'     => $data['cage_id'],
+                'cage_id'     => $cageId,
                 'log_date'    => $data['log_date'],
                 'count'       => $hensToDeactivate->count(),
                 'reason'      => $data['reason'],
@@ -135,7 +146,7 @@ class MortalityController extends Controller
             return back()->withErrors(['hen_ids' => $error])->withInput();
         }
 
-        $this->checkMortalitySpike($data['cage_id'], $data['log_date']);
+        $this->checkMortalitySpike($cageId, $data['log_date']);
 
         if ($request->expectsJson()) {
             return response()->json(['success' => true, 'cage_code' => $cageCode, 'count' => count($data['hen_ids'])]);
