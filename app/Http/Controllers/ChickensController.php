@@ -415,7 +415,12 @@ class ChickensController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        return view('chickens._culling-records', compact('cullingLogs'));
+        $activeHens = Hen::where('is_active', 1)
+            ->with('cageSlot.cage')
+            ->orderBy('chicken_id')
+            ->get();
+
+        return view('chickens._culling-records', compact('cullingLogs', 'activeHens'));
     }
 
     public function removalRecords(Request $request)
