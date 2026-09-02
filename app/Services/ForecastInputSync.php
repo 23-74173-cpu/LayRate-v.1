@@ -41,6 +41,8 @@ class ForecastInputSync
         if (! empty($filters['cage'])) {
             $query->where('c.cage_code', $filters['cage']);
         }
+        // Never sync today's incomplete data — only completed days.
+        $query->where('pl.log_date', '<', now()->toDateString());
         if ($fromOption) {
             $query->where('pl.log_date', '>=', $fromOption);
         }

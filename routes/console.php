@@ -28,27 +28,6 @@ Artisan::command('forecast:sync-input-records {--cage=} {--from=} {--to=} {--dry
     $count === 0 ? $this->warn('No new records to sync.') : $this->info("Synced {$count} records into forecast_input_records.");
 })->purpose('Sync farm records into forecast_input_records');
 
-// Sync daily farm records into forecast_input_records so the forecasting
-// module always has a continuously growing historical dataset.
-//
-// Runs just after midnight so the previous calendar day is fully captured.
-// Scheduled in the farm timezone (Asia/Manila).
-Schedule::command('forecast:sync-input-records')
-    ->daily()
-    ->at('00:05')
-    ->timezone(ReportingDateService::timezone())
-    ->withoutOverlapping()
-    ->appendOutputTo(storage_path('logs/forecast-sync.log'));
-
-// Backstop: run 6 hours after midnight. Catches cases where the server
-// was off during midnight and came back online later.
-Schedule::command('forecast:sync-input-records --catch-up')
-    ->daily()
-    ->at('06:05')
-    ->timezone(ReportingDateService::timezone())
-    ->withoutOverlapping()
-    ->appendOutputTo(storage_path('logs/forecast-sync.log'));
-
 // Check environmental log thresholds for violations every 15 minutes.
 Schedule::command('alerts:check-environment')
     ->everyFifteenMinutes()
