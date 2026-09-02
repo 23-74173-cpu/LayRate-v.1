@@ -104,20 +104,20 @@
                 <h3 class="text-lg font-semibold" style="color: #1f1f1f;">Log Entry</h3>
                 <div id="logTabs" class="hidden flex items-center gap-1 bg-gray-100 rounded-lg p-1">
                     <button type="button" onclick="switchLogTab('manual')" id="logTabManual"
-                            class="log-tab-btn active px-4 py-1.5 text-sm font-medium rounded-md transition-all"
-                            style="background: #fff; color: #1f1f1f; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            class="log-tab-btn px-4 py-1.5 text-sm font-medium rounded-md transition-all"
+                            style="background: transparent; color: #6b7280;">
                         Manual Log
                     </button>
                     <button type="button" onclick="switchLogTab('total')" id="logTabTotal"
-                            class="log-tab-btn px-4 py-1.5 text-sm font-medium rounded-md transition-all"
-                            style="background: transparent; color: #6b7280;">
-                        Total Cage Log
+                            class="log-tab-btn active px-4 py-1.5 text-sm font-medium rounded-md transition-all"
+                            style="background: #fff; color: #1f1f1f; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                        Total Egg Log
                     </button>
                 </div>
             </div>
 
             {{-- Manual Log Tab --}}
-            <div id="logTabManualContent" class="log-tab-content">
+            <div id="logTabManualContent" class="log-tab-content hidden">
 
                 {{-- Per-cage slot grids (hidden; shown via dropdown) --}}
                 @php $slotsByCageId = $cageSlots->groupBy('cage_id'); @endphp
@@ -333,8 +333,8 @@
                 </div>
             </div>
 
-            {{-- Total Cage Log Tab --}}
-            <div id="logTabTotalContent" class="log-tab-content hidden">
+            {{-- Total Egg Log Tab --}}
+            <div id="logTabTotalContent" class="log-tab-content">
                 <div id="totalCageLogEmpty" class="text-center py-10 text-sm" style="color: #a39e98;">
                     <i data-lucide="layout-grid" class="w-6 h-6 mx-auto mb-2" style="color: #d1d5db;"></i>
                     Select a cage above to log total eggs.
@@ -940,11 +940,11 @@
             document.getElementById('slotForm').classList.add('hidden');
             document.getElementById('totalCageLogEmpty').classList.remove('hidden');
             document.getElementById('totalCageLogForm').classList.add('hidden');
-            document.getElementById('logTabManualContent').classList.remove('hidden');
-            document.getElementById('logTabTotalContent').classList.add('hidden');
+            document.getElementById('logTabManualContent').classList.add('hidden');
+            document.getElementById('logTabTotalContent').classList.remove('hidden');
 
-            // Reset tabs to Manual
-            window.switchLogTab('manual');
+            // Reset tabs to Total Egg Log
+            window.switchLogTab('total');
 
             checkSizeSum();
             validateForm();
