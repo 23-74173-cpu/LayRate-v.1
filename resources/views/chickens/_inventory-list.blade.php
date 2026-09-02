@@ -4,11 +4,6 @@
         $totalVisible = $placedCount + $unplacedCount;
     @endphp
 
-    {{-- Unplaced Hens --}}
-    @if($unplacedHens->isNotEmpty())
-        @include('chickens._unplaced-list')
-    @endif
-
     <div class="space-y-6">
 
         {{-- ── Cage Overview (full-width row) ── --}}
@@ -78,6 +73,11 @@
             </div>
         </x-card>
     </div>
+
+    {{-- Unplaced Hens --}}
+    @if($unplacedHens->isNotEmpty())
+        @include('chickens._unplaced-list')
+    @endif
 
     {{-- ── Cage Slot Modal (rows + slots + per-slot hens) ── --}}
     <div id="cageSlotsModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] items-center justify-center p-3 sm:p-4" role="dialog" aria-modal="true" style="display: none;">
