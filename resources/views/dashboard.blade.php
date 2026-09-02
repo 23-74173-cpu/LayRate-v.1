@@ -142,12 +142,19 @@
             @include('dashboard._data-checklist')
 
             {{-- Section Filter Tabs --}}
-            <div class="flex items-center gap-1 p-1 rounded-lg w-fit" style="background-color: #f3f4f6;">
-                <button type="button" onclick="filterAnalytics('all')" class="analytics-section-tab active px-3 py-1.5 text-xs font-semibold rounded-md transition-all" data-section="all">All</button>
-                <button type="button" onclick="filterAnalytics('production')" class="analytics-section-tab px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb]" data-section="production">Production</button>
-                <button type="button" onclick="filterAnalytics('environmental')" class="analytics-section-tab px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb]" data-section="environmental">Environmental</button>
-                <button type="button" onclick="filterAnalytics('feed')" class="analytics-section-tab px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb]" data-section="feed">Feed</button>
-                <button type="button" onclick="filterAnalytics('flock')" class="analytics-section-tab px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb]" data-section="flock">Flock</button>
+            <div class="flex items-center gap-1 p-1 rounded-lg w-fit flex-wrap" style="background-color: #f3f4f6;">
+                <button type="button" onclick="filterAnalytics('production')" class="analytics-section-tab active px-3 py-1.5 text-xs font-semibold rounded-md transition-all inline-flex items-center gap-1.5" data-section="production">
+                    <i data-lucide="bar-chart-3" class="w-3 h-3"></i> Production Performance
+                </button>
+                <button type="button" onclick="filterAnalytics('environmental')" class="analytics-section-tab px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb] inline-flex items-center gap-1.5" data-section="environmental">
+                    <i data-lucide="thermometer" class="w-3 h-3"></i> Environmental Analytics
+                </button>
+                <button type="button" onclick="filterAnalytics('feed')" class="analytics-section-tab px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb] inline-flex items-center gap-1.5" data-section="feed">
+                    <i data-lucide="wheat" class="w-3 h-3"></i> Feed Analytics
+                </button>
+                <button type="button" onclick="filterAnalytics('flock')" class="analytics-section-tab px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb] inline-flex items-center gap-1.5" data-section="flock">
+                    <i data-lucide="heart-pulse" class="w-3 h-3"></i> Flock Analytics
+                </button>
             </div>
 
             <style>
@@ -156,8 +163,8 @@
                     color: #ffffff;
                     box-shadow: 0 1px 2px rgba(0,0,0,0.1);
                 }
-                .analytics-section { display: block; }
-                .analytics-section.hidden-section { display: none; }
+                .analytics-section { display: none; }
+                .analytics-section.active-section { display: block; }
             </style>
 
             <script>
@@ -175,14 +182,15 @@
                     }
                 });
                 document.querySelectorAll('.analytics-section').forEach(function(el) {
-                    if (section === 'all') {
-                        el.classList.remove('hidden-section');
-                    } else {
-                        el.classList.toggle('hidden-section', el.dataset.analyticsSection !== section);
-                    }
+                    el.classList.toggle('active-section', el.dataset.analyticsSection === section);
                 });
+                if (window.lucide) lucide.createIcons();
             }
             window.filterAnalytics = filterAnalytics;
+
+            document.addEventListener('DOMContentLoaded', function() {
+                filterAnalytics('production');
+            });
             </script>
 
             {{-- ═══ SECTION 1 — Production Performance ═══ --}}
