@@ -143,16 +143,16 @@
 
             {{-- Section Filter Tabs --}}
             <div class="flex items-center gap-2 mb-6 pt-4 flex-wrap">
-                <button type="button" onclick="filterAnalytics('production')" class="analytics-section-tab active text-xs font-semibold uppercase tracking-[0.125px] px-3 py-1.5 rounded-md transition-all inline-flex items-center gap-1.5" data-section="production">
+                <button type="button" onclick="filterAnalytics('production')" class="analytics-section-tab px-3 py-1.5 text-sm font-bold uppercase tracking-[0.125px] rounded-md transition-all inline-flex items-center gap-1.5" data-section="production">
                     <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Production Performance
                 </button>
-                <button type="button" onclick="filterAnalytics('environmental')" class="analytics-section-tab px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.125px] rounded-md transition-all text-[#6B7280] hover:text-[#374151] hover:bg-[#e5e7eb] inline-flex items-center gap-1.5" data-section="environmental">
+                <button type="button" onclick="filterAnalytics('environmental')" class="analytics-section-tab px-3 py-1.5 text-sm font-bold uppercase tracking-[0.125px] rounded-md transition-all text-[#6B7280] hover:text-[#374151] hover:bg-[#e5e7eb] inline-flex items-center gap-1.5" data-section="environmental">
                     <i data-lucide="thermometer" class="w-4 h-4"></i> Environmental Analytics
                 </button>
-                <button type="button" onclick="filterAnalytics('feed')" class="analytics-section-tab px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.125px] rounded-md transition-all text-[#6B7280] hover:text-[#374151] hover:bg-[#e5e7eb] inline-flex items-center gap-1.5" data-section="feed">
+                <button type="button" onclick="filterAnalytics('feed')" class="analytics-section-tab px-3 py-1.5 text-sm font-bold uppercase tracking-[0.125px] rounded-md transition-all text-[#6B7280] hover:text-[#374151] hover:bg-[#e5e7eb] inline-flex items-center gap-1.5" data-section="feed">
                     <i data-lucide="wheat" class="w-4 h-4"></i> Feed Analytics
                 </button>
-                <button type="button" onclick="filterAnalytics('flock')" class="analytics-section-tab px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.125px] rounded-md transition-all text-[#6B7280] hover:text-[#374151] hover:bg-[#e5e7eb] inline-flex items-center gap-1.5" data-section="flock">
+                <button type="button" onclick="filterAnalytics('flock')" class="analytics-section-tab px-3 py-1.5 text-sm font-bold uppercase tracking-[0.125px] rounded-md transition-all text-[#6B7280] hover:text-[#374151] hover:bg-[#e5e7eb] inline-flex items-center gap-1.5" data-section="flock">
                     <i data-lucide="heart-pulse" class="w-4 h-4"></i> Flock Analytics
                 </button>
             </div>
@@ -160,7 +160,8 @@
             <style>
                 .analytics-section-tab.active {
                     color: #111827 !important;
-                    font-size: 14px;
+                    font-size: 15px;
+                    font-weight: 800;
                     letter-spacing: 0.125px;
                 }
                 .analytics-section-tab.active i {
@@ -177,6 +178,7 @@
                     btn.classList.remove('active');
                     btn.style.color = '';
                     btn.style.fontSize = '';
+                    btn.style.fontWeight = '';
                     btn.style.letterSpacing = '';
                     var icon = btn.querySelector('i');
                     if (icon) {
@@ -186,7 +188,8 @@
                     if (btn.dataset.section === section) {
                         btn.classList.add('active');
                         btn.style.color = '#111827';
-                        btn.style.fontSize = '14px';
+                        btn.style.fontSize = '15px';
+                        btn.style.fontWeight = '800';
                         btn.style.letterSpacing = '0.125px';
                         if (icon) {
                             icon.style.width = '16px';
