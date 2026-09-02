@@ -57,6 +57,17 @@
             align-items: center;
             justify-content: center;
             padding: 1rem;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        @media (max-width: 640px) {
+            #forecastLockOverlay { padding: 0; }
+            #forecastLockOverlay { align-items: flex-start; }
+            #forecastLockOverlay > .card {
+                max-height: 100dvh;
+                max-height: 100vh;
+                border-radius: 0;
+            }
         }
         #forecastLockOverlay > .backdrop {
             position: fixed;
@@ -79,20 +90,20 @@
     <div id="forecastLockOverlay" role="dialog" aria-modal="true" {{ ($hasEnoughData ?? true) ? 'style="display:none"' : '' }}>
         <div class="backdrop"></div>
 
-        <div class="relative w-full max-w-md rounded-2xl p-6 text-center"
+        <div class="card relative w-full max-w-md rounded-2xl text-center flex flex-col bg-white overflow-hidden"
              style="background-color: #ffffff; box-shadow: 0 24px 64px rgba(0,0,0,0.35);">
-            <button type="button" id="lockDismissBtn" onclick="document.getElementById('forecastLockOverlay').style.display='none'" class="absolute top-3 right-3 p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Dismiss">
-                <i data-lucide="x" class="w-4 h-4" style="color: #615d59;"></i>
-            </button>
+            <div class="flex items-center justify-end px-4 pt-3 shrink-0">
+                <button type="button" id="lockDismissBtn" onclick="document.getElementById('forecastLockOverlay').style.display='none'" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Dismiss">
+                    <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+                </button>
+            </div>
+            <div class="px-6 pb-6 overflow-y-auto -webkit-overflow-scrolling-touch">
             <div class="w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: #fdf3e0;">
                 <i data-lucide="hourglass" class="w-7 h-7" style="color: #8a5a00;"></i>
             </div>
             <h2 class="text-lg font-semibold" style="color: #1f1f1f;">Insufficient Forecast Data</h2>
-            <p class="text-sm mt-2" style="color: #615d59;">
-                Both SARIMA and XGBoost require <strong>90 days</strong> of production records to generate a forecast.
-            </p>
 
-            <div class="mt-5">
+            <div class="mt-4">
                 <div class="flex items-center justify-between text-xs mb-1" style="color: #615d59;">
                     <span>{{ $scopeLabel }}: <strong style="color:#8a5a00;">{{ $forecastCount }}</strong>/90 days collected</span>
                     <span>{{ number_format($pct, 0) }}%</span>
@@ -170,6 +181,7 @@
                         style="color:#1f6b3a; border:1px solid #cfe8d6; background-color:#e8f5ec;">
                     <i data-lucide="upload" class="w-4 h-4"></i> Import Production Record
                 </button>
+            </div>
             </div>
         </div>
     </div>
