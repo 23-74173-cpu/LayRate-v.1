@@ -138,10 +138,55 @@
 
     {{-- Tab 2: Analytics (Charts + Checklist) --}}
     <div class="dash-tab-panel" data-tab-panel="analytics">
-                <div class="space-y-12">
+                <div class="space-y-6">
             @include('dashboard._data-checklist')
+
+            {{-- Section Filter Tabs --}}
+            <div class="flex items-center gap-1 p-1 rounded-lg w-fit" style="background-color: #f3f4f6;">
+                <button type="button" onclick="filterAnalytics('all')" class="analytics-section-tab active px-3 py-1.5 text-xs font-semibold rounded-md transition-all" data-section="all">All</button>
+                <button type="button" onclick="filterAnalytics('production')" class="analytics-section-tab px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb]" data-section="production">Production</button>
+                <button type="button" onclick="filterAnalytics('environmental')" class="analytics-section-tab px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb]" data-section="environmental">Environmental</button>
+                <button type="button" onclick="filterAnalytics('feed')" class="analytics-section-tab px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb]" data-section="feed">Feed</button>
+                <button type="button" onclick="filterAnalytics('flock')" class="analytics-section-tab px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb]" data-section="flock">Flock</button>
+            </div>
+
+            <style>
+                .analytics-section-tab.active {
+                    background-color: #0075de;
+                    color: #ffffff;
+                    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+                }
+                .analytics-section { display: block; }
+                .analytics-section.hidden-section { display: none; }
+            </style>
+
+            <script>
+            function filterAnalytics(section) {
+                document.querySelectorAll('.analytics-section-tab').forEach(function(btn) {
+                    btn.classList.remove('active');
+                    btn.style.backgroundColor = '';
+                    btn.style.color = '#6B7280';
+                    btn.style.boxShadow = '';
+                    if (btn.dataset.section === section) {
+                        btn.classList.add('active');
+                        btn.style.backgroundColor = '#0075de';
+                        btn.style.color = '#ffffff';
+                        btn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.1)';
+                    }
+                });
+                document.querySelectorAll('.analytics-section').forEach(function(el) {
+                    if (section === 'all') {
+                        el.classList.remove('hidden-section');
+                    } else {
+                        el.classList.toggle('hidden-section', el.dataset.analyticsSection !== section);
+                    }
+                });
+            }
+            window.filterAnalytics = filterAnalytics;
+            </script>
+
             {{-- ═══ SECTION 1 — Production Performance ═══ --}}
-            <div>
+            <div class="analytics-section" data-analytics-section="production">
                 <h3 class="text-xs font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-6 pt-4">
                     <i data-lucide="bar-chart-3" class="w-4 h-4 inline-block mr-1.5 -mt-0.5" style="color:#0075de;"></i>
                     Production Performance
@@ -183,7 +228,7 @@
             </div>
 
             {{-- ═══ SECTION 2 — Environmental Analytics ═══ --}}
-            <div>
+            <div class="analytics-section" data-analytics-section="environmental">
                 <h3 class="text-xs font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-6 pt-4">
                     <i data-lucide="thermometer" class="w-4 h-4 inline-block mr-1.5 -mt-0.5" style="color:#0891b2;"></i>
                     Environmental Analytics
@@ -206,7 +251,7 @@
             </div>
 
             {{-- ═══ SECTION 3 — Feed Analytics ═══ --}}
-            <div>
+            <div class="analytics-section" data-analytics-section="feed">
                 <h3 class="text-xs font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-6 pt-4">
                     <i data-lucide="wheat" class="w-4 h-4 inline-block mr-1.5 -mt-0.5" style="color:#16a34a;"></i>
                     Feed Analytics
@@ -229,7 +274,7 @@
             </div>
 
             {{-- ═══ SECTION 4 — Flock Analytics ═══ --}}
-            <div>
+            <div class="analytics-section" data-analytics-section="flock">
                 <h3 class="text-xs font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-6 pt-4">
                     <i data-lucide="heart-pulse" class="w-4 h-4 inline-block mr-1.5 -mt-0.5" style="color:#db2777;"></i>
                     Flock Analytics
