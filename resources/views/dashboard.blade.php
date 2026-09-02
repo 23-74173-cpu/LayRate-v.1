@@ -143,31 +143,55 @@
 
             {{-- Section Filter Tabs --}}
             <div class="flex items-center gap-2 mb-6 pt-4 flex-wrap">
-                <button type="button" onclick="filterAnalytics('production')" class="analytics-section-tab px-3 py-1.5 text-sm font-bold uppercase tracking-[0.125px] rounded-md transition-all inline-flex items-center gap-1.5" data-section="production">
+                <button type="button" onclick="filterAnalytics('production')" class="analytics-section-tab px-3 py-1.5 text-sm font-bold uppercase tracking-[0.125px] rounded-md transition-all inline-flex items-center gap-1.5 text-[#6B7280]" data-section="production">
                     <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Production Performance
                 </button>
-                <button type="button" onclick="filterAnalytics('environmental')" class="analytics-section-tab px-3 py-1.5 text-sm font-bold uppercase tracking-[0.125px] rounded-md transition-all text-[#6B7280] hover:text-[#374151] hover:bg-[#e5e7eb] inline-flex items-center gap-1.5" data-section="environmental">
+                <button type="button" onclick="filterAnalytics('environmental')" class="analytics-section-tab px-3 py-1.5 text-sm font-bold uppercase tracking-[0.125px] rounded-md transition-all text-[#6B7280] inline-flex items-center gap-1.5" data-section="environmental">
                     <i data-lucide="thermometer" class="w-4 h-4"></i> Environmental Analytics
                 </button>
-                <button type="button" onclick="filterAnalytics('feed')" class="analytics-section-tab px-3 py-1.5 text-sm font-bold uppercase tracking-[0.125px] rounded-md transition-all text-[#6B7280] hover:text-[#374151] hover:bg-[#e5e7eb] inline-flex items-center gap-1.5" data-section="feed">
+                <button type="button" onclick="filterAnalytics('feed')" class="analytics-section-tab px-3 py-1.5 text-sm font-bold uppercase tracking-[0.125px] rounded-md transition-all text-[#6B7280] inline-flex items-center gap-1.5" data-section="feed">
                     <i data-lucide="wheat" class="w-4 h-4"></i> Feed Analytics
                 </button>
-                <button type="button" onclick="filterAnalytics('flock')" class="analytics-section-tab px-3 py-1.5 text-sm font-bold uppercase tracking-[0.125px] rounded-md transition-all text-[#6B7280] hover:text-[#374151] hover:bg-[#e5e7eb] inline-flex items-center gap-1.5" data-section="flock">
+                <button type="button" onclick="filterAnalytics('flock')" class="analytics-section-tab px-3 py-1.5 text-sm font-bold uppercase tracking-[0.125px] rounded-md transition-all text-[#6B7280] inline-flex items-center gap-1.5" data-section="flock">
                     <i data-lucide="heart-pulse" class="w-4 h-4"></i> Flock Analytics
                 </button>
             </div>
 
             <style>
-                .analytics-section-tab.active {
-                    color: #111827 !important;
-                    font-size: 15px;
-                    font-weight: 800;
+                .analytics-section-tab {
+                    cursor: pointer;
+                    color: #9ca3af;
+                    font-size: 14px;
+                    font-weight: 700;
+                    text-transform: uppercase;
                     letter-spacing: 0.125px;
+                    transition: all 0.2s ease;
                 }
-                .analytics-section-tab.active i {
-                    width: 16px;
-                    height: 16px;
+                .analytics-section-tab i { transition: all 0.2s ease; }
+                .analytics-section-tab:hover {
+                    font-size: 16px;
+                    font-weight: 800;
                 }
+                .analytics-section-tab:hover i {
+                    width: 17px;
+                    height: 17px;
+                }
+                .analytics-section-tab.active[data-section="production"] {
+                    color: #2563eb !important;
+                }
+                .analytics-section-tab.active[data-section="production"] i { color: #2563eb; }
+                .analytics-section-tab.active[data-section="environmental"] {
+                    color: #16a34a !important;
+                }
+                .analytics-section-tab.active[data-section="environmental"] i { color: #16a34a; }
+                .analytics-section-tab.active[data-section="feed"] {
+                    color: #ca8a04 !important;
+                }
+                .analytics-section-tab.active[data-section="feed"] i { color: #ca8a04; }
+                .analytics-section-tab.active[data-section="flock"] {
+                    color: #db2777 !important;
+                }
+                .analytics-section-tab.active[data-section="flock"] i { color: #db2777; }
                 .analytics-section { display: none !important; }
                 .analytics-section.active-section { display: block !important; }
             </style>
@@ -176,27 +200,25 @@
             function filterAnalytics(section) {
                 document.querySelectorAll('.analytics-section-tab').forEach(function(btn) {
                     btn.classList.remove('active');
-                    btn.style.color = '';
                     btn.style.fontSize = '';
                     btn.style.fontWeight = '';
-                    btn.style.letterSpacing = '';
                     var icon = btn.querySelector('i');
                     if (icon) {
                         icon.style.width = '';
                         icon.style.height = '';
                     }
-                    if (btn.dataset.section === section) {
-                        btn.classList.add('active');
-                        btn.style.color = '#111827';
-                        btn.style.fontSize = '15px';
-                        btn.style.fontWeight = '800';
-                        btn.style.letterSpacing = '0.125px';
-                        if (icon) {
-                            icon.style.width = '16px';
-                            icon.style.height = '16px';
-                        }
-                    }
                 });
+                var activeBtn = document.querySelector('.analytics-section-tab[data-section="' + section + '"]');
+                if (activeBtn) {
+                    activeBtn.classList.add('active');
+                    activeBtn.style.fontSize = '16px';
+                    activeBtn.style.fontWeight = '800';
+                    var icon = activeBtn.querySelector('i');
+                    if (icon) {
+                        icon.style.width = '17px';
+                        icon.style.height = '17px';
+                    }
+                }
                 document.querySelectorAll('.analytics-section').forEach(function(el) {
                     el.classList.toggle('active-section', el.dataset.analyticsSection === section);
                 });
