@@ -60,6 +60,10 @@
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
         }
+        #forecastLockOverlay > .card {
+            max-height: calc(100dvh - 2rem);
+            max-height: calc(100vh - 2rem);
+        }
         @media (max-width: 640px) {
             #forecastLockOverlay { padding: 0; }
             #forecastLockOverlay { align-items: flex-start; }
@@ -68,6 +72,11 @@
                 max-height: 100vh;
                 border-radius: 0;
             }
+        }
+        #forecastLockOverlay > .card > .card-scroll {
+            overflow-y: auto;
+            min-height: 0;
+            flex: 1 1 auto;
         }
         #forecastLockOverlay > .backdrop {
             position: fixed;
@@ -97,7 +106,7 @@
                     <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
                 </button>
             </div>
-            <div class="px-6 pb-10 overflow-y-auto -webkit-overflow-scrolling-touch">
+            <div class="card-scroll px-6 pb-10 overflow-y-auto -webkit-overflow-scrolling-touch">
             <div class="w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: #fdf3e0;">
                 <i data-lucide="hourglass" class="w-7 h-7" style="color: #8a5a00;"></i>
             </div>
