@@ -109,51 +109,51 @@
                     <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
                 </button>
             </div>
-            <div class="card-scroll px-6 pb-12 overflow-y-auto -webkit-overflow-scrolling-touch">
-            <div class="w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: #fdf3e0;">
+            <div class="card-scroll px-6 pt-4 pb-8 overflow-y-auto -webkit-overflow-scrolling-touch">
+            <div class="w-14 h-14 mx-auto mb-5 rounded-full flex items-center justify-center" style="background-color: #fdf3e0;">
                 <i data-lucide="hourglass" class="w-7 h-7" style="color: #8a5a00;"></i>
             </div>
             <h2 class="text-lg font-semibold" style="color: #1f1f1f;">Insufficient Forecast Data</h2>
 
-            <div class="mt-4">
-                <div class="flex items-center justify-between text-xs mb-1" style="color: #615d59;">
+            <div class="mt-5">
+                <div class="flex items-center justify-between text-xs mb-2" style="color: #615d59;">
                     <span><strong style="color:#8a5a00;">{{ $forecastCount }}</strong>/90 days collected</span>
                     <span>{{ number_format($pct, 0) }}%</span>
                 </div>
                 <div class="w-full rounded-full h-2 overflow-hidden" style="background-color: #f3e3bf;">
                     <div class="h-2 rounded-full transition-all" style="width: {{ $pct }}%; background-color: #c2703e;"></div>
                 </div>
-                <div class="text-center mt-1">
+                <div class="text-center mt-2">
                     <span class="text-[10px]" style="color: #9ca3af;">
                         {{ $daysRemaining > 0 ? $daysRemaining . ' days remaining' : 'Ready to generate' }}
                     </span>
                 </div>
             </div>
 
-            <div class="mt-4 text-xs leading-relaxed" style="color: #6B7280;">
+            <div class="mt-5 text-xs leading-relaxed" style="color: #6B7280;">
                 Keep logging eggs daily. Each recorded day adds to your history.
                 You can also download the forecast input sheet, fill it with historical data,
                 and import it to reach 90 days faster.
             </div>
 
-            <div id="syncCountdown" class="mt-3 p-2.5 rounded-lg text-center" style="background-color:#f0f4ff; border:1px solid #d6e0f2;">
+            <div id="syncCountdown" class="mt-5 p-3 rounded-lg text-center" style="background-color:#f0f4ff; border:1px solid #d6e0f2;">
                 <div class="text-[10px] uppercase tracking-wider font-medium mb-1" style="color:#6B7280;">Next automatic sync</div>
                 <div id="syncCountdownTimer" class="text-lg font-bold tabular-nums" style="color:#002D5E;">--:--:--</div>
             </div>
 
-            <div class="mt-5 grid grid-cols-1 gap-2 text-center">
+            <div class="mt-6 grid grid-cols-1 gap-3 text-center">
                 <button type="button" id="lockDownloadBtn"
-                        class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white hover:brightness-95 transition-colors"
+                        class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-white hover:brightness-95 transition-colors"
                         style="background-color:#002D5E;">
                     <i data-lucide="download" class="w-4 h-4"></i> Download forecast sheet
                 </button>
                 <button type="button" id="lockInputRecordsBtn"
-                        class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                        class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors"
                         style="color:#002D5E; border:1px solid #d6e0f2; background-color:#eef2fb;">
                     <i data-lucide="table" class="w-4 h-4"></i> View input records status
                 </button>
                 <button type="button" id="lockImportBtn"
-                        class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                        class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors"
                         style="color:#1f6b3a; border:1px solid #cfe8d6; background-color:#e8f5ec;">
                     <i data-lucide="upload" class="w-4 h-4"></i> Import Production Record
                 </button>
