@@ -103,15 +103,15 @@
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                 <h3 class="text-lg font-semibold" style="color: #1f1f1f;">Log Entry</h3>
                 <div id="logTabs" class="hidden flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-                    <button type="button" onclick="switchLogTab('manual')" id="logTabManual"
-                            class="log-tab-btn px-4 py-1.5 text-sm font-medium rounded-md transition-all"
-                            style="background: transparent; color: #6b7280;">
-                        Manual Log
-                    </button>
                     <button type="button" onclick="switchLogTab('total')" id="logTabTotal"
                             class="log-tab-btn active px-4 py-1.5 text-sm font-medium rounded-md transition-all"
                             style="background: #fff; color: #1f1f1f; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                         Total Egg Log
+                    </button>
+                    <button type="button" onclick="switchLogTab('manual')" id="logTabManual"
+                            class="log-tab-btn px-4 py-1.5 text-sm font-medium rounded-md transition-all"
+                            style="background: transparent; color: #6b7280;">
+                        Manual Log
                     </button>
                 </div>
             </div>
