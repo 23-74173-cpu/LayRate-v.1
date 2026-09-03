@@ -114,7 +114,7 @@
 
             <div class="mt-4">
                 <div class="flex items-center justify-between text-xs mb-1" style="color: #615d59;">
-                    <span>{{ $scopeLabel }}: <strong style="color:#8a5a00;">{{ $forecastCount }}</strong>/90 days collected</span>
+                    <span><strong style="color:#8a5a00;">{{ $forecastCount }}</strong>/90 days collected</span>
                     <span>{{ number_format($pct, 0) }}%</span>
                 </div>
                 <div class="w-full rounded-full h-2 overflow-hidden" style="background-color: #f3e3bf;">
@@ -125,48 +125,6 @@
                         {{ $daysRemaining > 0 ? $daysRemaining . ' days remaining' : 'Ready to generate' }}
                     </span>
                 </div>
-            </div>
-
-            @if(count($perCage) > 1)
-            <div class="mt-4 text-left">
-                <div class="text-xs font-semibold mb-2" style="color: #333333;">Per-cage data status</div>
-                <div class="rounded-lg border border-[#E5E7EB] overflow-hidden">
-                    <table class="w-full text-xs">
-                        <thead>
-                            <tr style="background-color: #F9FAFB;">
-                                <th class="px-3 py-1.5 text-left font-medium" style="color: #6B7280;">Cage</th>
-                                <th class="px-3 py-1.5 text-right font-medium" style="color: #6B7280;">Days</th>
-                                <th class="px-3 py-1.5 text-center font-medium" style="color: #6B7280;">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($perCage as $cage => $days)
-                            <tr style="border-top: 1px solid #F3F4F6;">
-                                <td class="px-3 py-1.5 font-medium" style="color: #333333;">{{ $cage }}</td>
-                                <td class="px-3 py-1.5 text-right" style="color: #615d59;">{{ $days }}/90</td>
-                                <td class="px-3 py-1.5 text-center">
-                                    @if($days >= 90)
-                                        <span class="inline-flex items-center gap-1 text-[10px] font-medium" style="color: #16a34a;">
-                                            <i data-lucide="check-circle" class="w-3 h-3"></i> Ready
-                                        </span>
-                                    @else
-                                        <span class="inline-flex items-center gap-1 text-[10px] font-medium" style="color: #dc2626;">
-                                            <i data-lucide="x-circle" class="w-3 h-3"></i> {{ 90 - $days }} days remaining
-                                        </span>
-                                    @endif
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            @endif
-
-            <div class="mt-5 text-xs leading-relaxed" style="color: #6B7280;">
-                Keep logging eggs daily. Each recorded day adds to your history.
-                You can also download the forecast input sheet, fill it with historical data,
-                and import it to reach 90 days faster.
             </div>
 
             <div id="syncCountdown" class="mt-3 p-2.5 rounded-lg text-center" style="background-color:#f0f4ff; border:1px solid #d6e0f2;">
