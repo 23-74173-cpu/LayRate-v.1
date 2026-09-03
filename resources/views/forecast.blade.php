@@ -113,9 +113,9 @@
                     <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
                 </button>
             </div>
-            <div class="card-scroll px-6 pt-4 pb-8 overflow-y-auto -webkit-overflow-scrolling-touch">
-            <div class="w-14 h-14 mx-auto mb-5 rounded-full flex items-center justify-center" style="background-color: #fdf3e0;">
-                <i data-lucide="hourglass" class="w-7 h-7" style="color: #8a5a00;"></i>
+            <div class="card-scroll px-6 pt-4 pb-16 overflow-y-auto -webkit-overflow-scrolling-touch">
+            <div class="w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: #fdf3e0;">
+                <i data-lucide="hourglass" class="w-6 h-6" style="color: #8a5a00;"></i>
             </div>
             <h2 class="text-lg font-semibold" style="color: #1f1f1f;">Insufficient Forecast Data</h2>
 
@@ -135,9 +135,7 @@
             </div>
 
             <div class="mt-5 text-xs leading-relaxed" style="color: #6B7280;">
-                Keep logging eggs daily. Each recorded day adds to your history.
-                You can also download the forecast input sheet, fill it with historical data,
-                and import it to reach 90 days faster.
+                Keep logging eggs daily to reach 90 days faster, or import a filled input sheet.
             </div>
 
             <div id="syncCountdown" class="mt-5 p-3 rounded-lg text-center" style="background-color:#f0f4ff; border:1px solid #d6e0f2;">
