@@ -20,7 +20,10 @@ class EggProductionHistoryController extends Controller
         }
 
         // Lifetime total — single source of truth, reused by dashboard KPI.
-        $lifetimeEggs = ProductionLog::sum('egg_count');
+        // Orphaned logs (cage_slot_id NULL, from deleted cages whose history
+        // was preserved) are excluded here and in the timeline below so the
+        // total stays consistent with the dashboard and per-cage breakdown.
+        $lifetimeEggs = ProductionLog::whereNotNull('cage_slot_id')->sum('egg_count');
 
         // Timeline aggregation via shared service.
         $timeline = ProductionTimelineService::aggregate($groupBy);

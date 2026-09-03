@@ -932,16 +932,23 @@ class DashboardController extends Controller
                 ->sum('production_logs.egg_count');
         } else {
             $totalHens = \App\Models\Hen::where('is_active', 1)->count();
-            $todayLogs = ProductionLog::whereDate('log_date', $today)->get();
+            // Only logs still tied to a live cage_slot count toward global totals.
+            // When a cage is deleted and its production history preserved, its
+            // logs keep their data but their cage_slot_id is nulled, leaving
+            // them un-attributable to any remaining cage. Excluding them here
+            // keeps the global overview consistent with the per-cage branch
+            // above (which joins cage_slots and therefore already skips them),
+            // preventing deleted-cage eggs from inflating eggsToday/HDEP.
+            $todayLogs = ProductionLog::whereDate('log_date', $today)->whereNotNull('cage_slot_id')->get();
             // HDEP today = eggs collected today ÷ all hens in the cages, as a percentage
             $todayHdep = $totalHens > 0 ? round($todayLogs->sum('egg_count') / $totalHens * 100, 1) : 0;
-            $yesterdayLogs = ProductionLog::whereDate('log_date', $yesterday)->get();
+            $yesterdayLogs = ProductionLog::whereDate('log_date', $yesterday)->whereNotNull('cage_slot_id')->get();
             $yesterdayHdep = $yesterdayLogs->count() ? round($yesterdayLogs->avg('hdep'), 1) : 0;
             $hdepDelta = round($todayHdep - $yesterdayHdep, 1);
             $eggsToday = $todayLogs->sum('egg_count')
                 ?: $cages->sum(fn ($c) => $c->today_eggs);
             $eggsYesterday = $yesterdayLogs->sum('egg_count');
-            $lifetimeEggs = ProductionLog::sum('egg_count');
+            $lifetimeEggs = ProductionLog::whereNotNull('cage_slot_id')->sum('egg_count');
         }
 
         $eggsDelta = round($eggsToday - $eggsYesterday);
