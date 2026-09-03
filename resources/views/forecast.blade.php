@@ -57,33 +57,18 @@
             align-items: center;
             justify-content: center;
             padding: 1rem;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
         }
         #forecastLockOverlay > .card {
             max-height: calc(100dvh - 2rem);
             max-height: calc(100vh - 2rem);
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
-        #forecastLockOverlay > .card > .card-scroll { flex: 1 1 auto; }
-        @media (max-width: 640px) {
-            #forecastLockOverlay { padding: 0; align-items: flex-end; }
-            #forecastLockOverlay > .card {
-                height: 90dvh;
-                height: 90vh;
-                max-height: none;
-                width: 100%;
-                max-width: none;
-                border-radius: 1rem 1rem 0 0;
-                overflow-y: hidden;
-            }
-            #forecastLockOverlay > .backdrop { top: 0; }
-            #forecastLockOverlay > .card > .card-scroll {
-                overflow-y: auto;
-                -webkit-overflow-scrolling: touch;
-                min-height: 0;
-                flex: 1 1 auto;
-            }
+        @media (min-width: 1024px) {
+            #forecastLockOverlay { left: 16rem; }
+            #forecastLockOverlay > .backdrop { left: 16rem; }
+            html.sidebar-collapsed #forecastLockOverlay { left: 4rem; }
+            html.sidebar-collapsed #forecastLockOverlay > .backdrop { left: 4rem; }
         }
         #forecastLockOverlay > .backdrop {
             position: fixed;
@@ -95,12 +80,6 @@
             backdrop-filter: blur(6px);
             -webkit-backdrop-filter: blur(6px);
         }
-        @media (min-width: 1024px) {
-            #forecastLockOverlay { left: 16rem; }
-            #forecastLockOverlay > .backdrop { left: 16rem; }
-            html.sidebar-collapsed #forecastLockOverlay { left: 4rem; }
-            html.sidebar-collapsed #forecastLockOverlay > .backdrop { left: 4rem; }
-        }
         #forecastLockOverlay { pointer-events: auto; }
     </style>
     <div id="forecastLockOverlay" role="dialog" aria-modal="true" {{ ($hasEnoughData ?? true) ? 'style="display:none"' : '' }}>
@@ -108,16 +87,14 @@
 
         <div class="card relative w-full max-w-md rounded-2xl text-center flex flex-col bg-white overflow-hidden"
              style="background-color: #ffffff; box-shadow: 0 24px 64px rgba(0,0,0,0.35);">
-            <div class="flex items-center justify-end px-4 pt-3 shrink-0">
-                <button type="button" id="lockDismissBtn" onclick="document.getElementById('forecastLockOverlay').style.display='none'" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Dismiss">
-                    <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
-                </button>
-            </div>
-            <div class="card-scroll px-6 pt-4 pb-16 overflow-y-auto -webkit-overflow-scrolling-touch">
+            <button type="button" id="lockDismissBtn" onclick="document.getElementById('forecastLockOverlay').style.display='none'" class="absolute top-3 right-3 p-1.5 rounded-full hover:bg-black/5 transition-colors z-10" aria-label="Dismiss">
+                <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+            </button>
+            <div class="card-scroll px-6 py-8 overflow-y-auto -webkit-overflow-scrolling-touch">
             <div class="w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: #fdf3e0;">
                 <i data-lucide="hourglass" class="w-6 h-6" style="color: #8a5a00;"></i>
             </div>
-            <h2 class="text-lg font-semibold" style="color: #1f1f1f;">Insufficient Forecast Data</h2>
+            <h2 class="text-lg font-semibold pr-6" style="color: #1f1f1f;">Insufficient Forecast Data</h2>
 
             <div class="mt-5">
                 <div class="flex items-center justify-between text-xs mb-2" style="color: #615d59;">
