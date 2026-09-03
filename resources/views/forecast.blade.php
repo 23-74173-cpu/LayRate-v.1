@@ -65,13 +65,16 @@
             max-height: calc(100vh - 2rem);
         }
         @media (max-width: 640px) {
-            #forecastLockOverlay { padding: 0; }
-            #forecastLockOverlay { align-items: flex-start; }
+            #forecastLockOverlay { padding: 0; align-items: flex-end; }
             #forecastLockOverlay > .card {
-                max-height: 100dvh;
-                max-height: 100vh;
-                border-radius: 0;
+                height: 90dvh;
+                height: 90vh;
+                max-height: none;
+                width: 100%;
+                max-width: none;
+                border-radius: 1rem 1rem 0 0;
             }
+            #forecastLockOverlay > .backdrop { top: 0; }
         }
         #forecastLockOverlay > .card > .card-scroll {
             overflow-y: auto;
@@ -106,7 +109,7 @@
                     <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
                 </button>
             </div>
-            <div class="card-scroll px-6 pb-16 overflow-y-auto -webkit-overflow-scrolling-touch">
+            <div class="card-scroll px-6 pb-12 overflow-y-auto -webkit-overflow-scrolling-touch">
             <div class="w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: #fdf3e0;">
                 <i data-lucide="hourglass" class="w-7 h-7" style="color: #8a5a00;"></i>
             </div>
