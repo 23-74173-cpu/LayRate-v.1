@@ -165,7 +165,7 @@
                     <div>
                         <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">SELECT HENS <span class="text-red-500">*</span></label>
                         <input type="hidden" name="hen_ids" id="mortalityHenIds" value="">
-                        <button type="button" onclick="openHenPickerModal()" id="henPickerBtn"
+                        <button type="button" onclick="setPickerContext('mortalityHenIds', 'henPickerLabel')" id="henPickerBtn"
                                 class="w-full flex items-center justify-between border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white text-left focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E] transition-colors hover:border-[#9CA3AF]">
                             <span id="henPickerLabel" class="text-[#9CA3AF]">Click to select hens...</span>
                             <i data-lucide="chevron-right" class="w-4 h-4 text-[#9CA3AF]"></i>
@@ -203,9 +203,54 @@
     {{-- CULLING TAB --}}
     {{-- ============================================ --}}
     <div id="panelCulling" class="{{ $tab !== 'culling' ? 'hidden' : '' }}">
-        <turbo-frame id="chickens-culling-records" src="{{ route('chickens.culling-records') }}" loading="lazy" target="_top">
-            @include('chickens._culling-records-skeleton')
-        </turbo-frame>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {{-- Record Cull form --}}
+            <x-card>
+                <h3 class="text-sm font-medium text-[#333333] mb-4">Record Cull</h3>
+                <form method="POST" action="{{ route('chickens.cull') }}" class="space-y-4">
+                    @csrf
+                    <div>
+                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CULL DATE <span class="text-red-500">*</span></label>
+                        <input type="date" name="cull_date" required value="{{ today()->toDateString() }}"
+                               class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]">
+                    </div>
+                    <div>
+                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">SELECT HENS <span class="text-red-500">*</span></label>
+                        <input type="hidden" name="hen_id" id="cullingHenIds" value="">
+                        <button type="button" onclick="setPickerContext('cullingHenIds', 'cullingHenLabel')" id="cullingHenBtn"
+                                class="w-full flex items-center justify-between border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white text-left focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E] transition-colors hover:border-[#9CA3AF]">
+                            <span id="cullingHenLabel" class="text-[#9CA3AF]">Click to select hens...</span>
+                            <i data-lucide="chevron-right" class="w-4 h-4 text-[#9CA3AF]"></i>
+                        </button>
+                    </div>
+                    <div>
+                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">REASON <span class="text-red-500">*</span></label>
+                        <select name="reason" required
+                                class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]">
+                            <option value="">Select reason...</option>
+                            <option value="low_production">Low Production</option>
+                            <option value="illness">Illness</option>
+                            <option value="aggression">Aggression</option>
+                            <option value="age">Age</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">ADDITIONAL NOTES</label>
+                        <textarea name="notes" rows="2" placeholder="Optional details…"
+                                  class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] resize-none focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]"></textarea>
+                    </div>
+                    <x-button type="button" onclick="submitCullRecord(this.form)" class="w-full py-2.5">
+                        Save Record
+                    </x-button>
+                </form>
+            </x-card>
+
+            {{-- Culling Records (lazy loaded) --}}
+            <turbo-frame id="chickens-culling-records" src="{{ route('chickens.culling-records') }}" loading="lazy" target="_top" class="lg:col-span-2">
+                @include('chickens._culling-records-skeleton')
+            </turbo-frame>
+        </div>
     </div>
 
     {{-- ============================================ --}}
@@ -516,9 +561,16 @@ function updateModalHenCount() {
 
 var henPickerData = @json($henPickerData ?? []);
 
+var pickerContext = { hiddenId: 'mortalityHenIds', labelId: 'henPickerLabel' };
+function setPickerContext(hiddenId, labelId) {
+    pickerContext.hiddenId = hiddenId || 'mortalityHenIds';
+    pickerContext.labelId = labelId || 'henPickerLabel';
+    openHenPickerModal();
+}
+
 function openHenPickerModal() {
     var modal = document.getElementById('henPickerModal');
-    var hidden = document.getElementById('mortalityHenIds');
+    var hidden = document.getElementById(pickerContext.hiddenId);
     var savedIds = hidden.value ? hidden.value.split(',').map(Number) : [];
 
     var cageSelect = document.getElementById('pickerCageSelect');
@@ -601,7 +653,7 @@ function onPickerFilterChange() {
         });
     }
 
-    var savedIds = (document.getElementById('mortalityHenIds').value || '').split(',').map(Number).filter(Boolean);
+    var savedIds = (document.getElementById(pickerContext.hiddenId).value || '').split(',').map(Number).filter(Boolean);
 
     if (hens.length === 0) {
         list.innerHTML = '<div class="py-8 text-center text-sm text-[#9CA3AF]">No hens found.</div>';
@@ -645,10 +697,10 @@ function confirmHenSelection() {
     var checked = document.querySelectorAll('#henPickerList .hen-cage-check:checked');
     var henIds = Array.from(checked).map(function(cb) { return cb.dataset.henId; });
 
-    var hidden = document.getElementById('mortalityHenIds');
+    var hidden = document.getElementById(pickerContext.hiddenId);
     hidden.value = henIds.join(',');
 
-    var label = document.getElementById('henPickerLabel');
+    var label = document.getElementById(pickerContext.labelId);
     if (henIds.length === 0) {
         label.textContent = 'Click to select hens...';
         label.classList.add('text-[#9CA3AF]');
@@ -748,6 +800,105 @@ function mortalityAjaxSubmit(form) {
                 var msg = errors[field][0];
                 var errorEl = document.createElement('p');
                 errorEl.className = 'mortality-error flex items-center gap-1.5 text-sm mt-1';
+                errorEl.style.color = '#9b1c24';
+                errorEl.innerHTML = '<i data-lucide="alert-circle" class="w-4 h-4" style="color: #9b1c24; min-width: 16px;"></i> ' + msg;
+                wrapper.appendChild(errorEl);
+            });
+            if (window.lucide) lucide.createIcons();
+        }
+    }).catch(function() {
+        form.submit();
+    });
+}
+
+function submitCullRecord(form) {
+    var hidden = document.getElementById('cullingHenIds');
+    var henIds = hidden.value ? hidden.value.split(',').filter(Boolean) : [];
+
+    if (henIds.length === 0) {
+        confirmModal('Please select at least one hen.', {}, 'OK');
+        return;
+    }
+
+    confirmModal(
+        'Cull ' + henIds.length + ' hen(s)? The selected hen(s) will be permanently deactivated.',
+        { submit: function() { cullRecordAjaxSubmit(form); } },
+        'Cull', 'destructive'
+    );
+}
+
+function cullRecordAjaxSubmit(form) {
+    var hidden = document.getElementById('cullingHenIds');
+    var henIds = hidden.value ? hidden.value.split(',').map(Number).filter(Boolean) : [];
+
+    var data = {
+        cull_date: form.querySelector('input[name="cull_date"]').value,
+        hen_id: henIds.join(','),
+        reason: form.querySelector('select[name="reason"]').value,
+        notes: form.querySelector('textarea[name="notes"]').value || ''
+    };
+
+    form.querySelectorAll('.cull-record-error').forEach(function(el) { el.remove(); });
+    form.querySelectorAll('.has-cull-record-error').forEach(function(el) {
+        el.classList.remove('has-cull-record-error');
+    });
+
+    fetch(form.action, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify(data)
+    }).then(function(r) {
+        return r.json().then(function(j) { return { ok: r.ok, json: j }; });
+    }).then(function(result) {
+        if (result.ok) {
+            if (typeof showNotification === 'function') {
+                showNotification(result.json.message, 'success');
+            }
+
+            var frame = document.getElementById('chickens-culling-records');
+            if (frame) {
+                var src = frame.src;
+                frame.src = '';
+                frame.src = src;
+            }
+
+            var inventoryFrame = document.getElementById('chickens-inventory-list');
+            if (inventoryFrame) {
+                var invSrc = inventoryFrame.src;
+                inventoryFrame.src = '';
+                inventoryFrame.src = invSrc;
+            }
+
+            hidden.value = '';
+            var label = document.getElementById('cullingHenLabel');
+            label.textContent = 'Click to select hens...';
+            label.classList.add('text-[#9CA3AF]');
+            label.classList.remove('text-[#333333]');
+            var dateInput = form.querySelector('input[type="date"]');
+            if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+            var reasonSelect = form.querySelector('select[name="reason"]');
+            if (reasonSelect) reasonSelect.value = '';
+            var notesArea = form.querySelector('textarea[name="notes"]');
+            if (notesArea) notesArea.value = '';
+        } else {
+            var errors = result.json.errors || {};
+            Object.keys(errors).forEach(function(field) {
+                var input = form.querySelector('[name="' + field + '"]');
+                if (!input) return;
+                var wrapper = input.closest('div');
+                if (!wrapper) return;
+                wrapper.classList.add('has-cull-record-error');
+                input.style.borderColor = '#9b1c24';
+                input.classList.add('ring-1');
+                input.style.setProperty('--tw-ring-color', '#f3cdd0');
+
+                var msg = errors[field][0];
+                var errorEl = document.createElement('p');
+                errorEl.className = 'cull-record-error flex items-center gap-1.5 text-sm mt-1';
                 errorEl.style.color = '#9b1c24';
                 errorEl.innerHTML = '<i data-lucide="alert-circle" class="w-4 h-4" style="color: #9b1c24; min-width: 16px;"></i> ' + msg;
                 wrapper.appendChild(errorEl);
