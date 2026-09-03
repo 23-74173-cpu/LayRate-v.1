@@ -68,7 +68,7 @@ $hasData = $totalEggs > 0 || $performance->contains(fn ($p) => $p['hdep'] > 0);
                 <i data-lucide="layout-grid" class="w-4 h-4"></i>
             </span>
             <div>
-                <div class="text-sm font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Cage Performance Overview</div>
+                <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Cage Performance Overview</div>
             </div>
         </div>
         @if($showDayFilter)

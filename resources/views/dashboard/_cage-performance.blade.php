@@ -3,5 +3,6 @@
         'cages' => $cages,
         'days' => $days,
         'cageCode' => $cageCode ?? null,
+        'showDayFilter' => false,
     ])
 </turbo-frame>
