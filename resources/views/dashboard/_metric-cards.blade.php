@@ -36,7 +36,7 @@
                     </div>
                     <div class="relative mt-2">
                         <div class="text-[10px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Total Hens</div>
-                        <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 kpi-count kpi-value" style="background-image: linear-gradient(135deg,#16a34a,#2D7D46);" data-target="{{ $totalHens }}">0</div>
+                        <div class="text-[40px] font-bold leading-none tracking-[-1px] mt-2 kpi-count kpi-value" style="background-image: linear-gradient(135deg,#16a34a,#2D7D46);" data-target="{{ $totalHens }}">0</div>
                     </div>
                     <span class="kpi-accent" style="background-color: #d6f0e3;"></span>
                 </div>
@@ -58,7 +58,7 @@
                     </div>
                     <div class="relative mt-2">
                         <div class="text-[10px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Today's HDEP</div>
-                        <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 kpi-value" style="background-image: linear-gradient(135deg,#0075de,#1D4E8F);">
+                        <div class="text-[40px] font-bold leading-none tracking-[-1px] mt-2 kpi-value" style="background-image: linear-gradient(135deg,#0075de,#1D4E8F);">
                             <span class="kpi-count" data-target="{{ $todayHdep }}" data-decimals="1">0</span>%
                         </div>
                         <div class="text-xs font-medium mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5"
@@ -86,7 +86,7 @@
                     </div>
                     <div class="relative mt-2">
                         <div class="text-[10px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Eggs Today</div>
-                        <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 kpi-count kpi-value" style="background-image: linear-gradient(135deg,#d97706,#C2703E);" data-target="{{ $eggsToday }}">0</div>
+                        <div class="text-[40px] font-bold leading-none tracking-[-1px] mt-2 kpi-count kpi-value" style="background-image: linear-gradient(135deg,#d97706,#C2703E);" data-target="{{ $eggsToday }}">0</div>
                         <div class="text-xs font-medium mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5"
                              style="color: {{ $eggsDelta >= 0 ? '#0f7a44' : '#b71c2c' }}; background-color: rgba(255,255,255,0.78); border: 1px solid {{ $eggsDelta >= 0 ? 'rgba(31,138,79,0.35)' : 'rgba(183,28,44,0.35)' }};">
                             {{ $eggsDelta >= 0 ? '▲' : '▼' }} {{ abs($eggsDelta) }} vs yesterday
@@ -112,7 +112,7 @@
                     </div>
                     <div class="relative mt-2">
                         <div class="text-[10px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Lifetime Eggs</div>
-                        <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 kpi-count kpi-value" style="background-image: linear-gradient(135deg,#8B5CF6,#6B4C8A);" data-target="{{ $lifetimeEggs }}">0</div>
+                        <div class="text-[40px] font-bold leading-none tracking-[-1px] mt-2 kpi-count kpi-value" style="background-image: linear-gradient(135deg,#8B5CF6,#6B4C8A);" data-target="{{ $lifetimeEggs }}">0</div>
                         <div class="text-xs font-medium mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5"
                              style="color: #0f7a44; background-color: rgba(255,255,255,0.78); border: 1px solid rgba(31,138,79,0.35);">
                             ▲ +{{ number_format($eggsToday) }} today
@@ -147,7 +147,7 @@
                     </div>
                     <div class="relative mt-2">
                         <div class="text-[10px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Average Coop Temperature</div>
-                        <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 kpi-value" style="background-image: linear-gradient(135deg,#f59e0b,#C2703E);">
+                        <div class="text-[40px] font-bold leading-none tracking-[-1px] mt-2 kpi-value" style="background-image: linear-gradient(135deg,#f59e0b,#C2703E);">
                             <span class="kpi-count" data-target="{{ $avgTemp }}" data-decimals="1">0</span>°
                         </div>
                     </div>
@@ -171,7 +171,7 @@
                     </div>
                     <div class="relative mt-2">
                         <div class="text-[10px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Average Humidity</div>
-                        <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 kpi-value" style="background-image: linear-gradient(135deg,#0d9488,#2C7C91);">
+                        <div class="text-[40px] font-bold leading-none tracking-[-1px] mt-2 kpi-value" style="background-image: linear-gradient(135deg,#0d9488,#2C7C91);">
                             <span class="kpi-count" data-target="{{ $avgHum }}" data-decimals="1">0</span>%
                         </div>
                     </div>
@@ -195,7 +195,7 @@
                     </div>
                     <div class="relative mt-2">
                         <div class="text-[10px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Mortality Today</div>
-                        <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 {{ $mortalityTodayTotal > 0 ? 'kpi-value' : 'text-[#102A4C]' }}" style="{{ $mortalityTodayTotal > 0 ? 'background-image: linear-gradient(135deg,#dc2626,#9b1c24);' : '' }}">
+                        <div class="text-[40px] font-bold leading-none tracking-[-1px] mt-2 {{ $mortalityTodayTotal > 0 ? 'kpi-value' : 'text-[#102A4C]' }}" style="{{ $mortalityTodayTotal > 0 ? 'background-image: linear-gradient(135deg,#dc2626,#9b1c24);' : '' }}">
                             {{ number_format($mortalityTodayTotal) }}
                         </div>
                     </div>
@@ -228,7 +228,7 @@
                     </div>
                     <div class="relative mt-2">
                         <div class="text-[10px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Avg CP% This Week</div>
-                        <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 kpi-value" style="background-image: linear-gradient(135deg,#16a34a,#15803d);">{{ number_format($avgCp, 1) }}%</div>
+                        <div class="text-[40px] font-bold leading-none tracking-[-1px] mt-2 kpi-value" style="background-image: linear-gradient(135deg,#16a34a,#15803d);">{{ number_format($avgCp, 1) }}%</div>
                     </div>
                     <span class="kpi-accent" style="background-color: #e6f6ee;"></span>
                 </div>
@@ -250,7 +250,7 @@
                     </div>
                     <div class="relative mt-2">
                         <div class="text-[10px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Avg Feed/Cage/Day</div>
-                        <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 kpi-count kpi-value" style="background-image: linear-gradient(135deg,#16a34a,#15803d);" data-target="{{ $avgFeedPerCage }}" data-decimals="1">0</div>
+                        <div class="text-[40px] font-bold leading-none tracking-[-1px] mt-2 kpi-count kpi-value" style="background-image: linear-gradient(135deg,#16a34a,#15803d);" data-target="{{ $avgFeedPerCage }}" data-decimals="1">0</div>
                     </div>
                     <span class="kpi-accent" style="background-color: #e6f6ee;"></span>
                 </div>
@@ -272,7 +272,7 @@
                     </div>
                     <div class="relative mt-2">
                         <div class="text-[10px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Total Feed Used</div>
-                        <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 kpi-count kpi-value" style="background-image: linear-gradient(135deg,#16a34a,#15803d);" data-target="{{ round($totalFeedWeek, 1) }}" data-decimals="1">0</div>
+                        <div class="text-[40px] font-bold leading-none tracking-[-1px] mt-2 kpi-count kpi-value" style="background-image: linear-gradient(135deg,#16a34a,#15803d);" data-target="{{ round($totalFeedWeek, 1) }}" data-decimals="1">0</div>
                         <div class="text-xs font-medium mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5"
                              style="color: #0f7a44; background-color: rgba(255,255,255,0.78); border: 1px solid rgba(31,138,79,0.35);">
                             ▲ +{{ number_format(round($feedTodayKg, 1), 1) }} kg today
@@ -298,7 +298,7 @@
                     </div>
                     <div class="relative mt-2">
                         <div class="text-[10px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Feed Cost This Month</div>
-                        <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 kpi-value" style="background-image: linear-gradient(135deg,#16a34a,#15803d);">
+                        <div class="text-[40px] font-bold leading-none tracking-[-1px] mt-2 kpi-value" style="background-image: linear-gradient(135deg,#16a34a,#15803d);">
                             @if($totalFeedCostMonth !== null && $totalFeedCostMonth > 0)
                                 ₱{{ number_format($totalFeedCostMonth, 2) }}
                             @else
