@@ -609,7 +609,9 @@ function onPickerCageChange() {
     slotSelect.innerHTML = '<option value="">All slots</option>';
     slotSelect.disabled = !cageCode;
 
-    if (cageCode && henPickerData[cageCode]) {
+    if (cageCode && cageCode === 'Unplaced') {
+        slotSelect.disabled = true;
+    } else if (cageCode && henPickerData[cageCode]) {
         Object.keys(henPickerData[cageCode]).sort().forEach(function(slot) {
             var opt = document.createElement('option');
             opt.value = slot;
@@ -682,7 +684,7 @@ function onPickerFilterChange() {
             html += '<input type="checkbox" class="hen-cage-check rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]/30" data-hen-id="' + h.id + '" ' + checked + ' onchange="updateModalHenCount()">';
             html += '<span class="text-xs text-[#333333]">' + h.chicken_id + '</span>';
             if (h.tag_code) html += ' <span class="text-[10px] text-[#9CA3AF]">(' + h.tag_code + ')</span>';
-            html += '<span class="text-[10px] text-[#9CA3AF]">Slot ' + h._slot + '</span>';
+            if (h._slot && h._slot !== '—') html += '<span class="text-[10px] text-[#9CA3AF]">Slot ' + h._slot + '</span>';
             html += '<span class="text-[10px] text-[#9CA3AF] ml-auto">' + h.breed + '</span>';
             html += '</label>';
         });

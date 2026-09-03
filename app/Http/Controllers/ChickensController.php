@@ -63,6 +63,23 @@ class ChickensController extends Controller
         ksort($henPickerData);
         foreach ($henPickerData as &$slots) { ksort($slots); }
 
+        // Include unplaced active hens so they can be picked/culled from the
+        // hen picker popup too, grouped under a virtual "Unplaced" cage.
+        $unplacedHens = Hen::where('is_active', 1)
+            ->whereNull('cage_slot_id')
+            ->get();
+
+        if ($unplacedHens->isNotEmpty()) {
+            foreach ($unplacedHens as $hen) {
+                $henPickerData['Unplaced']['—'][] = [
+                    'id' => $hen->id,
+                    'chicken_id' => $hen->chicken_id,
+                    'tag_code' => $hen->tag_code,
+                    'breed' => $hen->breed,
+                ];
+            }
+        }
+
         return view('chickens.index', compact(
             'cages', 'breeds', 'todayTotal', 'todayByCage', 'tab',
             'cageId', 'breed', 'isActive', 'search', 'sort', 'preselectedCageId',
