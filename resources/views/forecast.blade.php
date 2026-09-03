@@ -63,7 +63,9 @@
         #forecastLockOverlay > .card {
             max-height: calc(100dvh - 2rem);
             max-height: calc(100vh - 2rem);
+            overflow-y: auto;
         }
+        #forecastLockOverlay > .card > .card-scroll { flex: 1 1 auto; }
         @media (max-width: 640px) {
             #forecastLockOverlay { padding: 0; align-items: flex-end; }
             #forecastLockOverlay > .card {
@@ -73,13 +75,15 @@
                 width: 100%;
                 max-width: none;
                 border-radius: 1rem 1rem 0 0;
+                overflow-y: hidden;
             }
             #forecastLockOverlay > .backdrop { top: 0; }
-        }
-        #forecastLockOverlay > .card > .card-scroll {
-            overflow-y: auto;
-            min-height: 0;
-            flex: 1 1 auto;
+            #forecastLockOverlay > .card > .card-scroll {
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                min-height: 0;
+                flex: 1 1 auto;
+            }
         }
         #forecastLockOverlay > .backdrop {
             position: fixed;
