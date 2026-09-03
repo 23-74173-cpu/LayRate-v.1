@@ -796,7 +796,6 @@
         }
 
         var url = buildFrameUrl('{{ route('dashboard.cage-performance') }}', {
-            cage: window.__dashboardCage === 'all' ? null : window.__dashboardCage,
             days: days === 1 ? null : days
         });
 
@@ -843,7 +842,9 @@
         var cageParam = code === 'all' ? null : code;
         var statsUrl   = buildFrameUrl('{{ route('dashboard.stats') }}',           { cage: cageParam, mortality_days: window.__dashboardMortalityDays === 1 ? null : window.__dashboardMortalityDays });
         var feedUrl    = buildFrameUrl('{{ route('dashboard.feed-mortality') }}',  { cage: cageParam });
-        var perfUrl    = buildFrameUrl('{{ route('dashboard.cage-performance') }}', { cage: cageParam, days: window.__dashboardPerfDays === 1 ? null : window.__dashboardPerfDays });
+        // Cage Performance Overview is intentionally NOT cage-filtered — it always
+        // compares all cages against each other regardless of the active cage filter.
+        var perfUrl    = buildFrameUrl('{{ route('dashboard.cage-performance') }}', { days: window.__dashboardPerfDays === 1 ? null : window.__dashboardPerfDays });
         var historyUrl = buildFrameUrl('{{ route('dashboard.production-history') }}', {
             days: window.__dashboardHistoryDays === 7 ? null : window.__dashboardHistoryDays,
             compare: window.__dashboardHistoryCompare ? 1 : null
