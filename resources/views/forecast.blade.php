@@ -106,7 +106,7 @@
                     <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
                 </button>
             </div>
-            <div class="card-scroll px-6 pb-10 overflow-y-auto -webkit-overflow-scrolling-touch">
+            <div class="card-scroll px-6 pb-16 overflow-y-auto -webkit-overflow-scrolling-touch">
             <div class="w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: #fdf3e0;">
                 <i data-lucide="hourglass" class="w-7 h-7" style="color: #8a5a00;"></i>
             </div>
@@ -125,6 +125,12 @@
                         {{ $daysRemaining > 0 ? $daysRemaining . ' days remaining' : 'Ready to generate' }}
                     </span>
                 </div>
+            </div>
+
+            <div class="mt-4 text-xs leading-relaxed" style="color: #6B7280;">
+                Keep logging eggs daily. Each recorded day adds to your history.
+                You can also download the forecast input sheet, fill it with historical data,
+                and import it to reach 90 days faster.
             </div>
 
             <div id="syncCountdown" class="mt-3 p-2.5 rounded-lg text-center" style="background-color:#f0f4ff; border:1px solid #d6e0f2;">
