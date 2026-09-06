@@ -96,7 +96,7 @@ class DashboardController extends Controller
     {
         $cageCode = request('cage');
         $days = (int) request('days', 1);
-        if (! in_array($days, [1, 7, 14, 30])) {
+        if (! in_array($days, [0, 1, 7, 14, 30])) {
             $days = 1;
         }
 
@@ -105,14 +105,15 @@ class DashboardController extends Controller
         // Override per-cage stats for the selected period.
         $reportingDate = ReportingDateService::reportingDate();
         $endDate = $reportingDate->toDateString();
-        $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
+        $startDate = $days > 0 ? $reportingDate->copy()->subDays($days - 1)->toDateString() : null;
 
         $cageIds = $data['cages']->pluck('id');
 
         $periodStats = ProductionLog::query()
             ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
             ->whereIn('cage_slots.cage_id', $cageIds)
-            ->whereBetween('production_logs.log_date', [$startDate, $endDate])
+            ->where('production_logs.log_date', '<=', $endDate)
+            ->when($startDate, fn ($q) => $q->where('production_logs.log_date', '>=', $startDate))
             ->selectRaw('cage_slots.cage_id as cage_id, SUM(production_logs.egg_count) as total_eggs, AVG(production_logs.hdep) as avg_hdep')
             ->groupBy('cage_slots.cage_id')
             ->get()
@@ -141,23 +142,44 @@ class DashboardController extends Controller
         $cageCode = request('cage');
         $days = (int) request('days', 7);
         $compare = request('compare', false);
-        if (! in_array($days, [7, 14, 30])) {
+        if (! in_array($days, [0, 7, 14, 30])) {
             $days = 7;
         }
 
         $reportingDate = ReportingDateService::reportingDate();
         $endDate = $reportingDate->toDateString();
-        $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
+        $startDate = $days > 0 ? $reportingDate->copy()->subDays($days - 1)->toDateString() : null;
 
-        // Build date labels and data points, filling missing days with 0.
-        $labels = collect(range(0, $days - 1))
-            ->map(fn ($i) => $reportingDate->copy()->subDays($days - 1 - $i)->format('M j'))
-            ->values()
-            ->toArray();
+        // Build date labels and data points. A bounded window renders a
+        // contiguous range; the full (day-1) view derives its axis from the
+        // dates that actually have logs.
+        if ($days > 0) {
+            // Build date labels and data points, filling missing days with 0.
+            $labels = collect(range(0, $days - 1))
+                ->map(fn ($i) => $reportingDate->copy()->subDays($days - 1 - $i)->format('M j'))
+                ->values()
+                ->toArray();
 
-        $dateKeys = collect(range(0, $days - 1))
-            ->map(fn ($i) => $reportingDate->copy()->subDays($days - 1 - $i)->toDateString())
-            ->values();
+            $dateKeys = collect(range(0, $days - 1))
+                ->map(fn ($i) => $reportingDate->copy()->subDays($days - 1 - $i)->toDateString())
+                ->values();
+        } else {
+            $scope = fn ($q) => $q->when($cageCode, fn ($cq) => $cq->whereHas('cageSlot.cage', fn ($c) => $c->where('cage_code', $cageCode)));
+
+            $dateKeys = ProductionLog::query()
+                ->select('log_date')
+                ->distinct()
+                ->where('log_date', '<=', $endDate)
+                ->where($scope)
+                ->orderBy('log_date')
+                ->pluck('log_date')
+                ->map(fn ($d) => is_string($d) ? strval($d) : $d->toDateString())
+                ->values();
+
+            $labels = $dateKeys
+                ->map(fn ($d) => Carbon::parse($d)->format('M j'))
+                ->values();
+        }
 
         if ($compare) {
             // Multi-line comparison: one dataset per active cage.
@@ -169,7 +191,8 @@ class DashboardController extends Controller
 
             $logs = ProductionLog::query()
                 ->with('cageSlot.cage')
-                ->whereBetween('log_date', [$startDate, $endDate])
+                ->where('log_date', '<=', $endDate)
+                ->when($startDate, fn ($q) => $q->where('log_date', '>=', $startDate))
                 ->when($cageCode, fn ($q) => $q->whereHas('cageSlot.cage', fn ($c) => $c->where('cage_code', $cageCode)))
                 ->get()
                 ->groupBy(fn ($l) => $l->cageSlot?->cage?->cage_code ?? 'Unknown')
@@ -200,7 +223,8 @@ class DashboardController extends Controller
             $scope = fn ($q) => $q->when($cageCode, fn ($cq) => $cq->whereHas('cageSlot.cage', fn ($c) => $c->where('cage_code', $cageCode)));
 
             $logs = ProductionLog::query()
-                ->whereBetween('log_date', [$startDate, $endDate])
+                ->where('log_date', '<=', $endDate)
+                ->when($startDate, fn ($q) => $q->where('log_date', '>=', $startDate))
                 ->where($scope)
                 ->get()
                 ->groupBy(fn ($l) => $l->log_date->format('Y-m-d'))
@@ -246,7 +270,8 @@ class DashboardController extends Controller
                 $firstAvg = count($firstHalf) > 0 ? round(array_sum($firstHalf) / count($firstHalf)) : 0;
                 $secondAvg = count($secondHalf) > 0 ? round(array_sum($secondHalf) / count($secondHalf)) : 0;
 
-                $insight = "Over the last {$days} days, daily egg production averaged {$avg} eggs (peak: {$peak}).";
+                $periodText = $days > 0 ? "Over the last {$days} days" : 'Since day 1';
+                $insight = "{$periodText}, daily egg production averaged {$avg} eggs (peak: {$peak}).";
                 if ($secondAvg > $firstAvg * 1.1 && $firstAvg > 0) {
                     $insight .= " Production is trending upward — a positive signal.";
                 } elseif ($firstAvg > $secondAvg * 1.1 && $secondAvg > 0) {
@@ -270,14 +295,14 @@ class DashboardController extends Controller
 
     public function eggCollectionTime()
     {
+        $days = (int) request('days', 7);
         $reportingDate = ReportingDateService::reportingDate();
-        $days = 7;
-
-        $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
+        $startDate = $days > 0 ? $reportingDate->copy()->subDays($days - 1)->toDateString() : null;
         $endDate = $reportingDate->toDateString();
 
         // Group egg counts by hour of day using created_at timestamp
-        $hourly = ProductionLog::whereBetween('log_date', [$startDate, $endDate])
+        $hourly = ProductionLog::where('log_date', '<=', $endDate)
+            ->when($startDate, fn ($q) => $q->where('log_date', '>=', $startDate))
             ->selectRaw('HOUR(created_at) as hour, SUM(egg_count) as total_eggs')
             ->groupBy('hour')
             ->orderBy('hour')
@@ -317,15 +342,16 @@ class DashboardController extends Controller
 
     public function henAgeLayrate()
     {
+        $days = (int) request('days', 90);
         $reportingDate = ReportingDateService::reportingDate();
-        $days = 90;
-        $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
+        $startDate = $days > 0 ? $reportingDate->copy()->subDays($days - 1)->toDateString() : null;
         $endDate = $reportingDate->toDateString();
 
         // Get production logs with their cage_slot's hens
         $logs = ProductionLog::query()
             ->with('cageSlot.hens')
-            ->whereBetween('log_date', [$startDate, $endDate])
+            ->where('log_date', '<=', $endDate)
+            ->when($startDate, fn ($q) => $q->where('log_date', '>=', $startDate))
             ->where('hen_count', '>', 0)
             ->where('hdep', '>', 0)
             ->get();
@@ -419,7 +445,7 @@ class DashboardController extends Controller
             }
         }
 
-        return view('dashboard._hen-age-layrate', compact('chartData', 'insight'));
+        return view('dashboard._hen-age-layrate', compact('chartData', 'days', 'insight'));
     }
 
     public function tempVsHdep()
@@ -427,7 +453,7 @@ class DashboardController extends Controller
         $cageCode = request('cage');
         $days = (int) request('days', 30);
         $reportingDate = ReportingDateService::reportingDate();
-        $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
+        $startDate = $days > 0 ? $reportingDate->copy()->subDays($days - 1)->toDateString() : null;
         $endDate = $reportingDate->toDateString();
 
         $cageIds = Cage::query()
@@ -436,14 +462,16 @@ class DashboardController extends Controller
 
         $points = EnvironmentalLog::select('cage_id', DB::raw('DATE(recorded_at) as log_date'), DB::raw('AVG(temperature_c) as avg_temp'))
             ->whereIn('cage_id', $cageIds)
-            ->whereBetween(DB::raw('DATE(recorded_at)'), [$startDate, $endDate])
+            ->where(DB::raw('DATE(recorded_at)'), '<=', $endDate)
+            ->when($startDate, fn ($q) => $q->where(DB::raw('DATE(recorded_at)'), '>=', $startDate))
             ->groupBy('cage_id', 'log_date')
             ->get();
 
         $prodByCageDate = ProductionLog::query()
             ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
             ->whereIn('cage_slots.cage_id', $cageIds)
-            ->whereBetween('production_logs.log_date', [$startDate, $endDate])
+            ->where('production_logs.log_date', '<=', $endDate)
+            ->when($startDate, fn ($q) => $q->where('production_logs.log_date', '>=', $startDate))
             ->where('hdep', '>', 0)
             ->selectRaw('cage_slots.cage_id as cage_id, production_logs.log_date as log_date, AVG(production_logs.hdep) as avg_hdep')
             ->groupBy('cage_slots.cage_id', 'production_logs.log_date')
@@ -474,7 +502,7 @@ class DashboardController extends Controller
             else $insight = 'No clear relationship detected between temperature and HDEP.';
         }
 
-        return view('dashboard._temp-vs-hdep', compact('scatterData', 'insight'));
+        return view('dashboard._temp-vs-hdep', compact('scatterData', 'days', 'insight'));
     }
 
     public function humVsHdep()
@@ -482,7 +510,7 @@ class DashboardController extends Controller
         $cageCode = request('cage');
         $days = (int) request('days', 30);
         $reportingDate = ReportingDateService::reportingDate();
-        $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
+        $startDate = $days > 0 ? $reportingDate->copy()->subDays($days - 1)->toDateString() : null;
         $endDate = $reportingDate->toDateString();
 
         $cageIds = Cage::query()
@@ -491,14 +519,16 @@ class DashboardController extends Controller
 
         $points = EnvironmentalLog::select('cage_id', DB::raw('DATE(recorded_at) as log_date'), DB::raw('AVG(humidity_pct) as avg_hum'))
             ->whereIn('cage_id', $cageIds)
-            ->whereBetween(DB::raw('DATE(recorded_at)'), [$startDate, $endDate])
+            ->where(DB::raw('DATE(recorded_at)'), '<=', $endDate)
+            ->when($startDate, fn ($q) => $q->where(DB::raw('DATE(recorded_at)'), '>=', $startDate))
             ->groupBy('cage_id', 'log_date')
             ->get();
 
         $prodByCageDate = ProductionLog::query()
             ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
             ->whereIn('cage_slots.cage_id', $cageIds)
-            ->whereBetween('production_logs.log_date', [$startDate, $endDate])
+            ->where('production_logs.log_date', '<=', $endDate)
+            ->when($startDate, fn ($q) => $q->where('production_logs.log_date', '>=', $startDate))
             ->where('hdep', '>', 0)
             ->selectRaw('cage_slots.cage_id as cage_id, production_logs.log_date as log_date, AVG(production_logs.hdep) as avg_hdep')
             ->groupBy('cage_slots.cage_id', 'production_logs.log_date')
@@ -529,7 +559,7 @@ class DashboardController extends Controller
             else $insight = 'No clear relationship detected between humidity and HDEP.';
         }
 
-        return view('dashboard._hum-vs-hdep', compact('scatterData', 'insight'));
+        return view('dashboard._hum-vs-hdep', compact('scatterData', 'days', 'insight'));
     }
 
     public function breedAnalytics()
@@ -537,14 +567,15 @@ class DashboardController extends Controller
         $cageCode = request('cage');
         $days = (int) request('days', 30);
         $reportingDate = ReportingDateService::reportingDate();
-        $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
+        $startDate = $days > 0 ? $reportingDate->copy()->subDays($days - 1)->toDateString() : null;
         $endDate = $reportingDate->toDateString();
 
         $breedData = ProductionLog::query()
             ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
             ->join('hens', 'hens.cage_slot_id', '=', 'cage_slots.id')
             ->where('hens.is_active', 1)
-            ->whereBetween('production_logs.log_date', [$startDate, $endDate])
+            ->where('production_logs.log_date', '<=', $endDate)
+            ->when($startDate, fn ($q) => $q->where('production_logs.log_date', '>=', $startDate))
             ->where('production_logs.hdep', '>', 0)
             ->when($cageCode, fn ($q) => $q->whereHas('cageSlot.cage', fn ($c) => $c->where('cage_code', $cageCode)))
             ->selectRaw('hens.breed as breed, AVG(production_logs.hdep) as avg_hdep, COUNT(*) as log_count')
@@ -569,7 +600,7 @@ class DashboardController extends Controller
             }
         }
 
-        return view('dashboard._breed-analytics', compact('labels', 'data', 'bestBreed', 'insight'));
+        return view('dashboard._breed-analytics', compact('labels', 'data', 'bestBreed', 'days', 'insight'));
     }
 
     public function mortalityByCause()
@@ -577,12 +608,13 @@ class DashboardController extends Controller
         $cageCode = request('cage');
         $days = (int) request('days', 30);
         $reportingDate = ReportingDateService::reportingDate();
-        $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
+        $startDate = $days > 0 ? $reportingDate->copy()->subDays($days - 1)->toDateString() : null;
         $endDate = $reportingDate->toDateString();
 
         $causeData = MortalityLog::query()
             ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
-            ->whereBetween('log_date', [$startDate, $endDate])
+            ->where('log_date', '<=', $endDate)
+            ->when($startDate, fn ($q) => $q->where('log_date', '>=', $startDate))
             ->selectRaw('reason, SUM(count) as total')
             ->groupBy('reason')
             ->orderByDesc('total')
@@ -608,7 +640,7 @@ class DashboardController extends Controller
             }
         }
 
-        return view('dashboard._mortality-by-cause', compact('labels', 'data', 'totalDeaths', 'topCause', 'insight'));
+        return view('dashboard._mortality-by-cause', compact('labels', 'data', 'totalDeaths', 'topCause', 'days', 'insight'));
     }
 
     public function mortalityTrend()
@@ -616,29 +648,50 @@ class DashboardController extends Controller
         $cageCode = request('cage');
         $days = (int) request('days', 30);
         $reportingDate = ReportingDateService::reportingDate();
-        $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
+        $startDate = $days > 0 ? $reportingDate->copy()->subDays($days - 1)->toDateString() : null;
         $endDate = $reportingDate->toDateString();
 
-        $labels = collect(range(0, $days - 1))
-            ->map(fn ($i) => $reportingDate->copy()->subDays($days - 1 - $i)->format('M j'))
-            ->values()->toArray();
+        // A bounded window renders contiguous dated labels; the full (day-1)
+        // view derives the axis from the dates that actually have logs.
+        if ($days > 0) {
+            $labels = collect(range(0, $days - 1))
+                ->map(fn ($i) => $reportingDate->copy()->subDays($days - 1 - $i)->format('M j'))
+                ->values()->toArray();
 
-        $dateKeys = collect(range(0, $days - 1))
-            ->map(fn ($i) => $reportingDate->copy()->subDays($days - 1 - $i)->toDateString())
-            ->values();
+            $dateKeys = collect(range(0, $days - 1))
+                ->map(fn ($i) => $reportingDate->copy()->subDays($days - 1 - $i)->toDateString())
+                ->values();
+        } else {
+            $dateKeys = MortalityLog::query()
+                ->select('log_date')
+                ->distinct()
+                ->where('log_date', '<=', $endDate)
+                ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
+                ->orderBy('log_date')
+                ->pluck('log_date')
+                ->map(fn ($d) => is_string($d) ? strval($d) : $d->toDateString())
+                ->values();
+
+            $labels = $dateKeys
+                ->map(fn ($d) => Carbon::parse($d)->format('M j'))
+                ->values();
+        }
 
         $dailyCounts = MortalityLog::query()
             ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
-            ->whereBetween('log_date', [$startDate, $endDate])
+            ->where('log_date', '<=', $endDate)
+            ->when($startDate, fn ($q) => $q->where('log_date', '>=', $startDate))
             ->selectRaw('log_date, SUM(count) as total')
             ->groupBy('log_date')
             ->pluck('total', 'log_date');
 
         $data = $dateKeys->map(fn ($d) => (int) ($dailyCounts->get($d, 0)))->values()->toArray();
-        $peakVal = max($data);
-        $peakIdx = array_search($peakVal, $data);
-        $peakLabel = $labels[$peakIdx] ?? '';
-        $avgDaily = $days > 0 ? round(array_sum($data) / $days, 1) : 0;
+        $peakVal = count($data) > 0 ? max($data) : 0;
+        $peakIdx = count($data) > 0 ? array_search($peakVal, $data) : null;
+        $peakLabel = $peakIdx !== null ? ($labels[$peakIdx] ?? '') : '';
+        $avgDaily = $days > 0
+            ? round(array_sum($data) / $days, 1)
+            : (count($dateKeys) > 0 ? round(array_sum($data) / count($dateKeys), 1) : 0);
 
         $insight = 'No mortality data available for analysis.';
         if (array_sum($data) > 0) {
@@ -647,7 +700,8 @@ class DashboardController extends Controller
             $firstAvg = count($firstHalf) > 0 ? round(array_sum($firstHalf) / count($firstHalf), 1) : 0;
             $secondAvg = count($secondHalf) > 0 ? round(array_sum($secondHalf) / count($secondHalf), 1) : 0;
 
-            $insight = "Average daily mortality is {$avgDaily} deaths over the last {$days} days.";
+            $periodText = $days > 0 ? "over the last {$days} days" : 'since day 1';
+            $insight = "Average daily mortality is {$avgDaily} deaths {$periodText}.";
             if ($peakVal > $avgDaily * 2 && $peakVal > 0) {
                 $insight .= " A spike of {$peakVal} deaths on {$peakLabel} was well above average — investigate potential causes.";
             }
@@ -660,7 +714,7 @@ class DashboardController extends Controller
             }
         }
 
-        return view('dashboard._mortality-trend', compact('labels', 'data', 'peakVal', 'peakLabel', 'avgDaily', 'insight'));
+        return view('dashboard._mortality-trend', compact('labels', 'data', 'peakVal', 'peakLabel', 'avgDaily', 'days', 'insight'));
     }
 
     public function feedVsEgg()
@@ -668,12 +722,13 @@ class DashboardController extends Controller
         $cageCode = request('cage');
         $days = (int) request('days', 30);
         $reportingDate = ReportingDateService::reportingDate();
-        $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
+        $startDate = $days > 0 ? $reportingDate->copy()->subDays($days - 1)->toDateString() : null;
         $endDate = $reportingDate->toDateString();
 
         $feedByCageDate = FeedConsumptionLog::query()
             ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
-            ->whereBetween('log_date', [$startDate, $endDate])
+            ->where('log_date', '<=', $endDate)
+            ->when($startDate, fn ($q) => $q->where('log_date', '>=', $startDate))
             ->selectRaw('cage_id, log_date, SUM(feed_consumed_kg) as feed_kg')
             ->groupBy('cage_id', 'log_date')
             ->get()
@@ -682,7 +737,8 @@ class DashboardController extends Controller
         $prodByCageDate = ProductionLog::query()
             ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
             ->when($cageCode, fn ($q) => $q->whereHas('cage_slots.cage', fn ($c) => $c->where('cage_code', $cageCode)))
-            ->whereBetween('production_logs.log_date', [$startDate, $endDate])
+            ->where('production_logs.log_date', '<=', $endDate)
+            ->when($startDate, fn ($q) => $q->where('production_logs.log_date', '>=', $startDate))
             ->selectRaw('cage_slots.cage_id as cage_id, production_logs.log_date as log_date, SUM(production_logs.egg_count) as eggs')
             ->groupBy('cage_slots.cage_id', 'production_logs.log_date')
             ->get()
@@ -711,7 +767,7 @@ class DashboardController extends Controller
             else $insight = 'No clear relationship detected between feed consumption and egg production.';
         }
 
-        return view('dashboard._feed-vs-egg', compact('scatterData', 'insight'));
+        return view('dashboard._feed-vs-egg', compact('scatterData', 'days', 'insight'));
     }
 
     public function feedByCage()
@@ -719,13 +775,14 @@ class DashboardController extends Controller
         $cageCode = request('cage');
         $days = (int) request('days', 7);
         $reportingDate = ReportingDateService::reportingDate();
-        $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
+        $startDate = $days > 0 ? $reportingDate->copy()->subDays($days - 1)->toDateString() : null;
         $endDate = $reportingDate->toDateString();
 
         $feedData = FeedConsumptionLog::query()
             ->join('cages', 'cages.id', '=', 'feed_consumption_logs.cage_id')
             ->when($cageCode, fn ($q) => $q->where('cages.cage_code', $cageCode))
-            ->whereBetween('feed_consumption_logs.log_date', [$startDate, $endDate])
+            ->where('feed_consumption_logs.log_date', '<=', $endDate)
+            ->when($startDate, fn ($q) => $q->where('feed_consumption_logs.log_date', '>=', $startDate))
             ->selectRaw('cages.cage_code as cage_code, cages.id as cage_id, SUM(feed_consumption_logs.feed_consumed_kg) as total_feed, COUNT(DISTINCT feed_consumption_logs.log_date) as days_logged')
             ->groupBy('cages.id', 'cages.cage_code')
             ->orderBy('cages.cage_code')
@@ -758,7 +815,7 @@ class DashboardController extends Controller
             }
         }
 
-        return view('dashboard._feed-by-cage', compact('labels', 'data', 'highest', 'feedData', 'insight'));
+        return view('dashboard._feed-by-cage', compact('labels', 'data', 'highest', 'feedData', 'days', 'insight'));
     }
 
     public function heatStress()
@@ -766,7 +823,7 @@ class DashboardController extends Controller
         $cageCode = request('cage');
         $days = (int) request('days', 30);
         $reportingDate = ReportingDateService::reportingDate();
-        $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
+        $startDate = $days > 0 ? $reportingDate->copy()->subDays($days - 1)->toDateString() : null;
         $endDate = $reportingDate->toDateString();
 
         $thresholds = Setting::thresholds();
@@ -778,14 +835,16 @@ class DashboardController extends Controller
 
         $envByCageDate = EnvironmentalLog::select('cage_id', 'recorded_at', DB::raw('AVG(temperature_c) as avg_temp'), DB::raw('AVG(humidity_pct) as avg_hum'))
             ->whereIn('cage_id', $cageIds)
-            ->whereBetween(DB::raw('DATE(recorded_at)'), [$startDate, $endDate])
+            ->where(DB::raw('DATE(recorded_at)'), '<=', $endDate)
+            ->when($startDate, fn ($q) => $q->where(DB::raw('DATE(recorded_at)'), '>=', $startDate))
             ->groupBy('cage_id', 'recorded_at')
             ->get();
 
         $prodByCageDate = ProductionLog::query()
             ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
             ->whereIn('cage_slots.cage_id', $cageIds)
-            ->whereBetween('production_logs.log_date', [$startDate, $endDate])
+            ->where('production_logs.log_date', '<=', $endDate)
+            ->when($startDate, fn ($q) => $q->where('production_logs.log_date', '>=', $startDate))
             ->where('hdep', '>', 0)
             ->selectRaw('cage_slots.cage_id as cage_id, production_logs.log_date as log_date, AVG(production_logs.hdep) as avg_hdep')
             ->groupBy('cage_slots.cage_id', 'production_logs.log_date')
@@ -794,7 +853,8 @@ class DashboardController extends Controller
 
         $mortByDate = MortalityLog::query()
             ->whereIn('cage_id', $cageIds)
-            ->whereBetween('log_date', [$startDate, $endDate])
+            ->where('log_date', '<=', $endDate)
+            ->when($startDate, fn ($q) => $q->where('log_date', '>=', $startDate))
             ->selectRaw('log_date, SUM(count) as total')
             ->groupBy('log_date')
             ->pluck('total', 'log_date');
@@ -850,7 +910,7 @@ class DashboardController extends Controller
             }
         }
 
-        return view('dashboard._heat-stress', compact('summary', 'highEvents', 'highAvgHdep', 'peakTemp', 'tempMax', 'insight'));
+        return view('dashboard._heat-stress', compact('summary', 'highEvents', 'highAvgHdep', 'peakTemp', 'tempMax', 'days', 'insight'));
     }
 
     public function buildDashboardData(?string $cageCode = null, int $mortalityDays = 1): array

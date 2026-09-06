@@ -170,6 +170,34 @@ class AnalyticsControllerTest extends TestCase
         $response->assertSee('CAGE-B');
     }
 
+    /** @test */
+    public function full_period_returns_all_logs_since_day_one()
+    {
+        $this->createLog($this->slotA1, 66.0, now()->subDays(40)->toDateString());
+        $this->createLog($this->slotA1, 88.0, now()->subDays(2)->toDateString());
+
+        $response = $this->actingAs($this->user)
+            ->get(route('analytics.data', ['cage' => 'CAGE-A', 'period' => 'full']));
+
+        $response->assertOk();
+        $response->assertJsonCount(2, 'charts.logs');
+        $response->assertJsonFragment(['hdep' => 66.0]);
+        $response->assertJsonFragment(['hdep' => 88.0]);
+
+        // The same cage scoped to a week must not include the 40-day-old log.
+        $week = $this->actingAs($this->user)
+            ->get(route('analytics.data', ['cage' => 'CAGE-A', 'period' => 'week']));
+        $week->assertOk();
+        $week->assertJsonCount(1, 'charts.logs');
+
+        // The charts frame renders the all-time title for the full period.
+        $charts = $this->actingAs($this->user)
+            ->get(route('analytics.charts', ['cage' => 'CAGE-A', 'period' => 'full']));
+        $charts->assertOk();
+        $charts->assertSee('ALL-TIME');
+        $charts->assertSee('chart-title-period');
+    }
+
     /**
      * Regression test for item #79: chart instances must be cached in a
      * namespaced store, never as window.<canvasId>. Bare window.hdepChart

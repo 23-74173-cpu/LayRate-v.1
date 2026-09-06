@@ -14,12 +14,13 @@
                 </span>
                 <div>
                     <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Eggs Collected by Time</div>
-                    <div class="text-xs mt-0.5" style="color: #9CA3AF;">{{ number_format($chartData['total']) }} eggs across 7 days</div>
+                    <div class="text-xs mt-0.5" style="color: #9CA3AF;">{{ number_format($chartData['total']) }} eggs across {{ $days > 0 ? $days . ' days' : 'all time' }}</div>
                     <button type="button" onclick="this.closest('.bg-white').querySelector('.interpretation-panel').classList.toggle('hidden')" class="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all hover:opacity-80" style="color: #6366f1; background-color: rgba(99,102,241,0.08);">
                         <i data-lucide="sparkles" class="w-2.5 h-2.5"></i> Interpretation
                     </button>
                 </div>
             </div>
+            @include('dashboard._days-filter', ['days' => $days, 'frameId' => 'dashboard-egg-collection-time', 'routeName' => 'dashboard.egg-collection-time'])
         </div>
 
         <div class="interpretation-panel hidden mb-3 px-3 py-2.5 rounded-lg text-xs leading-relaxed" style="background-color: #f0f0ff; color: #3730a3; border: 1px solid rgba(99,102,241,0.15);">{{ $insight }}</div>

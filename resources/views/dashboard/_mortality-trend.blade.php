@@ -1,16 +1,19 @@
 <turbo-frame id="dashboard-mortality-trend">
     <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 h-full flex flex-col">
-        <div class="flex items-start gap-3 mb-2">
-            <span class="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style="background-color: #fce7f3; color: #db2777;">
-                <i data-lucide="activity" class="w-4 h-4"></i>
-            </span>
-            <div>
-                <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Mortality Trend</div>
-                <div class="text-xs mt-0.5" style="color: #9CA3AF;">Average {{ $avgDaily }} deaths/day</div>
-                <button type="button" onclick="this.closest('.bg-white').querySelector('.interpretation-panel').classList.toggle('hidden')" class="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all hover:opacity-80" style="color: #6366f1; background-color: rgba(99,102,241,0.08);">
-                    <i data-lucide="sparkles" class="w-2.5 h-2.5"></i> Interpretation
-                </button>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
+            <div class="flex items-start gap-3">
+                <span class="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style="background-color: #fce7f3; color: #db2777;">
+                    <i data-lucide="activity" class="w-4 h-4"></i>
+                </span>
+                <div>
+                    <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Mortality Trend</div>
+                    <div class="text-xs mt-0.5" style="color: #9CA3AF;">Average {{ $avgDaily }} deaths/day</div>
+                    <button type="button" onclick="this.closest('.bg-white').querySelector('.interpretation-panel').classList.toggle('hidden')" class="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all hover:opacity-80" style="color: #6366f1; background-color: rgba(99,102,241,0.08);">
+                        <i data-lucide="sparkles" class="w-2.5 h-2.5"></i> Interpretation
+                    </button>
+                </div>
             </div>
+            @include('dashboard._days-filter', ['days' => $days, 'frameId' => 'dashboard-mortality-trend', 'routeName' => 'dashboard.mortality-trend'])
         </div>
         <div class="interpretation-panel hidden mb-3 px-3 py-2.5 rounded-lg text-xs leading-relaxed" style="background-color: #f0f0ff; color: #3730a3; border: 1px solid rgba(99,102,241,0.15);">{{ $insight }}</div>
         @if(array_sum($data) === 0)

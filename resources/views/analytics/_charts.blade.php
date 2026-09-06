@@ -3,12 +3,14 @@
         $hasLogs = $logs->isNotEmpty();
         $hasFeedOverlap = $logs->isNotEmpty() && $feedLogs->isNotEmpty();
         $displayLabel = $isAll ? 'FARM' : $cageCode;
+        $dayLabel = match($period) { 'week' => '7', 'month' => '30', '3months' => '90', default => 'ALL-TIME' };
+        $isFull = $period === 'full';
     @endphp
 
     {{-- ── HDEP Trend Chart ── --}}
     <div class="bg-white rounded-lg border border-[#D9D9D9] p-5 mb-8">
         <div class="text-xs tracking-wider text-[#6B7280] mb-4">
-            <span id="chart-title-period">{{ strtoupper($period === 'week' ? '7' : ($period === 'month' ? '30' : '90')) }}</span>-DAY HDEP TREND — <span id="chart-title-label-hdep">{{ $displayLabel }}</span>
+            <span id="chart-title-period">{{ $dayLabel }}</span><span id="chart-title-period-suffix" style="{{ $isFull ? 'display:none' : '' }}">-DAY</span> HDEP TREND — <span id="chart-title-label-hdep">{{ $displayLabel }}</span>
         </div>
         <div id="hdepChartWrap" class="relative w-full h-[310px]" style="display:{{ $hasLogs ? '' : 'none' }}">
             <canvas id="hdepChart" style="width: 100%; height: 100%; display: block;"></canvas>

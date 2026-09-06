@@ -766,6 +766,23 @@
         reloadFramePreservingScroll('dashboard-production-history', url);
     };
 
+    window.setCagePerformanceDays = function(days) {
+        window.__dashboardPerfDays = days;
+
+        var frame = document.getElementById('dashboard-cage-performance');
+        if (frame) {
+            frame.querySelectorAll('[data-perf-days]').forEach(function(btn) {
+                setButtonActive(btn, parseInt(btn.dataset.perfDays, 10) === days);
+            });
+        }
+
+        var url = buildFrameUrl('{{ route('dashboard.cage-performance') }}', {
+            days: days === 1 ? null : days
+        });
+
+        reloadFramePreservingScroll('dashboard-cage-performance', url);
+    };
+
     window.toggleProductionHistoryCompare = function() {
         var nextCompare = !window.__dashboardHistoryCompare;
         window.__dashboardHistoryCompare = nextCompare;
@@ -785,23 +802,6 @@
         reloadFramePreservingScroll('dashboard-production-history', url);
     };
 
-    window.setCagePerformanceDays = function(days) {
-        window.__dashboardPerfDays = days;
-
-        var frame = document.getElementById('dashboard-cage-performance');
-        if (frame) {
-            frame.querySelectorAll('[data-perf-days]').forEach(function(btn) {
-                setButtonActive(btn, parseInt(btn.dataset.perfDays, 10) === days);
-            });
-        }
-
-        var url = buildFrameUrl('{{ route('dashboard.cage-performance') }}', {
-            days: days === 1 ? null : days
-        });
-
-        reloadFramePreservingScroll('dashboard-cage-performance', url);
-    };
-
     window.setMortalityDays = function(days) {
         window.__dashboardMortalityDays = days;
 
@@ -819,6 +819,20 @@
         }
 
         reloadFramePreservingScroll('dashboard-stats', url);
+    };
+
+    // Generic per-card day filter (Week/Month/3 Months/Full) used by the
+    // analytics cards that don't have their own bespoke filter controls.
+    window.setCardDays = function(frameId, route, days) {
+        var frame = document.getElementById(frameId);
+        if (frame) {
+            frame.querySelectorAll('[data-days-filter]').forEach(function(btn) {
+                setButtonActive(btn, parseInt(btn.dataset.daysFilter, 10) === days);
+            });
+        }
+
+        var url = buildFrameUrl(route, { days: days });
+        reloadFramePreservingScroll(frameId, url);
     };
 
     // ── Cage filter: reloads Turbo Frames with ?cage=CODE ──

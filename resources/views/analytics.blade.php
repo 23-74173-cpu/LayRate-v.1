@@ -69,10 +69,10 @@
 
     {{-- ── Period Selector ── --}}
     <div class="flex items-center gap-0 border-b overflow-x-auto scrollbar-thin" style="border-color: #e6e6e6;">
-        @foreach(['week'=>'Week','month'=>'Month','3months'=>'3 Months'] as $key => $label)
+        @foreach(['week'=>'Week','month'=>'Month','3months'=>'3 Months','full'=>'Full'] as $key => $label)
         @php
             $isP = $period === $key;
-            $icon = match($key) { 'week' => 'calendar-days', 'month' => 'calendar', '3months' => 'calendar-range', default => 'calendar' };
+            $icon = match($key) { 'week' => 'calendar-days', 'month' => 'calendar', '3months' => 'calendar-range', 'full' => 'infinity', default => 'calendar' };
         @endphp
         <a href="{{ route('analytics', ['cage'=>$cageCode,'period'=>$key]) }}"
            data-period-tab="{{ $key }}"
@@ -361,9 +361,12 @@ if (!window.__analyticsListenersBound) {
 
         whenAnalyticsFrameReady(function() {
             analyticsFetch('/analytics/data?cage=' + encodeURIComponent(cage) + '&period=' + encodeURIComponent(period), url, function(data) {
-                var dayCount = period === 'week' ? '7' : (period === 'month' ? '30' : '90');
+                var isFull = period === 'full';
+                var dayCount = isFull ? 'ALL-TIME' : (period === 'week' ? '7' : (period === 'month' ? '30' : '90'));
                 var titleEl = document.getElementById('chart-title-period');
                 if (titleEl) titleEl.textContent = dayCount;
+                var suffixEl = document.getElementById('chart-title-period-suffix');
+                if (suffixEl) suffixEl.style.display = isFull ? 'none' : '';
             });
         });
     });

@@ -22,13 +22,13 @@
                 </div>
             </div>
             <div class="inline-flex items-center gap-1 rounded-lg p-1" style="background-color: #f3f4f6;">
-                @foreach([7, 14, 30] as $d)
+                @foreach([0, 7, 14, 30] as $d)
                 <button type="button"
                    data-history-days="{{ $d }}"
                    onclick="setProductionHistoryDays({{ $d }})"
                    class="history-days-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all {{ $days === $d ? 'history-days-active' : 'text-[#6B7280] hover:bg-[#e5e7eb]' }}"
                    {{ $days === $d ? 'style="background-color: #0d47a1; color: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.1);"' : '' }}>
-                    {{ $d }}D
+                    {{ $d === 0 ? 'Full' : $d . 'D' }}
                 </button>
                 @endforeach
                 <span class="w-px h-3 mx-1" style="background-color: #d1d5db;"></span>

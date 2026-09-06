@@ -245,6 +245,33 @@ class DashboardControllerTest extends TestCase
         $response->assertViewHas('days', 7);
     }
 
+    public function test_production_history_full_days_includes_oldest_log(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('dashboard.production-history', ['cage' => 'CAGE-DASH-A', 'days' => 0]));
+        $response->assertOk();
+        $response->assertViewHas('days', 0);
+
+        // Full (day 1) must include the 30-days-ago row that a 7-day window
+        // excludes. Cage A: 4 (today) + 2 (yesterday) + 1 (30d ago) = 7.
+        $chartData = $response->viewData('chartData');
+        $this->assertEquals(7, array_sum($chartData['datasets'][0]['data']));
+        $response->assertSee('Full');
+    }
+
+    public function test_cage_performance_full_days_accumulates_all_time_eggs(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('dashboard.cage-performance', ['cage' => 'CAGE-DASH-A', 'days' => 0]));
+        $response->assertOk();
+        $response->assertViewHas('days', 0);
+
+        $cageA = $response->viewData('cages')->firstWhere('cage_code', 'CAGE-DASH-A');
+        // All-time for A = 4 + 2 + 1 = 7 eggs.
+        $this->assertEquals(7, $cageA->period_eggs);
+
+        // The All-Time (day 1) ranking hint and HDEP chart header must render.
+        $response->assertSee('All-Time');
+    }
+
     public function test_production_history_compare_mode_renders_multiple_datasets(): void
     {
         $response = $this->actingAs($this->admin)->get(route('dashboard.production-history', ['compare' => 1]));
@@ -256,6 +283,34 @@ class DashboardControllerTest extends TestCase
         $this->assertGreaterThan(1, count($chartData['datasets']));
         $this->assertContains('CAGE-DASH-A', collect($chartData['datasets'])->pluck('label')->toArray());
         $this->assertContains('CAGE-DASH-B', collect($chartData['datasets'])->pluck('label')->toArray());
+    }
+
+    public function test_analytics_card_frames_render_at_default_and_full_days(): void
+    {
+        $routes = [
+            'dashboard.cage-performance' => 'data-perf-days',
+            'dashboard.production-history' => 'data-history-days',
+            'dashboard.egg-collection-time' => 'data-days-filter',
+            'dashboard.hen-age-layrate' => 'data-days-filter',
+            'dashboard.temp-vs-hdep' => 'data-days-filter',
+            'dashboard.hum-vs-hdep' => 'data-days-filter',
+            'dashboard.breed-analytics' => 'data-days-filter',
+            'dashboard.mortality-by-cause' => 'data-days-filter',
+            'dashboard.mortality-trend' => 'data-days-filter',
+            'dashboard.feed-vs-egg' => 'data-days-filter',
+            'dashboard.feed-by-cage' => 'data-days-filter',
+            'dashboard.heat-stress' => 'data-days-filter',
+        ];
+
+        foreach ($routes as $route => $marker) {
+            $response = $this->actingAs($this->admin)->get(route($route));
+            $response->assertOk();
+            $response->assertSee($marker);
+
+            $full = $this->actingAs($this->admin)->get(route($route, ['days' => 0]));
+            $full->assertOk();
+            $full->assertSee($marker);
+        }
     }
 
     private function extractEggsToday($response)

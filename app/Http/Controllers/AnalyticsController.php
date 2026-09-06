@@ -28,9 +28,11 @@ class AnalyticsController extends Controller
         $days = match($period) {
             'month'   => 30,
             '3months' => 90,
+            'full'    => 0,
             default   => 7,
         };
-        $rangeStart = ReportingDateService::reportingDate()->copy()->subDays($days)->toDateString();
+        $isFull = $period === 'full';
+        $rangeStart = $isFull ? null : ReportingDateService::reportingDate()->copy()->subDays($days)->toDateString();
 
         $isAll = $cageCode === 'all';
         $isPerformance = $cageCode === 'performance';
@@ -41,7 +43,9 @@ class AnalyticsController extends Controller
 
             $reportingDate = ReportingDateService::reportingDate();
             $endDate = $reportingDate->toDateString();
-            $startDate = $reportingDate->copy()->subDays($days - 1)->toDateString();
+            $startDate = $isFull
+                ? $reportingDate->copy()->subYears(5)->toDateString()
+                : $reportingDate->copy()->subDays($days - 1)->toDateString();
 
             $cageIds = $data['cages']->pluck('id');
 
@@ -82,12 +86,12 @@ class AnalyticsController extends Controller
             $logs = ProductionLog::whereIn('cage_slot_id', function ($q) use ($cageIds) {
                 $q->select('id')->from('cage_slots')->whereIn('cage_id', $cageIds);
             })
-                ->where('log_date', '>=', $rangeStart)
+                ->when($rangeStart, fn($q) => $q->where('log_date', '>=', $rangeStart))
                 ->orderBy('log_date')
                 ->get();
 
             $feedLogs = FeedConsumptionLog::whereIn('cage_id', $cageIds)
-                ->where('log_date', '>=', $rangeStart)
+                ->when($rangeStart, fn($q) => $q->where('log_date', '>=', $rangeStart))
                 ->orderBy('log_date')
                 ->get();
 
@@ -100,12 +104,12 @@ class AnalyticsController extends Controller
                 ->firstOrFail();
 
             $logs = $cage->productionLogs()
-                ->where('log_date', '>=', $rangeStart)
+                ->when($rangeStart, fn($q) => $q->where('log_date', '>=', $rangeStart))
                 ->orderBy('log_date')
                 ->get();
 
             $feedLogs = FeedConsumptionLog::where('cage_id', $cage->id)
-                ->where('log_date', '>=', $rangeStart)
+                ->when($rangeStart, fn($q) => $q->where('log_date', '>=', $rangeStart))
                 ->orderBy('log_date')
                 ->get();
         }
