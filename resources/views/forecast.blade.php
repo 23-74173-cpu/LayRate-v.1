@@ -215,11 +215,8 @@
         </div>
     </div>
 
-    {{-- ── Forecast Workspace (Inputs + Chart + Metrics) ── --}}
+    {{-- ── Forecast Workspace (Inputs + Calendar + Metrics) ── --}}
     @include('forecast._workspace')
-
-    {{-- ── Production Calendar ── --}}
-    @include('forecast._calendar')
 
 {{-- Download Template Modal --}}
 <div id="downloadTemplateModal" class="fixed inset-0 min-h-screen min-h-[100dvh] bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
@@ -1395,13 +1392,6 @@
             var extMap = { csv: 'csv', excel: 'xlsx', pdf: 'pdf' };
             var extension = extMap[format] || format;
 
-            var chartCanvas = document.querySelector('#forecastChart');
-            var chartImage = null;
-
-            if (format !== 'csv' && chartCanvas && typeof chartCanvas.toDataURL === 'function') {
-                chartImage = chartCanvas.toDataURL('image/png');
-            }
-
             var params = new URLSearchParams();
             params.set('scope', scope);
             params.set('horizon', horizon);
@@ -1419,8 +1409,7 @@
                     scope: scope,
                     cage: cage,
                     breed: breed,
-                    horizon: horizon,
-                    chart_image: chartImage
+                    horizon: horizon
                 })
             })
             .then(function(response) {

@@ -1,13 +1,10 @@
 @php
-    $cageColorMap = \App\Models\Cage::getColorMap();
-    $cageColor = $scope === 'farm' ? '#102A4C' : ($cageColorMap[$cageCode] ?? '#6B7280');
     $scopeLabel = match($scope) {
         'farm' => 'Whole Farm',
         'breed' => $breed ?? '',
         default => $cageCode,
     };
     $showForecast = session('forecast_generated', false);
-    $chartTitle = $showForecast ? 'HISTORICAL DATA VS FORECASTED EGG COUNT' : 'HISTORICAL EGG COUNT';
 @endphp
 
 <turbo-frame id="forecast-workspace">
@@ -83,13 +80,9 @@
             </form>
         </x-card>
 
-        {{-- ── Chart Panel ── --}}
-        <div class="xl:col-span-2 bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div id="chartTitleLine" class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-4">{{ $chartTitle }} — {{ $scopeLabel }}</div>
-            <div class="relative h-64 w-full" style="height: 16rem;">
-                <canvas id="forecastChart" style="width: 100%; height: 100%; display: block;"></canvas>
-                <div id="forecastChartLoading" class="absolute inset-0 flex items-center justify-center bg-white/70 rounded-lg text-xs text-[#6B7280]" style="display:none;">Loading forecast data...</div>
-            </div>
+        {{-- ── Production Calendar ── --}}
+        <div class="xl:col-span-2">
+            @include('forecast._calendar')
         </div>
     </div>
 
@@ -201,156 +194,10 @@
 
 <script>
 (function() {
-    const historical = @json($historical->map(fn($l) => ['date'=> is_object($l->log_date) ? $l->log_date->format('Y-m-d') : $l->log_date,'egg_count'=>$l->egg_count]));
-    const showForecast = @json($showForecast);
-    const forecasts  = showForecast
-        ? @json($forecasts->map(fn($f) => ['date'=> is_object($f->target_date) ? $f->target_date->format('Y-m-d') : $f->target_date,'egg_count'=>(int) $f->predicted_egg_count]))
-        : [];
-    const cageColor  = '{{ $cageColor }}';
-
-    // ── Vertical reference line (historical → forecast transition) ──
-    // Reads its state off the chart instance ($showForecast / $histCount) so it
-    // stays correct as the chart is rebuilt with fresh data on every refresh.
-    (function() {
-        const plugin = {
-            id: 'forecastSeparator',
-            afterDraw(chart) {
-                if (!chart.$showForecast) return;
-                const histCount = chart.$histCount || 0;
-                if (histCount === 0) return;
-                const xScale = chart.scales.x;
-                const chartArea = chart.chartArea;
-                const x = xScale.getPixelForValue(histCount - 0.5);
-                const ctx = chart.ctx;
-                ctx.save();
-                ctx.beginPath();
-                ctx.strokeStyle = '#6B7280';
-                ctx.lineWidth = 1.5;
-                ctx.setLineDash([4, 4]);
-                ctx.moveTo(x, chartArea.top);
-                ctx.lineTo(x, chartArea.bottom - 12);
-                ctx.stroke();
-                ctx.fillStyle = '#6B7280';
-                ctx.font = '10px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('▼ forecast starts', x, chartArea.bottom - 2);
-                ctx.restore();
-            }
-        };
-        if (typeof Chart !== 'undefined' && !Chart.registry.plugins.get('forecastSeparator')) {
-            Chart.register(plugin);
-        }
-    })();
-
-    function formatLabel(dateStr) {
-        const [y, m, d] = dateStr.split('-').map(Number);
-        return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
-    }
-
-    function buildChart(hist, fc, showFc, color) {
-        if (typeof Chart === 'undefined' || typeof window.LayRateChart === 'undefined') return;
-        const canvas = document.getElementById('forecastChart');
-        if (!canvas) return;
-
-        if (!hist || hist.length === 0) {
-            setChartError('No historical data to display.');
-            return;
-        }
-
-        clearChartError();
-
-        const histLabels = hist.map((h) => formatLabel(h.date));
-        const fcLabels   = fc.map((f) => formatLabel(f.date));
-        const allLabels  = showFc ? [...histLabels, ...fcLabels] : histLabels;
-        const histData   = showFc
-            ? [...hist.map(h => h.egg_count), ...Array(fcLabels.length).fill(null)]
-            : hist.map(h => h.egg_count);
-        const fcData     = showFc
-            ? [...Array(histLabels.length).fill(null), ...fc.map(f => f.egg_count)]
-            : [];
-
-        const datasets = [
-            {
-                label: 'Historical',
-                data: histData,
-                borderColor: '#31302e',
-                backgroundColor: 'transparent',
-                tension: 0.3,
-                pointRadius: 3,
-                borderWidth: 2,
-            }
-        ];
-
-        if (showFc) {
-            datasets.push({
-                label: 'Forecast',
-                data: fcData,
-                borderColor: color,
-                backgroundColor: color + '22',
-                tension: 0.3,
-                borderDash: [5, 3],
-                pointRadius: 3,
-                fill: true,
-                borderWidth: 2,
-            });
-        }
-
-        const chart = LayRateChart.create('forecastChart', {
-            type: 'line',
-            data: {
-                labels: allLabels,
-                datasets: datasets
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: true }
-                },
-                scales: {
-                    x: { ticks: { maxRotation: 45, minRotation: 45 } },
-                    y: { min: 0, beginAtZero: true },
-                }
-            }
-        });
-        if (chart) {
-            chart.$showForecast = showFc;
-            chart.$histCount = histLabels.length;
-        } else {
-            setChartError('Failed to render chart. Check console for details.');
-        }
-    }
-
-    function setChartError(message) {
-        const canvas = document.getElementById('forecastChart');
-        if (!canvas) return;
-        const wrapper = canvas.parentElement;
-        if (!wrapper) return;
-        const errorId = 'forecastChartError';
-        let errorEl = document.getElementById(errorId);
-        if (!errorEl) {
-            errorEl = document.createElement('div');
-            errorEl.id = errorId;
-            errorEl.className = 'absolute inset-0 flex items-center justify-center text-xs text-red-600 bg-red-50/80 rounded';
-            wrapper.appendChild(errorEl);
-        }
-        errorEl.textContent = message || 'Unable to load chart.';
-    }
-
-    function clearChartError() {
-        const errorEl = document.getElementById('forecastChartError');
-        if (errorEl) errorEl.remove();
-    }
-
     function escapeHtml(str) {
         return String(str == null ? '' : str)
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    }
-
-    function showChartLoading(show) {
-        const el = document.getElementById('forecastChartLoading');
-        if (el) el.style.display = show ? 'flex' : 'none';
     }
 
     function setScopeButtonStates(scope) {
@@ -483,10 +330,6 @@
             el.textContent = data.scopeLabel;
         });
 
-        const titleEl = document.getElementById('chartTitleLine');
-        if (titleEl) titleEl.textContent = (data.chartTitle || '') + ' — ' + (data.scopeLabel || '');
-
-        buildChart(data.historical, data.forecasts, data.showForecast, data.cageColor);
         updateForecastSummary(data);
         updateModelComparison(data);
         if (window.lucide) {
@@ -517,7 +360,6 @@
         });
 
         const token = ++forecastRequestToken;
-        showChartLoading(true);
 
         fetch('/forecast/data?' + params.toString(), { headers: { 'Accept': 'application/json' } })
             .then(function(res) {
@@ -531,48 +373,8 @@
             .catch(function(err) {
                 if (token !== forecastRequestToken) return;
                 console.error('[Forecast] refresh failed:', err);
-                setChartError('Failed to load forecast data.');
-            })
-            .finally(function() {
-                if (token === forecastRequestToken) showChartLoading(false);
             });
     };
-
-    function initForecastChart() {
-        if (typeof Chart === 'undefined') {
-            console.warn('[ForecastChart] Chart.js not loaded yet.');
-            return;
-        }
-
-        if (!document.getElementById('forecastChart')) {
-            console.warn('[ForecastChart] Canvas element not found.');
-            return;
-        }
-
-        buildChart(historical, forecasts, showForecast, cageColor);
-    }
-
-    function ensureForecastChart() {
-        if (typeof Chart !== 'undefined') {
-            setTimeout(initForecastChart, 120);
-        } else {
-            console.warn('[ForecastChart] Chart.js not available, polling...');
-            const checkChart = setInterval(function() {
-                if (typeof Chart !== 'undefined') {
-                    clearInterval(checkChart);
-                    console.log('[ForecastChart] Chart.js became available.');
-                    initForecastChart();
-                }
-            }, 100);
-            setTimeout(function() {
-                clearInterval(checkChart);
-                if (typeof Chart === 'undefined') {
-                    console.error('[ForecastChart] Chart.js failed to load within 10 seconds.');
-                    setChartError('Chart library failed to load. Please check your connection.');
-                }
-            }, 10000);
-        }
-    }
 
     // Scope buttons: intercept the click and update the workspace in place instead
     // of navigating the turbo-frame (keeps the URL stable, no history churn). These
@@ -586,28 +388,6 @@
             if (window.refreshForecastWorkspace) window.refreshForecastWorkspace();
         });
     });
-
-    // This whole script re-executes on every Turbo visit that lands on this
-    // page (confirmed behavior — Turbo replays body <script> tags per visit),
-    // and everything above is scoped inside this IIFE with `const`/`let` so
-    // each execution's ensureForecastChart() closure captures that visit's
-    // own freshly-rendered historical/forecast data — unlike reports.blade.php's
-    // equivalent fix, we can't just skip re-registering on repeat executions,
-    // that would permanently freeze the chart on whichever visit happened to
-    // bind first. Instead, swap out the previous visit's 'turbo:load' listener
-    // for this one on every execution, so exactly one is ever attached. Without
-    // this, listeners accumulate across visits (document persists across Turbo
-    // navigations, old listeners are never auto-removed) and on a later
-    // turbo:load multiple stacked listeners each call LayRateChart.create() on
-    // the same #forecastChart canvas, throwing "Canvas is already in use."
-    if (window.__forecastChartTurboLoadHandler) {
-        document.removeEventListener('turbo:load', window.__forecastChartTurboLoadHandler);
-    }
-    window.__forecastChartTurboLoadHandler = ensureForecastChart;
-    document.addEventListener('turbo:load', ensureForecastChart);
-    document.addEventListener('DOMContentLoaded', ensureForecastChart);
-    window.addEventListener('load', ensureForecastChart);
-    ensureForecastChart();
 })();
 </script>
 </turbo-frame>
