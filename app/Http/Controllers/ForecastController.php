@@ -43,22 +43,8 @@ class ForecastController extends Controller
         $calendarMonth = (int) $request->get('month', ReportingDateService::now()->month);
         $calendarDate = ReportingDateService::now()->copy()->setDate($calendarYear, max(1, min(12, $calendarMonth)), 1);
 
-        $allCages = DB::table('forecast_input_records')
-            ->whereNotNull('cage_code')
-            ->whereRaw("TRIM(cage_code) != ''")
-            ->distinct()
-            ->pluck('cage_code')
-            ->filter()
-            ->sort()
-            ->values();
-        $allBreeds = DB::table('forecast_input_records')
-            ->whereNotNull('breed')
-            ->whereRaw("TRIM(breed) != ''")
-            ->distinct()
-            ->pluck('breed')
-            ->filter()
-            ->sort()
-            ->values();
+        $allCages = $this->forecastService()->recordedCages();
+        $allBreeds = $this->forecastService()->recordedBreeds();
 
         $cageCode = $request->get('cage', $allCages->first() ?? '');
         $breed = $request->get('breed');
@@ -244,20 +230,10 @@ class ForecastController extends Controller
             'start_date' => $request->input('start_date'),
         ]);
 
-        $cageCode = $request->get('cage', DB::table('forecast_input_records')
-            ->whereNotNull('cage_code')
-            ->whereRaw("TRIM(cage_code) != ''")
-            ->distinct()
-            ->orderBy('cage_code')
-            ->value('cage_code') ?? '');
+        $cageCode = $request->get('cage', $this->forecastService()->recordedCages()->first() ?? '');
 
         if ($scope === 'breed' && empty($breed)) {
-            $breed = DB::table('forecast_input_records')
-                ->whereNotNull('breed')
-                ->whereRaw("TRIM(breed) != ''")
-                ->distinct()
-                ->orderBy('breed')
-                ->value('breed');
+            $breed = $this->forecastService()->recordedBreeds()->first();
         }
 
         $startDate = $request->input('start_date');
@@ -734,54 +710,16 @@ class ForecastController extends Controller
     }
 
     /**
-     * Determine whether the forecast_input_records table has enough historical
-     * data for the requested scope.
+     * Determine whether the aggregated production tables have enough historical
+     * data for the requested scope. Delegates to ForecastGenerationService,
+     * which computes the counts directly from the native tables.
      *
      * Whole farm needs at least 90 distinct dates. Per-cage / per-breed need
      * at least 90 rows for the selected cage or breed.
      */
     private function checkForecastDataSufficiency(string $scope, ?string $cageCode = null, ?string $breed = null): array
     {
-        $baseQuery = DB::table('forecast_input_records')
-            ->whereNotNull('date')
-            ->whereNotNull('cage_code')
-            ->whereRaw("TRIM(cage_code) != ''");
-
-        $uniqueDates = match (true) {
-            $scope === 'cage' && $cageCode => (int) $baseQuery->where('cage_code', $cageCode)->distinct()->count('date'),
-            $scope === 'breed' && $breed => (int) $baseQuery->where('breed', $breed)->distinct()->count('date'),
-            default => (int) $baseQuery->distinct()->count('date'),
-        };
-
-        $perCage = DB::table('forecast_input_records')
-            ->whereNotNull('date')
-            ->whereNotNull('cage_code')
-            ->whereRaw("TRIM(cage_code) != ''")
-            ->select('cage_code', DB::raw('COUNT(DISTINCT date) as unique_dates'))
-            ->groupBy('cage_code')
-            ->orderBy('cage_code')
-            ->pluck('unique_dates', 'cage_code')
-            ->toArray();
-
-        $daysRemaining = max(0, 90 - $uniqueDates);
-
-        Log::info('Forecast data sufficiency check', [
-            'scope' => $scope,
-            'cage_code' => $cageCode,
-            'breed' => $breed,
-            'unique_dates' => $uniqueDates,
-            'threshold' => 90,
-            'has_enough' => $uniqueDates >= 90,
-            'days_remaining' => $daysRemaining,
-            'per_cage' => $perCage,
-        ]);
-
-        return [
-            'has_enough' => $uniqueDates >= 90,
-            'current_count' => $uniqueDates,
-            'days_remaining' => $daysRemaining,
-            'per_cage' => $perCage,
-        ];
+        return $this->forecastService()->dataSufficiency($scope, $cageCode, $breed);
     }
 
     public function clear(Request $request)
@@ -853,22 +791,8 @@ class ForecastController extends Controller
         $calendarMonth = (int) $request->get('month', ReportingDateService::now()->month);
         $calendarDate = ReportingDateService::now()->copy()->setDate($calendarYear, max(1, min(12, $calendarMonth)), 1);
 
-        $allCages = DB::table('forecast_input_records')
-            ->whereNotNull('cage_code')
-            ->whereRaw("TRIM(cage_code) != ''")
-            ->distinct()
-            ->pluck('cage_code')
-            ->filter()
-            ->sort()
-            ->values();
-        $allBreeds = DB::table('forecast_input_records')
-            ->whereNotNull('breed')
-            ->whereRaw("TRIM(breed) != ''")
-            ->distinct()
-            ->pluck('breed')
-            ->filter()
-            ->sort()
-            ->values();
+        $allCages = $this->forecastService()->recordedCages();
+        $allBreeds = $this->forecastService()->recordedBreeds();
 
         $cageCode = $request->get('cage', $allCages->first() ?? '');
         $breed = $request->get('breed');
@@ -935,22 +859,8 @@ class ForecastController extends Controller
         $scope = $request->get('scope', 'cage');
         $horizon = (int) $request->get('horizon', 7);
 
-        $allCages = DB::table('forecast_input_records')
-            ->whereNotNull('cage_code')
-            ->whereRaw("TRIM(cage_code) != ''")
-            ->distinct()
-            ->pluck('cage_code')
-            ->filter()
-            ->sort()
-            ->values();
-        $allBreeds = DB::table('forecast_input_records')
-            ->whereNotNull('breed')
-            ->whereRaw("TRIM(breed) != ''")
-            ->distinct()
-            ->pluck('breed')
-            ->filter()
-            ->sort()
-            ->values();
+        $allCages = $this->forecastService()->recordedCages();
+        $allBreeds = $this->forecastService()->recordedBreeds();
 
         $cageCode = $request->get('cage', $allCages->first() ?? '');
         $breed = $request->get('breed');
@@ -1144,10 +1054,7 @@ class ForecastController extends Controller
             return $redirect;
         }
 
-        $records = DB::table('forecast_input_records')
-            ->orderBy('date')
-            ->orderBy('cage_code')
-            ->get();
+        $records = $this->forecastService()->datasetRows();
 
         $filename = 'production_data_'.ReportingDateService::reportingDateString().'.xlsx';
 
@@ -1155,8 +1062,9 @@ class ForecastController extends Controller
     }
 
     /**
-     * JSON list of forecast_input_records for the "View input records status"
-     * FAB modal on the forecast page. Read-only; returns recent rows + a summary
+     * JSON list of the aggregated forecast dataset (built on the fly from the
+     * native production tables) for the "View input records status" FAB modal
+     * on the forecast page. Read-only; returns recent rows + a summary
      * (count, distinct days, min/max date) so the user can gauge data depth.
      */
     public function inputRecords(Request $request)
@@ -1165,35 +1073,39 @@ class ForecastController extends Controller
             return $redirect;
         }
 
-        $count = DB::table('forecast_input_records')->count();
-        $distinctDays = DB::table('forecast_input_records')->distinct()->count('date');
-        $minDate = DB::table('forecast_input_records')->min('date');
-        $maxDate = DB::table('forecast_input_records')->max('date');
+        $dataset = $this->forecastService()->datasetRows();
 
-        $perCage = DB::table('forecast_input_records')
-            ->whereNotNull('cage_code')
-            ->whereRaw("TRIM(cage_code) != ''")
-            ->select('cage_code', DB::raw('COUNT(DISTINCT date) as unique_dates'))
+        $rows = $dataset
+            ->groupBy(fn ($r) => $r->date)
+            ->map(fn ($group) => (object) [
+                'date' => $group->first()->date,
+                'total_eggs' => (int) $group->sum('egg_count'),
+                'record_count' => $group->count(),
+            ])
+            ->sortByDesc('date')
+            ->values();
+
+        $perCage = $dataset
             ->groupBy('cage_code')
-            ->orderBy('cage_code')
-            ->get()
-            ->map(fn ($row) => [
-                'cage_code' => $row->cage_code,
-                'unique_dates' => (int) $row->unique_dates,
-                'ready' => $row->unique_dates >= 90,
-                'days_remaining' => max(0, 90 - $row->unique_dates),
+            ->map(fn ($group, $cageCode) => [
+                'cage_code' => $cageCode,
+                'unique_dates' => $group->pluck('date')->unique()->count(),
+            ])
+            ->sortKeys()
+            ->values()
+            ->map(fn ($row) => $row + [
+                'ready' => $row['unique_dates'] >= 90,
+                'days_remaining' => max(0, 90 - $row['unique_dates']),
             ]);
 
-        $rows = DB::table('forecast_input_records')
-            ->select('date', DB::raw('SUM(COALESCE(egg_count, 0)) as total_eggs'), DB::raw('COUNT(*) as record_count'))
-            ->groupBy('date')
-            ->orderByDesc('date')
-            ->get();
+        $distinctDays = $dataset->pluck('date')->unique()->count();
+        $minDate = $dataset->min('date');
+        $maxDate = $dataset->max('date');
 
         return response()->json([
             'rows' => $rows,
             'summary' => [
-                'total_records' => $count,
+                'total_records' => $dataset->count(),
                 'distinct_days' => $distinctDays,
                 'min_date' => $minDate,
                 'max_date' => $maxDate,

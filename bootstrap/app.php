@@ -23,20 +23,6 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withSchedule(function (Illuminate\Console\Scheduling\Schedule $schedule) {
-        $schedule->call(function () {
-            \App\Services\ForecastInputSync::run([], catchUp: false);
-        })->name('forecast:sync-input-records')->daily()->at('00:05')
-            ->timezone(\App\Services\ReportingDateService::timezone())
-            ->withoutOverlapping()
-            ->appendOutputTo(storage_path('logs/forecast-sync.log'));
-
-        $schedule->call(function () {
-            \App\Services\ForecastInputSync::run([], catchUp: true);
-        })->name('forecast:sync-input-records-catchup')->daily()->at('06:05')
-            ->timezone(\App\Services\ReportingDateService::timezone())
-            ->withoutOverlapping()
-            ->appendOutputTo(storage_path('logs/forecast-sync.log'));
-
         $schedule->command('alerts:check-environment')
             ->everyFifteenMinutes()
             ->withoutOverlapping()

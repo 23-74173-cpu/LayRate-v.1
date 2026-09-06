@@ -1089,8 +1089,7 @@ class DashboardController extends Controller
         })->filter();
 
         // Daily data completeness — check which active cages have logged data
-        // for the current reporting day across the 4 data types needed for
-        // forecast_input_records sync.
+        // for the current reporting day across the 4 data types.
         $activeCageCodes = $cages->pluck('cage_code')->values();
         $totalActiveCages = $activeCageCodes->count();
 

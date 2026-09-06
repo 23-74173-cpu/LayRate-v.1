@@ -62,23 +62,61 @@ XGB_LAG_FEATURES = [f"lag_{lag}" for lag in XGB_LAGS]
 XGB_ROLLING_FEATURES = ["rolling_mean_7", "rolling_mean_14"]
 XGB_FEATURES = XGB_EXOGENOUS_FEATURES + XGB_LAG_FEATURES + XGB_ROLLING_FEATURES
 
-FORECAST_DATASET_QUERY = """
+def forecast_dataset_query() -> str:
+    """Build the SQL that produces the modeling dataset from the native app
+    tables (production_logs + supporting tables) — the old forecast_input_records
+    denormalized copy no longer exists.
+
+    One row is produced per (cage, completed day) that has both production logs
+    and environmental logs for that day, mirroring the old sync semantics:
+
+      - Breed / Flock_Age_Weeks : first active hen per cage (lowest id)
+      - Live_Hens / Total_Eggs  : SUM of per-slot production logs
+      - Temperature / Humidity  : AVG of that day's environmental readings
+      - Crude_Protein / Feed    : the cage's feed_consumption_logs row that day
+      - Daily_Mortality         : SUM of mortality_logs.count
+
+    Incomplete days (log_date >= today) are excluded, matching what the sync
+    previously materialized.
+    """
+    today = date.today().isoformat()
+
+    return f"""
 SELECT
-    date AS `Date`,
-    cage_code AS `Cage_ID`,
-    breed AS `Breed`,
-    flock_age_weeks AS `Flock_Age_Weeks`,
-    COALESCE(hen_count, 0) AS `Live_Hens`,
-    COALESCE(egg_count, 0) AS `Total_Eggs`,
-    temperature_c AS `Temperature_C`,
-    humidity_percent AS `Humidity_Percent`,
-    COALESCE(crude_protein_percent, 0) AS `Crude_Protein_Percent`,
-    COALESCE(feed_consumed_kg, 0) AS `Total_Feed_Consumed_kg`,
-    COALESCE(mortality_count, 0) AS `Daily_Mortality`
-FROM forecast_input_records
-WHERE date IS NOT NULL
-  AND cage_code IS NOT NULL
-  AND TRIM(cage_code) != ''
+    pl.log_date AS `Date`,
+    c.cage_code AS `Cage_ID`,
+    (SELECT h.breed FROM hens h
+       JOIN cage_slots ch ON h.cage_slot_id = ch.id
+      WHERE ch.cage_id = c.id AND h.is_active = 1
+      ORDER BY h.id LIMIT 1) AS `Breed`,
+    (SELECT h.flock_age_weeks FROM hens h
+       JOIN cage_slots ch2 ON h.cage_slot_id = ch2.id
+      WHERE ch2.cage_id = c.id AND h.is_active = 1
+      ORDER BY h.id LIMIT 1) AS `Flock_Age_Weeks`,
+    COALESCE(SUM(pl.hen_count), 0) AS `Live_Hens`,
+    COALESCE(SUM(pl.egg_count), 0) AS `Total_Eggs`,
+    (SELECT ROUND(AVG(el.temperature_c), 2) FROM environmental_logs el
+      WHERE el.cage_id = c.id AND DATE(el.recorded_at) = pl.log_date) AS `Temperature_C`,
+    (SELECT ROUND(AVG(el.humidity_pct), 2) FROM environmental_logs el
+      WHERE el.cage_id = c.id AND DATE(el.recorded_at) = pl.log_date) AS `Humidity_Percent`,
+    (SELECT fb.crude_protein FROM feed_consumption_logs fcl
+       LEFT JOIN feed_batches fb ON fcl.feed_batch_id = fb.id
+      WHERE fcl.cage_id = c.id AND fcl.log_date = pl.log_date
+      ORDER BY fcl.id DESC LIMIT 1) AS `Crude_Protein_Percent`,
+    (SELECT fcl.feed_consumed_kg FROM feed_consumption_logs fcl
+      WHERE fcl.cage_id = c.id AND fcl.log_date = pl.log_date
+      ORDER BY fcl.id DESC LIMIT 1) AS `Total_Feed_Consumed_kg`,
+    (SELECT COALESCE(SUM(ml.count), 0) FROM mortality_logs ml
+      WHERE ml.cage_id = c.id AND ml.log_date = pl.log_date) AS `Daily_Mortality`
+FROM production_logs pl
+JOIN cage_slots cs ON pl.cage_slot_id = cs.id
+JOIN cages c ON cs.cage_id = c.id
+WHERE pl.log_date IS NOT NULL
+  AND c.cage_code IS NOT NULL
+  AND TRIM(c.cage_code) != ''
+  AND pl.log_date < '{today}'
+GROUP BY pl.log_date, c.id, c.cage_code
+HAVING `Temperature_C` IS NOT NULL AND `Humidity_Percent` IS NOT NULL
 ORDER BY `Date`, `Cage_ID`
 """
 
@@ -464,12 +502,13 @@ def load_dataset_from_db(
     connection_string: Optional[str] = None,
     breed: str = "ALL",
 ) -> pd.DataFrame:
-    """Load the forecast dataset directly from the forecast_input_records table.
+    """Load the forecast dataset by aggregating the native app tables.
 
-    The dataset is read from the denormalized forecast_input_records table,
-    which is populated from imported forecast input sheets. Mortality is taken
-    from the explicit mortality_count column when available; otherwise it is
-    derived from changes in Live_Hens.
+    The dataset is computed on the fly from production_logs, cage_slots, cages,
+    hens, environmental_logs, feed_consumption_logs, feed_batches, and
+    mortality_logs. Mortality is taken from the explicit
+    SUM(mortality_logs.count) aggregate when available; otherwise it is derived
+    from changes in Live_Hens.
 
     Parameters
     ----------
@@ -491,7 +530,7 @@ def load_dataset_from_db(
     if not connection_string:
         connection_string = _build_mysql_connection_string()
 
-    df = _execute_query(connection_string, db_path, FORECAST_DATASET_QUERY)
+    df = _execute_query(connection_string, db_path, forecast_dataset_query())
     df = build_modeling_frame(df)
 
     missing_columns = [col for col in REQUIRED_COLUMNS if col not in df.columns]
@@ -634,26 +673,44 @@ def automatic_forecast(df, forecast_days: int = 7, start_date: Optional[str] = N
     sarima_test_preds = np.asarray(sarima_eval.forecast(steps=len(test_df)), dtype=float)
     sarima_mae, sarima_rmse, sarima_mape = summarize_metrics(test_df[TARGET_COLUMN], sarima_test_preds)
 
-    xgb_run_preds = []
-    for seed in XGB_SEEDS:
-        model = fit_xgb_model(train_df, seed=seed)
-        preds = recursive_xgb_forecast(model, train_df, test_df)
-        xgb_run_preds.append(preds)
-
-    xgb_avg_preds_eval = np.mean(xgb_run_preds, axis=0)
-    xgb_mae, xgb_rmse, xgb_mape = summarize_metrics(test_df[TARGET_COLUMN], xgb_avg_preds_eval)
-
-    recommended = recommend_model(
-        (sarima_mae, sarima_rmse, sarima_mape),
-        (xgb_mae, xgb_rmse, xgb_mape),
+    feed_available = (
+        "Crude_Protein_Percent" in df.columns
+        and "Total_Feed_Consumed_kg" in df.columns
+        and df[["Crude_Protein_Percent", "Total_Feed_Consumed_kg"]].notna().any().any()
+        and (df["Crude_Protein_Percent"].sum() > 0 or df["Total_Feed_Consumed_kg"].sum() > 0)
     )
 
+    if feed_available:
+        try:
+            xgb_run_preds = []
+            for seed in XGB_SEEDS:
+                model = fit_xgb_model(train_df, seed=seed)
+                preds = recursive_xgb_forecast(model, train_df, test_df)
+                xgb_run_preds.append(preds)
+
+            xgb_avg_preds_eval = np.mean(xgb_run_preds, axis=0)
+            xgb_mae, xgb_rmse, xgb_mape = summarize_metrics(test_df[TARGET_COLUMN], xgb_avg_preds_eval)
+
+            recommended = recommend_model(
+                (sarima_mae, sarima_rmse, sarima_mape),
+                (xgb_mae, xgb_rmse, xgb_mape),
+            )
+        except ValueError as e:
+            logger.warning("XGB evaluation failed, falling back to SARIMA-only: %s", e)
+            feed_available = False
+
+    if not feed_available:
+        xgb_mae, xgb_rmse, xgb_mape = None, None, None
+        recommended = "SARIMA"
+
     sarima_full = fit_sarima_model(df[TARGET_COLUMN].astype(float))
-    xgb_full_models = [fit_xgb_model(df, seed) for seed in XGB_SEEDS]
+    xgb_full_models = None
+    if feed_available and recommended == "XGBoost":
+        xgb_full_models = [fit_xgb_model(df, seed) for seed in XGB_SEEDS]
 
     future_dates = _resolve_future_dates(forecast_days, start_date)
 
-    if recommended == "XGBoost":
+    if recommended == "XGBoost" and xgb_full_models is not None:
         last_row = df.iloc[-1]
         feature_frame = build_deployment_feature_frame(
             last_row, future_dates,
@@ -676,11 +733,15 @@ def automatic_forecast(df, forecast_days: int = 7, start_date: Optional[str] = N
             "predicted_egg_count": int(expected_eggs[i]),
         })
 
+    xgboost_metrics = None
+    if feed_available:
+        xgboost_metrics = {"MAE": round(xgb_mae, 2), "RMSE": round(xgb_rmse, 2), "MAPE": round(xgb_mape, 2)}
+
     return {
         "recommended_model": recommended,
         "metrics": {
             "sarima": {"MAE": round(sarima_mae, 2), "RMSE": round(sarima_rmse, 2), "MAPE": round(sarima_mape, 2)},
-            "xgboost": {"MAE": round(xgb_mae, 2), "RMSE": round(xgb_rmse, 2), "MAPE": round(xgb_mape, 2)},
+            "xgboost": xgboost_metrics,
         },
         "forecast": forecast_list,
     }

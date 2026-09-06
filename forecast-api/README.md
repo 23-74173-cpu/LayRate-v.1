@@ -1,6 +1,6 @@
 # LayRate Forecast API
 
-This directory contains the Python forecasting pipeline for the LayRate poultry farm management system. It trains SARIMA and XGBoost models on historical data from the `forecast_input_records` table and returns egg-production forecasts to the Laravel backend.
+This directory contains the Python forecasting pipeline for the LayRate poultry farm management system. It trains SARIMA and XGBoost models on historical data aggregated on demand from the app's native production tables (`production_logs`, `environmental_logs`, etc.) and returns egg-production forecasts to the Laravel backend.
 
 ## What is inside
 
@@ -9,7 +9,7 @@ This directory contains the Python forecasting pipeline for the LayRate poultry 
 | `ForecastingV5.py` | Main forecasting model (SARIMA + XGBoost ensemble). |
 | `forecast_runner.py` | CLI entry point executed by Laravel. Outputs JSON. |
 | `generate_forecast_sheet.py` | Creates a protected Excel template for operators to fill in. |
-| `import_forecast_input.py` | Imports a filled Excel sheet into `forecast_input_records`. |
+| `import_forecast_input.py` | Imports a filled Excel sheet into the app's native production tables. |
 | `requirements.txt` | Python dependencies. |
 | `Dockerfile` | Container image for the forecasting environment. |
 | `Forecast.py` | Older standalone Excel prototype (not used by Laravel). |
@@ -141,15 +141,13 @@ The Laravel `ForecastController` calls `forecast_runner.py` automatically when y
 Laravel commands related to forecasting:
 
 ```bash
-# Sync app tables into forecast_input_records
-php artisan forecast:sync-input-records
-
-# Preview what would be synced
-php artisan forecast:sync-input-records --dry-run
-
 # List scheduled tasks
 php artisan schedule:list
 ```
+
+> The old `forecast:sync-input-records` command and its scheduled syncs were
+> removed — the forecasting pipeline now aggregates production data on demand,
+> so no denormalized `forecast_input_records` copy is maintained.
 
 ## Data requirements
 

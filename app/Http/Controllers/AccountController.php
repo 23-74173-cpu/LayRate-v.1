@@ -270,14 +270,61 @@ class AccountController extends Controller
     }
 
     /**
-     * [TESTING] Manually sync production data into forecast_input_records.
-     * TODO: remove after testing.
+     * Table names that hold farm/business data. Everything here is wiped by
+     * clearDatabase(); users and settings (plus framework tables such as
+     * sessions, migrations, and jobs) are preserved.
+     *
+     * @var array<int, string>
      */
-    public function syncForecastInput()
-    {
-        $count = \App\Services\ForecastInputSync::run([], catchUp: true);
+    private const DATA_TABLES = [
+        'alerts',
+        'cage_slots',
+        'cage_transfers',
+        'cages',
+        'culling_logs',
+        'devices',
+        'egg_size_logs',
+        'egg_stock_batches',
+        'environmental_logs',
+        'farm_feed_entries',
+        'feed_batches',
+        'feed_consumption_logs',
+        'forecast_runs',
+        'forecasts',
+        'hardware_items',
+        'health_events',
+        'hens',
+        'mortality_log_hens',
+        'mortality_logs',
+        'notes',
+        'pre_orders',
+        'production_logs',
+        'removals',
+        'sensor_occupancy_readings',
+        'weight_checks',
+    ];
 
-        return back()->with('success', "Synced {$count} records into forecast_input_records.");
+    public function clearDatabase(Request $request)
+    {
+        $data = $request->validate([
+            'admin_password' => 'required',
+        ]);
+
+        if (! Hash::check($data['admin_password'], auth()->user()->password)) {
+            return back()->withErrors(['admin_password' => 'Admin password is incorrect.']);
+        }
+
+        DB::statement('SET FOREIGN_KEY_CHECKS = 0;');
+        try {
+            foreach (self::DATA_TABLES as $table) {
+                DB::statement("TRUNCATE TABLE `{$table}`");
+            }
+        } finally {
+            DB::statement('SET FOREIGN_KEY_CHECKS = 1;');
+        }
+
+        return redirect()->route('profile', ['tab' => 'system'])
+            ->with('success', 'Database cleared. User accounts and settings were kept; all farm data has been wiped.');
     }
 
 }

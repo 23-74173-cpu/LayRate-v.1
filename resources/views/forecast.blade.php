@@ -143,11 +143,24 @@
 
     <script>
     window.__forecastDataDays = {{ $forecastCount }};
+    // The lock overlay can survive Turbo snapshot restores or stale caches even
+    // after the data threshold is reached. Force it closed whenever there are
+    // enough days, and refuse to open it in the first place.
+    window.hideLockOverlayIfUnlocked = function() {
+        if ((window.__forecastDataDays || 0) >= 90) {
+            var ov = document.getElementById('forecastLockOverlay');
+            if (ov) ov.style.display = 'none';
+        }
+    };
     window.showLockOverlay = function() {
+        if ((window.__forecastDataDays || 0) >= 90) return;
         var overlay = document.getElementById('forecastLockOverlay');
         if (overlay) overlay.style.display = 'flex';
         if (window.lucide) { try { lucide.createIcons(); } catch(e) {} }
     };
+    window.hideLockOverlayIfUnlocked();
+    document.addEventListener('turbo:load', window.hideLockOverlayIfUnlocked);
+    document.addEventListener('turbo:render', window.hideLockOverlayIfUnlocked);
 
     (function() {
         var SYNC_HOUR = 0, SYNC_MIN = 5;

@@ -3,9 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Alert;
-use App\Services\ForecastInputSync;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -50,25 +48,5 @@ class AppServiceProvider extends ServiceProvider
                 'showAlertsModal'  => $showAlertsModal,
             ]);
         });
-
-        // Sync forecast input records on every server startup.
-        // Uses a lock file to run only once per process lifetime (not every request).
-        $lockFile = storage_path('app/forecast_sync_boot.lock');
-        $shouldSync = true;
-        if (file_exists($lockFile)) {
-            $lockAge = time() - (int) file_get_contents($lockFile);
-            if ($lockAge < 3600) { // already synced within the last hour
-                $shouldSync = false;
-            }
-        }
-        if ($shouldSync) {
-            try {
-                ForecastInputSync::run([], catchUp: true);
-                file_put_contents($lockFile, (string) time());
-                Log::info('Forecast input records synced on server startup');
-            } catch (\Throwable $e) {
-                Log::error('Startup forecast sync failed: ' . $e->getMessage());
-            }
-        }
     }
 }

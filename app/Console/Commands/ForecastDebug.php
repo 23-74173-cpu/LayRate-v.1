@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Services\ForecastGenerationService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class ForecastDebug extends Command
 {
@@ -20,50 +20,37 @@ class ForecastDebug extends Command
         $scope = $this->option('scope');
         $cageCode = $this->option('cage');
         $breed = $this->option('breed');
+        $service = app(ForecastGenerationService::class);
 
         $this->line('=== FORECAST DEBUG ===');
-        $total = DB::table('forecast_input_records')->count();
-        $this->line("Total rows in forecast_input_records: {$total}");
+        $total = DB::table('production_logs')->count();
+        $this->line("Total rows in production_logs: {$total}");
 
-        $cages = DB::table('forecast_input_records')->distinct()->pluck('cage_code')->sort()->values();
+        $cages = $service->recordedCages();
         $this->line("Cages: " . json_encode($cages));
 
-        $breeds = DB::table('forecast_input_records')->whereNotNull('breed')->distinct()->pluck('breed')->sort()->values();
+        $breeds = $service->recordedBreeds();
         $this->line("Breeds: " . json_encode($breeds));
-
-        $distinctDates = DB::table('forecast_input_records')->distinct()->count('date');
-        $minDate = DB::table('forecast_input_records')->min('date');
-        $maxDate = DB::table('forecast_input_records')->max('date');
-        $this->line("Distinct dates: {$distinctDates} ({$minDate} to {$maxDate})");
 
         $this->line('');
         $this->line("--- Sufficiency by scope ---");
-        $farmOk = $distinctDates >= 90;
-        $this->line("Farm: {$distinctDates}/90 (" . ($farmOk ? 'YES' : 'NO') . ")");
+        $farm = $service->dataSufficiency('farm');
+        $this->line("Farm: {$farm['current_count']}/90 (" . ($farm['has_enough'] ? 'YES' : 'NO') . ")");
 
         foreach ($cages as $c) {
-            $cnt = DB::table('forecast_input_records')
-                ->whereNotNull('date')->whereNotNull('cage_code')
-                ->whereRaw("TRIM(cage_code) != ''")
-                ->where('cage_code', $c)->count();
-            $this->line("Cage {$c}: {$cnt}/90 (" . ($cnt >= 90 ? 'YES' : 'NO') . ")");
+            $s = $service->dataSufficiency('cage', $c);
+            $this->line("Cage {$c}: {$s['current_count']}/90 (" . ($s['has_enough'] ? 'YES' : 'NO') . ")");
         }
 
         foreach ($breeds as $b) {
-            $cnt = DB::table('forecast_input_records')
-                ->whereNotNull('date')->whereNotNull('cage_code')
-                ->whereRaw("TRIM(cage_code) != ''")
-                ->where('breed', $b)->count();
-            $this->line("Breed {$b}: {$cnt}/90 (" . ($cnt >= 90 ? 'YES' : 'NO') . ")");
+            $s = $service->dataSufficiency('breed', null, $b);
+            $this->line("Breed {$b}: {$s['current_count']}/90 (" . ($s['has_enough'] ? 'YES' : 'NO') . ")");
         }
 
         $this->line('');
         $this->line("--- Python binary ---");
         try {
-            $reflection = new \ReflectionMethod(\App\Http\Controllers\ForecastController::class, 'resolvePythonBinary');
-            $reflection->setAccessible(true);
-            $controller = app()->make(\App\Http\Controllers\ForecastController::class);
-            $python = $reflection->invoke($controller);
+            $python = $service->resolvePythonBinary();
             $this->line("Resolved: {$python}");
             $this->line("Exists: " . (file_exists($python) ? 'YES' : 'NO'));
             if (file_exists($python)) {
@@ -71,7 +58,7 @@ class ForecastDebug extends Command
                 $this->line("Packages: " . trim($out ?? 'ERROR'));
             }
         } catch (\Throwable $e) {
-            $this->error("Reflection error: " . $e->getMessage());
+            $this->error("Python resolution error: " . $e->getMessage());
         }
 
         $this->line('');
@@ -87,13 +74,11 @@ class ForecastDebug extends Command
         $this->line('');
         $this->line("--- Process env check ---");
         try {
-            $reflection2 = new \ReflectionMethod(\App\Http\Controllers\ForecastController::class, 'processEnv');
-            $reflection2->setAccessible(true);
-            $env = $reflection2->invoke($controller);
+            $env = $service->processEnv();
             $safe = collect($env)->except(['DB_PASSWORD'])->toArray();
             $this->line(json_encode($safe, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
         } catch (\Throwable $e) {
-            $this->error("Reflection error: " . $e->getMessage());
+            $this->error("Process env error: " . $e->getMessage());
         }
 
         return self::SUCCESS;

@@ -213,7 +213,7 @@ Route::middleware(['auth', 'system-time-set'])->group(function () {
     Route::put('/settings/users/{targetUser}',      [AccountController::class, 'updateUser'])->name('settings.users.update')->middleware('admin');
     Route::post('/settings/users/{targetUser}/toggle-active', [AccountController::class, 'toggleUserActive'])->name('settings.users.toggle-active')->middleware('admin');
     Route::post('/settings/backup', [SettingsController::class, 'backupNow'])->name('settings.backup.now')->middleware('admin');
-    Route::post('/settings/sync-forecast', [AccountController::class, 'syncForecastInput'])->name('settings.sync-forecast')->middleware('admin');
+    Route::post('/settings/clear-database', [AccountController::class, 'clearDatabase'])->name('settings.clear-database')->middleware('admin');
     Route::get('/settings/system-time', [SystemTimeController::class, 'show'])->name('settings.system-time')->middleware('admin');
     Route::post('/settings/system-time', [SystemTimeController::class, 'update'])->name('settings.system-time.update')->middleware('admin');
     Route::redirect('/account', '/profile', 301);

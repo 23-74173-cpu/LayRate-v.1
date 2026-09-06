@@ -67,7 +67,7 @@
 | 57 | **Arduino firmware** | WORKING | `LayRate-Arduino/src/main.cpp`. DHT22 reads (3-retry), IR break-beam (edge-triggered + 1s cooldown). Serial output at 9600 baud. | Rate-limited to 1 reading/22h for 1-hen slots. |
 | 58 | **Mobile API (Flask)** | WORKING | `mobile-api/app.py`. Auth, incubator status, dashboard. Separate from Laravel. | Runs on Pi. CORS enabled. SQLite. Not merged to main branch. |
 | 59 | **Settings (key-value)** | WORKING | `Setting::get()/set()/thresholds()`. Stores env thresholds, egg weights, freshness config. | No type casting — all stored as strings. |
-| 60 | **Scheduled tasks** | WORKING | `routes/console.php:13-23`. `forecast:sync-input-records` daily at 02:00. `alerts:check-environment` every 15min. | Both commands exist and have `withoutOverlapping`. |
+| 60 | **Scheduled tasks** | WORKING | `alerts:check-environment` every 15min. `forecast:sync-input-records` removed with ForecastInputSync — forecasting now aggregates native tables on demand. | `alerts` has `withoutOverlapping`. |
 | 61 | **MobileAppController** (PHP) | NOT STARTED | `MobileAppController.php` — `dashboardStatus()` method. No routes registered. | Dead code. Never wired to any route file. |
 
 ---

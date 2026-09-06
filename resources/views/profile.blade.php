@@ -423,35 +423,43 @@
             </div>
             @endif
 
-            {{-- [TESTING] Forecast Sync — TODO: remove after testing --}}
+            {{-- Admin: clear database --}}
             @if(auth()->user()->isAdmin())
-            @php $forecastCount = \DB::table('forecast_input_records')->count(); @endphp
-            <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-                <h2 class="text-base font-medium text-[#333333] mb-1">Forecast Input Sync</h2>
-                <p class="text-xs text-[#6B7280] mb-4">[TESTING] Manually push all collected records into forecast_input_records for the forecasting module.</p>
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <div class="flex items-center gap-1.5">
-                            @if($forecastCount > 0)
-                                <span class="inline-block w-2.5 h-2.5 rounded-full bg-green-500"></span>
-                                <span class="text-sm text-green-700 font-medium">{{ number_format($forecastCount) }} records ready</span>
-                            @else
-                                <span class="inline-block w-2.5 h-2.5 rounded-full bg-amber-400"></span>
-                                <span class="text-sm text-amber-700 font-medium">No records yet — sync to populate</span>
-                            @endif
-                        </div>
+            <div class="bg-white rounded-lg border border-red-200 p-5">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                        <i data-lucide="alert-triangle" class="w-5 h-5 text-red-600"></i>
                     </div>
-                    <form method="POST" action="{{ route('settings.sync-forecast') }}" data-turbo="false"
-                          onsubmit="var btn=this.querySelector('button[type=submit]');btn.disabled=true;btn.textContent='Syncing\u2026';">
+                    <div>
+                        <h2 class="text-base font-medium text-[#9b1c24]">Clear Database</h2>
+                        <p class="text-sm text-[#6B7280]">Wipe all farm data. User accounts and settings are kept.</p>
+                    </div>
+                </div>
+
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <h3 class="text-sm font-medium text-[#9b1c24] mb-1">Permanently delete all farm data</h3>
+                    <p class="text-xs text-[#6B7280] mb-3">
+                        This deletes cages, hens, production &amp; environmental logs, feed &amp; mortality records,
+                        forecasts, alerts, hardware, and all other farm data. Your account (and other user accounts,
+                        plus farm settings) are preserved so you can sign in afterward.
+                    </p>
+                    <form method="POST" action="{{ route('settings.clear-database') }}"
+                          data-confirm="This will permanently erase ALL farm data. Type your password below and confirm to continue."
+                          data-confirm-action="Clear everything"
+                          data-confirm-severity="destructive"
+                          class="space-y-3">
                         @csrf
-                        <button type="submit"
-                                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
-                                style="color: #0075de; border: 1px solid #0075de;"
-                                onmouseover="this.style.backgroundColor='#f0f7ff'"
-                                onmouseout="this.style.backgroundColor='transparent'">
-                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-                            Sync Now
-                        </button>
+                        <div class="input-with-toggle relative">
+                            <input type="password" name="admin_password" placeholder="Enter admin password to confirm" required
+                                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-[#002D5E]">
+                            <button type="button" onclick="toggleVisibility(this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] hover:text-[#333333] transition-colors" aria-label="Show password">
+                                <i data-lucide="eye" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                        @error('admin_password')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
+                        <x-button type="submit" variant="danger" class="w-full sm:w-auto">
+                            Clear database
+                        </x-button>
                     </form>
                 </div>
             </div>
@@ -633,9 +641,10 @@
 
 <script>
     // Hide the layout's flash-message banners on this page — we use toasts instead.
+    // Only target banners (mx-4 mt-3), not action cards that happen to use bg-red-50.
     (function() {
         document.querySelectorAll('div[class*="bg-green-50"], div[class*="bg-red-50"]').forEach(function(el) {
-            el.remove();
+            if (el.classList.contains('mx-4')) el.remove();
         });
     })();
 

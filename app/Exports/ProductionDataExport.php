@@ -12,8 +12,9 @@ use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 /**
- * Exports forecast_input_records as a formatted .xlsx: a wider date column,
- * a frozen header row, and a colored header row so the sheet is easy to read.
+ * Exports the aggregated forecast dataset (built from the native production
+ * tables) as a formatted .xlsx: a wider date column, a frozen header row, and
+ * a colored header row so the sheet is easy to read.
  */
 class ProductionDataExport implements FromCollection, WithHeadings, WithStyles, WithEvents, WithTitle
 {

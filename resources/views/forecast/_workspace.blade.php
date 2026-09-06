@@ -167,28 +167,28 @@
                     <tr class="border-b border-[#F0F0F0]">
                         <td class="px-5 py-3.5 text-[#333333]">MAE</td>
                         <td class="px-5 py-3.5 text-right font-mono {{ $maeWinner === 'SARIMA' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
-                            {{ number_format($sarima['MAE'] ?? 0, 2) }}
+                            {{ $sarima ? number_format($sarima['MAE'], 2) : 'N/A' }}
                         </td>
                         <td class="px-5 py-3.5 text-right font-mono {{ $maeWinner === 'XGBoost' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
-                            {{ number_format($xgboost['MAE'] ?? 0, 2) }}
+                            {{ $xgboost ? number_format($xgboost['MAE'], 2) : 'N/A' }}
                         </td>
                     </tr>
                     <tr class="border-b border-[#F0F0F0]">
                         <td class="px-5 py-3.5 text-[#333333]">RMSE</td>
                         <td class="px-5 py-3.5 text-right font-mono {{ $rmseWinner === 'SARIMA' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
-                            {{ number_format($sarima['RMSE'] ?? 0, 2) }}
+                            {{ $sarima ? number_format($sarima['RMSE'], 2) : 'N/A' }}
                         </td>
                         <td class="px-5 py-3.5 text-right font-mono {{ $rmseWinner === 'XGBoost' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
-                            {{ number_format($xgboost['RMSE'] ?? 0, 2) }}
+                            {{ $xgboost ? number_format($xgboost['RMSE'], 2) : 'N/A' }}
                         </td>
                     </tr>
                     <tr>
                         <td class="px-5 py-3.5 text-[#333333]">MAPE</td>
                         <td class="px-5 py-3.5 text-right font-mono {{ $mapeWinner === 'SARIMA' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
-                            {{ number_format($sarima['MAPE'] ?? 0, 2) }}%
+                            {{ $sarima ? number_format($sarima['MAPE'], 2).'%' : 'N/A' }}
                         </td>
                         <td class="px-5 py-3.5 text-right font-mono {{ $mapeWinner === 'XGBoost' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
-                            {{ number_format($xgboost['MAPE'] ?? 0, 2) }}%
+                            {{ $xgboost ? number_format($xgboost['MAPE'], 2).'%' : 'N/A' }}
                         </td>
                     </tr>
                 </tbody>
@@ -407,7 +407,9 @@
 
     function metricCell(value, winner, suffix) {
         const cls = winner ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]';
-        return '<td class="px-5 py-3.5 text-right font-mono ' + cls + '">' + Number(value || 0).toFixed(2) + (suffix || '') + '</td>';
+        const display = (value === null || value === undefined) ? 'N/A'
+            : Number(value).toFixed(2) + (suffix || '');
+        return '<td class="px-5 py-3.5 text-right font-mono ' + cls + '">' + display + '</td>';
     }
 
     function updateModelComparison(data) {
@@ -441,16 +443,16 @@
                 + '<th class="text-right text-xs font-medium text-[#6B7280] px-5 py-3">SARIMA</th>'
                 + '<th class="text-right text-xs font-medium text-[#6B7280] px-5 py-3">XGBoost Regression</th></tr></thead><tbody>'
                 + '<tr class="border-b border-[#F0F0F0]"><td class="px-5 py-3.5 text-[#333333]">MAE</td>'
-                + metricCell(sarima ? sarima.MAE : 0, maeWinner === 'SARIMA')
-                + metricCell(xgboost ? xgboost.MAE : 0, maeWinner === 'XGBoost')
+                + metricCell(sarima ? sarima.MAE : null, maeWinner === 'SARIMA')
+                + metricCell(xgboost ? xgboost.MAE : null, maeWinner === 'XGBoost')
                 + '</tr>'
                 + '<tr class="border-b border-[#F0F0F0]"><td class="px-5 py-3.5 text-[#333333]">RMSE</td>'
-                + metricCell(sarima ? sarima.RMSE : 0, rmseWinner === 'SARIMA')
-                + metricCell(xgboost ? xgboost.RMSE : 0, rmseWinner === 'XGBoost')
+                + metricCell(sarima ? sarima.RMSE : null, rmseWinner === 'SARIMA')
+                + metricCell(xgboost ? xgboost.RMSE : null, rmseWinner === 'XGBoost')
                 + '</tr>'
                 + '<tr><td class="px-5 py-3.5 text-[#333333]">MAPE</td>'
-                + metricCell(sarima ? sarima.MAPE : 0, mapeWinner === 'SARIMA', '%')
-                + metricCell(xgboost ? xgboost.MAPE : 0, mapeWinner === 'XGBoost', '%')
+                + metricCell(sarima ? sarima.MAPE : null, mapeWinner === 'SARIMA', '%')
+                + metricCell(xgboost ? xgboost.MAPE : null, mapeWinner === 'XGBoost', '%')
                 + '</tr></tbody></table></div>'
                 + '<p class="text-xs text-[#6B7280] mt-2">Lower values are better. Highlighted cells indicate the best performing model for each metric.</p>';
         }

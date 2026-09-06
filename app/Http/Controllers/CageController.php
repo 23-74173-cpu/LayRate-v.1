@@ -373,7 +373,7 @@ class CageController extends Controller
 
             // Compute grid bounds from all placed cages
             $allCages = Cage::where('id', '!=', $cage->id)->get();
-            $gridCols = 10; $gridRows = 6;
+            $gridRows = 0; $gridCols = 0;
             foreach ($allCages as $c) {
                 if (is_null($c->location_row) || is_null($c->location_column)) continue;
                 $r = $c->location_row + ($c->rows ?? 1);
@@ -381,6 +381,8 @@ class CageController extends Controller
                 if ($r > $gridRows) $gridRows = $r;
                 if ($cl > $gridCols) $gridCols = $cl;
             }
+            $gridRows = max($gridRows, (int) Setting::get('farm_grid_rows', 6));
+            $gridCols = max($gridCols, (int) Setting::get('farm_grid_cols', 10));
 
             if ($row + $h > $gridRows || $col + $w > $gridCols) {
                 return response()->json(['success' => false, 'message' => 'Position out of bounds'], 422);
@@ -455,8 +457,8 @@ class CageController extends Controller
                     if ($r > $gridRows) $gridRows = $r;
                     if ($cl > $gridCols) $gridCols = $cl;
                 }
-                $gridRows = max($gridRows, 6);
-                $gridCols = max($gridCols, 10);
+                $gridRows = max($gridRows, (int) Setting::get('farm_grid_rows', 6));
+                $gridCols = max($gridCols, (int) Setting::get('farm_grid_cols', 10));
 
                 if ($row + $h > $gridRows || $col + $w > $gridCols) {
                     return response()->json(['success' => false, 'message' => 'Position out of bounds'], 422);

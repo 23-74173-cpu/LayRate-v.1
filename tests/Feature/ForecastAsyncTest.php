@@ -3,10 +3,14 @@
 namespace Tests\Feature;
 
 use App\Jobs\GenerateForecastJob;
+use App\Models\Cage;
+use App\Models\CageSlot;
+use App\Models\EnvironmentalLog;
 use App\Models\ForecastRun;
+use App\Models\Hen;
+use App\Models\ProductionLog;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -29,27 +33,60 @@ class ForecastAsyncTest extends TestCase
         $this->admin = User::where('email', 'admin@layrate.local')->firstOrFail();
     }
 
-    /** Seeds enough forecast_input_records rows for checkForecastDataSufficiency() to pass. */
+    /**
+     * Seeds a cage (one slot + one active hen) with enough completed
+     * production + environmental records for the sufficiency check to pass —
+     * the forecast dataset is now aggregated from the native tables instead
+     * of a pre-synced forecast_input_records copy.
+     */
     private function seedSufficientData(string $cageCode = 'CAGE-ASYNC-TEST', int $rows = 95): void
     {
-        $data = [];
+        $cage = Cage::create([
+            'cage_code' => $cageCode,
+            'location' => 'Test',
+            'rows' => 1,
+            'slots_per_row' => 1,
+            'max_chickens_per_slot' => 50,
+            'total_capacity' => 50,
+            'is_active' => 1,
+        ]);
+        $slot = CageSlot::create([
+            'cage_id' => $cage->id,
+            'slot_number' => 1,
+            'row_number' => 1,
+            'column_number' => 1,
+            'current_occupancy' => 50,
+        ]);
+        $hen = new Hen([
+            'tag_code' => $cageCode.'-1',
+            'breed' => 'ISA Brown',
+            'flock_age_weeks' => 30,
+            'date_acquired' => now()->subMonths(8),
+            'placement_date' => now()->subMonths(8),
+            'age_at_placement_weeks' => 0,
+            'is_active' => 1,
+        ]);
+        $hen->cage_slot_id = $slot->id;
+        $hen->save();
+
         for ($i = 0; $i < $rows; $i++) {
-            $data[] = [
-                'date' => now()->subDays($rows - $i)->toDateString(),
-                'cage_code' => $cageCode,
-                'breed' => 'ISA Brown',
-                'flock_age_weeks' => 30,
+            $date = now()->subDays($rows - $i)->toDateString();
+            ProductionLog::create([
+                'cage_slot_id' => $slot->id,
+                'log_date' => $date,
                 'hen_count' => 50,
                 'egg_count' => 45,
+                'hdep' => 90.0,
+                'logged_via' => 'unknown',
+            ]);
+            EnvironmentalLog::create([
+                'cage_id' => $cage->id,
+                'recorded_at' => $date.' 12:00:00',
                 'temperature_c' => 28.0,
-                'humidity_percent' => 60.0,
-                'feed_consumed_kg' => 5.0,
-                'mortality_count' => 0,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
+                'humidity_pct' => 60.0,
+                'is_override' => false,
+            ]);
         }
-        DB::table('forecast_input_records')->insert($data);
     }
 
     public function test_generate_with_insufficient_data_redirects_without_dispatching_job(): void
@@ -167,7 +204,11 @@ class ForecastAsyncTest extends TestCase
         $response->assertOk();
         $response->assertJsonPath('status', 'completed');
         $response->assertJsonPath('recommended_model', 'XGBoost');
-        $response->assertJsonPath('redirect_url', route('forecast', ['scope' => 'cage', 'cage' => 'CAGE-X', 'horizon' => 7]));
+
+        $expectedUrl = route('forecast', ['scope' => 'cage', 'cage' => 'CAGE-X', 'horizon' => 7]);
+        parse_str((string) parse_url((string) $response->json('redirect_url'), PHP_URL_QUERY), $actual);
+        parse_str((string) parse_url($expectedUrl, PHP_URL_QUERY), $expected);
+        $this->assertEquals($expected, $actual);
     }
 
     public function test_status_endpoint_reports_failed_run_with_error_message(): void

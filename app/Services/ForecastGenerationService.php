@@ -21,11 +21,51 @@ use Symfony\Component\Process\Process;
  */
 class ForecastGenerationService
 {
+    /**
+     * Distinct cages that currently have model-eligible records (completed
+     * days with production + environmental data).
+     */
+    public function recordedCages(): Collection
+    {
+        return DB::table('production_logs as pl')
+            ->join('cage_slots as cs', 'pl.cage_slot_id', '=', 'cs.id')
+            ->join('cages as c', 'cs.cage_id', '=', 'c.id')
+            ->whereNotNull('c.cage_code')
+            ->whereRaw("TRIM(c.cage_code) != ''")
+            ->where('pl.log_date', '<', ReportingDateService::reportingDateString())
+            ->whereExists(function ($q) {
+                $q->selectRaw('1')
+                    ->from('environmental_logs as el')
+                    ->whereColumn('el.cage_id', 'c.id')
+                    ->whereRaw('DATE(el.recorded_at) = pl.log_date');
+            })
+            ->distinct()
+            ->pluck('c.cage_code')
+            ->filter()
+            ->sort()
+            ->values();
+    }
+
+    /**
+     * Distinct breeds of active hens — the breed dropdown for breed-scope
+     * forecasts.
+     */
+    public function recordedBreeds(): Collection
+    {
+        return DB::table('hens')
+            ->where('is_active', true)
+            ->whereNotNull('breed')
+            ->whereRaw("TRIM(breed) != ''")
+            ->distinct()
+            ->pluck('breed')
+            ->filter()
+            ->sort()
+            ->values();
+    }
+
     public function farmHistorical(int $days = 14): Collection
     {
-        return DB::table('forecast_input_records')
-            ->select('date', DB::raw('SUM(egg_count) as egg_count'), DB::raw('SUM(hen_count) as hen_count'))
-            ->groupBy('date')
+        return $this->dailyTotalsQuery()
             ->orderByDesc('date')
             ->limit($days)
             ->get()
@@ -41,10 +81,8 @@ class ForecastGenerationService
 
     public function breedHistorical(string $breed): Collection
     {
-        return DB::table('forecast_input_records')
-            ->select('date', DB::raw('SUM(egg_count) as egg_count'), DB::raw('SUM(hen_count) as hen_count'))
-            ->where('breed', $breed)
-            ->groupBy('date')
+        return $this->dailyTotalsQuery()
+            ->whereExists($this->firstHenBreedClosure($breed))
             ->orderByDesc('date')
             ->limit(14)
             ->get()
@@ -60,10 +98,8 @@ class ForecastGenerationService
 
     public function cageHistorical(string $cageCode): Collection
     {
-        return DB::table('forecast_input_records')
-            ->select('date', DB::raw('SUM(egg_count) as egg_count'), DB::raw('SUM(hen_count) as hen_count'))
-            ->where('cage_code', $cageCode)
-            ->groupBy('date')
+        return $this->dailyTotalsQuery()
+            ->where('c.cage_code', $cageCode)
             ->orderByDesc('date')
             ->limit(14)
             ->get()
@@ -75,6 +111,161 @@ class ForecastGenerationService
             ], fn ($r) => $r))
             ->reverse()
             ->values();
+    }
+
+    /**
+     * Daily farm-wide egg/hen totals from production_logs (completed days),
+     * optionally scoped to a cage or breed for the historical chart.
+     */
+    private function dailyTotalsQuery()
+    {
+        return DB::table('production_logs as pl')
+            ->join('cage_slots as cs', 'pl.cage_slot_id', '=', 'cs.id')
+            ->join('cages as c', 'cs.cage_id', '=', 'c.id')
+            ->select(
+                'pl.log_date as date',
+                DB::raw('COALESCE(SUM(pl.egg_count), 0) as egg_count'),
+                DB::raw('COALESCE(SUM(pl.hen_count), 0) as hen_count')
+            )
+            ->whereNotNull('pl.log_date')
+            ->whereNotNull('c.cage_code')
+            ->whereRaw("TRIM(c.cage_code) != ''")
+            ->where('pl.log_date', '<', ReportingDateService::reportingDateString())
+            ->groupBy('pl.log_date');
+    }
+
+    /**
+     * WHERE EXISTS closure: a cage whose FIRST active hen (lowest id) has the
+     * given breed — matching the breed attribute the modeling dataset uses.
+     *
+     * @return \Closure
+     */
+    private function firstHenBreedClosure(string $breed)
+    {
+        return function ($q) use ($breed) {
+            $q->selectRaw('1')
+                ->from('hens as h')
+                ->join('cage_slots as ch', 'h.cage_slot_id', '=', 'ch.id')
+                ->whereColumn('ch.cage_id', 'c.id')
+                ->where('h.is_active', true)
+                ->where('h.breed', $breed)
+                ->whereRaw('h.id = (SELECT MIN(h2.id) FROM hens h2 JOIN cage_slots ch2 ON h2.cage_slot_id = ch2.id WHERE ch2.cage_id = c.id AND h2.is_active = 1)');
+        };
+    }
+
+    /**
+     * Determine whether the aggregated production tables have enough historical
+     * data for the requested scope — the old forecast_input_records sufficiency
+     * check, read directly from the native tables.
+     *
+     * Whole farm needs at least 90 distinct dates. Per-cage / per-breed need at
+     * least 90 rows for the selected cage or breed.
+     */
+    public function dataSufficiency(string $scope, ?string $cageCode = null, ?string $breed = null): array
+    {
+        $base = DB::table('production_logs as pl')
+            ->join('cage_slots as cs', 'pl.cage_slot_id', '=', 'cs.id')
+            ->join('cages as c', 'cs.cage_id', '=', 'c.id')
+            ->whereNotNull('pl.log_date')
+            ->whereNotNull('c.cage_code')
+            ->whereRaw("TRIM(c.cage_code) != ''")
+            ->where('pl.log_date', '<', ReportingDateService::reportingDateString())
+            ->whereExists(function ($q) {
+                $q->selectRaw('1')
+                    ->from('environmental_logs as el')
+                    ->whereColumn('el.cage_id', 'c.id')
+                    ->whereRaw('DATE(el.recorded_at) = pl.log_date')
+                    ->whereNotNull('el.temperature_c')
+                    ->whereNotNull('el.humidity_pct');
+            });
+
+        $countQuery = (clone $base)->selectRaw('COUNT(DISTINCT pl.log_date) as cnt');
+
+        $uniqueDates = match (true) {
+            $scope === 'cage' && $cageCode => (int) $countQuery->where('c.cage_code', $cageCode)->value('cnt'),
+            $scope === 'breed' && $breed => (int) $countQuery->whereExists($this->firstHenBreedClosure($breed))->value('cnt'),
+            default => (int) $countQuery->value('cnt'),
+        };
+
+        $perCage = (clone $base)
+            ->select('c.cage_code', DB::raw('COUNT(DISTINCT pl.log_date) as unique_dates'))
+            ->groupBy('c.cage_code')
+            ->orderBy('c.cage_code')
+            ->get()
+            ->mapWithKeys(fn ($row) => [$row->cage_code => (int) $row->unique_dates])
+            ->toArray();
+
+        $daysRemaining = max(0, 90 - $uniqueDates);
+
+        Log::info('Forecast data sufficiency check', [
+            'scope' => $scope,
+            'cage_code' => $cageCode,
+            'breed' => $breed,
+            'unique_dates' => $uniqueDates,
+            'threshold' => 90,
+            'has_enough' => $uniqueDates >= 90,
+            'days_remaining' => $daysRemaining,
+            'per_cage' => $perCage,
+        ]);
+
+        return [
+            'has_enough' => $uniqueDates >= 90,
+            'current_count' => $uniqueDates,
+            'days_remaining' => $daysRemaining,
+            'per_cage' => $perCage,
+        ];
+    }
+
+    /**
+     * Full modeling dataset aggregated from the native tables — the direct
+     * replacement for the old forecast_input_records read. Each row matches
+     * the export columns (date, cage_code, breed, flock_age_weeks, hen_count,
+     * egg_count, temperature_c, humidity_percent, crude_protein_percent,
+     * feed_consumed_kg, mortality_count).
+     */
+    public function datasetRows(?string $cageCode = null, ?string $breed = null): Collection
+    {
+        $query = DB::table('production_logs as pl')
+            ->join('cage_slots as cs', 'pl.cage_slot_id', '=', 'cs.id')
+            ->join('cages as c', 'cs.cage_id', '=', 'c.id')
+            ->select([
+                'pl.log_date as date',
+                'c.cage_code',
+                DB::raw('(SELECT h.breed FROM hens h JOIN cage_slots ch ON h.cage_slot_id = ch.id WHERE ch.cage_id = c.id AND h.is_active = 1 ORDER BY h.id LIMIT 1) as breed'),
+                DB::raw('(SELECT h.flock_age_weeks FROM hens h JOIN cage_slots ch2 ON h.cage_slot_id = ch2.id WHERE ch2.cage_id = c.id AND h.is_active = 1 ORDER BY h.id LIMIT 1) as flock_age_weeks'),
+                DB::raw('COALESCE(SUM(pl.hen_count), 0) as hen_count'),
+                DB::raw('COALESCE(SUM(pl.egg_count), 0) as egg_count'),
+                DB::raw('(SELECT ROUND(AVG(el.temperature_c), 2) FROM environmental_logs el WHERE el.cage_id = c.id AND DATE(el.recorded_at) = pl.log_date) as temperature_c'),
+                DB::raw('(SELECT ROUND(AVG(el.humidity_pct), 2) FROM environmental_logs el WHERE el.cage_id = c.id AND DATE(el.recorded_at) = pl.log_date) as humidity_percent'),
+                DB::raw('(SELECT fb.crude_protein FROM feed_consumption_logs fcl LEFT JOIN feed_batches fb ON fcl.feed_batch_id = fb.id WHERE fcl.cage_id = c.id AND fcl.log_date = pl.log_date ORDER BY fcl.id DESC LIMIT 1) as crude_protein_percent'),
+                DB::raw('(SELECT fcl.feed_consumed_kg FROM feed_consumption_logs fcl WHERE fcl.cage_id = c.id AND fcl.log_date = pl.log_date ORDER BY fcl.id DESC LIMIT 1) as feed_consumed_kg'),
+                DB::raw('(SELECT COALESCE(SUM(ml.count), 0) FROM mortality_logs ml WHERE ml.cage_id = c.id AND ml.log_date = pl.log_date) as mortality_count'),
+            ])
+            ->whereNotNull('pl.log_date')
+            ->whereNotNull('c.cage_code')
+            ->whereRaw("TRIM(c.cage_code) != ''")
+            ->where('pl.log_date', '<', ReportingDateService::reportingDateString())
+            ->whereExists(function ($q) {
+                $q->selectRaw('1')
+                    ->from('environmental_logs as el')
+                    ->whereColumn('el.cage_id', 'c.id')
+                    ->whereRaw('DATE(el.recorded_at) = pl.log_date')
+                    ->whereNotNull('el.temperature_c')
+                    ->whereNotNull('el.humidity_pct');
+            })
+            ->groupBy('pl.log_date', 'c.id', 'c.cage_code')
+            ->orderBy('pl.log_date')
+            ->orderBy('c.cage_code');
+
+        if ($cageCode) {
+            $query->where('c.cage_code', $cageCode);
+        }
+
+        if ($breed) {
+            $query->whereExists($this->firstHenBreedClosure($breed));
+        }
+
+        return $query->get()->map(fn ($row) => (object) $row);
     }
 
     /**
