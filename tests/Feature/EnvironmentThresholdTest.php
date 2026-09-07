@@ -57,9 +57,9 @@ class EnvironmentThresholdTest extends TestCase
             ->get(route('environment.live-data'));
 
         $response->assertOk();
-        $response->assertSee('Temp Alert');
         $response->assertSee('Alert');
-        $response->assertDontSee('Temp OK');
+        $response->assertSee('OK');
+        $response->assertDontSee('Watch');
     }
 
     /** @test */
@@ -71,7 +71,9 @@ class EnvironmentThresholdTest extends TestCase
             ->get(route('environment.live-data'));
 
         $response->assertOk();
-        $response->assertSee('Temp Watch');
+        $response->assertSee('Watch');
+        $response->assertSee('OK');
+        $response->assertDontSee('Alert');
     }
 
     /** @test */
@@ -83,8 +85,10 @@ class EnvironmentThresholdTest extends TestCase
             ->get(route('environment.live-data'));
 
         $response->assertOk();
-        $response->assertSee('Temp OK');
-        $response->assertSee('Humidity OK');
+        $response->assertSee('OK');
+        $response->assertSee('Normal');
+        $response->assertDontSee('Alert');
+        $response->assertDontSee('Watch');
     }
 
     /** @test */
@@ -96,7 +100,9 @@ class EnvironmentThresholdTest extends TestCase
             ->get(route('environment.live-data'));
 
         $response->assertOk();
-        $response->assertSee('Temp Watch');
+        $response->assertSee('Watch');
+        $response->assertSee('OK');
+        $response->assertDontSee('Alert');
     }
 
     /** @test */
@@ -108,7 +114,9 @@ class EnvironmentThresholdTest extends TestCase
             ->get(route('environment.live-data'));
 
         $response->assertOk();
-        $response->assertSee('Temp Alert');
+        $response->assertSee('Alert');
+        $response->assertSee('OK');
+        $response->assertDontSee('Watch');
     }
 
     /** @test */
@@ -120,7 +128,9 @@ class EnvironmentThresholdTest extends TestCase
             ->get(route('environment.live-data'));
 
         $response->assertOk();
-        $response->assertSee('Humidity Alert');
+        $response->assertSee('Alert');
+        $response->assertSee('OK');
+        $response->assertDontSee('Watch');
     }
 
     /** @test */
@@ -219,7 +229,9 @@ class EnvironmentThresholdTest extends TestCase
             ->get(route('environment.live-data'));
 
         $response->assertOk();
-        $response->assertSee('Humidity Watch');
+        $response->assertSee('Watch');
+        $response->assertSee('OK');
+        $response->assertDontSee('Alert');
     }
 
     /** @test */
@@ -231,7 +243,9 @@ class EnvironmentThresholdTest extends TestCase
             ->get(route('environment.live-data'));
 
         $response->assertOk();
-        $response->assertSee('Humidity Watch');
+        $response->assertSee('Watch');
+        $response->assertSee('OK');
+        $response->assertDontSee('Alert');
     }
 
     /** @test */
@@ -243,8 +257,8 @@ class EnvironmentThresholdTest extends TestCase
             ->get(route('environment.live-data'));
 
         $response->assertOk();
-        $response->assertSee('Humidity Alert');
-        $response->assertDontSee('Humidity OK');
+        $response->assertSee('Alert');
+        $response->assertDontSee('Watch');
     }
 
     // ── Humidity boundary tests for Dashboard ──

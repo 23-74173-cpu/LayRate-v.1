@@ -67,7 +67,7 @@
                 <i data-lucide="pen-line" class="w-4 h-4" style="color:#002D5E;"></i>
                 <h3 class="text-sm font-semibold text-[#1f1f1f]">Manual Reading Entry</h3>
             </div>
-            <p class="text-xs text-[#6B7280] mb-3">Enter a reading by hand when a sensor is unavailable. This overrides the sensor reading for the selected cage for today.</p>
+            <p class="text-xs text-[#6B7280] mb-3">Enter a reading by hand when a sensor is unavailable. Pick <strong>All Cages</strong> to apply the same reading to every cage. This overrides today's sensor reading.</p>
             <form id="envManualForm" method="POST" action="{{ route('environment.manual') }}" data-turbo="false" class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
                 @csrf
                 <div>
@@ -76,8 +76,9 @@
                             class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                             style="border-color:#e6e6e6;color:#1f1f1f;">
                         <option value="">Select cage…</option>
+                        <option value="all" {{ old('cage_id') === 'all' ? 'selected' : '' }}>All Cages</option>
                         @foreach($cages as $id => $code)
-                        <option value="{{ $id }}">{{ $code }}</option>
+                        <option value="{{ $id }}" {{ old('cage_id') == $id ? 'selected' : '' }}>{{ $code }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -315,7 +316,10 @@ function envRefreshNow() {
         .then(function(res) {
             if (res.ok && res.data.success) {
                 if (msg) {
-                    msg.textContent = 'Manual reading saved for the selected cage.';
+                    var cageSelect = form.querySelector('select[name="cage_id"]');
+                    msg.textContent = cageSelect && cageSelect.value === 'all'
+                        ? 'Manual reading saved for all cages.'
+                        : 'Manual reading saved for the selected cage.';
                     msg.className = 'mt-3 text-sm';
                     msg.style.color = '#1f6b3a';
                     msg.classList.remove('hidden');

@@ -64,8 +64,18 @@ class EnvironmentController extends Controller
             if ($tempStatus === 'Alert' || $humStatus === 'Alert') $status = 'Alert';
             elseif ($tempStatus === 'Watch' || $humStatus === 'Watch') $status = 'Watch';
 
-            return (object) compact('env', 'tempStatus', 'humStatus', 'status', 'cage');
+            // Source label: a reading written by hand (or imported as such) is a
+            // manual log; only raw is_override=0 rows come from actual sensors.
+            $source = $env->is_override ? 'Manual Log' : 'Sensor';
+
+            return (object) compact('env', 'tempStatus', 'humStatus', 'status', 'source', 'cage');
         })->filter();
+
+        // "Active sensors" = cages currently fed by a real sensor reading, not by
+        // manual overrides. This is what the top metric should report — before
+        // this fix it counted every cage with any env row (all 3 here), even
+        // though hardware_items is empty.
+        $activeSensors = $latestPerCage->filter(fn ($r) => $r->source === 'Sensor')->count();
 
         $trendData = EnvironmentalLog::select(
                 DB::raw("DATE_FORMAT(recorded_at, '{$dateFormat}') as period"),
@@ -93,9 +103,16 @@ class EnvironmentController extends Controller
         $avgTemp = $latestPerCage->avg(fn($r) => $r->env->temperature_c);
         $avgHum  = $latestPerCage->avg(fn($r) => $r->env->humidity_pct);
 
+        $tempValues = $latestPerCage->pluck('env.temperature_c');
+        $humValues  = $latestPerCage->pluck('env.humidity_pct');
+
+        $avgStatus = EnvironmentStatusService::summary((float) $avgTemp, (float) $avgHum, $thresholds);
+
         return view('environment._live-data', compact(
-            'cages', 'latestPerCage', 'trendData', 'summaryLogs',
-            'avgTemp', 'avgHum', 'thresholds', 'range'
+            'cages', 'latestPerCage', 'activeSensors', 'trendData', 'summaryLogs',
+            'avgTemp', 'avgHum', 'avgStatus',
+            'tempValues', 'humValues',
+            'thresholds', 'range'
         ));
     }
 
@@ -178,37 +195,46 @@ class EnvironmentController extends Controller
 
     /**
      * Manual live reading entry from the Environment page. Stores an override
-     * reading for the selected cage at the current reporting day's noon, so it
-     * takes precedence over sensor readings in live data.
+     * reading for the selected cage (or all cages when cage_id === 'all') at
+     * the current reporting day's noon, so it takes precedence over sensor
+     * readings in live data.
      */
     public function storeManual(Request $request)
     {
+        $allCageIds = Cage::orderBy('cage_code')->pluck('id')->all();
+
         $validated = $request->validate([
-            'cage_id'        => 'required|integer|exists:cages,id',
+            'cage_id'        => ['required', Rule::in(array_merge($allCageIds, ['all']))],
             'temperature_c'  => 'required|numeric|min:-10|max:60',
             'humidity_pct'   => 'required|numeric|min:0|max:100',
         ]);
 
-        $cageId = $validated['cage_id'];
+        // 'all' writes the same reading to every cage; otherwise a single cage.
+        $cageIds = $validated['cage_id'] === 'all'
+            ? $allCageIds
+            : [(int) $validated['cage_id']];
+
         $noon = ReportingDateService::reportingDayStart()->copy()->addHours(12);
         [$repStart, $repEnd] = ReportingDateService::reportingDayWindow(
             ReportingDateService::reportingDateString()
         );
 
-        // Replace any existing override for this cage on the current reporting
-        // day so the manual entry is the authoritative reading.
-        EnvironmentalLog::where('cage_id', $cageId)
+        // Replace any existing override for each target cage on the current
+        // reporting day so the manual entry is the authoritative reading.
+        EnvironmentalLog::whereIn('cage_id', $cageIds)
             ->where('is_override', 1)
             ->whereBetween('recorded_at', [$repStart, $repEnd])
             ->delete();
 
-        EnvironmentalLog::create([
-            'cage_id'        => $cageId,
-            'recorded_at'    => $noon,
-            'temperature_c'  => $validated['temperature_c'],
-            'humidity_pct'   => $validated['humidity_pct'],
-            'is_override'    => true,
-        ]);
+        foreach ($cageIds as $cageId) {
+            EnvironmentalLog::create([
+                'cage_id'        => $cageId,
+                'recorded_at'    => $noon,
+                'temperature_c'  => $validated['temperature_c'],
+                'humidity_pct'   => $validated['humidity_pct'],
+                'is_override'    => true,
+            ]);
+        }
 
         if ($request->wantsJson()) {
             return response()->json(['success' => true]);

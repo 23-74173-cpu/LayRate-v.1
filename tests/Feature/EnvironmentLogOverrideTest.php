@@ -113,6 +113,49 @@ class EnvironmentLogOverrideTest extends TestCase
         $this->assertEquals(1, (int) $entry->reading_count);
     }
 
+    public function test_all_cages_manual_writes_override_for_every_cage(): void
+    {
+        $c1 = $this->cage('OV-ALL-A');
+        $c2 = $this->cage('OV-ALL-B');
+        $c3 = $this->cage('OV-ALL-C');
+
+        $this->actingAs($this->user)->post(route('environment.manual'), [
+            'cage_id' => 'all',
+            'temperature_c' => 18.2,
+            'humidity_pct' => 55,
+        ])->assertSessionHasNoErrors();
+
+        foreach ([$c1, $c2, $c3] as $cage) {
+            $overrides = EnvironmentalLog::where('cage_id', $cage->id)->where('is_override', 1)->get();
+            $this->assertCount(1, $overrides, "All Cages must write an override for {$cage->cage_code}");
+            $this->assertEquals(18.2, (float) $overrides->first()->temperature_c);
+            $this->assertEquals(55, (float) $overrides->first()->humidity_pct);
+        }
+    }
+
+    public function test_all_cages_manual_replaces_existing_overrides(): void
+    {
+        $c1 = $this->cage('OV-ALL-1');
+        $c2 = $this->cage('OV-ALL-2');
+        $repDay = ReportingDateService::reportingDateString();
+        $noon = Carbon::parse($repDay, config('app.timezone', 'UTC'))->setHour(12)->setMinute(0)->setSecond(0)->toDateTimeString();
+
+        EnvironmentalLog::create(['cage_id' => $c1->id, 'recorded_at' => $noon, 'temperature_c' => 30.0, 'humidity_pct' => 70, 'is_override' => 1]);
+        EnvironmentalLog::create(['cage_id' => $c2->id, 'recorded_at' => $noon, 'temperature_c' => 31.0, 'humidity_pct' => 71, 'is_override' => 1]);
+
+        $this->actingAs($this->user)->post(route('environment.manual'), [
+            'cage_id' => 'all',
+            'temperature_c' => 19.0,
+            'humidity_pct' => 60,
+        ])->assertSessionHasNoErrors();
+
+        foreach ([$c1, $c2] as $cage) {
+            $todayOverrides = EnvironmentalLog::where('cage_id', $cage->id)->where('is_override', 1)->get();
+            $this->assertCount(1, $todayOverrides, "Only the new all-cages override should remain for {$cage->cage_code}");
+            $this->assertEquals(19.0, (float) $todayOverrides->first()->temperature_c);
+        }
+    }
+
     public function test_reporting_day_boundary_attribution_in_liveData(): void
     {
         Carbon::setTestNow('2026-08-22 18:00:00 UTC');

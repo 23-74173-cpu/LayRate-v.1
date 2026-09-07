@@ -1,96 +1,134 @@
 <turbo-frame id="environment-live-data">
     {{-- ── Top Metric Cards ── --}}
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">COOP AVG TEMPERATURE</div>
-            <div class="flex items-end gap-2 mb-1">
-                <span class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $avgTemp ? number_format($avgTemp,1) . '°C' : '—' }}</span>
-                <x-status-badge status="In Range" type="sensor" class="mb-1" />
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-[11px] font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Coop Avg Temp</span>
+                <x-status-badge :status="$avgStatus" type="sensor" />
             </div>
-            <div class="text-xs text-[#6B7280] mt-1">Spread across sensors: 1.3°C</div>
+            <div class="flex items-baseline gap-1">
+                <span class="text-3xl font-bold leading-none tracking-[-1px] text-[#1f1f1f]">{{ $avgTemp ? number_format($avgTemp,1) : '—' }}</span>
+                <span class="text-base font-medium text-[#a39e98]">°C</span>
+            </div>
+            <div class="text-xs text-[#9CA3AF] mt-1.5 flex items-center gap-1">
+                <i data-lucide="activity" class="w-3.5 h-3.5"></i>
+                <span>Spread {{ $tempValues->count() > 1 ? number_format(max(0, $tempValues->max() - $tempValues->min()), 1) . '°C across cages' : 'across cages' }}</span>
+            </div>
         </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">COOP AVG HUMIDITY</div>
-            <div class="flex items-end gap-2 mb-1">
-                <span class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $avgHum ? number_format($avgHum,1) . '%' : '—' }}</span>
-                <x-status-badge status="In Range" type="sensor" class="mb-1" />
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-[11px] font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Coop Avg Humidity</span>
+                <x-status-badge :status="$avgStatus" type="sensor" />
             </div>
-            <div class="text-xs text-[#6B7280] mt-1">Spread across sensors: 4.4%</div>
+            <div class="flex items-baseline gap-1">
+                <span class="text-3xl font-bold leading-none tracking-[-1px] text-[#1f1f1f]">{{ $avgHum ? number_format($avgHum,1) : '—' }}</span>
+                <span class="text-base font-medium text-[#a39e98]">%</span>
+            </div>
+            <div class="text-xs text-[#9CA3AF] mt-1.5 flex items-center gap-1">
+                <i data-lucide="droplets" class="w-3.5 h-3.5"></i>
+                <span>Spread {{ $humValues->count() > 1 ? number_format(max(0, $humValues->max() - $humValues->min()), 1) . '% across cages' : 'across cages' }}</span>
+            </div>
         </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">ACTIVE SENSORS</div>
-            <div class="flex items-end gap-2 mb-1">
-                <span class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $latestPerCage->count() }}</span>
-                <x-status-badge status="Live" type="sensor" class="mb-1" />
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-[11px] font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Active Sensors</span>
+                <x-status-badge :status="$activeSensors > 0 ? 'Live' : 'No Sensors'" type="sensor" />
             </div>
-            <div class="text-xs text-[#6B7280] mt-1">One sensor node mapped per cage.</div>
+            <div class="flex items-baseline gap-1">
+                <span class="text-3xl font-bold leading-none tracking-[-1px] text-[#1f1f1f]">{{ $activeSensors }}</span>
+                <span class="text-sm font-medium text-[#a39e98]">sensors</span>
+            </div>
+            <div class="text-xs text-[#9CA3AF] mt-1.5 flex items-center gap-1">
+                <i data-lucide="radio" class="w-3.5 h-3.5"></i>
+                <span>{{ $activeSensors > 0 ? 'One node mapped per cage' : 'All entries are manual logs' }}</span>
+            </div>
         </div>
     </div>
 
     {{-- ── Per-cage Sensor Cards ── --}}
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mt-5 mb-8">
-        @foreach($latestPerCage as $r)
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-10">
+        @forelse($latestPerCage as $r)
         @php
             $color = $r->cage->color;
-            $sensorId = 'S-0' . $loop->iteration;
-            // Canonical ok/watch/alert palette from DESIGN-SYSTEM.md §2.4 (matches <x-status-badge>) —
-            // previously this used a second, incompatible hex palette (#D5E8D4/#FFF3CD/#F8D7DA).
+            $soft  = $r->cage->color_soft;
+            // Canonical ok/watch/alert palette from DESIGN-SYSTEM.md §2.4 (matches <x-status-badge>)
             $toneColors = fn (string $tone) => match ($tone) {
                 'Normal', 'OK' => ['#e8f5ec', '#1f6b3a'],
                 'Watch'        => ['#fdf3e0', '#8a5a00'],
                 default        => ['#fbe4e6', '#9b1c24'],
             };
-            [$statusBg, $statusTxt] = $toneColors($r->status);
             [$tBg, $tTxt] = $toneColors($r->tempStatus);
             [$hBg, $hTxt] = $toneColors($r->humStatus);
-            // A stale-but-present reading previously rendered identically to a
-            // fresh one — no timestamp or staleness signal existed anywhere here.
             $isStale = $r->env->recorded_at?->lt(now()->subMinutes(30)) ?? false;
         @endphp
-        <div class="bg-white rounded-lg border-2 overflow-hidden" style="border-color:{{ $isStale ? '#9b1c24' : $color }}">
-            <div class="px-5 py-3 flex items-center justify-between" style="background:{{ $color }}22">
-                <div class="flex items-center gap-2">
-                    <span class="w-2.5 h-2.5 rounded-full" style="background:{{ $color }}"></span>
-                    <span class="text-sm font-medium text-[#333333]">{{ $r->cage->cage_code }}</span>
+        <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
+            <div class="h-1 w-full" style="background:{{ $isStale ? '#9b1c24' : $color }}"></div>
+            <div class="p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full" style="background:{{ $color }}"></span>
+                        <span class="text-sm font-semibold text-[#1f1f1f]">{{ $r->cage->cage_code }}</span>
+                    </div>
+                    <span class="text-[10px] font-semibold tracking-[0.05em] uppercase px-2 py-0.5 rounded-full"
+                          style="background:{{ $r->source === 'Manual Log' ? '#fdf3e0' : '#e8f5ec' }};color:{{ $r->source === 'Manual Log' ? '#8a5a00' : '#1f6b3a' }};">{{ $r->source }}</span>
                 </div>
-                <span class="text-xs" style="color: {{ $isStale ? '#9b1c24' : '#6B7280' }};" title="{{ $r->env->recorded_at }}">
-                    {{ $isStale ? 'Stale · ' : '' }}{{ $r->env->recorded_at?->diffForHumans() ?? $sensorId }}
-                </span>
-            </div>
-            <div class="px-4 py-3 space-y-2">
-                <div class="flex justify-between text-sm">
-                    <span class="text-[#6B7280]">Temp:</span>
-                    <span class="font-medium text-[#333333]">{{ $r->env->temperature_c }}°C</span>
-                </div>
-                <div class="flex justify-between text-sm">
-                    <span class="text-[#6B7280]">Humidity:</span>
-                    <span class="font-medium text-[#333333]">{{ $r->env->humidity_pct }}%</span>
-                </div>
-                {{-- Temp range bar --}}
-                <div>
-                    <div class="text-xs text-[#6B7280] mb-1">Temp range use</div>
-                    <div class="w-full h-1.5 bg-[#F5F6F8] rounded-full">
-                        <div class="h-1.5 rounded-full" style="width:{{ min(100, (($r->env->temperature_c - 18) / 12) * 100) }}%;background:{{ $color }}"></div>
+
+                <div class="flex items-center justify-between gap-3">
+                    {{-- Temp --}}
+                    <div class="flex-1">
+                        <div class="text-[10px] font-semibold tracking-[0.125px] uppercase text-[#9CA3AF] mb-1 flex items-center gap-1">
+                            <i data-lucide="thermometer" class="w-3 h-3"></i> Temp
+                        </div>
+                        <div class="flex items-baseline gap-0.5">
+                            <span class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#1f1f1f]">{{ number_format($r->env->temperature_c, 1) }}</span>
+                            <span class="text-xs font-medium text-[#a39e98]">°C</span>
+                        </div>
+                        <span class="text-[10px] font-semibold uppercase mt-1 inline-block px-1.5 py-0.5 rounded" style="background:{{ $tBg }};color:{{ $tTxt }}">{{ $r->tempStatus }}</span>
+                    </div>
+                    {{-- Vertical divider --}}
+                    <div class="w-px self-stretch" style="background:{{ $soft }}"></div>
+                    {{-- Humidity --}}
+                    <div class="flex-1">
+                        <div class="text-[10px] font-semibold tracking-[0.125px] uppercase text-[#9CA3AF] mb-1 flex items-center gap-1">
+                            <i data-lucide="droplets" class="w-3 h-3"></i> Humidity
+                        </div>
+                        <div class="flex items-baseline gap-0.5">
+                            <span class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#1f1f1f]">{{ number_format($r->env->humidity_pct, 0) }}</span>
+                            <span class="text-xs font-medium text-[#a39e98]">%</span>
+                        </div>
+                        <span class="text-[10px] font-semibold uppercase mt-1 inline-block px-1.5 py-0.5 rounded" style="background:{{ $hBg }};color:{{ $hTxt }}">{{ $r->humStatus }}</span>
                     </div>
                 </div>
-                <div class="flex flex-wrap gap-1.5 pt-1">
-                    <span class="text-xs px-2 py-0.5 rounded" style="background:{{ $tBg }};color:{{ $tTxt }}">Temp {{ $r->tempStatus }}</span>
-                    <span class="text-xs px-2 py-0.5 rounded" style="background:{{ $hBg }};color:{{ $hTxt }}">Humidity {{ $r->humStatus }}</span>
-                    <span class="text-xs px-2 py-0.5 rounded" style="background:{{ $statusBg }};color:{{ $statusTxt }}">Status {{ $r->status }}</span>
-                </div>
+            </div>
+
+            <div class="px-4 py-2.5 flex items-center justify-between border-t border-[#F0F0F0]" style="background:{{ $soft }}33">
+                <span class="text-[11px] {{ $isStale ? 'text-[#9b1c24] font-medium' : 'text-[#9CA3AF]' }} flex items-center gap-1">
+                    <i data-lucide="{{ $isStale ? 'alert-triangle' : 'clock' }}" class="w-3 h-3"></i>
+                    {{ $isStale ? 'Stale · ' : '' }}{{ $r->env->recorded_at?->diffForHumans() ?? 'No timestamp' }}
+                </span>
+                <span class="text-[11px] text-[#9CA3AF]">{{ $r->status }}</span>
             </div>
         </div>
-        @endforeach
+        @empty
+        <div class="col-span-full">
+            <div class="bg-white rounded-lg border border-dashed border-[#D9D9D9] py-10 text-center text-sm" style="color: #a39e98;">
+                No environmental readings recorded yet.
+            </div>
+        </div>
+        @endforelse
 
         {{-- Cages with no sensor --}}
         @foreach($cages as $cage)
         @if($latestPerCage->pluck('cage.id')->doesntContain($cage->id))
         <div class="bg-white rounded-lg border border-dashed border-[#D9D9D9] overflow-hidden">
-            <div class="px-5 py-3 bg-[#F5F6F8] flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-gray-300"></span>
-                <span class="text-sm text-[#333333]">{{ $cage->cage_code }}</span>
+            <div class="px-4 py-3 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full" style="background:{{ $cage->color }}"></span>
+                    <span class="text-sm font-medium text-[#333333]">{{ $cage->cage_code }}</span>
+                </div>
+                <span class="text-[10px] font-semibold tracking-[0.05em] uppercase px-2 py-0.5 rounded-full bg-[#F5F6F8] text-[#a39e98]">Offline</span>
             </div>
-            <div class="px-4 py-4 text-center text-xs text-[#6B7280]">
+            <div class="px-4 py-6 text-center text-xs text-[#6B7280]">
                 <i data-lucide="wifi-off" class="w-5 h-5 mx-auto mb-2 text-gray-300"></i>
                 No sensor data
             </div>
@@ -101,7 +139,7 @@
 
     {{-- ── Trend Charts ── --}}
     <div class="flex items-center justify-between mb-3">
-        <span class="text-xs tracking-wider text-[#6B7280]">TREND CHARTS</span>
+        <span class="text-sm font-semibold text-[#1f1f1f]">Trend Charts</span>
         <select id="trendRange" onchange="changeTrendRange(this.value)"
                 class="text-xs border border-[#D9D9D9] rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30">
             <option value="24h" {{ ($range ?? '24h') === '24h' ? 'selected' : '' }}>24 Hours</option>
@@ -111,14 +149,14 @@
     </div>
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <div class="text-xs tracking-wider text-[#6B7280] mb-3">TEMPERATURE TREND (COOP + PER CAGE)</div>
+            <div class="text-xs font-semibold tracking-wider text-[#6B7280] mb-3">TEMPERATURE TREND</div>
             <div id="envTempChartWrap" class="relative w-full h-[160px]">
                 <canvas id="envTempChart" style="width: 100%; height: 100%; display: block;"></canvas>
             </div>
             <div id="envTempChartEmpty" class="hidden h-[160px] flex items-center justify-center text-sm" style="color: #a39e98;">No temperature readings in this window.</div>
         </div>
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <div class="text-xs tracking-wider text-[#6B7280] mb-3">HUMIDITY TREND (COOP + PER CAGE)</div>
+            <div class="text-xs font-semibold tracking-wider text-[#6B7280] mb-3">HUMIDITY TREND</div>
             <div id="envHumChartWrap" class="relative w-full h-[160px]">
                 <canvas id="envHumChart" style="width: 100%; height: 100%; display: block;"></canvas>
             </div>
