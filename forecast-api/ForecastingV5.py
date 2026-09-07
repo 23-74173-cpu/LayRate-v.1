@@ -411,8 +411,22 @@ def build_holdout_table(test_df, sarima_preds, xgb_preds):
 
 
 def build_deployment_feature_frame(last_row, forecast_dates, temp, humidity, feed, mortality, heat):
+    """Build one feature row per consecutive forecast day, starting the day
+    after the last historical date and running through the latest requested
+    forecast date.
+
+    The recursive walker must step day-by-day so lag/rolling features are
+    consistent, even when the requested dates (e.g. a custom start date) are
+    later than the day after history. The caller slices the rows it wants.
+    """
+    last_hist = pd.Timestamp(last_row[DATE_COLUMN]).normalize()
+    max_date = max(pd.Timestamp(d).normalize() for d in forecast_dates)
+    total_steps = (max_date - last_hist).days
+    if total_steps < 1:
+        raise ValueError("Forecast dates must be after the last historical date.")
+
     rows = []
-    for step_idx in range(1, len(forecast_dates) + 1):
+    for step_idx in range(1, total_steps + 1):
         row = {
             "Breed": last_row["Breed"],
             "Live_Hens": float(last_row["Live_Hens"]),
@@ -426,7 +440,11 @@ def build_deployment_feature_frame(last_row, forecast_dates, temp, humidity, fee
         }
         rows.append(row)
     frame = pd.DataFrame(rows)
-    frame[DATE_COLUMN] = forecast_dates
+    frame[DATE_COLUMN] = pd.date_range(
+        start=last_hist + pd.Timedelta(days=1),
+        periods=total_steps,
+        freq="D",
+    )
     return frame
 
 
@@ -710,6 +728,16 @@ def automatic_forecast(df, forecast_days: int = 7, start_date: Optional[str] = N
 
     future_dates = _resolve_future_dates(forecast_days, start_date)
 
+    last_hist_date = pd.Timestamp(df[DATE_COLUMN].max()).normalize()
+    step_offsets = []
+    total_steps = 0
+    for d in future_dates:
+        offset = (pd.Timestamp(d).normalize() - last_hist_date).days
+        step_offsets.append(offset)
+        total_steps = max(total_steps, offset)
+    if total_steps < 1:
+        raise ValueError("Forecast dates must be after the last historical date.")
+
     if recommended == "XGBoost" and xgb_full_models is not None:
         last_row = df.iloc[-1]
         feature_frame = build_deployment_feature_frame(
@@ -720,9 +748,11 @@ def automatic_forecast(df, forecast_days: int = 7, start_date: Optional[str] = N
             mortality=float(last_row["Monthly_Mortality"]),
             heat=float(last_row["Heat_Stress"]),
         )
-        forecast_values = recursive_xgb_forecast_ensemble(xgb_full_models, df, feature_frame)
+        full_preds = recursive_xgb_forecast_ensemble(xgb_full_models, df, feature_frame)
+        forecast_values = np.asarray(full_preds, dtype=float)[[o - 1 for o in step_offsets]]
     else:
-        forecast_values = sarima_full.forecast(steps=forecast_days)
+        full_forecast = np.asarray(sarima_full.forecast(steps=total_steps), dtype=float)
+        forecast_values = full_forecast[[o - 1 for o in step_offsets]]
 
     expected_eggs = np.clip(np.rint(np.asarray(forecast_values, dtype=float)), 0, None).astype(int)
 
