@@ -366,7 +366,7 @@
                                class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                                style="border-color: #e6e6e6; color: #1f1f1f;">
                         <p id="tcError" class="hidden text-xs mt-1" style="color: #9b1c24;"></p>
-                        <p class="text-xs mt-1" style="color: #a39e98;">Eggs will be distributed across slots (max per slot = hens in that slot).</p>
+                        <p class="text-xs mt-1" style="color: #a39e98;">Eggs are distributed randomly across slots — every slot gets at least 1 (max per slot = hens in that slot).</p>
                     </div>
 
                     <div class="flex items-center gap-3 mt-4">
@@ -634,23 +634,47 @@
             var totalHens = window._tcTotalHens || 0;
             if (totalHens === 0 || slots.length === 0) return;
 
-            var remaining = totalEggs;
-            var distributions = [];
+            var populated = slots.filter(function(s) { return s.hens >= 1; });
 
-            // Fill each slot up to its hen count, proportionally
-            slots.forEach(function(slot, i) {
-                if (i === slots.length - 1) {
-                    distributions.push({ id: slot.id, eggs: remaining });
-                } else {
-                    var proportional = Math.round((slot.hens / totalHens) * totalEggs);
-                    var capped = Math.min(proportional, slot.hens, remaining);
-                    distributions.push({ id: slot.id, eggs: capped });
-                    remaining -= capped;
+            // Every populated slot starts with at least 1 egg so no cage is
+            // left without a record (only possible when enough eggs exist).
+            var distributions = [];
+            var remaining = totalEggs;
+
+            if (remaining >= populated.length) {
+                populated.forEach(function(s) {
+                    distributions.push({ id: s.id, hens: s.hens, eggs: 1 });
+                });
+                remaining -= populated.length;
+            } else {
+                // Not enough eggs to cover every slot — hand 1 egg to random
+                // slots until the batch is exhausted.
+                var randomOrder = populated.slice();
+                for (var i = randomOrder.length - 1; i > 0; i--) {
+                    var j = Math.floor(Math.random() * (i + 1));
+                    var tmp = randomOrder[i]; randomOrder[i] = randomOrder[j]; randomOrder[j] = tmp;
                 }
-            });
+                for (var k = 0; k < remaining; k++) {
+                    distributions.push({ id: randomOrder[k].id, hens: 1, eggs: 1 });
+                }
+                remaining = 0;
+            }
+
+            // Randomly hand out the remaining eggs, never exceeding a slot's hens.
+            var guard = 0;
+            while (remaining > 0 && guard++ < 10000) {
+                var open = distributions.filter(function(d) { return d.eggs < d.hens; });
+                if (open.length === 0) break;
+                var pick = open[Math.floor(Math.random() * open.length)];
+                pick.eggs++;
+                remaining--;
+            }
 
             // Submit each distribution via AJAX
             var date = '{{ \App\Services\ReportingDateService::reportingDateString() }}';
+            var pendingCount = distributions.filter(function(d) { return d.eggs > 0; }).length;
+            showLoadingModal('Saving Egg Records', 'Distributing ' + totalEggs + ' eggs across ' + pendingCount + ' slot(s)...');
+
             var promises = distributions.filter(function(d) { return d.eggs > 0; }).map(function(d) {
                 var slotInfo = slots.find(function(s) { return s.id == d.id; });
                 var henCount = slotInfo ? slotInfo.hens : d.eggs;
@@ -670,8 +694,10 @@
 
             Promise.all(promises).then(function() {
                 window.clearTotalCageLog();
+                hideLoadingModal();
                 location.reload();
             }).catch(function() {
+                hideLoadingModal();
                 document.getElementById('tcError').textContent = 'An error occurred. Please try again.';
                 document.getElementById('tcError').classList.remove('hidden');
             });
