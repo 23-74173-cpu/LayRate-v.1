@@ -476,7 +476,7 @@ class DashboardController extends Controller
             ->selectRaw('cage_slots.cage_id as cage_id, production_logs.log_date as log_date, AVG(production_logs.hdep) as avg_hdep')
             ->groupBy('cage_slots.cage_id', 'production_logs.log_date')
             ->get()
-            ->keyBy(fn ($r) => $r->cage_id . '|' . $r->log_date);
+            ->keyBy(fn ($r) => $r->cage_id . '|' . $r->log_date->toDateString());
 
         $scatterData = [];
         foreach ($points as $p) {
@@ -533,7 +533,7 @@ class DashboardController extends Controller
             ->selectRaw('cage_slots.cage_id as cage_id, production_logs.log_date as log_date, AVG(production_logs.hdep) as avg_hdep')
             ->groupBy('cage_slots.cage_id', 'production_logs.log_date')
             ->get()
-            ->keyBy(fn ($r) => $r->cage_id . '|' . $r->log_date);
+            ->keyBy(fn ($r) => $r->cage_id . '|' . $r->log_date->toDateString());
 
         $scatterData = [];
         foreach ($points as $p) {
@@ -732,7 +732,7 @@ class DashboardController extends Controller
             ->selectRaw('cage_id, log_date, SUM(feed_consumed_kg) as feed_kg')
             ->groupBy('cage_id', 'log_date')
             ->get()
-            ->keyBy(fn ($r) => $r->cage_id . '|' . $r->log_date);
+            ->keyBy(fn ($r) => $r->cage_id . '|' . $r->log_date->toDateString());
 
         $prodByCageDate = ProductionLog::query()
             ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
@@ -742,7 +742,7 @@ class DashboardController extends Controller
             ->selectRaw('cage_slots.cage_id as cage_id, production_logs.log_date as log_date, SUM(production_logs.egg_count) as eggs')
             ->groupBy('cage_slots.cage_id', 'production_logs.log_date')
             ->get()
-            ->keyBy(fn ($r) => $r->cage_id . '|' . $r->log_date);
+            ->keyBy(fn ($r) => $r->cage_id . '|' . $r->log_date->toDateString());
 
         $scatterData = [];
         foreach ($feedByCageDate as $key => $f) {
@@ -849,7 +849,7 @@ class DashboardController extends Controller
             ->selectRaw('cage_slots.cage_id as cage_id, production_logs.log_date as log_date, AVG(production_logs.hdep) as avg_hdep')
             ->groupBy('cage_slots.cage_id', 'production_logs.log_date')
             ->get()
-            ->keyBy(fn ($r) => $r->cage_id . '|' . $r->log_date);
+            ->keyBy(fn ($r) => $r->cage_id . '|' . $r->log_date->toDateString());
 
         $mortByDate = MortalityLog::query()
             ->whereIn('cage_id', $cageIds)
