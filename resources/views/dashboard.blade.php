@@ -691,7 +691,7 @@
     window.__dashboardCage = 'all';
     window.__dashboardHistoryDays = 7;
     window.__dashboardHistoryCompare = false;
-    window.__dashboardPerfDays = 1;
+    window.__dashboardPerfDays = 7;
     window.__dashboardMortalityDays = {{ $mortalityDays ?? 1 }};
 
     function buildFrameUrl(base, params) {
@@ -777,7 +777,7 @@
         }
 
         var url = buildFrameUrl('{{ route('dashboard.cage-performance') }}', {
-            days: days === 1 ? null : days
+            days: days === 7 ? null : days
         });
 
         reloadFramePreservingScroll('dashboard-cage-performance', url);
@@ -858,7 +858,7 @@
         var feedUrl    = buildFrameUrl('{{ route('dashboard.feed-mortality') }}',  { cage: cageParam });
         // Cage Performance Overview is intentionally NOT cage-filtered — it always
         // compares all cages against each other regardless of the active cage filter.
-        var perfUrl    = buildFrameUrl('{{ route('dashboard.cage-performance') }}', { days: window.__dashboardPerfDays === 1 ? null : window.__dashboardPerfDays });
+        var perfUrl    = buildFrameUrl('{{ route('dashboard.cage-performance') }}', { days: window.__dashboardPerfDays === 7 ? null : window.__dashboardPerfDays });
         var historyUrl = buildFrameUrl('{{ route('dashboard.production-history') }}', {
             days: window.__dashboardHistoryDays === 7 ? null : window.__dashboardHistoryDays,
             compare: window.__dashboardHistoryCompare ? 1 : null

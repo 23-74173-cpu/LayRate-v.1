@@ -95,9 +95,9 @@ class DashboardController extends Controller
     public function cagePerformance()
     {
         $cageCode = request('cage');
-        $days = (int) request('days', 1);
-        if (! in_array($days, [0, 1, 7, 14, 30])) {
-            $days = 1;
+        $days = (int) request('days', 7);
+        if (! in_array($days, [0, 7, 30])) {
+            $days = 7;
         }
 
         $data = $this->buildDashboardData($cageCode);
@@ -142,7 +142,7 @@ class DashboardController extends Controller
         $cageCode = request('cage');
         $days = (int) request('days', 7);
         $compare = request('compare', false);
-        if (! in_array($days, [0, 7, 14, 30])) {
+        if (! in_array($days, [0, 7, 30])) {
             $days = 7;
         }
 
@@ -342,7 +342,7 @@ class DashboardController extends Controller
 
     public function henAgeLayrate()
     {
-        $days = (int) request('days', 90);
+        $days = (int) request('days', 30);
         $reportingDate = ReportingDateService::reportingDate();
         $startDate = $days > 0 ? $reportingDate->copy()->subDays($days - 1)->toDateString() : null;
         $endDate = $reportingDate->toDateString();

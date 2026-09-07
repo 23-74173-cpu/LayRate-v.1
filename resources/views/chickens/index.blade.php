@@ -193,7 +193,7 @@
             </x-card>
 
             {{-- Recent Records (lazy loaded) --}}
-            <turbo-frame id="chickens-mortality-records" src="{{ route('chickens.mortality-records') }}" loading="lazy" target="_top" class="lg:col-span-2">
+            <turbo-frame id="chickens-mortality-records" src="{{ route('chickens.mortality-records') }}" loading="lazy" class="lg:col-span-2">
                 @include('chickens._mortality-records-skeleton')
             </turbo-frame>
         </div>

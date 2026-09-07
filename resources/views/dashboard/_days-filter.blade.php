@@ -3,7 +3,7 @@ $days = $days ?? 30;
 $frameId = $frameId ?? '';
 $routeName = $routeName ?? '';
 $routeUrl = $frameId ? route($routeName) : '';
-$options = [7 => 'Week', 30 => 'Month', 90 => '3 Months', 0 => 'Full'];
+$options = [7 => 'Week', 30 => 'Month', 0 => 'Full'];
 @endphp
 <div class="inline-flex items-center gap-1 rounded-lg p-1 shrink-0 ml-auto" style="background-color: #f3f4f6;">
     @foreach($options as $d => $label)
