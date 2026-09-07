@@ -3,15 +3,44 @@
 
 @push('head')
 <style>
+    .cage-slot-grid {
+        --slot-size: 65px;
+    }
     @media (max-width: 639px) {
-        .cage-slot-grid {
-            grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)) !important;
-        }
         .slot-card {
-            min-height: 52px;
-            font-size: 11px;
+            min-height: 48px;
+            font-size: 10px;
+        }
+        .cage-slot-grid {
+            --slot-size: 44px;
+            grid-template-columns: repeat(var(--cage-cols), var(--slot-size)) !important;
+        }
+        .cage-scroll-btn {
+            display: flex !important;
         }
     }
+    .cage-scroll-ctrl {
+        position: relative;
+    }
+    .cage-scroll-btn {
+        display: none;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 5;
+        width: 30px;
+        height: 30px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 9999px;
+        border: 1px solid #e6e6e6;
+        background: rgba(255,255,255,0.95);
+        color: #31302e;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    }
+    .cage-scroll-btn:hover { background: #f6f5f4; }
+    .cage-scroll-prev { left: 4px; }
+    .cage-scroll-next { right: 4px; }
     .log-tab-btn.active {
         background: #fff !important;
         color: #1f1f1f !important;
@@ -126,58 +155,79 @@
                 @php
                     $cageSlotsForThis = $slotsByCageId->get($cage->id, collect());
                     $totalSlots = $cageSlotsForThis->count();
-                    $gridCols = $totalSlots;
-                    for ($i = min(8, $totalSlots); $i >= 2; $i--) {
-                        if ($totalSlots % $i === 0) { $gridCols = $i; break; }
-                    }
+                    $rows = max(1, (int) $cage->rows);
+                    $cols = max(1, (int) $cage->slots_per_row);
+                    $slotsByRC = $cageSlotsForThis->mapWithKeys(fn ($s) => [
+                        $s->row_number . '-' . $s->column_number => $s,
+                    ]);
                 @endphp
-                <div class="cage-grid hidden overflow-x-auto" data-cage-id="{{ $cage->id }}">
-                    <div class="grid gap-1.5 cage-slot-grid" style="grid-template-columns: repeat({{ $gridCols }}, minmax(60px, 100px));">
-                        @foreach($cageSlotsForThis as $slot)
-                        @php
-                            $primaryHen = $slot->primaryHen();
-                            $isSensor = $slot->hasBreakbeam();
-                            $isLogged = $slot->today_egg_count > 0;
-                        @endphp
-                        @php $activeHenCount = $slot->active_hen_count; @endphp
-                        <button type="button"
-                                class="slot-card flex flex-col items-center justify-center aspect-square rounded-lg border transition-all relative select-none {{ $activeHenCount === 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer' }}"
-                                style="background-color: {{ $isLogged ? '#eaf6ee' : '#ffffff' }}; border-color: {{ $isLogged ? '#b8dfc6' : '#e6e6e6' }};"
-                                data-slot-id="{{ $slot->id }}"
-                                data-cage-id="{{ $cage->id }}"
-                                data-cage-code="{{ $cage->cage_code }}"
-                                data-slot-number="{{ $slot->slot_number }}"
-                                data-row="{{ $slot->row_number }}"
-                                data-col="{{ $slot->column_number }}"
-                                data-hens="{{ $activeHenCount }}"
-                                data-breed="{{ $primaryHen?->breed ?? '—' }}"
-                                data-age="{{ $primaryHen?->current_age_weeks ?? 0 }}"
-                                data-has-sensor="{{ $isSensor ? 1 : 0 }}"
-                                data-today-eggs="{{ $slot->today_egg_count }}"
-                                data-empty="{{ $activeHenCount === 0 ? 1 : 0 }}"
-                                aria-label="{{ $cage->cage_code }} slot {{ $slot->row_number }}-{{ $slot->column_number }}, {{ $activeHenCount }} hens{{ $activeHenCount === 0 ? ', no hens assigned' : '' }}"
-                                tabindex="{{ $activeHenCount === 0 ? '-1' : '0' }}"
-                                title="{{ $activeHenCount === 0 ? 'No hens assigned to this slot' : '' }}">
-
-                                @if($isSensor)
-                                <span class="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full" style="background-color: #0075de;"></span>
-                                @endif
-
-                                @if($isLogged)
-                                <span class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full flex items-center justify-center" style="background-color: #1f6b3a;">
-                                    <i data-lucide="check" class="w-2 h-2 text-white"></i>
-                                </span>
-                                @endif
-
-                                @if($activeHenCount === 0)
-                                <span class="text-xs text-center leading-tight" style="color: #a39e98;" title="No hens assigned">No<br>hens</span>
-                                @else
-                                <span class="text-xs font-semibold leading-none" style="color: {{ $activeHenCount >= $cage->max_chickens_per_slot ? '#9b1c24' : '#1f1f1f' }}">
-                                    {{ $activeHenCount }}
-                                </span>
-                                @endif
+                <div class="cage-grid hidden" data-cage-id="{{ $cage->id }}" data-rows="{{ $rows }}" data-cols="{{ $cols }}">
+                    <div class="cage-scroll-ctrl">
+                        <button type="button" class="cage-scroll-btn cage-scroll-prev" onclick="scrollCageGrid(this, -1)" aria-label="Scroll slots left">
+                            <i data-lucide="chevron-left" class="w-4 h-4"></i>
                         </button>
-                        @endforeach
+                        <div class="overflow-x-auto cage-slot-scroll pb-1" style="scroll-behavior: smooth; -webkit-overflow-scrolling: touch;">
+                            <div class="grid gap-1.5 cage-slot-grid" style="--cage-cols: {{ $cols }}; grid-template-columns: repeat(var(--cage-cols), var(--slot-size)); width: max-content;">
+                        @for($r = 1; $r <= $rows; $r++)
+                            @for($c = 1; $c <= $cols; $c++)
+                            @php
+                                $slot = $slotsByRC->get("{$r}-{$c}") ?? $cageSlotsForThis->firstWhere('slot_number', ($r - 1) * $cols + $c);
+                            @endphp
+                            @if(! $slot)
+                            <div class="slot-card flex flex-col items-center justify-center aspect-square rounded-lg border"
+                                 style="background-color: #fafaf9; border-color: #efefef; color: #d1d5db;" title="No slot"></div>
+                            @else
+                            @php
+                                $primaryHen = $slot->primaryHen();
+                                $isSensor = $slot->hasBreakbeam();
+                                $isLogged = $slot->today_egg_count > 0;
+                                $activeHenCount = $slot->active_hen_count;
+                            @endphp
+                            <button type="button"
+                                    class="slot-card flex flex-col items-center justify-center aspect-square rounded-lg border transition-all relative select-none {{ $activeHenCount === 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer' }}"
+                                    style="background-color: {{ $isLogged ? '#eaf6ee' : '#ffffff' }}; border-color: {{ $isLogged ? '#b8dfc6' : '#e6e6e6' }};"
+                                    data-slot-id="{{ $slot->id }}"
+                                    data-cage-id="{{ $cage->id }}"
+                                    data-cage-code="{{ $cage->cage_code }}"
+                                    data-slot-number="{{ $slot->slot_number }}"
+                                    data-row="{{ $slot->row_number }}"
+                                    data-col="{{ $slot->column_number }}"
+                                    data-hens="{{ $activeHenCount }}"
+                                    data-breed="{{ $primaryHen?->breed ?? '—' }}"
+                                    data-age="{{ $primaryHen?->current_age_weeks ?? 0 }}"
+                                    data-has-sensor="{{ $isSensor ? 1 : 0 }}"
+                                    data-today-eggs="{{ $slot->today_egg_count }}"
+                                    data-empty="{{ $activeHenCount === 0 ? 1 : 0 }}"
+                                    aria-label="{{ $cage->cage_code }} slot {{ $slot->row_number }}-{{ $slot->column_number }}, {{ $activeHenCount }} hens{{ $activeHenCount === 0 ? ', no hens assigned' : '' }}"
+                                    tabindex="{{ $activeHenCount === 0 ? '-1' : '0' }}"
+                                    title="{{ $activeHenCount === 0 ? 'No hens assigned to this slot' : '' }}">
+
+                                    @if($isSensor)
+                                    <span class="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full" style="background-color: #0075de;"></span>
+                                    @endif
+
+                                    @if($isLogged)
+                                    <span class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full flex items-center justify-center" style="background-color: #1f6b3a;">
+                                        <i data-lucide="check" class="w-2 h-2 text-white"></i>
+                                    </span>
+                                    @endif
+
+                                    @if($activeHenCount === 0)
+                                    <span class="text-xs text-center leading-tight" style="color: #a39e98;" title="No hens assigned">No<br>hens</span>
+                                    @else
+                                    <span class="text-xs font-semibold leading-none" style="color: {{ $activeHenCount >= $cage->max_chickens_per_slot ? '#9b1c24' : '#1f1f1f' }}">
+                                        {{ $activeHenCount }}
+                                    </span>
+                                    @endif
+                            </button>
+                            @endif
+                            @endfor
+                        @endfor
+                            </div>
+                        </div>
+                        <button type="button" class="cage-scroll-btn cage-scroll-next" onclick="scrollCageGrid(this, 1)" aria-label="Scroll slots right">
+                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                        </button>
                     </div>
                     <div class="mt-2 text-xs text-right" style="color: #a39e98;">
                         Logged today:
@@ -938,6 +988,13 @@
             document.addEventListener('mouseup', onGlobalMouseUp);
             document.addEventListener('touchend', onSlotTouchEnd);
         }
+
+        window.scrollCageGrid = function(btn, dir) {
+            var scroller = btn.closest('.cage-scroll-ctrl').querySelector('.cage-slot-scroll');
+            if (!scroller) return;
+            var step = Math.round(scroller.clientWidth * 0.8);
+            scroller.scrollBy({ left: dir * step, behavior: 'smooth' });
+        };
 
         function switchCage(cageId) {
             clearSlotSelection();
