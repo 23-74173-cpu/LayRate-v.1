@@ -85,6 +85,37 @@
   pointer-events: none;
 }
 
+/* KPI bottom accent bar */
+.kpi-accent {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+}
+
+/* KPI label — unified across all variants (plain + default) */
+ /* Normalized from original 11 hand-copied cards: plain used text-xs #6B7280 mb-1,
+    default used text-[10px] #5b6472. Chose default's values as canonical because
+    default is the primary KPI treatment and plain should match it exactly per
+    audit (font-size/weight/spacing/color identical). Gap to icon handled by
+    container mt-2 (default) / plain has no icon but label still uses same rule. */
+.kpi-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.125px;
+  text-transform: uppercase;
+  color: #5b6472;
+  line-height: 1;
+  display: block;
+}
+
+/* KPI gradient value — transparent text clipped to gradient */
+.kpi-value {
+  display: inline-block;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 1px 2px rgba(16,42,76,0.12);
+}
+
 /* Animated progress bar fill on view */
 @keyframes barGrow {
   from { width: 0; }

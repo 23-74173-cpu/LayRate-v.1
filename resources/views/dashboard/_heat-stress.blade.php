@@ -63,7 +63,7 @@
         {{-- Bar Chart --}}
         @php
             $barLabels = array_keys($summary);
-            $barData = array_map(fn ($s) => $s['avg_hdep'] ?? 0, $summary);
+            $barData = array_values(array_map(fn ($s) => $s['avg_hdep'] ?? 0, $summary));
         @endphp
         @if(array_sum($barData) > 0)
         <div class="relative w-full min-h-[180px]">
@@ -75,7 +75,16 @@
     (function() {
         var labels = @json($barLabels);
         var data = @json($barData);
-        if (!Array.isArray(data) || !data.some(function(v) { return v > 0; })) return;
+        if (!Array.isArray(data)) {
+            if (data !== null && typeof data === 'object') {
+                console.warn('[heatStressChart] expected array, got object — falling back to Object.values(). Received:', data);
+                data = Object.values(data);
+            } else {
+                console.warn('[heatStressChart] skipping render: expected array data, received:', data);
+                return;
+            }
+        }
+        if (!data.some(function(v) { return v > 0; })) return;
         var colors = ['rgba(5,150,105,0.6)', 'rgba(245,158,11,0.6)', 'rgba(220,38,38,0.6)'];
         var borderColors = ['#059669', '#f59e0b', '#dc2626'];
         var config = {

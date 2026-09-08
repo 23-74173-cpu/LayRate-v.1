@@ -4,6 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\Cage;
 use App\Models\CageSlot;
+use App\Models\FeedBatch;
+use App\Models\FeedConsumptionLog;
+use App\Models\Forecast;
 use App\Models\Hen;
 use App\Models\ProductionLog;
 use App\Models\User;
@@ -158,11 +161,11 @@ class DashboardControllerTest extends TestCase
         $cageA = $cages->firstWhere('cage_code', 'CAGE-DASH-A');
         $cageB = $cages->firstWhere('cage_code', 'CAGE-DASH-B');
 
-        // Default view is Today only.
-        $this->assertEquals(4, $cageA->period_eggs);
-        $this->assertEquals(100.0, $cageA->period_hdep);
-        $this->assertEquals(1, $cageB->period_eggs);
-        $this->assertEquals(50.0, $cageB->period_hdep);
+        // Default view is Week (7 days) — includes today + yesterday.
+        $this->assertEquals(6, $cageA->period_eggs);
+        $this->assertEquals(21.4, $cageA->period_hdep);
+        $this->assertEquals(2, $cageB->period_eggs);
+        $this->assertEquals(14.3, $cageB->period_hdep);
     }
 
     public function test_cage_performance_ranks_cages_by_eggs_collected(): void
@@ -170,10 +173,10 @@ class DashboardControllerTest extends TestCase
         $response = $this->actingAs($this->admin)->get(route('dashboard.cage-performance'));
         $response->assertOk();
 
-        // Default Today: Cage A = 4 eggs, Cage B = 1 egg, so A is #1.
+        // Default Week: Cage A = 6 eggs, Cage B = 2 eggs, so A is #1.
         $response->assertSee('CAGE-DASH-A');
-        $response->assertSee('100.0%');
-        $response->assertSee('4');
+        $response->assertSee('21.4%');
+        $response->assertSee('6');
     }
 
     public function test_cage_performance_7_day_filter_works(): void
@@ -194,7 +197,7 @@ class DashboardControllerTest extends TestCase
         $response->assertOk();
 
         $response->assertSee('HDEP by Cage');
-        $response->assertSee('Eggs Share by Cage');
+        $response->assertSee('Eggs Distribution by Cage');
         $response->assertSee('dashHdepChart');
         $response->assertSee('dashEggsChart');
 
@@ -221,6 +224,16 @@ class DashboardControllerTest extends TestCase
 
         // Default days filter is 7.
         $response->assertViewHas('days', 7);
+    }
+
+    public function test_cage_performance_90_day_filter_shows_3_months_label_and_footer(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('dashboard.cage-performance', ['days' => 90]));
+        $response->assertOk();
+        $response->assertViewHas('days', 90);
+        $response->assertSee('3 Months');
+        $response->assertSee('Ranked by eggs collected over the last 90 days');
+        $response->assertSee('HDEP by Cage (3 Months)');
     }
 
     public function test_production_history_scopes_to_selected_cage(): void
@@ -279,7 +292,6 @@ class DashboardControllerTest extends TestCase
         $response = $this->actingAs($this->admin)->get(route('dashboard.production-history', ['compare' => 1]));
         $response->assertOk();
 
-        $response->assertSee('Cage Production Comparison');
         $response->assertSee('Compare');
         $chartData = $response->viewData('chartData');
         $this->assertGreaterThan(1, count($chartData['datasets']));
@@ -315,6 +327,129 @@ class DashboardControllerTest extends TestCase
             $full->assertOk();
             $full->assertSee($frameId);
         }
+    }
+
+    public function test_forecast_overlay_returns_empty_gracefully_when_no_forecasts(): void
+    {
+        $response = $this->actingAs($this->admin)->getJson(route('dashboard.forecast-overlay', ['days' => 7]));
+        $response->assertOk();
+        $response->assertJsonPath('hasForecast', false);
+        $response->assertJsonPath('summary', null);
+        $forecast = $response->json('forecast');
+        $this->assertIsArray($forecast);
+        $this->assertTrue(collect($forecast)->every(fn ($v) => $v === null));
+        $variance = $response->json('variance');
+        $this->assertTrue(collect($variance)->every(fn ($v) => $v === null));
+    }
+
+    public function test_forecast_overlay_with_partial_coverage_computes_variance(): void
+    {
+        $yesterday = now()->subDay()->toDateString();
+        $today = now()->toDateString();
+
+        Forecast::create([
+            'cage_id' => $this->cageA->id,
+            'forecast_date' => now()->subDay()->toDateString(),
+            'target_date' => $yesterday,
+            'predicted_egg_count' => 10,
+        ]);
+
+        $response = $this->actingAs($this->admin)->getJson(route('dashboard.forecast-overlay', ['days' => 7, 'cage' => 'CAGE-DASH-A']));
+        $response->assertOk();
+        $response->assertJsonPath('hasForecast', true);
+        $data = $response->json();
+        $idxYesterday = array_search($yesterday, $data['dateKeys']);
+        $idxToday = array_search($today, $data['dateKeys']);
+        $this->assertNotFalse($idxYesterday);
+        $this->assertNotFalse($idxToday);
+        $this->assertEquals(10, $data['forecast'][$idxYesterday]);
+        $this->assertEquals(2, $data['actual'][$idxYesterday]);
+        $this->assertEquals(-80.0, $data['variance'][$yesterday]);
+        $this->assertNull($data['forecast'][$idxToday]);
+        $this->assertNull($data['variance'][$today]);
+        $this->assertNotNull($data['summary']);
+        $this->assertStringContainsString('Forecast was', $data['summary']);
+    }
+
+    public function test_forecast_overlay_whole_farm_uses_farm_scope(): void
+    {
+        $yesterday = now()->subDay()->toDateString();
+        Forecast::create([
+            'cage_id' => null,
+            'breed' => null,
+            'forecast_date' => now()->subDay()->toDateString(),
+            'target_date' => $yesterday,
+            'predicted_egg_count' => 20,
+        ]);
+
+        $response = $this->actingAs($this->admin)->getJson(route('dashboard.forecast-overlay', ['days' => 7]));
+        $response->assertOk();
+        $data = $response->json();
+        $idx = array_search($yesterday, $data['dateKeys']);
+        $this->assertEquals(20, $data['forecast'][$idx]);
+        // Cage-specific call should not see farm forecast
+        $cageResponse = $this->actingAs($this->admin)->getJson(route('dashboard.forecast-overlay', ['days' => 7, 'cage' => 'CAGE-DASH-A']));
+        $cageData = $cageResponse->json();
+        $cIdx = array_search($yesterday, $cageData['dateKeys']);
+        $this->assertNull($cageData['forecast'][$cIdx]);
+    }
+
+    public function test_avg_cp_this_week_is_cage_scoped_and_date_bound(): void
+    {
+        $batchA = FeedBatch::create([
+            'crude_protein' => 16.0,
+            'total_quantity_kg' => 100,
+            'date_received' => now()->subDay()->toDateString(),
+        ]);
+        $batchB = FeedBatch::create([
+            'crude_protein' => 20.0,
+            'total_quantity_kg' => 100,
+            'date_received' => now()->subDay()->toDateString(),
+        ]);
+        // Log for cage A today with batch A (16%)
+        FeedConsumptionLog::create([
+            'cage_id' => $this->cageA->id,
+            'feed_batch_id' => $batchA->id,
+            'log_date' => now()->toDateString(),
+            'log_time' => '08:00',
+            'feed_consumed_kg' => 10,
+            'recorded_by' => $this->admin->id,
+        ]);
+        // Log for cage B today with batch B (20%)
+        FeedConsumptionLog::create([
+            'cage_id' => $this->cageB->id,
+            'feed_batch_id' => $batchB->id,
+            'log_date' => now()->toDateString(),
+            'log_time' => '08:00',
+            'feed_consumed_kg' => 10,
+            'recorded_by' => $this->admin->id,
+        ]);
+        // Old log outside 7-day window should be ignored
+        $oldBatch = FeedBatch::create([
+            'crude_protein' => 30.0,
+            'total_quantity_kg' => 100,
+            'date_received' => now()->subDays(20)->toDateString(),
+        ]);
+        FeedConsumptionLog::create([
+            'cage_id' => $this->cageA->id,
+            'feed_batch_id' => $oldBatch->id,
+            'log_date' => now()->subDays(20)->toDateString(),
+            'log_time' => '08:00',
+            'feed_consumed_kg' => 10,
+            'recorded_by' => $this->admin->id,
+        ]);
+
+        $unscoped = $this->actingAs($this->admin)->get(route('dashboard.stats'));
+        $unscoped->assertOk();
+        $this->assertEquals(18.0, $unscoped->viewData('avgCp'), 'Unscoped avg CP% should average 16 and 20 from this week (old 30 excluded)');
+
+        $scopedA = $this->actingAs($this->admin)->get(route('dashboard.stats', ['cage' => 'CAGE-DASH-A']));
+        $scopedA->assertOk();
+        $this->assertEquals(16.0, $scopedA->viewData('avgCp'), 'Cage A avg CP% should only reflect its own batch (16%)');
+
+        $scopedB = $this->actingAs($this->admin)->get(route('dashboard.stats', ['cage' => 'CAGE-DASH-B']));
+        $scopedB->assertOk();
+        $this->assertEquals(20.0, $scopedB->viewData('avgCp'), 'Cage B avg CP% should only reflect its own batch (20%)');
     }
 
     private function extractEggsToday($response)

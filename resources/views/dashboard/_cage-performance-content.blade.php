@@ -1,5 +1,6 @@
 @php
 $chartRenderFn = $chartRenderFn ?? 'renderDashPerformanceCharts';
+$showDayFilter = $showDayFilter ?? false;
 
 $performance = $cages->map(function ($cage) {
     return [
@@ -70,6 +71,19 @@ $hasData = $totalEggs > 0 || $performance->contains(fn ($p) => $p['hdep'] > 0);
                 <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Cage Performance Overview</div>
             </div>
         </div>
+@if($showDayFilter)
+        <div class="inline-flex items-center gap-1 rounded-lg p-1 shrink-0" style="background-color: #f3f4f6;">
+            @foreach([7, 30, 90, 0] as $d)
+            <button type="button"
+               data-perf-days="{{ $d }}"
+               onclick="setCagePerformanceDays({{ $d }})"
+               class="perf-days-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all {{ $days === $d ? 'perf-days-active' : 'text-[#6B7280] hover:bg-[#e5e7eb]' }}"
+               {{ $days === $d ? 'style="background-color: #0075de; color: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.1);"' : '' }}>
+                 {{ $d === 0 ? 'Full' : ($d === 90 ? '3 Months' : ($d === 30 ? 'Month' : 'Week')) }}
+            </button>
+            @endforeach
+        </div>
+        @endif
     </div>
 
     @if(! $hasData)
@@ -137,7 +151,7 @@ $hasData = $totalEggs > 0 || $performance->contains(fn ($p) => $p['hdep'] > 0);
         {{-- Comparison charts side-by-side: HDEP bar (left), Eggs pie (right) --}}
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div class="perf-card rounded-xl border border-[#D9D9D9] p-4 bg-white chart-fade-in">
-                <div class="text-[11px] font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-2">HDEP by Cage {{ $days === 0 ? '(All-Time)' : ($days === 30 ? '(Month)' : '(Week)') }}</div>
+                <div class="text-[11px] font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-2">HDEP by Cage {{ $days === 0 ? '(All-Time)' : ($days === 90 ? '(3 Months)' : ($days === 30 ? '(Month)' : '(Week)')) }}</div>
                 <div class="relative w-full h-[170px]">
                     <canvas id="dashHdepChart" style="width: 100%; height: 100%; display: block;"></canvas>
                 </div>
@@ -153,6 +167,8 @@ $hasData = $totalEggs > 0 || $performance->contains(fn ($p) => $p['hdep'] > 0);
         <div class="mt-3 text-xs text-[#6B7280]">
             @if($days === 0)
                 Ranked by eggs collected since day 1, then by HDEP.
+            @elseif($days === 90)
+                Ranked by eggs collected over the last 90 days, then by HDEP.
             @elseif($days === 30)
                 Ranked by eggs collected over the last 30 days, then by HDEP.
             @else

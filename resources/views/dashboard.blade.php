@@ -1,12 +1,12 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 @section('title', 'Dashboard')
-@section('header-clock', now()->format('l, F j') . ' — ' . now()->format('g:i A'))
+@section('header-clock', now()->format('l, F j') . ' ΓÇö ' . now()->format('g:i A'))
 
 @section('content')
 <div class="space-y-5">
 
-    {{-- ── Dashboard Header with Integrated Tabs ── --}}
-    <div class="relative overflow-hidden rounded-lg flex items-center justify-between" id="dashHeader" style="min-height: 72px; background: linear-gradient(to right, #2e4a9e, #213183, #1a2342); transition: background 0.35s ease;">
+    {{-- ΓöÇΓöÇ Dashboard Header ΓöÇΓöÇ --}}
+    <div class="relative overflow-hidden bg-linear-to-br from-secondary to-sidebar-bg rounded-lg p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4" id="dashHeader" style="min-height: 72px;">
         {{-- Decorative egg bubbles --}}
         <div class="page-header-egg-decor" aria-hidden="true"
              style="position:absolute; inset:0; z-index:0; pointer-events:none; color:#9ca3af;"></div>
@@ -36,46 +36,11 @@
         })();
         </script>
 
-        {{-- Left: Dashboard tab (active) + subtitle --}}
-        <div class="relative z-[1] py-4" style="padding-left: 35px;">
-            <button type="button" onclick="switchDashTab('dashboard')" class="dash-header-tab active" data-header-tab="dashboard">
-                Dashboard
-            </button>
-        </div>
-
-        {{-- Right: Analytics tab --}}
-        <div class="relative z-[1] py-4" style="padding-right: 35px;">
-            <button type="button" onclick="switchDashTab('analytics')" class="dash-header-tab" data-header-tab="analytics">
-                Analytics
-            </button>
+        <div class="relative z-[1]">
+            <div class="text-xl font-bold text-white">Dashboard</div>
+            <div class="text-sm text-white/75 mt-1">Farm performance overview and analytics</div>
         </div>
     </div>
-
-    <style>
-        .dash-header-tab {
-            font-size: 20px;
-            font-weight: 700;
-            color: rgba(255,255,255,0.45);
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            padding: 6px 16px;
-            border-radius: 10px;
-            transition: all 0.25s ease;
-            line-height: 1.4;
-        }
-        .dash-header-tab:hover {
-            transform: scale(1.08);
-        }
-        .dash-header-tab:hover:not(.active) {
-            color: rgba(255,255,255,0.7);
-        }
-        .dash-header-tab.active {
-            color: #fff;
-        }
-        .dash-tab-panel { display: none; }
-        .dash-tab-panel.active { display: block; }
-    </style>
 
     {{-- Onboarding Modal --}}
     @if($needsOnboarding)
@@ -108,38 +73,19 @@
     </div>
     @endif
 
-    {{-- ── Cage Filter Tabs ── --}}
-    <div class="flex items-center gap-2 overflow-x-auto pb-1 dash-rise" style="animation-delay: 40ms;">
-        <button type="button" onclick="filterDashboard('all')" class="dashboard-tab px-4 py-2 text-sm font-semibold whitespace-nowrap rounded-full transition-all duration-200 ease-out hover:scale-[1.04] hover:shadow-md active:scale-[0.97]"
-                data-tab="all"
-                style="background-color: #0d47a1; color: #ffffff; border: 1px solid #0d47a1;">
-            All
-            <span class="ml-1 text-xs opacity-80">({{ $cages->count() }})</span>
-        </button>
-        @foreach($cages as $cage)
-        <button type="button" onclick="filterDashboard('{{ $cage->cage_code }}')" class="dashboard-tab px-4 py-2 text-sm font-medium whitespace-nowrap rounded-full transition-all duration-200 ease-out hover:scale-[1.04] hover:shadow-md active:scale-[0.97]"
-                data-tab="{{ $cage->cage_code }}"
-                style="background-color: #ffffff; color: #615d59; border: 1px solid #e6e6e6;">
-            <span class="inline-block w-2 h-2 rounded-full mr-1.5" style="background-color: {{ $cage->colorSoft }}; border: 1px solid {{ $cage->color }};"></span>
-            {{ $cage->cage_code }}
-        </button>
-        @endforeach
+    {{-- ΓöÇΓöÇ Cage Filter (native <select>) ΓöÇΓöÇ --}}
+    <div class="dash-rise" style="animation-delay: 40ms;">
+        <select id="dashboardCageSelect" onchange="filterDashboard(this.value)"
+                class="border border-[#D9D9D9] rounded-lg px-3 py-2.5 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#002D5E] focus:border-[#002D5E]">
+            <option value="all" {{ request('cage', 'all') === 'all' ? 'selected' : '' }}>All Cages ({{ $cages->count() }})</option>
+            @foreach($cages as $cage)
+                <option value="{{ $cage->cage_code }}" {{ request('cage') === $cage->cage_code ? 'selected' : '' }}>{{ $cage->cage_code }}</option>
+            @endforeach
+        </select>
     </div>
 
-    {{-- Tab 1: Dashboard (KPI Cards) --}}
-    <div class="dash-tab-panel active" data-tab-panel="dashboard">
-        <div class="space-y-5">
-            <turbo-frame id="dashboard-stats" src="{{ route('dashboard.stats') }}" loading="lazy" class="block">
-                @include('dashboard._metric-cards-skeleton')
-            </turbo-frame>
-            @include('dashboard._data-checklist')
-        </div>
-    </div>
-
-    {{-- Tab 2: Analytics (Charts + Checklist) --}}
-    <div class="dash-tab-panel" data-tab-panel="analytics">
-                <div class="space-y-6">
-            @include('dashboard._data-checklist')
+    <div class="space-y-6">
+        @include('dashboard._data-checklist')
 
             {{-- Global Period Filter (applies to every analytics card) --}}
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 pt-4">
@@ -154,84 +100,33 @@
                 </div>
             </div>
 
-            {{-- Section Filter Tabs --}}
-            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2 mb-6 pt-4">
-                <button type="button" onclick="filterAnalytics('production')" class="analytics-section-tab px-3 py-1.5 text-sm font-bold uppercase tracking-[0.125px] rounded-md transition-all inline-flex items-center gap-1.5 text-[#6B7280]" data-section="production">
-                    <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Production Performance
-                </button>
-                <button type="button" onclick="filterAnalytics('environmental')" class="analytics-section-tab px-3 py-1.5 text-sm font-bold uppercase tracking-[0.125px] rounded-md transition-all text-[#6B7280] inline-flex items-center gap-1.5" data-section="environmental">
-                    <i data-lucide="thermometer" class="w-4 h-4"></i> Environmental Analytics
-                </button>
-                <button type="button" onclick="filterAnalytics('feed')" class="analytics-section-tab px-3 py-1.5 text-sm font-bold uppercase tracking-[0.125px] rounded-md transition-all text-[#6B7280] inline-flex items-center gap-1.5" data-section="feed">
-                    <i data-lucide="wheat" class="w-4 h-4"></i> Feed Analytics
-                </button>
-                <button type="button" onclick="filterAnalytics('flock')" class="analytics-section-tab px-3 py-1.5 text-sm font-bold uppercase tracking-[0.125px] rounded-md transition-all text-[#6B7280] inline-flex items-center gap-1.5" data-section="flock">
-                    <i data-lucide="heart-pulse" class="w-4 h-4"></i> Flock Analytics
-                </button>
-            </div>
+        @php
+            $analyticsTabs = [
+                'production' => ['label' => 'Production Performance', 'icon' => 'bar-chart-3', 'onclick' => "filterAnalytics('production')"],
+                'environmental' => ['label' => 'Environmental Analytics', 'icon' => 'thermometer', 'onclick' => "filterAnalytics('environmental')"],
+                'feed' => ['label' => 'Feed Analytics', 'icon' => 'wheat', 'onclick' => "filterAnalytics('feed')"],
+                'flock' => ['label' => 'Flock Analytics', 'icon' => 'heart-pulse', 'onclick' => "filterAnalytics('flock')"],
+            ];
+            @endphp
+            <x-underline-tabs :tabs="$analyticsTabs" active="production" />
 
             <style>
-                .analytics-section-tab {
-                    cursor: pointer;
-                    color: #9ca3af;
-                    font-size: 14px;
-                    font-weight: 700;
-                    text-transform: uppercase;
-                    letter-spacing: 0.125px;
-                    transition: all 0.2s ease;
-                }
-                .analytics-section-tab i { transition: all 0.2s ease; }
-                .analytics-section-tab:hover {
-                    font-size: 16px;
-                    font-weight: 800;
-                }
-                .analytics-section-tab:hover i {
-                    width: 17px;
-                    height: 17px;
-                }
-                .analytics-section-tab.active[data-section="production"] {
-                    color: #2563eb !important;
-                }
-                .analytics-section-tab.active[data-section="production"] i { color: #2563eb; }
-                .analytics-section-tab.active[data-section="environmental"] {
-                    color: #16a34a !important;
-                }
-                .analytics-section-tab.active[data-section="environmental"] i { color: #16a34a; }
-                .analytics-section-tab.active[data-section="feed"] {
-                    color: #ca8a04 !important;
-                }
-                .analytics-section-tab.active[data-section="feed"] i { color: #ca8a04; }
-                .analytics-section-tab.active[data-section="flock"] {
-                    color: #db2777 !important;
-                }
-                .analytics-section-tab.active[data-section="flock"] i { color: #db2777; }
                 .analytics-section { display: none !important; }
                 .analytics-section.active-section { display: block !important; }
             </style>
 
             <script>
             function filterAnalytics(section) {
-                document.querySelectorAll('.analytics-section-tab').forEach(function(btn) {
-                    btn.classList.remove('active');
-                    btn.style.fontSize = '';
-                    btn.style.fontWeight = '';
-                    var icon = btn.querySelector('i');
-                    if (icon) {
-                        icon.style.width = '';
-                        icon.style.height = '';
-                    }
+                document.querySelectorAll('button[onclick^="filterAnalytics("]').forEach(function(btn) {
+                    var isActive = btn.getAttribute('onclick') === "filterAnalytics('" + section + "')";
+                    btn.classList.toggle('border-navy', isActive);
+                    btn.classList.toggle('text-navy', isActive);
+                    btn.classList.toggle('border-transparent', !isActive);
+                    btn.classList.toggle('text-ink-muted', !isActive);
+                    // Tailwind also accepts hex form ΓÇö keep both in sync for robustness
+                    btn.classList.toggle('border-[#002D5E]', isActive);
+                    btn.classList.toggle('text-[#002D5E]', isActive);
                 });
-                var activeBtn = document.querySelector('.analytics-section-tab[data-section="' + section + '"]');
-                if (activeBtn) {
-                    activeBtn.classList.add('active');
-                    activeBtn.style.fontSize = '16px';
-                    activeBtn.style.fontWeight = '800';
-                    var icon = activeBtn.querySelector('i');
-                    if (icon) {
-                        icon.style.width = '17px';
-                        icon.style.height = '17px';
-                    }
-                }
                 document.querySelectorAll('.analytics-section').forEach(function(el) {
                     el.classList.toggle('active-section', el.dataset.analyticsSection === section);
                 });
@@ -244,19 +139,16 @@
             });
             </script>
 
-            {{-- ═══ SECTION 1 — Production Performance ═══ --}}
+            {{-- ΓòÉΓòÉΓòÉ SECTION 1 ΓÇö Production Performance ΓòÉΓòÉΓòÉ --}}
             <div class="analytics-section active-section" data-analytics-section="production">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+                <div class="space-y-4">
+                    <turbo-frame id="dashboard-stats-production" src="{{ route('dashboard.stats.production', ['cage' => request('cage')]) }}" loading="lazy" class="block">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-4 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
+                    </turbo-frame>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
                     <div class="flex flex-col gap-4">
                         <turbo-frame id="dashboard-cage-performance" src="{{ route('dashboard.cage-performance', ['days' => 30]) }}" loading="lazy" class="block">
                             @include('dashboard._cage-performance-skeleton')
-                        </turbo-frame>
-
-                        <turbo-frame id="dashboard-heat-stress" src="{{ route('dashboard.heat-stress', ['days' => 30]) }}" loading="lazy" class="block">
-                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
-                                <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
-                                <div class="h-[110px] bg-gray-100 rounded-xl"></div>
-                            </div>
                         </turbo-frame>
                     </div>
 
@@ -280,30 +172,46 @@
                         </turbo-frame>
                     </div>
                 </div>
-            </div>
-
-            {{-- ═══ SECTION 2 — Environmental Analytics ═══ --}}
-            <div class="analytics-section" data-analytics-section="environmental">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
-                    <turbo-frame id="dashboard-temp-vs-hdep" src="{{ route('dashboard.temp-vs-hdep', ['days' => 30]) }}" loading="lazy" class="block">
-                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
-                            <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
-                            <div class="h-[110px] bg-gray-100 rounded-xl"></div>
-                        </div>
-                    </turbo-frame>
-
-                    <turbo-frame id="dashboard-hum-vs-hdep" src="{{ route('dashboard.hum-vs-hdep', ['days' => 30]) }}" loading="lazy" class="block">
-                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
-                            <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
-                            <div class="h-[110px] bg-gray-100 rounded-xl"></div>
-                        </div>
-                    </turbo-frame>
                 </div>
             </div>
 
-            {{-- ═══ SECTION 3 — Feed Analytics ═══ --}}
+            {{-- ΓòÉΓòÉΓòÉ SECTION 2 ΓÇö Environmental Analytics ΓòÉΓòÉΓòÉ --}}
+            <div class="analytics-section" data-analytics-section="environmental">
+                <div class="space-y-4">
+                    <turbo-frame id="dashboard-stats-environment" src="{{ route('dashboard.stats.environment', ['cage' => request('cage')]) }}" loading="lazy" class="block">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-3 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
+                    </turbo-frame>
+                    <turbo-frame id="dashboard-heat-stress" src="{{ route('dashboard.heat-stress', ['days' => 30]) }}" loading="lazy" class="block">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
+                            <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
+                            <div class="h-[110px] bg-gray-100 rounded-xl"></div>
+                        </div>
+                    </turbo-frame>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+                        <turbo-frame id="dashboard-temp-vs-hdep" src="{{ route('dashboard.temp-vs-hdep', ['days' => 30]) }}" loading="lazy" class="block">
+                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
+                                <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
+                                <div class="h-[110px] bg-gray-100 rounded-xl"></div>
+                            </div>
+                        </turbo-frame>
+
+                        <turbo-frame id="dashboard-hum-vs-hdep" src="{{ route('dashboard.hum-vs-hdep', ['days' => 30]) }}" loading="lazy" class="block">
+                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
+                                <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
+                                <div class="h-[110px] bg-gray-100 rounded-xl"></div>
+                            </div>
+                        </turbo-frame>
+                    </div>
+                </div>
+            </div>
+
+            {{-- ΓòÉΓòÉΓòÉ SECTION 3 ΓÇö Feed Analytics ΓòÉΓòÉΓòÉ --}}
             <div class="analytics-section" data-analytics-section="feed">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+                <div class="space-y-4">
+                    <turbo-frame id="dashboard-stats-feed" src="{{ route('dashboard.stats.feed', ['cage' => request('cage')]) }}" loading="lazy" class="block">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-4 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
+                    </turbo-frame>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
                     <turbo-frame id="dashboard-feed-by-cage" src="{{ route('dashboard.feed-by-cage', ['days' => 30]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
@@ -318,9 +226,10 @@
                         </div>
                     </turbo-frame>
                 </div>
+                </div>
             </div>
 
-            {{-- ═══ SECTION 4 — Flock Analytics ═══ --}}
+            {{-- ΓòÉΓòÉΓòÉ SECTION 4 ΓÇö Flock Analytics ΓòÉΓòÉΓòÉ --}}
             <div class="analytics-section" data-analytics-section="flock">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
                     <turbo-frame id="dashboard-breed-analytics" src="{{ route('dashboard.breed-analytics', ['days' => 30]) }}" loading="lazy" class="block">
@@ -346,9 +255,8 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    {{-- ─ Stats Modal ── --}}
+    {{-- ΓöÇ Stats Modal ΓöÇΓöÇ --}}
     <div id="statsModal" data-modal data-close="closeStatsModal" style="display: none;" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
         <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeStatsModal()"></div>
         <div class="relative w-full max-w-sm rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
@@ -403,7 +311,7 @@
     </script>
 
 
-    {{-- ── KPI Breakdown Modal (shared by all metric cards — item 9) ── --}}
+    {{-- ΓöÇΓöÇ KPI Breakdown Modal (shared by all metric cards ΓÇö item 9) ΓöÇΓöÇ --}}
     <div id="kpiModal" data-modal  data-close="closeKpiModal" style="display: none;" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
         <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeKpiModal()"></div>
         <div class="relative w-full max-w-sm rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
@@ -417,7 +325,7 @@
         </div>
     </div>
 
-    {{-- ── Yesterday's Production Record Popup ── --}}
+    {{-- ΓöÇΓöÇ Yesterday's Production Record Popup ΓöÇΓöÇ --}}
     <div id="yesterdaySummaryModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
         <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeYesterdaySummary()"></div>
         <div class="relative w-full max-w-sm rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
@@ -483,7 +391,7 @@
         </div>
     </div>
 
-    {{-- ── Day Production Complete Popup ── --}}
+    {{-- ΓöÇΓöÇ Day Production Complete Popup ΓöÇΓöÇ --}}
     <div id="dayCompleteModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
         <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeDayComplete()"></div>
         <div class="relative w-full max-w-sm rounded-2xl p-6 text-center" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
@@ -583,7 +491,7 @@
         if (e.key === 'Escape') closeKpiModal();
     });
 
-    // ── Card navigation (item 8) + long-press breakdown (item 9) ──
+    // ΓöÇΓöÇ Card navigation (item 8) + long-press breakdown (item 9) ΓöÇΓöÇ
     // Called by each lazily loaded frame once its cards are in the DOM.
     function bindKpiCards(root) {
         (root || document).querySelectorAll('.kpi-card:not([data-kpi-bound])').forEach(function(card) {
@@ -622,21 +530,21 @@
         });
     }
 
-    // ── Live clock (item 6): local timezone, ticks every second ──
+    // ΓöÇΓöÇ Live clock (item 6): local timezone, ticks every second ΓöÇΓöÇ
     (function() {
         function tick() {
             var el = document.getElementById('dashboardClock');
             if (!el) return;
             var now = new Date();
             el.textContent = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
-                + ' — ' + now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+                + ' ΓÇö ' + now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
         }
         tick();
         if (window.__dashboardClockTimer) clearInterval(window.__dashboardClockTimer);
         window.__dashboardClockTimer = setInterval(tick, 1000);
     })();
 
-    // ── Shared dashboard chart renderer ──
+    // ΓöÇΓöÇ Shared dashboard chart renderer ΓöÇΓöÇ
     // Multiple lazy Turbo Frames on the dashboard load incrementally. Each frame
     // used to call LayRateChart.prepareForRender() on its own, but that helper is
     // global: it destroys every existing chart instance. Calling it for every new
@@ -700,11 +608,15 @@
         };
     })();
 
-    // ── Track the active cage and period filters so sub-filter buttons can rebuild URLs ──
-    window.__dashboardCage = 'all';
+    // ΓöÇΓöÇ Track the active cage and period filters so sub-filter buttons can rebuild URLs ΓöÇΓöÇ
+    window.__dashboardCage = new URLSearchParams(window.location.search).get('cage') || 'all';
     window.__dashboardGlobalDays = 30;
     window.__dashboardHistoryCompare = false;
     window.__dashboardMortalityDays = {{ $mortalityDays ?? 1 }};
+    document.addEventListener('DOMContentLoaded', function(){
+        var sel = document.getElementById('dashboardCageSelect');
+        if(sel) sel.value = window.__dashboardCage;
+    });
 
     function buildFrameUrl(base, params) {
         var query = Object.keys(params).map(function (k) {
@@ -760,38 +672,36 @@
         }
     }
 
-    // Global period filter: reloads every analytics card with the same week/month/full window.
+    // Global Period filter — reloads every analytics card with the chosen day range.
+    // The default is 30 (Month); when days === 30, the param is omitted so the server
+    // default is used.  Production History additionally passes Compare if toggled on.
     window.setGlobalDays = function(days) {
         window.__dashboardGlobalDays = days;
 
-        var container = document.getElementById('dashboardGlobalPeriod');
-        if (container) {
-            container.querySelectorAll('[data-global-days]').forEach(function(btn) {
-                setButtonActive(btn, parseInt(btn.dataset.globalDays, 10) === days);
-            });
-        }
-
-        var d = days === 30 ? null : days;
-        var cards = [
-            { id: 'dashboard-cage-performance',    route: '{{ route('dashboard.cage-performance') }}',   extra: {} },
-            { id: 'dashboard-heat-stress',         route: '{{ route('dashboard.heat-stress') }}',        extra: {} },
-            { id: 'dashboard-egg-collection-time', route: '{{ route('dashboard.egg-collection-time') }}', extra: {} },
-            { id: 'dashboard-hen-age-layrate',     route: '{{ route('dashboard.hen-age-layrate') }}',    extra: {} },
-            { id: 'dashboard-temp-vs-hdep',        route: '{{ route('dashboard.temp-vs-hdep') }}',       extra: {} },
-            { id: 'dashboard-hum-vs-hdep',         route: '{{ route('dashboard.hum-vs-hdep') }}',        extra: {} },
-            { id: 'dashboard-feed-by-cage',        route: '{{ route('dashboard.feed-by-cage') }}',       extra: {} },
-            { id: 'dashboard-feed-vs-egg',         route: '{{ route('dashboard.feed-vs-egg') }}',        extra: {} },
-            { id: 'dashboard-breed-analytics',     route: '{{ route('dashboard.breed-analytics') }}',    extra: {} },
-            { id: 'dashboard-mortality-by-cause',  route: '{{ route('dashboard.mortality-by-cause') }}', extra: {} },
-            { id: 'dashboard-mortality-trend',     route: '{{ route('dashboard.mortality-trend') }}',    extra: {} },
-            // Production History additionally carries its Compare toggle.
-            { id: 'dashboard-production-history',  route: '{{ route('dashboard.production-history') }}', extra: { compare: window.__dashboardHistoryCompare ? 1 : null } }
-        ];
-
-        cards.forEach(function(card) {
-            var url = buildFrameUrl(card.route, Object.assign({ days: d }, card.extra));
-            reloadFramePreservingScroll(card.id, url);
+        // Restyle the global pill bar
+        document.querySelectorAll('#dashboardGlobalPeriod .global-days-btn').forEach(function(btn) {
+            setButtonActive(btn, parseInt(btn.dataset.globalDays, 10) === days);
         });
+
+        var params = { days: days === 30 ? null : days };
+
+        // Cage Performance Overview is intentionally NOT cage-filtered — it always
+        // compares all cages against each other regardless of the active cage filter.
+        reloadFramePreservingScroll('dashboard-cage-performance', buildFrameUrl('{{ route('dashboard.cage-performance') }}', params));
+        reloadFramePreservingScroll('dashboard-production-history', buildFrameUrl('{{ route('dashboard.production-history') }}', {
+            days: days === 30 ? null : days,
+            compare: window.__dashboardHistoryCompare ? 1 : null
+        }));
+        reloadFramePreservingScroll('dashboard-heat-stress', buildFrameUrl('{{ route('dashboard.heat-stress') }}', params));
+        reloadFramePreservingScroll('dashboard-temp-vs-hdep', buildFrameUrl('{{ route('dashboard.temp-vs-hdep') }}', params));
+        reloadFramePreservingScroll('dashboard-hum-vs-hdep', buildFrameUrl('{{ route('dashboard.hum-vs-hdep') }}', params));
+        reloadFramePreservingScroll('dashboard-feed-by-cage', buildFrameUrl('{{ route('dashboard.feed-by-cage') }}', params));
+        reloadFramePreservingScroll('dashboard-feed-vs-egg', buildFrameUrl('{{ route('dashboard.feed-vs-egg') }}', params));
+        reloadFramePreservingScroll('dashboard-egg-collection-time', buildFrameUrl('{{ route('dashboard.egg-collection-time') }}', params));
+        reloadFramePreservingScroll('dashboard-hen-age-layrate', buildFrameUrl('{{ route('dashboard.hen-age-layrate') }}', params));
+        reloadFramePreservingScroll('dashboard-breed-analytics', buildFrameUrl('{{ route('dashboard.breed-analytics') }}', params));
+        reloadFramePreservingScroll('dashboard-mortality-by-cause', buildFrameUrl('{{ route('dashboard.mortality-by-cause') }}', params));
+        reloadFramePreservingScroll('dashboard-mortality-trend', buildFrameUrl('{{ route('dashboard.mortality-trend') }}', params));
     };
 
     window.toggleProductionHistoryCompare = function() {
@@ -832,42 +742,53 @@
         reloadFramePreservingScroll('dashboard-stats', url);
     };
 
-    // ── Cage filter: reloads Turbo Frames with ?cage=CODE ──
+    // ΓöÇΓöÇ Cage filter: reloads Turbo Frames with ?cage=CODE ΓöÇΓöÇ
     window.filterDashboard = function(code) {
         window.__dashboardCage = code;
-
-        document.querySelectorAll('.dashboard-tab').forEach(function(tab) {
-            if (tab.dataset.tab === code) {
-                tab.classList.add('dashboard-tab-active');
-                tab.style.backgroundColor = '#0d47a1';
-                tab.style.color = '#ffffff';
-                tab.style.borderColor = '#0d47a1';
-            } else {
-                tab.classList.remove('dashboard-tab-active');
-                tab.style.backgroundColor = '#ffffff';
-                tab.style.color = '#615d59';
-                tab.style.borderColor = '#e6e6e6';
-            }
-        });
+        var sel = document.getElementById('dashboardCageSelect');
+        if (sel && sel.value !== code) sel.value = code;
+        var _url = new URL(window.location);
+        if (code === 'all') _url.searchParams.delete('cage');
+        else _url.searchParams.set('cage', code);
+        window.history.replaceState({}, '', _url);
 
         var cageParam = code === 'all' ? null : code;
+        var dayParam  = window.__dashboardGlobalDays === 30 ? null : window.__dashboardGlobalDays;
         var statsUrl   = buildFrameUrl('{{ route('dashboard.stats') }}',           { cage: cageParam, mortality_days: window.__dashboardMortalityDays === 1 ? null : window.__dashboardMortalityDays });
         var feedUrl    = buildFrameUrl('{{ route('dashboard.feed-mortality') }}',  { cage: cageParam });
         // Cage Performance Overview is intentionally NOT cage-filtered — it always
         // compares all cages against each other regardless of the active cage filter.
-        var perfUrl    = buildFrameUrl('{{ route('dashboard.cage-performance') }}', { days: window.__dashboardGlobalDays === 30 ? null : window.__dashboardGlobalDays });
+        var perfUrl    = buildFrameUrl('{{ route('dashboard.cage-performance') }}', { days: dayParam });
         var historyUrl = buildFrameUrl('{{ route('dashboard.production-history') }}', {
-            days: window.__dashboardGlobalDays === 30 ? null : window.__dashboardGlobalDays,
+            days: dayParam,
             compare: window.__dashboardHistoryCompare ? 1 : null
         });
 
         reloadFramePreservingScroll('dashboard-stats', statsUrl);
         reloadFramePreservingScroll('dashboard-feed-mortality', feedUrl);
+        reloadFramePreservingScroll('dashboard-stats-production', buildFrameUrl('{{ route('dashboard.stats.production') }}', { cage: cageParam, mortality_days: window.__dashboardMortalityDays === 1 ? null : window.__dashboardMortalityDays }));
+        reloadFramePreservingScroll('dashboard-stats-environment', buildFrameUrl('{{ route('dashboard.stats.environment') }}', { cage: cageParam, mortality_days: window.__dashboardMortalityDays === 1 ? null : window.__dashboardMortalityDays }));
+        reloadFramePreservingScroll('dashboard-stats-feed', buildFrameUrl('{{ route('dashboard.stats.feed') }}', { cage: cageParam, mortality_days: window.__dashboardMortalityDays === 1 ? null : window.__dashboardMortalityDays }));
         reloadFramePreservingScroll('dashboard-cage-performance', perfUrl);
         reloadFramePreservingScroll('dashboard-production-history', historyUrl);
+        // ΓöÇΓöÇ Remaining analytics frames — must stay in sync per cage (audit Part 5) ΓöÇΓöÇ
+        reloadFramePreservingScroll('dashboard-temp-vs-hdep', buildFrameUrl('{{ route('dashboard.temp-vs-hdep') }}', { cage: cageParam, days: dayParam }));
+        reloadFramePreservingScroll('dashboard-hum-vs-hdep', buildFrameUrl('{{ route('dashboard.hum-vs-hdep') }}', { cage: cageParam, days: dayParam }));
+        reloadFramePreservingScroll('dashboard-heat-stress', buildFrameUrl('{{ route('dashboard.heat-stress') }}', { cage: cageParam, days: dayParam }));
+        reloadFramePreservingScroll('dashboard-egg-collection-time', buildFrameUrl('{{ route('dashboard.egg-collection-time') }}', { cage: cageParam, days: dayParam }));
+        reloadFramePreservingScroll('dashboard-hen-age-layrate', buildFrameUrl('{{ route('dashboard.hen-age-layrate') }}', { cage: cageParam, days: dayParam }));
+        reloadFramePreservingScroll('dashboard-feed-by-cage', buildFrameUrl('{{ route('dashboard.feed-by-cage') }}', { cage: cageParam, days: dayParam }));
+        reloadFramePreservingScroll('dashboard-feed-vs-egg', buildFrameUrl('{{ route('dashboard.feed-vs-egg') }}', { cage: cageParam, days: dayParam }));
+        reloadFramePreservingScroll('dashboard-breed-analytics', buildFrameUrl('{{ route('dashboard.breed-analytics') }}', { cage: cageParam, days: dayParam }));
+        reloadFramePreservingScroll('dashboard-mortality-by-cause', buildFrameUrl('{{ route('dashboard.mortality-by-cause') }}', { cage: cageParam, days: dayParam }));
+        reloadFramePreservingScroll('dashboard-mortality-trend', buildFrameUrl('{{ route('dashboard.mortality-trend') }}', { cage: cageParam, days: dayParam }));
+        // Forecast overlay is JS-driven, not a Turbo Frame — re-fetch if currently visible
+        if (window.__forecastOverlayEnabled && typeof window.loadForecastOverlay === 'function') {
+            window.loadForecastOverlay();
+        }
     };
 
-    // ── Yesterday's Production Record popup ──
+    // ΓöÇΓöÇ Yesterday's Production Record popup ΓöÇΓöÇ
     // Shows once per reporting day. Uses localStorage keyed by the server's
     // reporting date so the popup reappears after the daily rollover.
     function closeYesterdaySummary() {
@@ -901,7 +822,7 @@
         }, 800);
     })();
 
-    // ── Day Production Complete popup ──
+    // ΓöÇΓöÇ Day Production Complete popup ΓöÇΓöÇ
     function closeDayComplete() {
         var m = document.getElementById('dayCompleteModal');
         if (m) m.style.display = 'none';
@@ -928,26 +849,6 @@
         }, 1200);
     })();
 
-    // ── Dashboard tabs ──
-    function switchDashTab(tab) {
-        document.querySelectorAll('.dash-header-tab').forEach(function(b) { b.classList.remove('active'); });
-        document.querySelectorAll('.dash-tab-panel').forEach(function(p) { p.classList.remove('active'); });
-        var btn = document.querySelector('[data-header-tab="' + tab + '"]');
-        var panel = document.querySelector('[data-tab-panel="' + tab + '"]');
-        if (btn) btn.classList.add('active');
-        if (panel) panel.classList.add('active');
-        var header = document.getElementById('dashHeader');
-        if (header) {
-            header.style.background = tab === 'analytics'
-                ? 'linear-gradient(to right, #1a2342, #213183, #2e4a9e)'
-                : 'linear-gradient(to right, #2e4a9e, #213183, #1a2342)';
-        }
-        if (tab === 'analytics' && typeof filterAnalytics === 'function') {
-            var activeBtn = document.querySelector('.analytics-section-tab.active');
-            filterAnalytics(activeBtn ? activeBtn.dataset.section : 'production');
-        }
-        lucide.createIcons();
-    }
     </script>
 
 </div>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+// @deprecated Scheduled for removal in Phase 4 of the Dashboard/Analytics consolidation.
 use App\Http\Controllers\DashboardController;
 use App\Models\Cage;
 use App\Models\FeedConsumptionLog;

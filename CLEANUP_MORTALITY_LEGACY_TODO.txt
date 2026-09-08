@@ -1,0 +1,24 @@
+# CLEANUP-2026-mortality-legacy — Remove legacy plain-box fallback in chickens/index.blade.php
+
+**Context:** Mortality summary in `resources/views/chickens/index.blade.php:139-165` was migrated from plain `bg-white rounded-lg border p-4` boxes with `data-mortality-total` / `data-mortality-cage-count` and `bg-red-50/border-red-200` to `<x-kpi-card variant="default">`. The JS `mortalityAjaxSubmit` at `resources/views/chickens/index.blade.php:780-840` now supports both markups for backward compat.
+
+**Why not deleted same-session:** Keep fallback this pass to avoid same-session risk if a missed consumer still renders legacy markup (e.g., an untested turbo-frame or cached view). The migration is live; removal should be a separate verified pass.
+
+**Grep verification (2026-09-08):**
+```
+grep -rn "data-mortality-total\|data-mortality-cage" resources --include="*.blade.php"
+→ only resources/views/chickens/index.blade.php (the new kpi-card outer attributes + JS) — no plain-box consumers.
+
+grep -rn "bg-red-50.*border-red-200" resources/views --include="*.blade.php" | grep -i mortality
+→ no Blade mortality plain boxes; only JS fallback and unrelated confirm-delete / profile alerts.
+```
+
+**Action for next cleanup pass:**
+- Delete fallback branches in `mortalityAjaxSubmit`:
+  - `if (!countEl) { countEl = cageCard.querySelector('.kpi-value') ... }` and the `else { cageCard.classList.add('bg-red-50'...) }` paths
+  - `totalCard.classList.contains('kpi-card') ? ... : totalCard` ternary — simplify to direct `.kpi-value` lookup (all cards are now kpi-card)
+  - Remove the `// TODO: Legacy plain-box fallback...` comment block added in this follow-up
+- Re-test `POST /chickens/mortality` (or `mortality.store`) via `chickens/index?tab=mortality` — verify total and per-cage counts still increment and gradient toggles to red when >0 without the fallback.
+- Remove this TODO file.
+
+**Owner:** Next sprint cleanup. Safe to delete after one full QA cycle with no legacy rendering observed.

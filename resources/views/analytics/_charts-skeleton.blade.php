@@ -1,3 +1,4 @@
+{{-- @deprecated Scheduled for removal in Phase 4 of the Dashboard/Analytics consolidation. --}}
 <div class="space-y-5">
     <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
         <x-skeleton variant="card" />

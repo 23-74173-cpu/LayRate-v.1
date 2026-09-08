@@ -1,3 +1,4 @@
+{{-- @deprecated Scheduled for removal in Phase 4 of the Dashboard/Analytics consolidation. --}}
 <turbo-frame id="analytics-charts">
     @php
         $hasLogs = $logs->isNotEmpty();

@@ -298,7 +298,6 @@
                     ['icon'=>'cpu',           'label'=>'Hardware',           'route'=>'hardware.index'],
                 ],
                 'Insights' => [
-                    ['icon'=>'bar-chart-3',   'label'=>'Analytics',          'route'=>'analytics'],
                     ['icon'=>'trending-up',   'label'=>'Forecast',           'route'=>'forecast', 'adminOnly' => true],
                     ['icon'=>'clipboard-list','label'=>'Reports',            'route'=>'reports'],
                     ['icon'=>'sticky-note',   'label'=>'Notes',              'route'=>'notes.index'],

@@ -57,6 +57,9 @@ Route::middleware(['auth', 'system-time-set'])->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/stats', [DashboardController::class, 'stats'])->name('dashboard.stats');
+    Route::get('/dashboard/stats/production', [DashboardController::class, 'statsProduction'])->name('dashboard.stats.production');
+    Route::get('/dashboard/stats/environment', [DashboardController::class, 'statsEnvironment'])->name('dashboard.stats.environment');
+    Route::get('/dashboard/stats/feed', [DashboardController::class, 'statsFeed'])->name('dashboard.stats.feed');
 
     // Initial setup wizard — admin only, mandatory first run
     Route::middleware('admin')->group(function () {
@@ -67,6 +70,7 @@ Route::middleware(['auth', 'system-time-set'])->group(function () {
     Route::get('/dashboard/calendar', [DashboardController::class, 'calendar'])->name('dashboard.calendar');
     Route::get('/dashboard/cage-performance', [DashboardController::class, 'cagePerformance'])->name('dashboard.cage-performance');
     Route::get('/dashboard/production-history', [DashboardController::class, 'productionHistory'])->name('dashboard.production-history');
+    Route::get('/dashboard/forecast-overlay', [DashboardController::class, 'forecastOverlay'])->name('dashboard.forecast-overlay');
     Route::get('/dashboard/egg-collection-time', [DashboardController::class, 'eggCollectionTime'])->name('dashboard.egg-collection-time');
     Route::get('/dashboard/hen-age-layrate', [DashboardController::class, 'henAgeLayrate'])->name('dashboard.hen-age-layrate');
     Route::get('/dashboard/temp-vs-hdep', [DashboardController::class, 'tempVsHdep'])->name('dashboard.temp-vs-hdep');
@@ -187,7 +191,25 @@ Route::middleware(['auth', 'system-time-set'])->group(function () {
     Route::put('/feed/farm-entry/{farmFeedEntry}', [FeedController::class, 'updateFarmFeedEntry'])->name('feed.farm-entry.update');
     Route::delete('/feed/farm-entry/{farmFeedEntry}', [FeedController::class, 'destroyFarmFeedEntry'])->name('feed.farm-entry.destroy');
 
-    Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics');
+    // Legacy Analytics URLs now land on the consolidated Dashboard. Keep the
+    // old route name alive so bookmarks and deferred Turbo links continue to
+    // resolve while the remaining Analytics endpoints are retired in Phase 4.
+    Route::get('/analytics', function () {
+        $days = match (request('period', 'week')) {
+            'month' => 30,
+            '3months' => 90,
+            'full' => 0,
+            default => 7,
+        };
+
+        $query = ['days' => $days];
+        $cage = request('cage');
+        if ($cage && ! in_array($cage, ['performance', 'all'], true)) {
+            $query['cage'] = $cage;
+        }
+
+        return redirect()->route('dashboard', $query);
+    })->name('analytics');
     Route::get('/analytics/charts', [AnalyticsController::class, 'charts'])->name('analytics.charts');
     Route::get('/analytics/data', [AnalyticsController::class, 'data'])->name('analytics.data');
 

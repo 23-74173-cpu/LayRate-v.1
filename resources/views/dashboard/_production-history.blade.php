@@ -9,8 +9,8 @@
         }
     </style>
     <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 h-full flex flex-col">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
-            <div class="flex items-start gap-3">
+        <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3 mb-2">
+            <div class="flex items-start gap-3 flex-1 min-w-0">
                 <span class="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style="background-color: #e8f3fe; color: #0075de;">
                     <i data-lucide="chart-line" class="w-3 h-3"></i>
                 </span>
@@ -21,7 +21,7 @@
                     </button>
                 </div>
             </div>
-            <div class="inline-flex items-center gap-1 rounded-lg p-1" style="background-color: #f3f4f6;">
+<div class="inline-flex flex-wrap items-center gap-1 rounded-lg p-1" style="background-color: #f3f4f6;">
                 <button type="button"
                    data-history-compare
                    onclick="toggleProductionHistoryCompare()"
@@ -29,10 +29,19 @@
                    {{ $compare ? 'style="background-color: #0d47a1; color: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.1);"' : '' }}>
                     Compare
                 </button>
+                <span class="w-px h-3 mx-1" style="background-color: #d1d5db;"></span>
+                <button type="button"
+                   id="forecastToggleBtn"
+                   data-forecast-toggle
+                   onclick="toggleForecastOverlay()"
+                   class="forecast-toggle-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb]">
+                    Show Forecast
+                </button>
             </div>
         </div>
 
         <div class="interpretation-panel hidden mb-3 px-3 py-2.5 rounded-lg text-xs leading-relaxed" style="background-color: #f0f0ff; color: #3730a3; border: 1px solid rgba(99,102,241,0.15);">{{ $insight }}</div>
+        <div id="forecastVariancePanel" class="hidden mb-3 px-3 py-2.5 rounded-lg text-xs leading-relaxed flex items-center gap-2" style="background-color:#fef3e2; color:#92400e; border:1px solid #fde68a;"><i data-lucide="trending-up" class="w-3 h-3"></i><span id="forecastVarianceText"></span></div>
 
         @if(empty($chartData['datasets']))
             <div class="rounded-xl border py-8 text-center text-sm" style="background-color: #ffffff; border-color: #e6e6e6; color: #a39e98;">
@@ -229,5 +238,130 @@
             LayRateChart.create('dashProductionHistoryChart', productionChartConfig);
         }
     }
+
+    // ── Forecast overlay — reuses the same chart, no new component ──
+    window.__forecastOverlayEnabled = window.__forecastOverlayEnabled || false;
+    window.__originalProductionChartData = window.__originalProductionChartData || JSON.parse(JSON.stringify(productionChartData));
+    window.__originalProductionChartConfig = window.__originalProductionChartConfig || productionChartConfig;
+
+    window.toggleForecastOverlay = function() {
+        var btn = document.getElementById('forecastToggleBtn');
+        window.__forecastOverlayEnabled = !window.__forecastOverlayEnabled;
+        if (btn) {
+            if (window.__forecastOverlayEnabled) {
+                btn.style.backgroundColor = '#C2703E';
+                btn.style.color = '#ffffff';
+                btn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.1)';
+                btn.classList.remove('text-[#6B7280]', 'hover:bg-[#e5e7eb]');
+            } else {
+                btn.style.backgroundColor = '';
+                btn.style.color = '';
+                btn.style.boxShadow = '';
+                btn.classList.add('text-[#6B7280]', 'hover:bg-[#e5e7eb]');
+            }
+        }
+        if (window.__forecastOverlayEnabled) {
+            loadForecastOverlay();
+        } else {
+            hideForecastOverlay();
+        }
+    };
+
+    window.hideForecastOverlay = function() {
+        var panel = document.getElementById('forecastVariancePanel');
+        if (panel) panel.classList.add('hidden');
+        // Restore original single-dataset chart
+        if (window.__originalProductionChartConfig) {
+            if (typeof window.DashboardChartRenderer !== 'undefined') {
+                window.DashboardChartRenderer.render('dashProductionHistoryChart', window.__originalProductionChartConfig);
+            } else if (window.LayRateChart) {
+                LayRateChart.create('dashProductionHistoryChart', window.__originalProductionChartConfig);
+            }
+        }
+    };
+
+    window.loadForecastOverlay = function() {
+        var days = (typeof window.__dashboardGlobalDays !== 'undefined') ? window.__dashboardGlobalDays : {{ $days }};
+        var cage = (typeof window.__dashboardCage !== 'undefined' && window.__dashboardCage !== 'all') ? window.__dashboardCage : '{{ $cageCode ?? '' }}';
+        var isCompare = (typeof window.__dashboardHistoryCompare !== 'undefined') ? window.__dashboardHistoryCompare : {{ $compare ? 'true' : 'false' }};
+        if (isCompare) {
+            // Compare shows multiple cage lines; overlay a single dashed forecast for the
+            // current scope would be ambiguous. Keep the forecast as an extra line anyway
+            // for Phase 3 — the variance summary is still per-date and remains useful.
+        }
+        var url = '{{ route('dashboard.forecast-overlay') }}' + '?days=' + encodeURIComponent(days) + (cage ? '&cage=' + encodeURIComponent(cage) : '');
+        fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!window.__forecastOverlayEnabled) return;
+                if (!data.hasForecast || !data.forecast || data.forecast.every(function(v){ return v===null; })) {
+                    var p = document.getElementById('forecastVariancePanel');
+                    var t = document.getElementById('forecastVarianceText');
+                    if (p && t) {
+                        t.textContent = 'No forecast data for this period.';
+                        p.classList.remove('hidden');
+                        if (window.lucide) try{ lucide.createIcons(); }catch(e){}
+                    }
+                    return;
+                }
+                // Build overlay dataset — dashed, distinct color, same labels
+                var forecastDataset = {
+                    label: data.cageCode ? data.cageCode + ' Forecast' : 'Farm Forecast',
+                    data: data.forecast,
+                    borderColor: '#C2703E',
+                    backgroundColor: 'rgba(194, 112, 62, 0.08)',
+                    borderDash: [6, 4],
+                    tension: 0.3,
+                    borderWidth: 2.5,
+                    pointRadius: 3,
+                    pointHoverRadius: 5,
+                    fill: false,
+                    spanGaps: true
+                };
+                var mergedData = JSON.parse(JSON.stringify(window.__originalProductionChartData));
+                // Keep original datasets, append forecast as extra line
+                mergedData.datasets = mergedData.datasets.concat([forecastDataset]);
+                var mergedConfig = JSON.parse(JSON.stringify(window.__originalProductionChartConfig));
+                mergedConfig.data = mergedData;
+                mergedConfig.options.plugins.legend.display = true;
+                if (typeof window.DashboardChartRenderer !== 'undefined') {
+                    window.DashboardChartRenderer.render('dashProductionHistoryChart', mergedConfig);
+                } else if (window.LayRateChart) {
+                    LayRateChart.create('dashProductionHistoryChart', mergedConfig);
+                }
+                var panel2 = document.getElementById('forecastVariancePanel');
+                var text2 = document.getElementById('forecastVarianceText');
+                if (panel2 && text2 && data.summary) {
+                    text2.textContent = data.summary;
+                    panel2.classList.remove('hidden');
+                    if (window.lucide) try{ lucide.createIcons(); }catch(e){}
+                } else if (panel2) {
+                    panel2.classList.add('hidden');
+                }
+            })
+            .catch(function(err) {
+                console.error('Forecast overlay failed', err);
+                var p3 = document.getElementById('forecastVariancePanel');
+                var t3 = document.getElementById('forecastVarianceText');
+                if (p3 && t3) {
+                    t3.textContent = 'Forecast overlay failed to load.';
+                    p3.classList.remove('hidden');
+                }
+            });
+    };
+
+    // If the page was reloaded with forecast overlay previously enabled (Turbo cache),
+    // reset to off — explicit opt-in per spec, not sticky.
+    (function(){
+        var p = document.getElementById('forecastVariancePanel');
+        if (p) p.classList.add('hidden');
+        var b = document.getElementById('forecastToggleBtn');
+        if (b) {
+            b.style.backgroundColor = '';
+            b.style.color = '';
+            b.style.boxShadow = '';
+        }
+        window.__forecastOverlayEnabled = false;
+    })();
     </script>
 </turbo-frame>

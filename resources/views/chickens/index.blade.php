@@ -136,18 +136,32 @@
     {{-- ============================================ --}}
     <div id="panelMortality" class="{{ $tab !== 'mortality' ? 'hidden' : '' }}">
 
-        {{-- Today's Summary Cards --}}
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5" id="mortality-summary">
-            <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-                <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Deaths Today</div>
-                <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]" data-mortality-total>{{ $todayTotal }}</div>
-            </div>
+        {{-- Today's Summary Cards — migrated to <x-kpi-card variant="default"> (real KPI) --}}
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5" id="mortality-summary">
+            <x-kpi-card
+                label="Deaths Today"
+                icon="skull"
+                iconBg="#fadfe3"
+                iconColor="#C2405C"
+                :gradient="$todayTotal > 0 ? 'linear-gradient(135deg,#dc2626,#9b1c24)' : null"
+                accent="#fadfe3"
+                delay="0ms"
+                :value="$todayTotal"
+                data-mortality-total
+            />
             @foreach($cages as $c)
             @php $count = $todayByCage->get($c->cage_code, 0); @endphp
-            <div class="bg-white rounded-lg border border-[#D9D9D9] p-4 {{ $count > 0 ? 'bg-red-50 border-red-200' : '' }}" data-mortality-cage="{{ $c->cage_code }}">
-                <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">{{ $c->cage_code }}</div>
-                <div class="text-2xl font-bold leading-none tracking-[-0.5px] {{ $count > 0 ? 'text-red-600' : 'text-[#333333]' }}" data-mortality-cage-count="{{ $c->cage_code }}">{{ $count }}</div>
-            </div>
+            <x-kpi-card
+                label="{{ $c->cage_code }}"
+                icon="heart-crack"
+                iconBg="#fadfe3"
+                iconColor="#C2405C"
+                :gradient="$count > 0 ? 'linear-gradient(135deg,#dc2626,#9b1c24)' : null"
+                accent="#fadfe3"
+                delay="{{ ($loop->index + 1) * 60 }}ms"
+                :value="$count"
+                data-mortality-cage="{{ $c->cage_code }}"
+            />
             @endforeach
         </div>
 
@@ -763,19 +777,71 @@ function mortalityAjaxSubmit(form) {
             var frame = document.getElementById('chickens-mortality-records');
             if (frame) frame.src = frame.src;
 
-            var totalEl = document.querySelector('[data-mortality-total]');
-            if (totalEl) totalEl.textContent = parseInt(totalEl.textContent) + result.json.count;
+            // Mortality KPI — runtime gradient toggle (intentional exception):
+            // Unlike other x-kpi-card usages which are purely declarative via Blade props,
+            // mortality's visual severity (red gradient when count>0 vs solid when 0) depends on
+            // live count that changes via AJAX without a page reload (mortalityAjaxSubmit).
+            // This JS toggles .kpi-value's gradient at runtime so the card reflects current
+            // severity immediately. Do not remove as "cruft" — it is the only kpi-card that
+            // requires JS-driven style behavior.
+
+            // TODO: Legacy plain-box fallback is dead code post-migration — safe to delete after verification.
+            // Grep confirms no Blade still renders pre-migration mortality markup (plain divs with
+            // data-mortality-total / data-mortality-cage-count and bg-red-50/border-red-200).
+            // Current Blade is fully x-kpi-card (see #mortality-summary above). The fallback
+            // branches below (`!countEl` / `!kpi-card` / `else bg-red-50`) are kept this pass to
+            // avoid same-session risk; remove in a follow-up cleanup ticket (e.g. CLEANUP-2026-mortality-legacy).
+            // Support both legacy plain value boxes and new x-kpi-card structure
+            var totalCard = document.querySelector('[data-mortality-total]');
+            if (totalCard) {
+                // For kpi-card, the number is inside .kpi-value (or its .kpi-count span)
+                var totalValueEl = totalCard.classList.contains('kpi-card')
+                    ? (totalCard.querySelector('.kpi-value') || totalCard.querySelector('[class*="text-\\[32px\\]"]') || totalCard)
+                    : totalCard;
+                var totalCountSpan = totalValueEl.querySelector ? totalValueEl.querySelector('.kpi-count') : null;
+                if (totalCountSpan) {
+                    totalCountSpan.textContent = parseInt(totalCountSpan.textContent || totalValueEl.textContent) + result.json.count;
+                } else {
+                    var curTotal = parseInt(totalValueEl.textContent) || 0;
+                    totalValueEl.textContent = curTotal + result.json.count;
+                }
+                // If newly >0 and was solid, apply gradient (kpi-card case)
+                if (totalCard.classList.contains('kpi-card')) {
+                    var tv = totalCard.querySelector('.kpi-value');
+                    if (tv && !tv.style.backgroundImage) {
+                        var newValCheck = parseInt(totalValueEl.textContent) || 0;
+                        if (newValCheck > 0) {
+                            tv.style.backgroundImage = 'linear-gradient(135deg,#dc2626,#9b1c24)';
+                        }
+                    }
+                }
+            }
 
             var cageCard = document.querySelector('[data-mortality-cage="' + result.json.cage_code + '"]');
             if (cageCard) {
                 var countEl = cageCard.querySelector('[data-mortality-cage-count]');
+                if (!countEl) {
+                    // New kpi-card structure: number is inside .kpi-value
+                    countEl = cageCard.querySelector('.kpi-value') || cageCard.querySelector('[class*="text-\\[32px\\]"]');
+                }
                 if (countEl) {
-                    var newVal = parseInt(countEl.textContent) + result.json.count;
-                    countEl.textContent = newVal;
+                    var innerSpan = countEl.querySelector ? countEl.querySelector('.kpi-count') : null;
+                    var cur = innerSpan ? parseInt(innerSpan.textContent) : parseInt(countEl.textContent);
+                    cur = isNaN(cur) ? 0 : cur;
+                    var newVal = cur + result.json.count;
+                    if (innerSpan) innerSpan.textContent = newVal;
+                    else countEl.textContent = newVal;
                     if (newVal > 0) {
-                        cageCard.classList.add('bg-red-50', 'border-red-200');
-                        countEl.classList.remove('text-[#333333]');
-                        countEl.classList.add('text-red-600');
+                        if (cageCard.classList.contains('kpi-card')) {
+                            var kv = cageCard.querySelector('.kpi-value');
+                            if (kv && !kv.style.backgroundImage) {
+                                kv.style.backgroundImage = 'linear-gradient(135deg,#dc2626,#9b1c24)';
+                            }
+                        } else {
+                            cageCard.classList.add('bg-red-50', 'border-red-200');
+                            countEl.classList.remove('text-[#333333]');
+                            countEl.classList.add('text-red-600');
+                        }
                     }
                 }
             }
