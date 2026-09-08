@@ -91,12 +91,55 @@ class AnalyticsControllerTest extends TestCase
     }
 
     /** @test */
-    public function analytics_page_loads_for_authenticated_user()
+    public function analytics_page_redirects_to_dashboard_for_authenticated_user()
     {
         $response = $this->actingAs($this->user)->get(route('analytics'));
 
-        $response->assertOk();
-        $response->assertSee('CAGE-A');
+        $response->assertRedirect(route('dashboard', ['days' => 7]));
+    }
+
+    /** @test */
+    public function analytics_page_redirects_performance_3months_to_dashboard_with_90_days()
+    {
+        $response = $this->actingAs($this->user)->get(route('analytics', ['cage' => 'performance', 'period' => '3months']));
+
+        $response->assertRedirect(route('dashboard', ['days' => 90]));
+    }
+
+    /** @test */
+    public function analytics_page_redirects_cage_specific_week_to_dashboard_with_cage_param()
+    {
+        $response = $this->actingAs($this->user)->get(route('analytics', ['cage' => 'CAGE-A', 'period' => 'week']));
+
+        $response->assertRedirect(route('dashboard', ['days' => 7, 'cage' => 'CAGE-A']));
+    }
+
+    /** @test */
+    public function analytics_page_redirects_month_and_full_periods_with_correct_day_mapping()
+    {
+        $month = $this->actingAs($this->user)->get(route('analytics', ['cage' => 'CAGE-A', 'period' => 'month']));
+        $month->assertRedirect(route('dashboard', ['days' => 30, 'cage' => 'CAGE-A']));
+
+        $full = $this->actingAs($this->user)->get(route('analytics', ['cage' => 'CAGE-A', 'period' => 'full']));
+        $full->assertRedirect(route('dashboard', ['days' => 0, 'cage' => 'CAGE-A']));
+
+        $allMonth = $this->actingAs($this->user)->get(route('analytics', ['cage' => 'all', 'period' => 'month']));
+        // 'all' is treated like no cage filter — redirect drops the cage param
+        $allMonth->assertRedirect(route('dashboard', ['days' => 30]));
+    }
+
+    /** @test */
+    public function analytics_route_still_generates_valid_bookmark_url()
+    {
+        $url = route('analytics', ['cage' => 'CAGE-A', 'period' => 'week']);
+
+        $this->assertStringContainsString('/analytics', $url);
+        $this->assertStringContainsString('cage=CAGE-A', $url);
+        $this->assertStringContainsString('period=week', $url);
+
+        // Hitting that bookmark now redirects to the consolidated Dashboard.
+        $response = $this->actingAs($this->user)->get($url);
+        $response->assertRedirect(route('dashboard', ['days' => 7, 'cage' => 'CAGE-A']));
     }
 
     /** @test */
@@ -114,8 +157,7 @@ class AnalyticsControllerTest extends TestCase
 
         $response = $this->actingAs($this->user)->get(route('analytics'));
 
-        $response->assertRedirect(route('dashboard'));
-        $response->assertSessionHas('error');
+        $response->assertRedirect(route('dashboard', ['days' => 7]));
     }
 
     /** @test */
@@ -134,13 +176,23 @@ class AnalyticsControllerTest extends TestCase
         $this->createLog($this->slotA1, 75.0, now()->subDays(2)->toDateString());
         $this->createLog($this->slotA1, 100.0, now()->subDay()->toDateString());
 
-        $response = $this->actingAs($this->user)
+        // Summary stats are now served via the JSON data endpoint (KPI cards live on the
+        // main Analytics page, not in the lazy charts frame). Verify the JSON payload.
+        $dataResponse = $this->actingAs($this->user)
+            ->get(route('analytics.data', ['cage' => 'CAGE-A', 'period' => 'week']));
+
+        $dataResponse->assertOk();
+        $dataResponse->assertJsonPath('kpi.avgHdep', 87.5);
+        $dataResponse->assertJsonPath('kpi.bestDay', 100);
+        $dataResponse->assertJsonPath('kpi.worstDay', 75);
+
+        // Charts frame itself should still render the canvas shells.
+        $chartsResponse = $this->actingAs($this->user)
             ->get(route('analytics.charts', ['cage' => 'CAGE-A', 'period' => 'week']));
 
-        $response->assertOk();
-        $response->assertSee('87.5%'); // avg HDEP
-        $response->assertSee('100%');  // best day
-        $response->assertSee('75%');   // worst day
+        $chartsResponse->assertOk();
+        $chartsResponse->assertSee('hdepChart');
+        $chartsResponse->assertSee('eggsChart');
     }
 
     /** @test */
@@ -163,9 +215,9 @@ class AnalyticsControllerTest extends TestCase
             ->get(route('analytics.charts', ['cage' => 'performance', 'period' => 'week']));
 
         $response->assertOk();
-        $response->assertSee('Cage Performance Rankings');
+        $response->assertSee('Cage Performance Overview');
         $response->assertSee('HDEP by Cage');
-        $response->assertSee('Eggs Share by Cage');
+        $response->assertSee('Eggs Distribution by Cage');
         $response->assertSee('CAGE-A');
         $response->assertSee('CAGE-B');
     }
@@ -205,6 +257,11 @@ class AnalyticsControllerTest extends TestCase
      * <canvas id="hdepChart"> (the global is the DOM node, which has no
      * .destroy()), which crashed chart init on every load, forever.
      *
+     * The charts frame now delegates to the shared LayRateChart helper and the
+     * parent page's renderAnalyticsCharts() rather than a bespoke
+     * __analyticsCharts store. Verify the canvas IDs are present and no
+     * bare window.<canvasId> globals are created.
+     *
      * @test
      */
     public function charts_partial_uses_namespaced_chart_store_not_canvas_id_globals()
@@ -215,10 +272,15 @@ class AnalyticsControllerTest extends TestCase
             ->get(route('analytics.charts', ['cage' => 'CAGE-A', 'period' => 'week']));
 
         $response->assertOk();
-        $response->assertSee('__analyticsCharts', false);
+        $response->assertSee('hdepChart');
+        $response->assertSee('eggsChart');
+        $response->assertSee('feedHdepChart');
+        // The shared helper is LayRateChart, and the parent page exposes
+        // renderAnalyticsCharts — neither should create bare window.hdepChart globals.
         foreach (['hdepChart', 'eggsChart', 'feedHdepChart'] as $id) {
             $response->assertDontSee("window.{$id} =", false);
             $response->assertDontSee("window.{$id}.destroy", false);
         }
+        $response->assertDontSee('__analyticsCharts', false);
     }
 }

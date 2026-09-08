@@ -1,16 +1,4 @@
 <turbo-frame id="dashboard-stats">
-    <style>
-        .kpi-accent {
-            position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
-        }
-        .kpi-value {
-            background-clip: text;
-            -webkit-background-clip: text;
-            color: transparent;
-            text-shadow: 0 1px 2px rgba(16,42,76,0.12);
-        }
-    </style>
-
     <div class="space-y-2 mb-2">
         {{-- Production Metrics --}}
         <div>
@@ -19,107 +7,73 @@
                 Production
             </h3>
             <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {{-- Total Hens --}}
-                <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-3 cursor-pointer"
-                     style="background-color: #f8f8f8; border-color: #e6e6e6; animation-delay: 0ms;"
-                     role="link" tabindex="0" aria-label="Go to Hens"
-                     data-nav="{{ route('chickens.index') }}" data-kpi="hens">
-                    <span class="kpi-watermark" style="color:#CDD2DA;"><i data-lucide="bird" class="w-full h-full"></i></span>
-                    <div class="relative flex items-start justify-between">
-                        <span class="kpi-chip" style="background-color: #d6f0e3; color: #2D7D46; border: 1px solid #2D7D46;">
-                            <i data-lucide="bird" class="w-4 h-4"></i>
-                        </span>
-                        <button type="button" class="p-1 rounded-full hover:bg-black/5 transition-colors -mt-1 -mr-1"
-                                onclick="event.stopPropagation(); openKpiModal('hens')" aria-label="Hens per cage breakdown">
-                            <i data-lucide="info" class="w-4 h-4 text-[#9CA3AF]"></i>
-                        </button>
-                    </div>
-                    <div class="relative mt-2">
-                        <div class="text-[10px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Total Hens</div>
-                        <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 kpi-count kpi-value" style="background-image: linear-gradient(135deg,#16a34a,#2D7D46);" data-target="{{ $totalHens }}">0</div>
-                    </div>
-                    <span class="kpi-accent" style="background-color: #d6f0e3;"></span>
-                </div>
+                <x-kpi-card
+                    label="Total Hens"
+                    icon="bird"
+                    iconBg="#d6f0e3"
+                    iconColor="#2D7D46"
+                    gradient="linear-gradient(135deg,#16a34a,#2D7D46)"
+                    accent="#d6f0e3"
+                    delay="0ms"
+                    :href="route('chickens.index')"
+                    kpi="hens"
+                    ariaLabel="Go to Hens"
+                    infoLabel="Hens per cage breakdown"
+                    :target="$totalHens"
+                />
 
-                {{-- HDEP --}}
-                <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-3 cursor-pointer"
-                     style="background-color: #f8f8f8; border-color: #e6e6e6; animation-delay: 60ms;"
-                     role="link" tabindex="0" aria-label="Go to Egg Logging"
-                     data-nav="{{ route('eggs.logging') }}" data-kpi="hdep">
-                    <span class="kpi-watermark" style="color:#CDD2DA;"><i data-lucide="gauge" class="w-full h-full"></i></span>
-                    <div class="relative flex items-start justify-between">
-                        <span class="kpi-chip" style="background-color: #dcebfa; color: #1D4E8F; border: 1px solid #1D4E8F;">
-                            <i data-lucide="gauge" class="w-4 h-4"></i>
-                        </span>
-                        <button type="button" class="p-1 rounded-full hover:bg-black/5 transition-colors -mt-1 -mr-1"
-                                onclick="event.stopPropagation(); openKpiModal('hdep')" aria-label="HDEP per cage breakdown">
-                            <i data-lucide="info" class="w-4 h-4 text-[#9CA3AF]"></i>
-                        </button>
-                    </div>
-                    <div class="relative mt-2">
-                        <div class="text-[10px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Today's HDEP</div>
-                        <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 kpi-value" style="background-image: linear-gradient(135deg,#0075de,#1D4E8F);">
-                            <span class="kpi-count" data-target="{{ $todayHdep }}" data-decimals="1">0</span>%
-                        </div>
-                        <div class="text-xs font-medium mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5"
-                             style="color: {{ $hdepDelta >= 0 ? '#0f7a44' : '#b71c2c' }}; background-color: rgba(255,255,255,0.78); border: 1px solid {{ $hdepDelta >= 0 ? 'rgba(31,138,79,0.35)' : 'rgba(183,28,44,0.35)' }};">
-                            {{ $hdepDelta >= 0 ? '▲' : '▼' }} {{ abs($hdepDelta) }}% vs yesterday
-                        </div>
-                    </div>
-                    <span class="kpi-accent" style="background-color: #dcebfa;"></span>
-                </div>
+                <x-kpi-card
+                    label="Today's HDEP"
+                    icon="gauge"
+                    iconBg="#dcebfa"
+                    iconColor="#1D4E8F"
+                    gradient="linear-gradient(135deg,#0075de,#1D4E8F)"
+                    accent="#dcebfa"
+                    delay="60ms"
+                    :href="route('eggs.logging')"
+                    kpi="hdep"
+                    ariaLabel="Go to Egg Logging"
+                    infoLabel="HDEP per cage breakdown"
+                    :target="$todayHdep"
+                    :decimals="1"
+                    suffix="%"
+                >
+                    <div class="text-xs font-medium mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5" style="color: {{ $hdepDelta >= 0 ? '#0f7a44' : '#b71c2c' }}; background-color: rgba(255,255,255,0.78); border: 1px solid {{ $hdepDelta >= 0 ? 'rgba(31,138,79,0.35)' : 'rgba(183,28,44,0.35)' }};">{{ $hdepDelta >= 0 ? '▲' : '▼' }} {{ abs($hdepDelta) }}% vs yesterday</div>
+                </x-kpi-card>
 
-                {{-- Eggs Collected --}}
-                <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-3 cursor-pointer"
-                     style="background-color: #f8f8f8; border-color: #e6e6e6; animation-delay: 120ms;"
-                     role="link" tabindex="0" aria-label="Go to Egg Logging"
-                     data-nav="{{ route('eggs.logging') }}" data-kpi="eggs">
-                    <span class="kpi-watermark" style="color:#CDD2DA;"><i data-lucide="egg" class="w-full h-full"></i></span>
-                    <div class="relative flex items-start justify-between">
-                        <span class="kpi-chip" style="background-color: #fae3d0; color: #C2703E; border: 1px solid #C2703E;">
-                            <i data-lucide="egg" class="w-4 h-4"></i>
-                        </span>
-                        <button type="button" class="p-1 rounded-full hover:bg-black/5 transition-colors -mt-1 -mr-1"
-                                onclick="event.stopPropagation(); openKpiModal('eggs')" aria-label="Eggs per cage breakdown">
-                            <i data-lucide="info" class="w-4 h-4 text-[#9CA3AF]"></i>
-                        </button>
-                    </div>
-                    <div class="relative mt-2">
-                        <div class="text-[10px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Eggs Today</div>
-                        <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 kpi-count kpi-value" style="background-image: linear-gradient(135deg,#d97706,#C2703E);" data-target="{{ $eggsToday }}">0</div>
-                        <div class="text-xs font-medium mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5"
-                             style="color: {{ $eggsDelta >= 0 ? '#0f7a44' : '#b71c2c' }}; background-color: rgba(255,255,255,0.78); border: 1px solid {{ $eggsDelta >= 0 ? 'rgba(31,138,79,0.35)' : 'rgba(183,28,44,0.35)' }};">
-                            {{ $eggsDelta >= 0 ? '▲' : '▼' }} {{ abs($eggsDelta) }} vs yesterday
-                        </div>
-                    </div>
-                    <span class="kpi-accent" style="background-color: #fae3d0;"></span>
-                </div>
+                <x-kpi-card
+                    label="Eggs Today"
+                    icon="egg"
+                    iconBg="#fae3d0"
+                    iconColor="#C2703E"
+                    gradient="linear-gradient(135deg,#d97706,#C2703E)"
+                    accent="#fae3d0"
+                    delay="120ms"
+                    :href="route('eggs.logging')"
+                    kpi="eggs"
+                    ariaLabel="Go to Egg Logging"
+                    infoLabel="Eggs per cage breakdown"
+                    :target="$eggsToday"
+                >
+                    <div class="text-xs font-medium mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5" style="color: {{ $eggsDelta >= 0 ? '#0f7a44' : '#b71c2c' }}; background-color: rgba(255,255,255,0.78); border: 1px solid {{ $eggsDelta >= 0 ? 'rgba(31,138,79,0.35)' : 'rgba(183,28,44,0.35)' }};">{{ $eggsDelta >= 0 ? '▲' : '▼' }} {{ abs($eggsDelta) }} vs yesterday</div>
+                </x-kpi-card>
 
-                {{-- Lifetime Eggs --}}
-                <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-3 cursor-pointer"
-                     style="background-color: #f8f8f8; border-color: #e6e6e6; animation-delay: 180ms;"
-                     role="link" tabindex="0" aria-label="Go to Egg Production History"
-                     data-nav="{{ route('egg-production-history') }}" data-kpi="lifetime-eggs">
-                    <span class="kpi-watermark" style="color:#CDD2DA;"><i data-lucide="layers" class="w-full h-full"></i></span>
-                    <div class="relative flex items-start justify-between">
-                        <span class="kpi-chip" style="background-color: #e9e0f5; color: #6B4C8A; border: 1px solid #6B4C8A;">
-                            <i data-lucide="layers" class="w-4 h-4"></i>
-                        </span>
-                        <button type="button" class="p-1 rounded-full hover:bg-black/5 transition-colors -mt-1 -mr-1"
-                                onclick="event.stopPropagation(); openKpiModal('lifetime-eggs')" aria-label="Lifetime eggs per cage breakdown">
-                            <i data-lucide="info" class="w-4 h-4 text-[#9CA3AF]"></i>
-                        </button>
-                    </div>
-                    <div class="relative mt-2">
-                        <div class="text-[10px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Lifetime Eggs</div>
-                        <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 kpi-count kpi-value" style="background-image: linear-gradient(135deg,#8B5CF6,#6B4C8A);" data-target="{{ $lifetimeEggs }}">0</div>
-                        <div class="text-xs font-medium mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5"
-                             style="color: #0f7a44; background-color: rgba(255,255,255,0.78); border: 1px solid rgba(31,138,79,0.35);">
-                            ▲ +{{ number_format($eggsToday) }} today
-                        </div>
-                    </div>
-                    <span class="kpi-accent" style="background-color: #e9e0f5;"></span>
-                </div>
+                <x-kpi-card
+                    label="Lifetime Eggs"
+                    icon="layers"
+                    iconBg="#e9e0f5"
+                    iconColor="#6B4C8A"
+                    gradient="linear-gradient(135deg,#8B5CF6,#6B4C8A)"
+                    accent="#e9e0f5"
+                    delay="180ms"
+                    :href="route('egg-production-history')"
+                    kpi="lifetime-eggs"
+                    ariaLabel="Go to Egg Production History"
+                    infoLabel="Lifetime eggs per cage breakdown"
+                    :target="$lifetimeEggs"
+                >
+                    <div class="text-xs font-medium mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5" style="color: #0f7a44; background-color: rgba(255,255,255,0.78); border: 1px solid rgba(31,138,79,0.35);">▲ +{{ number_format($eggsToday) }} today</div>
+                </x-kpi-card>
             </div>
         </div>
 
@@ -130,77 +84,55 @@
                 Environment &amp; Health
             </h3>
             <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {{-- Coop Temperature --}}
-                <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-3 cursor-pointer"
-                     style="background-color: #f8f8f8; border-color: #e6e6e6; animation-delay: 120ms;"
-                     role="link" tabindex="0" aria-label="Go to Environment"
-                     data-nav="{{ route('environment') }}" data-kpi="env">
-                    <span class="kpi-watermark" style="color:#CDD2DA;"><i data-lucide="thermometer" class="w-full h-full"></i></span>
-                    <div class="relative flex items-start justify-between">
-                        <span class="kpi-chip" style="background-color: #f7e3cf; color: #C2703E; border: 1px solid #C2703E;">
-                            <i data-lucide="thermometer" class="w-4 h-4"></i>
-                        </span>
-                        <button type="button" class="p-1 rounded-full hover:bg-black/5 transition-colors -mt-1 -mr-1"
-                                onclick="event.stopPropagation(); openKpiModal('env')" aria-label="Environment per cage breakdown">
-                            <i data-lucide="info" class="w-4 h-4 text-[#9CA3AF]"></i>
-                        </button>
-                    </div>
-                    <div class="relative mt-2">
-                        <div class="text-[10px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Average Coop Temperature</div>
-                        <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 kpi-value" style="background-image: linear-gradient(135deg,#f59e0b,#C2703E);">
-                            <span class="kpi-count" data-target="{{ $avgTemp }}" data-decimals="1">0</span>°
-                        </div>
-                    </div>
-                    <span class="kpi-accent" style="background-color: #f7e3cf;"></span>
-                </div>
+                <x-kpi-card
+                    label="Average Coop Temperature"
+                    icon="thermometer"
+                    iconBg="#f7e3cf"
+                    iconColor="#C2703E"
+                    gradient="linear-gradient(135deg,#f59e0b,#C2703E)"
+                    accent="#f7e3cf"
+                    delay="120ms"
+                    :href="route('environment')"
+                    kpi="env"
+                    ariaLabel="Go to Environment"
+                    infoLabel="Environment per cage breakdown"
+                    :target="$avgTemp"
+                    :decimals="1"
+                    suffix="°"
+                />
 
-                {{-- Coop Humidity --}}
-                <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-3 cursor-pointer"
-                     style="background-color: #f8f8f8; border-color: #e6e6e6; animation-delay: 160ms;"
-                     role="link" tabindex="0" aria-label="Go to Environment"
-                     data-nav="{{ route('environment') }}" data-kpi="env">
-                    <span class="kpi-watermark" style="color:#CDD2DA;"><i data-lucide="droplets" class="w-full h-full"></i></span>
-                    <div class="relative flex items-start justify-between">
-                        <span class="kpi-chip" style="background-color: #d5ecf4; color: #2C7C91; border: 1px solid #2C7C91;">
-                            <i data-lucide="droplets" class="w-4 h-4"></i>
-                        </span>
-                        <button type="button" class="p-1 rounded-full hover:bg-black/5 transition-colors -mt-1 -mr-1"
-                                onclick="event.stopPropagation(); openKpiModal('env')" aria-label="Environment per cage breakdown">
-                            <i data-lucide="info" class="w-4 h-4 text-[#9CA3AF]"></i>
-                        </button>
-                    </div>
-                    <div class="relative mt-2">
-                        <div class="text-[10px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Average Humidity</div>
-                        <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 kpi-value" style="background-image: linear-gradient(135deg,#0d9488,#2C7C91);">
-                            <span class="kpi-count" data-target="{{ $avgHum }}" data-decimals="1">0</span>%
-                        </div>
-                    </div>
-                    <span class="kpi-accent" style="background-color: #d5ecf4;"></span>
-                </div>
+                <x-kpi-card
+                    label="Average Humidity"
+                    icon="droplets"
+                    iconBg="#d5ecf4"
+                    iconColor="#2C7C91"
+                    gradient="linear-gradient(135deg,#0d9488,#2C7C91)"
+                    accent="#d5ecf4"
+                    delay="160ms"
+                    :href="route('environment')"
+                    kpi="env"
+                    ariaLabel="Go to Environment"
+                    infoLabel="Environment per cage breakdown"
+                    :target="$avgHum"
+                    :decimals="1"
+                    suffix="%"
+                />
 
-                {{-- Mortality Today --}}
-                <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-3 cursor-pointer col-span-2 sm:col-span-1"
-                     style="background-color: #f8f8f8; border-color: #e6e6e6; animation-delay: 200ms;"
-                     role="link" tabindex="0" aria-label="Go to Mortality"
-                     data-nav="{{ route('chickens.index', ['tab' => 'mortality']) }}" data-kpi="mortality">
-                    <span class="kpi-watermark" style="color:#CDD2DA;"><i data-lucide="heart-crack" class="w-full h-full"></i></span>
-                    <div class="relative flex items-start justify-between">
-                        <span class="kpi-chip" style="background-color: #fadfe3; color: #C2405C; border: 1px solid #C2405C;">
-                            <i data-lucide="heart-crack" class="w-4 h-4"></i>
-                        </span>
-                        <button type="button" class="p-1 rounded-full hover:bg-black/5 transition-colors -mt-1 -mr-1"
-                                onclick="event.stopPropagation(); openKpiModal('mortality')" aria-label="Mortality per cage breakdown">
-                            <i data-lucide="info" class="w-4 h-4 text-[#9CA3AF]"></i>
-                        </button>
-                    </div>
-                    <div class="relative mt-2">
-                        <div class="text-[10px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Mortality Today</div>
-                        <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 {{ $mortalityTodayTotal > 0 ? 'kpi-value' : 'text-[#102A4C]' }}" style="{{ $mortalityTodayTotal > 0 ? 'background-image: linear-gradient(135deg,#dc2626,#9b1c24);' : '' }}">
-                            {{ number_format($mortalityTodayTotal) }}
-                        </div>
-                    </div>
-                    <span class="kpi-accent" style="background-color: #fadfe3;"></span>
-                </div>
+                <x-kpi-card
+                    class="col-span-2 sm:col-span-1"
+                    label="Mortality Today"
+                    icon="heart-crack"
+                    iconBg="#fadfe3"
+                    iconColor="#C2405C"
+                    :gradient="$mortalityTodayTotal > 0 ? 'linear-gradient(135deg,#dc2626,#9b1c24)' : null"
+                    accent="#fadfe3"
+                    delay="200ms"
+                    :href="route('chickens.index', ['tab' => 'mortality'])"
+                    kpi="mortality"
+                    ariaLabel="Go to Mortality"
+                    infoLabel="Mortality per cage breakdown"
+                    :value="number_format($mortalityTodayTotal)"
+                />
             </div>
         </div>
 
@@ -211,107 +143,71 @@
                 Feed &amp; Nutrition
             </h3>
             <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {{-- Avg CP% This Week --}}
-                <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-3 cursor-pointer"
-                     style="background-color: #f8f8f8; border-color: #e6e6e6; animation-delay: 240ms;"
-                     role="link" tabindex="0" aria-label="Go to Feed"
-                     data-nav="{{ route('feed') }}" data-kpi="feed-avg-cp">
-                    <span class="kpi-watermark" style="color:#CDD2DA;"><i data-lucide="flask-conical" class="w-full h-full"></i></span>
-                    <div class="relative flex items-start justify-between">
-                        <span class="kpi-chip" style="background-color: #e6f6ee; color: #16a34a; border: 1px solid #16a34a;">
-                            <i data-lucide="flask-conical" class="w-4 h-4"></i>
-                        </span>
-                        <button type="button" class="p-1 rounded-full hover:bg-black/5 transition-colors -mt-1 -mr-1"
-                                onclick="event.stopPropagation(); openKpiModal('feed-avg-cp')" aria-label="Avg CP% breakdown">
-                            <i data-lucide="info" class="w-4 h-4 text-[#9CA3AF]"></i>
-                        </button>
-                    </div>
-                    <div class="relative mt-2">
-                        <div class="text-[10px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Avg CP% This Week</div>
-                        <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 kpi-value" style="background-image: linear-gradient(135deg,#16a34a,#15803d);">{{ number_format($avgCp, 1) }}%</div>
-                    </div>
-                    <span class="kpi-accent" style="background-color: #e6f6ee;"></span>
-                </div>
+                <x-kpi-card
+                    label="Avg CP% This Week"
+                    icon="flask-conical"
+                    iconBg="#e6f6ee"
+                    iconColor="#16a34a"
+                    gradient="linear-gradient(135deg,#16a34a,#15803d)"
+                    accent="#e6f6ee"
+                    delay="240ms"
+                    :href="route('feed')"
+                    kpi="feed-avg-cp"
+                    ariaLabel="Go to Feed"
+                    infoLabel="Avg CP% breakdown"
+                    :value="number_format($avgCp, 1) . '%'"
+                />
 
-                {{-- Avg Feed/Cage/Day --}}
-                <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-3 cursor-pointer"
-                     style="background-color: #f8f8f8; border-color: #e6e6e6; animation-delay: 280ms;"
-                     role="link" tabindex="0" aria-label="Go to Feed"
-                     data-nav="{{ route('feed') }}" data-kpi="feed-avg-cage-day">
-                    <span class="kpi-watermark" style="color:#CDD2DA;"><i data-lucide="scale" class="w-full h-full"></i></span>
-                    <div class="relative flex items-start justify-between">
-                        <span class="kpi-chip" style="background-color: #e6f6ee; color: #16a34a; border: 1px solid #16a34a;">
-                            <i data-lucide="scale" class="w-4 h-4"></i>
-                        </span>
-                        <button type="button" class="p-1 rounded-full hover:bg-black/5 transition-colors -mt-1 -mr-1"
-                                onclick="event.stopPropagation(); openKpiModal('feed-avg-cage-day')" aria-label="Avg feed per cage breakdown">
-                            <i data-lucide="info" class="w-4 h-4 text-[#9CA3AF]"></i>
-                        </button>
-                    </div>
-                    <div class="relative mt-2">
-                        <div class="text-[10px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Avg Feed/Cage/Day</div>
-                        <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 kpi-count kpi-value" style="background-image: linear-gradient(135deg,#16a34a,#15803d);" data-target="{{ $avgFeedPerCage }}" data-decimals="1">0</div>
-                    </div>
-                    <span class="kpi-accent" style="background-color: #e6f6ee;"></span>
-                </div>
+                <x-kpi-card
+                    label="Avg Feed/Cage/Day"
+                    icon="scale"
+                    iconBg="#e6f6ee"
+                    iconColor="#16a34a"
+                    gradient="linear-gradient(135deg,#16a34a,#15803d)"
+                    accent="#e6f6ee"
+                    delay="280ms"
+                    :href="route('feed')"
+                    kpi="feed-avg-cage-day"
+                    ariaLabel="Go to Feed"
+                    infoLabel="Avg feed per cage breakdown"
+                    :target="$avgFeedPerCage"
+                    :decimals="1"
+                />
 
-                {{-- Total Feed Used --}}
-                <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-3 cursor-pointer"
-                     style="background-color: #f8f8f8; border-color: #e6e6e6; animation-delay: 320ms;"
-                     role="link" tabindex="0" aria-label="Go to Feed"
-                     data-nav="{{ route('feed') }}" data-kpi="feed-total-week">
-                    <span class="kpi-watermark" style="color:#CDD2DA;"><i data-lucide="package" class="w-full h-full"></i></span>
-                    <div class="relative flex items-start justify-between">
-                        <span class="kpi-chip" style="background-color: #e6f6ee; color: #16a34a; border: 1px solid #16a34a;">
-                            <i data-lucide="package" class="w-4 h-4"></i>
-                        </span>
-                        <button type="button" class="p-1 rounded-full hover:bg-black/5 transition-colors -mt-1 -mr-1"
-                                onclick="event.stopPropagation(); openKpiModal('feed-total-week')" aria-label="Total feed used per cage breakdown">
-                            <i data-lucide="info" class="w-4 h-4 text-[#9CA3AF]"></i>
-                        </button>
-                    </div>
-                    <div class="relative mt-2">
-                        <div class="text-[10px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Total Feed Used</div>
-                        <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 kpi-count kpi-value" style="background-image: linear-gradient(135deg,#16a34a,#15803d);" data-target="{{ round($totalFeedWeek, 1) }}" data-decimals="1">0</div>
-                        <div class="text-xs font-medium mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5"
-                             style="color: #0f7a44; background-color: rgba(255,255,255,0.78); border: 1px solid rgba(31,138,79,0.35);">
-                            ▲ +{{ number_format(round($feedTodayKg, 1), 1) }} kg today
-                        </div>
-                    </div>
-                    <span class="kpi-accent" style="background-color: #e6f6ee;"></span>
-                </div>
+                <x-kpi-card
+                    label="Total Feed Used"
+                    icon="package"
+                    iconBg="#e6f6ee"
+                    iconColor="#16a34a"
+                    gradient="linear-gradient(135deg,#16a34a,#15803d)"
+                    accent="#e6f6ee"
+                    delay="320ms"
+                    :href="route('feed')"
+                    kpi="feed-total-week"
+                    ariaLabel="Go to Feed"
+                    infoLabel="Total feed used per cage breakdown"
+                    :target="round($totalFeedWeek, 1)"
+                    :decimals="1"
+                >
+                    <div class="text-xs font-medium mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5" style="color: #0f7a44; background-color: rgba(255,255,255,0.78); border: 1px solid rgba(31,138,79,0.35);">▲ +{{ number_format(round($feedTodayKg, 1), 1) }} kg today</div>
+                </x-kpi-card>
 
-                {{-- Feed Cost This Month --}}
-                <div class="kpi-card dash-rise relative overflow-hidden rounded-2xl border p-3 cursor-pointer"
-                     style="background-color: #f8f8f8; border-color: #e6e6e6; animation-delay: 360ms;"
-                     role="link" tabindex="0" aria-label="Go to Feed"
-                     data-nav="{{ route('feed') }}" data-kpi="feed-cost-month">
-                    <span class="kpi-watermark" style="color:#CDD2DA;"><i data-lucide="banknote" class="w-full h-full"></i></span>
-                    <div class="relative flex items-start justify-between">
-                        <span class="kpi-chip" style="background-color: #e6f6ee; color: #16a34a; border: 1px solid #16a34a;">
-                            <i data-lucide="banknote" class="w-4 h-4"></i>
-                        </span>
-                        <button type="button" class="p-1 rounded-full hover:bg-black/5 transition-colors -mt-1 -mr-1"
-                                onclick="event.stopPropagation(); openKpiModal('feed-cost-month')" aria-label="Feed cost per cage breakdown">
-                            <i data-lucide="info" class="w-4 h-4 text-[#9CA3AF]"></i>
-                        </button>
-                    </div>
-                    <div class="relative mt-2">
-                        <div class="text-[10px] font-semibold tracking-[0.125px] uppercase" style="color: #5b6472;">Feed Cost This Month</div>
-                        <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 kpi-value" style="background-image: linear-gradient(135deg,#16a34a,#15803d);">
-                            @if($totalFeedCostMonth !== null && $totalFeedCostMonth > 0)
-                                ₱{{ number_format($totalFeedCostMonth, 2) }}
-                            @else
-                                <span class="text-lg text-[#9CA3AF]">&mdash;</span>
-                            @endif
-                        </div>
-                        <div class="text-xs font-medium mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5"
-                             style="color: #0f7a44; background-color: rgba(255,255,255,0.78); border: 1px solid rgba(31,138,79,0.35);">
-                            ▲ +₱{{ number_format($feedCostToday ?? 0, 2) }} today
-                        </div>
-                    </div>
-                    <span class="kpi-accent" style="background-color: #e6f6ee;"></span>
-                </div>
+                <x-kpi-card
+                    label="Feed Cost This Month"
+                    icon="banknote"
+                    iconBg="#e6f6ee"
+                    iconColor="#16a34a"
+                    gradient="linear-gradient(135deg,#16a34a,#15803d)"
+                    accent="#e6f6ee"
+                    delay="360ms"
+                    :href="route('feed')"
+                    kpi="feed-cost-month"
+                    ariaLabel="Go to Feed"
+                    infoLabel="Feed cost per cage breakdown"
+                    :value="$totalFeedCostMonth !== null && $totalFeedCostMonth > 0 ? '₱' . number_format($totalFeedCostMonth, 2) : null"
+                >
+                    <div class="text-xs font-medium mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5" style="color: #0f7a44; background-color: rgba(255,255,255,0.78); border: 1px solid rgba(31,138,79,0.35);">▲ +₱{{ number_format($feedCostToday ?? 0, 2) }} today</div>
+                </x-kpi-card>
             </div>
         </div>
     </div>

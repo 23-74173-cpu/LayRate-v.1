@@ -8,6 +8,7 @@ use App\Models\Cage;
 use App\Models\EggStockBatch;
 use App\Models\EnvironmentalLog;
 use App\Models\FeedConsumptionLog;
+use App\Models\Forecast;
 use App\Models\Hen;
 use App\Models\MortalityLog;
 use App\Models\ProductionLog;
@@ -24,14 +25,14 @@ class ReportController extends Controller
 
     public function index(Request $request)
     {
-        [$type, $from, $to, $cageId, $reason, $allCages] = $this->filtersFromRequest($request);
+        [$type, $from, $to, $cageId, $reason, $withForecast, $allCages] = $this->filtersFromRequest($request);
         $charts = $request->boolean('charts');
         // Item #84: results land on a preview table first; the printable
         // letterhead document is an explicit second step (?full=1).
         $full = $request->boolean('full');
 
         if ($type === 'all') {
-            $sections = $this->buildSections($from, $to, $cageId, $reason, $allCages, $charts);
+            $sections = $this->buildSections($from, $to, $cageId, $reason, $withForecast, $allCages, $charts);
 
             if (!$full) {
                 foreach ($sections as &$section) {
@@ -42,10 +43,10 @@ class ReportController extends Controller
 
             $chartsPayload = collect($sections)->pluck('chart', 'type')->all();
 
-            return $this->noStore(view('reports', compact('type', 'from', 'to', 'cageId', 'reason', 'allCages', 'sections', 'full', 'charts', 'chartsPayload')));
+            return $this->noStore(view('reports', compact('type', 'from', 'to', 'cageId', 'reason', 'withForecast', 'allCages', 'sections', 'full', 'charts', 'chartsPayload')));
         }
 
-        $rows    = $this->buildReport($type, $from, $to, $cageId, $reason, $allCages);
+        $rows    = $this->buildReport($type, $from, $to, $cageId, $reason, $withForecast, $allCages);
         $summary = $this->buildSummary($type, $from, $to, $cageId, $reason, $allCages);
         $chart   = $charts ? $this->buildChartData($type, $from, $to, $cageId, $reason, $allCages) : null;
 
@@ -57,7 +58,7 @@ class ReportController extends Controller
 
         $chartsPayload = $chart ? [$type => $chart] : [];
 
-        return $this->noStore(view('reports', compact('type', 'from', 'to', 'cageId', 'reason', 'allCages', 'rows', 'summary', 'full', 'charts', 'chart', 'chartsPayload')));
+        return $this->noStore(view('reports', compact('type', 'from', 'to', 'cageId', 'reason', 'withForecast', 'allCages', 'rows', 'summary', 'full', 'charts', 'chart', 'chartsPayload')));
     }
 
     // Chrome's back-forward cache (bfcache) restores a page from an in-memory
@@ -86,9 +87,10 @@ class ReportController extends Controller
         $to     = $request->get('to') ?: null;
         $cageId = $request->get('cage', 'all');
         $reason = $request->get('reason', 'all');
+        $withForecast = $request->boolean('withForecast');
         $allCages = Cage::orderBy('cage_code')->get();
 
-        return [$type, $from, $to, $cageId, $reason, $allCages];
+        return [$type, $from, $to, $cageId, $reason, $withForecast, $allCages];
     }
 
     private function paginateCollection($items, Request $request, int $perPage = 20): LengthAwarePaginator
@@ -143,22 +145,23 @@ class ReportController extends Controller
     // Builds all five report types as independent sections for type=all.
     // The mortality `reason` filter is scoped to only the mortality section —
     // the other four always run unfiltered by reason.
-    private function buildSections($from, $to, $cageId, $reason, $allCages, bool $charts): array
+    private function buildSections($from, $to, $cageId, $reason, bool $withForecast, $allCages, bool $charts): array
     {
-        return collect(self::ALL_TYPES)->map(function ($t) use ($from, $to, $cageId, $reason, $allCages, $charts) {
+        return collect(self::ALL_TYPES)->map(function ($t) use ($from, $to, $cageId, $reason, $withForecast, $allCages, $charts) {
             $sectionReason = $t === 'mortality' ? $reason : 'all';
+            $sectionForecast = ($t === 'production') ? $withForecast : false;
 
             return [
                 'type'    => $t,
                 'label'   => $this->typeLabel($t),
-                'rows'    => $this->buildReport($t, $from, $to, $cageId, $sectionReason, $allCages),
+                'rows'    => $this->buildReport($t, $from, $to, $cageId, $sectionReason, $sectionForecast, $allCages),
                 'summary' => $this->buildSummary($t, $from, $to, $cageId, $sectionReason, $allCages),
                 'chart'   => $charts ? $this->buildChartData($t, $from, $to, $cageId, $sectionReason, $allCages) : null,
             ];
         })->all();
     }
 
-    private function buildReport($type, $from, $to, $cageId, $reason, $allCages)
+    private function buildReport($type, $from, $to, $cageId, $reason, bool $withForecast, $allCages)
     {
         $cageIds = $this->resolveCageIds($cageId, $allCages);
 
@@ -167,7 +170,7 @@ class ReportController extends Controller
             'environment' => $this->environmentReport($from, $to, $cageIds),
             'mortality'   => $this->mortalityReport($from, $to, $cageIds, $reason),
             'egg_stock'   => $this->eggStockReport($from, $to, $cageIds, $cageId),
-            default       => $this->productionReport($from, $to, $cageIds, $allCages),
+            default       => $this->productionReport($from, $to, $cageIds, $allCages, $withForecast),
         };
     }
 
@@ -257,7 +260,7 @@ class ReportController extends Controller
         };
     }
 
-    private function productionReport($from, $to, $cageIds, $allCages)
+    private function productionReport($from, $to, $cageIds, $allCages, bool $withForecast = false)
     {
         // Hens must be filtered to active here (same as AnalyticsController) —
         // an unfiltered ->first() can attribute a dead/transferred hen's breed
@@ -283,12 +286,26 @@ class ReportController extends Controller
             ->get()
             ->keyBy(fn($e) => $e->log_date . '-' . $e->cage_id);
 
-        return $logs->map(function ($log) use ($feedLogs, $envData) {
+        $forecastMap = collect();
+        if ($withForecast) {
+            $forecastQuery = Forecast::query()
+                ->whereNull('breed')
+                ->whereIn('cage_id', $cageIds)
+                ->when($hasRange, fn ($q) => $q->whereBetween('target_date', [$from, $to]))
+                ->orderByDesc('forecast_date')
+                ->orderByDesc('id');
+
+            $forecastMap = $forecastQuery->get()
+                ->groupBy(fn ($f) => $f->target_date->format('Y-m-d') . '-' . $f->cage_id)
+                ->map(fn ($g) => (string) $g->first()->predicted_egg_count);
+        }
+
+        return $logs->map(function ($log) use ($feedLogs, $envData, $forecastMap, $withForecast) {
             $key = $log->log_date->format('Y-m-d') . '-' . ($log->cage?->id ?? '0');
             $feed = $feedLogs->get($key);
             $env  = $envData->get($key);
 
-            return (object) [
+            $row = [
                 'date'     => $log->log_date->format('Y-m-d'),
                 'cage'     => $log->cageSlot?->cage?->cage_code ?? '—',
                 'breed'    => $log->cageSlot->hens->first()?->breed ?? '—',
@@ -300,6 +317,12 @@ class ReportController extends Controller
                 'temp'     => $env ? number_format($env->avg_temp, 1) : '—',
                 'humidity' => $env ? number_format($env->avg_hum, 1) . '%' : '—',
             ];
+
+            if ($withForecast) {
+                $row['forecast_for_date'] = $forecastMap->get($key, '—');
+            }
+
+            return (object) $row;
         });
     }
 
@@ -491,11 +514,11 @@ class ReportController extends Controller
 
     public function data(Request $request)
     {
-        [$type, $from, $to, $cageId, $reason, $allCages] = $this->filtersFromRequest($request);
+        [$type, $from, $to, $cageId, $reason, $withForecast, $allCages] = $this->filtersFromRequest($request);
         $charts = $request->boolean('charts');
 
         if ($type === 'all') {
-            $sections = $this->buildSections($from, $to, $cageId, $reason, $allCages, $charts);
+            $sections = $this->buildSections($from, $to, $cageId, $reason, $withForecast, $allCages, $charts);
             $total = 0;
             foreach ($sections as &$section) {
                 $total += $section['rows']->count();
@@ -525,7 +548,7 @@ class ReportController extends Controller
         }
 
         $page = (int) $request->get('page', 1);
-        $rows     = $this->buildReport($type, $from, $to, $cageId, $reason, $allCages);
+        $rows     = $this->buildReport($type, $from, $to, $cageId, $reason, $withForecast, $allCages);
         $summary  = $this->buildSummary($type, $from, $to, $cageId, $reason, $allCages);
         $chart    = $charts ? $this->buildChartData($type, $from, $to, $cageId, $reason, $allCages) : null;
 
@@ -568,14 +591,14 @@ class ReportController extends Controller
 
     public function exportCsv(Request $request)
     {
-        [$type, $from, $to, $cageId, $reason, $allCages] = $this->filtersFromRequest($request);
+        [$type, $from, $to, $cageId, $reason, $withForecast, $allCages] = $this->filtersFromRequest($request);
 
         $rangeLabel = ($from && $to) ? "{$from}_to_{$to}" : 'all_time';
         $filename = "layrate_{$type}_{$rangeLabel}.csv";
         $headers  = ['Content-Type' => 'text/csv', 'Content-Disposition' => "attachment; filename={$filename}"];
 
         if ($type === 'all') {
-            $sections = $this->buildSections($from, $to, $cageId, $reason, $allCages, false);
+            $sections = $this->buildSections($from, $to, $cageId, $reason, $withForecast, $allCages, false);
 
             $callback = function () use ($sections) {
                 $out = fopen('php://output', 'w');
@@ -598,7 +621,7 @@ class ReportController extends Controller
             return response()->stream($callback, 200, $headers);
         }
 
-        $rows = $this->buildReport($type, $from, $to, $cageId, $reason, $allCages);
+        $rows = $this->buildReport($type, $from, $to, $cageId, $reason, $withForecast, $allCages);
 
         $callback = function () use ($rows) {
             $out = fopen('php://output', 'w');
@@ -616,7 +639,7 @@ class ReportController extends Controller
 
     public function exportExcel(Request $request)
     {
-        [$type, $from, $to, $cageId, $reason, $allCages] = $this->filtersFromRequest($request);
+        [$type, $from, $to, $cageId, $reason, $withForecast, $allCages] = $this->filtersFromRequest($request);
         $rangeLabel = ($from && $to) ? "{$from}_to_{$to}" : 'all_time';
         $filename = "layrate_{$type}_{$rangeLabel}.xlsx";
 
@@ -626,12 +649,12 @@ class ReportController extends Controller
             $chartTempFiles = $this->decodeChartImages($request->input('chart_images', []));
 
             if ($type === 'all') {
-                $sections = $this->buildSections($from, $to, $cageId, $reason, $allCages, false);
+                $sections = $this->buildSections($from, $to, $cageId, $reason, $withForecast, $allCages, false);
 
                 return Excel::download(new AllReportsExport($sections, $chartTempFiles), $filename);
             }
 
-            $rows = $this->buildReport($type, $from, $to, $cageId, $reason, $allCages);
+            $rows = $this->buildReport($type, $from, $to, $cageId, $reason, $withForecast, $allCages);
 
             return Excel::download(new ReportSheetExport($this->typeLabel($type), $rows, $chartTempFiles), $filename);
         } finally {
@@ -649,19 +672,19 @@ class ReportController extends Controller
     {
         ini_set('memory_limit', '256M');
 
-        [$type, $from, $to, $cageId, $reason, $allCages] = $this->filtersFromRequest($request);
+        [$type, $from, $to, $cageId, $reason, $withForecast, $allCages] = $this->filtersFromRequest($request);
         $rangeLabel = ($from && $to) ? "{$from}_to_{$to}" : 'all_time';
         $filename = "layrate_{$type}_{$rangeLabel}.pdf";
 
         $chartImages = $this->validateChartImages($request->input('chart_images', []));
 
         if ($type === 'all') {
-            $sections = $this->buildSections($from, $to, $cageId, $reason, $allCages, false);
+            $sections = $this->buildSections($from, $to, $cageId, $reason, $withForecast, $allCages, false);
         } else {
             $sections = [[
                 'type'    => $type,
                 'label'   => $this->typeLabel($type),
-                'rows'    => $this->buildReport($type, $from, $to, $cageId, $reason, $allCages),
+                'rows'    => $this->buildReport($type, $from, $to, $cageId, $reason, $withForecast, $allCages),
                 'summary' => $this->buildSummary($type, $from, $to, $cageId, $reason, $allCages),
             ]];
         }

@@ -107,6 +107,12 @@
                     </select>
                 </div>
 
+                <div id="withForecastFilter" class="{{ $type === 'production' ? '' : 'hidden' }} flex items-center gap-2 pb-2">
+                    <input type="checkbox" name="withForecast" id="reportWithForecast" value="1" {{ ($withForecast ?? false) ? 'checked' : '' }}
+                           class="rounded border-[#D9D9D9] text-[#102A4C] focus:ring-[#102A4C]/30">
+                    <label for="reportWithForecast" class="text-xs tracking-wider text-[#6B7280] select-none cursor-pointer">INCLUDE FORECAST COMPARISON</label>
+                </div>
+
                 <div class="flex items-center gap-2 pb-2">
                     <input type="checkbox" name="charts" id="reportCharts" value="1" {{ ($charts ?? false) ? 'checked' : '' }}
                            class="rounded border-[#D9D9D9] text-[#102A4C] focus:ring-[#102A4C]/30">
@@ -257,6 +263,8 @@ function reportQuery(pageParams) {
     });
     var chartsEl = f.elements['charts'];
     if (chartsEl && chartsEl.checked) params.set('charts', '1');
+    var forecastEl = f.elements['withForecast'];
+    if (forecastEl && forecastEl.checked) params.set('withForecast', '1');
     if (pageParams) {
         var current = new URLSearchParams(window.location.search);
         current.forEach(function(v, k) {
@@ -276,6 +284,10 @@ function updateExportHrefs() {
         var el = f.elements[k];
         if (el && el.value) params.set(k, el.value);
     });
+    var chartsEl = f.elements['charts'];
+    if (chartsEl && chartsEl.checked) params.set('charts', '1');
+    var forecastEl2 = f.elements['withForecast'];
+    if (forecastEl2 && forecastEl2.checked) params.set('withForecast', '1');
     var qs = params.toString();
     var csv = document.getElementById('exportCsvLink');
     var xls = document.getElementById('exportExcelLink');
@@ -547,6 +559,8 @@ function exportReportWithCharts(format) {
                 var el = f.elements[k];
                 if (el && el.value) params[k] = el.value;
             });
+            if (f.elements['charts'] && f.elements['charts'].checked) params.charts = '1';
+            if (f.elements['withForecast'] && f.elements['withForecast'].checked) params.withForecast = '1';
         }
 
         var chartImages = {};
@@ -699,6 +713,8 @@ document.addEventListener('change', function(e) {
     // mortality section inside "All Reports"
     if (e.target.name === 'type') {
         document.getElementById('reasonFilter').classList.toggle('hidden', !['mortality', 'all'].includes(e.target.value));
+        var wf = document.getElementById('withForecastFilter');
+        if (wf) wf.classList.toggle('hidden', e.target.value !== 'production');
     }
     reportFetch();
 });

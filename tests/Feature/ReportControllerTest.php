@@ -8,6 +8,7 @@ use App\Models\EggStockBatch;
 use App\Models\EnvironmentalLog;
 use App\Models\FeedBatch;
 use App\Models\FeedConsumptionLog;
+use App\Models\Forecast;
 use App\Models\Hen;
 use App\Models\MortalityLog;
 use App\Models\ProductionLog;
@@ -667,5 +668,86 @@ class ReportControllerTest extends TestCase
         foreach (['production', 'feed', 'environment', 'mortality', 'egg_stock'] as $type) {
             $response->assertSee('id="chart-' . $type . '"', false);
         }
+    }
+
+    /** @test */
+    public function production_report_without_withForecast_has_no_forecast_column()
+    {
+        $this->createHen($this->slotA1, 'ISA Brown', true, 'A-HEN1');
+        $this->createProductionLog($this->slotA1, 4, now()->subDay()->toDateString());
+
+        $response = $this->actingAs($this->user)->get(route('reports', [
+            'type' => 'production',
+            'from' => now()->subDays(5)->toDateString(),
+            'to'   => now()->toDateString(),
+            'cage' => 'all',
+        ]));
+        $response->assertOk();
+        $response->assertDontSee('FORECAST FOR DATE');
+        $response->assertDontSee('forecast_for_date');
+
+        $csv = $this->actingAs($this->user)->get(route('reports.csv', [
+            'type' => 'production',
+            'from' => now()->subDays(5)->toDateString(),
+            'to'   => now()->toDateString(),
+            'cage' => 'all',
+        ]))->streamedContent();
+        $this->assertStringNotContainsString('forecast_for_date', strtolower($csv));
+        $this->assertStringNotContainsString('FORECAST FOR DATE', $csv);
+    }
+
+    /** @test */
+    public function production_report_with_withForecast_includes_forecast_column()
+    {
+        $this->createHen($this->slotA1, 'ISA Brown', true, 'A-HEN1');
+        $date = now()->subDay()->toDateString();
+        $this->createProductionLog($this->slotA1, 4, $date);
+        Forecast::create([
+            'cage_id' => $this->cageA->id,
+            'forecast_date' => $date,
+            'target_date' => $date,
+            'predicted_egg_count' => 9,
+        ]);
+
+        $response = $this->actingAs($this->user)->get(route('reports', [
+            'type' => 'production',
+            'from' => now()->subDays(5)->toDateString(),
+            'to'   => now()->toDateString(),
+            'cage' => 'all',
+            'withForecast' => 1,
+        ]));
+        $response->assertOk();
+        $response->assertSee('FORECAST FOR DATE');
+        $response->assertSee('9');
+
+        $csv = $this->actingAs($this->user)->get(route('reports.csv', [
+            'type' => 'production',
+            'from' => now()->subDays(5)->toDateString(),
+            'to'   => now()->toDateString(),
+            'cage' => 'all',
+            'withForecast' => 1,
+        ]))->streamedContent();
+        $this->assertStringContainsString('forecast_for_date', strtolower($csv));
+        $this->assertStringContainsString('9', $csv);
+    }
+
+    /** @test */
+    public function production_report_forecast_column_shows_dash_when_no_matching_forecast()
+    {
+        $this->createHen($this->slotA1, 'ISA Brown', true, 'A-HEN1');
+        $date = now()->subDay()->toDateString();
+        $this->createProductionLog($this->slotA1, 4, $date);
+        // No forecast created for this date — should show dash placeholder
+        $response = $this->actingAs($this->user)->get(route('reports', [
+            'type' => 'production',
+            'from' => now()->subDays(5)->toDateString(),
+            'to'   => now()->toDateString(),
+            'cage' => 'all',
+            'withForecast' => 1,
+        ]));
+        $response->assertOk();
+        $response->assertSee('FORECAST FOR DATE');
+        // Dash placeholder for missing forecast
+        $response->assertSee('—');
     }
 }

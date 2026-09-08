@@ -1,29 +1,47 @@
 @php use App\Models\Alert; @endphp
 <turbo-frame id="feed-live-data">
-    {{-- ── Metric Cards ── --}}
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Avg CP% This Week</div>
-            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ number_format($avgCp, 1) }}%</div>
-        </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Avg Feed/Cage/Day</div>
-            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $avgFeedPerCage }} kg</div>
-        </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Total Feed Used</div>
-            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ number_format($totalFeedWeek, 1) }} kg</div>
-        </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Feed Cost This Month</div>
-            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">
-                @if($totalFeedCostMonth !== null && $totalFeedCostMonth > 0)
-                    ₱{{ number_format($totalFeedCostMonth, 2) }}
-                @else
-                    <span class="text-lg text-[#9CA3AF]">—</span>
-                @endif
-            </div>
-        </div>
+    {{-- ── Metric Cards — migrated to <x-kpi-card variant="default"> (live sensor/feed readings) ── --}}
+    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+        <x-kpi-card
+            label="Avg CP% This Week"
+            icon="flask-conical"
+            iconBg="#e6f6ee"
+            iconColor="#16a34a"
+            gradient="linear-gradient(135deg,#16a34a,#15803d)"
+            accent="#e6f6ee"
+            delay="0ms"
+            :value="number_format($avgCp, 1) . '%'"
+        />
+        <x-kpi-card
+            label="Avg Feed/Cage/Day"
+            icon="scale"
+            iconBg="#e6f6ee"
+            iconColor="#16a34a"
+            gradient="linear-gradient(135deg,#16a34a,#15803d)"
+            accent="#e6f6ee"
+            delay="60ms"
+            :value="$avgFeedPerCage . ' kg'"
+        />
+        <x-kpi-card
+            label="Total Feed Used"
+            icon="package"
+            iconBg="#e6f6ee"
+            iconColor="#16a34a"
+            gradient="linear-gradient(135deg,#16a34a,#15803d)"
+            accent="#e6f6ee"
+            delay="120ms"
+            :value="number_format($totalFeedWeek, 1) . ' kg'"
+        />
+        <x-kpi-card
+            label="Feed Cost This Month"
+            icon="banknote"
+            iconBg="#e6f6ee"
+            iconColor="#16a34a"
+            gradient="linear-gradient(135deg,#16a34a,#15803d)"
+            accent="#e6f6ee"
+            delay="180ms"
+            :value="$totalFeedCostMonth !== null && $totalFeedCostMonth > 0 ? '₱' . number_format($totalFeedCostMonth, 2) : null"
+        />
     </div>
 
     {{-- ── Tabs ── --}}

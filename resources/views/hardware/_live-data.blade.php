@@ -1,22 +1,46 @@
 <turbo-frame id="hardware-live-data">
-    {{-- Summary Cards --}}
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">All Active</div>
-            <div class="text-2xl font-bold leading-none tracking-[-0.5px]" style="color: #1f1f1f;">{{ $activeCount }}</div>
-        </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">IR Breakbeams</div>
-            <div class="text-2xl font-bold leading-none tracking-[-0.5px]" style="color: #2D7D46;">{{ $breakbeamCount }}</div>
-        </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">DHT22</div>
-            <div class="text-2xl font-bold leading-none tracking-[-0.5px]" style="color: #1D4E8F;">{{ $dht22Count }}</div>
-        </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Health Faulty</div>
-            <div class="text-2xl font-bold leading-none tracking-[-0.5px]" style="color: #9b1c24;">{{ $faultyCount }}</div>
-        </div>
+    {{-- Summary Cards — migrated to <x-kpi-card variant="default"> (live device counts) ── --}}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+        <x-kpi-card
+            label="All Active"
+            icon="cpu"
+            iconBg="#d6f0e3"
+            iconColor="#2D7D46"
+            gradient="linear-gradient(135deg,#16a34a,#2D7D46)"
+            accent="#d6f0e3"
+            delay="0ms"
+            :value="$activeCount"
+        />
+        <x-kpi-card
+            label="IR Breakbeams"
+            icon="scan"
+            iconBg="#d6f0e3"
+            iconColor="#2D7D46"
+            gradient="linear-gradient(135deg,#16a34a,#2D7D46)"
+            accent="#d6f0e3"
+            delay="60ms"
+            :value="$breakbeamCount"
+        />
+        <x-kpi-card
+            label="DHT22"
+            icon="thermometer"
+            iconBg="#dcebfa"
+            iconColor="#1D4E8F"
+            gradient="linear-gradient(135deg,#0075de,#1D4E8F)"
+            accent="#dcebfa"
+            delay="120ms"
+            :value="$dht22Count"
+        />
+        <x-kpi-card
+            label="Health Faulty"
+            icon="alert-triangle"
+            iconBg="#fadfe3"
+            iconColor="#C2405C"
+            gradient="linear-gradient(135deg,#dc2626,#9b1c24)"
+            accent="#fadfe3"
+            delay="180ms"
+            :value="$faultyCount"
+        />
     </div>
 
     {{-- Device Table --}}

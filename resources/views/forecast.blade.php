@@ -18,24 +18,12 @@
         $forecastMap = collect($forecasts ?? [])->keyBy(fn($f) => is_object($f->target_date) ? $f->target_date->format('Y-m-d') : $f->target_date);
     @endphp
 
-    {{-- ── Forecast KPI Cards ── --}}
+    {{-- ── Forecast KPI Cards (plain variant – see components/kpi-card.blade.php for decision rationale) ── --}}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Weeks in month</div>
-            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $weeksInMonth }}</div>
-        </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Days in month</div>
-            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $daysInMonth }}</div>
-        </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Forecast days</div>
-            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ count($forecastMap) }}</div>
-        </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Current week</div>
-            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $calendarToday->weekOfMonth }}</div>
-        </div>
+        <x-kpi-card variant="plain" label="Weeks in month" :value="$weeksInMonth" />
+        <x-kpi-card variant="plain" label="Days in month" :value="$daysInMonth" />
+        <x-kpi-card variant="plain" label="Forecast days" :value="count($forecastMap)" />
+        <x-kpi-card variant="plain" label="Current week" :value="$calendarToday->weekOfMonth" />
     </div>
 
     @php
