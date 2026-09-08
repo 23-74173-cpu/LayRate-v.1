@@ -213,7 +213,7 @@ class DashboardController extends Controller
                     'borderWidth' => 2.5,
                     'pointRadius' => 0,
                     'pointHoverRadius' => 5,
-                    'fill' => true,
+                    'fill' => false,
                 ];
             })->values()->toArray();
 

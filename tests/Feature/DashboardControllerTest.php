@@ -90,6 +90,10 @@ class DashboardControllerTest extends TestCase
 
         // Farm-wide: today's eggs = 4 (A) + 1 (B) = 5.
         $this->assertEquals(5, $response->viewData('eggsToday'));
+
+        // The single global period filter drives every analytics card.
+        $response->assertSee('data-global-days');
+        $response->assertSee('setGlobalDays');
     }
 
     public function test_cage_scoped_stats_matches_hand_computed_values(): void
@@ -214,9 +218,6 @@ class DashboardControllerTest extends TestCase
         $response->assertSee('Production History');
         $response->assertSee('dashProductionHistoryChart');
         $response->assertSee('Total Production');
-        $response->assertSee('7D');
-        $response->assertSee('14D');
-        $response->assertSee('30D');
 
         // Default days filter is 7.
         $response->assertViewHas('days', 7);
@@ -255,7 +256,8 @@ class DashboardControllerTest extends TestCase
         // excludes. Cage A: 4 (today) + 2 (yesterday) + 1 (30d ago) = 7.
         $chartData = $response->viewData('chartData');
         $this->assertEquals(7, array_sum($chartData['datasets'][0]['data']));
-        $response->assertSee('Full');
+        // The Week/Month/Full pills live on the dashboard page's global filter,
+        // not on this frame, so only the data window is asserted here.
     }
 
     public function test_cage_performance_full_days_accumulates_all_time_eggs(): void
@@ -288,28 +290,30 @@ class DashboardControllerTest extends TestCase
     public function test_analytics_card_frames_render_at_default_and_full_days(): void
     {
         $routes = [
-            'dashboard.cage-performance' => 'data-perf-days',
-            'dashboard.production-history' => 'data-history-days',
-            'dashboard.egg-collection-time' => 'data-days-filter',
-            'dashboard.hen-age-layrate' => 'data-days-filter',
-            'dashboard.temp-vs-hdep' => 'data-days-filter',
-            'dashboard.hum-vs-hdep' => 'data-days-filter',
-            'dashboard.breed-analytics' => 'data-days-filter',
-            'dashboard.mortality-by-cause' => 'data-days-filter',
-            'dashboard.mortality-trend' => 'data-days-filter',
-            'dashboard.feed-vs-egg' => 'data-days-filter',
-            'dashboard.feed-by-cage' => 'data-days-filter',
-            'dashboard.heat-stress' => 'data-days-filter',
+            'dashboard.cage-performance',
+            'dashboard.production-history',
+            'dashboard.egg-collection-time',
+            'dashboard.hen-age-layrate',
+            'dashboard.temp-vs-hdep',
+            'dashboard.hum-vs-hdep',
+            'dashboard.breed-analytics',
+            'dashboard.mortality-by-cause',
+            'dashboard.mortality-trend',
+            'dashboard.feed-vs-egg',
+            'dashboard.feed-by-cage',
+            'dashboard.heat-stress',
         ];
 
-        foreach ($routes as $route => $marker) {
+        foreach ($routes as $route) {
+            $frameId = str_replace('dashboard.', 'dashboard-', $route);
+
             $response = $this->actingAs($this->admin)->get(route($route));
             $response->assertOk();
-            $response->assertSee($marker);
+            $response->assertSee($frameId);
 
             $full = $this->actingAs($this->admin)->get(route($route, ['days' => 0]));
             $full->assertOk();
-            $full->assertSee($marker);
+            $full->assertSee($frameId);
         }
     }
 

@@ -22,16 +22,6 @@
                 </div>
             </div>
             <div class="inline-flex items-center gap-1 rounded-lg p-1" style="background-color: #f3f4f6;">
-                @foreach([7, 30, 0] as $d)
-                <button type="button"
-                   data-history-days="{{ $d }}"
-                   onclick="setProductionHistoryDays({{ $d }})"
-                   class="history-days-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all {{ $days === $d ? 'history-days-active' : 'text-[#6B7280] hover:bg-[#e5e7eb]' }}"
-                   {{ $days === $d ? 'style="background-color: #0d47a1; color: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.1);"' : '' }}>
-                    {{ $d === 0 ? 'Full' : ($d === 30 ? 'Month' : 'Week') }}
-                </button>
-                @endforeach
-                <span class="w-px h-3 mx-1" style="background-color: #d1d5db;"></span>
                 <button type="button"
                    data-history-compare
                    onclick="toggleProductionHistoryCompare()"
@@ -119,23 +109,28 @@
         }
     };
 
-    // Tag each dataset with a gradient fill color (rgba derived from borderColor)
-    productionChartData.datasets.forEach(function(ds) {
-        var c = ds.borderColor || '#102A4C';
-        // Convert hex to rgba for gradient
-        if (c.charAt(0) === '#') {
-            var r = parseInt(c.slice(1,3), 16);
-            var g = parseInt(c.slice(3,5), 16);
-            var b = parseInt(c.slice(5,7), 16);
-            ds._fillGradient = 'rgba(' + r + ',' + g + ',' + b + ',0.45)';
-            ds.borderColor = 'rgb(' + r + ',' + g + ',' + b + ')';
-        } else if (c.indexOf('rgb(') === 0) {
-            ds._fillGradient = c.replace('rgb(', 'rgba(').replace(')', ',0.45)');
-        } else {
-            ds._fillGradient = 'rgba(16,42,76,0.45)';
-        }
-        ds.fill = true;
-    });
+    // Tag each dataset with a gradient fill color (rgba derived from borderColor).
+    // Applied only in single-series mode: in compare mode the fills would stack on
+    // top of each other and hide the per-cage lines, so there the datasets are
+    // drawn as plain lines and keep their cage-border colors.
+    if (!{{ $compare ? 'true' : 'false' }}) {
+        productionChartData.datasets.forEach(function(ds) {
+            var c = ds.borderColor || '#102A4C';
+            // Convert hex to rgba for gradient
+            if (c.charAt(0) === '#') {
+                var r = parseInt(c.slice(1,3), 16);
+                var g = parseInt(c.slice(3,5), 16);
+                var b = parseInt(c.slice(5,7), 16);
+                ds._fillGradient = 'rgba(' + r + ',' + g + ',' + b + ',0.45)';
+                ds.borderColor = 'rgb(' + r + ',' + g + ',' + b + ')';
+            } else if (c.indexOf('rgb(') === 0) {
+                ds._fillGradient = c.replace('rgb(', 'rgba(').replace(')', ',0.45)');
+            } else {
+                ds._fillGradient = 'rgba(16,42,76,0.45)';
+            }
+            ds.fill = true;
+        });
+    }
 
     var productionChartConfig = {
         type: 'line',

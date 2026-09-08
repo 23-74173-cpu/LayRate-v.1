@@ -13,7 +13,7 @@
                     </button>
                 </div>
             </div>
-            @include('dashboard._days-filter', ['days' => $days, 'frameId' => 'dashboard-mortality-by-cause', 'routeName' => 'dashboard.mortality-by-cause'])
+            
         </div>
         <div class="interpretation-panel hidden mb-3 px-3 py-2.5 rounded-lg text-xs leading-relaxed" style="background-color: #f0f0ff; color: #3730a3; border: 1px solid rgba(99,102,241,0.15);">{{ $insight }}</div>
         @if(empty($data))

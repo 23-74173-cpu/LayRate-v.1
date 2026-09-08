@@ -141,6 +141,19 @@
                 <div class="space-y-6">
             @include('dashboard._data-checklist')
 
+            {{-- Global Period Filter (applies to every analytics card) --}}
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 pt-4">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="calendar-range" class="w-4 h-4 text-[#6B7280]"></i>
+                    <span class="text-xs font-bold uppercase tracking-[0.125px] text-[#6B7280]">Period</span>
+                </div>
+                <div class="inline-flex items-center gap-1 rounded-lg p-1" style="background-color: #f3f4f6;" id="dashboardGlobalPeriod">
+                    <button type="button" data-global-days="7" onclick="setGlobalDays(7)" class="global-days-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb]">Week</button>
+                    <button type="button" data-global-days="30" onclick="setGlobalDays(30)" class="global-days-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb]" style="background-color: #0075de; color: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">Month</button>
+                    <button type="button" data-global-days="0" onclick="setGlobalDays(0)" class="global-days-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb]">Full</button>
+                </div>
+            </div>
+
             {{-- Section Filter Tabs --}}
             <div class="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2 mb-6 pt-4">
                 <button type="button" onclick="filterAnalytics('production')" class="analytics-section-tab px-3 py-1.5 text-sm font-bold uppercase tracking-[0.125px] rounded-md transition-all inline-flex items-center gap-1.5 text-[#6B7280]" data-section="production">
@@ -235,11 +248,11 @@
             <div class="analytics-section active-section" data-analytics-section="production">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
                     <div class="flex flex-col gap-4">
-                        <turbo-frame id="dashboard-cage-performance" src="{{ route('dashboard.cage-performance') }}" loading="lazy" class="block">
+                        <turbo-frame id="dashboard-cage-performance" src="{{ route('dashboard.cage-performance', ['days' => 30]) }}" loading="lazy" class="block">
                             @include('dashboard._cage-performance-skeleton')
                         </turbo-frame>
 
-                        <turbo-frame id="dashboard-heat-stress" src="{{ route('dashboard.heat-stress') }}" loading="lazy" class="block">
+                        <turbo-frame id="dashboard-heat-stress" src="{{ route('dashboard.heat-stress', ['days' => 30]) }}" loading="lazy" class="block">
                             <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                                 <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                                 <div class="h-[110px] bg-gray-100 rounded-xl"></div>
@@ -248,18 +261,18 @@
                     </div>
 
                     <div class="flex flex-col gap-4">
-                        <turbo-frame id="dashboard-production-history" src="{{ route('dashboard.production-history') }}" loading="lazy" class="block flex-[2]">
+                        <turbo-frame id="dashboard-production-history" src="{{ route('dashboard.production-history', ['days' => 30]) }}" loading="lazy" class="block flex-[2]">
                             @include('dashboard._production-history-skeleton')
                         </turbo-frame>
 
-                        <turbo-frame id="dashboard-egg-collection-time" src="{{ route('dashboard.egg-collection-time') }}" loading="lazy" class="block flex-1">
+                        <turbo-frame id="dashboard-egg-collection-time" src="{{ route('dashboard.egg-collection-time', ['days' => 30]) }}" loading="lazy" class="block flex-1">
                             <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                                 <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                                 <div class="h-[120px] bg-gray-100 rounded-xl"></div>
                             </div>
                         </turbo-frame>
 
-                        <turbo-frame id="dashboard-hen-age-layrate" src="{{ route('dashboard.hen-age-layrate') }}" loading="lazy" class="block flex-1">
+                        <turbo-frame id="dashboard-hen-age-layrate" src="{{ route('dashboard.hen-age-layrate', ['days' => 30]) }}" loading="lazy" class="block flex-1">
                             <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                                 <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                                 <div class="h-[120px] bg-gray-100 rounded-xl"></div>
@@ -272,14 +285,14 @@
             {{-- ═══ SECTION 2 — Environmental Analytics ═══ --}}
             <div class="analytics-section" data-analytics-section="environmental">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
-                    <turbo-frame id="dashboard-temp-vs-hdep" src="{{ route('dashboard.temp-vs-hdep') }}" loading="lazy" class="block">
+                    <turbo-frame id="dashboard-temp-vs-hdep" src="{{ route('dashboard.temp-vs-hdep', ['days' => 30]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                             <div class="h-[110px] bg-gray-100 rounded-xl"></div>
                         </div>
                     </turbo-frame>
 
-                    <turbo-frame id="dashboard-hum-vs-hdep" src="{{ route('dashboard.hum-vs-hdep') }}" loading="lazy" class="block">
+                    <turbo-frame id="dashboard-hum-vs-hdep" src="{{ route('dashboard.hum-vs-hdep', ['days' => 30]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                             <div class="h-[110px] bg-gray-100 rounded-xl"></div>
@@ -291,14 +304,14 @@
             {{-- ═══ SECTION 3 — Feed Analytics ═══ --}}
             <div class="analytics-section" data-analytics-section="feed">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
-                    <turbo-frame id="dashboard-feed-by-cage" src="{{ route('dashboard.feed-by-cage') }}" loading="lazy" class="block">
+                    <turbo-frame id="dashboard-feed-by-cage" src="{{ route('dashboard.feed-by-cage', ['days' => 30]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                             <div class="h-[110px] bg-gray-100 rounded-xl"></div>
                         </div>
                     </turbo-frame>
 
-                    <turbo-frame id="dashboard-feed-vs-egg" src="{{ route('dashboard.feed-vs-egg') }}" loading="lazy" class="block">
+                    <turbo-frame id="dashboard-feed-vs-egg" src="{{ route('dashboard.feed-vs-egg', ['days' => 30]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                             <div class="h-[110px] bg-gray-100 rounded-xl"></div>
@@ -310,21 +323,21 @@
             {{-- ═══ SECTION 4 — Flock Analytics ═══ --}}
             <div class="analytics-section" data-analytics-section="flock">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
-                    <turbo-frame id="dashboard-breed-analytics" src="{{ route('dashboard.breed-analytics') }}" loading="lazy" class="block">
+                    <turbo-frame id="dashboard-breed-analytics" src="{{ route('dashboard.breed-analytics', ['days' => 30]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                             <div class="h-[120px] bg-gray-100 rounded-xl"></div>
                         </div>
                     </turbo-frame>
 
-                    <turbo-frame id="dashboard-mortality-by-cause" src="{{ route('dashboard.mortality-by-cause') }}" loading="lazy" class="block">
+                    <turbo-frame id="dashboard-mortality-by-cause" src="{{ route('dashboard.mortality-by-cause', ['days' => 30]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                             <div class="h-[120px] bg-gray-100 rounded-xl"></div>
                         </div>
                     </turbo-frame>
 
-                    <turbo-frame id="dashboard-mortality-trend" src="{{ route('dashboard.mortality-trend') }}" loading="lazy" class="block lg:col-span-2">
+                    <turbo-frame id="dashboard-mortality-trend" src="{{ route('dashboard.mortality-trend', ['days' => 30]) }}" loading="lazy" class="block lg:col-span-2">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                             <div class="h-[110px] bg-gray-100 rounded-xl"></div>
@@ -689,9 +702,8 @@
 
     // ── Track the active cage and period filters so sub-filter buttons can rebuild URLs ──
     window.__dashboardCage = 'all';
-    window.__dashboardHistoryDays = 7;
+    window.__dashboardGlobalDays = 30;
     window.__dashboardHistoryCompare = false;
-    window.__dashboardPerfDays = 7;
     window.__dashboardMortalityDays = {{ $mortalityDays ?? 1 }};
 
     function buildFrameUrl(base, params) {
@@ -748,39 +760,38 @@
         }
     }
 
-    window.setProductionHistoryDays = function(days) {
-        window.__dashboardHistoryDays = days;
+    // Global period filter: reloads every analytics card with the same week/month/full window.
+    window.setGlobalDays = function(days) {
+        window.__dashboardGlobalDays = days;
 
-        var frame = document.getElementById('dashboard-production-history');
-        if (frame) {
-            frame.querySelectorAll('[data-history-days]').forEach(function(btn) {
-                setButtonActive(btn, parseInt(btn.dataset.historyDays, 10) === days);
+        var container = document.getElementById('dashboardGlobalPeriod');
+        if (container) {
+            container.querySelectorAll('[data-global-days]').forEach(function(btn) {
+                setButtonActive(btn, parseInt(btn.dataset.globalDays, 10) === days);
             });
         }
 
-        var url = buildFrameUrl('{{ route('dashboard.production-history') }}', {
-            days: days === 7 ? null : days,
-            compare: window.__dashboardHistoryCompare ? 1 : null
+        var d = days === 30 ? null : days;
+        var cards = [
+            { id: 'dashboard-cage-performance',    route: '{{ route('dashboard.cage-performance') }}',   extra: {} },
+            { id: 'dashboard-heat-stress',         route: '{{ route('dashboard.heat-stress') }}',        extra: {} },
+            { id: 'dashboard-egg-collection-time', route: '{{ route('dashboard.egg-collection-time') }}', extra: {} },
+            { id: 'dashboard-hen-age-layrate',     route: '{{ route('dashboard.hen-age-layrate') }}',    extra: {} },
+            { id: 'dashboard-temp-vs-hdep',        route: '{{ route('dashboard.temp-vs-hdep') }}',       extra: {} },
+            { id: 'dashboard-hum-vs-hdep',         route: '{{ route('dashboard.hum-vs-hdep') }}',        extra: {} },
+            { id: 'dashboard-feed-by-cage',        route: '{{ route('dashboard.feed-by-cage') }}',       extra: {} },
+            { id: 'dashboard-feed-vs-egg',         route: '{{ route('dashboard.feed-vs-egg') }}',        extra: {} },
+            { id: 'dashboard-breed-analytics',     route: '{{ route('dashboard.breed-analytics') }}',    extra: {} },
+            { id: 'dashboard-mortality-by-cause',  route: '{{ route('dashboard.mortality-by-cause') }}', extra: {} },
+            { id: 'dashboard-mortality-trend',     route: '{{ route('dashboard.mortality-trend') }}',    extra: {} },
+            // Production History additionally carries its Compare toggle.
+            { id: 'dashboard-production-history',  route: '{{ route('dashboard.production-history') }}', extra: { compare: window.__dashboardHistoryCompare ? 1 : null } }
+        ];
+
+        cards.forEach(function(card) {
+            var url = buildFrameUrl(card.route, Object.assign({ days: d }, card.extra));
+            reloadFramePreservingScroll(card.id, url);
         });
-
-        reloadFramePreservingScroll('dashboard-production-history', url);
-    };
-
-    window.setCagePerformanceDays = function(days) {
-        window.__dashboardPerfDays = days;
-
-        var frame = document.getElementById('dashboard-cage-performance');
-        if (frame) {
-            frame.querySelectorAll('[data-perf-days]').forEach(function(btn) {
-                setButtonActive(btn, parseInt(btn.dataset.perfDays, 10) === days);
-            });
-        }
-
-        var url = buildFrameUrl('{{ route('dashboard.cage-performance') }}', {
-            days: days === 7 ? null : days
-        });
-
-        reloadFramePreservingScroll('dashboard-cage-performance', url);
     };
 
     window.toggleProductionHistoryCompare = function() {
@@ -795,7 +806,7 @@
         }
 
         var url = buildFrameUrl('{{ route('dashboard.production-history') }}', {
-            days: window.__dashboardHistoryDays === 7 ? null : window.__dashboardHistoryDays,
+            days: window.__dashboardGlobalDays === 30 ? null : window.__dashboardGlobalDays,
             compare: nextCompare ? 1 : null
         });
 
@@ -821,20 +832,6 @@
         reloadFramePreservingScroll('dashboard-stats', url);
     };
 
-    // Generic per-card day filter (Week/Month/3 Months/Full) used by the
-    // analytics cards that don't have their own bespoke filter controls.
-    window.setCardDays = function(frameId, route, days) {
-        var frame = document.getElementById(frameId);
-        if (frame) {
-            frame.querySelectorAll('[data-days-filter]').forEach(function(btn) {
-                setButtonActive(btn, parseInt(btn.dataset.daysFilter, 10) === days);
-            });
-        }
-
-        var url = buildFrameUrl(route, { days: days });
-        reloadFramePreservingScroll(frameId, url);
-    };
-
     // ── Cage filter: reloads Turbo Frames with ?cage=CODE ──
     window.filterDashboard = function(code) {
         window.__dashboardCage = code;
@@ -858,9 +855,9 @@
         var feedUrl    = buildFrameUrl('{{ route('dashboard.feed-mortality') }}',  { cage: cageParam });
         // Cage Performance Overview is intentionally NOT cage-filtered — it always
         // compares all cages against each other regardless of the active cage filter.
-        var perfUrl    = buildFrameUrl('{{ route('dashboard.cage-performance') }}', { days: window.__dashboardPerfDays === 7 ? null : window.__dashboardPerfDays });
+        var perfUrl    = buildFrameUrl('{{ route('dashboard.cage-performance') }}', { days: window.__dashboardGlobalDays === 30 ? null : window.__dashboardGlobalDays });
         var historyUrl = buildFrameUrl('{{ route('dashboard.production-history') }}', {
-            days: window.__dashboardHistoryDays === 7 ? null : window.__dashboardHistoryDays,
+            days: window.__dashboardGlobalDays === 30 ? null : window.__dashboardGlobalDays,
             compare: window.__dashboardHistoryCompare ? 1 : null
         });
 
