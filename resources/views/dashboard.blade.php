@@ -145,33 +145,29 @@
                     <turbo-frame id="dashboard-stats-production" src="{{ route('dashboard.stats.production', ['cage' => request('cage')]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-4 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
                     </turbo-frame>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
-                    <div class="flex flex-col gap-4">
-                        <turbo-frame id="dashboard-cage-performance" src="{{ route('dashboard.cage-performance', ['days' => 30]) }}" loading="lazy" class="block">
+                    <div id="production-charts-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+                        <turbo-frame id="dashboard-cage-performance" src="{{ route('dashboard.cage-performance', ['days' => 30]) }}" loading="lazy" class="block h-full">
                             @include('dashboard._cage-performance-skeleton')
                         </turbo-frame>
-                    </div>
 
-                    <div class="flex flex-col gap-4">
-                        <turbo-frame id="dashboard-production-history" src="{{ route('dashboard.production-history', ['days' => 30]) }}" loading="lazy" class="block flex-[2]">
+                        <turbo-frame id="dashboard-production-history" src="{{ route('dashboard.production-history', ['days' => 30]) }}" loading="lazy" class="block h-full">
                             @include('dashboard._production-history-skeleton')
                         </turbo-frame>
 
-                        <turbo-frame id="dashboard-egg-collection-time" src="{{ route('dashboard.egg-collection-time', ['days' => 30]) }}" loading="lazy" class="block flex-1">
-                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
+                        <turbo-frame id="dashboard-egg-collection-time" src="{{ route('dashboard.egg-collection-time', ['days' => 30]) }}" loading="lazy" class="block h-full">
+                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse h-full">
                                 <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                                 <div class="h-[120px] bg-gray-100 rounded-xl"></div>
                             </div>
                         </turbo-frame>
 
-                        <turbo-frame id="dashboard-hen-age-layrate" src="{{ route('dashboard.hen-age-layrate', ['days' => 30]) }}" loading="lazy" class="block flex-1">
-                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
+                        <turbo-frame id="dashboard-hen-age-layrate" src="{{ route('dashboard.hen-age-layrate', ['days' => 30]) }}" loading="lazy" class="block h-full">
+                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse h-full">
                                 <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                                 <div class="h-[120px] bg-gray-100 rounded-xl"></div>
                             </div>
                         </turbo-frame>
                     </div>
-                </div>
                 </div>
             </div>
 
@@ -745,6 +741,26 @@
 
         reloadFramePreservingScroll('dashboard-stats', url);
     };
+
+    // ── Production charts: equalize all 4 graph cards to the same height ──
+    window.equalizeProductionCharts = function() {
+        var grid = document.getElementById('production-charts-grid');
+        if (!grid) return;
+        var frames = grid.querySelectorAll('turbo-frame');
+        if (!frames.length) return;
+        var max = 0;
+        for (var i = 0; i < frames.length; i++) {
+            frames[i].style.height = '';
+            max = Math.max(max, frames[i].offsetHeight);
+        }
+        if (max <= 0) return;
+        for (var j = 0; j < frames.length; j++) {
+            frames[j].style.height = max + 'px';
+        }
+    };
+    document.addEventListener('turbo:frame-load', function () { window.equalizeProductionCharts(); });
+    window.addEventListener('load', window.equalizeProductionCharts);
+    window.equalizeProductionCharts();
 
     // ΓöÇΓöÇ Cage filter: reloads Turbo Frames with ?cage=CODE ΓöÇΓöÇ
     window.filterDashboard = function(code) {

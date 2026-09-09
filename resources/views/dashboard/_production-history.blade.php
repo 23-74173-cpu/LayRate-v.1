@@ -64,7 +64,7 @@
                 </span>
             </div>
             @endif
-            <div class="relative w-full flex-1 min-h-[300px] chart-fade-in">
+            <div class="relative w-full flex-1 min-h-[240px] chart-fade-in">
                 <canvas id="dashProductionHistoryChart" style="width: 100%; height: 100%; display: block;"></canvas>
             </div>
         @endif

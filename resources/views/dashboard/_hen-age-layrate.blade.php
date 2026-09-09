@@ -37,7 +37,7 @@
                 No production data available for age analysis.
             </div>
         @else
-            <div class="relative w-full flex-1 min-h-[260px] hal-fade-in">
+            <div class="relative w-full flex-1 min-h-[220px] hal-fade-in">
                 <canvas id="henAgeLayrateChart" style="width: 100%; height: 100%; display: block;"></canvas>
             </div>
         @endif

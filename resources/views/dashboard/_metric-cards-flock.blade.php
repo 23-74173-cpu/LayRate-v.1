@@ -15,7 +15,7 @@
                     class="col-span-2 sm:col-span-1"
                     label="Mortality Today"
                     icon="heart-crack"
-                    :cardGradient="$mortalityTodayTotal > 0 ? 'linear-gradient(135deg,#dc2626,#9b1c24)' : null"
+                    cardGradient="linear-gradient(135deg,#ec4899,#9d174d)"
                     delay="0ms"
                     :href="route('chickens.index', ['tab' => 'mortality'])"
                     kpi="mortality"

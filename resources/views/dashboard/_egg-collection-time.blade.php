@@ -43,7 +43,7 @@
                 </span>
             </div>
             @endif
-            <div class="relative w-full flex-1 min-h-[260px] ect-fade-in">
+            <div class="relative w-full flex-1 min-h-[220px] ect-fade-in">
                 <canvas id="eggCollectionTimeChart" style="width: 100%; height: 100%; display: block;"></canvas>
             </div>
         @endif
