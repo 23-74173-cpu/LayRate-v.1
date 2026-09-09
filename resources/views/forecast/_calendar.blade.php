@@ -90,6 +90,16 @@
                     Today
                 </a>
 
+                <button type="button" id="dayDragSelectToggleBtn"
+                        onclick="window.dayDragSelectToggle()"
+                        aria-pressed="false"
+                        title="Toggle hold-and-drag to select a date range on touch screens"
+                        class="lg:hidden text-xs px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors flex items-center gap-1.5">
+                    <i data-lucide="hand" class="w-3.5 h-3.5"></i>
+                    <span class="hidden sm:inline">Drag select</span>
+                    <span class="sm:hidden">Drag</span>
+                </button>
+
                 @can('admin')
                 <form method="POST" action="{{ route('forecast.clear') }}" class="inline" data-confirm="Clear all forecast badges from the calendar for the current selection?" data-confirm-action="Clear" data-confirm-severity="neutral">
                     @csrf
@@ -482,7 +492,7 @@
         return true;
     }
 
-    function onCalendarDayGlobalMouseUp() {
+    function finalizeDayDrag() {
         if (!isDayDragging) return;
         isDayDragging = false;
         const dates = selectedDayRange();
@@ -506,6 +516,83 @@
         }
     }
 
+    function onCalendarDayGlobalMouseUp() {
+        if (!isDayDragging) return;
+        finalizeDayDrag();
+    }
+
+    // ── Touch drag-to-select (mobile) ──
+    function getCalendarDayFromTouch(touch) {
+        const el = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (!el) return null;
+        return el.closest('.calendar-day[data-selectable="true"]');
+    }
+
+    function onCalendarDayTouchStart(e) {
+        const el = e.currentTarget;
+        if (el.dataset.selectable !== 'true') return;
+        if (!window.__dayDragTouchEnabled) return; // normal tap → let the native click through
+        e.preventDefault(); // stop scroll/zoom while selecting
+        isDayDragging = true;
+        dayDragMoved = false;
+        dayDragAnchor = el.dataset.date;
+        dayDragHover = el.dataset.date;
+        snapshotSelectableDayClasses();
+        renderDaySelection();
+    }
+
+    function onCalendarDayTouchMove(e) {
+        if (!isDayDragging) return;
+        e.preventDefault();
+        const touch = e.touches[0];
+        const cell = getCalendarDayFromTouch(touch);
+        if (!cell) return;
+        if (cell.dataset.date !== dayDragHover) {
+            dayDragHover = cell.dataset.date;
+            dayDragMoved = true;
+            renderDaySelection();
+        }
+    }
+
+    function onCalendarDayGlobalTouchEnd() {
+        if (!isDayDragging) return;
+        finalizeDayDrag();
+    }
+
+    function onCalendarDayGlobalTouchCancel() {
+        if (!isDayDragging) return;
+        clearDaySelection();
+    }
+
+    // ── Drag-to-select toggle (touch only; button only shows below lg) ──
+    function syncDayDragToggleUI(enabled) {
+        const btn = document.getElementById('dayDragSelectToggleBtn');
+        if (!btn) return;
+        btn.classList.toggle('bg-[#002D5E]', enabled);
+        btn.classList.toggle('text-white', enabled);
+        btn.classList.toggle('border-[#002D5E]', enabled);
+        btn.classList.toggle('hover:bg-[#F5F6F8]', !enabled);
+        btn.classList.toggle('hover:text-[#333333]', !enabled);
+        btn.classList.toggle('border-[#D9D9D9]', !enabled);
+        btn.classList.toggle('text-[#6B7280]', !enabled);
+        btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+    }
+
+    window.dayDragSelectToggle = function() {
+        window.__dayDragTouchEnabled = !window.__dayDragTouchEnabled;
+        if (!window.__dayDragTouchEnabled) {
+            clearDaySelection();
+        }
+        syncDayDragToggleUI(window.__dayDragTouchEnabled);
+    };
+
+    // Drag-to-select is off by default so simple taps and page scrolling work
+    // normally on touch screens; the header toggle enables it (button only
+    // renders below the lg breakpoint). Persist across Turbo frame re-renders.
+    if (window.__dayDragTouchEnabled === undefined) {
+        window.__dayDragTouchEnabled = false;
+    }
+
     // Wire drag handlers on the current calendar cells (flag-guarded so
     // re-wires don't double-bind) and bind the global mouseup exactly once.
     // Re-run after every Turbo frame render of #production-calendar, because
@@ -517,11 +604,16 @@
                 el.__dragWired = true;
                 el.addEventListener('mousedown', onCalendarDayMouseDown);
                 el.addEventListener('mouseenter', onCalendarDayMouseEnter);
+                el.addEventListener('touchstart', onCalendarDayTouchStart, { passive: false });
             }
         });
+        syncDayDragToggleUI(window.__dayDragTouchEnabled);
         if (!window.__calendarDayDragBound) {
             window.__calendarDayDragBound = true;
             document.addEventListener('mouseup', onCalendarDayGlobalMouseUp);
+            document.addEventListener('touchmove', onCalendarDayTouchMove, { passive: false });
+            document.addEventListener('touchend', onCalendarDayGlobalTouchEnd);
+            document.addEventListener('touchcancel', onCalendarDayGlobalTouchCancel);
         }
     };
 
