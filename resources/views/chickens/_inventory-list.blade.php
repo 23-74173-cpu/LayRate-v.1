@@ -143,7 +143,7 @@
                     {{-- ══ LEFT: rows + slots grid ══ --}}
                     <div class="min-w-0">
                         <div class="overflow-x-auto pb-1">
-                            <div class="grid gap-1.5" style="grid-template-columns: 40px repeat({{ $slotsPerRow }}, minmax(0, 1fr)); width: 100%; max-width: {{ min($gridWidth, 520) }}px;">
+                            <div class="grid gap-1.5" style="grid-template-columns: 40px repeat({{ $slotsPerRow }}, minmax(44px, 1fr)); width: 100%; max-width: {{ min($gridWidth, 520) }}px;">
                                 {{-- Column headers --}}
                                 <div></div>
                                 @for($c = 1; $c <= $slotsPerRow; $c++)
