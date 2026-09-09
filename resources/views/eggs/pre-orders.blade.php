@@ -11,37 +11,35 @@
     <turbo-frame id="egg-content">
     <div class="space-y-5">
 
-    {{-- ── Supply Summary ── --}}
+    {{-- ── Supply Summary — dashboard gradient KPI design ── --}}
     <h2 class="sr-only">Pre-Orders Overview</h2>
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
         @foreach($summary as $size => $data)
         @php
             $label = ucfirst($size);
-            $colors = [
-                'small'  => ['#2D7D46', '#d6f0e3'],
-                'medium' => ['#1D4E8F', '#dcebfa'],
-                'large'  => ['#C2703E', '#fae3d0'],
-                'jumbo'  => ['#6B4C8A', '#e9e0f5'],
+            $gradients = [
+                'small'  => 'linear-gradient(135deg,#16a34a,#2D7D46)',
+                'medium' => 'linear-gradient(135deg,#0075de,#1D4E8F)',
+                'large'  => 'linear-gradient(135deg,#d97706,#C2703E)',
+                'jumbo'  => 'linear-gradient(135deg,#8B5CF6,#6B4C8A)',
             ];
-            [$color, $soft] = $colors[$size];
+            $cardGradient = $gradients[$size] ?? 'linear-gradient(135deg,#6B7280,#4B5563)';
             $isDeficit = $data['deficit'] > 0;
         @endphp
-        <div class="rounded-lg border p-4 {{ $isDeficit ? 'border-red-300 bg-red-50' : 'bg-white border-[#D9D9D9]' }}">
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase mb-1" style="color: {{ $color }}">{{ $label }}</div>
-            <div class="text-2xl font-bold leading-none tracking-[-0.5px]" style="color: {{ $isDeficit ? '#9b1c24' : '#333333' }}">
-                {{ number_format($data['available']) }}
-            </div>
-            <div class="text-xs mt-1" style="color: #6B7280">available</div>
-            <div class="text-xs mt-1" style="color: #6B7280">
-                {{ number_format($data['logged']) }} produced · {{ number_format($data['stocked']) }} stocked · {{ number_format($data['committed']) }} committed
-            </div>
-            <div class="text-xs" style="color: #6B7280">+{{ number_format($data['forecasted']) }} forecasted</div>
+        <x-kpi-card
+            label="{{ $label }}"
+            icon="egg"
+            cardGradient="{{ $cardGradient }}"
+            delay="{{ $loop->index * 60 }}ms"
+            :value="number_format($data['available'])"
+        >
+            <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">{{ number_format($data['logged']) }} produced · {{ number_format($data['committed']) }} committed</div>
             @if($isDeficit)
-            <div class="mt-1.5 text-xs font-medium" style="color: #9b1c24">
-                Shortfall: {{ number_format($data['deficit']) }} eggs · {{ (int) ceil($data['deficit'] / 30) }} trays
-            </div>
+            <div class="text-xs mt-1 font-semibold" style="color: #ffffff;">Shortfall: {{ number_format($data['deficit']) }} eggs</div>
+            @else
+            <div class="text-xs mt-1 font-medium" style="color: rgba(255,255,255,0.85);">+{{ number_format($data['forecasted']) }} forecasted</div>
             @endif
-        </div>
+        </x-kpi-card>
         @endforeach
     </div>
 

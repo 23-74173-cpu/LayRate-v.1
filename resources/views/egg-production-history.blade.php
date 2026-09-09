@@ -11,31 +11,23 @@
     <turbo-frame id="egg-content">
     <div class="space-y-5">
 
-    {{-- Summary cards --}}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <x-card>
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase mb-1 text-[#6B7280]">Lifetime Total</div>
-            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ number_format($lifetimeEggs) }}</div>
-            <div class="text-xs mt-2 text-[#6B7280]">eggs logged since day 1</div>
-        </x-card>
+    {{-- Summary cards — dashboard gradient KPI design --}}
+    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <x-kpi-card label="Lifetime Total" icon="egg" cardGradient="linear-gradient(135deg,#d97706,#C2703E)" delay="0ms" :value="number_format($lifetimeEggs)">
+            <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">eggs logged since day 1</div>
+        </x-kpi-card>
 
-        <x-card>
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase mb-1 text-[#6B7280]">Timeline Records</div>
-            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ number_format($timelineRecordsTotal) }}</div>
-            <div class="text-xs mt-2 text-[#6B7280]">{{ ucfirst($groupBy) }} aggregates</div>
-        </x-card>
+        <x-kpi-card label="Timeline Records" icon="layers" cardGradient="linear-gradient(135deg,#8B5CF6,#6B4C8A)" delay="60ms" :value="number_format($timelineRecordsTotal)">
+            <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">{{ ucfirst($groupBy) }} aggregates</div>
+        </x-kpi-card>
 
-        <x-card>
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase mb-1 text-[#6B7280]">Active Cages</div>
-            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $byCage->count() }}</div>
-            <div class="text-xs mt-2 text-[#6B7280]">with production records</div>
-        </x-card>
+        <x-kpi-card label="Active Cages" icon="warehouse" cardGradient="linear-gradient(135deg,#0075de,#1D4E8F)" delay="120ms" :value="$byCage->count()">
+            <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">with production records</div>
+        </x-kpi-card>
 
-        <x-card>
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase mb-1 text-[#6B7280]">Size Records</div>
-            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ number_format($bySize->sum('total')) }}</div>
-            <div class="text-xs mt-2 text-[#6B7280]">eggs with size breakdown</div>
-        </x-card>
+        <x-kpi-card label="Size Records" icon="package" cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)" delay="180ms" :value="number_format($bySize->sum('total'))">
+            <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">eggs with size breakdown</div>
+        </x-kpi-card>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">

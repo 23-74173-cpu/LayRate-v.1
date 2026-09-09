@@ -11,8 +11,8 @@
     <turbo-frame id="egg-content">
     <div class="space-y-5">
 
-    {{-- ── Summary Cards ── --}}
-    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4" id="summaryCards">
+    {{-- ── Summary Cards — dashboard gradient KPI design ── --}}
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3" id="summaryCards">
         @foreach($sizes as $size)
         @php
             $total = $totals[$size] ?? 0;
@@ -21,28 +21,26 @@
             $pool = $availablePools[$size] ?? 0;
             $threshold = $eggStockThresholds[$size] ?? 0;
             $isLowStock = $threshold > 0 && $pool <= $threshold;
-            $colors = [
-                'small'    => ['#2D7D46', '#d6f0e3'],
-                'medium'   => ['#1D4E8F', '#dcebfa'],
-                'large'    => ['#C2703E', '#fae3d0'],
-                'jumbo'    => ['#6B4C8A', '#e9e0f5'],
-                'unsorted' => ['#6B7280', '#f0f0f0'],
+            $gradients = [
+                'small'    => 'linear-gradient(135deg,#16a34a,#2D7D46)',
+                'medium'   => 'linear-gradient(135deg,#0075de,#1D4E8F)',
+                'large'    => 'linear-gradient(135deg,#d97706,#C2703E)',
+                'jumbo'    => 'linear-gradient(135deg,#8B5CF6,#6B4C8A)',
+                'unsorted' => 'linear-gradient(135deg,#6B7280,#4B5563)',
             ];
-            [$color, $soft] = $colors[$size];
+            $cardGradient = $gradients[$size];
+            $icons = ['small' => 'egg', 'medium' => 'egg', 'large' => 'egg', 'jumbo' => 'egg', 'unsorted' => 'layers'];
         @endphp
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4 {{ $isLowStock ? 'ring-2 ring-amber-400' : '' }}" data-size="{{ $size }}">
-            <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-semibold tracking-[0.125px] uppercase" style="color: {{ $color }}">{{ $label }}</span>
-                @if($isLowStock)
-                <x-status-badge status="Low" type="general" />
-                @endif
-            </div>
-            <div class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ number_format($total) }}</div>
-            <div class="text-xs mt-1 text-[#6B7280]">{{ $trays }} {{ $trays === 1 ? 'tray' : 'trays' }}</div>
-            <div class="text-xs mt-1.5 text-[#a39e98]">
-                <span class="font-medium" style="color: {{ $color }}">{{ number_format($pool) }}</span> available to stock
-            </div>
-        </div>
+        <x-kpi-card
+            label="{{ $label }}"
+            icon="{{ $icons[$size] }}"
+            cardGradient="{{ $cardGradient }}"
+            delay="{{ $loop->index * 60 }}ms"
+            :value="number_format($total)"
+            data-size="{{ $size }}"
+        >
+            <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">{{ $trays }} {{ $trays === 1 ? 'tray' : 'trays' }} · {{ number_format($pool) }} available</div>
+        </x-kpi-card>
         @endforeach
     </div>
 
@@ -654,11 +652,17 @@ function updateLogSelect(cageId) {
                                 var trays = trayTotals[size] || 0;
                                 var pool = pools[size] || 0;
 
-                                var totalEl = card.querySelector('.text-2xl');
+                                // Dashboard gradient kpi-card: number lives in .text-[32px] / .kpi-value (legacy .text-2xl fallback)
+                                var totalEl = card.querySelector('.kpi-value') || card.querySelector('[class*="text-[32px]"]') || card.querySelector('.text-2xl');
                                 if (totalEl) totalEl.textContent = numberFormat(total);
 
+                                // Secondary slot holds "X trays · Y available" as a single line
                                 var trayEl = card.querySelector('.text-xs.mt-1');
                                 if (trayEl) trayEl.textContent = trays + ' ' + (trays === 1 ? 'tray' : 'trays');
+                                else {
+                                    var secEl = card.querySelector('.mt-1\\.5');
+                                    if (secEl) secEl.textContent = trays + ' ' + (trays === 1 ? 'tray' : 'trays') + ' · ' + numberFormat(pool) + ' available';
+                                }
 
                                 var poolEl = card.querySelector('.font-medium');
                                 if (poolEl) poolEl.textContent = numberFormat(pool);

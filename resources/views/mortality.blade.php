@@ -79,22 +79,23 @@
         {{-- ── Today's Summary + Recent Log ── --}}
         <div class="xl:col-span-2 space-y-5">
 
-            {{-- Today's totals per cage --}}
+            {{-- Today's totals per cage — dashboard gradient KPI design --}}
             <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
                 <h2 class="text-sm font-medium text-[#333333] mb-3">Today's Summary</h2>
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     @foreach($cages as $cage)
                     @php
                         $count = $todayByCage[$cage->cage_code] ?? 0;
-                        $color = $cage->color;
-                        $bg    = $count > 0 ? '#F8D7DA' : '#F5F6F8';
-                        $txt   = $count > 0 ? '#721C24' : '#6B7280';
                     @endphp
-                    <div class="rounded-lg border p-4" style="border-color:{{ $count > 0 ? '#F5C6CB' : '#D9D9D9' }};background:{{ $bg }}">
-                        <div class="text-xs font-semibold tracking-[0.125px] uppercase mb-1" style="color:{{ $color }}">{{ $cage->cage_code }}</div>
-                        <div class="text-2xl font-bold leading-none tracking-[-0.5px]" style="color:{{ $txt }}">{{ $count }}</div>
-                        <div class="text-xs mt-1" style="color:{{ $txt }}">{{ $count === 1 ? 'hen' : 'hens' }}</div>
-                    </div>
+                    <x-kpi-card
+                        label="{{ $cage->cage_code }}"
+                        icon="heart-crack"
+                        cardGradient="linear-gradient(135deg,#ec4899,#9d174d)"
+                        delay="{{ $loop->index * 60 }}ms"
+                        :value="$count"
+                    >
+                        <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">{{ $count === 1 ? 'hen' : 'hens' }}</div>
+                    </x-kpi-card>
                     @endforeach
                 </div>
             </div>

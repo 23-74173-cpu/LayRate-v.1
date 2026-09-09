@@ -18,12 +18,12 @@
         $forecastMap = collect($forecasts ?? [])->keyBy(fn($f) => is_object($f->target_date) ? $f->target_date->format('Y-m-d') : $f->target_date);
     @endphp
 
-    {{-- ── Forecast KPI Cards (plain variant – see components/kpi-card.blade.php for decision rationale) ── --}}
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <x-kpi-card variant="plain" label="Weeks in month" :value="$weeksInMonth" />
-        <x-kpi-card variant="plain" label="Days in month" :value="$daysInMonth" />
-        <x-kpi-card variant="plain" label="Forecast days" :value="count($forecastMap)" />
-        <x-kpi-card variant="plain" label="Current week" :value="$calendarToday->weekOfMonth" />
+    {{-- ── Forecast KPI Cards — dashboard gradient KPI design ── --}}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <x-kpi-card label="Weeks in month" icon="calendar-range" cardGradient="linear-gradient(135deg,#0075de,#1D4E8F)" delay="0ms" :value="$weeksInMonth" />
+        <x-kpi-card label="Days in month" icon="calendar-days" cardGradient="linear-gradient(135deg,#8B5CF6,#6B4C8A)" delay="60ms" :value="$daysInMonth" />
+        <x-kpi-card label="Forecast days" icon="trending-up" cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)" delay="120ms" :value="count($forecastMap)" />
+        <x-kpi-card label="Current week" icon="calendar-check" cardGradient="linear-gradient(135deg,#d97706,#C2703E)" delay="180ms" :value="$calendarToday->weekOfMonth" />
     </div>
 
     @php

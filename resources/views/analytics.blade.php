@@ -37,34 +37,16 @@
         @endforeach
     </div>
 
-    {{-- ── Summary KPI Cards (hidden on the Performance tab) ── --}}
+    {{-- ── Summary KPI Cards (dashboard gradient KPI design; inner span IDs preserved for AJAX updates) ── --}}
     @if(!$isPerformance)
     @php $kpiColor = $isAll ? '#333333' : $cage->color; @endphp
-    <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Cage</div>
-            <div id="kpi-cage" class="text-2xl font-bold leading-none tracking-[-0.5px]" style="color:{{ $kpiColor }}">{{ $isAll ? 'All Cages' : $cageCode }}</div>
-        </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Breed</div>
-            <div id="kpi-breed" class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $isAll ? 'Mixed' : ($cage->hens->first()?->breed ?? '—') }}</div>
-        </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Avg HDEP</div>
-            <div id="kpi-avg-hdep" class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">@if($avgHdep === '-'){{ '-' }}@else{{ $avgHdep }}%@endif</div>
-        </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Best Day</div>
-            <div id="kpi-best-day" class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">@if($bestDay === '-'){{ '-' }}@else{{ $bestDay }}%@endif</div>
-        </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Worst Day</div>
-            <div id="kpi-worst-day" class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">@if($worstDay === '-'){{ '-' }}@else{{ $worstDay }}%@endif</div>
-        </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Flock Age</div>
-            <div id="kpi-flock-age" class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#333333]">{{ $isAll ? '—' : ($cage->hens->first() ? $cage->hens->first()->current_age_weeks . ' wks' : '—') }}</div>
-        </div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <x-kpi-card label="Cage" icon="warehouse" cardGradient="linear-gradient(135deg,#002D5E,#1D4E8F)" delay="0ms" :value="'<span id=\'kpi-cage\'>' . ($isAll ? 'All Cages' : $cageCode) . '</span>'" />
+        <x-kpi-card label="Breed" icon="bird" cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)" delay="60ms" :value="'<span id=\'kpi-breed\'>' . ($isAll ? 'Mixed' : ($cage->hens->first()?->breed ?? '—')) . '</span>'" />
+        <x-kpi-card label="Avg HDEP" icon="gauge" cardGradient="linear-gradient(135deg,#0075de,#1D4E8F)" delay="120ms" :value="'<span id=\'kpi-avg-hdep\'>' . ($avgHdep === '-' ? '-' : $avgHdep . '%') . '</span>'" />
+        <x-kpi-card label="Best Day" icon="trending-up" cardGradient="linear-gradient(135deg,#8B5CF6,#6B4C8A)" delay="180ms" :value="'<span id=\'kpi-best-day\'>' . ($bestDay === '-' ? '-' : $bestDay . '%') . '</span>'" />
+        <x-kpi-card label="Worst Day" icon="trending-down" cardGradient="linear-gradient(135deg,#d97706,#C2703E)" delay="240ms" :value="'<span id=\'kpi-worst-day\'>' . ($worstDay === '-' ? '-' : $worstDay . '%') . '</span>'" />
+        <x-kpi-card label="Flock Age" icon="clock" cardGradient="linear-gradient(135deg,#0d9488,#2C7C91)" delay="300ms" :value="'<span id=\'kpi-flock-age\'>' . ($isAll ? '—' : ($cage->hens->first() ? $cage->hens->first()->current_age_weeks . ' wks' : '—')) . '</span>'" />
     </div>
     @endif
 

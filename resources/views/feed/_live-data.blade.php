@@ -1,44 +1,32 @@
 @php use App\Models\Alert; @endphp
 <turbo-frame id="feed-live-data">
-    {{-- ── Metric Cards — migrated to <x-kpi-card variant="default"> (live sensor/feed readings) ── --}}
+    {{-- ── Metric Cards — dashboard gradient KPI design (cardGradient) ── --}}
     <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
         <x-kpi-card
             label="Avg CP% This Week"
             icon="flask-conical"
-            iconBg="#e6f6ee"
-            iconColor="#16a34a"
-            gradient="linear-gradient(135deg,#16a34a,#15803d)"
-            accent="#e6f6ee"
+            cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
             delay="0ms"
             :value="number_format($avgCp, 1) . '%'"
         />
         <x-kpi-card
             label="Avg Feed/Cage/Day"
             icon="scale"
-            iconBg="#e6f6ee"
-            iconColor="#16a34a"
-            gradient="linear-gradient(135deg,#16a34a,#15803d)"
-            accent="#e6f6ee"
+            cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
             delay="60ms"
             :value="$avgFeedPerCage . ' kg'"
         />
         <x-kpi-card
             label="Total Feed Used"
             icon="package"
-            iconBg="#e6f6ee"
-            iconColor="#16a34a"
-            gradient="linear-gradient(135deg,#16a34a,#15803d)"
-            accent="#e6f6ee"
+            cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
             delay="120ms"
             :value="number_format($totalFeedWeek, 1) . ' kg'"
         />
         <x-kpi-card
             label="Feed Cost This Month"
             icon="banknote"
-            iconBg="#e6f6ee"
-            iconColor="#16a34a"
-            gradient="linear-gradient(135deg,#16a34a,#15803d)"
-            accent="#e6f6ee"
+            cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
             delay="180ms"
             :value="$totalFeedCostMonth !== null && $totalFeedCostMonth > 0 ? '₱' . number_format($totalFeedCostMonth, 2) : null"
         />

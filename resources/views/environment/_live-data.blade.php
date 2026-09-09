@@ -1,48 +1,34 @@
 <turbo-frame id="environment-live-data">
-    {{-- ── Top Metric Cards ── --}}
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <div class="flex items-center justify-between mb-2">
-                <span class="text-[11px] font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Coop Avg Temp</span>
-                <x-status-badge :status="$avgStatus" type="sensor" />
-            </div>
-            <div class="flex items-baseline gap-1">
-                <span class="text-3xl font-bold leading-none tracking-[-1px] text-[#1f1f1f]">{{ $avgTemp ? number_format($avgTemp,1) : '—' }}</span>
-                <span class="text-base font-medium text-[#a39e98]">°C</span>
-            </div>
-            <div class="text-xs text-[#9CA3AF] mt-1.5 flex items-center gap-1">
-                <i data-lucide="activity" class="w-3.5 h-3.5"></i>
-                <span>Spread {{ $tempValues->count() > 1 ? number_format(max(0, $tempValues->max() - $tempValues->min()), 1) . '°C across cages' : 'across cages' }}</span>
-            </div>
-        </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <div class="flex items-center justify-between mb-2">
-                <span class="text-[11px] font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Coop Avg Humidity</span>
-                <x-status-badge :status="$avgStatus" type="sensor" />
-            </div>
-            <div class="flex items-baseline gap-1">
-                <span class="text-3xl font-bold leading-none tracking-[-1px] text-[#1f1f1f]">{{ $avgHum ? number_format($avgHum,1) : '—' }}</span>
-                <span class="text-base font-medium text-[#a39e98]">%</span>
-            </div>
-            <div class="text-xs text-[#9CA3AF] mt-1.5 flex items-center gap-1">
-                <i data-lucide="droplets" class="w-3.5 h-3.5"></i>
-                <span>Spread {{ $humValues->count() > 1 ? number_format(max(0, $humValues->max() - $humValues->min()), 1) . '% across cages' : 'across cages' }}</span>
-            </div>
-        </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <div class="flex items-center justify-between mb-2">
-                <span class="text-[11px] font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Active Sensors</span>
-                <x-status-badge :status="$activeSensors > 0 ? 'Live' : 'No Sensors'" type="sensor" />
-            </div>
-            <div class="flex items-baseline gap-1">
-                <span class="text-3xl font-bold leading-none tracking-[-1px] text-[#1f1f1f]">{{ $activeSensors }}</span>
-                <span class="text-sm font-medium text-[#a39e98]">sensors</span>
-            </div>
-            <div class="text-xs text-[#9CA3AF] mt-1.5 flex items-center gap-1">
-                <i data-lucide="radio" class="w-3.5 h-3.5"></i>
-                <span>{{ $activeSensors > 0 ? 'One node mapped per cage' : 'All entries are manual logs' }}</span>
-            </div>
-        </div>
+    {{-- ── Top Metric Cards — dashboard gradient KPI design ── --}}
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
+        <x-kpi-card
+            label="Coop Avg Temp"
+            icon="thermometer"
+            cardGradient="linear-gradient(135deg,#f59e0b,#C2703E)"
+            delay="0ms"
+            :value="($avgTemp ? number_format($avgTemp,1) : '—') . '°C'"
+        >
+            <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">Spread {{ $tempValues->count() > 1 ? number_format(max(0, $tempValues->max() - $tempValues->min()), 1) . '°C across cages' : 'across cages' }}</div>
+        </x-kpi-card>
+        <x-kpi-card
+            label="Coop Avg Humidity"
+            icon="droplets"
+            cardGradient="linear-gradient(135deg,#0d9488,#2C7C91)"
+            delay="60ms"
+            :value="($avgHum ? number_format($avgHum,1) : '—') . '%'"
+        >
+            <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">Spread {{ $humValues->count() > 1 ? number_format(max(0, $humValues->max() - $humValues->min()), 1) . '% across cages' : 'across cages' }}</div>
+        </x-kpi-card>
+        <x-kpi-card
+            class="col-span-2 sm:col-span-1"
+            label="Active Sensors"
+            icon="radio"
+            cardGradient="linear-gradient(135deg,#0075de,#1D4E8F)"
+            delay="120ms"
+            :value="$activeSensors . ' sensors'"
+        >
+            <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">{{ $activeSensors > 0 ? 'One node mapped per cage' : 'All entries are manual logs' }}</div>
+        </x-kpi-card>
     </div>
 
     {{-- ── Per-cage Sensor Cards ── --}}

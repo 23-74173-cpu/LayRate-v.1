@@ -41,26 +41,15 @@
  *   or named slot:
  *     <x-kpi-card> <x-slot:secondary>...</x-slot:secondary> </x-kpi-card>
  *
- * Variant decision – Forecast migration:
- *   Forecast's existing KPI pills (Weeks in month, Days in month, Forecast days, Current week)
- *   are plain "label + big number" boxes (bg-white, border #D9D9D9, p-4, text-2xl #333333) with no
- *   icon / gradient / accent bar / watermark. They are derived calendar metadata, not production
- *   KPIs that benefit from navigate/breakdown or high visual emphasis.
+ * Variant decision – Dashboard unification:
+ *   All KPI cards system-wide now use the Dashboard gradient treatment
+ *   (variant="default" + cardGradient). Forecast / Reports previously used
+ *   variant="plain" (white minimal box) for auxiliary counts, but per design
+ *   unification every KPI card renders with icon chip + cardGradient +
+ *   watermark + accent bar for visual consistency.
  *
- *   Decision: keep Forecast on a lower-emphasis appearance via variant="plain" rather than
- *   forcing full Dashboard styling (icon + gradient + accent). Rationale:
- *     1. Visual hierarchy – Dashboard gradients/chips signal actionable, navigable KPIs; applying
- *        that to auxiliary counts (e.g. "Weeks in month = 5") would inflate their perceived
- *        importance and clash with Forecast's actual high-value metrics (forecast avg, MAE/MAPE).
- *     2. Semantics – inventing icons/gradients for generic counts (weeks, days) would be arbitrary
- *        and misleading; plain preserves honesty.
- *     3. Minimal API – one variant switch reuses the same grid/card semantics without speculative
- *        color/icon props for a page that doesn't need them. If a future page needs graduated
- *        emphasis, add variants then; don't overfit now.
- *
- *   Result: <x-kpi-card variant="plain" label="Weeks in month" :value="$weeksInMonth" />
- *   renders pixel-equivalent to Forecast's original plain box while going through the same
- *   component entry point. The next migration prompt can reference this real API.
+ *   variant="plain" is retained for backward compatibility / print contexts
+ *   only — do not use for new on-screen KPI cards.
  *
  * Usage examples (Dashboard):
  *   <x-kpi-card label="Total Hens" icon="bird" iconBg="#d6f0e3" iconColor="#2D7D46"

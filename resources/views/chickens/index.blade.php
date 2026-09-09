@@ -136,15 +136,12 @@
     {{-- ============================================ --}}
     <div id="panelMortality" class="{{ $tab !== 'mortality' ? 'hidden' : '' }}">
 
-        {{-- Today's Summary Cards — migrated to <x-kpi-card variant="default"> (real KPI) --}}
+        {{-- Today's Summary Cards — dashboard gradient KPI design (cardGradient) --}}
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5" id="mortality-summary">
             <x-kpi-card
                 label="Deaths Today"
                 icon="skull"
-                iconBg="#fadfe3"
-                iconColor="#C2405C"
-                :gradient="$todayTotal > 0 ? 'linear-gradient(135deg,#dc2626,#9b1c24)' : null"
-                accent="#fadfe3"
+                cardGradient="linear-gradient(135deg,#ec4899,#9d174d)"
                 delay="0ms"
                 :value="$todayTotal"
                 data-mortality-total
@@ -154,10 +151,7 @@
             <x-kpi-card
                 label="{{ $c->cage_code }}"
                 icon="heart-crack"
-                iconBg="#fadfe3"
-                iconColor="#C2405C"
-                :gradient="$count > 0 ? 'linear-gradient(135deg,#dc2626,#9b1c24)' : null"
-                accent="#fadfe3"
+                cardGradient="linear-gradient(135deg,#ec4899,#9d174d)"
                 delay="{{ ($loop->index + 1) * 60 }}ms"
                 :value="$count"
                 data-mortality-cage="{{ $c->cage_code }}"
