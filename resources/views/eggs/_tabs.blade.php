@@ -149,10 +149,14 @@
     bottom-right corner. It sits outside the #egg-content frame, so it survives
     every frame swap untouched.
 
-    Only the tabs that actually give the FAB menu actions render it (stocks,
-    pre-orders); on the rest the menu would be empty, so the FAB is omitted and
-    the client-side tab sync hides it if one is ever reached via navigation.
+    Only the tabs that actually give the FAB menu actions populate it (stocks,
+    pre-orders); the client-side tab sync hides the FAB on every other tab. It is
+    therefore ALWAYS rendered here: the tabs bar + FAB live outside the
+    turbo-frame#egg-content, so a `@if($activeTab == ...)` guard would only ever
+    include it when the initially loaded page was stocks/pre-orders. Navigating
+    to those tabs from any other egg page swaps only the frame, leaving the FAB
+    (and its create buttons) permanently absent. Rendering it unconditionally and
+    letting syncActive() hide it where no action template exists keeps the create
+    buttons available no matter which tab you start on.
 --}}
-@if(in_array($activeTab ?? '', ['stocks', 'preorders']))
-    <x-fab menu-id="egg-fab-menu"></x-fab>
-@endif
+<x-fab menu-id="egg-fab-menu"></x-fab>
