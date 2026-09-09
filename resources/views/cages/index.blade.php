@@ -1667,10 +1667,10 @@ function renderCageInfoPopupContent(m) {
         return '<span class="text-[10px] font-semibold uppercase tracking-[0.08em] shrink-0" style="color:#a39e98;">' + label + '</span>';
     };
     var specValue = function(html, color) {
-        return '<span class="text-xs font-semibold text-right min-w-0" style="color:' + (color || '#1f1f1f') + ';max-width:100%;overflow-wrap:anywhere;">' + html + '</span>';
+        return '<span class="text-xs font-semibold min-w-0" style="color:' + (color || '#1f1f1f') + ';max-width:100%;overflow-wrap:anywhere;">' + html + '</span>';
     };
     var specRowHtml = function(label, valueHtml, first) {
-        return '<div class="flex items-center justify-between gap-3 px-3 py-2 min-w-0"' + (first ? '' : ' style="border-top:1px solid #ececec;"') + '>'
+        return '<div class="flex items-center gap-2.5 px-3 py-2 min-w-0"' + (first ? '' : ' style="border-top:1px solid #ececec;"') + '>'
             + specLabel(label) + valueHtml + '</div>';
     };
 
