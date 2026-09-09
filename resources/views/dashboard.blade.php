@@ -168,24 +168,24 @@
                     <turbo-frame id="dashboard-stats-production" src="{{ route('dashboard.stats.production', ['cage' => request('cage'), 'from_date' => request('from_date')]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-4 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
                     </turbo-frame>
-                    <div id="production-charts-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+                    <div id="production-charts-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start lg:items-stretch">
                         <turbo-frame id="dashboard-cage-performance" src="{{ route('dashboard.cage-performance', ['days' => 30]) }}" loading="lazy" class="block h-full">
                             @include('dashboard._cage-performance-skeleton')
                         </turbo-frame>
 
-                        <turbo-frame id="dashboard-production-history" src="{{ route('dashboard.production-history', ['days' => 30]) }}" loading="lazy" class="block h-full">
+                        <turbo-frame id="dashboard-production-history" src="{{ route('dashboard.production-history', ['days' => 30]) }}" loading="lazy" class="block self-start lg:h-full">
                             @include('dashboard._production-history-skeleton')
                         </turbo-frame>
 
-                        <turbo-frame id="dashboard-egg-collection-time" src="{{ route('dashboard.egg-collection-time', ['days' => 30]) }}" loading="lazy" class="block h-full">
-                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse h-full">
+                        <turbo-frame id="dashboard-egg-collection-time" src="{{ route('dashboard.egg-collection-time', ['days' => 30]) }}" loading="lazy" class="block self-start lg:h-full">
+                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse h-auto lg:h-full">
                                 <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                                 <div class="h-[120px] bg-gray-100 rounded-xl"></div>
                             </div>
                         </turbo-frame>
 
-                        <turbo-frame id="dashboard-hen-age-layrate" src="{{ route('dashboard.hen-age-layrate', ['days' => 30]) }}" loading="lazy" class="block h-full">
-                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse h-full">
+                        <turbo-frame id="dashboard-hen-age-layrate" src="{{ route('dashboard.hen-age-layrate', ['days' => 30]) }}" loading="lazy" class="block self-start lg:h-full">
+                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse h-auto lg:h-full">
                                 <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                                 <div class="h-[120px] bg-gray-100 rounded-xl"></div>
                             </div>
@@ -820,23 +820,33 @@
     };
 
     // ── Production charts: equalize all 4 graph cards to the same height ──
+    // Desktop (lg+): cards sit side-by-side in a 2-column grid, so equal heights look right.
+    // Mobile (<lg): each card occupies its own full-width row — equalizing would stretch
+    // every chart to the tallest card, so just clear any pinned inline heights.
     window.equalizeProductionCharts = function() {
         var grid = document.getElementById('production-charts-grid');
         if (!grid) return;
         var frames = grid.querySelectorAll('turbo-frame');
         if (!frames.length) return;
-        var max = 0;
-        for (var i = 0; i < frames.length; i++) {
-            frames[i].style.height = '';
-            max = Math.max(max, frames[i].offsetHeight);
-        }
-        if (max <= 0) return;
-        for (var j = 0; j < frames.length; j++) {
-            frames[j].style.height = max + 'px';
+        if (window.matchMedia('(min-width: 1024px)').matches) {
+            var max = 0;
+            for (var i = 0; i < frames.length; i++) {
+                frames[i].style.height = '';
+                max = Math.max(max, frames[i].offsetHeight);
+            }
+            if (max <= 0) return;
+            for (var j = 0; j < frames.length; j++) {
+                frames[j].style.height = max + 'px';
+            }
+        } else {
+            for (var k = 0; k < frames.length; k++) {
+                frames[k].style.height = '';
+            }
         }
     };
     document.addEventListener('turbo:frame-load', function () { window.equalizeProductionCharts(); });
     window.addEventListener('load', window.equalizeProductionCharts);
+    window.addEventListener('resize', window.equalizeProductionCharts);
     window.equalizeProductionCharts();
 
     // ΓöÇΓöÇ Cage filter: reloads Turbo Frames with ?cage=CODE ΓöÇΓöÇ
