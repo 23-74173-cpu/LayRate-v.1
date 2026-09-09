@@ -52,7 +52,7 @@
     <div id="farmLayoutSection" class="rounded-xl border p-4 sm:p-6" style="background-color: #ffffff; border-color: #e6e6e6;">
         <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
             <h3 class="text-xs font-semibold tracking-[0.05em] uppercase" style="color: #615d59;">Farm Layout</h3>
-            <div class="flex items-center gap-2 flex-wrap justify-end">
+            <div class="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end gap-2 w-full sm:w-auto">
                 <button id="clearFilterBtn" class="hidden text-xs font-medium px-3 py-1 rounded-lg transition-colors" style="color: #0075de; border: 1px solid #0075de;" onclick="clearCanvasFilter()">Show all</button>
                 @if($isAdmin)
                 <button onclick="openGridSettings()"
@@ -73,12 +73,12 @@
                         onclick="window.toggleCageTouchDrag()"
                         aria-pressed="false"
                         title="Turn off touch dragging so you can scroll or tap cages without accidentally moving them"
-                        class="lg:hidden text-xs font-medium px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors flex items-center gap-1.5">
+                        class="lg:hidden text-xs font-medium px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors flex items-center justify-center gap-1.5">
                     <i data-lucide="hand" class="w-3.5 h-3.5"></i>
                     Drag cages
                 </button>
-                <div class="relative inline-flex items-center">
-                    <x-button id="saveLayoutBtn" onclick="saveLayout()" disabled class="text-xs px-4 py-1.5">
+                <div class="relative grid sm:inline-flex sm:flex sm:items-center w-full sm:w-auto">
+                    <x-button id="saveLayoutBtn" onclick="saveLayout()" disabled class="text-xs px-4 py-1.5 w-full sm:w-auto">
                         Save Layout
                     </x-button>
                     <span id="unsavedDot" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full" style="background-color: #f59e0b; border: 2px solid #ffffff;"></span>

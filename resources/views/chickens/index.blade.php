@@ -39,10 +39,10 @@
         {{-- Filter Bar (single row, wraps on mobile) --}}
         <div id="inventoryFilters" class="mb-5">
             <x-card padding="p-4">
-            <div class="flex flex-wrap items-end gap-x-4 gap-y-3">
+            <div class="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end sm:gap-x-4 sm:gap-y-3">
 
                 {{-- Status --}}
-                <div>
+                <div class="col-span-2 sm:col-span-1">
                     <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Status</label>
                     <div class="flex items-center">
                         @foreach(['all' => 'All', 'active' => 'Active', 'inactive' => 'Inactive'] as $val => $label)
@@ -58,7 +58,7 @@
                 <div>
                     <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Tag Code</label>
                     <input type="text" name="search" value="{{ $search }}" placeholder="Search tag..."
-                           class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-36 sm:w-40 focus:outline-none focus:ring-1 focus:ring-[#002D5E]"
+                           class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-full min-w-0 sm:w-40 focus:outline-none focus:ring-1 focus:ring-[#002D5E]"
                            id="tagSearchInput"
                            oninput="debounceFilter()">
                 </div>
@@ -66,7 +66,7 @@
                 {{-- Cage --}}
                 <div>
                     <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Cage</label>
-                    <select name="cage_id" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="filterInventory()">
+                    <select name="cage_id" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-full min-w-0 sm:w-auto focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="filterInventory()">
                         <option value="">All Cages</option>
                         @foreach($cages as $c)
                         <option value="{{ $c->id }}" {{ $cageId == $c->id ? 'selected' : '' }}>{{ $c->cage_code }}</option>
@@ -77,7 +77,7 @@
                 {{-- Breed --}}
                 <div>
                     <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Breed</label>
-                    <select name="breed" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="filterInventory()">
+                    <select name="breed" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-full min-w-0 sm:w-auto focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="filterInventory()">
                         <option value="">All Breeds</option>
                         @foreach($breeds as $b)
                         <option value="{{ $b }}" {{ $breed == $b ? 'selected' : '' }}>{{ $b }}</option>
@@ -88,7 +88,7 @@
                 {{-- Sort --}}
                 <div>
                     <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Sort</label>
-                    <select name="sort" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="filterInventory()">
+                    <select name="sort" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-full min-w-0 sm:w-auto focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="filterInventory()">
                         <option value="" {{ $sort === '' ? 'selected' : '' }}>Hen ID (A-Z)</option>
                         <option value="chicken_id_desc" {{ $sort === 'chicken_id_desc' ? 'selected' : '' }}>Hen ID (Z-A)</option>
                         <option value="age_asc" {{ $sort === 'age_asc' ? 'selected' : '' }}>Age (Youngest)</option>
@@ -101,7 +101,7 @@
                 </div>
 
                 {{-- Clear filters --}}
-                <x-button variant="secondary" size="sm" onclick="clearFilters()" class="mb-px">Clear filters</x-button>
+                <x-button variant="secondary" size="sm" onclick="clearFilters()" class="mb-px w-full sm:w-auto col-span-2">Clear filters</x-button>
 
             </div>
             </x-card>
