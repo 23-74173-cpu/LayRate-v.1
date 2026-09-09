@@ -151,13 +151,15 @@ class DashboardController extends Controller
         $data['cages']->each(function ($cage) use ($periodStats, $days) {
             $stats = $periodStats->get($cage->id);
             $cage->period_eggs = (int) ($stats?->total_eggs ?? 0);
-            $cage->period_hdep = $cage->hen_count > 0 && $days > 0
-                ? round($cage->period_eggs / ($cage->hen_count * $days) * 100, 1)
-                : 0;
-            // Fall back to stored avg_hdep if available and computed value is zero but eggs exist.
-            if ($cage->period_hdep === 0.0 && $stats?->avg_hdep !== null) {
-                $cage->period_hdep = round((float) $stats->avg_hdep, 1);
-            }
+            // Use the stored per-log HDEP average, which weights by actual
+            // hen-days (each log records its own hen_count).  The manual
+            // formula  eggs / (hen_count × days)  over-estimates the
+            // denominator because not every slot logs every day.
+            $cage->period_hdep = $stats?->avg_hdep !== null
+                ? round((float) $stats->avg_hdep, 1)
+                : ($cage->hen_count > 0 && $days > 0
+                    ? round($cage->period_eggs / ($cage->hen_count * $days) * 100, 1)
+                    : 0);
         });
 
         $data['days'] = $days;

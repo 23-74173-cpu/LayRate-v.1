@@ -62,12 +62,11 @@ class AnalyticsController extends Controller
             $data['cages']->each(function ($cage) use ($periodStats, $days) {
                 $stats = $periodStats->get($cage->id);
                 $cage->period_eggs = (int) ($stats?->total_eggs ?? 0);
-                $cage->period_hdep = $cage->hen_count > 0 && $days > 0
-                    ? round($cage->period_eggs / ($cage->hen_count * $days) * 100, 1)
-                    : 0;
-                if ($cage->period_hdep === 0.0 && $stats?->avg_hdep !== null) {
-                    $cage->period_hdep = round((float) $stats->avg_hdep, 1);
-                }
+                $cage->period_hdep = $stats?->avg_hdep !== null
+                    ? round((float) $stats->avg_hdep, 1)
+                    : ($cage->hen_count > 0 && $days > 0
+                        ? round($cage->period_eggs / ($cage->hen_count * $days) * 100, 1)
+                        : 0);
             });
 
             $cages = $data['cages'];
