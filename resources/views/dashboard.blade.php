@@ -111,7 +111,7 @@
                     <i data-lucide="calendar-days" class="w-4 h-4"></i>
                     <span>From</span>
                 </label>
-                <input type="date" id="dashboardFromDate" value="{{ request('from_date', '') }}"
+                <input type="date" id="dashboardFromDate" value="{{ request('from_date', today()->toDateString()) }}"
                        max="{{ now()->toDateString() }}"
                        onchange="setDashboardFromDate(this.value)"
                        title="Show analytics from this date to today"
@@ -819,29 +819,19 @@
         reloadFramePreservingScroll('dashboard-stats', url);
     };
 
-    // ── Production charts: equalize all 4 graph cards to the same height ──
-    // Desktop (lg+): cards sit side-by-side in a 2-column grid, so equal heights look right.
-    // Mobile (<lg): each card occupies its own full-width row — equalizing would stretch
-    // every chart to the tallest card, so just clear any pinned inline heights.
+    // ── Production charts equalizer ──
+    // Previously this pinned all 4 frames to the tallest card's height on every
+    // breakpoint.  That inflated the two smaller chart cards (egg-collection,
+    // hen-age) on desktop and all chart cards on mobile.  The CSS grid
+    // (items-stretch + h-full frames + flex-1 holders) already produces
+    // correct per-row equal heights, so this function now only clears any
+    // leftover inline heights that the old equalizer left behind.
     window.equalizeProductionCharts = function() {
         var grid = document.getElementById('production-charts-grid');
         if (!grid) return;
         var frames = grid.querySelectorAll('turbo-frame');
-        if (!frames.length) return;
-        if (window.matchMedia('(min-width: 1024px)').matches) {
-            var max = 0;
-            for (var i = 0; i < frames.length; i++) {
-                frames[i].style.height = '';
-                max = Math.max(max, frames[i].offsetHeight);
-            }
-            if (max <= 0) return;
-            for (var j = 0; j < frames.length; j++) {
-                frames[j].style.height = max + 'px';
-            }
-        } else {
-            for (var k = 0; k < frames.length; k++) {
-                frames[k].style.height = '';
-            }
+        for (var k = 0; k < frames.length; k++) {
+            if (frames[k].style.height) frames[k].style.height = '';
         }
     };
     document.addEventListener('turbo:frame-load', function () { window.equalizeProductionCharts(); });
