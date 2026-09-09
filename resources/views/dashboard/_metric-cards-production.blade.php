@@ -4,6 +4,7 @@
             <h3 class="text-[10px] font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-2">
                 <i data-lucide="factory" class="w-4 h-4 inline-block mr-1.5 -mt-0.5" style="color:#0075de;"></i>
                 Production
+                @if($kpiAsOf ?? null)<span class="normal-case tracking-normal font-medium text-[#9ca3af]">· as of {{ $kpiAsOf }}</span>@endif
             </h3>
             <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <x-kpi-card
