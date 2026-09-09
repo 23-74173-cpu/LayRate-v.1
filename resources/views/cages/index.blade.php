@@ -145,7 +145,7 @@
             #cageInfoPopup .flipper { transform-style: preserve-3d; transition: transform 0.35s ease; display: grid; }
             #cageInfoPopup .flipper.flipped { transform: rotateY(180deg); }
             #cageInfoPopup .front-face,
-            #cageInfoPopup .back-face { grid-area: 1 / 1; backface-visibility: hidden; background-color: #ffffff; border-radius: 11px; }
+            #cageInfoPopup .back-face { grid-area: 1 / 1; backface-visibility: hidden; background-color: #ffffff; border-radius: 11px; min-height: 0; overflow: hidden; display: flex; flex-direction: column; max-height: min(540px, calc(100vh - 3rem)); }
             #cageInfoPopup .back-face { transform: rotateY(180deg); }
             #cageInfoBackdrop { transition: opacity 0.2s ease; }
             #cageInfoPopup .slot-mini { transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease; }
@@ -153,7 +153,7 @@
             #cageInfoPopup .slot-mini:active { transform: scale(1.05); }
         </style>
         <div id="cageInfoBackdrop" class="hidden fixed inset-0 z-40" style="background-color: rgba(107,114,128,0.45); backdrop-filter: blur(4px);" onclick="closeCageInfoPopup()"></div>
-        <div id="cageInfoPopup" class="hidden fixed z-50 rounded-xl border bg-white shadow-lg p-0 w-64" style="border-color: #e6e6e6; max-width: calc(100vw - 2rem); max-height: calc(100vh - 1.5rem); overflow-y: auto;">
+        <div id="cageInfoPopup" class="hidden fixed z-50 rounded-xl border bg-white shadow-lg p-0 w-64" style="border-color: #e6e6e6; max-width: calc(100vw - 2rem); max-height: min(540px, calc(100vh - 3rem)); overflow-y: auto;">
             <div id="cageInfoPopupContent"></div>
         </div>
     </div>
@@ -1478,37 +1478,68 @@ function renderCageOverlays() {
 
 // ── Cage Info Popup (mirrors the cage detail card: front slot grid + back details) ──
 function renderCageInfoPopupSlotGrid(m) {
-    var cols = Math.min(m.slots_per_row, 6);
-    var html = '<div class="grid gap-1 slot-grid-' + m.id + '" style="grid-template-columns:repeat(' + cols + ', 32px);justify-content:flex-start;">';
-    for (var i = 0; i < m.slots.length; i++) {
-        var s = m.slots[i];
-        var isSensor = s.has_sensor;
-        var occupancy = s.occupancy;
-        var maxPerSlot = m.max_chickens_per_slot || 4;
-        var fillRatio = maxPerSlot > 0 ? Math.min(1, occupancy / maxPerSlot) : 0;
-        var slotBg, slotBorder, slotContent;
-        if (isSensor) {
-            slotBg = '#d6f0e3';
-            slotBorder = '#2a9d6a';
-            slotContent = occupancy > 0 ? '<span class="text-xs font-semibold" style="color:#1f6b3a;">' + occupancy + '</span>' : '<span class="text-xs" style="color:#d1d5db;">—</span>';
-        } else if (occupancy > 0) {
-            var gray = Math.round(248 - (fillRatio * 40));
-            slotBg = 'rgb(' + gray + ',' + gray + ',' + gray + ')';
-            slotBorder = gray > 235 ? '#e6e6e6' : '#d1d5db';
-            slotContent = '<span class="text-xs font-semibold" style="color:#1f1f1f;">' + occupancy + '</span>';
-        } else {
-            slotBg = '#ffffff';
-            slotBorder = '#e6e6e6';
-            slotContent = '<span class="text-xs" style="color:#d1d5db;">—</span>';
+    var rows = Math.max(1, m.rows || 1);
+    var cols = Math.max(1, m.slots_per_row || 1);
+    // Lay the slots out exactly like the canvas cage: rows × slots-per-row, in
+    // row-major slot-number order, at full 38px cell size. Wide cages overflow
+    // horizontally inside the scrollable front body instead of shrinking.
+    var cell = 38;
+
+    var byNum = {};
+    for (var i = 0; i < m.slots.length; i++) byNum[m.slots[i].number] = m.slots[i];
+
+    // Axis labels: column numbers on top (C1..Cn), row numbers on the left
+    // (R1..Rm), so each slot's position in the cage is obvious at a glance.
+    var labelW = 26;
+    var label = function(txt) {
+        return '<span class="text-center leading-none" style="font-size:9px;font-weight:600;color:#a39e98;">' + txt + '</span>';
+    };
+    var html = '<div class="grid gap-1 slot-grid-' + m.id + '" style="grid-template-columns:' + labelW + 'px repeat(' + cols + ', ' + cell + 'px);justify-content:flex-start;align-items:center;">';
+    html += '<span style="height:12px;"></span>';
+    for (var c = 1; c <= cols; c++) html += label('C' + c);
+    for (var r = 1; r <= rows; r++) {
+        html += label('R' + r);
+        for (var c = 1; c <= cols; c++) {
+            var s = byNum[(r - 1) * cols + c];
+            if (s) {
+                html += renderCageInfoPopupSlotCell(m, s);
+            } else {
+                html += '<span class="slot-mini rounded" style="width:' + cell + 'px;height:' + cell + 'px;background-color:#f7f7f7;border:1px dashed #e0e0e0;" title="Missing slot"></span>';
+            }
         }
-        var sensorDot = isSensor ? '<span class="absolute top-0 right-0 w-1.5 h-1.5 rounded-bl" style="background-color:#0075de;"></span>' : '';
-        html += '<button type="button" onclick="expandSlotInPopup(this)" class="slot-mini w-8 h-8 rounded flex flex-col items-center justify-center text-xs relative cursor-pointer transition-colors" data-cage-id="' + m.id + '" data-slot-id="' + s.id + '" data-cage-code="' + m.code.replace(/"/g, '&quot;') + '" data-original-number="' + s.number + '" style="background-color:' + slotBg + ';border:1px solid ' + slotBorder + ';" title="Slot ' + s.row + '-' + s.col + ': ' + occupancy + ' hens' + (isSensor ? ' (sensor equipped)' : '') + '" aria-label="Slot ' + s.row + '-' + s.col + ', ' + occupancy + ' hens">'
-            + sensorDot
-            + '<span class="slot-reorder-number hidden text-[10px] font-bold" style="color:#002D5E;">' + s.number + '</span>'
-            + slotContent + '</button>';
     }
     html += '</div>';
     return html;
+}
+
+function renderCageInfoPopupSlotCell(m, s) {
+    var isSensor = s.has_sensor;
+    var occupancy = s.occupancy;
+    var maxPerSlot = m.max_chickens_per_slot || 4;
+    var fillRatio = maxPerSlot > 0 ? Math.min(1, occupancy / maxPerSlot) : 0;
+    var fontSize = '12px';
+    var slotBg, slotBorder, slotContent;
+    if (isSensor) {
+        slotBg = '#d6f0e3';
+        slotBorder = '#2a9d6a';
+        slotContent = occupancy > 0
+            ? '<span class="font-semibold" style="font-size:' + fontSize + ';color:#1f6b3a;">' + occupancy + '</span>'
+            : '<span style="font-size:' + fontSize + ';color:#d1d5db;">—</span>';
+    } else if (occupancy > 0) {
+        var gray = Math.round(248 - (fillRatio * 40));
+        slotBg = 'rgb(' + gray + ',' + gray + ',' + gray + ')';
+        slotBorder = gray > 235 ? '#e6e6e6' : '#d1d5db';
+        slotContent = '<span class="font-semibold" style="font-size:' + fontSize + ';color:#1f1f1f;">' + occupancy + '</span>';
+    } else {
+        slotBg = '#ffffff';
+        slotBorder = '#e6e6e6';
+        slotContent = '<span style="font-size:' + fontSize + ';color:#d1d5db;">—</span>';
+    }
+    var sensorDot = isSensor ? '<span class="absolute top-0 right-0 w-1.5 h-1.5 rounded-bl" style="background-color:#0075de;"></span>' : '';
+    return '<button type="button" onclick="expandSlotInPopup(this)" class="slot-mini rounded flex flex-col items-center justify-center relative cursor-pointer transition-colors" data-cage-id="' + m.id + '" data-slot-id="' + s.id + '" data-cage-code="' + m.code.replace(/"/g, '&quot;') + '" data-original-number="' + s.number + '" style="width:38px;height:38px;background-color:' + slotBg + ';border:1px solid ' + slotBorder + ';" title="Slot ' + s.row + '-' + s.col + ': ' + occupancy + ' hens' + (isSensor ? ' (sensor equipped)' : '') + '" aria-label="Slot ' + s.row + '-' + s.col + ', ' + occupancy + ' hens">'
+        + sensorDot
+        + '<span class="slot-reorder-number hidden font-bold" style="font-size:' + fontSize + ';color:#002D5E;">' + s.number + '</span>'
+        + slotContent + '</button>';
 }
 
 function renderCageInfoPopupContent(m) {
@@ -1529,10 +1560,10 @@ function renderCageInfoPopupContent(m) {
     var accentBar = '<div style="width:4px;align-self:stretch;background-color:' + accentColor + ';border-radius:3px;flex-shrink:0;"></div>';
 
     // ── FRONT FACE ──
-    var frontHeader = '<div class="flex items-center gap-3 px-3 pt-3 pb-2 border-b" style="background-color:#f8f8f8;border-bottom-color:#e6e6e6;border-top-left-radius:11px;border-top-right-radius:11px;">'
+    var frontHeader = '<div class="flex items-center gap-3 px-3 pt-3 pb-2 border-b shrink-0" style="background-color:#f8f8f8;border-bottom-color:#e6e6e6;border-top-left-radius:11px;border-top-right-radius:11px;">'
         + accentBar
         + '<div class="flex items-center gap-2 min-w-0 flex-1">'
-        + '<span class="text-sm font-bold shrink-0" style="color:' + m.color + '">' + m.code + '</span>'
+        + '<span class="text-sm font-bold min-w-0 truncate" style="color:' + m.color + '">' + m.code + '</span>'
         + '<span class="text-[10px] px-2 py-0.5 rounded-full shrink-0 font-semibold" style="background-color:' + (m.is_active ? '#e8f5ec' : '#f0f0f0') + ';color:' + (m.is_active ? '#1f6b3a' : '#615d59') + ';">' + (m.is_active ? 'Active' : 'Inactive') + '</span>'
         + '</div>'
         + '<div class="flex items-center gap-1 shrink-0">'
@@ -1542,7 +1573,7 @@ function renderCageInfoPopupContent(m) {
         + '</div>'
         + '</div>';
 
-    var frontBody = '<div class="px-4 py-3">'
+    var frontBody = '<div class="px-4 py-3 flex-1 min-h-0 overflow-auto">'
         + renderCageInfoPopupSlotGrid(m)
         + '<p class="text-[10px] mt-1.5 flex items-center gap-1" style="color:#a39e98;"><i data-lucide="mouse-pointer-click" class="w-3 h-3"></i> Click a slot to view details</p>'
         + '<div id="popupReorderBar-' + m.id + '" class="hidden mt-2 flex items-center justify-between text-xs" style="color:#615d59;">'
@@ -1574,24 +1605,50 @@ function renderCageInfoPopupContent(m) {
     var frontFace = '<div class="front-face flex flex-col" style="z-index:2;">' + frontHeader + frontBody + frontFooter + '</div>';
 
     // ── BACK FACE ──
-    var backHeader = '<div class="flex items-center gap-3 px-3 pt-3 pb-2 border-b" style="background-color:#f8f8f8;border-bottom-color:#e6e6e6;border-top-left-radius:11px;border-top-right-radius:11px;">'
+    var backHeader = '<div class="flex items-center gap-3 px-3 pt-3 pb-2 border-b shrink-0" style="background-color:#f8f8f8;border-bottom-color:#e6e6e6;border-top-left-radius:11px;border-top-right-radius:11px;">'
         + accentBar
-        + '<span class="text-sm font-bold flex-1" style="color:' + m.color + ';">' + m.code + '</span>'
+        + '<span class="text-sm font-bold flex-1 min-w-0 truncate" style="color:' + m.color + ';">' + m.code + '</span>'
         + '<button onclick="flipCageInfoPopup()" class="icon-btn" style="color:#615d59;" aria-label="Back" title="Back"><i data-lucide="arrow-left" class="w-3.5 h-3.5"></i></button>'
         + '</div>';
 
-    var specs = '<div class="grid grid-cols-[60px_1fr] gap-x-2 gap-y-1.5 text-xs">'
-        + '<span class="font-medium" style="color:#a39e98;">Dims</span><span style="color:#1f1f1f;">' + (m.rows || '?') + '×' + (m.slots_per_row || '?') + ' · ' + m.slots.length + ' slots</span>'
-        + '<span class="font-medium" style="color:#a39e98;">Cap</span><span style="color:#1f1f1f;">' + m.current_occupancy + ' / ' + (m.total_capacity || '?') + ' hens</span>';
+    // Back-face spec rows. Redesigned as a divided stat card: muted uppercase
+    // labels left, right-aligned values that wrap (min-w-0 + overflow-wrap:
+    // anywhere) instead of pushing the text past the popup frame.
+    var specLabel = function(label) {
+        return '<span class="text-[10px] font-semibold uppercase tracking-[0.08em] shrink-0" style="color:#a39e98;">' + label + '</span>';
+    };
+    var specValue = function(html, color) {
+        return '<span class="text-xs font-semibold text-right min-w-0" style="color:' + (color || '#1f1f1f') + ';max-width:100%;overflow-wrap:anywhere;">' + html + '</span>';
+    };
+    var specRowHtml = function(label, valueHtml, first) {
+        return '<div class="flex items-center justify-between gap-3 px-3 py-2 min-w-0"' + (first ? '' : ' style="border-top:1px solid #ececec;"') + '>'
+            + specLabel(label) + valueHtml + '</div>';
+    };
+
+    var specRows = [];
+    var occBadge = occupancyPct > 0
+        ? '<span class="ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold shrink-0" style="background-color:' + (occupancyPct >= 100 ? '#fbe4e6' : (occupancyPct >= 75 ? '#fdf0e4' : '#e8f5ec')) + ';color:' + (occupancyPct >= 100 ? '#9b1c24' : (occupancyPct >= 75 ? '#c2703e' : '#1f6b3a')) + ';">' + occupancyPct + '%</span>'
+        : '';
+    specRows.push(specRowHtml('Status',
+        specValue(m.is_active ? 'Active' : 'Inactive', m.is_active ? '#1f6b3a' : '#615d59') + occBadge, true));
+    specRows.push(specRowHtml('Dims',
+        specValue((m.rows || '?') + '×' + (m.slots_per_row || '?'))
+        + '<span class="text-[10px] shrink-0 ml-1" style="color:#a39e98;">' + m.slots.length + ' slots</span>'));
+    specRows.push(specRowHtml('Cap',
+        specValue(m.current_occupancy + ' / ' + (m.total_capacity || '?') + ' hens')));
     if (m.breed && m.breed !== '—') {
-        specs += '<span class="font-medium" style="color:#a39e98;">Breed</span><span style="color:#1f1f1f;">' + m.breed + (m.primary_age_weeks ? ' · ' + m.primary_age_weeks + 'w' : '') + '</span>';
+        specRows.push(specRowHtml('Breed',
+            specValue(m.breed + (m.primary_age_weeks ? ' · ' + m.primary_age_weeks + 'w' : ''))));
     }
     if (sensorCount > 0) {
-        specs += '<span class="font-medium" style="color:#a39e98;">Sensor</span><span style="color:#1f1f1f;">' + sensorCount + ' slot' + (sensorCount > 1 ? 's' : '') + '</span>';
+        specRows.push(specRowHtml('Sensor', specValue(sensorCount + ' slot' + (sensorCount > 1 ? 's' : ''))));
     }
-    specs += '</div>';
 
-    var backBody = '<div class="flex-1 px-4 py-3 space-y-2.5 overflow-y-auto">' + specs + '</div>';
+    var specs = '<div class="rounded-lg overflow-hidden" style="background-color:#fbfbfb;border:1px solid #ececec;box-shadow:inset 0 1px 2px rgba(0,0,0,0.02);">'
+        + specRows.join('')
+        + '</div>';
+
+    var backBody = '<div class="flex-1 px-4 py-3 space-y-2.5 overflow-y-auto min-h-0">' + specs + '</div>';
 
     var backFooter = '<div class="flex items-center justify-around px-4 py-2 border-t shrink-0" style="border-color:#e6e6e6;">';
     if (IS_ADMIN) {
@@ -1661,6 +1718,7 @@ function positionCageInfoPopup(popup, targetRect) {
     }
     var left = targetRect.right + margin;
     var top = targetRect.top;
+    var bottomRoom = 24; // keep the popup clear of the screen frame when pinned low
 
     if (left + popupRect.width > viewportW - margin) {
         left = targetRect.left - popupRect.width - margin;
@@ -1668,11 +1726,11 @@ function positionCageInfoPopup(popup, targetRect) {
     if (left < margin) {
         left = margin;
     }
-    if (top + popupRect.height > viewportH - margin) {
-        top = viewportH - popupRect.height - margin;
+    if (top + popupRect.height > viewportH - bottomRoom) {
+        top = viewportH - popupRect.height - bottomRoom;
     }
-    if (top < margin) {
-        top = margin;
+    if (top < bottomRoom) {
+        top = bottomRoom;
     }
 
     popup.style.left = left + 'px';
@@ -1699,7 +1757,7 @@ function openCageInfoPopup(cageId, btnEl) {
     if (backdrop) backdrop.classList.remove('hidden');
     popup._cageInfoBtnEl = btnEl;
     popup._cageInfoCageId = cageId;
-    popup.style.width = '16rem';
+    popup.style.width = '22rem';
     window.__popupReorderBound = false;
 
     positionCageInfoPopup(popup, btnEl.getBoundingClientRect());
