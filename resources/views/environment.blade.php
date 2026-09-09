@@ -7,6 +7,20 @@
     <x-page-header title="Environment" subtitle="Monitor coop temperature, humidity, and alert thresholds" />
 
     <x-fab>
+        <button type="button" onclick="openEnvFanModal()"
+                class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>Cooling Fan</span>
+            <div class="w-8 h-8 rounded-full bg-[#6B4C8A]/10 flex items-center justify-center">
+                <i data-lucide="fan" class="w-4 h-4 text-[#6B4C8A]"></i>
+            </div>
+        </button>
+        <button type="button" onclick="openEnvManualModal()"
+                class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>Manual Entry</span>
+            <div class="w-8 h-8 rounded-full bg-[#6B4C8A]/10 flex items-center justify-center">
+                <i data-lucide="pen-line" class="w-4 h-4 text-[#6B4C8A]"></i>
+            </div>
+        </button>
         <button type="button" onclick="openEnvThresholdsModal()"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Configure Thresholds</span>
@@ -29,80 +43,6 @@
             @keyframes layrate-fan-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
             .layrate-fan-spinning { animation: layrate-fan-spin 1s linear infinite; }
         </style>
-
-        {{-- ── Fan Control Card (SSE-driven — lives outside the polled turbo-frame) ── --}}
-        <div id="relayCard" class="bg-white rounded-xl border border-[#D9D9D9] p-5 mb-6">
-            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div class="flex items-center gap-4">
-                    <div id="relayFanBubble" class="w-14 h-14 rounded-full flex items-center justify-center shrink-0 transition-colors"
-                         style="background:#F0F0F0; color:#615d59;">
-                        <i data-lucide="fan" class="w-7 h-7"></i>
-                    </div>
-                    <div>
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <div class="text-sm font-semibold text-[#1f1f1f]">Cooling Fan</div>
-                            <span id="relayStatusBadge" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold leading-none whitespace-nowrap"
-                                  style="background:#F0F0F0; color:#615d59; border:1px solid #E6E6E6;">—</span>
-                            <span id="relayModeBadge" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold leading-none whitespace-nowrap"
-                                  style="background:#eef2fb; color:#002D5E; border:1px solid #d6e0f2;">AUTO</span>
-                        </div>
-                        <div id="relaySubtext" class="text-xs text-[#6B7280] mt-1">Waiting for sensor signal…</div>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button type="button" data-relay-action="on"
-                            class="relay-action-btn inline-flex items-center justify-center rounded-lg border border-[#D9D9D9] px-4 py-2 text-sm font-medium text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">Fan ON</button>
-                    <button type="button" data-relay-action="off"
-                            class="relay-action-btn inline-flex items-center justify-center rounded-lg border border-[#D9D9D9] px-4 py-2 text-sm font-medium text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">Fan OFF</button>
-                    <button type="button" data-relay-action="auto"
-                            class="relay-action-btn inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors"
-                            style="background:#002D5E;">AUTO</button>
-                </div>
-            </div>
-        </div>
-
-        {{-- ── Manual Reading Entry ── --}}
-        <div class="bg-white rounded-xl border border-[#D9D9D9] p-5 mb-6">
-            <div class="flex items-center gap-2 mb-1">
-                <i data-lucide="pen-line" class="w-4 h-4" style="color:#002D5E;"></i>
-                <h3 class="text-sm font-semibold text-[#1f1f1f]">Manual Reading Entry</h3>
-            </div>
-            <p class="text-xs text-[#6B7280] mb-3">Enter a reading by hand when a sensor is unavailable. Pick <strong>All Cages</strong> to apply the same reading to every cage. This overrides today's sensor reading.</p>
-            <form id="envManualForm" method="POST" action="{{ route('environment.manual') }}" data-turbo="false" class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-                @csrf
-                <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color:#615d59;">Cage</label>
-                    <select name="cage_id" id="envManualCage" required
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
-                            style="border-color:#e6e6e6;color:#1f1f1f;">
-                        <option value="">Select cage…</option>
-                        <option value="all" {{ old('cage_id') === 'all' ? 'selected' : '' }}>All Cages</option>
-                        @foreach($cages as $id => $code)
-                        <option value="{{ $id }}" {{ old('cage_id') == $id ? 'selected' : '' }}>{{ $code }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color:#615d59;">Temperature (°C)</label>
-                    <input type="number" name="temperature_c" id="envManualTemp" step="0.1" min="-10" max="60" required
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
-                           style="border-color:#e6e6e6;color:#1f1f1f;">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color:#615d59;">Humidity (%)</label>
-                    <input type="number" name="humidity_pct" id="envManualHum" step="1" min="0" max="100" required
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
-                           style="border-color:#e6e6e6;color:#1f1f1f;">
-                </div>
-                <div class="sm:col-span-3">
-                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white hover:brightness-95 transition-colors"
-                            style="background-color:#002D5E;">
-                        <i data-lucide="save" class="w-4 h-4"></i> Save Reading
-                    </button>
-                </div>
-            </form>
-            <div id="envManualMsg" class="hidden mt-3 text-sm"></div>
-        </div>
 
         {{-- Live Data (lazy): metrics, thresholds, sensor cards, trends --}}
         <turbo-frame id="environment-live-data" src="{{ route('environment.live-data') }}" loading="lazy">
@@ -211,6 +151,101 @@
     </div>
 </div>
 
+{{-- ── Cooling Fan Control Modal (SSE-driven state + manual relay control) ── --}}
+<div id="envFanModal" data-modal data-close="closeEnvFanModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEnvFanModal()"></div>
+    <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+        <div class="flex items-center justify-between mb-2">
+            <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Cooling Fan</h2>
+            <button onclick="closeEnvFanModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+            </button>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <div id="relayFanBubble" class="w-14 h-14 rounded-full flex items-center justify-center shrink-0 transition-colors"
+                 style="background:#F0F0F0; color:#615d59;">
+                <i data-lucide="fan" class="w-7 h-7"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span id="relayStatusBadge" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold leading-none whitespace-nowrap"
+                          style="background:#F0F0F0; color:#615d59; border:1px solid #E6E6E6;">—</span>
+                    <span id="relayModeBadge" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold leading-none whitespace-nowrap"
+                          style="background:#eef2fb; color:#002D5E; border:1px solid #d6e0f2;">AUTO</span>
+                </div>
+                <div id="relaySubtext" class="text-xs text-[#6B7280] mt-1">Waiting for sensor signal…</div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap mt-5">
+            <button type="button" data-relay-action="on"
+                    class="relay-action-btn inline-flex items-center justify-center rounded-lg border border-[#D9D9D9] px-4 py-2 text-sm font-medium text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">Fan ON</button>
+            <button type="button" data-relay-action="off"
+                    class="relay-action-btn inline-flex items-center justify-center rounded-lg border border-[#D9D9D9] px-4 py-2 text-sm font-medium text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">Fan OFF</button>
+            <button type="button" data-relay-action="auto"
+                    class="relay-action-btn inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors"
+                    style="background:#002D5E;">AUTO</button>
+        </div>
+
+        <div class="flex gap-3 mt-5">
+            <button type="button" onclick="closeEnvFanModal()"
+                    class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">Close</button>
+        </div>
+    </div>
+</div>
+
+{{-- ── Manual Reading Entry Modal ── --}}
+<div id="envManualModal" data-modal data-close="closeEnvManualModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEnvManualModal()"></div>
+    <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+        <div class="flex items-center justify-between mb-2">
+            <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Manual Reading Entry</h2>
+            <button onclick="closeEnvManualModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+            </button>
+        </div>
+        <p class="text-xs text-[#6B7280] mb-4">Enter a reading by hand when a sensor is unavailable. Pick <strong>All Cages</strong> to apply the same reading to every cage. This overrides today's sensor reading.</p>
+
+        <form id="envManualForm" method="POST" action="{{ route('environment.manual') }}" data-turbo="false" class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+            @csrf
+            <div class="sm:col-span-2">
+                <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color:#615d59;">Cage</label>
+                <select name="cage_id" id="envManualCage" required
+                        class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                        style="border-color:#e6e6e6;color:#1f1f1f;">
+                    <option value="">Select cage…</option>
+                    <option value="all" {{ old('cage_id') === 'all' ? 'selected' : '' }}>All Cages</option>
+                    @foreach($cages as $id => $code)
+                    <option value="{{ $id }}" {{ old('cage_id') == $id ? 'selected' : '' }}>{{ $code }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color:#615d59;">Temperature (°C)</label>
+                <input type="number" name="temperature_c" id="envManualTemp" step="0.1" min="-10" max="60" required
+                       class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                       style="border-color:#e6e6e6;color:#1f1f1f;">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color:#615d59;">Humidity (%)</label>
+                <input type="number" name="humidity_pct" id="envManualHum" step="1" min="0" max="100" required
+                       class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                       style="border-color:#e6e6e6;color:#1f1f1f;">
+            </div>
+            <div id="envManualMsg" class="hidden mt-3 text-sm sm:col-span-2"></div>
+            <div class="flex gap-3 sm:col-span-2">
+                <button type="button" onclick="closeEnvManualModal()"
+                        class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">Cancel</button>
+                <button type="submit" class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white hover:brightness-95 transition-colors"
+                        style="background-color:#002D5E;">
+                    <i data-lucide="save" class="w-4 h-4"></i> Save Reading
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
@@ -248,6 +283,43 @@ function openEnvThresholdsModal() {
 
 function closeEnvThresholdsModal() {
     var modal = document.getElementById('envThresholdsModal');
+    if (!modal) return;
+    modal.style.display = 'none';
+    startLivePolling();
+}
+
+// ── Cooling Fan Modal ──
+function openEnvFanModal() {
+    var modal = document.getElementById('envFanModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    stopLivePolling();
+    startRelaySSE();
+}
+
+function closeEnvFanModal() {
+    var modal = document.getElementById('envFanModal');
+    if (!modal) return;
+    modal.style.display = 'none';
+    startLivePolling();
+    var livePanel = document.getElementById('panelLiveData');
+    if (livePanel && livePanel.classList.contains('hidden')) stopRelaySSE();
+}
+
+// ── Manual Reading Entry Modal ──
+function openEnvManualModal() {
+    var modal = document.getElementById('envManualModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    stopLivePolling();
+    var msg = document.getElementById('envManualMsg');
+    if (msg) msg.classList.add('hidden');
+}
+
+function closeEnvManualModal() {
+    var modal = document.getElementById('envManualModal');
     if (!modal) return;
     modal.style.display = 'none';
     startLivePolling();
@@ -485,7 +557,7 @@ function paintRelayButtons(activeAction) {
 }
 
 function startRelaySSE() {
-    var card = document.getElementById('relayCard');
+    var card = document.getElementById('envFanModal');
     if (!card) return;
     if (window.__relaySource) window.__relaySource.close();
     var url = '{{ route("environment.relay-stream") }}';
@@ -496,7 +568,7 @@ function startRelaySSE() {
     window.__relaySource.onerror = function() {
         if (window.__relaySource && window.__relaySource.readyState === EventSource.CLOSED) {
             setTimeout(function() {
-                if (document.getElementById('relayCard')) startRelaySSE();
+                if (document.getElementById('envFanModal')) startRelaySSE();
             }, 3000);
         }
     };
@@ -592,6 +664,8 @@ if (!window.__envThresholdsEscapeBound) {
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closeEnvThresholdsModal();
+            closeEnvFanModal();
+            closeEnvManualModal();
             closeEnvLogOverride();
         }
     });
