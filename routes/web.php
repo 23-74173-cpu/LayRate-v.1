@@ -60,6 +60,7 @@ Route::middleware(['auth', 'system-time-set'])->group(function () {
     Route::get('/dashboard/stats/production', [DashboardController::class, 'statsProduction'])->name('dashboard.stats.production');
     Route::get('/dashboard/stats/environment', [DashboardController::class, 'statsEnvironment'])->name('dashboard.stats.environment');
     Route::get('/dashboard/stats/feed', [DashboardController::class, 'statsFeed'])->name('dashboard.stats.feed');
+    Route::get('/dashboard/stats/flock', [DashboardController::class, 'statsFlock'])->name('dashboard.stats.flock');
 
     // Initial setup wizard — admin only, mandatory first run
     Route::middleware('admin')->group(function () {

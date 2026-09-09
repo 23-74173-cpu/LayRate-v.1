@@ -21,6 +21,8 @@
  * @param string $iconColor    Chip icon color + border color.
  * @param string|null $iconBorder Optional chip border override (defaults to $iconColor)
  * @param string|null $gradient CSS background-image value (e.g. "linear-gradient(135deg,#16a34a,#2D7D46)"). If null, value renders as solid #102A4C.
+ * @param string|null $cardGradient CSS background-image for the whole card. When set, the card gets a gradient
+ *        background with white number/label/chip text (gradient text on the number is removed).
  * @param string|null $accent  Bottom 3px accent bar color. Defaults to $iconBg.
  * @param string $delay        CSS animation-delay (e.g. "60ms")
  * @param string|null $href    Navigation URL -> sets data-nav + role=link / cursor-pointer
@@ -83,6 +85,7 @@
     'iconColor' => '#6B7280',
     'iconBorder' => null,
     'gradient' => null,
+    'cardGradient' => null,
     'accent' => null,
     'delay' => '0ms',
     'href' => null,
@@ -97,7 +100,8 @@
 
 @php
     $iconBorder = $iconBorder ?? $iconColor;
-    $accent = $accent ?? $iconBg;
+    $gradientCard = $cardGradient !== null && $cardGradient !== '';
+    $accent = $accent ?? ($gradientCard ? 'rgba(255,255,255,0.35)' : $iconBg);
     $isPlain = $variant === 'plain';
     $isClickable = $href !== null && $href !== '';
     // Resolve secondary slot: named slot $secondary takes precedence over default $slot
@@ -132,16 +136,20 @@
 @else
     {{-- Default variant: full Dashboard KPI card – pixel-equivalent to hand-copied original --}}
     <div {{ $attributes->merge(['class' => 'kpi-card dash-rise relative overflow-hidden rounded-2xl border p-3' . ($isClickable ? ' cursor-pointer' : '')]) }}
-         style="background-color: #f8f8f8; border-color: #e6e6e6; animation-delay: {{ $delay }};"
+         style="{{ $gradientCard ? 'background-image: ' . $cardGradient . '; border-color: rgba(255,255,255,0.28);' : 'background-color: #f8f8f8; border-color: #e6e6e6;' }} animation-delay: {{ $delay }};"
          @if($isClickable) role="link" tabindex="0" aria-label="{{ $outerAriaLabel }}" data-nav="{{ $href }}" @endif
          @if($kpi) data-kpi="{{ $kpi }}" @endif
     >
         @if($icon)
-            <span class="kpi-watermark" style="color:#CDD2DA;"><i data-lucide="{{ $icon }}" class="w-full h-full"></i></span>
+            <span class="kpi-watermark" style="color:{{ $gradientCard ? 'rgba(255,255,255,0.95)' : '#CDD2DA' }};"><i data-lucide="{{ $icon }}" class="w-full h-full"></i></span>
         @endif
         <div class="relative flex items-start justify-between">
             @if($icon)
-                <span class="kpi-chip" style="background-color: {{ $iconBg }}; color: {{ $iconColor }}; border: 1px solid {{ $iconBorder }};">
+                @if($gradientCard)
+                    <span class="kpi-chip" style="background-color: rgba(255,255,255,0.18); color: #ffffff; border: 1px solid rgba(255,255,255,0.40);">
+                @else
+                    <span class="kpi-chip" style="background-color: {{ $iconBg }}; color: {{ $iconColor }}; border: 1px solid {{ $iconBorder }};">
+                @endif
                     <i data-lucide="{{ $icon }}" class="w-4 h-4"></i>
                 </span>
             @else
@@ -155,28 +163,28 @@
             @endif
         </div>
         <div class="relative mt-2">
-            <div class="kpi-label">{{ $label }}</div>
+            <div class="kpi-label" style="{{ $gradientCard ? 'color:#ffffff;' : '' }}">{{ $label }}</div>
 
             @if($target !== null)
                 {{-- Animated count (kpi-count) – gradient text if gradient provided, else solid --}}
-                @if($gradient)
+                @if($gradient && !$gradientCard)
                     <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 kpi-value" style="background-image: {{ $gradient }};">
                         <span class="kpi-count" data-target="{{ $target }}" data-decimals="{{ $decimals }}">0</span>{{ $suffix ?? '' }}
                     </div>
                 @else
-                    <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 text-[#102A4C]">
+                    <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 {{ $gradientCard ? 'text-white' : 'text-[#102A4C]' }}">
                         <span class="kpi-count" data-target="{{ $target }}" data-decimals="{{ $decimals }}">0</span>{{ $suffix ?? '' }}
                     </div>
                 @endif
             @elseif($value !== null)
-                @if($gradient)
+                @if($gradient && !$gradientCard)
                     <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 kpi-value" style="background-image: {{ $gradient }};">{!! $value !!}</div>
                 @else
-                    <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 text-[#102A4C]">{!! $value !!}</div>
+                    <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 {{ $gradientCard ? 'text-white' : 'text-[#102A4C]' }}">{!! $value !!}</div>
                 @endif
             @else
                 {{-- Null value fallback – mirrors original feed-cost empty state (muted em dash) --}}
-                <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 text-[#102A4C]"><span class="text-lg text-[#9CA3AF]">&mdash;</span></div>
+                <div class="text-[32px] font-bold leading-none tracking-[-1px] mt-2 {{ $gradientCard ? 'text-white' : 'text-[#102A4C]' }}"><span class="text-lg {{ $gradientCard ? 'text-white' : 'text-[#9CA3AF]' }}">&mdash;</span></div>
             @endif
 
             @if($hasSecondary)

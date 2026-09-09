@@ -10,10 +10,7 @@
                 <x-kpi-card
                     label="Total Hens"
                     icon="bird"
-                    iconBg="#d6f0e3"
-                    iconColor="#2D7D46"
-                    gradient="linear-gradient(135deg,#16a34a,#2D7D46)"
-                    accent="#d6f0e3"
+                    cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)"
                     delay="0ms"
                     :href="route('chickens.index')"
                     kpi="hens"
@@ -25,10 +22,7 @@
                 <x-kpi-card
                     label="Today's HDEP"
                     icon="gauge"
-                    iconBg="#dcebfa"
-                    iconColor="#1D4E8F"
-                    gradient="linear-gradient(135deg,#0075de,#1D4E8F)"
-                    accent="#dcebfa"
+                    cardGradient="linear-gradient(135deg,#0075de,#1D4E8F)"
                     delay="60ms"
                     :href="route('eggs.logging')"
                     kpi="hdep"
@@ -44,10 +38,7 @@
                 <x-kpi-card
                     label="Eggs Today"
                     icon="egg"
-                    iconBg="#fae3d0"
-                    iconColor="#C2703E"
-                    gradient="linear-gradient(135deg,#d97706,#C2703E)"
-                    accent="#fae3d0"
+                    cardGradient="linear-gradient(135deg,#d97706,#C2703E)"
                     delay="120ms"
                     :href="route('eggs.logging')"
                     kpi="eggs"
@@ -61,10 +52,7 @@
                 <x-kpi-card
                     label="Lifetime Eggs"
                     icon="layers"
-                    iconBg="#e9e0f5"
-                    iconColor="#6B4C8A"
-                    gradient="linear-gradient(135deg,#8B5CF6,#6B4C8A)"
-                    accent="#e9e0f5"
+                    cardGradient="linear-gradient(135deg,#8B5CF6,#6B4C8A)"
                     delay="180ms"
                     :href="route('egg-production-history')"
                     kpi="lifetime-eggs"
@@ -83,14 +71,11 @@
                 <i data-lucide="heart-pulse" class="w-4 h-4 inline-block mr-1.5 -mt-0.5" style="color:#0891b2;"></i>
                 Environment &amp; Health
             </h3>
-            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 gap-3">
                 <x-kpi-card
                     label="Average Coop Temperature"
                     icon="thermometer"
-                    iconBg="#f7e3cf"
-                    iconColor="#C2703E"
-                    gradient="linear-gradient(135deg,#f59e0b,#C2703E)"
-                    accent="#f7e3cf"
+                    cardGradient="linear-gradient(135deg,#f59e0b,#C2703E)"
                     delay="120ms"
                     :href="route('environment')"
                     kpi="env"
@@ -104,10 +89,7 @@
                 <x-kpi-card
                     label="Average Humidity"
                     icon="droplets"
-                    iconBg="#d5ecf4"
-                    iconColor="#2C7C91"
-                    gradient="linear-gradient(135deg,#0d9488,#2C7C91)"
-                    accent="#d5ecf4"
+                    cardGradient="linear-gradient(135deg,#0d9488,#2C7C91)"
                     delay="160ms"
                     :href="route('environment')"
                     kpi="env"
@@ -116,22 +98,6 @@
                     :target="$avgHum"
                     :decimals="1"
                     suffix="%"
-                />
-
-                <x-kpi-card
-                    class="col-span-2 sm:col-span-1"
-                    label="Mortality Today"
-                    icon="heart-crack"
-                    iconBg="#fadfe3"
-                    iconColor="#C2405C"
-                    :gradient="$mortalityTodayTotal > 0 ? 'linear-gradient(135deg,#dc2626,#9b1c24)' : null"
-                    accent="#fadfe3"
-                    delay="200ms"
-                    :href="route('chickens.index', ['tab' => 'mortality'])"
-                    kpi="mortality"
-                    ariaLabel="Go to Mortality"
-                    infoLabel="Mortality per cage breakdown"
-                    :value="number_format($mortalityTodayTotal)"
                 />
             </div>
         </div>
@@ -146,10 +112,7 @@
                 <x-kpi-card
                     label="Avg CP% This Week"
                     icon="flask-conical"
-                    iconBg="#e6f6ee"
-                    iconColor="#16a34a"
-                    gradient="linear-gradient(135deg,#16a34a,#15803d)"
-                    accent="#e6f6ee"
+                    cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
                     delay="240ms"
                     :href="route('feed')"
                     kpi="feed-avg-cp"
@@ -161,10 +124,7 @@
                 <x-kpi-card
                     label="Avg Feed/Cage/Day"
                     icon="scale"
-                    iconBg="#e6f6ee"
-                    iconColor="#16a34a"
-                    gradient="linear-gradient(135deg,#16a34a,#15803d)"
-                    accent="#e6f6ee"
+                    cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
                     delay="280ms"
                     :href="route('feed')"
                     kpi="feed-avg-cage-day"
@@ -177,10 +137,7 @@
                 <x-kpi-card
                     label="Total Feed Used"
                     icon="package"
-                    iconBg="#e6f6ee"
-                    iconColor="#16a34a"
-                    gradient="linear-gradient(135deg,#16a34a,#15803d)"
-                    accent="#e6f6ee"
+                    cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
                     delay="320ms"
                     :href="route('feed')"
                     kpi="feed-total-week"
@@ -195,10 +152,7 @@
                 <x-kpi-card
                     label="Feed Cost This Month"
                     icon="banknote"
-                    iconBg="#e6f6ee"
-                    iconColor="#16a34a"
-                    gradient="linear-gradient(135deg,#16a34a,#15803d)"
-                    accent="#e6f6ee"
+                    cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
                     delay="360ms"
                     :href="route('feed')"
                     kpi="feed-cost-month"

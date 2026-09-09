@@ -152,6 +152,20 @@ class DashboardControllerTest extends TestCase
         $this->assertGreaterThanOrEqual(11, $response->viewData('lifetimeEggs'));
     }
 
+    public function test_flock_stats_partial_renders_mortality_livability_metrics(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('dashboard.stats.flock'));
+        $response->assertOk();
+
+        $this->assertEquals(6, $response->viewData('totalHens'));
+        $this->assertEquals(0, $response->viewData('mortalityTodayTotal'));
+        $this->assertEquals(0, $response->viewData('yesterdayMortalityTotal'));
+
+        $response->assertSee('Mortality Today')
+            ->assertSee('Livability')
+            ->assertSee("Yesterday's Mortality");
+    }
+
     public function test_cage_performance_endpoint_returns_view_with_rankings(): void
     {
         $response = $this->actingAs($this->admin)->get(route('dashboard.cage-performance'));

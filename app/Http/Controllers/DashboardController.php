@@ -62,6 +62,13 @@ class DashboardController extends Controller
         return view('dashboard._metric-cards-feed', $data);
     }
 
+    public function statsFlock()
+    {
+        $data = $this->buildDashboardData(request('cage'), (int) request('mortality_days', 1));
+
+        return view('dashboard._metric-cards-flock', $data);
+    }
+
     public function feedMortality()
     {
         $data = $this->buildDashboardData(request('cage'));

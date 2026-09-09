@@ -231,6 +231,10 @@
 
             {{-- ΓòÉΓòÉΓòÉ SECTION 4 ΓÇö Flock Analytics ΓòÉΓòÉΓòÉ --}}
             <div class="analytics-section" data-analytics-section="flock">
+                <div class="space-y-4">
+                    <turbo-frame id="dashboard-stats-flock" src="{{ route('dashboard.stats.flock', ['cage' => request('cage')]) }}" loading="lazy" class="block">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-3 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
+                    </turbo-frame>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
                     <turbo-frame id="dashboard-breed-analytics" src="{{ route('dashboard.breed-analytics', ['days' => 30]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
@@ -769,6 +773,7 @@
         reloadFramePreservingScroll('dashboard-stats-production', buildFrameUrl('{{ route('dashboard.stats.production') }}', { cage: cageParam, mortality_days: window.__dashboardMortalityDays === 1 ? null : window.__dashboardMortalityDays }));
         reloadFramePreservingScroll('dashboard-stats-environment', buildFrameUrl('{{ route('dashboard.stats.environment') }}', { cage: cageParam, mortality_days: window.__dashboardMortalityDays === 1 ? null : window.__dashboardMortalityDays }));
         reloadFramePreservingScroll('dashboard-stats-feed', buildFrameUrl('{{ route('dashboard.stats.feed') }}', { cage: cageParam, mortality_days: window.__dashboardMortalityDays === 1 ? null : window.__dashboardMortalityDays }));
+        reloadFramePreservingScroll('dashboard-stats-flock', buildFrameUrl('{{ route('dashboard.stats.flock') }}', { cage: cageParam, mortality_days: window.__dashboardMortalityDays === 1 ? null : window.__dashboardMortalityDays }));
         reloadFramePreservingScroll('dashboard-cage-performance', perfUrl);
         reloadFramePreservingScroll('dashboard-production-history', historyUrl);
         // ΓöÇΓöÇ Remaining analytics frames — must stay in sync per cage (audit Part 5) ΓöÇΓöÇ
