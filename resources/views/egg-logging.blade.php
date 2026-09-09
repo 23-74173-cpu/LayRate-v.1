@@ -84,7 +84,7 @@
                     $allLogged = $loggedCount >= $slotCount;
                 @endphp
                 <div class="rounded-xl border p-4 flex flex-col gap-2 min-h-[7rem] cage-overview-card cursor-pointer transition-all hover:shadow-md"
-                     data-cage-id="{{ $cage->id }}" data-total-slots="{{ $slotCount }}"
+                     data-cage-id="{{ $cage->id }}" data-cage-code="{{ $cage->cage_code }}" data-total-slots="{{ $slotCount }}"
                      onclick="switchCage('{{ $cage->id }}')"
                      role="button" tabindex="0"
                      onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); switchCage('{{ $cage->id }}'); }"
@@ -614,7 +614,9 @@
             var cageCard = document.querySelector('.cage-overview-card[data-cage-id="' + currentCageId + '"]');
             if (!cageCard) return;
 
-            var cageCode = cageCard.querySelector('[data-cage-code]')?.dataset.cageCode || '';
+            var cageCode = cageCard.dataset.cageCode
+                || cageCard.querySelector('[data-cage-code]')?.dataset.cageCode
+                || '';
             var slots = document.querySelectorAll('.slot-card[data-cage-id="' + currentCageId + '"]');
             var totalHens = 0;
             var breeds = {};
@@ -743,9 +745,15 @@
             });
 
             Promise.all(promises).then(function() {
+                var cageCode = document.getElementById('tcCageCode').textContent || '';
                 window.clearTotalCageLog();
                 hideLoadingModal();
-                location.reload();
+
+                if (typeof showNotification === 'function') {
+                    showNotification('Total eggs recorded for Cage ' + cageCode + ': ' + totalEggs + ' egg(s) across ' + pendingCount + ' slot(s).', 'success');
+                }
+
+                setTimeout(function() { location.reload(); }, 2000);
             }).catch(function() {
                 hideLoadingModal();
                 document.getElementById('tcError').textContent = 'An error occurred. Please try again.';
