@@ -69,6 +69,14 @@
                         onmouseout="this.style.backgroundColor='transparent'">
                     Clear All Cages
                 </button>
+                <button type="button" id="cageDragToggleBtn"
+                        onclick="window.toggleCageTouchDrag()"
+                        aria-pressed="false"
+                        title="Turn off touch dragging so you can scroll or tap cages without accidentally moving them"
+                        class="lg:hidden text-xs font-medium px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors flex items-center gap-1.5">
+                    <i data-lucide="hand" class="w-3.5 h-3.5"></i>
+                    Drag cages
+                </button>
                 <div class="relative inline-flex items-center">
                     <x-button id="saveLayoutBtn" onclick="saveLayout()" disabled class="text-xs px-4 py-1.5">
                         Save Layout
@@ -115,7 +123,7 @@
                      draggable="{{ $isAdmin ? 'true' : 'false' }}"
                      data-cage-id="{{ $uc->id }}"
                      data-cage-code="{{ $uc->cage_code }}"
-                     @if($isAdmin) ondragstart="handleDragStart(event, {{ $uc->id }})" ontouchstart="if(!event.target.closest('.cage-info-btn')){handleTouchDragStart({{ $uc->id }}, event.touches[0], false);event.preventDefault();}" @endif>
+                     @if($isAdmin) ondragstart="handleDragStart(event, {{ $uc->id }})" ontouchstart="if(window.__cageDragTouchEnabled && !event.target.closest('.cage-info-btn')){handleTouchDragStart({{ $uc->id }}, event.touches[0], false);event.preventDefault();}" @endif>
                     <button class="cage-info-btn w-6 h-6 rounded-full flex items-center justify-center" data-cage-id="{{ $uc->id }}" style="position:absolute; bottom:2px; right:2px; background-color:transparent; color: {{ $uc->color }}; line-height:1;" title="Cage info" aria-label="Cage info"><i data-lucide="info" class="w-3 h-3"></i></button>
                     @if($isTiny)
                     <span class="font-bold leading-none text-center" style="font-size:14px;color: {{ $uc->color }};overflow:hidden;text-overflow:ellipsis;max-width:100%;display:inline-block;">
@@ -151,6 +159,44 @@
             #cageInfoPopup .slot-mini { transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease; }
             #cageInfoPopup .slot-mini:hover { transform: scale(1.15); box-shadow: 0 2px 8px rgba(0,0,0,0.15); border-color: #0075de !important; z-index: 1; }
             #cageInfoPopup .slot-mini:active { transform: scale(1.05); }
+
+            /* Info button becomes a compact corner chip with a View label on mobile.
+            .cage-info-btn { transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease; }
+            @media (max-width: 639px) {
+                /* Info button becomes a short corner "chip": icon + View label.
+                   Grid cages live inside the scaled canvas (#canvasScaler), so
+                   compensate with --cage-info-btn-scale to keep the on-screen
+                   size constant; staging tiles are unscaled. */
+                .staging-tile .cage-info-btn,
+                .cage-overlay .cage-info-btn {
+                    width: auto !important;
+                    border-radius: 9999px !important;
+                    display: inline-flex !important;
+                    align-items: center;
+                    justify-content: center;
+                    background-color: rgba(255,255,255,0.92) !important;
+                    border: 1px solid rgba(0,0,0,0.12) !important;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+                }
+                .staging-tile .cage-info-btn { height: 26px !important; min-width: 26px; padding: 0 8px !important; gap: 3px; bottom: 6px !important; right: 6px !important; }
+                .staging-tile .cage-info-btn i,
+                .staging-tile .cage-info-btn svg { width: 14px !important; height: 14px !important; }
+                .staging-tile .cage-info-btn::after { content: "View"; font-size: 11px; font-weight: 600; letter-spacing: 0.01em; line-height: 1; white-space: nowrap; }
+                .cage-overlay .cage-info-btn { height: calc(26px * var(--cage-info-btn-scale, 1)) !important; min-width: calc(26px * var(--cage-info-btn-scale, 1)); padding: 0 calc(8px * var(--cage-info-btn-scale, 1)) !important; gap: calc(3px * var(--cage-info-btn-scale, 1)); bottom: calc(6px * var(--cage-info-btn-scale, 1)) !important; right: calc(6px * var(--cage-info-btn-scale, 1)) !important; }
+                .cage-overlay .cage-info-btn i,
+                .cage-overlay .cage-info-btn svg { width: calc(14px * var(--cage-info-btn-scale, 1)) !important; height: calc(14px * var(--cage-info-btn-scale, 1)) !important; }
+                .cage-overlay .cage-info-btn::after { content: "View"; font-size: calc(11px * var(--cage-info-btn-scale, 1)); font-weight: 600; letter-spacing: 0.01em; line-height: 1; white-space: nowrap; }
+                .cage-info-btn:active { transform: scale(1.1); background-color: rgba(255,255,255,1) !important; box-shadow: 0 2px 6px rgba(0,0,0,0.22); }
+                /* Larger cage code labels on mobile (grid labels compensated
+                   for the canvas zoom via --cage-info-btn-scale). */
+                .cage-overlay span[style*="font-size:18px"] { font-size: calc(22px * var(--cage-info-btn-scale, 1)) !important; }
+                .cage-overlay span[style*="font-size:13px"] { font-size: calc(17px * var(--cage-info-btn-scale, 1)) !important; }
+                .cage-overlay span[style*="font-size:14px"] { font-size: calc(19px * var(--cage-info-btn-scale, 1)) !important; }
+                .cage-overlay .text-xs { font-size: calc(15px * var(--cage-info-btn-scale, 1)) !important; }
+                .staging-tile span[style*="font-size:14px"] { font-size: 17px !important; }
+                .staging-tile .text-sm { font-size: 17px !important; }
+                .staging-tile .text-xs { font-size: 15px !important; }
+            }
         </style>
         <div id="cageInfoBackdrop" class="hidden fixed inset-0 z-40" style="background-color: rgba(107,114,128,0.45); backdrop-filter: blur(4px);" onclick="closeCageInfoPopup()"></div>
         <div id="cageInfoPopup" class="hidden fixed z-50 rounded-xl border bg-white shadow-lg p-0 w-64" style="border-color: #e6e6e6; max-width: calc(100vw - 2rem); max-height: min(540px, calc(100vh - 3rem)); overflow-y: auto;">
@@ -1466,7 +1512,7 @@ function renderCageOverlays() {
     // Bind drag events
     layer.querySelectorAll('.cage-drag-handle').forEach(function(el) {
         el.addEventListener('dragstart', function(e) { handleDragStart(e, parseInt(el.dataset.cageId)); });
-        el.addEventListener('touchstart', function(e) { handleTouchDragStart(parseInt(el.dataset.cageId), e.touches[0], true); e.preventDefault(); }, { passive: false });
+        el.addEventListener('touchstart', function(e) { if (!window.__cageDragTouchEnabled) return; handleTouchDragStart(parseInt(el.dataset.cageId), e.touches[0], true); e.preventDefault(); }, { passive: false });
     });
     // Re-render lucide icons (drag/drop and select re-create the overlay markup,
     // which leaves info/action icons as empty <i> until createIcons runs)
@@ -1974,7 +2020,35 @@ function fitCanvasToWidth() {
     scaler.style.transform = 'scale(' + scale + ')';
     scaler.style.width = (contentW * scale) + 'px';
     scaler.style.height = (canvasH() * scale) + 'px';
+    // Keep the mobile info-button visually large: expose the inverse scale so
+    // the CSS media query can size grid cages' buttons past the canvas zoom.
+    document.documentElement.style.setProperty('--cage-info-btn-scale', (1 / scale).toFixed(3));
 }
+
+// ── Mobile drag toggle: touch-drag is opt-in to avoid mistouches ──
+if (window.__cageDragTouchEnabled === undefined) {
+    window.__cageDragTouchEnabled = false;
+}
+
+function syncCageDragToggleUI(enabled) {
+    var btn = document.getElementById('cageDragToggleBtn');
+    if (!btn) return;
+    btn.classList.toggle('bg-[#002D5E]', enabled);
+    btn.classList.toggle('text-white', enabled);
+    btn.classList.toggle('border-[#002D5E]', enabled);
+    btn.classList.toggle('text-[#6B7280]', !enabled);
+    btn.classList.toggle('border-[#D9D9D9]', !enabled);
+    btn.classList.toggle('hover:bg-[#F5F6F8]', !enabled);
+    btn.classList.toggle('hover:text-[#333333]', !enabled);
+    btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+}
+
+window.toggleCageTouchDrag = function() {
+    window.__cageDragTouchEnabled = !window.__cageDragTouchEnabled;
+    syncCageDragToggleUI(window.__cageDragTouchEnabled);
+};
+
+syncCageDragToggleUI(window.__cageDragTouchEnabled);
 
 // Fit canvas on window resize
 var _fitCanvasTimer = null;
@@ -2431,7 +2505,7 @@ function addStagingTile(cageId) {
     var infoBtn = tile.querySelector('.cage-info-btn');
     if (infoBtn) bindCageInfoButton(infoBtn);
     tile.addEventListener('dragstart', function(e) { handleDragStart(e, cageId); });
-    tile.addEventListener('touchstart', function(e) { if(!e.target.closest('.cage-info-btn')){handleTouchDragStart(cageId, e.touches[0], false);e.preventDefault();} }, { passive: false });
+    tile.addEventListener('touchstart', function(e) { if(window.__cageDragTouchEnabled && !e.target.closest('.cage-info-btn')){handleTouchDragStart(cageId, e.touches[0], false);e.preventDefault();} }, { passive: false });
     area.appendChild(tile);
     if (window.lucide && typeof window.lucide.createIcons === 'function') {
         try { window.lucide.createIcons({ root: tile }); } catch (e) {}
