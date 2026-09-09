@@ -5,30 +5,30 @@
         </div>
 
         {{-- Filters --}}
-        <form method="GET" action="{{ route('environment.logs') }}" data-turbo-frame="environment-logs" class="px-5 py-3 border-b border-[#D9D9D9] flex flex-wrap items-end gap-3">
+        <form method="GET" action="{{ route('environment.logs') }}" data-turbo-frame="environment-logs" class="px-5 py-3 border-b border-[#D9D9D9] grid grid-cols-2 sm:flex sm:flex-wrap sm:items-end sm:gap-3 gap-3">
             <div>
                 <label class="block text-xs text-[#6B7280] mb-1">From</label>
                 <input type="date" name="date_from" value="{{ request('date_from') }}"
-                       class="border border-[#D9D9D9] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30">
+                       class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30">
             </div>
             <div>
                 <label class="block text-xs text-[#6B7280] mb-1">To</label>
                 <input type="date" name="date_to" value="{{ request('date_to') }}"
-                       class="border border-[#D9D9D9] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30">
+                       class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30">
             </div>
             <div>
                 <label class="block text-xs text-[#6B7280] mb-1">Cage</label>
                 <select name="cage_id"
-                        class="border border-[#D9D9D9] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30">
+                        class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30">
                     <option value="">All Cages</option>
                     @foreach($cages as $id => $code)
                     <option value="{{ $id }}" {{ request('cage_id') == $id ? 'selected' : '' }}>{{ $code }}</option>
                     @endforeach
                 </select>
             </div>
-            <button type="submit" class="text-xs px-4 py-1.5 rounded-lg font-medium text-white transition-colors" style="background-color:#0075de;">Filter</button>
+            <button type="submit" class="w-full sm:w-auto text-center text-xs px-4 py-1.5 rounded-lg font-medium text-white transition-colors" style="background-color:#0075de;">Filter</button>
             @if(request()->hasAny(['date_from','date_to','cage_id']))
-            <a href="{{ route('environment.logs') }}" data-turbo-frame="environment-logs" class="text-xs px-4 py-1.5 rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">Clear</a>
+            <a href="{{ route('environment.logs') }}" data-turbo-frame="environment-logs" class="col-span-2 sm:col-span-1 w-full sm:w-auto text-center text-xs px-4 py-1.5 rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">Clear</a>
             @endif
         </form>
 

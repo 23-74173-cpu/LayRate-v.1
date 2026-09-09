@@ -61,11 +61,11 @@
     {{-- ── Filters ── --}}
     <div class="no-print">
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <form method="GET" action="{{ route('reports') }}" class="flex flex-wrap items-end gap-4" id="reportForm" data-turbo="false">
-                <div>
+            <form method="GET" action="{{ route('reports') }}" class="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-end sm:gap-x-4 sm:gap-y-3 gap-3" id="reportForm" data-turbo="false">
+                <div class="col-span-2 sm:col-span-1">
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">REPORT TYPE</label>
                     <select name="type" id="reportType"
-                            class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C] min-w-[180px]">
+                            class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                         <option value="production" {{ $type === 'production' ? 'selected' : '' }}>Production Report</option>
                         <option value="feed"        {{ $type === 'feed'       ? 'selected' : '' }}>Feed Report</option>
                         <option value="environment" {{ $type === 'environment'? 'selected' : '' }}>Environment Report</option>
@@ -77,17 +77,17 @@
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">FROM</label>
                     <input type="date" name="from" value="{{ $from }}"
-                           class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                           class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TO</label>
                     <input type="date" name="to" value="{{ $to }}"
-                           class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                           class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CAGE</label>
                     <select name="cage"
-                            class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                            class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                         <option value="all" {{ $cageId === 'all' ? 'selected' : '' }}>All Cages</option>
                         @foreach($allCages as $c)
                         <option value="{{ $c->cage_code }}" {{ $cageId === $c->cage_code ? 'selected' : '' }}>{{ $c->cage_code }}</option>
@@ -99,7 +99,7 @@
                 <div id="reasonFilter" class="{{ in_array($type, ['mortality', 'all']) ? '' : 'hidden' }}">
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">REASON</label>
                     <select name="reason"
-                            class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                            class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
                         <option value="all" {{ $reason === 'all' ? 'selected' : '' }}>All Reasons</option>
                         @foreach(\App\Models\MortalityLog::REASONS as $r)
                         <option value="{{ $r }}" {{ $reason === $r ? 'selected' : '' }}>{{ $r }}</option>
@@ -107,20 +107,20 @@
                     </select>
                 </div>
 
-                <div id="withForecastFilter" class="{{ $type === 'production' ? '' : 'hidden' }} flex items-center gap-2 pb-2">
+                <div id="withForecastFilter" class="{{ $type === 'production' ? '' : 'hidden' }} col-span-2 sm:col-span-1 flex items-center gap-2 pb-2">
                     <input type="checkbox" name="withForecast" id="reportWithForecast" value="1" {{ ($withForecast ?? false) ? 'checked' : '' }}
                            class="rounded border-[#D9D9D9] text-[#102A4C] focus:ring-[#102A4C]/30">
                     <label for="reportWithForecast" class="text-xs tracking-wider text-[#6B7280] select-none cursor-pointer">INCLUDE FORECAST COMPARISON</label>
                 </div>
 
-                <div class="flex items-center gap-2 pb-2">
+                <div class="col-span-2 sm:col-span-1 flex items-center gap-2 pb-2">
                     <input type="checkbox" name="charts" id="reportCharts" value="1" {{ ($charts ?? false) ? 'checked' : '' }}
                            class="rounded border-[#D9D9D9] text-[#102A4C] focus:ring-[#102A4C]/30">
                     <label for="reportCharts" class="text-xs tracking-wider text-[#6B7280] select-none cursor-pointer">INCLUDE GRAPHS</label>
                 </div>
 
                 {{-- Export dropdown — CSV / Excel / PDF, all respecting the current filters --}}
-                <div class="relative" id="exportDropdownWrap">
+                <div class="relative col-span-2 sm:col-span-1" id="exportDropdownWrap">
                     <x-button variant="secondary" type="button" id="exportDropdownBtn" aria-haspopup="true" aria-expanded="false">
                         <i data-lucide="download" class="w-4 h-4"></i> Export <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
                     </x-button>
@@ -138,10 +138,10 @@
                 </div>
 
                 @if($full)
-                <x-button variant="secondary" :href="route('reports', request()->except('full'))" data-turbo="false">
+                <x-button variant="secondary" :href="route('reports', request()->except('full'))" data-turbo="false" class="col-span-2 sm:col-span-1">
                     <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Preview
                 </x-button>
-                <x-button variant="secondary" type="button" onclick="printReport()">
+                <x-button variant="secondary" type="button" onclick="printReport()" class="col-span-2 sm:col-span-1">
                     <i data-lucide="printer" class="w-4 h-4"></i>
                 </x-button>
                 @endif

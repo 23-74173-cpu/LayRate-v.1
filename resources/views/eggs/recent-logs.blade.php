@@ -12,12 +12,12 @@
 
     <x-card header="Production Logs">
         <form id="recentLogsForm" onsubmit="return false" class="mb-4">
-            <div class="flex flex-wrap items-end gap-4">
+            <div class="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-end sm:gap-x-4 sm:gap-y-3 gap-3">
                 {{-- Cage filter --}}
                 <div>
                     <label class="block text-xs mb-1" style="color: #615d59;">Cage</label>
                     <select name="cage_id" onchange="recentLogsFilter()"
-                            class="border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            class="w-full min-w-0 sm:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">All Cages</option>
                         @foreach($cages as $c)
@@ -32,7 +32,7 @@
                 <div>
                     <label class="block text-xs mb-1" style="color: #615d59;">Slot</label>
                     <select name="cage_slot_id" onchange="recentLogsFilter()"
-                            class="border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            class="w-full min-w-0 sm:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">All Slots</option>
                         @foreach($cageSlots as $slot)
@@ -47,7 +47,7 @@
                 <div>
                     <label class="block text-xs mb-1" style="color: #615d59;">Breed</label>
                     <select name="breed" onchange="recentLogsFilter()"
-                            class="border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            class="w-full min-w-0 sm:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">All Breeds</option>
                         @foreach($breeds as $b)
@@ -59,9 +59,9 @@
                 </div>
 
                 {{-- Manual vs Sensor filter (checkbox chips) --}}
-                <div>
+                <div class="col-span-2 sm:col-span-1">
                     <label class="block text-xs mb-1" style="color: #615d59;">Logged Via</label>
-                    <div class="flex items-center gap-3">
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
                         @foreach(['manual' => 'Manual', 'sensor' => 'Sensor', 'unknown' => 'Unknown'] as $value => $label)
                         <label class="inline-flex items-center gap-1.5 text-sm cursor-pointer" style="color: #31302e;">
                             <input type="checkbox" name="logged_via[]" value="{{ $value }}" onchange="recentLogsFilter()"
@@ -73,7 +73,7 @@
                     </div>
                 </div>
 
-                <div class="flex items-center gap-2">
+                <div class="col-span-2 sm:col-span-1 flex items-center justify-end gap-2">
                     <a href="{{ route('eggs.recent-logs') }}"
                        class="px-3 py-1.5 text-xs font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">
                         Reset

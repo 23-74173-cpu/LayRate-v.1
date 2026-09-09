@@ -108,18 +108,18 @@
         </div>
 
         {{-- Bulk Action Bar --}}
-        <div id="bulkActionBar" class="hidden bg-white rounded-lg border border-[#D9D9D9] px-4 py-3 flex items-center justify-between">
+        <div id="bulkActionBar" class="hidden bg-white rounded-lg border border-[#D9D9D9] px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <span class="text-sm text-[#6B7280]">
                 <strong id="bulkCount" class="text-[#002D5E]">0</strong> hen(s) selected
             </span>
-            <div class="flex items-center gap-2">
-                <x-button variant="outline-primary" size="sm" onclick="bulkMove()">
+            <div class="grid grid-cols-3 gap-2 w-full sm:flex sm:w-auto sm:items-center sm:gap-2">
+                <x-button variant="outline-primary" size="sm" onclick="bulkMove()" class="w-full sm:w-auto">
                     <i data-lucide="arrow-right" class="w-3 h-3 inline"></i> Move
                 </x-button>
-                <x-button variant="outline-warning" size="sm" onclick="bulkCull()">
+                <x-button variant="outline-warning" size="sm" onclick="bulkCull()" class="w-full sm:w-auto">
                     <i data-lucide="crosshair" class="w-3 h-3 inline"></i> Cull
                 </x-button>
-                <x-button variant="outline-danger" size="sm" onclick="bulkRemoval()">
+                <x-button variant="outline-danger" size="sm" onclick="bulkRemoval()" class="w-full sm:w-auto">
                     <i data-lucide="log-out" class="w-3 h-3 inline"></i> Remove
                 </x-button>
             </div>

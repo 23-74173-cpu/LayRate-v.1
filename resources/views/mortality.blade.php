@@ -4,9 +4,9 @@
 @section('content')
 <div class="space-y-5">
 
-    <div class="flex items-center justify-between">
+    <div class="flex flex-wrap items-center justify-between gap-2">
         <x-page-header title="Mortality Log" subtitle="Record and track hen mortality per cage" />
-        <span class="text-xs px-3 py-1.5 rounded-full bg-[#F8D7DA] text-[#721C24] border border-[#F5C6CB] shrink-0 ml-3">
+        <span class="text-xs px-3 py-1.5 rounded-full bg-[#F8D7DA] text-[#721C24] border border-[#F5C6CB] shrink-0 ml-0 sm:ml-3">
             {{ $todayTotal }} recorded today
         </span>
     </div>

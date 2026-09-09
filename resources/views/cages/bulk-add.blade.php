@@ -5,7 +5,7 @@
 <div class="max-w-6xl mx-auto space-y-5">
 
     {{-- Header --}}
-    <div class="flex items-center justify-between">
+    <div class="flex flex-wrap items-center justify-between gap-2">
         <div class="flex items-center gap-3">
             <a href="{{ route('chickens.index') }}" class="text-[#6B7280] hover:text-[#002D5E]" aria-label="Back to inventory">
                 <i data-lucide="arrow-left" class="w-5 h-5"></i>
@@ -47,9 +47,9 @@
 
         {{-- ── Step 1: Select Hens ── --}}
         <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
-            <div class="flex items-center justify-between px-5 py-3"
+            <div class="flex flex-wrap items-center justify-between gap-2 px-5 py-3"
                  style="background: #F0F4FF; border-bottom: 1px solid #CCDDFF;">
-                <div class="flex items-center gap-3">
+                <div class="flex flex-wrap items-center gap-3">
                     <span class="text-sm font-semibold text-[#1D4E8F]">Step 1: Select Hens</span>
                     <label class="flex items-center gap-1 text-xs text-[#6B7280] cursor-pointer">
                         <input type="checkbox" id="selectAllHens" onchange="toggleSelectAll()"
@@ -60,8 +60,8 @@
                         <strong id="henCount" class="text-[#002D5E]">0</strong> selected
                     </span>
                 </div>
-                <div class="flex items-center gap-2">
-                    <select id="henBreedFilter" class="border border-[#D9D9D9] rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="filterUnplaced()">
+                <div class="flex flex-wrap items-center gap-2">
+                    <select id="henBreedFilter" class="border border-[#D9D9D9] rounded px-2 py-1 text-xs min-w-0 max-w-full focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="filterUnplaced()">
                         <option value="">All breeds ({{ $unplacedHens->count() }})</option>
                         @foreach($unplacedBreeds as $b)
                         <option value="{{ $b }}">{{ $b }} ({{ $unplacedBreedCounts[$b] ?? 0 }} available)</option>
@@ -107,7 +107,7 @@
 
         {{-- ── Step 3: Choose Mode + Slot Grid ── --}}
         <div id="step3Mode" class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
-            <div id="step3ModePicker" class="flex items-center gap-4 px-5 py-3 border-b border-[#D9D9D9]" style="background: #FAFAFA;">
+            <div id="step3ModePicker" class="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3 border-b border-[#D9D9D9]" style="background: #FAFAFA;">
                 <span class="text-xs font-semibold text-[#1D4E8F]">Step 3: Placement Mode</span>
                 <label class="flex items-center gap-1.5 text-xs cursor-pointer">
                     <input type="radio" name="mode_radio" value="manual" {{ old('mode', 'manual') === 'manual' ? 'checked' : '' }} onchange="switchMode('manual')"
@@ -135,9 +135,9 @@
 
             {{-- Manual mode --}}
             <div id="manualMode" class="{{ old('mode') === 'auto' ? 'hidden' : '' }} p-5">
-                <div class="flex items-center justify-between mb-3">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
                     <span class="text-xs font-medium text-[#6B7280] uppercase tracking-wider">Click slots to select</span>
-                    <div class="flex items-center gap-3 text-xs text-[#9CA3AF]">
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#9CA3AF]">
                         <span class="flex items-center gap-1"><span class="w-3 h-3 rounded border-2 border-[#002D5E] bg-[#002D5E]/10"></span> selected</span>
                         <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-white border border-[#D9D9D9]"></span> available</span>
                         <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-[#F5F6F8] border border-[#D9D9D9]"></span> occupied</span>
@@ -166,20 +166,19 @@
         </div>
 
         {{-- ── Summary + Submit ── --}}
-        <div class="bg-white rounded-lg border border-[#D9D9D9] px-5 py-4 flex items-center justify-between">
-            <div class="flex items-center gap-4 text-sm text-[#6B7280]">
+        <div class="bg-white rounded-lg border border-[#D9D9D9] px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-4 text-sm text-[#6B7280]">
                 <span>Hens: <strong id="summaryHens" class="text-[#002D5E]">0</strong></span>
                 <span>Slots: <strong id="summarySlots" class="text-[#002D5E]">0</strong></span>
                 <span class="text-red-500 hidden" id="summaryError"></span>
             </div>
-            <div class="flex items-center gap-3">
-                <button type="button" onclick="clearAll()"
-                        class="px-4 py-2 text-sm border border-[#D9D9D9] rounded hover:bg-[#F5F6F8] text-[#6B7280]">
+            <div class="grid grid-cols-3 sm:flex sm:items-center gap-2 w-full sm:w-auto">
+                <button type="button" onclick="clearAll()" class="w-full sm:w-auto text-center px-4 py-2 text-sm border border-[#D9D9D9] rounded hover:bg-[#F5F6F8] text-[#6B7280]">
                     Clear
                 </button>
-                <a href="{{ route('chickens.index') }}" class="px-4 py-2 text-sm border border-[#D9D9D9] rounded hover:bg-[#F5F6F8]">Cancel</a>
+                <a href="{{ route('chickens.index') }}" class="w-full sm:w-auto text-center px-4 py-2 text-sm border border-[#D9D9D9] rounded hover:bg-[#F5F6F8]">Cancel</a>
                 <button type="submit" id="submitBtn" disabled
-                        class="px-5 py-2 text-sm bg-[#002D5E] text-white rounded hover:bg-[#001F42] disabled:opacity-40 disabled:cursor-not-allowed">
+                        class="w-full sm:w-auto text-center px-5 py-2 text-sm bg-[#002D5E] text-white rounded hover:bg-[#001F42] disabled:opacity-40 disabled:cursor-not-allowed">
                     Place Hens
                 </button>
             </div>

@@ -271,11 +271,11 @@
         {{-- Primary actions — these are the two things operators do most on this
              tab, so they're full-size primary buttons up top, not small/muted
              secondary ones a barn worker could miss on a tablet. --}}
-        <div class="flex flex-wrap items-center justify-end gap-3 mb-4">
-            <x-button onclick="openFarmEntryModal(null, null, '{{ now()->toDateString() }}', '{{ now()->format('H:i') }}', null)">
+        <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-end gap-3 mb-4">
+            <x-button onclick="openFarmEntryModal(null, null, '{{ now()->toDateString() }}', '{{ now()->format('H:i') }}', null)" class="w-full sm:w-auto">
                 <i data-lucide="scale" class="w-4 h-4"></i> Log Whole-Farm Feeding
             </x-button>
-            <x-button onclick="openConsumptionModal(null, null, '{{ now()->toDateString() }}', '{{ now()->format('H:i') }}', null, null)">
+            <x-button onclick="openConsumptionModal(null, null, '{{ now()->toDateString() }}', '{{ now()->format('H:i') }}', null, null)" class="w-full sm:w-auto">
                 <i data-lucide="plus" class="w-4 h-4"></i> Add Consumption
             </x-button>
         </div>
@@ -352,9 +352,9 @@
                     <p class="text-xs text-[#6B7280]">kg feed ÷ kg egg mass (lower is better)</p>
                 </div>
 
-                <div class="flex flex-wrap items-center gap-3">
+                <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
                     <select id="fcr-cage-select" onchange="fcrLoad()"
-                            class="border border-[#D9D9D9] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[#002D5E]">
+                            class="w-full sm:w-auto min-w-0 border border-[#D9D9D9] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[#002D5E]">
                         <option value="all">All Cages</option>
                         @foreach($cages as $c)
                         <option value="{{ $c->id }}" {{ (int) $fcrSelectedId === $c->id ? 'selected' : '' }}>
@@ -363,7 +363,7 @@
                         @endforeach
                     </select>
 
-                    <div class="flex items-center gap-1">
+                    <div class="flex flex-wrap items-center gap-1">
                         @foreach(['day' => 'Day', 'week' => 'Week', 'month' => 'Month'] as $value => $label)
                         <button type="button"
                                 data-group-by="{{ $value }}"

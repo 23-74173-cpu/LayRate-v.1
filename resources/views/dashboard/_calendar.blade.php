@@ -32,9 +32,9 @@
             <div class="text-sm font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Daily Egg Logs</div>
         </div>
 
-        <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="flex flex-wrap items-center gap-2">
-                <form method="GET" action="{{ route('dashboard.calendar') }}" class="flex items-center gap-2" data-turbo-frame="dashboard-calendar">
+        <div class="grid sm:flex sm:flex-wrap sm:items-center sm:justify-between items-center gap-3" style="grid-template-columns: 1fr auto;">
+            <div class="flex flex-wrap items-center gap-2 min-w-0">
+                <form method="GET" action="{{ route('dashboard.calendar') }}" class="flex flex-wrap items-center gap-2 min-w-0" data-turbo-frame="dashboard-calendar">
                 @foreach(request()->except(['month', 'year', 'cage']) as $key => $value)
                     @if(is_array($value))
                         @foreach($value as $v)
