@@ -6,21 +6,30 @@ aggregates these on demand) and the rest of the app stay in sync:
 
   - production_logs   : cage-level egg_count / hen_count are distributed
                         across the cage's slots (weighted by active hens per
-                        slot) and upserted on (cage_slot_id, log_date).
-  - egg_size_logs     : one 'unsorted' entry per production log with eggs.
+                        slot). Rows already present for (cage_slot_id,
+                        log_date) are left untouched; only new dates/slots
+                        are inserted (add-only — never replaces existing
+                        production logs, including manual entries).
+  - egg_size_logs     : one 'unsorted' entry per newly inserted production
+                        log with eggs. Logs that were skipped because a
+                        production record already exists are also skipped.
   - environmental_logs: temperature / humidity recorded for the reporting
                         date at 12:00:00, flagged as a manual override.
+                        Existing (cage_id, recorded_at) rows are skipped.
   - feed_consumption_logs: each date's farm-wide feed total (the sum of the
                         sheet's per-cage Feed_Consumed_kg) is distributed
                         across active cages with active hens, weighted by live
                         active hen count using largest-remainder — the same
                         distribution the feeds/nutrition module applies to a
                         whole-farm feeding entry. The batch is matched by crude
-                        protein (else most recent).
-  - mortality_logs    : mortality_count per cage / date.
+                        protein (else most recent). Existing (cage_id,
+                        log_date) rows are skipped.
+  - mortality_logs    : mortality_count per cage / date. Existing rows are
+                        skipped.
 
 All native writes happen in a single transaction: either everything commits
-or nothing does.
+or nothing does. Existing data is never overwritten — only new (slot, date)
+/ (cage, date) combinations are inserted.
 """
 
 import argparse
@@ -363,6 +372,68 @@ def ensure_feed_batch_id(conn, crude_protein, fallback_date, feed_batch_cache, s
     return batch_id
 
 
+def collect_existing_keys(conn, records, cage_structure):
+    """Collect the unique keys already present in each target table for the
+    dates referenced by the import records.
+
+    Pre-computed once up front so the per-row write loop can skip rows that
+    would overwrite existing data (add-only behavior) without running a
+    SELECT per record.
+
+    Returns (prod_keys, env_keys, mort_keys, feed_keys):
+        prod_keys: set of (cage_slot_id, 'YYYY-MM-DD') already in production_logs
+        env_keys:  set of (cage_id, 'YYYY-MM-DD 12:00:00') already in environmental_logs
+        mort_keys: set of (cage_id, 'YYYY-MM-DD') already in mortality_logs
+        feed_keys: set of (cage_id, 'YYYY-MM-DD') already in feed_consumption_logs
+    """
+    date_strs = {str(r["date"]) for r in records if r.get("date") is not None}
+    if not date_strs:
+        return set(), set(), set(), set()
+
+    slot_ids = {sid for c in cage_structure.values() for sid, _ in c["slots"]}
+
+    def in_clause(col, values, prefix):
+        values = list(values)
+        if not values:
+            return "1=0", {}
+        placeholders = ", ".join(f":{prefix}_{i}" for i in range(len(values)))
+        return f"{col} IN ({placeholders})", {f"{prefix}_{i}": v for i, v in enumerate(values)}
+
+    prod_keys, env_keys, mort_keys, feed_keys = set(), set(), set(), set()
+
+    if slot_ids:
+        dc, dp = in_clause("log_date", date_strs, "d")
+        sc, sp = in_clause("cage_slot_id", slot_ids, "s")
+        rows = conn.execute(
+            text(f"SELECT cage_slot_id, log_date FROM production_logs WHERE {dc} AND {sc}"),
+            {**dp, **sp},
+        ).fetchall()
+        prod_keys = {(int(r[0]), str(r[1])) for r in rows}
+
+    dc, dp = in_clause("recorded_at", [f"{d} 12:00:00" for d in date_strs], "e")
+    rows = conn.execute(
+        text(f"SELECT cage_id, recorded_at FROM environmental_logs WHERE {dc}"),
+        dp,
+    ).fetchall()
+    env_keys = {(int(r[0]), str(r[1])) for r in rows}
+
+    dc, dp = in_clause("log_date", date_strs, "m")
+    rows = conn.execute(
+        text(f"SELECT cage_id, log_date FROM mortality_logs WHERE {dc}"),
+        dp,
+    ).fetchall()
+    mort_keys = {(int(r[0]), str(r[1])) for r in rows}
+
+    dc, dp = in_clause("log_date", date_strs, "f")
+    rows = conn.execute(
+        text(f"SELECT cage_id, log_date FROM feed_consumption_logs WHERE {dc}"),
+        dp,
+    ).fetchall()
+    feed_keys = {(int(r[0]), str(r[1])) for r in rows}
+
+    return prod_keys, env_keys, mort_keys, feed_keys
+
+
 def write_native_tables(conn, records, cage_structure, source_file):
     """Write per-cage forecast input rows into the app's native tables.
 
@@ -377,13 +448,16 @@ def write_native_tables(conn, records, cage_structure, source_file):
         "feed": 0,
         "mortality": 0,
         "skips": [],
+        "skipped": {"production": 0, "env": 0, "feed": 0, "mortality": 0},
     }
 
     feed_batch_cache = {}
+    prod_keys, env_keys, mort_keys, feed_keys = collect_existing_keys(conn, records, cage_structure)
 
     for rec in records:
         cage_code = rec["cage_code"]
         date = rec["date"]
+        date_str = str(date)
 
         cage = cage_structure.get(cage_code)
         if cage is None:
@@ -424,6 +498,11 @@ def write_native_tables(conn, records, cage_structure, source_file):
                             excess = 0
 
             for (slot_id, _), hen, egg in zip(slots, hen_parts, egg_parts):
+                key = (slot_id, date_str)
+                if key in prod_keys:
+                    stats["skipped"]["production"] += 1
+                    prod_keys.add(key)
+                    continue
                 hdep = round(egg / hen * 100, 2) if hen > 0 else 0.0
                 conn.execute(
                     text(
@@ -432,12 +511,6 @@ def write_native_tables(conn, records, cage_structure, source_file):
                             (cage_slot_id, log_date, egg_count, hen_count, hdep, notes, logged_via)
                         VALUES
                             (:sid, :date, :egg, :hen, :hdep, :notes, :via)
-                        ON DUPLICATE KEY UPDATE
-                            egg_count = VALUES(egg_count),
-                            hen_count = VALUES(hen_count),
-                            hdep = VALUES(hdep),
-                            notes = VALUES(notes),
-                            logged_via = VALUES(logged_via)
                         """
                     ),
                     {
@@ -450,27 +523,21 @@ def write_native_tables(conn, records, cage_structure, source_file):
                         "via": "unknown",
                     },
                 )
+                prod_keys.add(key)
                 stats["production"] += 1
 
                 if egg > 0:
-                    log_row = conn.execute(
+                    pid = conn.execute(text("SELECT LAST_INSERT_ID()")).scalar()
+                    conn.execute(
                         text(
-                            "SELECT id FROM production_logs WHERE cage_slot_id = :sid AND log_date = :date LIMIT 1"
+                            """
+                            INSERT INTO egg_size_logs (production_log_id, egg_size, count)
+                            VALUES (:pid, 'unsorted', :cnt)
+                            """
                         ),
-                        {"sid": slot_id, "date": date},
-                    ).fetchone()
-                    if log_row:
-                        conn.execute(
-                            text(
-                                """
-                                INSERT INTO egg_size_logs (production_log_id, egg_size, count)
-                                VALUES (:pid, 'unsorted', :cnt)
-                                ON DUPLICATE KEY UPDATE count = VALUES(count)
-                                """
-                            ),
-                            {"pid": log_row[0], "cnt": egg},
-                        )
-                        stats["egg_size"] += 1
+                        {"pid": pid, "cnt": egg},
+                    )
+                    stats["egg_size"] += 1
         else:
             stats["skips"].append(
                 f"{cage_code} {date}: no slots or hen_count <= 0, production skipped"
@@ -479,46 +546,37 @@ def write_native_tables(conn, records, cage_structure, source_file):
         # ---- Environmental log ----
         if rec["temperature_c"] is not None and rec["humidity_percent"] is not None:
             recorded_at = f"{date} 12:00:00"
-            conn.execute(
-                text(
-                    """
-                    INSERT INTO environmental_logs
-                        (cage_id, recorded_at, temperature_c, humidity_pct, is_override)
-                    VALUES
-                        (:cid, :at, :t, :h, 1)
-                    ON DUPLICATE KEY UPDATE
-                        temperature_c = VALUES(temperature_c),
-                        humidity_pct = VALUES(humidity_pct),
-                        is_override = 1
-                    """
-                ),
-                {
-                    "cid": cage_id,
-                    "at": recorded_at,
-                    "t": rec["temperature_c"],
-                    "h": rec["humidity_percent"],
-                },
-            )
-            stats["env"] += 1
+            env_key = (cage_id, recorded_at)
+            if env_key in env_keys:
+                stats["skipped"]["env"] += 1
+                env_keys.add(env_key)
+            else:
+                conn.execute(
+                    text(
+                        """
+                        INSERT INTO environmental_logs
+                            (cage_id, recorded_at, temperature_c, humidity_pct, is_override)
+                        VALUES
+                            (:cid, :at, :t, :h, 1)
+                        """
+                    ),
+                    {
+                        "cid": cage_id,
+                        "at": recorded_at,
+                        "t": rec["temperature_c"],
+                        "h": rec["humidity_percent"],
+                    },
+                )
+                env_keys.add(env_key)
+                stats["env"] += 1
 
-# ---- Mortality log ----
+        # ---- Mortality log ----
         mort = int(rec["mortality_count"] or 0)
         if mort > 0:
-            existing = conn.execute(
-                text(
-                    """
-                    SELECT id FROM mortality_logs
-                     WHERE cage_id = :cid AND log_date = :date
-                     ORDER BY id LIMIT 1
-                    """
-                ),
-                {"cid": cage_id, "date": date},
-            ).fetchone()
-            if existing:
-                conn.execute(
-                    text("UPDATE mortality_logs SET count = :cnt WHERE id = :id"),
-                    {"cnt": mort, "id": existing[0]},
-                )
+            mort_key = (cage_id, date_str)
+            if mort_key in mort_keys:
+                stats["skipped"]["mortality"] += 1
+                mort_keys.add(mort_key)
             else:
                 conn.execute(
                     text(
@@ -534,7 +592,8 @@ def write_native_tables(conn, records, cage_structure, source_file):
                         "notes": f"Import: {source_file}",
                     },
                 )
-            stats["mortality"] += 1
+                mort_keys.add(mort_key)
+                stats["mortality"] += 1
 
     # ---- Feed consumption logs (whole-farm, distributed by hen share) ----
     # Feed is recorded farm-wide, not per cage: the feeds/nutrition module's
@@ -602,40 +661,23 @@ def write_native_tables(conn, records, cage_structure, source_file):
 
         for cage_id, base_cents, _ in shares:
             kg = base_cents / 100
-            existing = conn.execute(
+            feed_key = (cage_id, str(date))
+            if feed_key in feed_keys:
+                stats["skipped"]["feed"] += 1
+                feed_keys.add(feed_key)
+                continue
+            conn.execute(
                 text(
                     """
-                    SELECT id FROM feed_consumption_logs
-                     WHERE cage_id = :cid AND log_date = :date
-                     ORDER BY id LIMIT 1
+                    INSERT INTO feed_consumption_logs
+                        (cage_id, feed_batch_id, log_date, feed_consumed_kg, source)
+                    VALUES
+                        (:cid, :bid, :date, :kg, 'direct')
                     """
                 ),
-                {"cid": cage_id, "date": date},
-            ).fetchone()
-            if existing:
-                conn.execute(
-                    text(
-                        """
-                        UPDATE feed_consumption_logs
-                           SET feed_batch_id = :bid, feed_consumed_kg = :kg,
-                               source = 'direct', farm_feed_entry_id = NULL
-                         WHERE id = :id
-                        """
-                    ),
-                    {"bid": batch_id, "kg": kg, "id": existing[0]},
-                )
-            else:
-                conn.execute(
-                    text(
-                        """
-                        INSERT INTO feed_consumption_logs
-                            (cage_id, feed_batch_id, log_date, feed_consumed_kg, source)
-                        VALUES
-                            (:cid, :bid, :date, :kg, 'direct')
-                        """
-                    ),
-                    {"cid": cage_id, "bid": batch_id, "date": date, "kg": kg},
-                )
+                {"cid": cage_id, "bid": batch_id, "date": date, "kg": kg},
+            )
+            feed_keys.add(feed_key)
             stats["feed"] += 1
 
     return stats
@@ -675,12 +717,22 @@ def import_forecast_input(file_path: str, source_file: str | None = None) -> int
     print(f"Imported {len(records)} row(s) into native production tables.")
     print(
         "Native tables: "
-        f"{native_stats['production']} production log(s), "
+        f"{native_stats['production']} new production log(s), "
         f"{native_stats['egg_size']} egg size log(s), "
-        f"{native_stats['env']} environmental log(s), "
-        f"{native_stats['feed']} feed log(s), "
-        f"{native_stats['mortality']} mortality log(s)."
+        f"{native_stats['env']} new environmental log(s), "
+        f"{native_stats['feed']} new feed log(s), "
+        f"{native_stats['mortality']} new mortality log(s)."
     )
+    skipped = native_stats.get("skipped", {})
+    skip_total = sum(skipped.values())
+    if skip_total:
+        print(
+            f"Skipped {skip_total} existing record(s) (left as-is): "
+            f"{skipped.get('production', 0)} production, "
+            f"{skipped.get('env', 0)} environment, "
+            f"{skipped.get('feed', 0)} feed, "
+            f"{skipped.get('mortality', 0)} mortality."
+        )
     if native_stats.get("feed_batches_created"):
         print(f"Auto-created {native_stats['feed_batches_created']} feed batch(es) for imported feed (no feed batches existed).")
     if native_stats["skips"]:
