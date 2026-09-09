@@ -150,6 +150,9 @@
             #cageInfoPopup { perspective: 1000px; }
             #cageInfoPopup .icon-btn { width:28px; height:28px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; transition:background-color 0.15s ease, color 0.15s ease; }
             #cageInfoPopup .icon-btn:hover { background-color:rgba(0,0,0,0.06); }
+            #cageInfoPopup .icon-btn.labeled { width:auto; height:26px; padding:0 9px; gap:4px; display:inline-flex; align-items:center; border-radius:9999px; background-color:rgba(0,0,0,0.03); }
+            #cageInfoPopup .icon-btn.labeled:hover { background-color:rgba(0,0,0,0.08); }
+            #cageInfoPopup .icon-btn.labeled .btn-label { font-size:11px; font-weight:600; line-height:1; white-space:nowrap; }
             #cageInfoPopup .flipper { transform-style: preserve-3d; transition: transform 0.35s ease; display: grid; }
             #cageInfoPopup .flipper.flipped { transform: rotateY(180deg); }
             #cageInfoPopup .front-face,
@@ -1612,10 +1615,10 @@ function renderCageInfoPopupContent(m) {
         + '<span class="text-sm font-bold min-w-0 truncate" style="color:' + m.color + '">' + m.code + '</span>'
         + '<span class="text-[10px] px-2 py-0.5 rounded-full shrink-0 font-semibold" style="background-color:' + (m.is_active ? '#e8f5ec' : '#f0f0f0') + ';color:' + (m.is_active ? '#1f6b3a' : '#615d59') + ';">' + (m.is_active ? 'Active' : 'Inactive') + '</span>'
         + '</div>'
-        + '<div class="flex items-center gap-1 shrink-0">'
+        + '<div class="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">'
         + '<span class="text-sm font-semibold" style="color:' + occupancyColor + ';">' + m.current_occupancy + '/' + (m.total_capacity || '?') + '</span>'
-        + '<a href="' + m.bulk_add_url + '" class="icon-btn" style="color:#0075de;" aria-label="Bulk add hens" title="Add hens"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i></a>'
-        + '<button onclick="flipCageInfoPopup()" class="icon-btn" style="color:#615d59;" aria-label="Show details" title="Details & settings"><i data-lucide="info" class="w-3.5 h-3.5"></i></button>'
+        + '<a href="' + m.bulk_add_url + '" class="icon-btn labeled" style="color:#0075de;" aria-label="Bulk add hens" title="Add hens"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i><span class="btn-label">Add hens</span></a>'
+        + '<button onclick="flipCageInfoPopup()" class="icon-btn labeled" style="color:#615d59;" aria-label="Show details" title="Details & settings"><i data-lucide="info" class="w-3.5 h-3.5"></i><span class="btn-label">Details</span></button>'
         + '</div>'
         + '</div>';
 
@@ -1654,7 +1657,7 @@ function renderCageInfoPopupContent(m) {
     var backHeader = '<div class="flex items-center gap-3 px-3 pt-3 pb-2 border-b shrink-0" style="background-color:#f8f8f8;border-bottom-color:#e6e6e6;border-top-left-radius:11px;border-top-right-radius:11px;">'
         + accentBar
         + '<span class="text-sm font-bold flex-1 min-w-0 truncate" style="color:' + m.color + ';">' + m.code + '</span>'
-        + '<button onclick="flipCageInfoPopup()" class="icon-btn" style="color:#615d59;" aria-label="Back" title="Back"><i data-lucide="arrow-left" class="w-3.5 h-3.5"></i></button>'
+        + '<button onclick="flipCageInfoPopup()" class="icon-btn labeled" style="color:#615d59;" aria-label="Back" title="Back"><i data-lucide="arrow-left" class="w-3.5 h-3.5"></i><span class="btn-label">Back</span></button>'
         + '</div>';
 
     // Back-face spec rows. Redesigned as a divided stat card: muted uppercase
@@ -1696,14 +1699,14 @@ function renderCageInfoPopupContent(m) {
 
     var backBody = '<div class="flex-1 px-4 py-3 space-y-2.5 overflow-y-auto min-h-0">' + specs + '</div>';
 
-    var backFooter = '<div class="flex items-center justify-around px-4 py-2 border-t shrink-0" style="border-color:#e6e6e6;">';
+    var backFooter = '<div class="flex items-center justify-around flex-wrap px-4 py-2 border-t gap-y-1.5 shrink-0" style="border-color:#e6e6e6;">';
     if (IS_ADMIN) {
-        backFooter += '<button onclick="closeCageInfoPopup(); openEditModal(' + m.id + ', \'' + m.code + '\', ' + (m.location_row !== null ? m.location_row : 'null') + ', ' + (m.location_col !== null ? m.location_col : 'null') + ', ' + m.rows + ', ' + m.slots_per_row + ', ' + m.max_chickens_per_slot + ', ' + (m.is_active ? 1 : 0) + ')" class="icon-btn" style="color:#615d59;" aria-label="Edit cage" title="Edit cage"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>';
-        backFooter += '<button onclick="togglePopupReorderMode(' + m.id + ')" class="icon-btn" style="color:#615d59;" aria-label="Renumber slots" title="Renumber slots"><i data-lucide="list-ordered" class="w-3.5 h-3.5"></i></button>';
+        backFooter += '<button onclick="closeCageInfoPopup(); openEditModal(' + m.id + ', \'' + m.code + '\', ' + (m.location_row !== null ? m.location_row : 'null') + ', ' + (m.location_col !== null ? m.location_col : 'null') + ', ' + m.rows + ', ' + m.slots_per_row + ', ' + m.max_chickens_per_slot + ', ' + (m.is_active ? 1 : 0) + ')" class="icon-btn labeled" style="color:#615d59;" aria-label="Edit cage" title="Edit cage"><i data-lucide="pencil" class="w-3.5 h-3.5"></i><span class="btn-label">Edit</span></button>';
+        backFooter += '<button onclick="togglePopupReorderMode(' + m.id + ')" class="icon-btn labeled" style="color:#615d59;" aria-label="Renumber slots" title="Renumber slots"><i data-lucide="list-ordered" class="w-3.5 h-3.5"></i><span class="btn-label">Renumber</span></button>';
     }
-    backFooter += '<button onclick="closeCageInfoPopup(); window.open(\'' + m.print_label_url + '\', \'print-' + m.id + '\', \'width=900,height=700\')" class="icon-btn" style="color:#615d59;" aria-label="Print cage label" title="Print label"><i data-lucide="printer" class="w-3.5 h-3.5"></i></button>';
+    backFooter += '<button onclick="closeCageInfoPopup(); window.open(\'' + m.print_label_url + '\', \'print-' + m.id + '\', \'width=900,height=700\')" class="icon-btn labeled" style="color:#615d59;" aria-label="Print cage label" title="Print label"><i data-lucide="printer" class="w-3.5 h-3.5"></i><span class="btn-label">Print</span></button>';
     if (IS_ADMIN) {
-        backFooter += '<button onclick="closeCageInfoPopup(); openDeleteModal(' + m.id + ', \'' + m.code + '\')" class="icon-btn" style="color:#615d59;" aria-label="Delete cage" title="Delete cage"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>';
+        backFooter += '<button onclick="closeCageInfoPopup(); openDeleteModal(' + m.id + ', \'' + m.code + '\')" class="icon-btn labeled" style="color:#615d59;" aria-label="Delete cage" title="Delete cage"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i><span class="btn-label">Delete</span></button>';
     }
     backFooter += '</div>';
 
