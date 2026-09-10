@@ -1245,12 +1245,11 @@ class DashboardController extends Controller
         $eggsDelta = round($eggsToday - $eggsYesterday);
 
         // Coop environment averages
-        $latestEnv = EnvironmentalLog::whereIn('cage_id', $cages->pluck('id'))
-            ->orderByDesc('recorded_at')
-            ->limit($cages->count())
+        $todayEnvLogs = EnvironmentalLog::whereIn('cage_id', $cages->pluck('id'))
+            ->whereDate('recorded_at', $today)
             ->get();
-        $avgTemp = $latestEnv->count() ? round($latestEnv->avg('temperature_c'), 1) : null;
-        $avgHum = $latestEnv->count() ? round($latestEnv->avg('humidity_pct'), 1) : null;
+        $avgTemp = $todayEnvLogs->count() ? round($todayEnvLogs->avg('temperature_c'), 1) : null;
+        $avgHum = $todayEnvLogs->count() ? round($todayEnvLogs->avg('humidity_pct'), 1) : null;
 
         // Feed today — sum ALL of today's logs per cage (not just the most recent)
         $feedPerHenKg = (float) Setting::get('feed_per_hen_daily', 0.12);
