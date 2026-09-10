@@ -2,9 +2,8 @@
 <turbo-frame id="analytics-charts">
     @include('dashboard._cage-performance-content', [
         'cages' => $cages,
-        'days' => $days,
+        'targetDate' => $targetDate,
         'cageCode' => $cageCode ?? null,
-        'showDayFilter' => false,
         'chartRenderFn' => 'renderPerformanceCharts',
     ])
 </turbo-frame>

@@ -169,7 +169,7 @@
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-4 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
                     </turbo-frame>
                     <div id="production-charts-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start lg:items-stretch">
-                        <turbo-frame id="dashboard-cage-performance" src="{{ route('dashboard.cage-performance', ['days' => 30]) }}" loading="lazy" class="block h-full">
+                        <turbo-frame id="dashboard-cage-performance" src="{{ route('dashboard.cage-performance') }}" loading="lazy" class="block h-full">
                             @include('dashboard._cage-performance-skeleton')
                         </turbo-frame>
 

@@ -42,31 +42,29 @@ class AnalyticsController extends Controller
             $dashboardController = app(DashboardController::class);
             $data = $dashboardController->buildDashboardData(null);
 
+            // HDEP for the reporting (today) date only — no week / month /
+            // full-period layrate aggregation in Performance mode.
             $reportingDate = ReportingDateService::reportingDate();
-            $endDate = $reportingDate->toDateString();
-            $startDate = $isFull
-                ? $reportingDate->copy()->subYears(5)->toDateString()
-                : $reportingDate->copy()->subDays($days - 1)->toDateString();
+            $targetDate = $reportingDate;
+            $dateStr = $reportingDate->toDateString();
 
             $cageIds = $data['cages']->pluck('id');
 
-            $periodStats = ProductionLog::query()
+            $dayStats = ProductionLog::query()
                 ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
                 ->whereIn('cage_slots.cage_id', $cageIds)
-                ->whereBetween('production_logs.log_date', [$startDate, $endDate])
+                ->whereDate('production_logs.log_date', $dateStr)
                 ->selectRaw('cage_slots.cage_id as cage_id, SUM(production_logs.egg_count) as total_eggs, AVG(production_logs.hdep) as avg_hdep')
                 ->groupBy('cage_slots.cage_id')
                 ->get()
                 ->keyBy('cage_id');
 
-            $data['cages']->each(function ($cage) use ($periodStats, $days) {
-                $stats = $periodStats->get($cage->id);
+            $data['cages']->each(function ($cage) use ($dayStats) {
+                $stats = $dayStats->get($cage->id);
                 $cage->period_eggs = (int) ($stats?->total_eggs ?? 0);
                 $cage->period_hdep = $stats?->avg_hdep !== null
                     ? round((float) $stats->avg_hdep, 1)
-                    : ($cage->hen_count > 0 && $days > 0
-                        ? round($cage->period_eggs / ($cage->hen_count * $days) * 100, 1)
-                        : 0);
+                    : 0;
             });
 
             $cages = $data['cages'];
@@ -78,7 +76,7 @@ class AnalyticsController extends Controller
             $bestDay = '-';
             $worstDay = '-';
 
-            return compact('cage', 'cageCode', 'period', 'logs', 'feedLogs', 'avgHdep', 'bestDay', 'worstDay', 'allCages', 'isAll', 'isPerformance', 'days', 'cages');
+            return compact('cage', 'cageCode', 'period', 'logs', 'feedLogs', 'avgHdep', 'bestDay', 'worstDay', 'allCages', 'isAll', 'isPerformance', 'days', 'cages', 'targetDate');
         }
 
         if ($isAll) {

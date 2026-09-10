@@ -125,44 +125,46 @@ class DashboardController extends Controller
     public function cagePerformance()
     {
         $cageCode = request('cage');
-        $days = (int) request('days', 7);
-        if (! in_array($days, [0, 7, 30, 90])) {
-            $days = 7;
-        }
 
         $data = $this->buildDashboardData($cageCode);
 
-        // Override per-cage stats for the selected period.
+        // HDEP is reported for a single date only: the selected From date when
+        // one is set, otherwise the reporting (today) date. No week / month /
+        // full-period aggregation is applied to layrate.
         $reportingDate = ReportingDateService::reportingDate();
-        [$startDate, $endDate, $days] = $this->dateRange($days, request('from_date'), $reportingDate);
+        $selectedDate = $reportingDate;
+        $fromDate = request('from_date');
+        if ($fromDate && preg_match('/^\d{4}-\d{2}-\d{2}$/', $fromDate)) {
+            $candidate = \Carbon\Carbon::parse($fromDate);
+            if ($candidate->lessThanOrEqualTo($reportingDate)) {
+                $selectedDate = $candidate;
+            }
+        }
+        $dateStr = $selectedDate->toDateString();
 
         $cageIds = $data['cages']->pluck('id');
 
-        $periodStats = ProductionLog::query()
+        $dayStats = ProductionLog::query()
             ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
             ->whereIn('cage_slots.cage_id', $cageIds)
-            ->where('production_logs.log_date', '<=', $endDate)
-            ->when($startDate, fn ($q) => $q->where('production_logs.log_date', '>=', $startDate))
+            ->whereDate('production_logs.log_date', $dateStr)
             ->selectRaw('cage_slots.cage_id as cage_id, SUM(production_logs.egg_count) as total_eggs, AVG(production_logs.hdep) as avg_hdep')
             ->groupBy('cage_slots.cage_id')
             ->get()
             ->keyBy('cage_id');
 
-        $data['cages']->each(function ($cage) use ($periodStats, $days) {
-            $stats = $periodStats->get($cage->id);
+        $data['cages']->each(function ($cage) use ($dayStats) {
+            $stats = $dayStats->get($cage->id);
             $cage->period_eggs = (int) ($stats?->total_eggs ?? 0);
-            // Use the stored per-log HDEP average, which weights by actual
-            // hen-days (each log records its own hen_count).  The manual
-            // formula  eggs / (hen_count × days)  over-estimates the
-            // denominator because not every slot logs every day.
+            // HDEP for the chosen date only: average of that date's per-log
+            // HDEP, where each log already weights by its own recorded hen
+            // count. 0 when the selected date has no production logs.
             $cage->period_hdep = $stats?->avg_hdep !== null
                 ? round((float) $stats->avg_hdep, 1)
-                : ($cage->hen_count > 0 && $days > 0
-                    ? round($cage->period_eggs / ($cage->hen_count * $days) * 100, 1)
-                    : 0);
+                : 0;
         });
 
-        $data['days'] = $days;
+        $data['targetDate'] = $selectedDate;
         $data['cageCode'] = $cageCode;
 
         return view('dashboard._cage-performance', $data);
