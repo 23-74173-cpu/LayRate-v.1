@@ -6,7 +6,14 @@
     /* dompdf has limited CSS support (no flexbox/grid) — this view intentionally
        uses plain block/table layout instead of the Tailwind classes the screen
        and print views use. */
+    /* Page margin is sized to exactly fit the fixed header below (no leftover
+       blank strip) plus a small footer. The header/footer are positioned into
+       that margin area — dompdf repeats any `position: fixed` element on every
+       page, which a plain top-of-document block does not. */
+    @page { margin: 90px 40px 50px 40px; }
     body { font-family: Georgia, 'Times New Roman', serif; color: #333333; font-size: 11px; }
+    .pdf-header { position: fixed; top: -70px; left: 0px; right: 0px; }
+    .pdf-footer { position: fixed; bottom: -30px; left: 0px; right: 0px; text-align: center; font-size: 8px; color: #9CA3AF; }
     .letterhead { width: 100%; margin-bottom: 4px; }
     .letterhead td { vertical-align: top; }
     .brand-name { font-weight: bold; color: #102A4C; font-size: 13px; }
@@ -37,22 +44,27 @@
     @php $cageColorMap = \App\Models\Cage::getColorMap(); @endphp
     @php $reasonColors = ['Disease' => '#721C24', 'Heat Stress' => '#856404', 'Injury' => '#856404', 'Predator' => '#721C24']; @endphp
 
-    <table class="letterhead">
-        <tr>
-            <td style="width:40px;vertical-align:middle;">
-                <img src="{{ public_path('images/layrate-logo-mark.png') }}" style="width:32px;height:32px;">
-            </td>
-            <td>
-                <div class="brand-name">LayRate Poultry Farm</div>
-                <div class="brand-sub">Farm Monitor System</div>
-            </td>
-            <td>
-                <div class="doc-title">{{ $type === 'all' ? 'All Reports' : ucfirst($type) . ' Report' }}</div>
-                <div class="doc-range">{{ $from && $to ? "{$from} — {$to}" : 'All time' }}</div>
-            </td>
-        </tr>
-    </table>
-    <hr class="rule">
+    {{-- position: fixed repeats this block on every page — the actual fix
+         for the header disappearing after page 1. --}}
+    <div class="pdf-header">
+        <table class="letterhead">
+            <tr>
+                <td style="width:40px;vertical-align:middle;">
+                    <img src="{{ public_path('images/layrate-logo-mark.png') }}" style="width:32px;height:32px;">
+                </td>
+                <td>
+                    <div class="brand-name">LayRate Poultry Farm</div>
+                    <div class="brand-sub">Farm Monitor System</div>
+                </td>
+                <td>
+                    <div class="doc-title">{{ $type === 'all' ? 'All Reports' : ucfirst($type) . ' Report' }}</div>
+                    <div class="doc-range">{{ $from && $to ? "{$from} — {$to}" : 'All time' }}</div>
+                </td>
+            </tr>
+        </table>
+        <hr class="rule">
+    </div>
+    <div class="pdf-footer">LayRate Poultry Farm</div>
 
     <table class="meta-strip">
         <tr>

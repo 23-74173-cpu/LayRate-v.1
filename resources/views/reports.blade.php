@@ -10,8 +10,17 @@
    renders it into, which suppresses it; #report-doc's own 20mm padding below
    supplies the actual visual margin instead. If a browser still shows it
    regardless, that's the "Headers and footers" checkbox under the print
-   dialog's "More settings" — a browser preference outside what CSS can force. */
-@page { margin: 0; }
+   dialog's "More settings" — a browser preference outside what CSS can force.
+
+   Page 1 keeps margin 0 (its spacing already comes from #report-doc's own
+   padding — adding page margin on top of that would double it up). Every
+   page after that has no equivalent padding of its own (the repeating
+   <thead> header just starts wherever the table happens to break), so it
+   needs its own top margin or the header sits flush against the physical
+   page edge. @page :first is real, standards-supported CSS — it's what lets
+   the two cases have different margins at all. */
+@page { margin: 15mm 0 0 0; }
+@page :first { margin: 0; }
 @media print {
     aside, header, .no-print { display: none !important; }
     body { display: block !important; overflow: visible !important; }
@@ -29,6 +38,12 @@
     tbody tr { page-break-inside: avoid; }
     tfoot, .signature-block { page-break-inside: avoid; }
     .no-screen { display: block !important; }
+    /* A dedicated class rather than reusing .no-screen: that one forces
+       display:block for print, which is correct for ordinary elements but
+       would pull a <tr> out of table-row semantics entirely — and it's
+       exactly the row semantics that make a browser repeat a <thead> on
+       every printed page. This keeps it a real row. */
+    .print-repeat-header { display: table-row !important; }
     /* On screen, the printable doc is paginated client-side (see script block);
        printing must always show every row regardless of the current page. */
     #report-doc tbody tr { display: table-row !important; }
@@ -45,6 +60,7 @@
     .report-section-break { page-break-before: always; break-before: page; }
 }
 .no-screen { display: none; }
+.print-repeat-header { display: none; }
 .report-chart-img { display: none; }
 </style>
 @endpush
@@ -193,7 +209,7 @@
             @endif
 
             @if($section['rows']->isNotEmpty())
-            @include('reports._report-table', ['rows' => $section['rows'], 'cageColorMap' => $cageColorMap, 'tableKey' => $section['type']])
+            @include('reports._report-table', ['rows' => $section['rows'], 'cageColorMap' => $cageColorMap, 'tableKey' => $section['type'], 'printHeader' => ['type' => $type, 'from' => $from, 'to' => $to]])
             <div class="no-print flex items-center justify-center gap-3 mt-3 text-xs text-[#6B7280]" data-report-pager="{{ $section['type'] }}">
                 <button type="button" data-page-prev class="px-2.5 py-1 rounded border border-[#D9D9D9] hover:bg-black/5 disabled:opacity-40 disabled:cursor-not-allowed" disabled>‹ Prev</button>
                 <span data-page-label>Page 1 of 1</span>
@@ -217,7 +233,7 @@
         </div>
         @endif
 
-        @include('reports._report-table', ['rows' => $rows, 'cageColorMap' => $cageColorMap, 'tableKey' => $type])
+        @include('reports._report-table', ['rows' => $rows, 'cageColorMap' => $cageColorMap, 'tableKey' => $type, 'printHeader' => ['type' => $type, 'from' => $from, 'to' => $to]])
         <div class="no-print flex items-center justify-center gap-3 mt-3 text-xs text-[#6B7280]" data-report-pager="{{ $type }}">
             <button type="button" data-page-prev class="px-2.5 py-1 rounded border border-[#D9D9D9] hover:bg-black/5 disabled:opacity-40 disabled:cursor-not-allowed" disabled>‹ Prev</button>
             <span data-page-label>Page 1 of 1</span>

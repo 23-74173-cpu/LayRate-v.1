@@ -8,11 +8,16 @@ use Illuminate\Support\Str;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithCustomStartCell;
 use Maatwebsite\Excel\Concerns\WithDrawings;
+use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithTitle;
+use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
+use PhpOffice\PhpSpreadsheet\Worksheet\Table;
+use PhpOffice\PhpSpreadsheet\Worksheet\Table\TableStyle;
 
-class ReportSheetExport implements FromCollection, WithCustomStartCell, WithDrawings, WithHeadings, WithTitle
+class ReportSheetExport implements FromCollection, WithCustomStartCell, WithDrawings, WithEvents, WithHeadings, WithTitle
 {
     public function __construct(
         private string $label,
@@ -68,5 +73,38 @@ class ReportSheetExport implements FromCollection, WithCustomStartCell, WithDraw
             }
         }
         return $drawings;
+    }
+
+    /**
+     * WithHeadings + FromCollection only write plain values — no borders, no
+     * banding, no filter, nothing that actually reads as "a table" when
+     * opened. Wrap the written range in a real Excel Table object instead.
+     */
+    public function registerEvents(): array
+    {
+        return [
+            AfterSheet::class => function (AfterSheet $event) {
+                $headings = $this->headings();
+                if (empty($headings)) {
+                    return;
+                }
+
+                $sheet = $event->sheet->getDelegate();
+                [$startCol, $startRow] = Coordinate::coordinateFromString($this->startCell());
+                $startColIndex = Coordinate::columnIndexFromString($startCol);
+                $endColIndex = $startColIndex + count($headings) - 1;
+                $endRow = $startRow + $this->rows->count();
+
+                $range = $this->startCell() . ':' . Coordinate::stringFromColumnIndex($endColIndex) . $endRow;
+
+                $tableName = 'Tbl_' . preg_replace('/[^A-Za-z0-9_]/', '_', $this->title());
+                $tableName = preg_match('/^[A-Za-z_]/', $tableName) ? $tableName : "T{$tableName}";
+
+                $table = new Table($range, $tableName);
+                $table->getStyle()->setTheme(TableStyle::TABLE_STYLE_MEDIUM2)->setShowRowStripes(true);
+
+                $sheet->addTable($table);
+            },
+        ];
     }
 }
