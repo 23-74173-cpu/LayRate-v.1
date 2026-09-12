@@ -54,7 +54,7 @@
             <button type="button" onclick="acknowledgeAlertsModal()" class="w-full sm:w-auto px-4 py-2 text-sm font-medium rounded-lg transition-colors" style="color: #1f1f1f; border: 1px solid #e6e6e6;" onmouseover="this.style.backgroundColor='#f6f5f4'" onmouseout="this.style.backgroundColor='transparent'">
                 Acknowledge
             </button>
-            <a href="{{ route('notifications.index') }}" class="inline-flex items-center justify-center w-full sm:w-auto px-4 py-2 text-sm font-medium rounded-lg text-white bg-[#002D5E] hover:bg-[#001F42] transition-colors">
+            <a href="{{ route('notifications.index') }}" onclick="acknowledgeAlertsModal()" class="inline-flex items-center justify-center w-full sm:w-auto px-4 py-2 text-sm font-medium rounded-lg text-white bg-[#002D5E] hover:bg-[#001F42] transition-colors">
                 View all notifications
             </a>
         </div>
@@ -64,27 +64,27 @@
 <script>
 (function() {
     window.acknowledgeAlertsModal = function() {
+        // Remove immediately so the modal never lingers over the next
+        // page (e.g. when "View all notifications" navigates away).
+        const modal = document.getElementById('alerts-modal');
+        if (modal) modal.remove();
+
         const ids = Array.from(document.querySelectorAll('#alerts-modal-list [data-alert-id]'))
             .map(function(el) { return parseInt(el.dataset.alertId, 10); })
             .filter(function(id) { return !isNaN(id); });
 
         fetch('{{ route('alerts.acknowledge-modal') }}', {
             method: 'POST',
+            // keepalive lets the acknowledge land even when this fires
+            // during a page navigation.
+            keepalive: true,
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ ids: ids })
-        })
-        .then(function() {
-            const modal = document.getElementById('alerts-modal');
-            if (modal) modal.remove();
-        })
-        .catch(function() {
-            const modal = document.getElementById('alerts-modal');
-            if (modal) modal.remove();
-        });
+        }).catch(function() { /* best-effort; modal already closed */ });
     };
 
     // Escape key closes modal
