@@ -395,7 +395,7 @@ class EggReportingAndHistoryTest extends TestCase
         $response = $this->post(route('eggs.logging.store'), [
             'cage_slot_id' => $this->slotA1->id,
             'log_date' => now()->toDateString(),
-            'egg_count' => 5,
+            'egg_count' => 3,
             'hen_count' => 4,
         ]);
 

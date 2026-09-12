@@ -349,7 +349,8 @@ class EggLoggingController extends Controller
         }
 
         // Use hen_count submitted by the editor, or preserve the stored value
-        $henCount = $data['hen_count'] !== null ? (int) $data['hen_count'] : $productionLog->hen_count;
+        // ($data['hen_count'] is absent when the field is omitted entirely).
+        $henCount = ($data['hen_count'] ?? null) !== null ? (int) $data['hen_count'] : $productionLog->hen_count;
 
         if ($henCount === 0) {
             return redirect()->route('eggs.logging')
@@ -371,6 +372,11 @@ class EggLoggingController extends Controller
             'hen_count' => $henCount,
             'hdep' => round(($data['egg_count'] / $henCount) * 100, 2),
             'notes' => $data['notes'] ?? null,
+            // An explicit user edit is a manual override — without this a
+            // sensor-created log stays logged_via='sensor' and the next
+            // sensor POST silently reverts the correction (ingestion only
+            // protects logged_via='manual' rows).
+            'logged_via' => 'manual',
         ]);
 
         $this->syncSizeLogs($productionLog, $data);

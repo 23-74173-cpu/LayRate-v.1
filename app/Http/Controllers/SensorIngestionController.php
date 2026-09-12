@@ -61,6 +61,11 @@ class SensorIngestionController extends Controller
 
         DB::beginTransaction();
 
+        // Per-cage died-today cache for the hen-count invariant below.
+        // Mirrors EggLoggingController::store(): a hen that died today may
+        // still have laid, so the ceiling is active hens + died today.
+        $diedTodayByCage = [];
+
         try {
             foreach ($data['readings'] as $index => $reading) {
                 $serial = $reading['serial_number'];
@@ -208,6 +213,30 @@ class SensorIngestionController extends Controller
                         }
 
                         $henCount = $slot->active_hen_count;
+
+                        /*
+                         * HEN-COUNT INVARIANT — a slot cannot lay more eggs
+                         * in a day than the hens present (active + died
+                         * today, mirroring EggLoggingController::store).
+                         * A higher sensor count is a miscount (double-break,
+                         * stuck beam re-trigger) and must never become a
+                         * ProductionLog — it would corrupt HDEP and the
+                         * forecast inputs. Reject loudly (207) and alert so
+                         * the farmer checks the sensor. The raw occupancy
+                         * reading above is still preserved.
+                         */
+                        if (! array_key_exists($slot->cage_id, $diedTodayByCage)) {
+                            $diedTodayByCage[$slot->cage_id] = self::diedTodayCount($slot->cage_id, $logDate);
+                        }
+                        $henCount += $diedTodayByCage[$slot->cage_id];
+
+                        if ($reportedCount > $henCount) {
+                            self::createEggOverHenAlert($slot, $reportedCount, $henCount);
+
+                            $errors[] = "Reading {$index}: count {$reportedCount} exceeds hen count ({$henCount}) for slot {$slot->id} on {$logDate}. Sensor over-count suspected.";
+                            continue;
+                        }
+
                         $productionAttrs = [
                             'egg_count' => $reportedCount,
                             'hen_count' => $henCount,
@@ -349,6 +378,52 @@ class SensorIngestionController extends Controller
                 'error' => config('app.debug') ? $e->getMessage() : 'Internal server error.',
             ], 500);
         }
+    }
+
+    private static function diedTodayCount(int $cageId, string $logDate): int
+    {
+        $died = (int) DB::table('mortality_logs')
+            ->join('mortality_log_hens', 'mortality_logs.id', '=', 'mortality_log_hens.mortality_log_id')
+            ->where('mortality_logs.cage_id', $cageId)
+            ->where('mortality_logs.log_date', $logDate)
+            ->distinct()
+            ->count('mortality_log_hens.hen_id');
+
+        if ($died === 0) {
+            $died = (int) \App\Models\MortalityLog::where('cage_id', $cageId)
+                ->where('log_date', $logDate)
+                ->sum('count');
+        }
+
+        return $died;
+    }
+
+    private static function createEggOverHenAlert($slot, int $reportedCount, int $henCount): void
+    {
+        $cage = $slot->cage;
+        $cageCode = $cage?->cage_code ?? 'Unknown';
+        [$dayStart, $dayEnd] = ReportingDateService::reportingDayWindow(ReportingDateService::reportingDateString());
+
+        $exists = Alert::where('cage_id', $cage?->id)
+            ->where('alert_type', 'egg_over_hen')
+            ->where('is_read', 0)
+            ->where('triggered_at', '>=', $dayStart)
+            ->where('triggered_at', '<', $dayEnd)
+            ->exists();
+
+        if ($exists) {
+            return;
+        }
+
+        Alert::createDeduped([
+            'cage_id' => $cage?->id,
+            'alert_type' => 'egg_over_hen',
+            'message' => "IR sensor in {$cageCode} slot {$slot->row_number}-{$slot->column_number} reported {$reportedCount} eggs but only {$henCount} hen(s) present: reading rejected, check the sensor",
+            'is_read' => 0,
+            'triggered_at' => now(),
+            'dedup_key' => Alert::dedupKey($cage?->id, 'egg_over_hen'),
+            'alert_day' => ReportingDateService::reportingDateString(),
+        ]);
     }
 
     private static function createSensorResetAlert($slot, int $previousCount, int $reportedCount): void

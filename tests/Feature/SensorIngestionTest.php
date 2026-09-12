@@ -9,6 +9,7 @@ use App\Models\Device;
 use App\Models\EnvironmentalLog;
 use App\Models\HardwareItem;
 use App\Models\Hen;
+use App\Models\ProductionLog;
 use App\Models\SensorOccupancyReading;
 use App\Models\Setting;
 use App\Models\User;
@@ -287,6 +288,133 @@ class SensorIngestionTest extends TestCase
         // Critical P0-P4 protection: placement/occupancy must not change.
         $this->assertEquals(4, $this->slot->fresh()->current_occupancy);
         $this->assertEquals(4, $this->slot->hens()->where('is_active', 1)->count());
+    }
+
+    public function test_breakbeam_count_exceeding_hen_count_is_rejected(): void
+    {
+        $this->createHens(1);
+        $this->breakbeamItem();
+        HardwareItem::create([
+            'device_type' => 'relay',
+            'serial_number' => 'RELAY-TEST-001',
+            'cage_id' => $this->cage->id,
+            'device_id' => $this->device->id,
+            'status' => 'active',
+        ]);
+        $key = $this->deviceKey();
+
+        $response = $this->postReadings([
+            'readings' => [
+                [
+                    'serial_number' => 'RELAY-TEST-001',
+                    'relay_status' => 'off',
+                ],
+                [
+                    'serial_number' => 'IRBBS-TEST-001',
+                    'count' => 2,
+                ],
+            ],
+            'recorded_at' => now()->toDateTimeString(),
+        ], $key);
+
+        // Partial success: relay accepted, over-count egg log rejected.
+        $response->assertStatus(207);
+        $response->assertJsonPath('accepted', 1);
+        $response->assertJsonPath('errors.0', fn ($msg) => str_contains($msg, 'exceeds hen count'));
+
+        // No egg log may be created from an impossible sensor count.
+        $this->assertEquals(0, ProductionLog::where('cage_slot_id', $this->slot->id)->count());
+
+        // Raw occupancy datum is still preserved for diagnostics.
+        $this->assertDatabaseHas('sensor_occupancy_readings', [
+            'cage_slot_id' => $this->slot->id,
+            'reported_count' => 2,
+        ]);
+
+        // Farmer is alerted to check the sensor.
+        $this->assertDatabaseHas('alerts', [
+            'cage_id' => $this->cage->id,
+            'alert_type' => 'egg_over_hen',
+            'is_read' => 0,
+        ]);
+    }
+
+    public function test_breakbeam_count_equal_to_hen_count_is_accepted(): void
+    {
+        $this->createHens(2);
+        $this->breakbeamItem();
+        $key = $this->deviceKey();
+
+        $response = $this->postReadings([
+            'readings' => [
+                [
+                    'serial_number' => 'IRBBS-TEST-001',
+                    'count' => 2,
+                ],
+            ],
+            'recorded_at' => now()->toDateTimeString(),
+        ], $key);
+
+        $response->assertOk();
+
+        $this->assertDatabaseHas('production_logs', [
+            'cage_slot_id' => $this->slot->id,
+            'egg_count' => 2,
+            'hen_count' => 2,
+        ]);
+    }
+
+    public function test_editing_sensor_log_marks_manual_so_sensor_cannot_revert_it(): void
+    {
+        $this->createHens(2);
+        $this->breakbeamItem();
+        $key = $this->deviceKey();
+        $today = \App\Services\ReportingDateService::reportingDateString();
+
+        // Sensor logs 2 (valid for 2 hens).
+        $this->postReadings([
+            'readings' => [
+                ['serial_number' => 'IRBBS-TEST-001', 'count' => 2],
+            ],
+            'recorded_at' => now()->subMinutes(2)->toDateTimeString(),
+        ], $key)->assertOk();
+
+        $log = ProductionLog::where('cage_slot_id', $this->slot->id)->firstOrFail();
+        $this->assertEquals('sensor', $log->logged_via);
+
+        // User corrects 2 -> 1 via the edit modal (Recent logs pencil).
+        $this->actingAs($this->admin)
+            ->put(route('eggs.logging.update', $log), [
+                'log_date' => $today,
+                'egg_count' => 1,
+            ])
+            ->assertRedirect(route('eggs.logging'));
+
+        $this->assertDatabaseHas('production_logs', [
+            'id' => $log->id,
+            'egg_count' => 1,
+            'logged_via' => 'manual',
+        ]);
+
+        // Sensor re-posts 2 (e.g. next temperature-triggered bridge POST
+        // carries the same monotonic count). Must NOT revert the correction.
+        // Single-reading batch with everything skipped => 422 by convention.
+        $response = $this->postReadings([
+            'readings' => [
+                ['serial_number' => 'IRBBS-TEST-001', 'count' => 2],
+            ],
+            'recorded_at' => now()->toDateTimeString(),
+        ], $key);
+
+        $response->assertStatus(422);
+        $response->assertJsonPath('accepted', 0);
+        $response->assertJsonPath('errors.0', fn ($msg) => str_contains($msg, 'manual override'));
+
+        $this->assertDatabaseHas('production_logs', [
+            'id' => $log->id,
+            'egg_count' => 1,
+            'logged_via' => 'manual',
+        ]);
     }
 
     public function test_serial_number_not_linked_to_device_is_rejected(): void
