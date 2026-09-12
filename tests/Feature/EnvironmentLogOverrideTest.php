@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Cage;
 use App\Models\EnvironmentalLog;
+use App\Models\HardwareItem;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\ReportingDateService;
@@ -183,5 +184,35 @@ class EnvironmentLogOverrideTest extends TestCase
         } finally {
             Carbon::setTestNow();
         }
+    }
+
+    public function test_cage_without_assigned_sensor_shows_no_readings_card(): void
+    {
+        $sensorCage = $this->cage('ENV-SENS');
+        $plainCage = $this->cage('ENV-PLAIN');
+        $repDay = ReportingDateService::reportingDateString();
+        $at = Carbon::parse($repDay, config('app.timezone', 'UTC'))->setHour(12)->setMinute(0)->setSecond(0)->toDateTimeString();
+
+        HardwareItem::create([
+            'device_type' => 'DHT22',
+            'serial_number' => 'ENV-DHT-001',
+            'cage_id' => $sensorCage->id,
+            'status' => 'active',
+        ]);
+        EnvironmentalLog::create(['cage_id' => $sensorCage->id, 'recorded_at' => $at, 'temperature_c' => 29.5, 'humidity_pct' => 60, 'is_override' => 0]);
+        EnvironmentalLog::create(['cage_id' => $plainCage->id, 'recorded_at' => $at, 'temperature_c' => 27.0, 'humidity_pct' => 55, 'is_override' => 0]);
+
+        $response = $this->actingAs($this->user)->get(route('environment.live-data'));
+        $response->assertOk();
+        $response->assertSee('No sensor assigned');
+        $response->assertSee('29.5');
+
+        $ids = $this->actingAs($this->user)->get(route('environment.live-data'))->viewData('sensorCageIds');
+        $this->assertTrue($ids->contains($sensorCage->id));
+        $this->assertFalse($ids->contains($plainCage->id));
+
+        $rows = $this->actingAs($this->user)->get(route('environment.live-data'))->viewData('sensorReadings');
+        $this->assertCount(1, $rows);
+        $this->assertEquals($sensorCage->id, $rows->first()->cage->id);
     }
 }

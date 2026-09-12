@@ -31,9 +31,9 @@
         </x-kpi-card>
     </div>
 
-    {{-- ── Per-cage Sensor Cards ── --}}
+    {{-- ── Per-cage Sensor Cards (sensor-assigned cages with readings only) ── --}}
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-10">
-        @forelse($latestPerCage as $r)
+        @forelse(($sensorReadings ?? $latestPerCage) as $r)
         @php
             $color = $r->cage->color;
             $soft  = $r->cage->color_soft;
@@ -103,9 +103,13 @@
         </div>
         @endforelse
 
-        {{-- Cages with no sensor --}}
+        {{-- Cages with no assigned sensor (or sensor cages with no readings yet) --}}
         @foreach($cages as $cage)
-        @if($latestPerCage->pluck('cage.id')->doesntContain($cage->id))
+        @php
+            $hasSensor = ($sensorCageIds ?? collect())->contains($cage->id);
+            $hasReading = $latestPerCage->pluck('cage.id')->contains($cage->id);
+        @endphp
+        @if(! $hasSensor || ! $hasReading)
         <div class="bg-white rounded-lg border border-dashed border-[#D9D9D9] overflow-hidden">
             <div class="px-4 py-3 flex items-center justify-between">
                 <div class="flex items-center gap-2">
@@ -116,7 +120,7 @@
             </div>
             <div class="px-4 py-6 text-center text-xs text-[#6B7280]">
                 <i data-lucide="wifi-off" class="w-5 h-5 mx-auto mb-2 text-gray-300"></i>
-                No sensor data
+                {{ ! $hasSensor ? 'No sensor assigned' : 'No sensor data' }}
             </div>
         </div>
         @endif

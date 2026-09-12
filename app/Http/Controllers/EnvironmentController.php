@@ -71,11 +71,29 @@ class EnvironmentController extends Controller
             return (object) compact('env', 'tempStatus', 'humStatus', 'status', 'source', 'cage');
         })->filter();
 
+        // Cages with an assigned, active DHT22 sensor. Cards render live
+        // readings ONLY for these cages — a cage with no sensor must not
+        // show temp/humidity nor a "Sensor" badge (env rows there can only
+        // be manual entries, and labeling them "Sensor" is wrong).
+        $sensorCageIds = HardwareItem::where('device_type', 'DHT22')
+            ->where('status', 'active')
+            ->whereNotNull('cage_id')
+            ->distinct()
+            ->pluck('cage_id');
+
         // "Active sensors" = cages currently fed by a real sensor reading, not by
         // manual overrides. This is what the top metric should report — before
         // this fix it counted every cage with any env row (all 3 here), even
         // though hardware_items is empty.
-        $activeSensors = $latestPerCage->filter(fn ($r) => $r->source === 'Sensor')->count();
+        $activeSensors = $latestPerCage
+            ->filter(fn ($r) => $r->source === 'Sensor' && $sensorCageIds->contains($r->cage->id))
+            ->count();
+
+        // Readings shown on per-cage cards: sensor-assigned cages only.
+        // (Coop-wide KPIs/trends below still aggregate all rows.)
+        $sensorReadings = $latestPerCage
+            ->filter(fn ($r) => $sensorCageIds->contains($r->cage->id))
+            ->values();
 
         $trendData = EnvironmentalLog::select(
                 DB::raw("DATE_FORMAT(recorded_at, '{$dateFormat}') as period"),
@@ -109,7 +127,7 @@ class EnvironmentController extends Controller
         $avgStatus = EnvironmentStatusService::summary((float) $avgTemp, (float) $avgHum, $thresholds);
 
         return view('environment._live-data', compact(
-            'cages', 'latestPerCage', 'activeSensors', 'trendData', 'summaryLogs',
+            'cages', 'latestPerCage', 'sensorCageIds', 'sensorReadings', 'activeSensors', 'trendData', 'summaryLogs',
             'avgTemp', 'avgHum', 'avgStatus',
             'tempValues', 'humValues',
             'thresholds', 'range'

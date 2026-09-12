@@ -468,7 +468,7 @@
             </div>
             <div id="overridePinSection">
                 <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Override PIN</label>
-                <input type="text" id="overridePinInput" inputmode="numeric" maxlength="6"
+                <input type="password" id="overridePinInput" inputmode="numeric" maxlength="6" autocomplete="off"
                        class="w-full border rounded-lg px-3 py-2.5 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                        style="border-color: #e6e6e6; color: #1f1f1f;">
             </div>
@@ -1668,6 +1668,13 @@
                     if (typeof closeOverrideModal === 'function') closeOverrideModal();
                     if (typeof closeConfirmMultiModal === 'function') closeConfirmMultiModal();
                     if (typeof closeEditLogModal === 'function') closeEditLogModal();
+                    return;
+                }
+                // Enter in the override PIN/password field submits (mobile keyboards
+                // often have no Tab/go affordance to reach the Unlock button).
+                if (e.key === 'Enter' && (e.target.id === 'overridePinInput' || e.target.id === 'overridePasswordInput')) {
+                    e.preventDefault();
+                    if (typeof submitOverride === 'function') submitOverride();
                 }
             });
         }
