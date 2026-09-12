@@ -556,6 +556,42 @@
         }
     });
 
+    // ── Pi connection-loss notice ──
+    // Turbo frames, streams and fetch calls hit the Pi over mDNS
+    // (layratepi.local), which flaps while the device hops networks
+    // (hotspot ↔ router) or the browser re-resolves .local to a different
+    // address family. Surface one banner instead of console spam, then
+    // reload stalled lazy frames once the network settles.
+    var piOfflineUntil = 0;
+    function showPiOfflineBanner() {
+        if (Date.now() < piOfflineUntil) return;
+        piOfflineUntil = Date.now() + 30000;
+        var banner = document.getElementById('pi-offline-banner');
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'pi-offline-banner';
+            banner.setAttribute('role', 'alert');
+            banner.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:9999;max-width:min(92vw,28rem);background:#7f1d1d;color:#fff;font-size:13px;line-height:1.45;padding:10px 14px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25);';
+            banner.textContent = 'Connection to the Pi was lost — stay on the LayRatePI network and this page will retry automatically.';
+            document.body.appendChild(banner);
+        }
+        banner.style.display = 'block';
+        setTimeout(function() { banner.style.display = 'none'; }, 30000);
+    }
+    document.addEventListener('turbo:fetch-request-error', function(e) {
+        showPiOfflineBanner();
+        var url = e.detail && (e.detail.url || (e.detail.request && e.detail.request.url));
+        setTimeout(function() {
+            document.querySelectorAll('turbo-frame[src]').forEach(function(f) {
+                var src = f.getAttribute('src');
+                if (!url || src === url || f.src === url) {
+                    try { f.reload(); } catch (err) { /* frame detached */ }
+                }
+            });
+        }, 5000);
+    });
+    window.addEventListener('offline', showPiOfflineBanner);
+
     var SIDEBAR_INITIALIZED = false;
 
     // ── Scroll-position preservation across form-submit navigations ──

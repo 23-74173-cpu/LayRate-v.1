@@ -21,6 +21,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Session\Middleware\AuthenticateSession::class,
             \App\Http\Middleware\EnsureUserIsActive::class,
         ]);
+        // Global (pre-routing) so PNA/CORS preflights for Turbo frames,
+        // EventSource streams and fetch POSTs are answered even though no
+        // OPTIONS route exists. No-op without an Origin header.
+        $middleware->append(\App\Http\Middleware\AllowPrivateNetworkAccess::class);
     })
     ->withSchedule(function (Illuminate\Console\Scheduling\Schedule $schedule) {
         $schedule->command('alerts:check-environment')
