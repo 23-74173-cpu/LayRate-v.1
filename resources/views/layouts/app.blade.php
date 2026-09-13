@@ -953,6 +953,10 @@ window.LayRateChart = {
     _recoveryHook: null,
     _recovering: false,
     _generation: 0,
+    // Set when a stuck-paint recovery MUST have a guaranteed-fresh Chart.js module;
+    // prepareForRender() then performs the heavy script reload instead of blessing the
+    // already-loaded one. Consumed (reset to false) once the reload runs.
+    _needsLibraryReload: false,
 
     // A page can register how to "re-render everything I currently show" (e.g.
     // Analytics re-runs its normal AJAX fetch for the active cage/period). The
@@ -966,14 +970,28 @@ window.LayRateChart = {
         this._recoveryHook = fn;
     },
 
-    // Unconditionally rebuilds from a clean Chart.js module before rendering — call
-    // this on every tab/cage/period switch, not just when a chart is detected broken.
-    // Returns a Promise; render inside its .then(). Heavier than the detect-then-heal
-    // approach this replaced, but guaranteed correct every time instead of depending on
-    // a check that can itself race.
+    // Prepares the chart layer before rendering — call this on every tab/cage/period
+    // switch, not just when a chart is detected broken. Destroys live instances and
+    // bumps the generation counter synchronously (so racing renders no-op by generation),
+    // returning a Promise; render inside its .then(). Re-downloads a clean Chart.js
+    // module only when a recovery flagged _needsLibraryReload (see _verifyBarPainted);
+    // otherwise it reuses the already-loaded module, keeping normal renders fast.
     prepareForRender() {
         this._generation++;
         Object.keys(this._instances).forEach(id => this.destroy(id));
+        // Fast path: Chart.js is already downloaded and executing. Unless a stuck-paint
+        // recovery flagged the module dirty, re-downloading/re-executing it here makes
+        // every page load (and every analytics tab/cage/period switch) pay ~300ms plus a
+        // ~205KB round-trip for a module that was already rendering fine. The recovery
+        // paths in _verifyBarPainted set _needsLibraryReload when a chart genuinely fails
+        // to paint — that is the only case that guarantees the heavy reload, and it's
+        // what the self-heal actually relies on. The synchronous generation bump and
+        // instance teardown still happen here, so the race protection that used
+        // prepareForRender's ordering is preserved.
+        if (!this._needsLibraryReload) {
+            return Promise.resolve();
+        }
+        this._needsLibraryReload = false;
         return this._reloadChartJsLibrary();
     },
 
@@ -1024,6 +1042,13 @@ window.LayRateChart = {
 
     _verifyBarPainted(id, config, canvas, instance, retryCount) {
         if (this._instances[id] !== instance) return; // superseded by a newer render already
+        // Guard: a chart inside a display:none section / zero-area canvas can never
+        // measure a bar geometry, so "null base everywhere" there is expected — not the
+        // stuck-paint corruption this self-heal exists for. Bailing prevents an
+        // eager-loaded hidden-section chart from repeatedly tearing down every chart and
+        // re-downloading Chart.js. Such charts paint themselves once their section is
+        // shown, because Chart.js re-measures on the container resize.
+        if (canvas.offsetParent === null || canvas.clientWidth === 0 || canvas.clientHeight === 0) return;
         const meta = instance.getDatasetMeta(0);
         const stuck = meta.data.length > 0 && meta.data.every(el => el.base == null || !isFinite(el.base));
         if (!stuck) return;
@@ -1047,9 +1072,14 @@ window.LayRateChart = {
             this._recovering = true;
             const gen = this._generation; // if this changes, the page navigated away — abort
             Object.keys(this._instances).forEach(otherId => this.destroy(otherId));
+            this._needsLibraryReload = true;
             this._reloadChartJsLibrary()
                 .then(() => {
                     if (gen !== this._generation) return; // navigated away mid-recovery
+                    // This reload already produced the guaranteed-fresh module; let the
+                    // recovery hook's own prepareForRender() take the fast path instead of
+                    // loading chart.min.js a second time back-to-back.
+                    this._needsLibraryReload = false;
                     if (typeof this._recoveryHook === 'function') {
                         this._recoveryHook();
                     } else {

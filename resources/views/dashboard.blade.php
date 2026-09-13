@@ -11,7 +11,7 @@
         <div class="page-header-egg-decor" aria-hidden="true"
              style="position:absolute; inset:0; z-index:0; pointer-events:none; color:#9ca3af;"></div>
 
-        <script>
+        <script data-turbo-eval>
         (function () {
             var decor = document.querySelector('.page-header-egg-decor');
             if (!decor || decor.getAttribute('data-eggs')) return;
@@ -138,28 +138,66 @@
                 .analytics-section.active-section { display: block !important; }
             </style>
 
-            <script>
+            <script data-turbo-eval>
+            // ── Dashboard state persistence ──
+            // Survives sidebar navigation within this browser session (sessionStorage),
+            // so returning to the dashboard stays on the same analytics tab with the
+            // same cage / period / from-date filters instead of resetting to Production.
+            window.__dashboardStateKey = 'layrate.dashboard.v1';
+            window.__dashboardReadState = function() {
+                try {
+                    var raw = sessionStorage.getItem(window.__dashboardStateKey);
+                    return raw ? JSON.parse(raw) : null;
+                } catch (e) { return null; }
+            };
+            window.__dashboardWriteState = function() {
+                try {
+                    sessionStorage.setItem(window.__dashboardStateKey, JSON.stringify({
+                        section: window.__dashboardSection || 'production',
+                        cage: window.__dashboardCage || 'all',
+                        from_date: window.__dashboardFromDate || '',
+                        days: (typeof window.__dashboardGlobalDays === 'number') ? window.__dashboardGlobalDays : 30,
+                        mortalityDays: (typeof window.__dashboardMortalityDays === 'number') ? window.__dashboardMortalityDays : 1
+                    }));
+                } catch (e) {}
+            };
+            document.addEventListener('pagehide', function() {
+                if (window.__dashboardWriteState) window.__dashboardWriteState();
+            });
+
             function filterAnalytics(section) {
+                window.__dashboardSection = section;
                 document.querySelectorAll('button[onclick^="filterAnalytics("]').forEach(function(btn) {
                     var isActive = btn.getAttribute('onclick') === "filterAnalytics('" + section + "')";
                     btn.classList.toggle('border-navy', isActive);
                     btn.classList.toggle('text-navy', isActive);
                     btn.classList.toggle('border-transparent', !isActive);
                     btn.classList.toggle('text-ink-muted', !isActive);
-                    // Tailwind also accepts hex form ΓÇö keep both in sync for robustness
+                    // Tailwind also accepts hex form — keep both in sync for robustness
                     btn.classList.toggle('border-[#002D5E]', isActive);
                     btn.classList.toggle('text-[#002D5E]', isActive);
                 });
                 document.querySelectorAll('.analytics-section').forEach(function(el) {
                     el.classList.toggle('active-section', el.dataset.analyticsSection === section);
                 });
+                // Load this section's frames on demand (data-src → src) so coming back
+                // to the dashboard only renders the section you were last on.
+                if (window.__dashboardActivateSection) window.__dashboardActivateSection(section);
+                if (window.__dashboardWriteState) window.__dashboardWriteState();
                 if (window.lucide) lucide.createIcons();
             }
             window.filterAnalytics = filterAnalytics;
 
-            document.addEventListener('DOMContentLoaded', function() {
-                filterAnalytics('production');
-            });
+            // Restore the previously active section + filters (fall back to Production).
+            var __dashSaved = window.__dashboardReadState();
+            window.__dashboardRestored = !!__dashSaved;
+            if (__dashSaved) {
+                if (__dashSaved.cage) window.__dashboardCage = __dashSaved.cage;
+                if (__dashSaved.from_date) window.__dashboardFromDate = __dashSaved.from_date;
+                if (typeof __dashSaved.days === 'number') window.__dashboardGlobalDays = __dashSaved.days;
+                if (typeof __dashSaved.mortalityDays === 'number') window.__dashboardMortalityDays = __dashSaved.mortalityDays;
+            }
+            filterAnalytics((__dashSaved && ['production','environmental','feed','flock'].indexOf(__dashSaved.section) >= 0) ? __dashSaved.section : 'production');
             </script>
 
             {{-- ΓòÉΓòÉΓòÉ SECTION 1 ΓÇö Production Performance ΓòÉΓòÉΓòÉ --}}
@@ -321,7 +359,7 @@
         </div>
     </div>
 
-    <script>
+    <script data-turbo-eval>
     function openStatsModal(el) {
         document.getElementById('statsCageCode').textContent = el.dataset.cageCode;
         document.getElementById('statsBreed').textContent = el.dataset.breed;
@@ -335,9 +373,12 @@
     function closeStatsModal() {
         document.getElementById('statsModal').style.display = 'none';
     }
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') closeStatsModal();
-    });
+    if (!window.__statsEscBound) {
+        window.__statsEscBound = 1;
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') { try { closeStatsModal(); } catch (err) {} }
+        });
+    }
     </script>
 
 
@@ -436,9 +477,9 @@
         </div>
     </div>
 
-    <script>
+    <script data-turbo-eval>
     // KPI_DATA is populated by the lazily loaded metric-cards frame.
-    window.KPI_DATA = window.KPI_DATA || {};
+    window.KPI_DATA = {};
 
     function openKpiModal(key) {
         var data = window.KPI_DATA[key];
@@ -517,9 +558,12 @@
         var m = document.getElementById('kpiModal');
         if (m) m.style.display = 'none';
     }
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') closeKpiModal();
-    });
+    if (!window.__kpiEscBound) {
+        window.__kpiEscBound = 1;
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') { try { closeKpiModal(); } catch (err) {} }
+        });
+    }
 
     // ΓöÇΓöÇ Card navigation (item 8) + long-press breakdown (item 9) ΓöÇΓöÇ
     // Called by each lazily loaded frame once its cards are in the DOM.
@@ -638,16 +682,35 @@
         };
     })();
 
-    // ΓöÇΓöÇ Track the active cage and period filters so sub-filter buttons can rebuild URLs ΓöÇΓöÇ
-    window.__dashboardCage = new URLSearchParams(window.location.search).get('cage') || 'all';
-    window.__dashboardGlobalDays = 30;
-    window.__dashboardFromDate = '{{ request('from_date', '') }}';
+    // ── Track the active cage and period filters so sub-filter buttons can rebuild URLs ──
+    // Values restored from sessionStorage (block 2) take priority; otherwise derive
+    // from the URL query as before.
+    if (!window.__dashboardRestored) {
+        window.__dashboardCage = new URLSearchParams(window.location.search).get('cage') || 'all';
+        window.__dashboardGlobalDays = 30;
+        window.__dashboardFromDate = '{{ request('from_date', '') }}';
+        window.__dashboardMortalityDays = {{ $mortalityDays ?? 1 }};
+    } else {
+        if (typeof window.__dashboardCage !== 'string') window.__dashboardCage = 'all';
+        if (typeof window.__dashboardGlobalDays !== 'number') window.__dashboardGlobalDays = 30;
+        if (typeof window.__dashboardFromDate !== 'string') window.__dashboardFromDate = '';
+        if (typeof window.__dashboardMortalityDays !== 'number') window.__dashboardMortalityDays = 1;
+    }
     window.__dashboardHistoryCompare = false;
-    window.__dashboardMortalityDays = {{ $mortalityDays ?? 1 }};
-    document.addEventListener('DOMContentLoaded', function(){
+    // Marks this document as the dashboard so Back/Forward snapshot restores know
+    // to re-create charts (see the turbo:render hook in layouts/app.blade.php).
+    document.body.setAttribute('data-dashboard-booted', '1');
+
+    // Sync filter controls with the (possibly restored) state.
+    (function() {
         var sel = document.getElementById('dashboardCageSelect');
-        if(sel) sel.value = window.__dashboardCage;
-    });
+        if (sel) sel.value = window.__dashboardCage;
+        var dateInput = document.getElementById('dashboardFromDate');
+        if (dateInput && window.__dashboardFromDate) dateInput.value = window.__dashboardFromDate;
+        document.querySelectorAll('#dashboardGlobalPeriod .global-days-btn').forEach(function(btn) {
+            setButtonActive(btn, !window.__dashboardFromDate && parseInt(btn.dataset.globalDays, 10) === window.__dashboardGlobalDays);
+        });
+    })();
 
     function buildFrameUrl(base, params) {
         var query = Object.keys(params).map(function (k) {
@@ -657,6 +720,36 @@
         }).filter(Boolean).join('&');
         return query ? base + '?' + query : base;
     }
+
+    // Re-applies the active cage / period / from-date filters onto a frame's URL
+    // (used when activating frames that were server-rendered without those params).
+    window.__dashboardFrameUrl = function(dataSrc) {
+        if (!dataSrc) return dataSrc;
+        var u = new URL(dataSrc, window.location.href);
+        var p = {};
+        if (window.__dashboardFromDate) p.from_date = window.__dashboardFromDate;
+        else if (window.__dashboardGlobalDays !== 30) p.days = window.__dashboardGlobalDays;
+        if (window.__dashboardCage && window.__dashboardCage !== 'all') p.cage = window.__dashboardCage;
+        Object.keys(p).forEach(function(k) { u.searchParams.set(k, p[k]); });
+        return u.href;
+    };
+
+    // Activates (data-src → src) every still-unloaded frame inside a given analytics
+    // section. Called when a tab is switched to, so hidden sections only fetch when
+    // they're actually shown.
+    window.__dashboardActivateSection = function(section) {
+        var sec = null;
+        document.querySelectorAll('.analytics-section').forEach(function(el) {
+            if (el.dataset.analyticsSection === section) sec = el;
+        });
+        if (!sec) return;
+        sec.querySelectorAll('turbo-frame[data-src]').forEach(function(f) {
+            if (f.dataset.src && !f.getAttribute('src')) {
+                f.setAttribute('src', (window.__dashboardFrameUrl && window.__dashboardFrameUrl(f.dataset.src)) || f.dataset.src);
+                f.setAttribute('loading', 'eager');
+            }
+        });
+    };
 
     // Reload a Turbo Frame without scrolling the page back to the frame.
     function reloadFramePreservingScroll(frameId, url) {
@@ -718,6 +811,7 @@
         });
 
         reloadCharts();
+        if (window.__dashboardWriteState) window.__dashboardWriteState();
     };
 
     // Reload every analytics chart frame with the active Cage / Period / From-date filters.
@@ -782,6 +876,7 @@
         });
 
         reloadCharts();
+        if (window.__dashboardWriteState) window.__dashboardWriteState();
     };
 
     window.toggleProductionHistoryCompare = function() {
@@ -939,10 +1034,15 @@ var cageParam = code === 'all' ? null : code;
             turbo-frame.frame-fade-in { animation: none !important; }
         }
     </style>
-    <script>
+    <script data-turbo-eval>
     (function () {
-        if (window.__dashboardSequencer) return;
-        window.__dashboardSequencer = 1;
+        // data-turbo-eval → this block re-runs on EVERY Turbo visit (sidebar nav,
+        // Back/Forward), because Dashboards load lazy frames whose src lives in
+        // data-src. Without re-running, Turbo would serve a fresh skeleton on each
+        // return visit and never copy data-src into src, so KPI cards + charts stay
+        // as pulsing placeholders. Frame loading below is idempotent (it skips any
+        // frame that already has a src), so re-running is safe. Only the one-time
+        // listener bindings are guarded with window flags to avoid double-binding.
 
         // Fade each frame in as it finishes loading so updates appear smoothly,
         // one card/panel at a time instead of everything swapping at once.
