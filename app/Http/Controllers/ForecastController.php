@@ -1134,17 +1134,21 @@ class ForecastController extends Controller
         $cageCode = $request->input('cage');
         $breed = $request->input('breed');
 
+        // Exports reflect the forecast that was actually generated and stored
+        // for today, so the days follow the selected forecast duration or a
+        // customized calendar range — never the currently-selected horizon
+        // radio (which could be different from the run that created the rows).
         $historical = collect();
         if ($scope === 'farm') {
             $historical = $this->forecastService()->farmHistorical();
             $forecasts = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
                 ->whereNull('cage_id')->whereNull('breed')
-                ->orderBy('target_date')->limit($horizon)->get();
+                ->orderBy('target_date')->get();
         } elseif ($scope === 'breed' && $breed) {
             $historical = $this->forecastService()->breedHistorical($breed);
             $forecasts = Forecast::where('forecast_date', ReportingDateService::reportingDateString())
                 ->whereNull('cage_id')->where('breed', $breed)
-                ->orderBy('target_date')->limit($horizon)->get();
+                ->orderBy('target_date')->get();
         } else {
             $cage = $cageCode ? Cage::where('cage_code', $cageCode)->first() : null;
             $historical = $this->forecastService()->cageHistorical($cageCode ?? '');
@@ -1153,12 +1157,17 @@ class ForecastController extends Controller
                 ->when(! $cage, fn ($q) => $q->whereNull('cage_id'))
                 ->whereNull('breed')
                 ->whereNotNull('target_date')
-                ->orderBy('target_date')->limit($horizon)->get();
+                ->orderBy('target_date')->get();
         }
 
         if ($forecasts->isEmpty()) {
             return null;
         }
+
+        // Report metadata (e.g. the PDF "Horizon: N days" label and the number
+        // of exported rows) should reflect the stored days, not the request's
+        // horizon value.
+        $horizon = $forecasts->count();
 
         return compact('scope', 'cageCode', 'breed', 'horizon', 'historical', 'forecasts');
     }
