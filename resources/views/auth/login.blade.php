@@ -11,10 +11,50 @@
     <link href="/css/tailwind.css" rel="stylesheet">
     <script src="/js/lucide.min.js"></script>
     <style>
-        body { background: linear-gradient(135deg, #213183, #1a2342); background-attachment: fixed; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; overscroll-behavior: none; }
+        body { background: linear-gradient(160deg, #213183 0%, #1a2342 55%, #4a5485 100%); background-attachment: fixed; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; overscroll-behavior: none; }
         :focus-visible { outline: 2px solid #0075de; outline-offset: 2px; border-radius: 4px; }
 
         .egg-decor { color: rgba(255, 255, 255, 0.10); }
+
+        /* Glassmorphism card + inputs */
+        .glass-card {
+            position: relative;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.06);
+            -webkit-backdrop-filter: blur(28px) saturate(160%);
+            backdrop-filter: blur(28px) saturate(160%);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+        }
+        .glass-eggs { overflow: hidden; pointer-events: none; }
+        .glass-eggs i, .glass-eggs svg { color: #ffffff; filter: blur(4px); }
+        .glass-input {
+            background: rgba(255, 255, 255, 0.10);
+            border: 1px solid rgba(255, 255, 255, 0.32);
+            color: #fff;
+        }
+        .glass-input::placeholder { color: rgba(255, 255, 255, 0.55); }
+        .glass-input:hover { border-color: rgba(255, 255, 255, 0.45); }
+        .glass-input:focus {
+            background: rgba(255, 255, 255, 0.16);
+            border-color: rgba(255, 255, 255, 0.65);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.14);
+        }
+        .glass-label { color: rgba(255, 255, 255, 0.85); }
+
+        .signin-title {
+            font-family: Georgia, 'Times New Roman', 'Palatino Linotype', serif;
+            font-style: italic;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+        }
+        .signin-title-accent {
+            width: 3rem; height: 3px; margin: 0.6rem auto 0;
+            border-radius: 9999px;
+            background: linear-gradient(90deg, rgba(255,255,255,0.9), rgba(255,255,255,0.25));
+        }
 
         /* Reverse of the landing page's circle-wipe: this page loads already
            covered, then wipes away to reveal the form — continuing the same
@@ -23,7 +63,7 @@
            then the fallback below force-removes it). */
         #page-wipe {
             position: fixed; inset: 0; z-index: 9999; pointer-events: none;
-            background: linear-gradient(135deg, #213183, #1a2342);
+            background: linear-gradient(160deg, #213183 0%, #1a2342 55%, #4a5485 100%);
             clip-path: circle(150% at 50% 50%);
             transition: clip-path 0.65s cubic-bezier(.76,0,.24,1);
         }
@@ -55,54 +95,60 @@
         @endif
 
         {{-- Card --}}
-        <div class="bg-white rounded-xl border border-[#D9D9D9] p-7 shadow-sm">
-            {{-- Logo — lives inside the card: the PNG has a solid white
-                 background, which blends invisibly here but would show as a
-                 white box on the page's warm canvas. --}}
-            <img src="/images/layrate-logo.png"
+        <div class="glass-card p-7">
+            {{-- Blurred decorative eggs behind the card content --}}
+            <div class="glass-eggs" style="position:absolute; inset:0; z-index:-1;">
+                <i data-lucide="egg" class="w-16 h-16" style="position:absolute; top:3%; left:5%; transform:rotate(-12deg); opacity:.55;"></i>
+                <i data-lucide="egg" class="w-24 h-24" style="position:absolute; bottom:6%; right:-3%; transform:rotate(18deg); opacity:.4;"></i>
+                <i data-lucide="egg" class="w-10 h-10" style="position:absolute; top:16%; right:12%; transform:rotate(24deg); opacity:.5;"></i>
+                <i data-lucide="egg" class="w-14 h-14" style="position:absolute; top:38%; left:-4%; transform:rotate(-20deg); opacity:.35;"></i>
+                <i data-lucide="egg" class="w-20 h-20" style="position:absolute; bottom:26%; left:30%; transform:rotate(10deg); opacity:.3;"></i>
+            </div>
+            {{-- Logo — circular-cropped mark, sits directly on the glass. --}}
+            <img src="/images/logo1.png"
                  alt="LayRate — Egg Counting &amp; Forecasting System"
-                 class="w-36 mx-auto -mt-3 -mb-5" loading="lazy">
+                 class="w-40 mx-auto -mt-3 -mb-5 rounded-full" loading="lazy">
 
-            <h1 class="text-base font-semibold text-[#333333] mb-1 text-center">Sign in</h1>
-            <p class="text-xs text-[#6B7280] mb-6 text-center">Enter your credentials to access the dashboard.</p>
+            <h1 class="signin-title text-2xl text-white mb-1 text-center">Sign in</h1>
+            <div class="signin-title-accent"></div>
+            <p class="text-xs text-white/70 mb-6 mt-3 text-center">Enter your credentials to access the dashboard.</p>
 
             <form action="{{ route('login') }}" method="POST" class="space-y-4">
                 @csrf
 
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">EMAIL</label>
+                    <label class="glass-label block text-xs tracking-wider mb-1.5">EMAIL</label>
                     <input type="email" name="email" required autofocus
                            value="{{ old('email') }}"
                            placeholder="operator@layrate.local"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333]
-                                  focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]
-                                  {{ $errors->has('email') ? 'border-red-400' : '' }}">
+                           style="{{ $errors->has('email') ? 'border-color:#ef4444;' : '' }}"
+                           class="glass-input w-full rounded-lg px-3 py-2.5 text-sm focus:outline-none"
+                           autocapitalize="none" spellcheck="false">
                     @error('email')
                     <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">PASSWORD</label>
+                    <label class="glass-label block text-xs tracking-wider mb-1.5">PASSWORD</label>
                     <input type="password" name="password" required
                            placeholder="••••••••"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333]
-                                  focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                           class="glass-input w-full rounded-lg px-3 py-2.5 text-sm focus:outline-none">
                 </div>
 
                 <div class="flex items-center gap-2">
                     <input type="checkbox" name="remember" id="remember"
-                           class="w-3.5 h-3.5 rounded border-[#D9D9D9] text-[#102A4C]">
-                    <label for="remember" class="text-xs text-[#6B7280]">Remember me</label>
+                           class="w-3.5 h-3.5 rounded border-white/40 bg-white/10 text-[#102A4C]" style="accent-color:#fff;">
+                    <label for="remember" class="text-xs text-white/80">Remember me</label>
                 </div>
 
                 <x-button type="submit" class="w-full py-2.5 mt-2">
                     Sign In
                 </x-button>
 
-                <div class="text-center mt-4 pt-4 border-t border-[#D9D9D9]">
+                <div class="text-center mt-4 pt-4 border-t border-white/15">
                     <a href="{{ route('landing') }}"
-                       class="text-xs text-black/70 hover:text-black transition-colors">
+                       class="text-xs text-white/70 hover:text-white transition-colors">
                         What is LayRate?
                     </a>
                 </div>
