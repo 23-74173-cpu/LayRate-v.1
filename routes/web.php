@@ -81,6 +81,7 @@ Route::middleware(['auth', 'system-time-set'])->group(function () {
     Route::get('/dashboard/mortality-trend', [DashboardController::class, 'mortalityTrend'])->name('dashboard.mortality-trend');
     Route::get('/dashboard/feed-vs-egg', [DashboardController::class, 'feedVsEgg'])->name('dashboard.feed-vs-egg');
     Route::get('/dashboard/feed-by-cage', [DashboardController::class, 'feedByCage'])->name('dashboard.feed-by-cage');
+    Route::get('/dashboard/flock-age-by-cage', [DashboardController::class, 'flockAgeByCage'])->name('dashboard.flock-age-by-cage');
     Route::get('/dashboard/heat-stress', [DashboardController::class, 'heatStress'])->name('dashboard.heat-stress');
     Route::post('/settings/farm-layout', [SettingsController::class, 'storeFarmLayout'])->name('settings.farm-layout');
 

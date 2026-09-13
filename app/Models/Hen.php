@@ -79,12 +79,22 @@ class Hen extends Model
 
     public function getCurrentAgeWeeksAttribute(): int
     {
-        if ($this->placement_date !== null) {
-            $weeksElapsed = (int) floor($this->placement_date->diffInWeeks(now()));
-            return (int) $this->age_at_placement_weeks + $weeksElapsed;
+        $stored = (int) $this->flock_age_weeks;
+
+        if ($this->placement_date === null || $this->age_at_placement_weeks === null) {
+            return $stored;
         }
 
-        return $this->flock_age_weeks;
+        $computed = (int) $this->age_at_placement_weeks + (int) floor($this->placement_date->diffInWeeks(now()));
+
+        if ($computed > $stored) {
+            $this->flock_age_weeks = $computed;
+            $this->saveQuietly();
+
+            return $computed;
+        }
+
+        return $stored;
     }
 
     public function getCageAttribute(): ?Cage

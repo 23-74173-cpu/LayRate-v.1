@@ -1037,6 +1037,48 @@ class DashboardController extends Controller
         return view('dashboard._feed-by-cage', compact('labels', 'data', 'highest', 'feedData', 'days', 'insight'));
     }
 
+    public function flockAgeByCage()
+    {
+        $cageCode = request('cage');
+        $reportingDate = ReportingDateService::reportingDate();
+
+        $ageData = Cage::query()
+            ->with(['hens' => fn ($q) => $q->where('is_active', 1)])
+            ->when($cageCode, fn ($q) => $q->where('cage_code', $cageCode))
+            ->orderBy('cage_code')
+            ->get()
+            ->map(function (Cage $cage) {
+                $ages = $cage->hens
+                    ->map(fn ($h) => $h->current_age_weeks)
+                    ->filter(fn ($a) => is_numeric($a) && $a > 0);
+                $cage->flock_age_weeks = $ages->count() > 0 ? round($ages->avg(), 1) : 0;
+                $cage->hen_count = $cage->hens->count();
+                return $cage;
+            })
+            ->filter(fn ($cage) => $cage->flock_age_weeks > 0);
+
+        $labels = $ageData->pluck('cage_code')->values()->toArray();
+        $data = $ageData->pluck('flock_age_weeks')->values()->toArray();
+        $oldest = $ageData->sortByDesc('flock_age_weeks')->first();
+        $youngest = $ageData->sortBy('flock_age_weeks')->first();
+
+        $insight = 'No flock age data available for analysis.';
+        if ($ageData->isNotEmpty() && $oldest) {
+            $insight = "{$oldest->cage_code} currently has the oldest flock at {$oldest->flock_age_weeks} weeks of age";
+            if ($oldest->hen_count > 0) {
+                $insight .= " across {$oldest->hen_count} hens";
+            }
+            if ($youngest && $youngest->cage_code !== $oldest->cage_code) {
+                $gap = round($oldest->flock_age_weeks - $youngest->flock_age_weeks, 1);
+                $insight .= ". The youngest flock is {$youngest->cage_code} at {$youngest->flock_age_weeks} weeks (a {$gap} week gap).";
+            } else {
+                $insight .= '.';
+            }
+        }
+
+        return view('dashboard._flock-age-by-cage', compact('labels', 'data', 'oldest', 'youngest', 'ageData', 'insight', 'reportingDate'));
+    }
+
     public function heatStress()
     {
         $cageCode = request('cage');

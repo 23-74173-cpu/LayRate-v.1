@@ -269,7 +269,14 @@
                         </div>
                     </turbo-frame>
 
-                    <turbo-frame id="dashboard-mortality-trend" src="{{ route('dashboard.mortality-trend', ['days' => 30]) }}" loading="lazy" class="block lg:col-span-2">
+                    <turbo-frame id="dashboard-flock-age-by-cage" src="{{ route('dashboard.flock-age-by-cage') }}" loading="lazy" class="block">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
+                            <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
+                            <div class="h-[120px] bg-gray-100 rounded-xl"></div>
+                        </div>
+                    </turbo-frame>
+
+                    <turbo-frame id="dashboard-mortality-trend" src="{{ route('dashboard.mortality-trend', ['days' => 30]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                             <div class="h-[110px] bg-gray-100 rounded-xl"></div>
