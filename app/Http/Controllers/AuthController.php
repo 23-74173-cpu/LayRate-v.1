@@ -32,6 +32,17 @@ class AuthController extends Controller
 
             $request->session()->regenerate();
 
+            // Unauthenticated Turbo-frame requests (the dashboard's analytics
+            // fragments like /dashboard/mortality-trend that autoload after a
+            // session expires) each record their own URL as "intended", so the
+            // last one to fire wins and would land the user on a bare fragment
+            // page after login. Strip dashboard sub-paths from intended and fall
+            // back to the dashboard proper.
+            $intendedPath = (string) parse_url((string) $request->session()->get('url.intended', ''), PHP_URL_PATH);
+            if (str_starts_with($intendedPath, '/dashboard/')) {
+                $request->session()->forget('url.intended');
+            }
+
             // Authorize client IP in the nftables walled garden
             $clientIp = $request->ip();
             if ($clientIp && $clientIp !== '127.0.0.1' && $clientIp !== '::1') {

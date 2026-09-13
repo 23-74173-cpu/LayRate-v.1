@@ -11,7 +11,7 @@
     <link href="/css/tailwind.css" rel="stylesheet">
     <script src="/js/lucide.min.js"></script>
     <style>
-        body { background: linear-gradient(160deg, #213183 0%, #1a2342 55%, #4a5485 100%); background-attachment: fixed; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; overscroll-behavior: none; }
+        body { min-height: 100vh; background: linear-gradient(160deg, #213183 0%, #1a2342 55%, #4a5485 100%); background-size: cover; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; overscroll-behavior: none; }
         :focus-visible { outline: 2px solid #0075de; outline-offset: 2px; border-radius: 4px; }
 
         .egg-decor { color: rgba(255, 255, 255, 0.10); }
@@ -19,16 +19,13 @@
         /* Glassmorphism card + inputs */
         .glass-card {
             position: relative;
-            overflow: hidden;
-            background: rgba(255, 255, 255, 0.06);
-            -webkit-backdrop-filter: blur(28px) saturate(160%);
-            backdrop-filter: blur(28px) saturate(160%);
-            border: 1px solid rgba(255, 255, 255, 0.22);
+            background: rgba(26, 35, 66, 0.32);
+            -webkit-backdrop-filter: blur(2px) saturate(150%);
+            backdrop-filter: blur(2px) saturate(150%);
+            border: 1px solid rgba(151, 168, 233, 0.45);
             border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 32px rgba(10, 16, 40, 0.45), inset 0 1px 0 rgba(173, 189, 255, 0.25);
         }
-        .glass-eggs { overflow: hidden; pointer-events: none; }
-        .glass-eggs i, .glass-eggs svg { color: #ffffff; filter: blur(4px); }
         .glass-input {
             background: rgba(255, 255, 255, 0.10);
             border: 1px solid rgba(255, 255, 255, 0.32);
@@ -96,14 +93,6 @@
 
         {{-- Card --}}
         <div class="glass-card p-7">
-            {{-- Blurred decorative eggs behind the card content --}}
-            <div class="glass-eggs" style="position:absolute; inset:0; z-index:-1;">
-                <i data-lucide="egg" class="w-16 h-16" style="position:absolute; top:3%; left:5%; transform:rotate(-12deg); opacity:.55;"></i>
-                <i data-lucide="egg" class="w-24 h-24" style="position:absolute; bottom:6%; right:-3%; transform:rotate(18deg); opacity:.4;"></i>
-                <i data-lucide="egg" class="w-10 h-10" style="position:absolute; top:16%; right:12%; transform:rotate(24deg); opacity:.5;"></i>
-                <i data-lucide="egg" class="w-14 h-14" style="position:absolute; top:38%; left:-4%; transform:rotate(-20deg); opacity:.35;"></i>
-                <i data-lucide="egg" class="w-20 h-20" style="position:absolute; bottom:26%; left:30%; transform:rotate(10deg); opacity:.3;"></i>
-            </div>
             {{-- Logo — circular-cropped mark, sits directly on the glass. --}}
             <img src="/images/logo1.png"
                  alt="LayRate — Egg Counting &amp; Forecasting System"
@@ -142,9 +131,7 @@
                     <label for="remember" class="text-xs text-white/80">Remember me</label>
                 </div>
 
-                <x-button type="submit" class="w-full py-2.5 mt-2">
-                    Sign In
-                </x-button>
+                <x-button type="submit" class="w-full py-2.5 mt-2" style="background-color:#27578A;">Sign In</x-button>
 
                 <div class="text-center mt-4 pt-4 border-t border-white/15">
                     <a href="{{ route('landing') }}"
@@ -197,6 +184,75 @@
                 if (card) card.classList.add('in');
             }, 1500);
         });
+
+        // Exit transition on successful sign-in: intercept the POST, follow the
+        // server redirect with fetch, play the reverse circle-wipe, then go.
+        // On failure we land back on /login, so reload it to show the banner.
+        (function () {
+            var form = document.querySelector('form');
+            if (!form) return;
+            var reduceMotion = window.matchMedia &&
+                window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            form.addEventListener('submit', function (e) {
+                if (form.dataset.submitting) { e.preventDefault(); return; }
+                form.dataset.submitting = '1';
+                var btn = form.querySelector('button[type="submit"]');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.textContent = 'Signing in…';
+                }
+                e.preventDefault();
+
+                fetch(form.action, {
+                    method: 'POST',
+                    body: new FormData(form),
+                    redirect: 'follow',
+                    credentials: 'same-origin',
+                }).then(function (res) {
+                    if (res.status === 419) {
+                        // Session/token expired (e.g. a login page rendered before
+                        // a logout rotated the CSRF token). Reload fresh instead of
+                        // showing the "Session Expired" page.
+                        window.location.reload();
+                        return;
+                    }
+                    if (!res.ok) throw new Error('request failed');
+                    var url = res.url || window.location.href;
+                    var hasRedirected = res.redirected;
+
+                    // Server bounced us back to the login page → auth failed.
+                    if (url.indexOf('/login') !== -1) {
+                        window.location.href = url;
+                        return;
+                    }
+
+                    var go = function () { window.location.href = url; };
+
+                    if (!hasRedirected || reduceMotion) { go(); return; }
+
+                    // Leave with the same circle-wipe used when entering the login
+                    // page — just in reverse: the wipe covers the screen, then we
+                    // navigate into the dashboard beneath it.
+                    var wipe = document.getElementById('page-wipe');
+                    if (!wipe) { go(); return; }
+                    wipe.style.display = '';
+                    wipe.style.clipPath = 'circle(0% at 50% 50%)';
+                    requestAnimationFrame(function () {
+                        requestAnimationFrame(function () {
+                            wipe.style.clipPath = 'circle(150% at 50% 50%)';
+                            setTimeout(go, 700);
+                        });
+                    });
+                }).catch(function () {
+                    // Fetch failed (network/dup-click guard) → fall back to the
+                    // native POST so the browser behaves as usual.
+                    if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+                    delete form.dataset.submitting;
+                    form.submit();
+                });
+            });
+        })();
     </script>
 </body>
 </html>

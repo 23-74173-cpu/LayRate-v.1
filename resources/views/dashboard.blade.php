@@ -1,4 +1,4 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 @section('title', 'Dashboard')
 @section('header-clock', now()->format('l, F j') . ' ΓÇö ' . now()->format('g:i A'))
 
@@ -165,26 +165,26 @@
             {{-- ΓòÉΓòÉΓòÉ SECTION 1 ΓÇö Production Performance ΓòÉΓòÉΓòÉ --}}
             <div class="analytics-section active-section" data-analytics-section="production">
                 <div class="space-y-4">
-                    <turbo-frame id="dashboard-stats-production" src="{{ route('dashboard.stats.production', ['cage' => request('cage'), 'from_date' => request('from_date')]) }}" loading="lazy" class="block">
+                    <turbo-frame id="dashboard-stats-production" data-src="{{ route('dashboard.stats.production', ['cage' => request('cage'), 'from_date' => request('from_date')]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-4 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
                     </turbo-frame>
                     <div id="production-charts-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start lg:items-stretch">
-                        <turbo-frame id="dashboard-cage-performance" src="{{ route('dashboard.cage-performance') }}" loading="lazy" class="block h-full">
+                        <turbo-frame id="dashboard-cage-performance" data-src="{{ route('dashboard.cage-performance') }}" loading="lazy" class="block h-full">
                             @include('dashboard._cage-performance-skeleton')
                         </turbo-frame>
 
-                        <turbo-frame id="dashboard-production-history" src="{{ route('dashboard.production-history', ['days' => 30]) }}" loading="lazy" class="block self-start lg:h-full">
+                        <turbo-frame id="dashboard-production-history" data-src="{{ route('dashboard.production-history', ['days' => 30]) }}" loading="lazy" class="block self-start lg:h-full">
                             @include('dashboard._production-history-skeleton')
                         </turbo-frame>
 
-                        <turbo-frame id="dashboard-egg-collection-time" src="{{ route('dashboard.egg-collection-time', ['days' => 30]) }}" loading="lazy" class="block self-start lg:h-full">
+                        <turbo-frame id="dashboard-egg-collection-time" data-src="{{ route('dashboard.egg-collection-time', ['days' => 30]) }}" loading="lazy" class="block self-start lg:h-full">
                             <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse h-auto lg:h-full">
                                 <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                                 <div class="h-[120px] bg-gray-100 rounded-xl"></div>
                             </div>
                         </turbo-frame>
 
-                        <turbo-frame id="dashboard-hen-age-layrate" src="{{ route('dashboard.hen-age-layrate', ['days' => 30]) }}" loading="lazy" class="block self-start lg:h-full">
+                        <turbo-frame id="dashboard-hen-age-layrate" data-src="{{ route('dashboard.hen-age-layrate', ['days' => 30]) }}" loading="lazy" class="block self-start lg:h-full">
                             <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse h-auto lg:h-full">
                                 <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                                 <div class="h-[120px] bg-gray-100 rounded-xl"></div>
@@ -197,24 +197,24 @@
             {{-- ΓòÉΓòÉΓòÉ SECTION 2 ΓÇö Environmental Analytics ΓòÉΓòÉΓòÉ --}}
             <div class="analytics-section" data-analytics-section="environmental">
                 <div class="space-y-4">
-                    <turbo-frame id="dashboard-stats-environment" src="{{ route('dashboard.stats.environment', ['cage' => request('cage'), 'from_date' => request('from_date')]) }}" loading="lazy" class="block">
+                    <turbo-frame id="dashboard-stats-environment" data-src="{{ route('dashboard.stats.environment', ['cage' => request('cage'), 'from_date' => request('from_date')]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-3 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
                     </turbo-frame>
-                    <turbo-frame id="dashboard-heat-stress" src="{{ route('dashboard.heat-stress', ['days' => 30]) }}" loading="lazy" class="block">
+                    <turbo-frame id="dashboard-heat-stress" data-src="{{ route('dashboard.heat-stress', ['days' => 30]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                             <div class="h-[110px] bg-gray-100 rounded-xl"></div>
                         </div>
                     </turbo-frame>
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
-                        <turbo-frame id="dashboard-temp-vs-hdep" src="{{ route('dashboard.temp-vs-hdep', ['days' => 30]) }}" loading="lazy" class="block">
+                        <turbo-frame id="dashboard-temp-vs-hdep" data-src="{{ route('dashboard.temp-vs-hdep', ['days' => 30]) }}" loading="lazy" class="block">
                             <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                                 <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                                 <div class="h-[110px] bg-gray-100 rounded-xl"></div>
                             </div>
                         </turbo-frame>
 
-                        <turbo-frame id="dashboard-hum-vs-hdep" src="{{ route('dashboard.hum-vs-hdep', ['days' => 30]) }}" loading="lazy" class="block">
+                        <turbo-frame id="dashboard-hum-vs-hdep" data-src="{{ route('dashboard.hum-vs-hdep', ['days' => 30]) }}" loading="lazy" class="block">
                             <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                                 <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                                 <div class="h-[110px] bg-gray-100 rounded-xl"></div>
@@ -227,18 +227,18 @@
             {{-- ΓòÉΓòÉΓòÉ SECTION 3 ΓÇö Feed Analytics ΓòÉΓòÉΓòÉ --}}
             <div class="analytics-section" data-analytics-section="feed">
                 <div class="space-y-4">
-                    <turbo-frame id="dashboard-stats-feed" src="{{ route('dashboard.stats.feed', ['cage' => request('cage'), 'from_date' => request('from_date')]) }}" loading="lazy" class="block">
+                    <turbo-frame id="dashboard-stats-feed" data-src="{{ route('dashboard.stats.feed', ['cage' => request('cage'), 'from_date' => request('from_date')]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-4 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
                     </turbo-frame>
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
-                    <turbo-frame id="dashboard-feed-by-cage" src="{{ route('dashboard.feed-by-cage', ['days' => 30]) }}" loading="lazy" class="block">
+                    <turbo-frame id="dashboard-feed-by-cage" data-src="{{ route('dashboard.feed-by-cage', ['days' => 30]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                             <div class="h-[110px] bg-gray-100 rounded-xl"></div>
                         </div>
                     </turbo-frame>
 
-                    <turbo-frame id="dashboard-feed-vs-egg" src="{{ route('dashboard.feed-vs-egg', ['days' => 30]) }}" loading="lazy" class="block">
+                    <turbo-frame id="dashboard-feed-vs-egg" data-src="{{ route('dashboard.feed-vs-egg', ['days' => 30]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                             <div class="h-[110px] bg-gray-100 rounded-xl"></div>
@@ -251,32 +251,32 @@
             {{-- ΓòÉΓòÉΓòÉ SECTION 4 ΓÇö Flock Analytics ΓòÉΓòÉΓòÉ --}}
             <div class="analytics-section" data-analytics-section="flock">
                 <div class="space-y-4">
-                    <turbo-frame id="dashboard-stats-flock" src="{{ route('dashboard.stats.flock', ['cage' => request('cage'), 'from_date' => request('from_date')]) }}" loading="lazy" class="block">
+                    <turbo-frame id="dashboard-stats-flock" data-src="{{ route('dashboard.stats.flock', ['cage' => request('cage'), 'from_date' => request('from_date')]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-3 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
                     </turbo-frame>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
-                    <turbo-frame id="dashboard-breed-analytics" src="{{ route('dashboard.breed-analytics', ['days' => 30]) }}" loading="lazy" class="block">
+                    <turbo-frame id="dashboard-breed-analytics" data-src="{{ route('dashboard.breed-analytics', ['days' => 30]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                             <div class="h-[120px] bg-gray-100 rounded-xl"></div>
                         </div>
                     </turbo-frame>
 
-                    <turbo-frame id="dashboard-mortality-by-cause" src="{{ route('dashboard.mortality-by-cause', ['days' => 30]) }}" loading="lazy" class="block">
+                    <turbo-frame id="dashboard-mortality-by-cause" data-src="{{ route('dashboard.mortality-by-cause', ['days' => 30]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                             <div class="h-[120px] bg-gray-100 rounded-xl"></div>
                         </div>
                     </turbo-frame>
 
-                    <turbo-frame id="dashboard-flock-age-by-cage" src="{{ route('dashboard.flock-age-by-cage') }}" loading="lazy" class="block">
+                    <turbo-frame id="dashboard-flock-age-by-cage" data-src="{{ route('dashboard.flock-age-by-cage') }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                             <div class="h-[120px] bg-gray-100 rounded-xl"></div>
                         </div>
                     </turbo-frame>
 
-                    <turbo-frame id="dashboard-mortality-trend" src="{{ route('dashboard.mortality-trend', ['days' => 30]) }}" loading="lazy" class="block">
+                    <turbo-frame id="dashboard-mortality-trend" data-src="{{ route('dashboard.mortality-trend', ['days' => 30]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                             <div class="h-[110px] bg-gray-100 rounded-xl"></div>
@@ -926,6 +926,58 @@ var cageParam = code === 'all' ? null : code;
         }, 1200);
     })();
 
+    </script>
+
+    {{-- Sequential frame loader + smooth 1-by-1 entrance --}}
+    <style>
+        @keyframes frameFadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        turbo-frame.frame-fade-in { animation: frameFadeIn 0.4s ease-out both; }
+        @media (prefers-reduced-motion: reduce) {
+            turbo-frame.frame-fade-in { animation: none !important; }
+        }
+    </style>
+    <script>
+    (function () {
+        if (window.__dashboardSequencer) return;
+        window.__dashboardSequencer = 1;
+
+        // Fade each frame in as it finishes loading so updates appear smoothly,
+        // one card/panel at a time instead of everything swapping at once.
+        if (!window.__dashboardFrameFade) {
+            window.__dashboardFrameFade = 1;
+            document.addEventListener('turbo:frame-load', function (e) {
+                var frame = e.target;
+                if (!frame || frame.tagName !== 'TURBO-FRAME') return;
+                frame.classList.remove('frame-fade-in');
+                void frame.offsetWidth; // restart the animation
+                frame.classList.add('frame-fade-in');
+            });
+        }
+
+        // Frames carry their URL in data-src so Turbo never auto-fires all of
+        // them simultaneously. Load them strictly one at a time, in DOM order,
+        // with a small gap so the server + Chart.js render serially.
+        var queue = Array.prototype.slice.call(document.querySelectorAll('turbo-frame[data-src]'));
+        var i = 0;
+        var GAP = 280; // ms between frame starts
+
+        function loadNext() {
+            if (i >= queue.length) return;
+            var f = queue[i++];
+            // Skip frames already given a real src (e.g. by a filter reload).
+            if (f.dataset.src && !f.getAttribute('src')) {
+                f.setAttribute('src', f.dataset.src);
+                // Switching lazy→eager triggers the load immediately, even for
+                // frames currently off-screen.
+                f.setAttribute('loading', 'eager');
+            }
+            setTimeout(loadNext, GAP);
+        }
+        setTimeout(loadNext, 300);
+    })();
     </script>
 
 </div>
