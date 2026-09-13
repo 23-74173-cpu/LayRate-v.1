@@ -21,8 +21,24 @@
                 {{-- Quantity --}}
                 <div>
                     <label class="block text-xs font-medium text-[#6B7280] mb-1">Quantity <span class="text-red-500">*</span></label>
-                    <input type="number" name="quantity" required min="1" max="100" value="{{ old('quantity', 1) }}"
-                           class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
+                    <div style="display:grid;grid-template-columns:7fr 3fr;gap:8px;">
+                        <input type="number" name="quantity" id="registerQuantityInput" required min="1" value="{{ old('quantity', 1) }}"
+                               class="border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]"
+                               oninput="clampRegisterQuantity(this)" title="Manual entries are limited to 100">
+                        <button type="button" id="registerMaxBtn" data-available="{{ $availableSpaces }}" {{ $availableSpaces > 0 ? '' : 'disabled' }} onclick="fillRegisterMax()"
+                                class="inline-flex items-center justify-center gap-1 text-sm font-semibold rounded transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                style="color:#7c3aed;background-color:rgba(124,58,237,0.12);" title="Fill with all available cage spaces">
+                            <i data-lucide="maximize" class="w-3.5 h-3.5"></i> Max
+                        </button>
+                    </div>
+                    <div class="mt-1.5 flex items-center gap-1.5 text-xs" style="color:#9CA3AF;">
+                        <i data-lucide="layout-grid" class="w-3.5 h-3.5 shrink-0"></i>
+                        <span>Cage spaces:
+                            <span class="font-semibold" style="color:#1f1f1f;">{{ number_format($occupiedSpaces) }} / {{ number_format($totalCapacity) }}</span>
+                            occupied ·
+                            <span id="registerAvailableLabel" class="font-semibold" style="color:{{ $availableSpaces > 0 ? '#059669' : '#9b1c24' }};">{{ number_format($availableSpaces) }} available</span>
+                        </span>
+                    </div>
                     <x-input-error name="quantity" />
                 </div>
 
@@ -106,8 +122,25 @@ function closeRegisterModal() {
     if (el) { el.style.display = 'none'; }
 }
 
+function fillRegisterMax() {
+    var btn = document.getElementById('registerMaxBtn');
+    if (!btn) return;
+    var available = parseInt(btn.dataset.available || '0', 10);
+    if (!(available > 0)) return;
+    var input = document.getElementById('registerQuantityInput');
+    if (!input) return;
+    input.value = available;
+}
+
+function clampRegisterQuantity(el) {
+    if (!el || !el.value) return;
+    if (parseInt(el.value, 10) > 100) el.value = 100;
+}
+
 window.openRegisterModal = openRegisterModal;
 window.closeRegisterModal = closeRegisterModal;
+window.fillRegisterMax = fillRegisterMax;
+window.clampRegisterQuantity = clampRegisterQuantity;
 
 (function() {
     if (window.__registerModalEscapeBound) return;

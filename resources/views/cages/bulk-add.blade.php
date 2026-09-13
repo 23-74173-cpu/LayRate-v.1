@@ -447,9 +447,7 @@
         const available = cageSlots.filter(s => (s.current_occupancy || 0) < maxPerSlot);
 
         if (available.length === 0) {
-            window.autoModeFits = henCount === 0;
-            autoSummary.innerHTML =
-                '<span class="text-red-500">No available slots in this cage.</span>';
+            autoSummary.innerHTML = '<span class="text-red-500">No available slots in this cage.</span>';
             validateForm();
             return;
         }
@@ -458,10 +456,10 @@
         available.forEach(s => { totalCapacity += Math.min(perSlot, maxPerSlot - (s.current_occupancy || 0)); });
 
         const fits = totalCapacity >= henCount;
-        window.autoModeFits = fits;
         autoSummary.innerHTML =
-            'Will distribute <strong>' + henCount + '</strong> hens across <strong>' + available.length + '</strong> available slot(s)' +
-            (fits ? '.' : '. <span class="text-red-500">Only ' + totalCapacity + ' space(s) available — select fewer hens or reduce per-slot count.</span>');
+            (fits
+                ? 'Will distribute <strong>' + henCount + '</strong> hens across <strong>' + available.length + '</strong> available slot(s).'
+                : 'Will place <strong>' + totalCapacity + '</strong> of <strong>' + henCount + '</strong> selected hen(s); the remaining stay unplaced.');
         validateForm();
     }
     window.updateAutoSummary = updateAutoSummary;
@@ -501,12 +499,6 @@
             }
         } else {
             if (summarySlots) summarySlots.textContent = 'auto';
-            // window.autoModeFits is set by updateAutoSummary() — false when
-            // the selected hens exceed the selected cage's available capacity.
-            if (henCount > 0 && window.autoModeFits === false) {
-                valid = false;
-                if (!errorMsg) errorMsg = 'Selected hens exceed available slot capacity in this cage.';
-            }
         }
 
         submitBtn.disabled = !valid;

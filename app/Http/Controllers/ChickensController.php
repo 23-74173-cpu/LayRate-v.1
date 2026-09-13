@@ -63,6 +63,16 @@ class ChickensController extends Controller
         ksort($henPickerData);
         foreach ($henPickerData as &$slots) { ksort($slots); }
 
+        // Farm-wide cage space summary for the Register Hens modal: a hen is
+        // placed when it has an active cage slot, so occupied = active placed
+        // hens. The "Max" button registers up to the currently-available spaces.
+        $activeCages = Cage::where('is_active', 1)
+            ->with(['hens' => fn ($q) => $q->where('is_active', 1)])
+            ->get();
+        $totalCapacity = $activeCages->sum('total_capacity');
+        $occupiedSpaces = $activeCages->sum(fn ($cage) => $cage->hens->count());
+        $availableSpaces = max(0, $totalCapacity - $occupiedSpaces);
+
         // Include unplaced active hens so they can be picked/culled from the
         // hen picker popup too, grouped under a virtual "Unplaced" cage.
         $unplacedHens = Hen::where('is_active', 1)
@@ -83,7 +93,7 @@ class ChickensController extends Controller
         return view('chickens.index', compact(
             'cages', 'breeds', 'todayTotal', 'todayByCage', 'tab',
             'cageId', 'breed', 'isActive', 'search', 'sort', 'preselectedCageId',
-            'henPickerData'
+            'henPickerData', 'totalCapacity', 'occupiedSpaces', 'availableSpaces'
         ));
     }
 
@@ -185,6 +195,11 @@ class ChickensController extends Controller
 
     public function store(Request $request)
     {
+        $activeCages = Cage::where('is_active', 1)
+            ->with(['hens' => fn ($q) => $q->where('is_active', 1)])
+            ->get();
+        $availableSpaces = max(0, $activeCages->sum('total_capacity') - $activeCages->sum(fn ($cage) => $cage->hens->count()));
+
         $validator = Validator::make($request->all(), [
             'breed'              => 'required|string|in:ISA Brown,Lohmann Brown-Classic,Dekalb White,Hy-Line Brown,Novogen Brown',
             'source'             => 'nullable|string|max:200',
@@ -192,7 +207,7 @@ class ChickensController extends Controller
             'age_at_placement_weeks' => 'required|integer|min:0|max:200',
             'initial_health_status' => 'nullable|string|max:100',
             'notes'              => 'nullable|string|max:1000',
-            'quantity'           => 'required|integer|min:1|max:100',
+            'quantity'           => 'required|integer|min:1|max:' . $availableSpaces,
         ]);
 
         if ($validator->fails()) {

@@ -65,7 +65,15 @@ class CageController extends Controller
             ])->find($editCageId);
         }
 
-        return view('cages.index', compact('cages', 'nextCageCode', 'gridRows', 'gridCols', 'spareCounts', 'editCage', 'eggSizeByCage'));
+        // Farm-wide cage space summary for the Register Hens modal (also shown
+        // from the Cages page). Occupied = active placed hens; the Max button
+        // registers up to the currently-available spaces.
+        $activeCages = $cages->where('is_active', 1);
+        $totalCapacity = $activeCages->sum('total_capacity');
+        $occupiedSpaces = $activeCages->sum(fn ($cage) => $cage->hens->count());
+        $availableSpaces = max(0, $totalCapacity - $occupiedSpaces);
+
+        return view('cages.index', compact('cages', 'nextCageCode', 'gridRows', 'gridCols', 'spareCounts', 'editCage', 'eggSizeByCage', 'totalCapacity', 'occupiedSpaces', 'availableSpaces'));
     }
 
     public function store(Request $request)
@@ -871,7 +879,8 @@ class CageController extends Controller
 
             $placed = 0;
             $error = null;
-            DB::transaction(function () use ($henIds, $intendedByBreed, $slotIds, $cage, &$placed, &$error) {
+            $toPlace = 0;
+            DB::transaction(function () use ($henIds, $intendedByBreed, $slotIds, $cage, &$placed, &$error, &$toPlace) {
                 $slots = CageSlot::with('cage')->whereIn('id', $slotIds)
                     ->where('cage_id', $cage->id)
                     ->lockForUpdate()
@@ -904,8 +913,8 @@ class CageController extends Controller
 
                 $toPlace = $freshHens->count();
                 $totalRemaining = $slots->sum(fn($s) => $s->remaining);
-                if ($totalRemaining < $toPlace) {
-                    $error = "Selected slots have {$totalRemaining} space(s) available, but {$toPlace} hens need placement.";
+                if ($totalRemaining <= 0 && $toPlace > 0) {
+                    $error = 'All selected slots are full.';
                     return;
                 }
 
@@ -925,8 +934,13 @@ class CageController extends Controller
                 return back()->withErrors(['slot_ids' => $error]);
             }
 
-            return redirect()->route('chickens.index')
-                ->with('success', "{$placed} hen(s) placed into {$cage->cage_code}.");
+            $leftUnplaced = max(0, $toPlace - $placed);
+            $manualMsg = "{$placed} hen(s) placed into {$cage->cage_code}.";
+            if ($leftUnplaced > 0) {
+                $manualMsg .= " {$leftUnplaced} hen(s) left unplaced — selected slots ran out of space.";
+            }
+
+            return redirect()->route('chickens.index')->with('success', $manualMsg);
         }
 
         // Auto mode: distribute evenly across all available slots in the cage
@@ -934,7 +948,8 @@ class CageController extends Controller
 
         $placed = 0;
         $error = null;
-        DB::transaction(function () use ($henIds, $intendedByBreed, $cage, $perSlot, &$placed, &$error) {
+        $toPlace = 0;
+        DB::transaction(function () use ($henIds, $intendedByBreed, $cage, $perSlot, &$placed, &$error, &$toPlace) {
             $allSlots = CageSlot::with('cage')->where('cage_id', $cage->id)
                 ->lockForUpdate()
                 ->get();
@@ -968,8 +983,8 @@ class CageController extends Controller
             }
 
             $totalRemaining = $availableSlots->sum(fn($s) => $s->remaining);
-            if ($totalRemaining < $toPlace) {
-                $error = "Cage {$cage->cage_code} has {$totalRemaining} space(s) available, but {$toPlace} hens need placement.";
+            if ($totalRemaining <= 0 && $toPlace > 0) {
+                $error = "No available spaces in {$cage->cage_code}.";
                 return;
             }
 
@@ -989,8 +1004,13 @@ class CageController extends Controller
             return back()->withErrors(['cage_id' => $error]);
         }
 
-        return redirect()->route('chickens.index')
-            ->with('success', "{$placed} hen(s) placed into {$cage->cage_code}.");
+        $leftUnplaced = max(0, $toPlace - $placed);
+        $autoMsg = "{$placed} hen(s) placed into {$cage->cage_code}.";
+        if ($leftUnplaced > 0) {
+            $autoMsg .= " {$leftUnplaced} hen(s) left unplaced — cage ran out of space.";
+        }
+
+        return redirect()->route('chickens.index')->with('success', $autoMsg);
     }
 
     public function printLabel(Cage $cage)
