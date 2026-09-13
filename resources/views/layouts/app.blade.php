@@ -81,8 +81,11 @@
 
         var timer = null;
         function arm() {
+            // Loading animation disabled: Turbo visits are fast enough now that the
+            // spinner is never worth showing fulfilling. `timer` is left null so the
+            // hide/clearTimeout listeners below simply no-op.
             clearTimeout(timer);
-            timer = setTimeout(show, 600);
+            timer = null;
         }
 
         // Initial hard load: arm while the document is still being transferred.
