@@ -37,6 +37,15 @@ class AppServiceProvider extends ServiceProvider
                     ->orderByDesc('triggered_at')
                     ->get();
 
+                // Prune stale IDs (read/deleted alerts) so the session list
+                // can't grow unbounded across logins.
+                $unreadIds = $unreadAlerts->pluck('id')->all();
+                $pruned = array_values(array_intersect($acknowledgedIds, $unreadIds));
+                if (count($pruned) !== count($acknowledgedIds)) {
+                    session()->put('alerts_acknowledged_ids', $pruned);
+                    $acknowledgedIds = $pruned;
+                }
+
                 $alertCount = $unreadAlerts->count();
                 $newAlerts = $unreadAlerts->whereNotIn('id', $acknowledgedIds);
                 $showAlertsModal = $newAlerts->isNotEmpty();

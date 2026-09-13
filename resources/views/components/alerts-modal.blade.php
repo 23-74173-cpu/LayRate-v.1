@@ -64,14 +64,27 @@
 <script>
 (function() {
     window.acknowledgeAlertsModal = function() {
+        // Collect IDs BEFORE removing the modal from the DOM.
+        // (Previous bug: modal.remove() ran first, so the query below
+        // returned [] and the server never recorded the acknowledge —
+        // causing the popup to reappear on every section.)
+        const ids = Array.from(document.querySelectorAll('#alerts-modal-list [data-alert-id]'))
+            .map(function(el) { return parseInt(el.dataset.alertId, 10); })
+            .filter(function(id) { return !isNaN(id); });
+
+        // Client-side guard: remember acked IDs immediately so a fast
+        // Turbo navigation before the POST lands can't re-show the modal
+        // from cache / a pending render.
+        try {
+            const stored = JSON.parse(sessionStorage.getItem('alertsModalAckedIds') || '[]');
+            const merged = Array.from(new Set(stored.concat(ids)));
+            sessionStorage.setItem('alertsModalAckedIds', JSON.stringify(merged));
+        } catch (e) { /* storage unavailable — server ack is the source of truth */ }
+
         // Remove immediately so the modal never lingers over the next
         // page (e.g. when "View all notifications" navigates away).
         const modal = document.getElementById('alerts-modal');
         if (modal) modal.remove();
-
-        const ids = Array.from(document.querySelectorAll('#alerts-modal-list [data-alert-id]'))
-            .map(function(el) { return parseInt(el.dataset.alertId, 10); })
-            .filter(function(id) { return !isNaN(id); });
 
         fetch('{{ route('alerts.acknowledge-modal') }}', {
             method: 'POST',
@@ -94,6 +107,31 @@
 
     document.removeEventListener('keydown', onKeydown);
     document.addEventListener('keydown', onKeydown);
+
+    // If this page was restored from Turbo's cache after an acknowledge,
+    // hide the stale modal copy immediately using the client-side guard.
+    try {
+        const acked = JSON.parse(sessionStorage.getItem('alertsModalAckedIds') || '[]');
+        if (acked.length) {
+            const list = document.getElementById('alerts-modal-list');
+            if (list) {
+                const remaining = Array.from(list.querySelectorAll('[data-alert-id]'))
+                    .filter(function(el) { return acked.indexOf(parseInt(el.dataset.alertId, 10)) === -1; });
+                if (remaining.length === 0) {
+                    const modal = document.getElementById('alerts-modal');
+                    if (modal) modal.remove();
+                }
+            }
+        }
+    } catch (e) { /* ignore */ }
+
+    // Never persist the modal into Turbo's snapshot cache — otherwise the
+    // back button / fast revisits restore a stale copy even after the
+    // server session already recorded the acknowledge.
+    document.addEventListener('turbo:before-cache', function() {
+        const modal = document.getElementById('alerts-modal');
+        if (modal) modal.remove();
+    });
 })();
 </script>
 @endif

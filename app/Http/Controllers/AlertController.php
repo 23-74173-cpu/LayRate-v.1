@@ -58,7 +58,15 @@ class AlertController extends Controller
     public function acknowledgeModal(Request $request)
     {
         $ids = $request->input('ids', []);
-        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        $ids = array_values(array_unique(array_filter(array_map('intval', (array) $ids))));
+
+        // Fallback: if the client sent no IDs (e.g. older cached JS that
+        // removed the modal before collecting IDs, or a beacon lost its
+        // body during navigation), acknowledge all currently-unread alerts
+        // so the popup can't loop forever on every section.
+        if (empty($ids)) {
+            $ids = Alert::where('is_read', false)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        }
 
         $acknowledged = session()->get('alerts_acknowledged_ids', []);
         $acknowledged = array_values(array_unique(array_merge($acknowledged, $ids)));
