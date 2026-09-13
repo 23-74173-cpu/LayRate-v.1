@@ -1,32 +1,33 @@
-@extends('layouts.app')
-@section('title', 'Session Expired')
-
-@section('content')
-<div class="min-h-[60vh] flex items-center justify-center">
-    <div class="text-center max-w-md">
-        <div class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: #fbe4e6;">
-            <i data-lucide="clock" class="w-8 h-8" style="color: #9b1c24;"></i>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Session Expired · LayRate</title>
+<link rel="icon" href="/favicon-32x32.png">
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: #fafaf9; color: #1f1f1f; min-height: 100vh; min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+    .card { text-align: center; max-width: 28rem; }
+    .icon { width: 4rem; height: 4rem; margin: 0 auto 1rem; border-radius: 9999px; background: #fbe4e6; display: flex; align-items: center; justify-content: center; }
+    .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .125em; text-transform: uppercase; color: #a39e98; margin-bottom: .25rem; }
+    h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: .5rem; }
+    p { font-size: .875rem; color: #6B7280; margin-bottom: 1.5rem; line-height: 1.5; }
+    .ref { font-size: 11px; color: #a39e98; margin-bottom: 1.5rem; }
+    .btn { display: inline-flex; align-items: center; gap: .5rem; padding: .625rem 1.5rem; border-radius: .5rem; font-size: .875rem; font-weight: 500; text-decoration: none; }
+    .btn-primary { background: #002D5E; color: #fff; }
+    .btn-secondary { color: #1f1f1f; border: 1px solid #e6e6e6; margin-left: .75rem; background: #fff; }
+</style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9b1c24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v6h4"/><circle cx="12" cy="12" r="10"/></svg>
         </div>
-        <h1 class="text-2xl font-semibold mb-2" style="color: #1f1f1f;">Session Expired</h1>
-        <p class="text-sm mb-6" style="color: #6B7280;">
-            Your session has timed out due to inactivity. Please log in again to continue.
-        </p>
-        <a href="{{ route('login') }}"
-           class="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium text-white transition-colors"
-           style="background-color: #002D5E;"
-           onmouseover="this.style.backgroundColor='#001F42'"
-           onmouseout="this.style.backgroundColor='#002D5E'">
-            <i data-lucide="log-in" class="w-4 h-4"></i>
-            Log In Again
-        </a>
-        <a href="{{ url()->previous() }}"
-           class="inline-flex items-center gap-2 px-6 py-2.5 ml-3 rounded-lg text-sm font-medium transition-colors"
-           style="color: #1f1f1f; border: 1px solid #e6e6e6;"
-           onmouseover="this.style.backgroundColor='#f6f5f4'"
-           onmouseout="this.style.backgroundColor='transparent'">
-            <i data-lucide="arrow-left" class="w-4 h-4"></i>
-            Go Back
-        </a>
+        <p class="eyebrow">Error 419</p>
+        <h1>Session Expired</h1>
+        <p>Your session has timed out due to inactivity. Please log in again to continue.</p>
+        <a class="btn btn-primary" href="/login">Log In Again</a><a class="btn btn-secondary" href="javascript:history.back()">Go Back</a>
     </div>
-</div>
-@endsection
+</body>
+</html>

@@ -42,9 +42,9 @@ class ProductionDataExport implements FromCollection, WithHeadings, WithStyles, 
     public function headings(): array
     {
         return [
-            'Date', 'Cage Code', 'Breed', 'Flock Age (wks)', 'Hen Count',
-            'Egg Count', 'Temp (°C)', 'Humidity (%)', 'Crude Protein (%)',
-            'Feed (kg)', 'Mortality',
+            'Date', 'Cage_Code', 'Breed', 'Flock_Age_Weeks', 'Hen_Count',
+            'Egg_Count', 'Temperature_C', 'Humidity_Percent', 'Crude_Protein_Percent',
+            'Feed_Consumed_kg', 'Mortality_Count',
         ];
     }
 
