@@ -16,30 +16,28 @@
 
         .egg-decor { color: rgba(255, 255, 255, 0.10); }
 
-        /* Glassmorphism card + inputs */
+        /* Basic white card + inputs (glassmorphism removed) */
         .glass-card {
             position: relative;
-            background: rgba(26, 35, 66, 0.32);
-            -webkit-backdrop-filter: blur(2px) saturate(150%);
-            backdrop-filter: blur(2px) saturate(150%);
-            border: 1px solid rgba(151, 168, 233, 0.45);
+            background: #ffffff;
+            border: 1px solid #D9D9D9;
             border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(10, 16, 40, 0.45), inset 0 1px 0 rgba(173, 189, 255, 0.25);
+            box-shadow: 0 8px 32px rgba(10, 22, 46, 0.18);
         }
         .glass-input {
-            background: rgba(255, 255, 255, 0.10);
-            border: 1px solid rgba(255, 255, 255, 0.32);
-            color: #fff;
+            background: #ffffff;
+            border: 1px solid #D9D9D9;
+            color: #333333;
         }
-        .glass-input::placeholder { color: rgba(255, 255, 255, 0.55); }
-        .glass-input:hover { border-color: rgba(255, 255, 255, 0.45); }
+        .glass-input::placeholder { color: #9CA3AF; }
+        .glass-input:hover { border-color: #B0B0B0; }
         .glass-input:focus {
-            background: rgba(255, 255, 255, 0.16);
-            border-color: rgba(255, 255, 255, 0.65);
+            background: #ffffff;
+            border-color: #102A4C;
             outline: none;
-            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.14);
+            box-shadow: 0 0 0 3px rgba(16, 42, 76, 0.14);
         }
-        .glass-label { color: rgba(255, 255, 255, 0.85); }
+        .glass-label { color: #6B7280; }
 
         .signin-title {
             font-family: Georgia, 'Times New Roman', 'Palatino Linotype', serif;
@@ -50,7 +48,7 @@
         .signin-title-accent {
             width: 3rem; height: 3px; margin: 0.6rem auto 0;
             border-radius: 9999px;
-            background: linear-gradient(90deg, rgba(255,255,255,0.9), rgba(255,255,255,0.25));
+            background: linear-gradient(90deg, #102A4C, rgba(16, 42, 76, 0.25));
         }
 
         /* Reverse of the landing page's circle-wipe: this page loads already
@@ -94,13 +92,13 @@
         {{-- Card --}}
         <div class="glass-card p-7">
             {{-- Logo — circular-cropped mark, sits directly on the glass. --}}
-            <img src="/images/logo1.png"
+            <img src="/images/logo_nobg.png"
                  alt="LayRate — Egg Counting &amp; Forecasting System"
-                 class="w-40 mx-auto -mt-3 -mb-5 rounded-full" loading="lazy">
+                 class="w-40 mx-auto -mt-3" loading="lazy">
 
-            <h1 class="signin-title text-2xl text-white mb-1 text-center">Sign in</h1>
+            <h1 class="signin-title text-2xl mb-1 text-center" style="color: #102A4C;">Sign in</h1>
             <div class="signin-title-accent"></div>
-            <p class="text-xs text-white/70 mb-6 mt-3 text-center">Enter your credentials to access the dashboard.</p>
+            <p class="text-xs mb-6 mt-3 text-center" style="color: #6B7280;">Enter your credentials to access the dashboard.</p>
 
             <form action="{{ route('login') }}" method="POST" class="space-y-4">
                 @csrf
@@ -128,21 +126,21 @@
                 <div class="flex items-center gap-2">
                     <input type="checkbox" name="remember" id="remember"
                            class="w-3.5 h-3.5 rounded border-white/40 bg-white/10 text-[#102A4C]" style="accent-color:#fff;">
-                    <label for="remember" class="text-xs text-white/80">Remember me</label>
+                    <label for="remember" class="text-xs" style="color: #374151;">Remember me</label>
                 </div>
 
                 <x-button type="submit" class="w-full py-2.5 mt-2" style="background-color:#27578A;">Sign In</x-button>
 
                 <div class="text-center mt-4 pt-4 border-t border-white/15">
                     <a href="{{ route('landing') }}"
-                       class="text-xs text-white/70 hover:text-white transition-colors">
+                       class="text-xs transition-colors" style="color: #6B7280;">
                         What is LayRate?
                     </a>
                 </div>
             </form>
         </div>
 
-        <p class="text-center text-xs text-white mt-5">
+        <p class="text-center text-xs mt-5" style="color: #6B7280;">
             LayRate · Offline Poultry Farm Management System
         </p>
     </div>
