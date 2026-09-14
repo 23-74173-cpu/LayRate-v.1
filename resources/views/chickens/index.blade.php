@@ -352,6 +352,7 @@ function updateStatusPills() {
     }
 }
 
+var _lastInventoryFilter = '';
 function filterInventory() {
     const status = document.querySelector('input[name="status"]:checked')?.value || 'all';
     const cageId = document.querySelector('select[name="cage_id"]')?.value || '';
@@ -366,7 +367,16 @@ function filterInventory() {
     if (cageId) params.set('cage_id', cageId);
     if (breed) params.set('breed', breed);
     if (search) params.set('search', search);
-    if (sort) params.set('sort', sort);
+    if (sort) params.set('sort', sort.sex);
+
+    // De-duplicate: if the computed filter is byte-identical to the last one we
+    // actually requested, don't fire a redundant full-frame reload (each reload
+    // re-runs the grouped render + DOM swap, which is the expensive part).
+    const signature = params.toString() + '|' + status;
+    if (signature === _lastInventoryFilter) {
+        return;
+    }
+    _lastInventoryFilter = signature;
 
     const frame = document.getElementById('chickens-inventory-list');
     frame.src = '{{ route("chickens.inventory-list") }}?' + params.toString();

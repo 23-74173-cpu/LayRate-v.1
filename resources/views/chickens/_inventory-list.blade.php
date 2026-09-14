@@ -131,6 +131,9 @@
 
                 <style>
                 .cage-grid .two-col { display: flex; flex-direction: column; gap: 24px; align-items: flex-start; }
+                .cage-grid .slot-tile,
+                .cage-grid .slot-mini { content-visibility: auto; contain-intrinsic-size: auto 46px; }
+                .cage-grid .cage-overview-card { content-visibility: auto; contain-intrinsic-size: auto 210px; }
                 .cage-grid .two-col > div { width: 100%; min-width: 0; }
                 @media (min-width: 1024px) {
                     .cage-grid .two-col { flex-direction: row; }
