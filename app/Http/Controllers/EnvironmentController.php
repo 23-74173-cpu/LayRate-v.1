@@ -11,6 +11,7 @@ use App\Services\RelayStateService;
 use App\Services\ReportingDateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class EnvironmentController extends Controller
@@ -306,6 +307,12 @@ class EnvironmentController extends Controller
         ]);
         $action = $validated['action'];
 
+        Log::info('controlRelay: request received', [
+            'action' => $action,
+            'user_id' => $request->user()?->id,
+            'timestamp' => now()->toIso8601String(),
+        ]);
+
         $relay = $this->activeRelay();
 
         if (! $relay) {
@@ -326,6 +333,14 @@ class EnvironmentController extends Controller
                 'last_changed_at' => now(),
                 'last_changed_by' => $request->user()?->id,
             ]);
+
+            Log::info('controlRelay: DB write', [
+                'hardware_item_id' => $relay->id,
+                'action' => $action,
+                'control_mode' => 'auto',
+                'relay_status' => 'auto',
+                'timestamp' => now()->toIso8601String(),
+            ]);
         } else {
             $relay->update([
                 'control_mode' => 'manual',
@@ -333,6 +348,14 @@ class EnvironmentController extends Controller
                 'relay_safety' => false,
                 'last_changed_at' => now(),
                 'last_changed_by' => $request->user()?->id,
+            ]);
+
+            Log::info('controlRelay: DB write', [
+                'hardware_item_id' => $relay->id,
+                'action' => $action,
+                'control_mode' => 'manual',
+                'relay_status' => $action,
+                'timestamp' => now()->toIso8601String(),
             ]);
         }
 
