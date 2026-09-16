@@ -12,6 +12,9 @@ class RunnerHealthCheck extends Command
 
     protected $description = 'Check GitHub Actions runner status and create an alert if offline';
 
+    // Deploy-pipeline verification marker (2026-09-16): comment-only change to
+    // confirm the self-hosted runner picks up jobs after the watchdog fix. Safe to remove.
+
     public function handle(): int
     {
         $serviceName = 'actions.runner.23-74173-cpu-LayRate-v.1.LayRatePI.service';
