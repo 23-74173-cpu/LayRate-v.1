@@ -250,9 +250,6 @@ def apply_commands(ser, intended, last_applied_command, last_reported_relay,
         # Re-apply it. Skipped while the safety default is blocking the relay —
         # "OFF (SAFETY)" is the correct response to a manual ON, not a drift to
         # be corrected.
-        log.info("DRIFT DETECTED: reported=%s intended=%s mode=%s safety=%s",
-                 last_reported_relay, intended["command"],
-                 intended["mode"], last_reported_safety)
         needs_send = True
     if needs_send:
         cmd_line = f"RELAY:{intended['command'].upper()}\n"
@@ -324,7 +321,6 @@ def run_loop(args):
                     # (covers an Arduino reboot that reverted to hysteresis).
                     if settling_end is None and now_mono - last_command_poll >= COMMAND_POLL_INTERVAL:
                         last_command_poll = now_mono
-                        log.info("Command poll: ts=%.3f", now_mono)
                         intended = fetch_relay_command(session, args.command_api_url)
                         if intended is not None:
                             (last_applied_command, last_applied_threshold) = apply_commands(
@@ -333,14 +329,11 @@ def run_loop(args):
 
                     if ser.in_waiting:
                         data = ser.read(ser.in_waiting).decode("utf-8", errors="replace")
-                        log.debug("RAW serial: %r", data)
                         blocks = parser.feed(data)
                         for parsed in blocks:
                             if parsed.get("relay") is not None:
                                 last_reported_relay = parsed["relay"]
                                 last_reported_safety = parsed.get("relay_safety", False)
-                                log.info("Parsed block: relay=%s safety=%s ts=%.3f",
-                                         parsed["relay"], parsed.get("relay_safety", False), now_mono)
 
                             if settling_end is not None:
                                 log.debug("Settling: discarding block (count=%s, temp=%s, hum=%s)",

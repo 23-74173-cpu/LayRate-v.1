@@ -174,14 +174,12 @@ void readDHT() {
     humidity     = h;
     temperature  = t;
     dhtDataValid = true;
-    Serial.println("DIAG:DHT:OK");
     return;
   }
 
   // All 3 attempts failed validation
   dhtDataValid = false;
   dhtErrorMsg = "DHT22 Error - Check wiring";
-  Serial.println("DIAG:DHT:FAIL");
 }
 
 // ----------------------------------------------------------------
@@ -355,10 +353,6 @@ void loop() {
     digitalWrite(RELAY_PIN, relayOn ? LOW : HIGH); // active LOW relay
 
     if (relayOn != prevRelay || relaySafetyActive != prevSafety) {
-      Serial.print("DIAG:RELAY:");
-      Serial.print(relayOn ? "ON" : "OFF");
-      Serial.print(":SAFETY:");
-      Serial.println(relaySafetyActive ? "TRUE" : "FALSE");
       printBlock();
       syncPrintedValues();
     }
