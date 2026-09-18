@@ -28,8 +28,16 @@ use App\Http\Controllers\SystemTimeController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-// ─── Public landing page ───────────────────────────────────────
+// ─── App entry point: guests land on the login page, not the marketing page ──
 Route::get('/', function () {
+    if (Auth::check()) {
+        return redirect()->route('dashboard');
+    }
+    return redirect()->route('login');
+});
+
+// ─── Public landing page (reached via "What is LayRate?" on the login page) ──
+Route::get('/welcome', function () {
     if (Auth::check()) {
         return redirect()->route('dashboard');
     }
