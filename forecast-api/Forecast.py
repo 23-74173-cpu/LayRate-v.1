@@ -256,7 +256,7 @@ def build_deployment_feature_frame(last_row, forecast_dates, temp, humidity, fee
         row = {
             "Breed": last_row["Breed"],
             "Live_Hens": float(last_row["Live_Hens"]),
-            "Flock_Age_Weeks": float(last_row["Flock_Age_Weeks"]) + (step_idx / 7.0),
+            "Flock_Age_Weeks": float(last_row["Flock_Age_Weeks"]) - (step_idx / 7.0),
             "Temperature_C": temp,
             "Humidity_Percent": humidity,
             "Crude_Protein_Percent": float(last_row["Crude_Protein_Percent"]),
@@ -493,7 +493,7 @@ def manual_forecast(
         row = {
             "Breed": breed,
             "Live_Hens": float(live_hens),
-            "Flock_Age_Weeks": float(flock_age_weeks) + (step_idx / 7.0),
+            "Flock_Age_Weeks": float(flock_age_weeks) - (step_idx / 7.0),
             "Temperature_C": temperature_c,
             "Humidity_Percent": humidity_percent,
             "Crude_Protein_Percent": float(crude_protein_percent),

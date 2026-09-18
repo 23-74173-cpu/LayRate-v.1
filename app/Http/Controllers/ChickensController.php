@@ -187,7 +187,7 @@ class ChickensController extends Controller
         $mortalityLogs = MortalityLog::with(['cage', 'recorder'])
             ->orderByDesc('log_date')
             ->orderByDesc('created_at')
-            ->paginate(20)
+            ->paginate(5)
             ->withQueryString();
 
         return view('chickens._mortality-records', compact('mortalityLogs'));
@@ -444,7 +444,7 @@ class ChickensController extends Controller
         $cullingLogs = CullingLog::with(['hen.cageSlot.cage', 'recorder'])
             ->orderByDesc('cull_date')
             ->orderByDesc('created_at')
-            ->paginate(20)
+            ->paginate(5)
             ->withQueryString();
 
         return view('chickens._culling-records', compact('cullingLogs'));
@@ -455,7 +455,7 @@ class ChickensController extends Controller
         $removalLogs = Removal::with(['hen.cageSlot.cage', 'recorder'])
             ->orderByDesc('removal_date')
             ->orderByDesc('created_at')
-            ->paginate(20)
+            ->paginate(5)
             ->withQueryString();
 
         return view('chickens._removal-records', compact('removalLogs'));
