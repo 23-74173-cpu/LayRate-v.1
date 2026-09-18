@@ -96,9 +96,9 @@ SELECT
     COALESCE(SUM(pl.hen_count), 0) AS `Live_Hens`,
     COALESCE(SUM(pl.egg_count), 0) AS `Total_Eggs`,
     (SELECT ROUND(AVG(el.temperature_c), 2) FROM environmental_logs el
-      WHERE el.cage_id = c.id AND DATE(el.recorded_at) = pl.log_date) AS `Temperature_C`,
+      WHERE el.cage_id = c.id AND el.is_demo = 0 AND DATE(el.recorded_at) = pl.log_date) AS `Temperature_C`,
     (SELECT ROUND(AVG(el.humidity_pct), 2) FROM environmental_logs el
-      WHERE el.cage_id = c.id AND DATE(el.recorded_at) = pl.log_date) AS `Humidity_Percent`,
+      WHERE el.cage_id = c.id AND el.is_demo = 0 AND DATE(el.recorded_at) = pl.log_date) AS `Humidity_Percent`,
     (SELECT fb.crude_protein FROM feed_consumption_logs fcl
        LEFT JOIN feed_batches fb ON fcl.feed_batch_id = fb.id
       WHERE fcl.cage_id = c.id AND fcl.log_date = pl.log_date
@@ -114,6 +114,7 @@ JOIN cages c ON cs.cage_id = c.id
 WHERE pl.log_date IS NOT NULL
   AND c.cage_code IS NOT NULL
   AND TRIM(c.cage_code) != ''
+  AND pl.is_demo = 0
   AND pl.log_date < '{today}'
 GROUP BY pl.log_date, c.id, c.cage_code
 HAVING `Temperature_C` IS NOT NULL AND `Humidity_Percent` IS NOT NULL

@@ -23,7 +23,7 @@ class EggProductionHistoryController extends Controller
         // Orphaned logs (cage_slot_id NULL, from deleted cages whose history
         // was preserved) are excluded here and in the timeline below so the
         // total stays consistent with the dashboard and per-cage breakdown.
-        $lifetimeEggs = ProductionLog::whereNotNull('cage_slot_id')->sum('egg_count');
+        $lifetimeEggs = ProductionLog::whereNotNull('cage_slot_id')->real()->sum('egg_count');
 
         // Timeline aggregation via shared service.
         $timeline = ProductionTimelineService::aggregate($groupBy);
@@ -49,13 +49,14 @@ class EggProductionHistoryController extends Controller
             ->map(fn ($cage) => [
                 'cage_code' => $cage->cage_code,
                 'color' => $cage->color,
-                'total_eggs' => (int) $cage->productionLogs->sum('egg_count'),
+                'total_eggs' => (int) $cage->productionLogs->where('is_demo', false)->sum('egg_count'),
             ])
             ->filter(fn ($c) => $c['total_eggs'] > 0)
             ->values();
 
         // Breakdown by size using EggSizeLog as source of truth.
         $bySize = EggSizeLog::select('egg_size', DB::raw('SUM(count) as total'))
+            ->whereHas('productionLog', fn ($q) => $q->real())
             ->groupBy('egg_size')
             ->orderBy('egg_size')
             ->get()

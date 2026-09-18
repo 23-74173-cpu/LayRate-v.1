@@ -53,6 +53,7 @@ class AnalyticsController extends Controller
             $dayStats = ProductionLog::query()
                 ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
                 ->whereIn('cage_slots.cage_id', $cageIds)
+                ->where('production_logs.is_demo', false)
                 ->whereDate('production_logs.log_date', $dateStr)
                 ->selectRaw('cage_slots.cage_id as cage_id, SUM(production_logs.egg_count) as total_eggs, AVG(production_logs.hdep) as avg_hdep')
                 ->groupBy('cage_slots.cage_id')
@@ -84,6 +85,7 @@ class AnalyticsController extends Controller
             $logs = ProductionLog::whereIn('cage_slot_id', function ($q) use ($cageIds) {
                 $q->select('id')->from('cage_slots')->whereIn('cage_id', $cageIds);
             })
+                ->real()
                 ->when($rangeStart, fn($q) => $q->where('log_date', '>=', $rangeStart))
                 ->orderBy('log_date')
                 ->get();
@@ -102,6 +104,7 @@ class AnalyticsController extends Controller
                 ->firstOrFail();
 
             $logs = $cage->productionLogs()
+                ->real()
                 ->when($rangeStart, fn($q) => $q->where('log_date', '>=', $rangeStart))
                 ->orderBy('log_date')
                 ->get();

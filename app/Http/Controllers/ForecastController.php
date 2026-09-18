@@ -230,6 +230,18 @@ class ForecastController extends Controller
             'start_date' => $request->input('start_date'),
         ]);
 
+        // Horizon bound (Prompt 15): the workspace radios offer 1/7/14/30 but
+        // day-range selection legitimately submits any 1-30 value, so the
+        // bound is the continuous range, not the discrete set. Anything
+        // outside it (e.g. horizon=99 far-future predictions, 0/negative
+        // garbage) is rejected here, upstream of both the plain and the
+        // start_date paths, mirroring the redirect-back guards below.
+        if ($horizon < 1 || $horizon > 30) {
+            return redirect()->back()
+                ->with('error', 'Invalid forecast horizon. Choose between 1 and 30 days.')
+                ->withInput();
+        }
+
         $cageCode = $request->get('cage', $this->forecastService()->recordedCages()->first() ?? '');
 
         if ($scope === 'breed' && empty($breed)) {

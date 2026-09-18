@@ -3,6 +3,7 @@ Description=GitHub Actions Runner (23-74173-cpu-LayRate-v.1.LayRatePI)
 After=network-online.target
 
 [Service]
+EnvironmentFile=/home/layratepi/actions-runner/.env
 ExecStart=/home/layratepi/actions-runner/runsvc.sh
 User=layratepi
 WorkingDirectory=/home/layratepi/actions-runner

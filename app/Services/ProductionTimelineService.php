@@ -31,6 +31,7 @@ class ProductionTimelineService
         };
 
         $query = ProductionLog::query()
+            ->real()
             ->whereNotNull('cage_slot_id')
             ->selectRaw("{$select}, SUM(egg_count) as total_eggs")
             ->groupBy('period')

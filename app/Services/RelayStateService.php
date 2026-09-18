@@ -17,7 +17,11 @@ class RelayStateService
             return ['configured' => false];
         }
 
-        $latest = $relay->cage?->latestEnvironmentLog;
+        // Latest REAL reading (demo-quarantined). Plain latest() query, not a
+        // constrained latestOfMany (see EnvironmentalLog::latestRealPerCage).
+        $latest = $relay->cage_id
+            ? \App\Models\EnvironmentalLog::where('cage_id', $relay->cage_id)->real()->latest('recorded_at')->first()
+            : null;
         $seen = $relay->relay_seen_at;
 
         return [

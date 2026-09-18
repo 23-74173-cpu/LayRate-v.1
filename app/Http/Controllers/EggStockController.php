@@ -96,6 +96,7 @@ class EggStockController extends Controller
         }
 
         $productionLogs = ProductionLog::select('id', 'cage_slot_id', 'log_date')
+            ->real()
             ->with(['cageSlot.cage:id,cage_code'])
             ->where('log_date', '>=', ReportingDateService::reportingDate()->copy()->subDays(30)->toDateString())
             ->orderByDesc('log_date')

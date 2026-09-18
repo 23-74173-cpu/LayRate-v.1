@@ -94,6 +94,7 @@ class DashboardController extends Controller
         $scope = fn ($q) => $q->when($cageCode, fn ($cq) => $cq->whereHas('cageSlot.cage', fn ($c) => $c->where('cage_code', $cageCode)));
 
         $logs = ProductionLog::query()
+            ->real()
             ->whereBetween('log_date', [$rangeStart->toDateString(), $rangeEnd->toDateString()])
             ->where($scope)
             ->get()
@@ -104,6 +105,7 @@ class DashboardController extends Controller
             ]);
 
         $monthLogs = ProductionLog::query()
+            ->real()
             ->whereBetween('log_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
             ->where($scope)
             ->get();
@@ -111,7 +113,7 @@ class DashboardController extends Controller
         $monthLoggedDays = $monthLogs->groupBy(fn ($l) => $l->log_date->format('Y-m-d'))->count();
 
         // Year options for navigation: earliest recorded log .. next year.
-        $firstLogDate = ProductionLog::query()->orderBy('log_date')->value('log_date');
+        $firstLogDate = ProductionLog::query()->real()->orderBy('log_date')->value('log_date');
         $firstYear = $firstLogDate ? (int) date('Y', strtotime($firstLogDate)) : $now->year;
         $yearOptions = range(max($firstYear, $now->year - 10), $now->year + 1);
 
@@ -147,6 +149,7 @@ class DashboardController extends Controller
         $dayStats = ProductionLog::query()
             ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
             ->whereIn('cage_slots.cage_id', $cageIds)
+            ->where('production_logs.is_demo', false)
             ->whereDate('production_logs.log_date', $dateStr)
             ->selectRaw('cage_slots.cage_id as cage_id, SUM(production_logs.egg_count) as total_eggs, AVG(production_logs.hdep) as avg_hdep')
             ->groupBy('cage_slots.cage_id')
@@ -242,6 +245,7 @@ class DashboardController extends Controller
         $dateKeys = ProductionLog::query()
             ->select('log_date')
             ->distinct()
+            ->where('is_demo', false)
             ->where('log_date', '<=', $endDate)
             ->where('log_date', '>=', $startDate)
             ->where($scope)
@@ -281,6 +285,7 @@ class DashboardController extends Controller
 
             $logs = ProductionLog::query()
                 ->with('cageSlot.cage')
+                ->real()
                 ->where('log_date', '<=', $endDate)
                 ->when($startDate, fn ($q) => $q->where('log_date', '>=', $startDate))
                 ->when($cageCode, fn ($q) => $q->whereHas('cageSlot.cage', fn ($c) => $c->where('cage_code', $cageCode)))
@@ -316,6 +321,7 @@ class DashboardController extends Controller
                 ->where('log_date', '<=', $endDate)
                 ->when($startDate, fn ($q) => $q->where('log_date', '>=', $startDate))
                 ->where($scope)
+                ->real()
                 ->get()
                 ->groupBy(fn ($l) => $l->log_date->format('Y-m-d'))
                 ->map(fn ($g) => (int) $g->sum('egg_count'));
@@ -399,6 +405,7 @@ class DashboardController extends Controller
         // Actual production per date (same source as productionHistory)
         $scope = fn ($q) => $q->when($cageCode, fn ($cq) => $cq->whereHas('cageSlot.cage', fn ($c) => $c->where('cage_code', $cageCode)));
         $actualByDate = ProductionLog::query()
+            ->real()
             ->where('log_date', '<=', $endDate)
             ->where('log_date', '>=', $startDate)
             ->where($scope)
@@ -527,6 +534,7 @@ class DashboardController extends Controller
 
         // Group egg counts by hour of day using created_at timestamp
         $hourly = ProductionLog::where('log_date', '<=', $endDate)
+            ->real()
             ->when($startDate, fn ($q) => $q->where('log_date', '>=', $startDate))
             ->selectRaw('HOUR(created_at) as hour, SUM(egg_count) as total_eggs')
             ->groupBy('hour')
@@ -574,6 +582,7 @@ class DashboardController extends Controller
         // Get production logs with their cage_slot's hens
         $logs = ProductionLog::query()
             ->with('cageSlot.hens')
+            ->real()
             ->where('log_date', '<=', $endDate)
             ->when($startDate, fn ($q) => $q->where('log_date', '>=', $startDate))
             ->where('hen_count', '>', 0)
@@ -684,6 +693,7 @@ class DashboardController extends Controller
             ->pluck('id');
 
         $points = EnvironmentalLog::select('cage_id', DB::raw('DATE(recorded_at) as log_date'), DB::raw('AVG(temperature_c) as avg_temp'))
+            ->real()
             ->whereIn('cage_id', $cageIds)
             ->where(DB::raw('DATE(recorded_at)'), '<=', $endDate)
             ->when($startDate, fn ($q) => $q->where(DB::raw('DATE(recorded_at)'), '>=', $startDate))
@@ -694,6 +704,7 @@ class DashboardController extends Controller
             ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
             ->whereIn('cage_slots.cage_id', $cageIds)
             ->where('production_logs.log_date', '<=', $endDate)
+            ->where('production_logs.is_demo', false)
             ->when($startDate, fn ($q) => $q->where('production_logs.log_date', '>=', $startDate))
             ->where('hdep', '>', 0)
             ->selectRaw('cage_slots.cage_id as cage_id, production_logs.log_date as log_date, AVG(production_logs.hdep) as avg_hdep')
@@ -740,6 +751,7 @@ class DashboardController extends Controller
             ->pluck('id');
 
         $points = EnvironmentalLog::select('cage_id', DB::raw('DATE(recorded_at) as log_date'), DB::raw('AVG(humidity_pct) as avg_hum'))
+            ->real()
             ->whereIn('cage_id', $cageIds)
             ->where(DB::raw('DATE(recorded_at)'), '<=', $endDate)
             ->when($startDate, fn ($q) => $q->where(DB::raw('DATE(recorded_at)'), '>=', $startDate))
@@ -750,6 +762,7 @@ class DashboardController extends Controller
             ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
             ->whereIn('cage_slots.cage_id', $cageIds)
             ->where('production_logs.log_date', '<=', $endDate)
+            ->where('production_logs.is_demo', false)
             ->when($startDate, fn ($q) => $q->where('production_logs.log_date', '>=', $startDate))
             ->where('hdep', '>', 0)
             ->selectRaw('cage_slots.cage_id as cage_id, production_logs.log_date as log_date, AVG(production_logs.hdep) as avg_hdep')
@@ -795,7 +808,9 @@ class DashboardController extends Controller
             ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
             ->join('hens', 'hens.cage_slot_id', '=', 'cage_slots.id')
             ->where('hens.is_active', 1)
+            ->where('production_logs.is_demo', false)
             ->where('production_logs.log_date', '<=', $endDate)
+            ->where('production_logs.is_demo', false)
             ->when($startDate, fn ($q) => $q->where('production_logs.log_date', '>=', $startDate))
             ->where('production_logs.hdep', '>', 0)
             ->when($cageCode, fn ($q) => $q->whereHas('cageSlot.cage', fn ($c) => $c->where('cage_code', $cageCode)))
@@ -958,6 +973,7 @@ class DashboardController extends Controller
             ->join('cages', 'cages.id', '=', 'cage_slots.cage_id')
             ->when($cageCode, fn ($q) => $q->where('cages.cage_code', $cageCode))
             ->where('production_logs.log_date', '<=', $endDate)
+            ->where('production_logs.is_demo', false)
             ->when($startDate, fn ($q) => $q->where('production_logs.log_date', '>=', $startDate))
             ->selectRaw('cages.id as cage_id, production_logs.log_date as log_date, SUM(production_logs.egg_count) as eggs')
             ->groupBy('cages.id', 'production_logs.log_date')
@@ -1094,6 +1110,7 @@ class DashboardController extends Controller
             ->pluck('id');
 
         $envByCageDate = EnvironmentalLog::select('cage_id', 'recorded_at', DB::raw('AVG(temperature_c) as avg_temp'), DB::raw('AVG(humidity_pct) as avg_hum'))
+            ->real()
             ->whereIn('cage_id', $cageIds)
             ->where(DB::raw('DATE(recorded_at)'), '<=', $endDate)
             ->when($startDate, fn ($q) => $q->where(DB::raw('DATE(recorded_at)'), '>=', $startDate))
@@ -1104,6 +1121,7 @@ class DashboardController extends Controller
             ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
             ->whereIn('cage_slots.cage_id', $cageIds)
             ->where('production_logs.log_date', '<=', $endDate)
+            ->where('production_logs.is_demo', false)
             ->when($startDate, fn ($q) => $q->where('production_logs.log_date', '>=', $startDate))
             ->where('hdep', '>', 0)
             ->selectRaw('cage_slots.cage_id as cage_id, production_logs.log_date as log_date, AVG(production_logs.hdep) as avg_hdep')
@@ -1219,10 +1237,19 @@ class DashboardController extends Controller
         $cages = $cagesQuery->get();
         $cageIds = $cages->pluck('id');
 
+        // Swap the eager-loaded latest reading for the latest REAL one per
+        // cage (demo-quarantined; see EnvironmentalLog::latestRealPerCage).
+        // Downstream reads ($liveReadings, sensorStatusText) are unchanged.
+        $latestReal = EnvironmentalLog::latestRealPerCage($cageIds);
+        $cages->each(fn ($cage) => $cage->setRelation(
+            'latestEnvironmentLog', $latestReal->get($cage->id)
+        ));
+
         $todayEggsByCage = ProductionLog::query()
             ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
             ->whereIn('cage_slots.cage_id', $cageIds)
             ->whereDate('production_logs.log_date', $today)
+            ->where('production_logs.is_demo', false)
             ->selectRaw('cage_slots.cage_id as cage_id, SUM(production_logs.egg_count) as total')
             ->groupBy('cage_slots.cage_id')
             ->pluck('total', 'cage_id');
@@ -1248,6 +1275,7 @@ class DashboardController extends Controller
                 ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
                 ->whereIn('cage_slots.cage_id', $cageIds)
                 ->whereDate('production_logs.log_date', $yesterday)
+                ->where('production_logs.is_demo', false)
                 ->selectRaw('COUNT(*) as log_count, AVG(production_logs.hdep) as avg_hdep, SUM(production_logs.egg_count) as total_eggs')
                 ->first();
             $yesterdayHdep = $yesterdayStats->log_count ? round((float) $yesterdayStats->avg_hdep, 1) : 0;
@@ -1262,6 +1290,7 @@ class DashboardController extends Controller
             $lifetimeEggs = ProductionLog::query()
                 ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
                 ->whereIn('cage_slots.cage_id', $cageIds)
+                ->where('production_logs.is_demo', false)
                 ->sum('production_logs.egg_count');
         } else {
             $totalHens = \App\Models\Hen::where('is_active', 1)->count();
@@ -1272,22 +1301,23 @@ class DashboardController extends Controller
             // keeps the global overview consistent with the per-cage branch
             // above (which joins cage_slots and therefore already skips them),
             // preventing deleted-cage eggs from inflating eggsToday/HDEP.
-            $todayLogs = ProductionLog::whereDate('log_date', $today)->whereNotNull('cage_slot_id')->get();
+            $todayLogs = ProductionLog::whereDate('log_date', $today)->real()->whereNotNull('cage_slot_id')->get();
             // HDEP today = eggs collected today ÷ all hens in the cages, as a percentage
             $todayHdep = $totalHens > 0 ? round($todayLogs->sum('egg_count') / $totalHens * 100, 1) : 0;
-            $yesterdayLogs = ProductionLog::whereDate('log_date', $yesterday)->whereNotNull('cage_slot_id')->get();
+            $yesterdayLogs = ProductionLog::whereDate('log_date', $yesterday)->real()->whereNotNull('cage_slot_id')->get();
             $yesterdayHdep = $yesterdayLogs->count() ? round($yesterdayLogs->avg('hdep'), 1) : 0;
             $hdepDelta = round($todayHdep - $yesterdayHdep, 1);
             $eggsToday = $todayLogs->sum('egg_count')
                 ?: $cages->sum(fn ($c) => $c->today_eggs);
             $eggsYesterday = $yesterdayLogs->sum('egg_count');
-            $lifetimeEggs = ProductionLog::whereNotNull('cage_slot_id')->sum('egg_count');
+            $lifetimeEggs = ProductionLog::real()->whereNotNull('cage_slot_id')->sum('egg_count');
         }
 
         $eggsDelta = round($eggsToday - $eggsYesterday);
 
         // Coop environment averages
         $todayEnvLogs = EnvironmentalLog::whereIn('cage_id', $cages->pluck('id'))
+            ->real()
             ->whereDate('recorded_at', $today)
             ->get();
         $avgTemp = $todayEnvLogs->count() ? round($todayEnvLogs->avg('temperature_c'), 1) : null;
@@ -1438,6 +1468,7 @@ class DashboardController extends Controller
             ->join('cages', 'cages.id', '=', 'cage_slots.cage_id')
             ->whereIn('cages.cage_code', $activeCageCodes)
             ->whereDate('production_logs.log_date', $today)
+            ->where('production_logs.is_demo', false)
             ->distinct('cages.cage_code')
             ->count('cages.cage_code');
 
@@ -1446,6 +1477,7 @@ class DashboardController extends Controller
         $envLogsForRange = EnvironmentalLog::query()
             ->join('cages', 'cages.id', '=', 'environmental_logs.cage_id')
             ->whereIn('cages.cage_code', $activeCageCodes)
+            ->where('environmental_logs.is_demo', false)
             ->whereBetween(DB::raw('DATE(environmental_logs.recorded_at)'), [$yesterday, $today])
             ->select('cages.cage_code', 'environmental_logs.recorded_at')
             ->get()

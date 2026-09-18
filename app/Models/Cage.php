@@ -73,7 +73,7 @@ class Cage extends Model
 
     public function latestProductionLog()
     {
-        return $this->productionLogs->sortByDesc('log_date')->first();
+        return $this->productionLogs->where('is_demo', false)->sortByDesc('log_date')->first();
     }
 
     public function latestEnvironmentLog()

@@ -370,7 +370,6 @@ admin→200; suite baseline unchanged.
 ```
 
 ## Prompt 14 — Shared modal keyboard UX (Esc close / Enter submit) (COMPLETED)
-
 ```
 Added a single bind-once keydown listener in layouts/app.blade.php driven by
 data-modal / data-modal-destructive / data-close opt-in attributes. Esc closes
@@ -380,6 +379,54 @@ its keypress (parent not double-closed). Applied to all ~19 group-B modal
 views. Verified via a browser harness (plain/textarea/destructive/nested
 cases) + full suite. Note: JS comments must never contain Blade component
 tags (<x-...>) — that broke page rendering until sanitized.
+```
+
+## Prompt 15 — Forecast generate(): horizon whitelist (COMPLETED)
+
+```
+Found during Table IX test implementation (TC-03): ForecastController::generate()
+casts horizon to int with no whitelist and no upper bound
+(app/Http/Controllers/ForecastController.php:222). The workspace radio offers
+1/7/14/30, but a direct POST accepts anything — e.g. horizon=99 dispatches a
+GenerateForecastJob that trains and predicts 99 days (far-future predictions
+with no validity, plus 300s-timeout risk on the Pi worker); horizon=0/negative
+flows into limit(0)/Python unclamped on the non-start_date path (only the
+start_date path clamps via max(1, ...) at line 245).
+
+Fix (recommended): validate horizon against [1, 7, 14, 30] to match the UI,
+rejecting anything else with a redirect-back error like the existing
+start_date/sufficiency guards — NOT a Table IX test case, this is a code fix.
+Alternative: consciously record it as a known limitation for the defense.
+Either way, do not silently leave it: decide before defense.
+
+Status: implemented (validation branch). generate() rejects horizon outside
+1-30 with a redirect-back error, upstream of both plain and start_date paths.
+Bound is the continuous range so calendar drag-select ranges keep working.
+Verified live (99/0/-5/abc all 302 + error text; horizon=1 passes the gate);
+ForecastAsyncTest 9/9, F1 Playwright block 3/3 green.
+```
+
+## Prompt 16 — Report PDF export: GD gap + full-range OOM (OPEN — decision needed)
+
+```
+Found during Table IX test implementation (TC-18): /reports/pdf always 500s
+on this dev host for two independent reasons —
+
+1. Missing PHP GD extension (fatal for EVERY range, even one week):
+   "The PHP GD extension is required, but is not installed." DomPDF needs
+   GD for the letterhead logo (reports/pdf.blade.php:53). joed has no sudo
+   here so it cannot be installed locally; the Pi build must be checked for
+   php-gd before defense (typical PHP builds include it, but it is
+   unverified — if the Pi lacks it too, every PDF export 500s in production).
+
+2. Full-quarter production PDF (Mar-Jun, 4,275 rows) exhausts the 256M limit
+   (exportPdf sets 256M; DomPDF dies ~14s in). Independent of GD — it OOMs
+   before image processing. Needs one of: row-cap/pagination for PDF scope,
+   chunked rendering, or a raised limit with measured headroom on Pi hardware.
+
+Table IX TC-18 was switched to the Excel export (pure-PHP path, verified:
+200 in ~2s, valid XLSX) so the benchmark stays green; PDF coverage stays open
+here until both items above are resolved and TC-18 can be re-pointed at PDF.
 ```
 
 ## Sequencing notes
@@ -401,3 +448,23 @@ tags (<x-...>) — that broke page rendering until sanitized.
 - Every prompt ends with "show me before touching/running anything" —
   don't skip reviewing those checkpoints even if you're running several
   back-to-back.
+- **Prompt 15** is implemented (horizon 1-30 whitelist in generate()) and verified; no defense note needed.
+
+## Prompt 17 — Sensor ingestion 500 on sub-second recorded_at collision (OPEN — decision needed)
+
+```
+Found during Table IX API validation (Postman TC-API-02): two ingestion POSTs
+landing within the same wall-clock second 500 with SQLSTATE 23000 duplicate
+entry on environmental_logs(cage_id, recorded_at).
+Root cause: $recorded_at is used RAW in EnvironmentalLog::updateOrCreate()
+lookup while MySQL DATETIME truncates the millis that Postman {{$isoTimestamp}}
+(or any ms-precision client) sends — lookup misses, INSERT hits the unique
+key. The Pi bridge sends whole seconds today so production is unaffected, but
+any ms-precision integrator gets a 500 on a valid-shape payload (contract
+says never-500 for user-class failures).
+Fix (small): normalize recorded_at to whole seconds (Carbon::parse()->startOfSecond()
+or format) before the updateOrCreate in SensorIngestionController::store, for
+BOTH the environmental and occupancy lookups. Alternatively catch the
+QueryException into a 422. Table IX collections pin whole-second timestamps
+(TS-R1/R2) so the benchmark is deterministic either way.
+```

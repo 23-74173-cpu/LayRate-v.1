@@ -221,6 +221,7 @@ class PreOrderController extends Controller
         $sizes = ['small', 'medium', 'large', 'jumbo'];
 
         $historical = ProductionLog::selectRaw('log_date, SUM(egg_count) as egg_count, SUM(hen_count) as hen_count')
+            ->real()
             ->groupBy('log_date')
             ->orderByDesc('log_date')
             ->limit(14)
@@ -257,6 +258,7 @@ class PreOrderController extends Controller
         $sizes = ['small', 'medium', 'large', 'jumbo'];
 
         $counts = EggSizeLog::selectRaw('egg_size, SUM(count) as total')
+            ->whereHas('productionLog', fn ($q) => $q->real())
             ->groupBy('egg_size')
             ->pluck('total', 'egg_size');
         $total = array_sum(array_map('intval', $counts->all()));

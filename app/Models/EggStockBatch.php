@@ -10,7 +10,7 @@ class EggStockBatch extends Model
 {
     public static function getAvailablePool(?int $cageId = null, ?string $harvestedDate = null): int
     {
-        $logged = ProductionLog::when($cageId, fn($q) => $q->whereHas('cageSlot', fn($sq) => $sq->where('cage_id', $cageId)))
+        $logged = ProductionLog::real()->when($cageId, fn($q) => $q->whereHas('cageSlot', fn($sq) => $sq->where('cage_id', $cageId)))
             ->when($harvestedDate, fn($q) => $q->where('log_date', '<=', $harvestedDate))
             ->sum('egg_count');
         $stocked = self::when($cageId, fn($q) => $q->where('cage_id', $cageId))
@@ -48,6 +48,7 @@ class EggStockBatch extends Model
         }
 
         $loggedQuery = \App\Models\EggSizeLog::where('egg_size', $size);
+        $loggedQuery->whereHas('productionLog', fn ($q) => $q->real());
         if ($cageId) {
             $loggedQuery->whereHas('productionLog.cageSlot', fn($q) => $q->where('cage_id', $cageId));
         }

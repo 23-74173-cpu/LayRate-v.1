@@ -50,6 +50,7 @@ class FcrCalculator
             ->sum('feed_consumed_kg');
 
         $eggMassKg = ProductionLog::with('eggSizeLogs')
+            ->real()
             ->whereHas('cageSlot', fn ($q) => $q->where('cage_id', $cage->id))
             ->whereBetween('log_date', [$start->toDateString(), $end->toDateString()])
             ->get()
@@ -73,6 +74,7 @@ class FcrCalculator
             ->sum('feed_consumed_kg');
 
         $eggMassKg = ProductionLog::with('eggSizeLogs')
+            ->real()
             ->whereHas('cageSlot.cage', fn ($q) => $q->where('is_active', 1))
             ->whereBetween('log_date', [$start->toDateString(), $end->toDateString()])
             ->get()
@@ -108,6 +110,7 @@ class FcrCalculator
         }
 
         $productionLogs = ProductionLog::with('eggSizeLogs')
+            ->real()
             ->whereHas('cageSlot.cage', fn ($q) => $q->where('is_active', 1))
             ->when($since, fn ($q) => $q->where('log_date', '>=', $since->toDateString()))
             ->orderBy('log_date')
@@ -159,6 +162,7 @@ class FcrCalculator
 
         // Fetch all relevant logs for the cage.
         $productionLogs = ProductionLog::with('eggSizeLogs')
+            ->real()
             ->whereHas('cageSlot', fn ($q) => $q->where('cage_id', $cage->id))
             ->when($since, fn ($q) => $q->where('log_date', '>=', $since->toDateString()))
             ->orderBy('log_date')

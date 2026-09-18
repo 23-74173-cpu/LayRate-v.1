@@ -310,7 +310,7 @@
 
             @foreach($sections as $sectionName => $items)
             @php
-                $visible = array_values(array_filter($items, fn($item) => empty($item['adminOnly']) || auth()->user()->isAdmin()));
+                $visible = array_values(array_filter($items, fn($item) => empty($item['adminOnly']) || auth()->user()?->isAdmin()));
             @endphp
             @if(empty($visible))
                 @continue

@@ -32,11 +32,13 @@ class ForecastGenerationService
             ->join('cages as c', 'cs.cage_id', '=', 'c.id')
             ->whereNotNull('c.cage_code')
             ->whereRaw("TRIM(c.cage_code) != ''")
+            ->where('pl.is_demo', false)
             ->where('pl.log_date', '<', ReportingDateService::reportingDateString())
             ->whereExists(function ($q) {
                 $q->selectRaw('1')
                     ->from('environmental_logs as el')
                     ->whereColumn('el.cage_id', 'c.id')
+                    ->where('el.is_demo', false)
                     ->whereRaw('DATE(el.recorded_at) = pl.log_date');
             })
             ->distinct()
@@ -130,6 +132,7 @@ class ForecastGenerationService
             ->whereNotNull('pl.log_date')
             ->whereNotNull('c.cage_code')
             ->whereRaw("TRIM(c.cage_code) != ''")
+            ->where('pl.is_demo', false)
             ->where('pl.log_date', '<', ReportingDateService::reportingDateString())
             ->groupBy('pl.log_date');
     }
@@ -169,11 +172,13 @@ class ForecastGenerationService
             ->whereNotNull('pl.log_date')
             ->whereNotNull('c.cage_code')
             ->whereRaw("TRIM(c.cage_code) != ''")
+            ->where('pl.is_demo', false)
             ->where('pl.log_date', '<', ReportingDateService::reportingDateString())
             ->whereExists(function ($q) {
                 $q->selectRaw('1')
                     ->from('environmental_logs as el')
                     ->whereColumn('el.cage_id', 'c.id')
+                    ->where('el.is_demo', false)
                     ->whereRaw('DATE(el.recorded_at) = pl.log_date')
                     ->whereNotNull('el.temperature_c')
                     ->whereNotNull('el.humidity_pct');
@@ -235,8 +240,8 @@ class ForecastGenerationService
                 DB::raw('(SELECT h.flock_age_weeks FROM hens h JOIN cage_slots ch2 ON h.cage_slot_id = ch2.id WHERE ch2.cage_id = c.id AND h.is_active = 1 ORDER BY h.id LIMIT 1) as flock_age_weeks'),
                 DB::raw('COALESCE(SUM(pl.hen_count), 0) as hen_count'),
                 DB::raw('COALESCE(SUM(pl.egg_count), 0) as egg_count'),
-                DB::raw('(SELECT ROUND(AVG(el.temperature_c), 2) FROM environmental_logs el WHERE el.cage_id = c.id AND DATE(el.recorded_at) = pl.log_date) as temperature_c'),
-                DB::raw('(SELECT ROUND(AVG(el.humidity_pct), 2) FROM environmental_logs el WHERE el.cage_id = c.id AND DATE(el.recorded_at) = pl.log_date) as humidity_percent'),
+                DB::raw('(SELECT ROUND(AVG(el.temperature_c), 2) FROM environmental_logs el WHERE el.cage_id = c.id AND el.is_demo = 0 AND DATE(el.recorded_at) = pl.log_date) as temperature_c'),
+                DB::raw('(SELECT ROUND(AVG(el.humidity_pct), 2) FROM environmental_logs el WHERE el.cage_id = c.id AND el.is_demo = 0 AND DATE(el.recorded_at) = pl.log_date) as humidity_percent'),
                 DB::raw('(SELECT fb.crude_protein FROM feed_consumption_logs fcl LEFT JOIN feed_batches fb ON fcl.feed_batch_id = fb.id WHERE fcl.cage_id = c.id AND fcl.log_date = pl.log_date ORDER BY fcl.id DESC LIMIT 1) as crude_protein_percent'),
                 DB::raw('(SELECT fcl.feed_consumed_kg FROM feed_consumption_logs fcl WHERE fcl.cage_id = c.id AND fcl.log_date = pl.log_date ORDER BY fcl.id DESC LIMIT 1) as feed_consumed_kg'),
                 DB::raw('(SELECT COALESCE(SUM(ml.count), 0) FROM mortality_logs ml WHERE ml.cage_id = c.id AND ml.log_date = pl.log_date) as mortality_count'),
@@ -244,11 +249,13 @@ class ForecastGenerationService
             ->whereNotNull('pl.log_date')
             ->whereNotNull('c.cage_code')
             ->whereRaw("TRIM(c.cage_code) != ''")
+            ->where('pl.is_demo', false)
             ->where('pl.log_date', '<', ReportingDateService::reportingDateString())
             ->whereExists(function ($q) {
                 $q->selectRaw('1')
                     ->from('environmental_logs as el')
                     ->whereColumn('el.cage_id', 'c.id')
+                    ->where('el.is_demo', false)
                     ->whereRaw('DATE(el.recorded_at) = pl.log_date')
                     ->whereNotNull('el.temperature_c')
                     ->whereNotNull('el.humidity_pct');

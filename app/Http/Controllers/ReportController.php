@@ -194,6 +194,7 @@ class ReportController extends Controller
         return match($type) {
             'production' => (function () use ($cageIds, $hasRange, $from, $to) {
                 $agg = ProductionLog::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))
+                    ->real()
                     ->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))
                     ->selectRaw('SUM(egg_count) as total_eggs, AVG(hdep) as avg_hdep, COUNT(DISTINCT log_date) as days')
                     ->first();
@@ -220,6 +221,7 @@ class ReportController extends Controller
             })(),
             'environment' => (function () use ($cageIds, $hasRange, $from, $to) {
                 $agg = EnvironmentalLog::whereIn('cage_id', $cageIds)
+                    ->real()
                     ->when($hasRange, fn($q) => $q->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59']))
                     ->selectRaw('AVG(temperature_c) as avg_temp, AVG(humidity_pct) as avg_hum, COUNT(*) as readings, SUM(CASE WHEN temperature_c > 30 OR humidity_pct > 70 THEN 1 ELSE 0 END) as alerts')
                     ->first();
@@ -268,6 +270,7 @@ class ReportController extends Controller
         $hasRange = $from && $to;
 
         $logs = ProductionLog::with(['cageSlot.cage', 'cageSlot.hens' => fn($q) => $q->where('is_active', 1)])
+            ->real()
             ->whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))
             ->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))
             ->get();
@@ -279,6 +282,7 @@ class ReportController extends Controller
             ->keyBy(fn($f) => $f->log_date->format('Y-m-d') . '-' . $f->cage_id);
 
         $envData = EnvironmentalLog::whereIn('cage_id', $cageIds)
+            ->real()
             ->when($hasRange, fn($q) => $q->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59']))
             ->selectRaw('cage_id, DATE(recorded_at) as log_date, AVG(temperature_c) as avg_temp, AVG(humidity_pct) as avg_hum')
             ->groupBy('cage_id', DB::raw('DATE(recorded_at)'))
@@ -362,6 +366,7 @@ class ReportController extends Controller
     private function environmentReport($from, $to, $cageIds)
     {
         return EnvironmentalLog::with('cage')
+            ->real()
             ->whereIn('cage_id', $cageIds)
             ->when($from && $to, fn($q) => $q->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59']))
             ->orderByDesc('recorded_at')
@@ -442,6 +447,7 @@ class ReportController extends Controller
     {
         $hasRange = $from && $to;
         $rows = ProductionLog::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))
+            ->real()
             ->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))
             ->selectRaw('log_date, SUM(egg_count) as eggs, AVG(hdep) as hdep')
             ->groupBy('log_date')
@@ -477,6 +483,7 @@ class ReportController extends Controller
     {
         $hasRange = $from && $to;
         $rows = EnvironmentalLog::whereIn('cage_id', $cageIds)
+            ->real()
             ->when($hasRange, fn($q) => $q->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59']))
             ->selectRaw('DATE(recorded_at) as log_date, AVG(temperature_c) as avg_temp, AVG(humidity_pct) as avg_hum')
             ->groupBy(DB::raw('DATE(recorded_at)'))

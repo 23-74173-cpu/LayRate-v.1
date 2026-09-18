@@ -100,11 +100,21 @@ class HardwareItemController extends Controller
         $activeCount = (clone $query)->where('status', 'active')->count();
         $faultyCount = (clone $query)->where('health_state', 'faulty')->count();
 
-        $items = $query->with(['cage.latestEnvironmentLog', 'cageSlot.cage', 'device', 'latestOccupancyReading'])
+        $items = $query->with(['cage', 'cageSlot.cage', 'device', 'latestOccupancyReading'])
             ->orderBy('status')
             ->orderBy('serial_number')
             ->paginate(20)
             ->withQueryString();
+
+        // Latest REAL reading per cage for the "Last Reading" column
+        // (demo-quarantined; see EnvironmentalLog::latestRealPerCage).
+        $cageIds = $items->getCollection()->map(fn ($i) => $i->cage?->id)->filter()->unique()->values();
+        $latestReal = \App\Models\EnvironmentalLog::latestRealPerCage($cageIds);
+        $items->getCollection()->each(function ($item) use ($latestReal) {
+            if ($item->cage) {
+                $item->cage->setRelation('latestEnvironmentLog', $latestReal->get($item->cage->id));
+            }
+        });
 
         return view('hardware._live-data', compact(
             'items', 'breakbeamCount', 'dht22Count', 'activeCount', 'faultyCount'
