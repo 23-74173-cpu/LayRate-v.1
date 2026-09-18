@@ -566,6 +566,7 @@
         }
 
         var currentCageId = null;
+        var currentCageCode = null;
         var logMode = null; // 'manual' or 'total'
 
         window.switchLogTab = function(tab) {
@@ -1009,6 +1010,10 @@
             currentCageId = cageId;
             logMode = null;
 
+            var selectedCard = document.querySelector('.cage-overview-card[data-cage-id="' + cageId + '"]');
+            currentCageCode = selectedCard ? selectedCard.dataset.cageCode : null;
+            connectEggCountSSE();
+
             document.querySelectorAll('.cage-overview-card').forEach(function(card) {
                 var isSelected = card.dataset.cageId == cageId;
                 if (isSelected) {
@@ -1355,9 +1360,7 @@
         }
 
         // ── Live SSE egg count ──
-        var cageTCode = 'CAGE-T';
-
-        function updateCageTCount(slotId, count) {
+        function updateSlotEggCount(slotId, count) {
             var card = document.querySelector('.slot-card[data-slot-id="' + slotId + '"]');
             if (!card) return;
             var prev = parseInt(card.dataset.todayEggs) || 0;
@@ -1390,11 +1393,22 @@
         function connectEggCountSSE() {
             if (!document.getElementById('todayTotalEggs')) return;
 
+            // Stream slot-level counts for whichever cage is currently open;
+            // before any cage is selected, fall back to the first cage card
+            // so the farm-wide cage_stats broadcast (used by every overview
+            // card, not just the open one) still has a valid cage to attach to.
+            var cageCode = currentCageCode;
+            if (!cageCode) {
+                var firstCard = document.querySelector('.cage-overview-card[data-cage-code]');
+                cageCode = firstCard ? firstCard.dataset.cageCode : null;
+            }
+            if (!cageCode) return;
+
             if (window.__eggCountSource) {
                 window.__eggCountSource.close();
             }
 
-            var url = '{{ route("eggs.logging.live-count") }}?cage_code=' + cageTCode;
+            var url = '{{ route("eggs.logging.live-count") }}?cage_code=' + encodeURIComponent(cageCode);
             window.__eggCountSource = new EventSource(url);
 
             window.__eggCountSource.addEventListener('count', function(e) {
@@ -1403,7 +1417,7 @@
                     if (data.counts) {
                         for (var slotId in data.counts) {
                             if (data.counts.hasOwnProperty(slotId)) {
-                                updateCageTCount(slotId, data.counts[slotId].egg_count);
+                                updateSlotEggCount(slotId, data.counts[slotId].egg_count);
                             }
                         }
                     }
