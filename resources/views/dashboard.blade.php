@@ -75,14 +75,14 @@
 
     {{-- Global Filters: Cage + Period --}}
     <div class="dash-rise" style="animation-delay: 0ms;">
-        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center flex-wrap gap-3 sm:gap-5">
-            <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 sm:flex-1 sm:min-w-0">
+        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center flex-wrap gap-3 sm:gap-x-5 sm:gap-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 sm:flex-auto">
                 <label for="dashboardCageSelect" class="flex items-center gap-1.5 shrink-0 text-xs font-bold uppercase tracking-[0.125px] text-[#6B7280]">
                     <i data-lucide="warehouse" class="w-4 h-4"></i>
                     <span>Cage</span>
                 </label>
                 <select id="dashboardCageSelect" onchange="filterDashboard(this.value)"
-                        class="w-full sm:w-44 border border-[#D9D9D9] rounded-lg px-3 py-2.5 sm:py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#002D5E] focus:border-[#002D5E]">
+                        class="w-full sm:w-44 shrink-0 border border-[#D9D9D9] rounded-lg px-3 py-2.5 sm:py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#002D5E] focus:border-[#002D5E]">
                     <option value="all" {{ request('cage', 'all') === 'all' ? 'selected' : '' }}>All Cages ({{ $cages->count() }})</option>
                     @foreach($cages as $cage)
                         <option value="{{ $cage->cage_code }}" {{ request('cage') === $cage->cage_code ? 'selected' : '' }}>{{ $cage->cage_code }}</option>
@@ -92,12 +92,12 @@
 
             <div class="hidden sm:block w-px self-stretch" style="background-color: #E5E7EB;"></div>
 
-            <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2">
+            <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 sm:shrink-0">
                 <label class="flex items-center gap-1.5 shrink-0 text-xs font-bold uppercase tracking-[0.125px] text-[#6B7280]">
                     <i data-lucide="calendar-range" class="w-4 h-4"></i>
                     <span>Period</span>
                 </label>
-                <div class="inline-flex items-center gap-1 rounded-lg p-1 w-full sm:w-auto" style="background-color: #f3f4f6;" id="dashboardGlobalPeriod">
+                <div class="inline-flex items-center gap-1 rounded-lg p-1 w-full sm:w-auto shrink-0" style="background-color: #f3f4f6;" id="dashboardGlobalPeriod">
                     <button type="button" data-global-days="7" onclick="setGlobalDays(7)" class="global-days-btn flex-1 sm:flex-none text-center px-3 py-2 sm:py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb]">Week</button>
                     <button type="button" data-global-days="30" onclick="setGlobalDays(30)" class="global-days-btn flex-1 sm:flex-none text-center px-3 py-2 sm:py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb]" style="background-color: #0075de; color: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">Month</button>
                     <button type="button" data-global-days="0" onclick="setGlobalDays(0)" class="global-days-btn flex-1 sm:flex-none text-center px-3 py-2 sm:py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb]">Full</button>
@@ -106,7 +106,8 @@
 
             <div class="hidden sm:block w-px self-stretch" style="background-color: #E5E7EB;"></div>
 
-            <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2">
+            <div class="flex flex-col gap-1.5 sm:gap-2 sm:shrink-0">
+            <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 sm:shrink-0">
                 <label for="dashboardFromDate" class="flex items-center gap-1.5 shrink-0 text-xs font-bold uppercase tracking-[0.125px] text-[#6B7280]">
                     <i data-lucide="calendar-days" class="w-4 h-4"></i>
                     <span>From</span>
@@ -114,8 +115,21 @@
                 <input type="date" id="dashboardFromDate" value="{{ request('from_date', today()->toDateString()) }}"
                        max="{{ now()->toDateString() }}"
                        onchange="setDashboardFromDate(this.value)"
-                       title="Show analytics from this date to today"
-                       class="w-full sm:w-44 border border-[#D9D9D9] rounded-lg px-2.5 py-2.5 sm:py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#002D5E] focus:border-[#002D5E]">
+                       title="Show analytics from this date"
+                       class="w-full sm:w-44 shrink-0 border border-[#D9D9D9] rounded-lg px-2.5 py-2.5 sm:py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#002D5E] focus:border-[#002D5E]">
+            </div>
+
+            <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 sm:shrink-0">
+                <label for="dashboardToDate" class="flex items-center gap-1.5 shrink-0 text-xs font-bold uppercase tracking-[0.125px] text-[#6B7280]">
+                    <i data-lucide="calendar-days" class="w-4 h-4"></i>
+                    <span>To</span>
+                </label>
+                <input type="date" id="dashboardToDate" value="{{ request('to_date', '') }}"
+                       max="{{ now()->toDateString() }}"
+                       onchange="setDashboardToDate(this.value)"
+                       title="Show analytics up to this date"
+                       class="w-full sm:w-44 shrink-0 border border-[#D9D9D9] rounded-lg px-2.5 py-2.5 sm:py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#002D5E] focus:border-[#002D5E]">
+            </div>
             </div>
         </div>
     </div>
@@ -142,7 +156,7 @@
             // ── Dashboard state persistence ──
             // Survives sidebar navigation within this browser session (sessionStorage),
             // so returning to the dashboard stays on the same analytics tab with the
-            // same cage / period / from-date filters instead of resetting to Production.
+            // same cage / period / date filters instead of resetting to Production.
             window.__dashboardStateKey = 'layrate.dashboard.v1';
             window.__dashboardReadState = function() {
                 try {
@@ -156,6 +170,7 @@
                         section: window.__dashboardSection || 'production',
                         cage: window.__dashboardCage || 'all',
                         from_date: window.__dashboardFromDate || '',
+                        to_date: window.__dashboardToDate || '',
                         days: (typeof window.__dashboardGlobalDays === 'number') ? window.__dashboardGlobalDays : 30,
                         mortalityDays: (typeof window.__dashboardMortalityDays === 'number') ? window.__dashboardMortalityDays : 1
                     }));
@@ -194,6 +209,7 @@
             if (__dashSaved) {
                 if (__dashSaved.cage) window.__dashboardCage = __dashSaved.cage;
                 if (__dashSaved.from_date) window.__dashboardFromDate = __dashSaved.from_date;
+                if (__dashSaved.to_date) window.__dashboardToDate = __dashSaved.to_date;
                 if (typeof __dashSaved.days === 'number') window.__dashboardGlobalDays = __dashSaved.days;
                 if (typeof __dashSaved.mortalityDays === 'number') window.__dashboardMortalityDays = __dashSaved.mortalityDays;
             }
@@ -203,7 +219,7 @@
             {{-- ΓòÉΓòÉΓòÉ SECTION 1 ΓÇö Production Performance ΓòÉΓòÉΓòÉ --}}
             <div class="analytics-section active-section" data-analytics-section="production">
                 <div class="space-y-4">
-                    <turbo-frame id="dashboard-stats-production" data-src="{{ route('dashboard.stats.production', ['cage' => request('cage'), 'from_date' => request('from_date')]) }}" loading="lazy" class="block">
+                    <turbo-frame id="dashboard-stats-production" data-src="{{ route('dashboard.stats.production', ['cage' => request('cage'), 'from_date' => request('from_date'), 'to_date' => request('to_date')]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-4 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
                     </turbo-frame>
                     <div id="production-charts-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start lg:items-stretch">
@@ -235,7 +251,7 @@
             {{-- ΓòÉΓòÉΓòÉ SECTION 2 ΓÇö Environmental Analytics ΓòÉΓòÉΓòÉ --}}
             <div class="analytics-section" data-analytics-section="environmental">
                 <div class="space-y-4">
-                    <turbo-frame id="dashboard-stats-environment" data-src="{{ route('dashboard.stats.environment', ['cage' => request('cage'), 'from_date' => request('from_date')]) }}" loading="lazy" class="block">
+                    <turbo-frame id="dashboard-stats-environment" data-src="{{ route('dashboard.stats.environment', ['cage' => request('cage'), 'from_date' => request('from_date'), 'to_date' => request('to_date')]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-3 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
                     </turbo-frame>
                     <turbo-frame id="dashboard-heat-stress" data-src="{{ route('dashboard.heat-stress', ['days' => 30]) }}" loading="lazy" class="block">
@@ -265,7 +281,7 @@
             {{-- ΓòÉΓòÉΓòÉ SECTION 3 ΓÇö Feed Analytics ΓòÉΓòÉΓòÉ --}}
             <div class="analytics-section" data-analytics-section="feed">
                 <div class="space-y-4">
-                    <turbo-frame id="dashboard-stats-feed" data-src="{{ route('dashboard.stats.feed', ['cage' => request('cage'), 'from_date' => request('from_date')]) }}" loading="lazy" class="block">
+                    <turbo-frame id="dashboard-stats-feed" data-src="{{ route('dashboard.stats.feed', ['cage' => request('cage'), 'from_date' => request('from_date'), 'to_date' => request('to_date')]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-4 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
                     </turbo-frame>
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
@@ -289,7 +305,7 @@
             {{-- ΓòÉΓòÉΓòÉ SECTION 4 ΓÇö Flock Analytics ΓòÉΓòÉΓòÉ --}}
             <div class="analytics-section" data-analytics-section="flock">
                 <div class="space-y-4">
-                    <turbo-frame id="dashboard-stats-flock" data-src="{{ route('dashboard.stats.flock', ['cage' => request('cage'), 'from_date' => request('from_date')]) }}" loading="lazy" class="block">
+                    <turbo-frame id="dashboard-stats-flock" data-src="{{ route('dashboard.stats.flock', ['cage' => request('cage'), 'from_date' => request('from_date'), 'to_date' => request('to_date')]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-3 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
                     </turbo-frame>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
@@ -689,11 +705,13 @@
         window.__dashboardCage = new URLSearchParams(window.location.search).get('cage') || 'all';
         window.__dashboardGlobalDays = 30;
         window.__dashboardFromDate = '{{ request('from_date', '') }}';
+        window.__dashboardToDate = '{{ request('to_date', '') }}';
         window.__dashboardMortalityDays = {{ $mortalityDays ?? 1 }};
     } else {
         if (typeof window.__dashboardCage !== 'string') window.__dashboardCage = 'all';
         if (typeof window.__dashboardGlobalDays !== 'number') window.__dashboardGlobalDays = 30;
         if (typeof window.__dashboardFromDate !== 'string') window.__dashboardFromDate = '';
+        if (typeof window.__dashboardToDate !== 'string') window.__dashboardToDate = '';
         if (typeof window.__dashboardMortalityDays !== 'number') window.__dashboardMortalityDays = 1;
     }
     window.__dashboardHistoryCompare = false;
@@ -707,8 +725,10 @@
         if (sel) sel.value = window.__dashboardCage;
         var dateInput = document.getElementById('dashboardFromDate');
         if (dateInput && window.__dashboardFromDate) dateInput.value = window.__dashboardFromDate;
+        var toInput = document.getElementById('dashboardToDate');
+        if (toInput && window.__dashboardToDate) toInput.value = window.__dashboardToDate;
         document.querySelectorAll('#dashboardGlobalPeriod .global-days-btn').forEach(function(btn) {
-            setButtonActive(btn, !window.__dashboardFromDate && parseInt(btn.dataset.globalDays, 10) === window.__dashboardGlobalDays);
+            setButtonActive(btn, !window.__dashboardFromDate && !window.__dashboardToDate && parseInt(btn.dataset.globalDays, 10) === window.__dashboardGlobalDays);
         });
     })();
 
@@ -721,14 +741,15 @@
         return query ? base + '?' + query : base;
     }
 
-    // Re-applies the active cage / period / from-date filters onto a frame's URL
+    // Re-applies the active cage / period / date filters onto a frame's URL
     // (used when activating frames that were server-rendered without those params).
     window.__dashboardFrameUrl = function(dataSrc) {
         if (!dataSrc) return dataSrc;
         var u = new URL(dataSrc, window.location.href);
         var p = {};
         if (window.__dashboardFromDate) p.from_date = window.__dashboardFromDate;
-        else if (window.__dashboardGlobalDays !== 30) p.days = window.__dashboardGlobalDays;
+        if (window.__dashboardToDate) p.to_date = window.__dashboardToDate;
+        if (!window.__dashboardFromDate && !window.__dashboardToDate && window.__dashboardGlobalDays !== 30) p.days = window.__dashboardGlobalDays;
         if (window.__dashboardCage && window.__dashboardCage !== 'all') p.cage = window.__dashboardCage;
         Object.keys(p).forEach(function(k) { u.searchParams.set(k, p[k]); });
         return u.href;
@@ -802,8 +823,11 @@
     window.setGlobalDays = function(days) {
         window.__dashboardGlobalDays = days;
         window.__dashboardFromDate = '';
+        window.__dashboardToDate = '';
         var dateInput = document.getElementById('dashboardFromDate');
         if (dateInput) dateInput.value = '';
+        var toInput = document.getElementById('dashboardToDate');
+        if (toInput) toInput.value = '';
 
         // Restyle the global pill bar
         document.querySelectorAll('#dashboardGlobalPeriod .global-days-btn').forEach(function(btn) {
@@ -814,16 +838,17 @@
         if (window.__dashboardWriteState) window.__dashboardWriteState();
     };
 
-    // Reload every analytics chart frame with the active Cage / Period / From-date filters.
+    // Reload every analytics chart frame with the active Cage / Period / date filters.
     function reloadCharts() {
         var dayParam = window.__dashboardGlobalDays === 30 ? null : window.__dashboardGlobalDays;
         var cageParam = (window.__dashboardCage && window.__dashboardCage !== 'all') ? window.__dashboardCage : null;
-        var hasDate = !!window.__dashboardFromDate;
+        var hasDate = !!(window.__dashboardFromDate || window.__dashboardToDate);
 
         function base(route, extra) {
             var p = {};
-            if (hasDate) p.from_date = window.__dashboardFromDate;
-            else p.days = dayParam;
+            if (window.__dashboardFromDate) p.from_date = window.__dashboardFromDate;
+            if (window.__dashboardToDate) p.to_date = window.__dashboardToDate;
+            if (!hasDate) p.days = dayParam;
             if (extra) { for (var k in extra) p[k] = extra[k]; }
             return buildFrameUrl(route, p);
         }
@@ -833,7 +858,7 @@
             return base(route, p);
         }
 
-        // KPI cards reflect the as-of snapshot when a From date is set (otherwise
+        // KPI cards reflect the as-of snapshot when a date bound is set (otherwise
         // today's live numbers) and stay cage-filtered + mortality-window aware.
         function statsFrame(route) {
             var p = { cage: cageParam, mortality_days: window.__dashboardMortalityDays === 1 ? null : window.__dashboardMortalityDays };
@@ -865,15 +890,30 @@
         reloadFramePreservingScroll('dashboard-mortality-trend', caged('{{ route('dashboard.mortality-trend') }}'));
     }
 
-    // From-date filter — shows analytics from the selected day up to today.
+    // Date filters — show analytics between the selected days (each end open
+    // when blank; the range is capped at today). Either bound overrides the
+    // Period pill bar until a pill is clicked again.
+    function syncPeriodPills() {
+        document.querySelectorAll('#dashboardGlobalPeriod .global-days-btn').forEach(function(btn) {
+            setButtonActive(btn, !window.__dashboardFromDate && !window.__dashboardToDate && parseInt(btn.dataset.globalDays, 10) === window.__dashboardGlobalDays);
+        });
+    }
     window.setDashboardFromDate = function(value) {
         window.__dashboardFromDate = value || '';
         var input = document.getElementById('dashboardFromDate');
         if (input && input.value !== window.__dashboardFromDate) input.value = window.__dashboardFromDate;
 
-        document.querySelectorAll('#dashboardGlobalPeriod .global-days-btn').forEach(function(btn) {
-            setButtonActive(btn, !window.__dashboardFromDate && parseInt(btn.dataset.globalDays, 10) === window.__dashboardGlobalDays);
-        });
+        syncPeriodPills();
+
+        reloadCharts();
+        if (window.__dashboardWriteState) window.__dashboardWriteState();
+    };
+    window.setDashboardToDate = function(value) {
+        window.__dashboardToDate = value || '';
+        var input = document.getElementById('dashboardToDate');
+        if (input && input.value !== window.__dashboardToDate) input.value = window.__dashboardToDate;
+
+        syncPeriodPills();
 
         reloadCharts();
         if (window.__dashboardWriteState) window.__dashboardWriteState();
@@ -893,7 +933,11 @@
         var p = { compare: nextCompare ? 1 : null };
         if (window.__dashboardFromDate) {
             p.from_date = window.__dashboardFromDate;
-        } else {
+        }
+        if (window.__dashboardToDate) {
+            p.to_date = window.__dashboardToDate;
+        }
+        if (!window.__dashboardFromDate && !window.__dashboardToDate) {
             p.days = window.__dashboardGlobalDays === 30 ? null : window.__dashboardGlobalDays;
         }
         var url = buildFrameUrl('{{ route('dashboard.production-history') }}', p);
@@ -907,7 +951,8 @@
         var url = buildFrameUrl('{{ route('dashboard.stats') }}', {
             cage: window.__dashboardCage === 'all' ? null : window.__dashboardCage,
             mortality_days: days === 1 ? null : days,
-            from_date: window.__dashboardFromDate || null
+            from_date: window.__dashboardFromDate || null,
+            to_date: window.__dashboardToDate || null
         });
 
         var frame = document.getElementById('dashboard-stats');
@@ -952,7 +997,7 @@
         window.history.replaceState({}, '', _url);
 
 var cageParam = code === 'all' ? null : code;
-        // All stats + chart frames pick up Cage + Period + From-date in one place.
+        // All stats + chart frames pick up Cage + Period + date filters in one place.
         reloadCharts();
         // Forecast overlay is JS-driven, not a Turbo Frame — re-fetch if currently visible
         if (window.__forecastOverlayEnabled && typeof window.loadForecastOverlay === 'function') {

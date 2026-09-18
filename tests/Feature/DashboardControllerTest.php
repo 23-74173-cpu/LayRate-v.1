@@ -470,4 +470,51 @@ class DashboardControllerTest extends TestCase
     {
         return $response->viewData('eggsToday');
     }
+
+    public function test_production_history_to_date_caps_range_at_to_date(): void
+    {
+        $from = now()->subDays(30)->toDateString();
+        $to = now()->subDays(10)->toDateString();
+
+        $response = $this->actingAs($this->admin)->get(route('dashboard.production-history', [
+            'from_date' => $from, 'to_date' => $to,
+        ]));
+        $response->assertOk();
+
+        $chartData = $response->viewData('chartData');
+        // 21 contiguous days ending exactly on the To date.
+        $this->assertCount(21, $chartData['labels']);
+        $this->assertEquals(
+            \Carbon\Carbon::parse($to)->format('M j'),
+            end($chartData['labels'])
+        );
+        // Only the 30-days-ago rows fall inside [from .. to]:
+        // cage A 1 egg + cage B 2 eggs = 3; today/yesterday are excluded.
+        $this->assertEquals(3, array_sum($chartData['datasets'][0]['data']));
+    }
+
+    public function test_dashboard_kpi_snapshot_uses_to_date(): void
+    {
+        $to = now()->subDay()->toDateString();
+
+        $response = $this->actingAs($this->admin)->get(route('dashboard.stats', ['to_date' => $to]));
+        $response->assertOk();
+
+        // Yesterday's eggs: cage A 2 + cage B 1 = 3 (not today's 5).
+        $this->assertEquals(3, $response->viewData('eggsToday'));
+        $this->assertNotNull($response->viewData('kpiAsOf'));
+    }
+
+    public function test_invalid_to_date_is_ignored(): void
+    {
+        $invalid = $this->actingAs($this->admin)->get(route('dashboard.stats', ['to_date' => 'not-a-date']));
+        $invalid->assertOk();
+
+        // Behaves exactly like no to_date at all: live reporting-date
+        // snapshot with no snapshot label.
+        $plain = $this->actingAs($this->admin)->get(route('dashboard.stats'));
+        $plain->assertOk();
+        $this->assertEquals($plain->viewData('eggsToday'), $invalid->viewData('eggsToday'));
+        $this->assertNull($invalid->viewData('kpiAsOf'));
+    }
 }
