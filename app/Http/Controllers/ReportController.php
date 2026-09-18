@@ -270,7 +270,6 @@ class ReportController extends Controller
         $logs = ProductionLog::with(['cageSlot.cage', 'cageSlot.hens' => fn($q) => $q->where('is_active', 1)])
             ->whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))
             ->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))
-            ->orderByDesc('log_date')
             ->get();
 
         $feedLogs = FeedConsumptionLog::with('feedBatch')
@@ -300,30 +299,47 @@ class ReportController extends Controller
                 ->map(fn ($g) => (string) $g->first()->predicted_egg_count);
         }
 
-        return $logs->map(function ($log) use ($feedLogs, $envData, $forecastMap, $withForecast) {
-            $key = $log->log_date->format('Y-m-d') . '-' . ($log->cage?->id ?? '0');
-            $feed = $feedLogs->get($key);
-            $env  = $envData->get($key);
+        // A cage is split into several physical slots, and ProductionLog is
+        // logged per slot per day — grouping by (date, cage) here collapses
+        // those slot-level rows into one true per-cage total per day, instead
+        // of a separate printable row for every slot (the source of reports
+        // ballooning to 100+ pages for cages with many slots).
+        return $logs
+            ->groupBy(fn($log) => $log->log_date->format('Y-m-d') . '-' . ($log->cageSlot?->cage?->id ?? '0'))
+            ->map(function ($group) use ($feedLogs, $envData, $forecastMap, $withForecast) {
+                $first = $group->first();
+                $key = $first->log_date->format('Y-m-d') . '-' . ($first->cageSlot?->cage?->id ?? '0');
+                $feed = $feedLogs->get($key);
+                $env  = $envData->get($key);
 
-            $row = [
-                'date'     => $log->log_date->format('Y-m-d'),
-                'cage'     => $log->cageSlot?->cage?->cage_code ?? '—',
-                'breed'    => $log->cageSlot->hens->first()?->breed ?? '—',
-                'eggs'     => $log->egg_count,
-                'hens'     => $log->hen_count,
-                'hdep'     => number_format($log->hdep, 1) . '%',
-                'feed_kg'  => $feed ? number_format($feed->feed_consumed_kg, 1) : '—',
-                'cp_pct'   => $feed?->feedBatch ? number_format($feed->feedBatch->crude_protein, 1) . '%' : '—',
-                'temp'     => $env ? number_format($env->avg_temp, 1) : '—',
-                'humidity' => $env ? number_format($env->avg_hum, 1) . '%' : '—',
-            ];
+                $totalEggs = $group->sum('egg_count');
+                $totalHens = $group->sum('hen_count');
+                $hdep = $totalHens > 0 ? $totalEggs / $totalHens * 100 : 0;
 
-            if ($withForecast) {
-                $row['forecast_for_date'] = $forecastMap->get($key, '—');
-            }
+                $breeds = $group->flatMap(fn($log) => $log->cageSlot->hens->pluck('breed'))->filter()->unique();
+                $breed = $breeds->count() > 1 ? 'Mixed' : ($breeds->first() ?? '—');
 
-            return (object) $row;
-        });
+                $row = [
+                    'date'     => $first->log_date->format('Y-m-d'),
+                    'cage'     => $first->cageSlot?->cage?->cage_code ?? '—',
+                    'breed'    => $breed,
+                    'eggs'     => $totalEggs,
+                    'hens'     => $totalHens,
+                    'hdep'     => number_format($hdep, 1) . '%',
+                    'feed_kg'  => $feed ? number_format($feed->feed_consumed_kg, 1) : '—',
+                    'cp_pct'   => $feed?->feedBatch ? number_format($feed->feedBatch->crude_protein, 1) . '%' : '—',
+                    'temp'     => $env ? number_format($env->avg_temp, 1) : '—',
+                    'humidity' => $env ? number_format($env->avg_hum, 1) . '%' : '—',
+                ];
+
+                if ($withForecast) {
+                    $row['forecast_for_date'] = $forecastMap->get($key, '—');
+                }
+
+                return (object) $row;
+            })
+            ->sortByDesc('date')
+            ->values();
     }
 
     private function feedReport($from, $to, $cageIds)
