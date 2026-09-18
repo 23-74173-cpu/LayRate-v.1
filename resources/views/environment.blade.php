@@ -586,7 +586,14 @@ function controlRelay(action) {
     window.__relaySending = true;
 
     var form = new FormData();
-    form.append('_token', '{{ csrf_token() }}');
+    // Read the token fresh from the meta tag on every click — never the
+    // render-time blade value. A stale page (open past SESSION_LIFETIME,
+    // restored from Turbo cache, or superseded by another device's login)
+    // would otherwise POST a dead token, eat a 419, and force the user
+    // into a hard refresh before the fan button works again. Same pattern
+    // as the manual-reading form above; blade echo kept as fallback.
+    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    form.append('_token', csrfMeta ? csrfMeta.getAttribute('content') : '{{ csrf_token() }}');
     form.append('action', action);
 
     fetch('{{ route("environment.relay.control") }}', {
@@ -599,6 +606,7 @@ function controlRelay(action) {
     })
     .then(function(res) {
         if (res.ok && res.data && res.data.success) {
+            window.sessionStorage.removeItem('__relayReloaded');
             applyRelayState(res.data.relay);
             if (typeof showNotification === 'function') {
                 showNotification('Relay set to ' + action.toUpperCase() + '.', 'success');
@@ -607,6 +615,21 @@ function controlRelay(action) {
             if (typeof showNotification === 'function') {
                 showNotification((res.data && res.data.message) || 'No active relay registered.', 'error');
             }
+        } else if (res.status === 419 || res.status === 401) {
+            // Stale session/token (page left open past SESSION_LIFETIME,
+            // restored from cache, or superseded login). A reload fetches a
+            // fresh token and lands back here (or on login if signed out).
+            // Guarded to a single auto-reload per tab so a persistently
+            // failing server degrades to the error toast below, never a loop.
+            if (!window.sessionStorage.getItem('__relayReloaded')) {
+                window.sessionStorage.setItem('__relayReloaded', '1');
+                if (typeof showNotification === 'function') {
+                    showNotification('Session expired — refreshing, please retry.', 'error');
+                }
+                window.location.reload();
+                return;
+            }
+            throw new Error('Server returned ' + res.status);
         } else if (res.status === 422) {
             var msg = Object.values(res.data.errors || {})[0]?.[0] || 'Validation failed.';
             if (typeof showNotification === 'function') showNotification(msg, 'error');
