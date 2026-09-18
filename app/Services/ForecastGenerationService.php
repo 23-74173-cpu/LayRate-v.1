@@ -265,7 +265,22 @@ class ForecastGenerationService
             $query->whereExists($this->firstHenBreedClosure($breed));
         }
 
-        return $query->get()->map(fn ($row) => (object) $row);
+        // Per the deployer's flock-age convention, age is anchored to the LATEST
+        // egg-recorded date in the download and decrements 1 week per week back.
+        $records = $query->get();
+
+        $latestByCage = $records
+            ->groupBy('cage_code')
+            ->map(fn ($rows) => $rows->max(fn ($r) => $r->date));
+
+        return $records->map(function ($row) use ($latestByCage) {
+            $row = (object) $row;
+            $weekSpan = ($latestByCage[$row->cage_code] && $row->date)
+                ? (strtotime($latestByCage[$row->cage_code]) - strtotime($row->date)) / 604800.0
+                : 0.0;
+            $row->flock_age_weeks = round(max(0.0, (float) $row->flock_age_weeks - $weekSpan), 1);
+            return $row;
+        });
     }
 
     /**

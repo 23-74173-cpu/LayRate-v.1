@@ -46,7 +46,7 @@ class FeedController extends Controller
         $allBatches = FeedBatch::orderByDesc('date_received')->get();
         $avgCp = $allBatches->avg('crude_protein');
 
-        $batches = FeedBatch::orderByDesc('date_received')->paginate(15)->withQueryString();
+        $batches = FeedBatch::orderByDesc('date_received')->paginate(5)->withQueryString();
 
         $preselectedCageId = (int) request('cage_id') ?: null;
 
@@ -54,7 +54,7 @@ class FeedController extends Controller
             ->when($preselectedCageId, fn ($q) => $q->where('cage_id', $preselectedCageId))
             ->orderByDesc('log_date')
             ->orderByDesc('log_time')
-            ->paginate(20)
+            ->paginate(5)
             ->withQueryString();
 
         $reportingNow = ReportingDateService::now();

@@ -57,7 +57,7 @@
             </tr>
         </thead>
         <tbody>
-            @foreach($fcrTimeline as $row)
+            @foreach($fcrTimeline->take(5) as $row)
             @php
                 $rowStatus = FcrStatusService::status($row['fcr']);
                 $rowBadge  = FcrStatusService::badgeClasses($row['fcr']);

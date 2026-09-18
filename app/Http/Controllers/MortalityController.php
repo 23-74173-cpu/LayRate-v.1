@@ -27,7 +27,7 @@ class MortalityController extends Controller
         $logs  = MortalityLog::with(['cage', 'hens'])
             ->orderByDesc('log_date')
             ->orderByDesc('created_at')
-            ->paginate(20)
+            ->paginate(5)
             ->withQueryString();
 
         $today = ReportingDateService::reportingDateString();
@@ -87,7 +87,7 @@ class MortalityController extends Controller
         $logs  = MortalityLog::with(['cage', 'hens'])
             ->orderByDesc('log_date')
             ->orderByDesc('created_at')
-            ->paginate(20)
+            ->paginate(5)
             ->withQueryString();
 
         return view('mortality._logs', compact('cages', 'logs'));

@@ -57,3 +57,35 @@ forecast-api/venv/
 !mobile-api/README.md
 !API_ROUTES.md
 !WHAT_WE_CAN_DELIVER.md
+
+# ------------------------------------------------------------------
+# Table XIII / XIV / XV live-report test scripts + their generated
+# Word scorecard artifacts ("the table testings" - xiii/xiv/xv)
+# ------------------------------------------------------------------
+table_xiii_report.py
+table_xiv_report.py
+table_xv_report.py
+Table_XIII_Scorecard.docx
+Table_XIV_Scorecard.docx
+Table_XV_Scorecard.docx
+
+# Ad-hoc perf/test helper scaffolding (anything that is testing)
+perf-render.php
+perf_hen_index.php
+_perf_hen.php
+_renderhen.php
+verify_env*.mjs
+table_xx_report.py
+Table_XX_Consolidated_Summary.docx
+docx_suite.py
+
+# Forecast experiment/eval scaffolding + exported data dumps (testing, not deliverables)
+forecast_xgboost.py
+forecast_xgboost_layrate.py
+forecast-api/eval_horizons.py
+EggRecord_2026up-to-present.xlsx
+forecast_input_20260913_115331.xlsx
+production_data_2026-09-18 (1).xlsx
+
+# CSV files (testing/download exports and scratch data)
+*.csv
