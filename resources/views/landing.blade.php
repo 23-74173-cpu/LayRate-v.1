@@ -35,14 +35,8 @@
         .reveal { opacity: 1; transform: none; }
 
         @media (prefers-reduced-motion: reduce) {
-            .hero-enter, .float-slow { animation: none !important; }
+            .hero-enter { animation: none !important; }
         }
-
-        @keyframes floatSlow {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-        .float-slow { animation: floatSlow 6s ease-in-out infinite; }
 
         .hero-glow {
             background: radial-gradient(60% 60% at 30% 20%, rgba(98,174,240,0.35) 0%, rgba(98,174,240,0) 70%),
@@ -52,7 +46,6 @@
         .hero-spotlight {
             background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 20%), rgba(255,255,255,0.10), transparent 70%);
         }
-        #hero-mockup { transition: transform 0.3s ease-out; }
 
         /* ── Nav ── */
         header { transition: box-shadow 0.3s ease, background-color 0.3s ease; }
@@ -71,11 +64,6 @@
         /* ── Cards ── */
         .lift-card { transition: transform 0.35s cubic-bezier(.16,1,.3,1), box-shadow 0.35s ease, border-color 0.35s ease; }
         .lift-card:hover { transform: translateY(-6px); border-color: rgba(0,117,222,0.3); }
-
-        /* ── Bars grow in from 0 ── */
-        .grow-bar { height: 0%; transition: height 1.1s cubic-bezier(.16,1,.3,1); }
-
-        .tabular { font-variant-numeric: tabular-nums; }
 
         /* ── How-it-works scroll-driven connecting line ── */
         .step-icon { transition: background-color 0.4s ease, color 0.4s ease, transform 0.3s ease; }
@@ -131,88 +119,29 @@
     <div id="hero-glow" class="absolute inset-0 hero-glow"></div>
     <div class="absolute inset-0 hero-spotlight"></div>
     <div class="relative max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-24 lg:pt-24 lg:pb-32">
-        <div class="grid lg:grid-cols-2 gap-14 items-center">
-
-            {{-- Copy --}}
-            <div class="hero-enter">
-                <span class="inline-flex items-center gap-1.5 text-eyebrow text-white/80 bg-white/10 border border-white/15 rounded-full px-3 py-1.5 mb-6">
-                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-                    SMART POULTRY OPERATIONS
-                </span>
-                <h1 class="text-4xl sm:text-heading-1 lg:text-display-2 text-white mb-5">
-                    Every egg counted.<br>Every hen accounted for.
-                </h1>
-                <p class="text-body-md text-white/75 max-w-md mb-8">
-                    LayRate unifies egg production, environmental monitoring, feed, and flock
-                    health into one real-time system — powered by IoT sensors and
-                    machine-learning forecasts, built for the modern layer farm.
-                </p>
-                <div class="flex flex-wrap items-center gap-4">
-                    <a href="{{ route('login') }}" data-page-transition
-                       class="inline-flex items-center gap-2 bg-primary text-on-primary text-button px-6 py-3 rounded-full hover:bg-primary-active active:scale-95 transition-all shadow-elevated">
-                        Sign In to Dashboard
-                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                    </a>
-                    <a href="#features"
-                       class="inline-flex items-center gap-2 text-button text-white px-6 py-3 rounded-full border border-white/25 hover:bg-white/10 active:scale-95 transition-all">
-                        Explore Features
-                    </a>
-                </div>
-            </div>
-
-            {{-- Decorative live-dashboard mockup. Three nested layers on purpose:
-                 hero-enter (one-shot load animation) > float-slow (continuous
-                 bob) > #hero-mockup (JS-driven velocity tilt). CSS animations
-                 outrank inline styles on the same element/property, so each
-                 motion needs its own layer or they'd fight over `transform`. --}}
-            <div class="hero-enter" style="animation-delay: 150ms;">
-                <div class="float-slow">
-                    <div id="hero-mockup">
-                        <div class="bg-surface rounded-xl shadow-elevated border border-hairline p-5 max-w-md mx-auto lg:mx-0 lg:ml-auto">
-                            <div class="flex items-center justify-between mb-4">
-                                <div class="flex items-center gap-1.5">
-                                    <span class="w-2.5 h-2.5 rounded-full bg-alert-text/70"></span>
-                                    <span class="w-2.5 h-2.5 rounded-full bg-watch-text/70"></span>
-                                    <span class="w-2.5 h-2.5 rounded-full bg-ok-text/70"></span>
-                                </div>
-                                <span class="text-eyebrow text-ink-faint flex items-center gap-1">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-ok-text animate-pulse"></span>
-                                    LIVE
-                                </span>
-                            </div>
-
-                            <div class="grid grid-cols-3 gap-3 mb-4">
-                                <div class="bg-canvas-soft rounded-lg p-3">
-                                    <div class="text-eyebrow text-ink-muted mb-1">EGGS TODAY</div>
-                                    <div class="text-heading-3 text-ink tabular" data-countup="182">0</div>
-                                </div>
-                                <div class="bg-canvas-soft rounded-lg p-3">
-                                    <div class="text-eyebrow text-ink-muted mb-1">AVG HDEP</div>
-                                    <div class="text-heading-3 text-ink tabular" data-countup="84.2" data-decimals="1" data-suffix="%">0%</div>
-                                </div>
-                                <div class="bg-canvas-soft rounded-lg p-3">
-                                    <div class="text-eyebrow text-ink-muted mb-1">CAGES</div>
-                                    <div class="text-heading-3 text-ink tabular" data-countup="4">0</div>
-                                </div>
-                            </div>
-
-                            <div class="border border-hairline rounded-lg p-3 mb-4">
-                                <div class="text-eyebrow text-ink-muted mb-2.5">PRODUCTION BY CAGE</div>
-                                <div class="flex items-end gap-2.5 h-16">
-                                    <div class="grow-bar flex-1 rounded-t bg-cage-a" data-h="92"></div>
-                                    <div class="grow-bar flex-1 rounded-t bg-cage-b" data-h="74"></div>
-                                    <div class="grow-bar flex-1 rounded-t bg-cage-c" data-h="58"></div>
-                                    <div class="grow-bar flex-1 rounded-t bg-cage-d" data-h="30"></div>
-                                </div>
-                            </div>
-
-                            <div class="flex items-center gap-2 text-ok-text bg-ok-bg border border-ok-border rounded-lg px-3 py-2 text-caption">
-                                <i data-lucide="thermometer" class="w-3.5 h-3.5"></i>
-                                Cage A · 28.9°C · 68% humidity — within range
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <div class="max-w-2xl mx-auto text-center hero-enter">
+            <span class="inline-flex items-center gap-1.5 text-eyebrow text-white/80 bg-white/10 border border-white/15 rounded-full px-3 py-1.5 mb-6">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                SMART POULTRY OPERATIONS
+            </span>
+            <h1 class="text-4xl sm:text-heading-1 lg:text-display-2 text-white mb-5">
+                Every egg counted.<br>Every hen accounted for.
+            </h1>
+            <p class="text-body-md text-white/75 mx-auto mb-8">
+                LayRate unifies egg production, environmental monitoring, feed, and flock
+                health into one real-time system — powered by IoT sensors and
+                machine-learning forecasts, built for the modern layer farm.
+            </p>
+            <div class="flex flex-wrap items-center justify-center gap-4">
+                <a href="{{ route('login') }}" data-page-transition
+                   class="inline-flex items-center gap-2 bg-primary text-on-primary text-button px-6 py-3 rounded-full hover:bg-primary-active active:scale-95 transition-all shadow-elevated">
+                    Sign In to Dashboard
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+                <a href="#features"
+                   class="inline-flex items-center gap-2 text-button text-white px-6 py-3 rounded-full border border-white/25 hover:bg-white/10 active:scale-95 transition-all">
+                    Explore Features
+                </a>
             </div>
         </div>
     </div>
@@ -437,7 +366,6 @@ document.addEventListener('DOMContentLoaded', function () {
         var navLinks     = [].slice.call(document.querySelectorAll('[data-nav-link]'));
         var sections     = navLinks.map(function (l) { return document.getElementById(l.dataset.navLink); }).filter(Boolean);
         var heroGlow     = document.getElementById('hero-glow');
-        var heroMockup   = document.getElementById('hero-mockup');
         var howSection   = document.getElementById('how-it-works');
         var howFill      = document.getElementById('how-fill');
         var howSteps     = [].slice.call(document.querySelectorAll('.step-card'));
@@ -487,11 +415,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 // Hero ambient parallax.
                 if (heroGlow) heroGlow.style.transform = 'translateY(' + (scrollY * 0.25) + 'px)';
 
-                // Scroll-velocity tilt on the hero mockup card (decays to 0 when still).
                 var delta = scrollY - lastScrollY;
                 lastScrollY = scrollY;
                 velocity += (delta - velocity) * 0.15;
-                if (heroMockup) heroMockup.style.transform = 'rotate(' + clamp(velocity * 0.5, -4, 4) + 'deg)';
                 velocity *= 0.9;
 
                 // How-it-works: connecting line fills as the section scrolls
@@ -523,30 +449,6 @@ document.addEventListener('DOMContentLoaded', function () {
             document.addEventListener('scroll', kickLoop, { passive: true });
             computeFrame(); // establish correct initial state without waiting for the first scroll
         }
-
-        // ── Count-up numbers in the hero mockup (load-triggered, once) ──
-        function easeOutExpo(t) { return t === 1 ? 1 : 1 - Math.pow(2, -10 * t); }
-        document.querySelectorAll('[data-countup]').forEach(function (el) {
-            var target = parseFloat(el.dataset.countup);
-            var decimals = parseInt(el.dataset.decimals || '0', 10);
-            var suffix = el.dataset.suffix || '';
-            if (reducedMotion) { el.textContent = target.toFixed(decimals) + suffix; return; }
-            var duration = 1400, start = null;
-            function tick(ts) {
-                if (start === null) start = ts;
-                var progress = Math.min((ts - start) / duration, 1);
-                el.textContent = (target * easeOutExpo(progress)).toFixed(decimals) + suffix;
-                if (progress < 1) requestAnimationFrame(tick);
-            }
-            setTimeout(function () { requestAnimationFrame(tick); }, 350);
-        });
-
-        // ── Bar chart grow-in (load-triggered, once) ──
-        document.querySelectorAll('.grow-bar').forEach(function (bar) {
-            var target = bar.dataset.h + '%';
-            if (reducedMotion) { bar.style.height = target; return; }
-            setTimeout(function () { bar.style.height = target; }, 400);
-        });
 
         // ── Cursor-follow spotlight in hero (skip on touch devices) ──
         var isCoarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
