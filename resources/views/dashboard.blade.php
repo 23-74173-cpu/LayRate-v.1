@@ -1,11 +1,11 @@
 @extends('layouts.app')
 @section('title', 'Dashboard')
-@section('header-clock', now()->format('l, F j') . ' ΓÇö ' . now()->format('g:i A'))
+@section('header-clock', now()->format('l, F j') . ' — ' . now()->format('g:i A'))
 
 @section('content')
 <div class="space-y-5">
 
-    {{-- ΓöÇΓöÇ Dashboard Header ΓöÇΓöÇ --}}
+    {{-- ── Dashboard Header ── --}}
     <div class="relative overflow-hidden bg-linear-to-br from-secondary to-sidebar-bg rounded-lg p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4" id="dashHeader" style="min-height: 72px;">
         {{-- Decorative egg bubbles --}}
         <div class="page-header-egg-decor" aria-hidden="true"
@@ -216,7 +216,7 @@
             filterAnalytics((__dashSaved && ['production','environmental','feed','flock'].indexOf(__dashSaved.section) >= 0) ? __dashSaved.section : 'production');
             </script>
 
-            {{-- ΓòÉΓòÉΓòÉ SECTION 1 ΓÇö Production Performance ΓòÉΓòÉΓòÉ --}}
+            {{-- ═══ SECTION 1 — Production Performance ═══ --}}
             <div class="analytics-section active-section" data-analytics-section="production">
                 <div class="space-y-4">
                     <turbo-frame id="dashboard-stats-production" data-src="{{ route('dashboard.stats.production', ['cage' => request('cage'), 'from_date' => request('from_date'), 'to_date' => request('to_date')]) }}" loading="lazy" class="block">
@@ -248,7 +248,7 @@
                 </div>
             </div>
 
-            {{-- ΓòÉΓòÉΓòÉ SECTION 2 ΓÇö Environmental Analytics ΓòÉΓòÉΓòÉ --}}
+            {{-- ═══ SECTION 2 — Environmental Analytics ═══ --}}
             <div class="analytics-section" data-analytics-section="environmental">
                 <div class="space-y-4">
                     <turbo-frame id="dashboard-stats-environment" data-src="{{ route('dashboard.stats.environment', ['cage' => request('cage'), 'from_date' => request('from_date'), 'to_date' => request('to_date')]) }}" loading="lazy" class="block">
@@ -278,7 +278,7 @@
                 </div>
             </div>
 
-            {{-- ΓòÉΓòÉΓòÉ SECTION 3 ΓÇö Feed Analytics ΓòÉΓòÉΓòÉ --}}
+            {{-- ═══ SECTION 3 — Feed Analytics ═══ --}}
             <div class="analytics-section" data-analytics-section="feed">
                 <div class="space-y-4">
                     <turbo-frame id="dashboard-stats-feed" data-src="{{ route('dashboard.stats.feed', ['cage' => request('cage'), 'from_date' => request('from_date'), 'to_date' => request('to_date')]) }}" loading="lazy" class="block">
@@ -302,7 +302,7 @@
                 </div>
             </div>
 
-            {{-- ΓòÉΓòÉΓòÉ SECTION 4 ΓÇö Flock Analytics ΓòÉΓòÉΓòÉ --}}
+            {{-- ═══ SECTION 4 — Flock Analytics ═══ --}}
             <div class="analytics-section" data-analytics-section="flock">
                 <div class="space-y-4">
                     <turbo-frame id="dashboard-stats-flock" data-src="{{ route('dashboard.stats.flock', ['cage' => request('cage'), 'from_date' => request('from_date'), 'to_date' => request('to_date')]) }}" loading="lazy" class="block">
@@ -340,7 +340,7 @@
             </div>
         </div>
 
-    {{-- ΓöÇ Stats Modal ΓöÇΓöÇ --}}
+    {{-- ── Stats Modal ── --}}
     <div id="statsModal" data-modal data-close="closeStatsModal" style="display: none;" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
         <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeStatsModal()"></div>
         <div class="relative w-full max-w-sm rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
@@ -398,7 +398,7 @@
     </script>
 
 
-    {{-- ΓöÇΓöÇ KPI Breakdown Modal (shared by all metric cards ΓÇö item 9) ΓöÇΓöÇ --}}
+    {{-- ── KPI Breakdown Modal (shared by all metric cards — item 9) ── --}}
     <div id="kpiModal" data-modal  data-close="closeKpiModal" style="display: none;" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
         <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeKpiModal()"></div>
         <div class="relative w-full max-w-sm rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
@@ -412,7 +412,7 @@
         </div>
     </div>
 
-    {{-- ΓöÇΓöÇ Yesterday's Production Record Popup ΓöÇΓöÇ --}}
+    {{-- ── Yesterday's Production Record Popup ── --}}
     <div id="yesterdaySummaryModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
         <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeYesterdaySummary()"></div>
         <div class="relative w-full max-w-sm rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
@@ -478,7 +478,7 @@
         </div>
     </div>
 
-    {{-- ΓöÇΓöÇ Day Production Complete Popup ΓöÇΓöÇ --}}
+    {{-- ── Day Production Complete Popup ── --}}
     <div id="dayCompleteModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
         <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeDayComplete()"></div>
         <div class="relative w-full max-w-sm rounded-2xl p-6 text-center" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
@@ -581,7 +581,7 @@
         });
     }
 
-    // ΓöÇΓöÇ Card navigation (item 8) + long-press breakdown (item 9) ΓöÇΓöÇ
+    // ── Card navigation (item 8) + long-press breakdown (item 9) ──
     // Called by each lazily loaded frame once its cards are in the DOM.
     function bindKpiCards(root) {
         (root || document).querySelectorAll('.kpi-card:not([data-kpi-bound])').forEach(function(card) {
@@ -620,21 +620,21 @@
         });
     }
 
-    // ΓöÇΓöÇ Live clock (item 6): local timezone, ticks every second ΓöÇΓöÇ
+    // ── Live clock (item 6): local timezone, ticks every second ──
     (function() {
         function tick() {
             var el = document.getElementById('dashboardClock');
             if (!el) return;
             var now = new Date();
             el.textContent = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
-                + ' ΓÇö ' + now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+                + ' — ' + now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
         }
         tick();
         if (window.__dashboardClockTimer) clearInterval(window.__dashboardClockTimer);
         window.__dashboardClockTimer = setInterval(tick, 1000);
     })();
 
-    // ΓöÇΓöÇ Shared dashboard chart renderer ΓöÇΓöÇ
+    // ── Shared dashboard chart renderer ──
     // Multiple lazy Turbo Frames on the dashboard load incrementally. Each frame
     // used to call LayRateChart.prepareForRender() on its own, but that helper is
     // global: it destroys every existing chart instance. Calling it for every new
@@ -986,7 +986,7 @@
     window.addEventListener('resize', window.equalizeProductionCharts);
     window.equalizeProductionCharts();
 
-    // ΓöÇΓöÇ Cage filter: reloads Turbo Frames with ?cage=CODE ΓöÇΓöÇ
+    // ── Cage filter: reloads Turbo Frames with ?cage=CODE ──
     window.filterDashboard = function(code) {
         window.__dashboardCage = code;
         var sel = document.getElementById('dashboardCageSelect');
@@ -1005,7 +1005,7 @@ var cageParam = code === 'all' ? null : code;
         }
     };
 
-    // ΓöÇΓöÇ Yesterday's Production Record popup ΓöÇΓöÇ
+    // ── Yesterday's Production Record popup ──
     // Shows once per reporting day. Uses localStorage keyed by the server's
     // reporting date so the popup reappears after the daily rollover.
     function closeYesterdaySummary() {
@@ -1039,7 +1039,7 @@ var cageParam = code === 'all' ? null : code;
         }, 800);
     })();
 
-    // ΓöÇΓöÇ Day Production Complete popup ΓöÇΓöÇ
+    // ── Day Production Complete popup ──
     function closeDayComplete() {
         var m = document.getElementById('dayCompleteModal');
         if (m) m.style.display = 'none';
