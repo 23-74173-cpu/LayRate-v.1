@@ -10,6 +10,7 @@ use App\Services\EnvironmentStatusService;
 use App\Services\RelayStateService;
 use App\Services\ReportingDateService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -30,7 +31,15 @@ class EnvironmentController extends Controller
     public function liveData(Request $request)
     {
         $thresholds = Setting::thresholds();
-        $cages = Cage::with(['latestEnvironmentLog'])->orderBy('cage_code')->get();
+        $cages = Cage::orderBy('cage_code')->get();
+
+        // Latest REAL reading per cage (see EnvironmentalLog::latestRealPerCage
+        // for why this is an explicit query, not a constrained latestOfMany).
+        // Set as the loaded relation so every read below sees real-only data.
+        $latestReal = EnvironmentalLog::latestRealPerCage($cages->pluck('id'));
+        $cages->each(fn ($cage) => $cage->setRelation(
+            'latestEnvironmentLog', $latestReal->get($cage->id)
+        ));
 
         $range = $request->query('range', '24h');
 
@@ -46,6 +55,7 @@ class EnvironmentController extends Controller
         // 06:00 reset) matches the app's date convention (see Prompt 2 fix).
         [$repStart, $repEnd] = ReportingDateService::reportingDayWindow(ReportingDateService::reportingDateString());
         $overrideByCage = EnvironmentalLog::where('is_override', 1)
+            ->where('is_demo', false)
             ->whereBetween('recorded_at', [$repStart, $repEnd])
             ->get()
             ->keyBy('cage_id');
@@ -101,6 +111,7 @@ class EnvironmentController extends Controller
                 DB::raw('ROUND(AVG(temperature_c),1) as avg_temp'),
                 DB::raw('ROUND(AVG(humidity_pct),1) as avg_hum')
             )
+            ->where('is_demo', false)
             ->where('recorded_at', '>=', $since)
             ->groupBy('period', 'cage_id')
             ->orderBy('period')
@@ -112,6 +123,7 @@ class EnvironmentController extends Controller
                 DB::raw('ROUND(AVG(temperature_c),1) as avg_temp'),
                 DB::raw('ROUND(AVG(humidity_pct),1) as avg_hum')
             )
+            ->where('is_demo', false)
             ->where('recorded_at', '>=', $since)
             ->groupBy('time_slot')
             ->orderByDesc('time_slot')
@@ -156,6 +168,7 @@ class EnvironmentController extends Controller
                      ELSE ROUND(MAX(humidity_pct), 0) END as max_hum,
                 CASE WHEN MAX(is_override) = 1 THEN 1 ELSE COUNT(*) END as reading_count
             ")
+            ->where('is_demo', false)
             ->groupBy('cage_id', 'log_date')
             ->orderByDesc('log_date')
             ->orderBy('cage_id');
@@ -336,6 +349,14 @@ class EnvironmentController extends Controller
             ]);
         }
 
+        // Bust the ingestion lookup cache so the next sensor POST (arrives
+        // within ~1s, well before the bridge's 2s command poll) resolves this
+        // relay fresh via HardwareItem::findActiveForIngestion() instead of
+        // reading a up-to-300s-stale model whose outdated control_mode would
+        // make SensorIngestionController overwrite the command just written
+        // here. Same Cache::forget pattern as HardwareItemController.
+        $this->forgetIngestionCache($relay->serial_number, $relay->device_id);
+
         $relay->refresh();
         $payload = RelayStateService::payload($relay);
 
@@ -344,6 +365,15 @@ class EnvironmentController extends Controller
         }
 
         return back()->with('success', 'Relay set to ' . strtoupper($action) . '.');
+    }
+
+    private function forgetIngestionCache(string $serialNumber, ?int $deviceId): void
+    {
+        if ($deviceId === null) {
+            return;
+        }
+
+        Cache::forget(HardwareItem::ingestionCacheKey($serialNumber, $deviceId));
     }
 }
 

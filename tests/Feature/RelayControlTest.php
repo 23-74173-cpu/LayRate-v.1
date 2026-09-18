@@ -442,6 +442,45 @@ class RelayControlTest extends TestCase
         $this->assertFalse($fresh->relay_safety, 'Returning to AUTO clears any stale safety block.');
     }
 
+    public function test_web_control_busts_ingestion_cache_so_next_reading_sees_fresh_command(): void
+    {
+        // Reproduces the live "fan never fires" race: the ~1Hz sensor POSTs
+        // resolve the relay through a 300s ingestion cache
+        // (HardwareItem::findActiveForIngestion). A web toggle must bust that
+        // cache, or the next reading takes the stale auto-branch and
+        // overwrites the fresh command before the bridge's 2s poll sees it.
+        $item = $this->relayItem(['control_mode' => 'auto', 'relay_status' => 'off']);
+        $key = $this->deviceKey();
+
+        // Prime the cache with the pre-toggle auto state, as live traffic does.
+        $primed = HardwareItem::findActiveForIngestion('RELAY-TEST-001', $this->device->id);
+        $this->assertSame('auto', $primed->control_mode);
+
+        // User clicks Fan ON.
+        $this->actingAs($this->admin)
+            ->postJson('/environment/relay', ['action' => 'on'])
+            ->assertOk();
+
+        // The next ingestion lookup must see the fresh command, not the stale model.
+        $fresh = HardwareItem::findActiveForIngestion('RELAY-TEST-001', $this->device->id);
+        $this->assertSame('manual', $fresh->control_mode);
+        $this->assertSame('on', $fresh->relay_status);
+
+        // And the next reported-off reading must not clobber it back.
+        $this->postReadings([
+            'readings' => [
+                ['serial_number' => 'RELAY-TEST-001', 'relay_status' => 'off'],
+            ],
+            'recorded_at' => now()->toDateTimeString(),
+        ], $key)->assertOk();
+
+        $this->assertDatabaseHas('hardware_items', [
+            'id' => $item->id,
+            'control_mode' => 'manual',
+            'relay_status' => 'on',
+        ]);
+    }
+
     public function test_web_control_rejects_unknown_action(): void
     {
         $this->relayItem();
