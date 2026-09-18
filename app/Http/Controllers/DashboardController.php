@@ -1470,7 +1470,6 @@ class DashboardController extends Controller
             'eggs'        => ['logged' => $cagesWithEggs, 'total' => $totalActiveCages, 'complete' => $cagesWithEggs >= $totalActiveCages && $totalActiveCages > 0],
             'environment' => ['logged' => $cagesWithEnv,  'total' => $totalActiveCages, 'complete' => $cagesWithEnv >= $totalActiveCages && $totalActiveCages > 0],
             'feed'        => ['logged' => $cagesWithFeed, 'total' => $totalActiveCages, 'complete' => $cagesWithFeed >= $totalActiveCages && $totalActiveCages > 0],
-            'mortality'   => ['logged' => $mortalityTodayTotal, 'total' => 0, 'complete' => true], // optional, always OK
         ];
 
         $dayComplete = true;

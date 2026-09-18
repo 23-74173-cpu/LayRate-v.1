@@ -25,14 +25,6 @@
             'color' => '#16a34a',
             'bg'    => '#e6f6ee',
         ],
-        [
-            'key'   => 'mortality',
-            'label' => 'Mortality',
-            'icon'  => 'heart-crack',
-            'route' => route('chickens.index', ['tab' => 'mortality']),
-            'color' => '#dc2626',
-            'bg'    => '#fde8e8',
-        ],
     ];
 
     $anyIncomplete = collect($items)->contains(function ($item) use ($dataCompleteness) {
@@ -86,7 +78,7 @@
                             <span style="font-size: 13px; font-family: 'Georgia', serif; color: {{ $isComplete ? '#8a8279' : '#2c2c2c' }}; {{ $isComplete ? 'text-decoration: line-through;' : '' }}">{{ $item['label'] }}</span>
                         </div>
                         {{-- Status icon --}}
-                        @if(!$isComplete && $item['key'] !== 'mortality' && $d['total'] > 0)
+                        @if(!$isComplete && $d['total'] > 0)
                             <span style="font-size: 11px; color: #a39e98; font-family: 'Georgia', serif;">{{ $d['logged'] }}/{{ $d['total'] }}</span>
                         @elseif($isComplete)
                             <i data-lucide="check-circle" style="width: 16px; height: 16px; color: #16a34a;"></i>
