@@ -58,7 +58,17 @@ class FeedController extends Controller
             ->withQueryString();
 
         $reportingNow = ReportingDateService::now();
-        $totalFeedWeek = FeedConsumptionLog::where('log_date', '>=', $reportingNow->copy()->subDays(7)->toDateString())
+
+        // Same stale-data fallback as the dashboard feed cards: when nothing
+        // was logged in the last 7 days, anchor "this week/month" to the
+        // latest feed log so the cards summarize real history instead of
+        // reading 0. Live behavior is unchanged when data is current.
+        $feedRef = $this->feedReferenceDate();
+        $feedAsOf = $feedRef->toDateString() < $reportingNow->toDateString()
+            ? $feedRef->format('M j, Y')
+            : null;
+
+        $totalFeedWeek = FeedConsumptionLog::where('log_date', '>=', $feedRef->copy()->subDays(7)->toDateString())
             ->sum('feed_consumed_kg');
 
         $activeCagesCount = Cage::where('is_active', 1)->count();
@@ -66,7 +76,7 @@ class FeedController extends Controller
             ? round($totalFeedWeek / max($activeCagesCount, 1) / 7, 1)
             : 0;
 
-        $totalFeedCostMonth = FeedConsumptionLog::where('feed_consumption_logs.log_date', '>=', $reportingNow->copy()->startOfMonth()->toDateString())
+        $totalFeedCostMonth = FeedConsumptionLog::where('feed_consumption_logs.log_date', '>=', $feedRef->copy()->startOfMonth()->toDateString())
             ->join('feed_batches', 'feed_consumption_logs.feed_batch_id', '=', 'feed_batches.id')
             ->selectRaw('SUM(feed_consumption_logs.feed_consumed_kg * feed_batches.unit_cost) as total')
             ->whereNotNull('feed_batches.unit_cost')
@@ -86,11 +96,11 @@ class FeedController extends Controller
             $fcrCageId = $firstCage ? (string) $firstCage->id : null;
         }
 
-        $fcrData = $this->computeFcrData($fcrCageId, $fcrGroupBy);
+        $fcrData = $this->computeFcrData($fcrCageId, $fcrGroupBy, $feedRef);
 
         return view('feed._live-data', array_merge(
             compact('batches', 'allBatches', 'consumptionLogs', 'avgCp', 'totalFeedWeek', 'avgFeedPerCage',
-                     'totalFeedCostMonth', 'cages', 'preselectedCageId'),
+                      'totalFeedCostMonth', 'cages', 'preselectedCageId', 'feedAsOf'),
             $fcrData
         ));
     }
@@ -106,15 +116,34 @@ class FeedController extends Controller
             $groupBy = 'week';
         }
 
-        $fcrData = $this->computeFcrData($cageId, $groupBy);
+        $fcrData = $this->computeFcrData($cageId, $groupBy, $this->feedReferenceDate());
 
         return view('feed._fcr-content', $fcrData);
     }
 
     /**
-     * Shared FCR computation for both server-render and AJAX.
+     * Latest-data fallback shared by liveData() and fcrData(): today when
+     * feed data is current, otherwise the latest feed log date.
      */
-    private function computeFcrData(string|null $cageId, string $groupBy): array
+    private function feedReferenceDate(): \Carbon\Carbon
+    {
+        $now = ReportingDateService::now();
+        $latest = FeedConsumptionLog::max('log_date');
+        if ($latest && $latest < $now->copy()->subDays(7)->toDateString()) {
+            return \Carbon\Carbon::parse($latest);
+        }
+
+        return $now;
+    }
+
+    /**
+     * Shared FCR computation for both server-render and AJAX.
+     *
+     * $refEnd anchors the "current period" window (defaults to the reporting
+     * day end); callers pass the latest-data fallback so FCR reflects the
+     * newest history instead of an empty trailing window.
+     */
+    private function computeFcrData(string|null $cageId, string $groupBy, ?\Carbon\Carbon $refEnd = null): array
     {
         $periodDays = match ($groupBy) {
             'month' => 30,
@@ -122,14 +151,19 @@ class FeedController extends Controller
             default  => 1,
         };
 
+        $dayEnd = $refEnd
+            ? $refEnd->copy()->endOfDay()
+            : ReportingDateService::reportingDayEnd()->subSecond();
+        $dayStart = $dayEnd->copy()->subDays($periodDays - 1);
+
         $label = null;
         $selectedCageId = null;
 
         if ($cageId === 'all' || $cageId === null) {
             if ($cageId === 'all') {
                 $fcrCurrent  = FcrCalculator::forAllCages(
-                    ReportingDateService::reportingDayStart()->subDays($periodDays - 1),
-                    ReportingDateService::reportingDayEnd()->subSecond()
+                    $dayStart,
+                    $dayEnd
                 );
                 $fcrTimeline = FcrCalculator::timelineAll($groupBy);
                 $label       = 'All Cages';
@@ -147,8 +181,8 @@ class FeedController extends Controller
                 $fcrTimeline = FcrCalculator::timeline($cage, $groupBy);
                 $fcrCurrent  = FcrCalculator::forCage(
                     $cage,
-                    ReportingDateService::reportingDayStart()->subDays($periodDays - 1),
-                    ReportingDateService::reportingDayEnd()->subSecond()
+                    $dayStart,
+                    $dayEnd
                 );
                 $label = $cage->cage_code;
             } else {

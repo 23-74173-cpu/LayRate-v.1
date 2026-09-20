@@ -105,6 +105,13 @@ class EggStockController extends Controller
 
         $cages = Cage::where('is_active', 1)->orderBy('cage_code')->get();
 
+        // Sold vs available: sold is driven by fulfilled pre-orders (real
+        // deductions would need a stock-out ledger, which the schema has no
+        // table for — see PreOrder model notes). Available = stocked − pending.
+        $soldTotal = \App\Models\PreOrder::where('status', 'fulfilled')->sum('egg_count');
+        $availableTotal = max(0, EggStockBatch::sum('count')
+            - \App\Models\PreOrder::where('status', 'pending')->sum('egg_count'));
+
         $availablePools = EggStockBatch::getAvailablePools();
 
         $eggWeights = Setting::eggWeights();
@@ -120,6 +127,9 @@ class EggStockController extends Controller
             'totals' => $totals,
             'trayTotals' => $trayTotals,
             'availablePools' => $availablePools,
+            'soldTotal' => (int) $soldTotal,
+            'soldTrays' => (int) ceil($soldTotal / 30),
+            'availableTotal' => (int) $availableTotal,
             'productionLogs' => $productionLogs,
             'cages' => $cages,
             'sizes' => $sizes,
@@ -176,6 +186,10 @@ class EggStockController extends Controller
 
         $availablePools = EggStockBatch::getAvailablePools();
 
+        $soldTotal = (int) \App\Models\PreOrder::where('status', 'fulfilled')->sum('egg_count');
+        $availableTotal = max(0, (int) $allBatches->sum('count')
+            - (int) \App\Models\PreOrder::where('status', 'pending')->sum('egg_count'));
+
         return response()->json([
             'success' => true,
             'batch' => [
@@ -191,6 +205,9 @@ class EggStockController extends Controller
             'totals' => $newTotals,
             'trayTotals' => array_map(fn($t) => (int) ceil($t / 30), $newTotals),
             'availablePools' => $availablePools,
+            'soldTotal' => $soldTotal,
+            'soldTrays' => (int) ceil($soldTotal / 30),
+            'availableTotal' => $availableTotal,
         ])->header('Content-Type', 'application/json');
     }
 

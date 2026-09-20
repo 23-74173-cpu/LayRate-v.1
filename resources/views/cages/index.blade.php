@@ -89,7 +89,14 @@
         </div>
 
         {{-- Canvas container (tile grid auto-rendered by JS, fit-to-width) --}}
-        <div id="farmCanvas" class="relative overflow-auto rounded-lg border select-none" style="border-color: #e6e6e6; background-color: #f9fafb; min-height: 120px; max-height: 60vh;">
+        {{-- Shrink-wrapped + centered: the container takes the grid's intrinsic
+             width (up to 100%) and centers itself in the section, so the grid
+             sits in the middle instead of pinning left with a gap on the right.
+             Grid content still starts at the container's left edge, so all
+             drag-and-drop tile math (farmCanvas rect + scroll offsets) is
+             unaffected; when the grid is wider than available the container
+             caps at 100% and scrolls exactly as before. --}}
+        <div id="farmCanvas" class="relative overflow-auto rounded-lg border select-none mx-auto w-max max-w-full" style="border-color: #e6e6e6; background-color: #f9fafb; min-height: 120px; max-height: 60vh;">
             <div id="canvasScaler" style="transform-origin: top left;">
                 <div id="canvasContent" class="relative inline-block">
                     {{-- Tile background grid --}}
@@ -118,13 +125,16 @@
                     $isTiny = $uc->rows == 1 && $uc->slots_per_row == 1;
                     $isSmall = $uc->rows <= 2 || $uc->slots_per_row <= 2;
                 @endphp
-                <div class="staging-tile relative rounded-lg border-2 px-5 py-3 sm:px-4 sm:py-2 min-h-[3rem] flex flex-col items-center justify-center {{ $isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer' }}"
+                <div class="staging-tile relative rounded-lg border-2 {{ $isTiny ? 'px-2 py-2 gap-1' : 'px-5 py-3 sm:px-4 sm:py-2' }} min-h-[3rem] flex flex-col items-center justify-center {{ $isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer' }}"
                      style="border-color: {{ $uc->color }}; background-color: {{ $uc->colorSoft }};"
                      draggable="{{ $isAdmin ? 'true' : 'false' }}"
                      data-cage-id="{{ $uc->id }}"
                      data-cage-code="{{ $uc->cage_code }}"
                      @if($isAdmin) ondragstart="handleDragStart(event, {{ $uc->id }})" ontouchstart="if(window.__cageDragTouchEnabled && !event.target.closest('.cage-info-btn')){handleTouchDragStart({{ $uc->id }}, event.touches[0], false);event.preventDefault();}" @endif>
-                    <button class="cage-info-btn w-6 h-6 rounded-full flex items-center justify-center" data-cage-id="{{ $uc->id }}" style="position:absolute; bottom:2px; right:2px; background-color:transparent; color: {{ $uc->color }}; line-height:1;" title="Cage info" aria-label="Cage info"><i data-lucide="info" class="w-3 h-3"></i></button>
+                    {{-- Tray-size info button (w-5): on tiny 1x1 cards it renders
+                         in-flow below the label so it can never overlap it;
+                         larger cards keep the absolute corner position. --}}
+                    <button class="cage-info-btn w-5 h-5 rounded-full flex items-center justify-center {{ $isTiny ? 'order-last' : '' }}" data-cage-id="{{ $uc->id }}" style="{{ $isTiny ? 'position:static;' : 'position:absolute; bottom:2px; right:2px;' }} background-color:transparent; color: {{ $uc->color }}; line-height:1;" title="Cage info" aria-label="Cage info"><i data-lucide="info" class="w-3 h-3"></i></button>
                     @if($isTiny)
                     <span class="font-bold leading-none text-center" style="font-size:14px;color: {{ $uc->color }};overflow:hidden;text-overflow:ellipsis;max-width:100%;display:inline-block;">
                         {{ \Illuminate\Support\Str::after($uc->cage_code, 'CAGE-') }}
@@ -156,21 +166,22 @@
             #cageInfoPopup .flipper { transform-style: preserve-3d; transition: transform 0.35s ease; display: grid; }
             #cageInfoPopup .flipper.flipped { transform: rotateY(180deg); }
             #cageInfoPopup .front-face,
-            #cageInfoPopup .back-face { grid-area: 1 / 1; backface-visibility: hidden; background-color: #ffffff; border-radius: 11px; min-height: 0; overflow: hidden; display: flex; flex-direction: column; max-height: min(540px, calc(100vh - 3rem)); }
+            #cageInfoPopup .back-face { grid-area: 1 / 1; backface-visibility: hidden; background-color: #ffffff; border-radius: 11px; min-height: 0; overflow: hidden; display: flex; flex-direction: column; max-height: min(640px, calc(100vh - 3rem)); }
             #cageInfoPopup .back-face { transform: rotateY(180deg); }
             #cageInfoBackdrop { transition: opacity 0.2s ease; }
             #cageInfoPopup .slot-mini { transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease; }
             #cageInfoPopup .slot-mini:hover { transform: scale(1.15); box-shadow: 0 2px 8px rgba(0,0,0,0.15); border-color: #0075de !important; z-index: 1; }
             #cageInfoPopup .slot-mini:active { transform: scale(1.05); }
 
-            /* Info button becomes a compact corner chip with a View label on mobile.
+            /* Info button becomes a compact corner chip with a View label on mobile. */
             .cage-info-btn { transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease; }
             @media (max-width: 639px) {
-                /* Info button becomes a short corner "chip": icon + View label.
+                /* Grid-cage button becomes a short corner "chip": icon + View label.
                    Grid cages live inside the scaled canvas (#canvasScaler), so
                    compensate with --cage-info-btn-scale to keep the on-screen
-                   size constant; staging tiles are unscaled. */
-                .staging-tile .cage-info-btn,
+                   size constant. Staging-tray cards keep a compact icon-only
+                   button (no View label) — the tray cards are too small for
+                   the chip, e.g. 1x1 cages. */
                 .cage-overlay .cage-info-btn {
                     width: auto !important;
                     border-radius: 9999px !important;
@@ -181,10 +192,14 @@
                     border: 1px solid rgba(0,0,0,0.12) !important;
                     box-shadow: 0 1px 3px rgba(0,0,0,0.12);
                 }
-                .staging-tile .cage-info-btn { height: 26px !important; min-width: 26px; padding: 0 8px !important; gap: 3px; bottom: 6px !important; right: 6px !important; }
+                /* Staging tray keeps a compact icon-only button (no View label)
+                   at every width: tray cards are too small for the View chip —
+                   e.g. a 1x1 cage card is narrower than the chip itself. These
+                   come after the chip rules so they win on equal specificity. */
+                .staging-tile .cage-info-btn { width: 20px !important; height: 20px !important; min-width: 0 !important; padding: 0 !important; gap: 0; bottom: 4px !important; right: 4px !important; border-radius: 9999px !important; display: inline-flex !important; align-items: center; justify-content: center; background-color: rgba(255,255,255,0.92) !important; border: 1px solid rgba(0,0,0,0.12) !important; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
                 .staging-tile .cage-info-btn i,
-                .staging-tile .cage-info-btn svg { width: 14px !important; height: 14px !important; }
-                .staging-tile .cage-info-btn::after { content: "View"; font-size: 11px; font-weight: 600; letter-spacing: 0.01em; line-height: 1; white-space: nowrap; }
+                .staging-tile .cage-info-btn svg { width: 12px !important; height: 12px !important; }
+                .staging-tile .cage-info-btn::after { content: none !important; }
                 .cage-overlay .cage-info-btn { height: calc(26px * var(--cage-info-btn-scale, 1)) !important; min-width: calc(26px * var(--cage-info-btn-scale, 1)); padding: 0 calc(8px * var(--cage-info-btn-scale, 1)) !important; gap: calc(3px * var(--cage-info-btn-scale, 1)); bottom: calc(6px * var(--cage-info-btn-scale, 1)) !important; right: calc(6px * var(--cage-info-btn-scale, 1)) !important; }
                 .cage-overlay .cage-info-btn i,
                 .cage-overlay .cage-info-btn svg { width: calc(14px * var(--cage-info-btn-scale, 1)) !important; height: calc(14px * var(--cage-info-btn-scale, 1)) !important; }
@@ -202,8 +217,15 @@
             }
         </style>
         <div id="cageInfoBackdrop" class="hidden fixed inset-0 z-40" style="background-color: rgba(107,114,128,0.45); backdrop-filter: blur(4px);" onclick="closeCageInfoPopup()"></div>
-        <div id="cageInfoPopup" class="hidden fixed z-50 rounded-xl border bg-white shadow-lg p-0 w-64" style="border-color: #e6e6e6; max-width: calc(100vw - 2rem); max-height: min(540px, calc(100vh - 3rem)); overflow-y: auto;">
-            <div id="cageInfoPopupContent"></div>
+        {{-- Cage slot-detail modal: centered dialog reusing the app's modal pattern
+            (fixed inset-0 flex overlay + dimmed backdrop + Escape/outside close),
+            same as gridSettingsModal/addCageModal below. Formerly an anchored
+            popover positioned next to the clicked cage (see positionCageInfoPopup,
+            now a no-op kept for its callers). --}}
+        <div id="cageInfoPopup" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Cage slot details">
+            <div id="cageInfoCard" class="rounded-xl border bg-white shadow-lg" style="border-color: #e6e6e6; width: min(58rem, calc(100vw - 2rem)); max-height: min(640px, calc(100vh - 3rem)); overflow-y: auto;">
+                <div id="cageInfoPopupContent"></div>
+            </div>
         </div>
     </div>
 
@@ -916,11 +938,11 @@ function expandSlotInPopup(btn) {
         anchorPopup._openSlotCageId = cageId;
     }
 
-    // Widen the popup so the panel renders like the cage cards below
-    var popup = document.getElementById('cageInfoPopup');
-    if (popup) {
-        popup.style.width = 'min(32rem, calc(100vw - 2rem))';
-        if (popup._cageInfoBtnEl) positionCageInfoPopup(popup, popup._cageInfoBtnEl.getBoundingClientRect());
+    // Widen the card so the slot-detail panel renders like the cage cards
+    // below (the centered modal is already wide; grow only if narrower).
+    var card = document.getElementById('cageInfoCard');
+    if (card) {
+        card.style.width = 'min(64rem, calc(100vw - 2rem))';
     }
 
     fetch(`${cagesBase}/slots/${slotId}/hens-json`)
@@ -1530,20 +1552,21 @@ function renderCageInfoPopupSlotGrid(m) {
     var rows = Math.max(1, m.rows || 1);
     var cols = Math.max(1, m.slots_per_row || 1);
     // Lay the slots out exactly like the canvas cage: rows × slots-per-row, in
-    // row-major slot-number order, at full 38px cell size. Wide cages overflow
-    // horizontally inside the scrollable front body instead of shrinking.
-    var cell = 38;
+    // row-major slot-number order. Full 38px cells on desktop; compact 30px
+    // cells on phones so the grid stays usable without sideways scrolling.
+    var compact = window.innerWidth < 640;
+    var cell = compact ? 30 : 38;
 
     var byNum = {};
     for (var i = 0; i < m.slots.length; i++) byNum[m.slots[i].number] = m.slots[i];
 
     // Axis labels: column numbers on top (C1..Cn), row numbers on the left
     // (R1..Rm), so each slot's position in the cage is obvious at a glance.
-    var labelW = 26;
+    var labelW = compact ? 22 : 26;
     var label = function(txt) {
-        return '<span class="text-center leading-none" style="font-size:9px;font-weight:600;color:#a39e98;">' + txt + '</span>';
+        return '<span class="text-center leading-none" style="font-size:' + (compact ? '8px' : '9px') + ';font-weight:600;color:#a39e98;">' + txt + '</span>';
     };
-    var html = '<div class="grid gap-1 slot-grid-' + m.id + '" style="grid-template-columns:' + labelW + 'px repeat(' + cols + ', ' + cell + 'px);justify-content:flex-start;align-items:center;">';
+    var html = '<div class="grid gap-1 slot-grid-' + m.id + '" style="grid-template-columns:' + labelW + 'px repeat(' + cols + ', ' + cell + 'px);justify-content:flex-start;align-items:center;overflow-x:auto;max-width:100%;">';
     html += '<span style="height:12px;"></span>';
     for (var c = 1; c <= cols; c++) html += label('C' + c);
     for (var r = 1; r <= rows; r++) {
@@ -1551,7 +1574,7 @@ function renderCageInfoPopupSlotGrid(m) {
         for (var c = 1; c <= cols; c++) {
             var s = byNum[(r - 1) * cols + c];
             if (s) {
-                html += renderCageInfoPopupSlotCell(m, s);
+                html += renderCageInfoPopupSlotCell(m, s, cell);
             } else {
                 html += '<span class="slot-mini rounded" style="width:' + cell + 'px;height:' + cell + 'px;background-color:#f7f7f7;border:1px dashed #e0e0e0;" title="Missing slot"></span>';
             }
@@ -1561,12 +1584,13 @@ function renderCageInfoPopupSlotGrid(m) {
     return html;
 }
 
-function renderCageInfoPopupSlotCell(m, s) {
+function renderCageInfoPopupSlotCell(m, s, cellPx) {
     var isSensor = s.has_sensor;
     var occupancy = s.occupancy;
     var maxPerSlot = m.max_chickens_per_slot || 4;
     var fillRatio = maxPerSlot > 0 ? Math.min(1, occupancy / maxPerSlot) : 0;
-    var fontSize = '12px';
+    var cell = cellPx || 38;
+    var fontSize = cell < 38 ? '10px' : '12px';
     var slotBg, slotBorder, slotContent;
     if (isSensor) {
         slotBg = '#d6f0e3';
@@ -1585,7 +1609,7 @@ function renderCageInfoPopupSlotCell(m, s) {
         slotContent = '<span style="font-size:' + fontSize + ';color:#d1d5db;">—</span>';
     }
     var sensorDot = isSensor ? '<span class="absolute top-0 right-0 w-1.5 h-1.5 rounded-bl" style="background-color:#0075de;"></span>' : '';
-    return '<button type="button" onclick="expandSlotInPopup(this)" class="slot-mini rounded flex flex-col items-center justify-center relative cursor-pointer transition-colors" data-cage-id="' + m.id + '" data-slot-id="' + s.id + '" data-cage-code="' + m.code.replace(/"/g, '&quot;') + '" data-original-number="' + s.number + '" style="width:38px;height:38px;background-color:' + slotBg + ';border:1px solid ' + slotBorder + ';" title="Slot ' + s.row + '-' + s.col + ': ' + occupancy + ' hens' + (isSensor ? ' (sensor equipped)' : '') + '" aria-label="Slot ' + s.row + '-' + s.col + ', ' + occupancy + ' hens">'
+    return '<button type="button" onclick="expandSlotInPopup(this)" class="slot-mini rounded flex flex-col items-center justify-center relative cursor-pointer transition-colors" data-cage-id="' + m.id + '" data-slot-id="' + s.id + '" data-cage-code="' + m.code.replace(/"/g, '&quot;') + '" data-original-number="' + s.number + '" style="width:' + cell + 'px;height:' + cell + 'px;background-color:' + slotBg + ';border:1px solid ' + slotBorder + ';touch-action:manipulation;min-width:' + cell + 'px;min-height:' + cell + 'px;" title="Slot ' + s.row + '-' + s.col + ': ' + occupancy + ' hens' + (isSensor ? ' (sensor equipped)' : '') + '" aria-label="Slot ' + s.row + '-' + s.col + ', ' + occupancy + ' hens">'
         + sensorDot
         + '<span class="slot-reorder-number hidden font-bold" style="font-size:' + fontSize + ';color:#002D5E;">' + s.number + '</span>'
         + slotContent + '</button>';
@@ -1609,7 +1633,7 @@ function renderCageInfoPopupContent(m) {
     var accentBar = '<div style="width:4px;align-self:stretch;background-color:' + accentColor + ';border-radius:3px;flex-shrink:0;"></div>';
 
     // ── FRONT FACE ──
-    var frontHeader = '<div class="flex items-center gap-3 px-3 pt-3 pb-2 border-b shrink-0" style="background-color:#f8f8f8;border-bottom-color:#e6e6e6;border-top-left-radius:11px;border-top-right-radius:11px;">'
+    var frontHeader = '<div class="flex items-center flex-wrap gap-x-3 gap-y-2 px-3 pt-3 pb-2 border-b shrink-0" style="background-color:#f8f8f8;border-bottom-color:#e6e6e6;border-top-left-radius:11px;border-top-right-radius:11px;">'
         + accentBar
         + '<div class="flex items-center gap-2 min-w-0 flex-1">'
         + '<span class="text-sm font-bold min-w-0 truncate" style="color:' + m.color + '">' + m.code + '</span>'
@@ -1645,7 +1669,7 @@ function renderCageInfoPopupContent(m) {
         + '</div>'
         + '</div>';
 
-    var frontFooter = '<div class="flex items-center gap-3 px-4 py-2 border-t text-[10px] leading-none shrink-0" style="border-color:#e6e6e6;color:#a39e98;">'
+    var frontFooter = '<div class="flex items-center flex-wrap gap-x-3 gap-y-1.5 px-4 py-2 border-t text-[10px] leading-none shrink-0" style="border-color:#e6e6e6;color:#a39e98;">'
         + '<span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded" style="background-color:#d6f0e3;border:1px solid #2a9d6a;"></span> Sensor</span>'
         + '<span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded" style="background-color:rgb(228,228,228);border:1px solid #d1d5db;"></span> Occupied</span>'
         + '<span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded" style="background-color:#ffffff;border:1px solid #e6e6e6;"></span> Empty</span>'
@@ -1654,7 +1678,7 @@ function renderCageInfoPopupContent(m) {
     var frontFace = '<div class="front-face flex flex-col" style="z-index:2;">' + frontHeader + frontBody + frontFooter + '</div>';
 
     // ── BACK FACE ──
-    var backHeader = '<div class="flex items-center gap-3 px-3 pt-3 pb-2 border-b shrink-0" style="background-color:#f8f8f8;border-bottom-color:#e6e6e6;border-top-left-radius:11px;border-top-right-radius:11px;">'
+    var backHeader = '<div class="flex items-center flex-wrap gap-x-3 gap-y-2 px-3 pt-3 pb-2 border-b shrink-0" style="background-color:#f8f8f8;border-bottom-color:#e6e6e6;border-top-left-radius:11px;border-top-right-radius:11px;">'
         + accentBar
         + '<span class="text-sm font-bold flex-1 min-w-0 truncate" style="color:' + m.color + ';">' + m.code + '</span>'
         + '<button onclick="flipCageInfoPopup()" class="icon-btn labeled" style="color:#615d59;" aria-label="Back" title="Back"><i data-lucide="arrow-left" class="w-3.5 h-3.5"></i><span class="btn-label">Back</span></button>'
@@ -1723,6 +1747,8 @@ function closeCageInfoPopup() {
         popup.style.transform = '';
         popup.style.zIndex = '';
     }
+    var card = document.getElementById('cageInfoCard');
+    if (card) card.style.width = '';
     if (backdrop) backdrop.classList.add('hidden');
     popupReorderCageId = null;
     popupReorderState = {};
@@ -1739,64 +1765,21 @@ function flipCageInfoPopup() {
     }
 }
 
+// Centered modal: no anchor positioning is needed (flexbox centers the card).
+// Kept as a no-op so existing callers (open/flip/expand-slot flows) keep working.
 function positionCageInfoPopup(popup, targetRect) {
-    var margin = 8;
-    var viewportW = window.innerWidth;
-    var viewportH = window.innerHeight;
-
-    if (viewportW < 768) {
-        // Mobile/tablet: center it as a full-screen-style overlay above page content
-        // (same approach as the Move modal), width capped to viewport.
-        popup.style.width = 'calc(100vw - 2rem)';
-        popup.style.maxHeight = 'calc(100vh - 2rem)';
-        popup.style.left = '50%';
-        popup.style.top = '50%';
-        popup.style.transform = 'translate(-50%, -50%)';
-        popup.style.zIndex = '90';
-        return;
-    }
-
-    popup.style.transform = '';
-    popup.style.zIndex = '';
-
-    var popupRect = popup.getBoundingClientRect();
-    // If the anchor rect is null/zero (e.g. a detached or hidden button after a
-    // re-render), keep the popup where it is instead of snapping to (0,0).
-    if (!targetRect || (targetRect.width === 0 && targetRect.height === 0)) {
-        return;
-    }
-    var left = targetRect.right + margin;
-    var top = targetRect.top;
-    var bottomRoom = 24; // keep the popup clear of the screen frame when pinned low
-
-    if (left + popupRect.width > viewportW - margin) {
-        left = targetRect.left - popupRect.width - margin;
-    }
-    if (left < margin) {
-        left = margin;
-    }
-    if (top + popupRect.height > viewportH - bottomRoom) {
-        top = viewportH - popupRect.height - bottomRoom;
-    }
-    if (top < bottomRoom) {
-        top = bottomRoom;
-    }
-
-    popup.style.left = left + 'px';
-    popup.style.top = top + 'px';
+    return;
 }
 
 function repositionCageInfoPopup() {
-    var popup = document.getElementById('cageInfoPopup');
-    if (popup && popup._cageInfoBtnEl && popup._cageInfoBtnEl.isConnected) {
-        positionCageInfoPopup(popup, popup._cageInfoBtnEl.getBoundingClientRect());
-    }
+    return;
 }
 
 function openCageInfoPopup(cageId, btnEl) {
     var m = cageMeta[cageId];
     if (!m) return;
     var popup = document.getElementById('cageInfoPopup');
+    var card = document.getElementById('cageInfoCard');
     var content = document.getElementById('cageInfoPopupContent');
     var backdrop = document.getElementById('cageInfoBackdrop');
     if (!popup || !content) return;
@@ -1806,14 +1789,34 @@ function openCageInfoPopup(cageId, btnEl) {
     if (backdrop) backdrop.classList.remove('hidden');
     popup._cageInfoBtnEl = btnEl;
     popup._cageInfoCageId = cageId;
-    popup.style.width = '22rem';
+    // Size the modal to the cage being viewed: just wide enough for its
+    // actual column count (Cage A 20 cols ≈ 59rem, B/C 12 cols ≈ 38rem),
+    // capped so it never exceeds the viewport. The grid scrolls internally
+    // only if it genuinely cannot fit.
+    var modalCompact = window.innerWidth < 640;
+    var modalCell = modalCompact ? 30 : 38;
+    var modalLabelW = modalCompact ? 22 : 26;
+    var modalCols = Math.max(1, m.slots_per_row || 1);
+    var gridPx = modalLabelW + modalCols * modalCell + (modalCols - 1) * 4 + 80;
+    var widthRem = Math.min(60, Math.max(20, Math.ceil(gridPx / 16)));
+    if (card) card.style.width = 'min(' + widthRem + 'rem, calc(100vw - 2rem))';
     window.__popupReorderBound = false;
-
-    positionCageInfoPopup(popup, btnEl.getBoundingClientRect());
 
     if (window.lucide && typeof window.lucide.createIcons === 'function') {
         try { window.lucide.createIcons(); } catch (e) {}
     }
+}
+
+// Clicking the dimmed area around the centered card closes the modal (the
+// document-level outside-click handler ignores overlay clicks since they land
+// inside #cageInfoPopup itself).
+if (!window.__cageInfoSelfClickBound) {
+    window.__cageInfoSelfClickBound = true;
+    document.addEventListener('click', function(e) {
+        var popup = document.getElementById('cageInfoPopup');
+        if (!popup || popup.classList.contains('hidden')) return;
+        if (e.target === popup) closeCageInfoPopup();
+    });
 }
 
 // Close the cage info popup with Escape (keeps it open otherwise, so it does not
@@ -2013,7 +2016,13 @@ function fitCanvasToWidth() {
     var canvas = document.getElementById('farmCanvas');
     if (!scaler || !canvas) return;
     var contentW = canvasW();
-    var containerW = canvas.clientWidth - 4;
+    // Measure available space from the section (parent), not the canvas
+    // itself: #farmCanvas is shrink-wrapped to the grid (width:max-content),
+    // so its own clientWidth reflects content size, not free space.
+    // parentContentWidth - border(2) - fudge(4) matches the old formula exactly.
+    var parentCS = window.getComputedStyle(canvas.parentElement);
+    var containerW = canvas.parentElement.clientWidth
+        - parseFloat(parentCS.paddingLeft) - parseFloat(parentCS.paddingRight) - 2 - 4;
     if (containerW < 1) return;
     var scale = Math.min(1, containerW / contentW);
     // On narrow viewports, keep tiles readable and scroll horizontally instead of
@@ -2496,6 +2505,10 @@ function addStagingTile(cageId) {
     var m = cageMeta[cageId];
     if (!m) return;
     var area = document.getElementById('stagingArea');
+    // Idempotent: callers like resyncPositionsFromServer() re-add every
+    // unplaced cage, which used to duplicate tiles already rendered by Blade
+    // (each duplicate carried its own info button, crowding the tray).
+    if (area.querySelector('.staging-tile[data-cage-id="' + cageId + '"]')) return;
     var tile = document.createElement('div');
     tile.className = 'staging-tile relative rounded-lg border-2 px-4 py-2 flex items-center justify-center ' + (IS_ADMIN ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer');
     tile.draggable = IS_ADMIN;
@@ -2504,7 +2517,7 @@ function addStagingTile(cageId) {
     tile.style.borderColor = m.color;
     tile.style.backgroundColor = m.colorSoft;
     tile.innerHTML = '<span class="text-sm font-semibold" style="color:' + m.color + ';">' + m.code + '</span>'
-        + '<button class="cage-info-btn w-6 h-6 rounded-full flex items-center justify-center" data-cage-id="' + cageId + '" style="position:absolute; bottom:2px; right:2px; background-color:transparent; color:' + m.color + '; line-height:1;" title="Cage info" aria-label="Cage info"><i data-lucide="info" class="w-3 h-3"></i></button>';
+        + '<button class="cage-info-btn w-5 h-5 rounded-full flex items-center justify-center" data-cage-id="' + cageId + '" style="position:absolute; bottom:2px; right:2px; background-color:transparent; color:' + m.color + '; line-height:1;" title="Cage info" aria-label="Cage info"><i data-lucide="info" class="w-3 h-3"></i></button>';
     var infoBtn = tile.querySelector('.cage-info-btn');
     if (infoBtn) bindCageInfoButton(infoBtn);
     tile.addEventListener('dragstart', function(e) { handleDragStart(e, cageId); });

@@ -12,7 +12,7 @@
     <div class="space-y-5">
 
     {{-- ── Summary Cards — dashboard gradient KPI design ── --}}
-    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3" id="summaryCards">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3" id="summaryCards">
         @foreach($sizes as $size)
         @php
             $total = $totals[$size] ?? 0;
@@ -42,6 +42,17 @@
             <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">{{ $trays }} {{ $trays === 1 ? 'tray' : 'trays' }} · {{ number_format($pool) }} available</div>
         </x-kpi-card>
         @endforeach
+        {{-- Sold vs available — sold is driven by fulfilled pre-orders, not a flag --}}
+        <x-kpi-card
+            label="Sold"
+            icon="receipt"
+            cardGradient="linear-gradient(135deg,#334155,#0f172a)"
+            delay="300ms"
+            :value="number_format($soldTotal ?? 0)"
+            data-size="sold"
+        >
+            <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">{{ $soldTrays ?? 0 }} {{ ($soldTrays ?? 0) === 1 ? 'tray' : 'trays' }} · {{ number_format($availableTotal ?? 0) }} available</div>
+        </x-kpi-card>
     </div>
 
     {{-- ── Stock Table ── --}}
@@ -648,6 +659,16 @@ function updateLogSelect(cageId) {
                         if (totals) {
                             document.querySelectorAll('#summaryCards [data-size]').forEach(function(card) {
                                 var size = card.dataset.size;
+                                if (size === 'sold') {
+                                    var sold = res.body.soldTotal || 0;
+                                    var soldTrays = res.body.soldTrays || 0;
+                                    var availAll = res.body.availableTotal || 0;
+                                    var totalEl = card.querySelector('.kpi-value') || card.querySelector('[class*="text-[32px]"]') || card.querySelector('.text-2xl');
+                                    if (totalEl) totalEl.textContent = numberFormat(sold);
+                                    var secEl = card.querySelector('.text-xs.mt-1, .mt-1\\.5');
+                                    if (secEl) secEl.textContent = soldTrays + ' ' + (soldTrays === 1 ? 'tray' : 'trays') + ' · ' + numberFormat(availAll) + ' available';
+                                    return;
+                                }
                                 var total = totals[size] || 0;
                                 var trays = trayTotals[size] || 0;
                                 var pool = pools[size] || 0;

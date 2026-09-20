@@ -1,6 +1,9 @@
 @php use App\Models\Alert; @endphp
 <turbo-frame id="feed-live-data">
     {{-- ── Metric Cards — dashboard gradient KPI design (cardGradient) ── --}}
+    @if($feedAsOf ?? null)
+    <p class="text-xs font-medium mb-3" style="color:#9ca3af;">Showing last logged week · as of {{ $feedAsOf }}</p>
+    @endif
     <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
         <x-kpi-card
             label="Avg CP% This Week"

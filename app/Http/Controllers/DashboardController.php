@@ -1245,6 +1245,24 @@ class DashboardController extends Controller
         $monthStart = $snapshotDate->copy()->startOfMonth()->toDateString();
         $thresholds = Setting::thresholds();
 
+        // Feed windows follow the latest FEED log when the data is stale:
+        // with no explicit snapshot range and nothing logged in the last 7
+        // days, "this week/month" would otherwise read 0 forever even though
+        // the database holds a full history. Live behavior is unchanged when
+        // feed data is current (ref = today).
+        $feedRefDate = $today;
+        $feedAsOf = null;
+        if (! $this->validRangeDate($fromDate) && ! $this->validRangeDate($toDate)) {
+            $latestFeedDate = FeedConsumptionLog::when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))->max('log_date');
+            if ($latestFeedDate && $latestFeedDate < $weekStart) {
+                $feedRefDate = $latestFeedDate;
+                $feedAsOf = Carbon::parse($latestFeedDate)->format('M j, Y');
+            }
+        }
+        $feedRef = Carbon::parse($feedRefDate);
+        $feedWeekStart = $feedRef->copy()->subDays(7)->toDateString();
+        $feedMonthStart = $feedRef->copy()->startOfMonth()->toDateString();
+
         $needsOnboarding = Setting::where('key', 'farm_grid_rows')->doesntExist()
             || Setting::where('key', 'farm_grid_cols')->doesntExist();
 
@@ -1378,7 +1396,7 @@ class DashboardController extends Controller
         $totalFeedConsumed = FeedConsumptionLog::sum('feed_consumed_kg');
 
         // Feed & Nutrition summary cards — Avg CP% This Week must be date-bound + cage-scoped like its siblings
-        $scopedBatchIds = FeedConsumptionLog::where('log_date', '>=', $weekStart)
+        $scopedBatchIds = FeedConsumptionLog::where('log_date', '>=', $feedWeekStart)
             ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
             ->distinct()
             ->pluck('feed_batch_id')
@@ -1389,15 +1407,15 @@ class DashboardController extends Controller
             : collect();
         $avgCp = round($allBatches->avg('crude_protein') ?? 0, 1);
 
-        $totalFeedWeek = FeedConsumptionLog::where('log_date', '>=', $weekStart)
+        $totalFeedWeek = FeedConsumptionLog::where('log_date', '>=', $feedWeekStart)
             ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
             ->sum('feed_consumed_kg');
 
-        $feedTodayKg = FeedConsumptionLog::where('log_date', $today)
+        $feedTodayKg = FeedConsumptionLog::where('log_date', $feedRefDate)
             ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
             ->sum('feed_consumed_kg');
 
-        $feedWeekByCage = FeedConsumptionLog::where('log_date', '>=', $weekStart)
+        $feedWeekByCage = FeedConsumptionLog::where('log_date', '>=', $feedWeekStart)
             ->join('cages', 'feed_consumption_logs.cage_id', '=', 'cages.id')
             ->when($cageCode, fn ($q) => $q->where('cages.cage_code', $cageCode))
             ->selectRaw('cages.id as cage_id, cages.cage_code, ROUND(SUM(feed_consumption_logs.feed_consumed_kg), 2) as feed_kg')
@@ -1416,7 +1434,7 @@ class DashboardController extends Controller
             ? round($totalFeedWeek / max($activeCagesCount, 1) / 7, 1)
             : 0;
 
-        $totalFeedCostMonth = FeedConsumptionLog::where('feed_consumption_logs.log_date', '>=', $monthStart)
+        $totalFeedCostMonth = FeedConsumptionLog::where('feed_consumption_logs.log_date', '>=', $feedMonthStart)
             ->join('feed_batches', 'feed_consumption_logs.feed_batch_id', '=', 'feed_batches.id')
             ->join('cages', 'feed_consumption_logs.cage_id', '=', 'cages.id')
             ->selectRaw('SUM(feed_consumption_logs.feed_consumed_kg * feed_batches.unit_cost) as total')
@@ -1424,14 +1442,14 @@ class DashboardController extends Controller
             ->when($cageCode, fn ($q) => $q->where('cages.cage_code', $cageCode))
             ->value('total');
 
-        $feedCostToday = FeedConsumptionLog::where('feed_consumption_logs.log_date', $today)
+        $feedCostToday = FeedConsumptionLog::where('feed_consumption_logs.log_date', $feedRefDate)
             ->join('feed_batches', 'feed_consumption_logs.feed_batch_id', '=', 'feed_batches.id')
             ->whereNotNull('feed_batches.unit_cost')
             ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
             ->selectRaw('ROUND(SUM(feed_consumption_logs.feed_consumed_kg * feed_batches.unit_cost), 2) as total')
             ->value('total') ?? 0;
 
-        $feedCostByCage = FeedConsumptionLog::where('feed_consumption_logs.log_date', '>=', $monthStart)
+        $feedCostByCage = FeedConsumptionLog::where('feed_consumption_logs.log_date', '>=', $feedMonthStart)
             ->join('feed_batches', 'feed_consumption_logs.feed_batch_id', '=', 'feed_batches.id')
             ->join('cages', 'feed_consumption_logs.cage_id', '=', 'cages.id')
             ->whereNotNull('feed_batches.unit_cost')
@@ -1550,7 +1568,7 @@ class DashboardController extends Controller
             'eggsToday', 'eggsDelta', 'lifetimeEggs', 'avgTemp', 'avgHum', 'feedToday',
             'mortalityToday', 'mortalityTodayTotal', 'mortalityDays',
             'totalFeedConsumed', 'avgCp', 'avgFeedPerCage',             'totalFeedWeek', 'totalFeedCostMonth', 'feedTodayKg', 'feedCostToday',
-            'feedWeekByCage', 'feedCostByCage', 'allBatches',
+            'feedWeekByCage', 'feedCostByCage', 'allBatches', 'feedAsOf',
             'yesterdayHdep', 'eggsYesterday', 'yesterdayMortalityTotal', 'yesterdayFeedTotal',
             'liveReadings', 'today', 'dataCompleteness', 'kpiAsOf',
             'needsOnboarding', 'dayComplete'
