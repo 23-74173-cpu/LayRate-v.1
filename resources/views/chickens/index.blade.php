@@ -136,8 +136,8 @@
     {{-- ============================================ --}}
     <div id="panelMortality" class="{{ $tab !== 'mortality' ? 'hidden' : '' }}">
 
-        {{-- Today's Summary Cards — dashboard gradient KPI design (cardGradient) --}}
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5" id="mortality-summary">
+        {{-- Summary Cards — 3-card layout: Deaths Today / Livability / Total --}}
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5" id="mortality-summary">
             <x-kpi-card
                 label="Deaths Today"
                 icon="skull"
@@ -146,17 +146,24 @@
                 :value="$todayTotal"
                 data-mortality-total
             />
-            @foreach($cages as $c)
-            @php $count = $todayByCage->get($c->cage_code, 0); @endphp
             <x-kpi-card
-                label="{{ $c->cage_code }}"
-                icon="heart-crack"
-                cardGradient="linear-gradient(135deg,#ec4899,#9d174d)"
-                delay="{{ ($loop->index + 1) * 60 }}ms"
-                :value="$count"
-                data-mortality-cage="{{ $c->cage_code }}"
+                label="Livability Rate"
+                icon="heart"
+                cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)"
+                delay="60ms"
+                :value="number_format($livabilityRate, 1) . '%'"
+                data-mortality-livability
+                data-live-hens="{{ $liveHens }}"
+                data-starting-hens="{{ $startingHens }}"
             />
-            @endforeach
+            <x-kpi-card
+                label="Total Mortality"
+                icon="skull"
+                cardGradient="linear-gradient(135deg,#ec4899,#9d174d)"
+                delay="120ms"
+                :value="$totalMortality"
+                data-mortality-cumulative
+            />
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -821,32 +828,25 @@ function mortalityAjaxSubmit(form) {
                 }
             }
 
-            var cageCard = document.querySelector('[data-mortality-cage="' + result.json.cage_code + '"]');
-            if (cageCard) {
-                var countEl = cageCard.querySelector('[data-mortality-cage-count]');
-                if (!countEl) {
-                    // New kpi-card structure: number is inside .kpi-value
-                    countEl = cageCard.querySelector('.kpi-value') || cageCard.querySelector('[class*="text-\\[32px\\]"]');
-                }
-                if (countEl) {
-                    var innerSpan = countEl.querySelector ? countEl.querySelector('.kpi-count') : null;
-                    var cur = innerSpan ? parseInt(innerSpan.textContent) : parseInt(countEl.textContent);
-                    cur = isNaN(cur) ? 0 : cur;
-                    var newVal = cur + result.json.count;
-                    if (innerSpan) innerSpan.textContent = newVal;
-                    else countEl.textContent = newVal;
-                    if (newVal > 0) {
-                        if (cageCard.classList.contains('kpi-card')) {
-                            var kv = cageCard.querySelector('.kpi-value');
-                            if (kv && !kv.style.backgroundImage) {
-                                kv.style.backgroundImage = 'linear-gradient(135deg,#dc2626,#9b1c24)';
-                            }
-                        } else {
-                            cageCard.classList.add('bg-red-50', 'border-red-200');
-                            countEl.classList.remove('text-[#333333]');
-                            countEl.classList.add('text-red-600');
-                        }
-                    }
+            // Cumulative Total Mortality card + Livability recompute. Both are
+            // plain .kpi-value numbers (no .kpi-count span); livability is
+            // derived from data-live-hens / data-starting-hens carried on its
+            // own card so it stays correct without a page reload.
+            var cumulativeCard = document.querySelector('[data-mortality-cumulative] .kpi-value, [data-mortality-cumulative].kpi-value');
+            if (cumulativeCard) {
+                var curCum = parseInt(cumulativeCard.textContent) || 0;
+                cumulativeCard.textContent = curCum + result.json.count;
+            }
+
+            var livCard = document.querySelector('[data-mortality-livability]');
+            if (livCard) {
+                var liveHens = parseInt(livCard.getAttribute('data-live-hens')) || 0;
+                var startingHens = parseInt(livCard.getAttribute('data-starting-hens')) || 0;
+                liveHens = Math.max(0, liveHens - result.json.count);
+                livCard.setAttribute('data-live-hens', liveHens);
+                if (startingHens > 0) {
+                    var livVal = livCard.querySelector('.kpi-value');
+                    if (livVal) livVal.textContent = (Math.round(liveHens / startingHens * 1000) / 10).toFixed(1) + '%';
                 }
             }
 

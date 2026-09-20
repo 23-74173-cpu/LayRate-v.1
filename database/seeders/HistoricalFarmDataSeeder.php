@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Historical farm data reseed — Mar 23 → Aug 27 2026 (158 days).
@@ -13,8 +14,9 @@ use Illuminate\Support\Facades\DB;
  *
  * Mapping onto the real schema (per-slot production granularity):
  * - cages CAGE-A/B/C rebuilt to 60/36/36 slots (4 birds/slot, 528 birds)
- * - CAGE-T + its slot (id 61) + all hardware_items/devices left untouched
- * - CAGE-D (empty, no hardware refs) deleted
+ * - hardware_items/devices left untouched; any slot/cage row they reference
+ *   is preserved (and reset to fresh occupancy/hens like all others)
+ * - CAGE-D deleted unless hardware references it
  * - production_logs: one row per SLOT per day (~20,856 rows); cage-day
  *   sums reconcile exactly to the CSV (74,990 eggs)
  * - environmental_logs: one row per cage per day, noon, is_override=1 (474)
@@ -81,28 +83,47 @@ class HistoricalFarmDataSeeder extends Seeder
             DB::table($t)->delete();
         }
 
-        // Hens: all historical/test birds go (CAGE-T test birds included;
-        // its cage+slot structure and hardware rows stay, occupancy -> 0).
+        // Hardware-aware purge: slot/cage rows referenced by hardware_items
+        // are NEVER deleted (FKs are cascadeOnDelete). Everything else
+        // business-data is rebuilt fresh; preserved slots are reset to
+        // 4 occupancy + fresh hens like all others in rebuildStructure().
+        $keepSlotIds = DB::table('hardware_items')->whereNotNull('cage_slot_id')->pluck('cage_slot_id')->all();
+        if (Schema::hasTable('hardware_item_cage_slot')) {
+            $keepSlotIds = array_merge($keepSlotIds, DB::table('hardware_item_cage_slot')->pluck('cage_slot_id')->all());
+        }
+        $keepSlotIds = array_values(array_unique($keepSlotIds));
+        $keepCageIds = DB::table('hardware_items')->whereNotNull('cage_id')->pluck('cage_id')->all();
+        if (! empty($keepSlotIds)) {
+            $keepCageIds = array_merge($keepCageIds, DB::table('cage_slots')->whereIn('id', $keepSlotIds)->pluck('cage_id')->all());
+        }
+        $keepCageIds = array_values(array_unique($keepCageIds));
+
+        // Hens: all birds go; preserved slots get fresh hens in the rebuild.
         DB::table('hens')->delete();
 
-        // Slots for A/B/C/D only — keep CAGE-T slot(s) for hardware refs.
-        $tId = DB::table('cages')->where('cage_code', 'CAGE-T')->value('id');
+        // Slots for A/B/C/D only, except hardware-referenced ones.
         $killCageIds = DB::table('cages')
             ->whereIn('cage_code', ['CAGE-A', 'CAGE-B', 'CAGE-C', 'CAGE-D'])
             ->pluck('id')->all();
         if (! empty($killCageIds)) {
-            DB::table('cage_slots')->whereIn('cage_id', $killCageIds)->delete();
+            DB::table('cage_slots')->whereIn('cage_id', $killCageIds)
+                ->when(! empty($keepSlotIds), fn ($q) => $q->whereNotIn('id', $keepSlotIds))
+                ->delete();
         }
 
-        // Delete empty CAGE-D (no hardware refs). A/B/C are updated, T kept.
-        DB::table('cages')->where('cage_code', 'CAGE-D')->delete();
-
-        // Reset CAGE-T slot occupancy to 0 (hens truncated).
-        if ($tId) {
-            DB::table('cage_slots')->where('cage_id', $tId)->update([
-                'current_occupancy' => 0,
-            ]);
+        // Delete CAGE-D only when nothing hardware-related points at it.
+        $dId = DB::table('cages')->where('cage_code', 'CAGE-D')->value('id');
+        if ($dId && ! in_array($dId, $keepCageIds)) {
+            DB::table('cages')->where('id', $dId)->delete();
         }
+
+        // Preserved slots in non-rebuilt cages (e.g. legacy holding cages)
+        // lose their hens above, so reset occupancy to 0. Slots in A/B/C
+        // are reset to 4 by rebuildStructure().
+        $specIds = DB::table('cages')->whereIn('cage_code', ['CAGE-A', 'CAGE-B', 'CAGE-C'])->pluck('id')->all();
+        DB::table('cage_slots')->whereIn('id', $keepSlotIds)->whereNotIn('cage_id', $specIds)->update([
+            'current_occupancy' => 0,
+        ]);
 
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
     }
@@ -132,15 +153,27 @@ class HistoricalFarmDataSeeder extends Seeder
                 $id = DB::table('cages')->insertGetId(array_merge(['cage_code' => $code], $row));
             }
 
-            // Create slots: slot_number sequential per cage.
+            // Create slots: slot_number sequential per cage. Slots already
+            // present (hardware-preserved) are kept and reset to fresh state
+            // instead of re-inserted (unique cage_id+slot_number).
+            $existing = DB::table('cage_slots')->where('cage_id', $id)->pluck('current_occupancy', 'slot_number')->all();
             $slots = [];
             for ($r = 1; $r <= $s['rows']; $r++) {
                 for ($c = 1; $c <= $s['slots_per_row']; $c++) {
+                    $slotNumber = ($r - 1) * $s['slots_per_row'] + $c;
+                    if (array_key_exists($slotNumber, $existing)) {
+                        DB::table('cage_slots')->where('cage_id', $id)->where('slot_number', $slotNumber)->update([
+                            'row_number' => $r, 'column_number' => $c,
+                            'current_occupancy' => 4,
+                            'created_at' => $ts, 'updated_at' => $ts,
+                        ]);
+                        continue;
+                    }
                     $slots[] = [
                         'cage_id' => $id,
                         'row_number' => $r,
                         'column_number' => $c,
-                        'slot_number' => ($r - 1) * $s['slots_per_row'] + $c,
+                        'slot_number' => $slotNumber,
                         'current_occupancy' => 4,
                         'created_at' => $ts, 'updated_at' => $ts,
                     ];

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Cache;
 
@@ -67,6 +68,29 @@ class HardwareItem extends Model
         return $this->belongsTo(CageSlot::class);
     }
 
+    /**
+     * Additional slots this sensor covers beyond its primary
+     * cage_slot_id (IR breakbeam only). Readings/ingestion stay keyed to
+     * the primary slot; this pivot is coverage metadata for the UI.
+     */
+    public function additionalSlots(): BelongsToMany
+    {
+        return $this->belongsToMany(CageSlot::class, 'hardware_item_cage_slot');
+    }
+
+    /**
+     * Every slot id this item is associated with (primary + extras).
+     */
+    public function coveredSlotIds(): array
+    {
+        $ids = $this->additionalSlots()->pluck('cage_slots.id')->all();
+        if ($this->cage_slot_id) {
+            array_unshift($ids, $this->cage_slot_id);
+        }
+
+        return array_values(array_unique($ids));
+    }
+
     public function device(): BelongsTo
     {
         return $this->belongsTo(Device::class);
@@ -93,7 +117,8 @@ class HardwareItem extends Model
               ->orWhere(function ($q2) {
                   $q2->where('status', 'active')
                      ->whereNull('cage_id')
-                     ->whereNull('cage_slot_id');
+                     ->whereNull('cage_slot_id')
+                     ->whereDoesntHave('additionalSlots');
               });
         });
     }

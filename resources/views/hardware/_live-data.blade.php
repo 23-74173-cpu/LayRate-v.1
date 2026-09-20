@@ -60,6 +60,10 @@
 
                         if ($item->cageSlot) {
                             $assignedTo = $item->cageSlot->cage?->cage_code . ' · Slot ' . $item->cageSlot->row_number . '-' . $item->cageSlot->column_number;
+                            $extraCount = $item->additionalSlots->count();
+                            if ($extraCount > 0) {
+                                $assignedTo .= ' (+' . $extraCount . ' more)';
+                            }
                         } elseif ($item->cage) {
                             $assignedTo = $item->cage->cage_code;
                         } else {
@@ -123,7 +127,7 @@
                         <td class="px-5 py-3.5">
                             <div class="flex items-center gap-1">
                                 <x-icon-button icon="pencil" label="Edit device" color="neutral"
-                                    onclick="openEditModal({{ $item->id }}, '{{ $item->device_type }}', '{{ addslashes($item->serial_number) }}', {{ $item->cage_id ?? 'null' }}, {{ $item->cage_slot_id ?? 'null' }}, '{{ $item->installation_date?->format('Y-m-d') ?? '' }}', '{{ $item->status }}', '{{ $item->last_calibration_date?->format('Y-m-d') ?? '' }}')" />
+                                    onclick="openEditModal({{ $item->id }}, '{{ $item->device_type }}', '{{ addslashes($item->serial_number) }}', {{ $item->cage_id ?? 'null' }}, {{ $item->cage_slot_id ?? 'null' }}, '{{ $item->installation_date?->format('Y-m-d') ?? '' }}', '{{ $item->status }}', '{{ $item->last_calibration_date?->format('Y-m-d') ?? '' }}', '{{ $item->additionalSlots->pluck('id')->implode(',') }}')" />
                                 @can('admin')
                                 <form method="POST" action="{{ route('hardware.destroy', $item) }}"
                                       data-confirm="Delete this hardware item?" data-confirm-action="Delete" data-confirm-severity="destructive">

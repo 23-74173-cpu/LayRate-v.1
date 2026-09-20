@@ -35,11 +35,13 @@ class ChickensController extends Controller
         $today = ReportingDateService::reportingDateString();
         $todayTotal = MortalityLog::whereDate('log_date', $today)->sum('count');
 
-        $todayByCage = MortalityLog::with('cage')
-            ->whereDate('log_date', $today)
-            ->get()
-            ->groupBy(fn($l) => $l->cage?->cage_code ?? 'Deleted Cage')
-            ->map(fn($g) => $g->sum('count'));
+        // Livability + farm totals are computed live from current hen rows:
+        // starting flock = every hen ever placed (active + inactive), live =
+        // still active. Recalculated on every request, never cached.
+        $liveHens = Hen::where('is_active', 1)->count();
+        $startingHens = Hen::count();
+        $livabilityRate = $startingHens > 0 ? round($liveHens / $startingHens * 100, 1) : 100.0;
+        $totalMortality = MortalityLog::sum('count');
 
         $tab = $request->query('tab', 'inventory');
 
@@ -91,7 +93,8 @@ class ChickensController extends Controller
         }
 
         return view('chickens.index', compact(
-            'cages', 'breeds', 'todayTotal', 'todayByCage', 'tab',
+            'cages', 'breeds', 'todayTotal', 'liveHens', 'startingHens',
+            'livabilityRate', 'totalMortality', 'tab',
             'cageId', 'breed', 'isActive', 'search', 'sort', 'preselectedCageId',
             'henPickerData', 'totalCapacity', 'occupiedSpaces', 'availableSpaces'
         ));

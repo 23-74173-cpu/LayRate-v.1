@@ -262,6 +262,7 @@ class CageController extends Controller
                 'status' => 'active',
                 'installation_date' => now(),
             ]);
+            $item->additionalSlots()->detach();
 
             return $item;
         });
@@ -559,14 +560,14 @@ class CageController extends Controller
 
     public function slotsJson(Cage $cage)
     {
-        return response()->json($cage->cageSlots->load('hardwareItems')->map(fn ($s) => [
+        return response()->json($cage->cageSlots->load(['hardwareItems', 'additionalSensors'])->map(fn ($s) => [
             'id' => $s->id,
             'slot_number' => $s->slot_number,
             'row_number' => $s->row_number,
             'column_number' => $s->column_number,
             'current_occupancy' => $s->current_occupancy,
             'has_sensor' => $s->hasBreakbeam(),
-            'sensor_device_id' => optional($s->hardwareItems->where('device_type', 'IR_breakbeam')->where('status', 'active')->first())?->serial_number ?? '',
+            'sensor_device_id' => $s->breakbeamSerial(),
         ]));
     }
 
@@ -628,7 +629,10 @@ class CageController extends Controller
     public function deleteConfirm(Cage $cage)
     {
         $slotCount = $cage->cageSlots()->count();
-        $sensorSlotCount = $cage->cageSlots()->whereHas('hardwareItems', fn ($q) => $q->where('device_type', 'IR_breakbeam')->where('status', 'active'))->count();
+        $sensorSlotCount = $cage->cageSlots()->where(fn ($q) => $q
+            ->whereHas('hardwareItems', fn ($qq) => $qq->where('device_type', 'IR_breakbeam')->where('status', 'active'))
+            ->orWhereHas('additionalSensors', fn ($qq) => $qq->where('device_type', 'IR_breakbeam')->where('status', 'active'))
+        )->count();
         $henCount = $cage->hens()->where('is_active', 1)->count();
         $productionLogCount = ProductionLog::whereIn('cage_slot_id', $cage->cageSlots()->pluck('id'))->count();
         $envLogCount = EnvironmentalLog::where('cage_id', $cage->id)->count();

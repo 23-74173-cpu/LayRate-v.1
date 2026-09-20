@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CageSlot extends Model
@@ -40,6 +41,15 @@ class CageSlot extends Model
         return $this->hasMany(HardwareItem::class);
     }
 
+    /**
+     * Sensors covering this slot via the multi-slot pivot (in addition to
+     * primary hardwareItems above).
+     */
+    public function additionalSensors(): BelongsToMany
+    {
+        return $this->belongsToMany(HardwareItem::class, 'hardware_item_cage_slot');
+    }
+
     public function primaryHen(): ?Hen
     {
         return $this->hens()->where('is_active', 1)->first();
@@ -56,15 +66,38 @@ class CageSlot extends Model
     public function hasBreakbeam(): bool
     {
         if ($this->relationLoaded('hardwareItems')) {
-            return $this->hardwareItems
+            $primary = $this->hardwareItems
                 ->where('device_type', 'IR_breakbeam')
                 ->where('status', 'active')
                 ->isNotEmpty();
+            if ($primary) {
+                return true;
+            }
+        } elseif ($this->hardwareItems()
+            ->where('device_type', 'IR_breakbeam')
+            ->where('status', 'active')
+            ->exists()) {
+            return true;
         }
-        return $this->hardwareItems()
+        return $this->additionalSensors()
             ->where('device_type', 'IR_breakbeam')
             ->where('status', 'active')
             ->exists();
+    }
+
+    /**
+     * Serial of the first active IR sensor covering this slot (primary
+     * assignment first, then multi-slot extras) — for slot JSON/UI labels.
+     */
+    public function breakbeamSerial(): string
+    {
+        $primary = $this->relationLoaded('hardwareItems')
+            ? $this->hardwareItems->where('device_type', 'IR_breakbeam')->where('status', 'active')->first()
+            : $this->hardwareItems()->where('device_type', 'IR_breakbeam')->where('status', 'active')->first();
+        if ($primary) {
+            return $primary->serial_number;
+        }
+        return $this->additionalSensors()->where('device_type', 'IR_breakbeam')->where('status', 'active')->first()?->serial_number ?? '';
     }
 
     public function getStatusAttribute(): string

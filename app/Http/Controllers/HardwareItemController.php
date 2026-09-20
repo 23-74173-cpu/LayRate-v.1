@@ -8,6 +8,7 @@ use App\Models\Device;
 use App\Models\HardwareItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -38,6 +39,8 @@ class HardwareItemController extends Controller
             'serial_number' => $serialRules,
             'cage_id' => 'nullable|exists:cages,id',
             'cage_slot_id' => 'nullable|exists:cage_slots,id',
+            'cage_slot_ids' => 'nullable|array',
+            'cage_slot_ids.*' => 'exists:cage_slots,id',
             'device_id' => 'nullable|exists:devices,id',
             'installation_date' => 'nullable|date',
             'status' => ['required', Rule::in(HardwareItem::STATUSES)],
@@ -49,10 +52,11 @@ class HardwareItemController extends Controller
             $deviceType = $data['device_type'] ?? null;
             $cageId = $data['cage_id'] ?? null;
             $cageSlotId = $data['cage_slot_id'] ?? null;
+            $extraSlotIds = array_values(array_unique(array_filter($data['cage_slot_ids'] ?? [])));
             $status = $data['status'] ?? null;
 
             if ($status === 'spare') {
-                if ($cageId !== null || $cageSlotId !== null) {
+                if ($cageId !== null || $cageSlotId !== null || ! empty($extraSlotIds)) {
                     $validator->errors()->add('status', 'Spare devices must not be assigned to a cage or slot.');
                 }
                 return;
@@ -65,12 +69,18 @@ class HardwareItemController extends Controller
                 if ($cageId !== null) {
                     $validator->errors()->add('cage_id', 'IR breakbeam sensors must not be assigned to a cage directly.');
                 }
+                if (in_array($cageSlotId, $extraSlotIds)) {
+                    $validator->errors()->add('cage_slot_ids', 'Additional slots must not repeat the primary slot.');
+                }
             } elseif (in_array($deviceType, ['DHT22', 'relay'])) {
                 if ($cageId === null) {
                     $validator->errors()->add('cage_id', "{$deviceType} devices must be assigned to a cage.");
                 }
                 if ($cageSlotId !== null) {
                     $validator->errors()->add('cage_slot_id', "{$deviceType} devices must not be assigned to a specific slot.");
+                }
+                if (! empty($extraSlotIds)) {
+                    $validator->errors()->add('cage_slot_ids', 'Additional slots are only supported for IR breakbeam sensors.');
                 }
 
                 if ($deviceType === 'DHT22' && $cageId && $status !== 'spare') {
@@ -100,7 +110,7 @@ class HardwareItemController extends Controller
         $activeCount = (clone $query)->where('status', 'active')->count();
         $faultyCount = (clone $query)->where('health_state', 'faulty')->count();
 
-        $items = $query->with(['cage', 'cageSlot.cage', 'device', 'latestOccupancyReading'])
+        $items = $query->with(['cage', 'cageSlot.cage', 'device', 'latestOccupancyReading', 'additionalSlots.cage'])
             ->orderBy('status')
             ->orderBy('serial_number')
             ->paginate(20)
@@ -133,13 +143,17 @@ class HardwareItemController extends Controller
         }
 
         $data = $validator->validated();
+        $extraSlotIds = ($data['device_type'] ?? null) === 'IR_breakbeam' && ($data['status'] ?? null) !== 'spare'
+            ? array_values(array_unique(array_filter($data['cage_slot_ids'] ?? [])))
+            : [];
+        unset($data['cage_slot_ids']);
 
         if ($data['status'] === 'spare') {
             $data['cage_id'] = null;
             $data['cage_slot_id'] = null;
         }
 
-        HardwareItem::create($data);
+        HardwareItem::create($data)->additionalSlots()->sync($extraSlotIds);
 
         return redirect()->route('hardware.index')->with('success', 'Hardware item added.');
     }
@@ -156,6 +170,10 @@ class HardwareItemController extends Controller
         }
 
         $data = $validator->validated();
+        $extraSlotIds = ($data['device_type'] ?? null) === 'IR_breakbeam' && ($data['status'] ?? null) !== 'spare'
+            ? array_values(array_unique(array_filter($data['cage_slot_ids'] ?? [])))
+            : [];
+        unset($data['cage_slot_ids']);
 
         if ($data['status'] === 'spare') {
             $data['cage_id'] = null;
@@ -167,8 +185,25 @@ class HardwareItemController extends Controller
         // serial_number, and device_id (reassignment to a different Pi) can
         // all change here, and any of them can make a cached lookup stale.
         $this->forgetIngestionCache($hardwareItem->serial_number, $hardwareItem->device_id);
+        $oldSlotId = $hardwareItem->cage_slot_id;
 
-        $hardwareItem->update($data);
+        DB::transaction(function () use ($hardwareItem, $data, $extraSlotIds, $oldSlotId) {
+            $hardwareItem->update($data);
+            $hardwareItem->additionalSlots()->sync($extraSlotIds);
+
+            // A reassigned sensor's own reading stream follows it: occupancy
+            // readings are keyed by hardware_item_id, so repoint their slot
+            // reference to the new primary slot. (DHT22 environmental logs
+            // carry only a cage_id with no sensor link, so past climate rows
+            // intentionally stay with the cage they were recorded in —
+            // future readings land in the new cage via cage_id.)
+            if ($hardwareItem->device_type === 'IR_breakbeam'
+                && $hardwareItem->cage_slot_id
+                && $oldSlotId !== $hardwareItem->cage_slot_id) {
+                \App\Models\SensorOccupancyReading::where('hardware_item_id', $hardwareItem->id)
+                    ->update(['cage_slot_id' => $hardwareItem->cage_slot_id]);
+            }
+        });
 
         $this->forgetIngestionCache($hardwareItem->serial_number, $hardwareItem->device_id);
 

@@ -76,15 +76,37 @@
                 </div>
                 <div id="addCageSlotGroup" class="hidden">
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Cage Slot</label>
-                    <select name="cage_slot_id"
+                    <select id="addSlotCageFilter" onchange="filterAddSlots()"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1 mb-2"
+                            style="border-color: #e6e6e6; color: #1f1f1f;" aria-label="Filter slots by cage">
+                        <option value="">All cages…</option>
+                        @foreach($cages as $cage)
+                        <option value="{{ $cage->id }}">{{ $cage->cage_code }}</option>
+                        @endforeach
+                    </select>
+                    <select name="cage_slot_id" id="addCageSlot"
                             class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select slot…</option>
                         @foreach($cageSlots as $slot)
-                        <option value="{{ $slot->id }}" {{ old('cage_slot_id') == $slot->id ? 'selected' : '' }}>{{ $slot->cage->cage_code }} · Slot {{ $slot->row_number }}-{{ $slot->column_number }}</option>
+                        <option value="{{ $slot->id }}" data-cage-id="{{ $slot->cage_id }}" {{ old('cage_slot_id') == $slot->id ? 'selected' : '' }}>{{ $slot->cage->cage_code }} · Slot {{ $slot->row_number }}-{{ $slot->column_number }}</option>
                         @endforeach
                     </select>
                     <x-input-error name="cage_slot_id" />
+                </div>
+                <div id="addExtraSlotsGroup" class="hidden">
+                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Additional Slots <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">— same sensor covers more</span></label>
+                    <select name="cage_slot_ids[]" id="addExtraSlots" multiple size="6"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            style="border-color: #e6e6e6; color: #1f1f1f;" onchange="updateExtraCount('add')">
+                        @foreach($cageSlots as $slot)
+                        <option value="{{ $slot->id }}" data-cage-id="{{ $slot->cage_id }}">{{ $slot->cage->cage_code }} · Slot {{ $slot->row_number }}-{{ $slot->column_number }}</option>
+                        @endforeach
+                    </select>
+                    <p id="addExtraCount" class="text-xs mt-1" style="color: #a39e98;">Hold Ctrl/Cmd to select multiple.</p>
+                </div>
+                <div id="addExtraSlotsError">
+                    <x-input-error name="cage_slot_ids" />
                 </div>
                 <div id="addCageGroup" class="hidden">
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Cage</label>
@@ -181,15 +203,37 @@
                 </div>
                 <div id="editCageSlotGroup" class="hidden">
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Cage Slot</label>
+                    <select id="editSlotCageFilter" onchange="filterEditSlots()"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1 mb-2"
+                            style="border-color: #e6e6e6; color: #1f1f1f;" aria-label="Filter slots by cage">
+                        <option value="">All cages…</option>
+                        @foreach($cages as $cage)
+                        <option value="{{ $cage->id }}">{{ $cage->cage_code }}</option>
+                        @endforeach
+                    </select>
                     <select name="cage_slot_id" id="editCageSlot"
                             class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select slot…</option>
                         @foreach($cageSlots as $slot)
-                        <option value="{{ $slot->id }}" {{ old('cage_slot_id', $editItem->cage_slot_id ?? '') == $slot->id ? 'selected' : '' }}>{{ $slot->cage->cage_code }} · Slot {{ $slot->row_number }}-{{ $slot->column_number }}</option>
+                        <option value="{{ $slot->id }}" data-cage-id="{{ $slot->cage_id }}" {{ old('cage_slot_id', $editItem->cage_slot_id ?? '') == $slot->id ? 'selected' : '' }}>{{ $slot->cage->cage_code }} · Slot {{ $slot->row_number }}-{{ $slot->column_number }}</option>
                         @endforeach
                     </select>
                     <x-input-error name="cage_slot_id" />
+                </div>
+                <div id="editExtraSlotsGroup" class="hidden">
+                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Additional Slots <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">— same sensor covers more</span></label>
+                    <select name="cage_slot_ids[]" id="editExtraSlots" multiple size="6"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            style="border-color: #e6e6e6; color: #1f1f1f;" onchange="updateExtraCount('edit')">
+                        @foreach($cageSlots as $slot)
+                        <option value="{{ $slot->id }}" data-cage-id="{{ $slot->cage_id }}">{{ $slot->cage->cage_code }} · Slot {{ $slot->row_number }}-{{ $slot->column_number }}</option>
+                        @endforeach
+                    </select>
+                    <p id="editExtraCount" class="text-xs mt-1" style="color: #a39e98;">Hold Ctrl/Cmd to select multiple.</p>
+                </div>
+                <div id="editExtraSlotsError">
+                    <x-input-error name="cage_slot_ids" />
                 </div>
                 <div id="editCageGroup" class="hidden">
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Cage</label>
@@ -255,7 +299,8 @@
         {{ $editItem->cage_slot_id ?: 'null' }},
         '{{ $editItem->installation_date ?? '' }}',
         '{{ $editItem->status }}',
-        '{{ $editItem->last_calibration_date ?? '' }}'
+        '{{ $editItem->last_calibration_date ?? '' }}',
+        '{{ implode(',', old('cage_slot_ids', $editItem->additionalSlots->pluck('id')->all())) }}'
     );
 </x-modal-reopen>
 @endif
@@ -267,25 +312,31 @@
 function updateAddAssignment() {
     var type = document.getElementById('addDeviceType').value;
     var slotGroup = document.getElementById('addCageSlotGroup');
+    var extraGroup = document.getElementById('addExtraSlotsGroup');
     var cageGroup = document.getElementById('addCageGroup');
     var status = document.getElementById('addStatus').value;
 
     if (status === 'spare') {
         slotGroup.classList.add('hidden');
+        if (extraGroup) extraGroup.classList.add('hidden');
         cageGroup.classList.add('hidden');
         return;
     }
-    slotGroup.classList.toggle('hidden', type !== 'IR_breakbeam');
+    var isIR = type === 'IR_breakbeam';
+    slotGroup.classList.toggle('hidden', !isIR);
+    if (extraGroup) extraGroup.classList.toggle('hidden', !isIR);
     cageGroup.classList.toggle('hidden', type !== 'DHT22' && type !== 'relay');
 }
 
 function onAddStatusChange() {
     var status = document.getElementById('addStatus').value;
     var slotGroup = document.getElementById('addCageSlotGroup');
+    var extraGroup = document.getElementById('addExtraSlotsGroup');
     var cageGroup = document.getElementById('addCageGroup');
 
     if (status === 'spare') {
         slotGroup.classList.add('hidden');
+        if (extraGroup) extraGroup.classList.add('hidden');
         cageGroup.classList.add('hidden');
     } else {
         updateAddAssignment();
@@ -295,9 +346,12 @@ function onAddStatusChange() {
 function updateEditAssignment() {
     var type = document.getElementById('editDeviceType').value;
     var slotGroup = document.getElementById('editCageSlotGroup');
+    var extraGroup = document.getElementById('editExtraSlotsGroup');
     var cageGroup = document.getElementById('editCageGroup');
 
-    slotGroup.classList.toggle('hidden', type !== 'IR_breakbeam');
+    var isIR = type === 'IR_breakbeam';
+    slotGroup.classList.toggle('hidden', !isIR);
+    if (extraGroup) extraGroup.classList.toggle('hidden', !isIR);
     cageGroup.classList.toggle('hidden', type !== 'DHT22' && type !== 'relay');
 }
 
@@ -305,13 +359,15 @@ function onEditStatusChange() {
     var status = document.getElementById('editStatus').value;
     if (status === 'spare') {
         document.getElementById('editCageSlotGroup').classList.add('hidden');
+        var extraGroup = document.getElementById('editExtraSlotsGroup');
+        if (extraGroup) extraGroup.classList.add('hidden');
         document.getElementById('editCageGroup').classList.add('hidden');
     } else {
         updateEditAssignment();
     }
 }
 
-function openEditModal(id, deviceType, serial, cageId, cageSlotId, installDate, status, calDate) {
+function openEditModal(id, deviceType, serial, cageId, cageSlotId, installDate, status, calDate, extraSlotIds) {
     document.getElementById('editForm').action = '/hardware/' + id;
     document.getElementById('editDeviceType').value = deviceType;
     document.getElementById('editSerial').value = serial;
@@ -326,9 +382,68 @@ function openEditModal(id, deviceType, serial, cageId, cageSlotId, installDate, 
         document.getElementById('editCageSlot').value = cageSlotId;
     }
 
+    // Preselect the cage filter from the sensor's current slot so the slot
+    // dropdown opens already narrowed to the right cage.
+    var slotOpt = document.querySelector('#editCageSlot option[value="' + cageSlotId + '"]');
+    document.getElementById('editSlotCageFilter').value = slotOpt ? (slotOpt.getAttribute('data-cage-id') || '') : '';
+    filterEditSlots();
+    if (cageSlotId) {
+        document.getElementById('editCageSlot').value = cageSlotId;
+    }
+
+    // Restore this sensor's extra-slot coverage in the multi-select.
+    var extraSel = document.getElementById('editExtraSlots');
+    if (extraSel) {
+        var wanted = String(extraSlotIds || '').split(',').filter(Boolean);
+        for (var i = 0; i < extraSel.options.length; i++) {
+            extraSel.options[i].selected = wanted.indexOf(extraSel.options[i].value) !== -1;
+        }
+        updateExtraCount('edit');
+    }
+
     onEditStatusChange();
     document.getElementById('editModal').style.display = 'flex';
     lucide.createIcons();
+}
+
+// Cage filter shared by the primary slot dropdown and the extras
+// multi-select (prefix 'add' or 'edit'). Filter selects carry no name
+// attribute, so they never submit — only cage_slot_id / cage_slot_ids[] do.
+function filterSlots(prefix) {
+    var filter = document.getElementById(prefix + 'SlotCageFilter').value;
+    var select = document.getElementById(prefix === 'add' ? 'addCageSlot' : 'editCageSlot');
+    var current = select.value;
+    var stillValid = false;
+    for (var i = 0; i < select.options.length; i++) {
+        var opt = select.options[i];
+        if (!opt.value) continue; // placeholder stays visible
+        var show = !filter || opt.getAttribute('data-cage-id') === filter;
+        opt.hidden = !show;
+        if (show && opt.value === current) stillValid = true;
+    }
+    if (!stillValid) select.value = '';
+    var extra = document.getElementById(prefix + 'ExtraSlots');
+    if (extra) {
+        for (var j = 0; j < extra.options.length; j++) {
+            var eopt = extra.options[j];
+            eopt.hidden = !(!filter || eopt.getAttribute('data-cage-id') === filter);
+        }
+        updateExtraCount(prefix);
+    }
+}
+
+function filterAddSlots() { filterSlots('add'); }
+function filterEditSlots() { filterSlots('edit'); }
+
+function updateExtraCount(prefix) {
+    var extra = document.getElementById(prefix + 'ExtraSlots');
+    var hint = document.getElementById(prefix + 'ExtraCount');
+    if (!extra || !hint) return;
+    var n = 0;
+    for (var i = 0; i < extra.options.length; i++) {
+        if (extra.options[i].selected) n++;
+    }
+    hint.textContent = n > 0 ? n + ' extra slot' + (n === 1 ? '' : 's') + ' selected.' : 'Hold Ctrl/Cmd to select multiple.';
 }
 
 function openAddModal() {
