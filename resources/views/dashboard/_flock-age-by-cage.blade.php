@@ -7,7 +7,7 @@
                 </span>
                 <div>
                     <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Flock Age by Cage</div>
-                    <div class="text-xs mt-0.5" style="color: #9CA3AF;">Average flock age (weeks) per cage · as of {{ $reportingDate->format('M j, Y') }}</div>
+                    <div class="text-xs mt-0.5" style="color: #9CA3AF;">Average flock age (weeks) per cage · as of {{ $reportingDate->display() }}</div>
                     <button type="button" onclick="this.closest('.bg-white').querySelector('.interpretation-panel').classList.toggle('hidden')" class="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all hover:opacity-80" style="color: #6366f1; background-color: rgba(99,102,241,0.08);">
                         <i data-lucide="sparkles" class="w-2.5 h-2.5"></i> Interpretation
                     </button>

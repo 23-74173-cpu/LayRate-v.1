@@ -19,18 +19,20 @@ class EnvironmentController extends Controller
     public function index(Request $request)
     {
         $thresholds = Setting::thresholds();
+        $optimal = config('environment');
         $envTab = $request->query('envTab', 'live');
         $cages = \App\Models\Cage::orderBy('cage_code')->pluck('cage_code', 'id');
 
         $relay = $this->activeRelay();
         $relayState = RelayStateService::payload($relay);
 
-        return view('environment', compact('thresholds', 'envTab', 'cages', 'relay', 'relayState'));
+        return view('environment', compact('thresholds', 'optimal', 'envTab', 'cages', 'relay', 'relayState'));
     }
 
     public function liveData(Request $request)
     {
         $thresholds = Setting::thresholds();
+        $optimal = config('environment');
         $cages = Cage::orderBy('cage_code')->get();
 
         // Latest REAL reading per cage (see EnvironmentalLog::latestRealPerCage
@@ -142,7 +144,7 @@ class EnvironmentController extends Controller
             'cages', 'latestPerCage', 'sensorCageIds', 'sensorReadings', 'activeSensors', 'trendData', 'summaryLogs',
             'avgTemp', 'avgHum', 'avgStatus',
             'tempValues', 'humValues',
-            'thresholds', 'range'
+            'thresholds', 'optimal', 'range'
         ));
     }
 

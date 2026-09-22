@@ -76,27 +76,31 @@
             <div class="space-y-4">
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TEMP MIN (°C)</label>
-                    <input type="number" name="temp_min" step="0.5"
-                           value="{{ $thresholds['temp_min'] }}"
+                    <input type="number" name="temp_min" step="0.5" data-threshold-input="temp"
+                           value="{{ $thresholds['temp_min'] }}" oninput="window.evalThresholdHelper(this)"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                    <p class="text-xs mt-1" data-threshold-helper></p>
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TEMP MAX (°C)</label>
-                    <input type="number" name="temp_max" step="0.5"
-                           value="{{ $thresholds['temp_max'] }}"
+                    <input type="number" name="temp_max" step="0.5" data-threshold-input="temp"
+                           value="{{ $thresholds['temp_max'] }}" oninput="window.evalThresholdHelper(this)"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                    <p class="text-xs mt-1" data-threshold-helper></p>
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">HUMIDITY MIN (%)</label>
-                    <input type="number" name="hum_min" step="1"
-                           value="{{ $thresholds['hum_min'] }}"
+                    <input type="number" name="hum_min" step="1" data-threshold-input="hum"
+                           value="{{ $thresholds['hum_min'] }}" oninput="window.evalThresholdHelper(this)"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                    <p class="text-xs mt-1" data-threshold-helper></p>
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">HUMIDITY MAX (%)</label>
-                    <input type="number" name="hum_max" step="1"
-                           value="{{ $thresholds['hum_max'] }}"
+                    <input type="number" name="hum_max" step="1" data-threshold-input="hum"
+                           value="{{ $thresholds['hum_max'] }}" oninput="window.evalThresholdHelper(this)"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                    <p class="text-xs mt-1" data-threshold-helper></p>
                 </div>
             </div>
 
@@ -279,6 +283,9 @@ function openEnvThresholdsModal() {
     modal.style.display = 'flex';
     if (typeof lucide !== 'undefined') lucide.createIcons();
     stopLivePolling();
+    modal.querySelectorAll('[data-threshold-input]').forEach(function(input) {
+        window.evalThresholdHelper(input);
+    });
 }
 
 function closeEnvThresholdsModal() {
@@ -693,6 +700,44 @@ if (!window.__envThresholdsEscapeBound) {
         }
     });
 }
+
+// ── Threshold input helper text — informational only, evaluates the entered
+// value against the fixed optimal reference range in real time. Does NOT
+// block, correct, or lock the field; the operator can still save any value.
+// Same optimal constants as the IR Reference Card (config/environment.php).
+var LAYRATE_OPTIMAL_RANGE = {
+    temp: { min: {{ $optimal['optimal_temp_min'] }}, max: {{ $optimal['optimal_temp_max'] }}, unit: '°C' },
+    hum:  { min: {{ $optimal['optimal_humidity_min'] }}, max: {{ $optimal['optimal_humidity_max'] }}, unit: '%' },
+};
+
+window.evalThresholdHelper = function(input) {
+    var helper = input.parentElement.querySelector('[data-threshold-helper]');
+    if (!helper) return;
+
+    var kind = input.getAttribute('data-threshold-input'); // 'temp' | 'hum'
+    var range = LAYRATE_OPTIMAL_RANGE[kind];
+    var value = parseFloat(input.value);
+
+    if (isNaN(value)) {
+        helper.textContent = '';
+        return;
+    }
+
+    if (value >= range.min && value <= range.max) {
+        helper.textContent = 'Within optimal range (' + range.min + '–' + range.max + range.unit + ').';
+        helper.style.color = '#1f6b3a';
+    } else if (value > range.max) {
+        helper.textContent = kind === 'temp'
+            ? 'Above optimal range — may increase heat stress risk.'
+            : 'Above optimal range — may increase respiratory/ammonia risk.';
+        helper.style.color = '#8a5a00';
+    } else {
+        helper.textContent = kind === 'temp'
+            ? 'Below optimal range — may increase cold stress risk.'
+            : 'Below optimal range — may cause dry, dusty conditions.';
+        helper.style.color = '#8a5a00';
+    }
+};
 
 // ── Threshold save handler (AJAX, on form directly since modal is outside Turbo Frame) ──
 (function() {

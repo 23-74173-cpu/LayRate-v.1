@@ -231,6 +231,10 @@
                             @include('dashboard._production-history-skeleton')
                         </turbo-frame>
 
+                        <turbo-frame id="dashboard-forecast-history" data-src="{{ route('dashboard.forecast-history', ['cage' => request('cage')]) }}" loading="lazy" class="block self-start lg:h-full">
+                            @include('dashboard._forecast-history-skeleton')
+                        </turbo-frame>
+
                         <turbo-frame id="dashboard-egg-collection-time" data-src="{{ route('dashboard.egg-collection-time', ['days' => 30]) }}" loading="lazy" class="block self-start lg:h-full">
                             <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse h-auto lg:h-full">
                                 <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>

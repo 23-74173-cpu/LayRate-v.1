@@ -142,6 +142,34 @@ class ReportController extends Controller
             : [$allCages->where('cage_code', $cageId)->first()?->id];
     }
 
+    // Names every group tied for the highest total, not just the first one
+    // found — a plain GROUP BY + ORDER BY DESC + value() has no tiebreaker
+    // and silently picks one arbitrary row when two or more groups share the
+    // max, which is misleading for something presented as "the" top result.
+    private function tiedLabels($rows, string $groupColumn, ?\Closure $mapValue = null, string $tieNote = 'tied'): string
+    {
+        if ($rows->isEmpty()) {
+            return '—';
+        }
+
+        $max = $rows->max('total');
+        $tied = $rows->where('total', $max)->pluck($groupColumn);
+        $labels = ($mapValue ? $tied->map($mapValue) : $tied)->filter()->values();
+
+        if ($labels->isEmpty()) {
+            return '—';
+        }
+        if ($labels->count() === 1) {
+            return (string) $labels->first();
+        }
+
+        $joined = $labels->count() === 2
+            ? $labels->implode(' and ')
+            : $labels->slice(0, -1)->implode(', ') . ', and ' . $labels->last();
+
+        return "{$joined} ({$tieNote})";
+    }
+
     // Builds all five report types as independent sections for type=all.
     // The mortality `reason` filter is scoped to only the mortality section —
     // the other four always run unfiltered by reason.
@@ -200,10 +228,10 @@ class ReportController extends Controller
                     ->first();
 
                 return (object) [
-                    'total_eggs'  => $agg->total_eggs ?? 0,
+                    'total_eggs'  => number_format($agg->total_eggs ?? 0) . ' eggs',
                     'avg_hdep'    => number_format($agg->avg_hdep ?? 0, 1) . '%',
-                    'total_hens'  => Hen::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->where('is_active', 1)->count(),
-                    'days'        => $agg->days ?? 0,
+                    'total_hens'  => number_format(Hen::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->where('is_active', 1)->count()) . ' hens',
+                    'days'        => number_format($agg->days ?? 0) . ' days',
                 ];
             })(),
             'feed' => (function () use ($cageIds, $hasRange, $from, $to) {
@@ -213,10 +241,10 @@ class ReportController extends Controller
                     ->first();
 
                 return (object) [
-                    'total_kg'    => number_format($agg->total_kg ?? 0, 1),
-                    'avg_per_day' => number_format($agg->avg_per_day ?? 0, 1),
-                    'batches'     => $agg->batches ?? 0,
-                    'days'        => $agg->days ?? 0,
+                    'total_kg'    => number_format($agg->total_kg ?? 0, 1) . ' kg',
+                    'avg_per_day' => number_format($agg->avg_per_day ?? 0, 1) . ' kg/day',
+                    'batches'     => number_format($agg->batches ?? 0) . ' batches',
+                    'days'        => number_format($agg->days ?? 0) . ' days',
                 ];
             })(),
             'environment' => (function () use ($cageIds, $hasRange, $from, $to) {
@@ -229,8 +257,8 @@ class ReportController extends Controller
                 return (object) [
                     'avg_temp'    => number_format($agg->avg_temp ?? 0, 1) . '°C',
                     'avg_hum'     => number_format($agg->avg_hum ?? 0, 1) . '%',
-                    'readings'    => $agg->readings ?? 0,
-                    'alerts'      => $agg->alerts ?? 0,
+                    'readings'    => number_format($agg->readings ?? 0) . ' readings',
+                    'alerts'      => number_format($agg->alerts ?? 0) . ' alert readings',
                 ];
             })(),
             'egg_stock' => (function () use ($from, $to, $cageIds, $cageId) {
@@ -239,10 +267,10 @@ class ReportController extends Controller
                     ->first();
 
                 return (object) [
-                    'total_stocked' => (int) ($agg->total_stocked ?? 0),
-                    'batches'       => $agg->batches ?? 0,
+                    'total_stocked' => number_format((int) ($agg->total_stocked ?? 0)) . ' eggs',
+                    'batches'       => number_format($agg->batches ?? 0) . ' batches',
                     'top_size'      => ucfirst($this->eggStockQuery($from, $to, $cageIds, $cageId)->selectRaw('egg_size, SUM(`count`) as total')->groupBy('egg_size')->orderByDesc('total')->value('egg_size') ?? '—'),
-                    'days'          => $agg->days ?? 0,
+                    'days'          => number_format($agg->days ?? 0) . ' days',
                 ];
             })(),
             'mortality' => (function () use ($cageIds, $hasRange, $from, $to, $allCages) {
@@ -251,11 +279,19 @@ class ReportController extends Controller
                     ->selectRaw('SUM(`count`) as total_deaths, COUNT(DISTINCT log_date) as days')
                     ->first();
 
+                $causeRows = MortalityLog::whereIn('cage_id', $cageIds)
+                    ->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))
+                    ->selectRaw('reason, SUM(`count`) as total')->groupBy('reason')->get();
+
+                $cageRows = MortalityLog::whereIn('cage_id', $cageIds)
+                    ->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))
+                    ->selectRaw('cage_id, SUM(`count`) as total')->groupBy('cage_id')->get();
+
                 return (object) [
-                    'total_deaths'  => $agg->total_deaths ?? 0,
-                    'top_cause'     => MortalityLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->selectRaw('reason, SUM(`count`) as total')->groupBy('reason')->orderByDesc('total')->value('reason') ?? '—',
-                    'most_affected' => optional($allCages->find(MortalityLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->selectRaw('cage_id, SUM(`count`) as total')->groupBy('cage_id')->orderByDesc('total')->value('cage_id')))->cage_code ?? '—',
-                    'days'          => $agg->days ?? 0,
+                    'total_deaths'  => number_format($agg->total_deaths ?? 0) . ' hens',
+                    'top_cause'     => $this->tiedLabels($causeRows, 'reason', tieNote: 'tied'),
+                    'most_affected' => $this->tiedLabels($cageRows, 'cage_id', fn($id) => $allCages->find($id)?->cage_code, 'equally affected'),
+                    'days'          => number_format($agg->days ?? 0) . ' days',
                 ];
             })(),
             default => null,
@@ -324,7 +360,7 @@ class ReportController extends Controller
                 $breed = $breeds->count() > 1 ? 'Mixed' : ($breeds->first() ?? '—');
 
                 $row = [
-                    'date'     => $first->log_date->format('Y-m-d'),
+                    'date'     => $first->log_date->display(),
                     'cage'     => $first->cageSlot?->cage?->cage_code ?? '—',
                     'breed'    => $breed,
                     'eggs'     => $totalEggs,
@@ -354,7 +390,7 @@ class ReportController extends Controller
             ->orderByDesc('log_date')
             ->get()
             ->map(fn($l) => (object) [
-                'date'     => $l->log_date->format('Y-m-d'),
+                'date'     => $l->log_date->display(),
                 'cage'     => $l->cage?->cage_code ?? '—',
                 'batch'    => $l->feedBatch->batch_code,
                 'consumed' => number_format($l->feed_consumed_kg, 2) . ' kg',
@@ -373,7 +409,7 @@ class ReportController extends Controller
             ->limit(200)
             ->get()
             ->map(fn($l) => (object) [
-                'datetime' => $l->recorded_at->format('Y-m-d H:i'),
+                'datetime' => $l->recorded_at->displayDateTime(),
                 'cage'     => $l->cage?->cage_code ?? '—',
                 'temp'     => $l->temperature_c . '°C',
                 'humidity' => $l->humidity_pct . '%',
@@ -394,7 +430,7 @@ class ReportController extends Controller
         }
 
         return $query->get()->map(fn($l) => (object) [
-            'date'   => $l->log_date->format('Y-m-d'),
+            'date'   => $l->log_date->display(),
                 'cage'     => $l->cage?->cage_code ?? '—',
             'count'  => $l->count,
             'reason' => $l->reason,
@@ -419,7 +455,7 @@ class ReportController extends Controller
             ->orderByDesc('harvested_date')
             ->get()
             ->map(fn($b) => (object) [
-                'date'      => $b->harvested_date->format('Y-m-d'),
+                'date'      => $b->harvested_date->display(),
                 'cage'      => $b->cage?->cage_code ?? '—',
                 'size'      => ucfirst($b->egg_size),
                 'count'     => $b->count,
@@ -456,7 +492,7 @@ class ReportController extends Controller
 
         return [
             'kind'   => 'production',
-            'labels' => $rows->map(fn($r) => $r->log_date->format('Y-m-d'))->all(),
+            'labels' => $rows->map(fn($r) => $r->log_date->display())->all(),
             'eggs'   => $rows->map(fn($r) => (int) $r->eggs)->all(),
             'hdep'   => $rows->map(fn($r) => round((float) $r->hdep, 1))->all(),
         ];
@@ -474,7 +510,7 @@ class ReportController extends Controller
 
         return [
             'kind'   => 'feed',
-            'labels' => $rows->map(fn($r) => $r->log_date->format('Y-m-d'))->all(),
+            'labels' => $rows->map(fn($r) => $r->log_date->display())->all(),
             'kg'     => $rows->map(fn($r) => round((float) $r->kg, 1))->all(),
         ];
     }

@@ -97,6 +97,7 @@ class DatabaseBackup extends Command
         $paths = [
             'C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysqldump.exe',
             'C:\\xampp3\\mysql\\bin\\mysqldump.exe',
+            'C:\\xampp\\mysql\\bin\\mysqldump.exe',
         ];
 
         foreach ($paths as $path) {

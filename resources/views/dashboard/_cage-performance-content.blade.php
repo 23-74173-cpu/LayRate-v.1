@@ -75,7 +75,7 @@ $hasData = $totalEggs > 0 || $performance->contains(fn ($p) => $p['hdep'] > 0);
 
     @if(! $hasData)
         <div class="rounded-xl border py-8 text-center text-sm" style="background-color: #ffffff; border-color: #e6e6e6; color: #a39e98;">
-            No production data recorded for {{ $targetDate->format('M d, Y') }}.
+            No production data recorded for {{ $targetDate->display() }}.
         </div>
     @else
         {{-- Ranking table (top of section) --}}
@@ -138,7 +138,7 @@ $hasData = $totalEggs > 0 || $performance->contains(fn ($p) => $p['hdep'] > 0);
         {{-- Comparison charts side-by-side: HDEP bar (left), Eggs pie (right) --}}
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div class="perf-card rounded-xl border border-[#D9D9D9] p-4 bg-white chart-fade-in">
-                <div class="text-[11px] font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-2">HDEP by Cage ({{ $targetDate->format('M d, Y') }})</div>
+                <div class="text-[11px] font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-2">HDEP by Cage ({{ $targetDate->display() }})</div>
                 <div class="relative w-full h-[130px]">
                     <canvas id="dashHdepChart" style="width: 100%; height: 100%; display: block;"></canvas>
                 </div>
@@ -152,7 +152,7 @@ $hasData = $totalEggs > 0 || $performance->contains(fn ($p) => $p['hdep'] > 0);
         </div>
 
         <div class="mt-3 text-xs text-[#6B7280]">
-            Ranked by eggs collected on {{ $targetDate->format('M d, Y') }}, then by HDEP.
+            Ranked by eggs collected on {{ $targetDate->display() }}, then by HDEP.
         </div>
     @endif
 </div>

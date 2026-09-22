@@ -303,6 +303,7 @@
                 'Insights' => [
                     ['icon'=>'trending-up',   'label'=>'Forecast',           'route'=>'forecast', 'adminOnly' => true],
                     ['icon'=>'clipboard-list','label'=>'Reports',            'route'=>'reports'],
+                    ['icon'=>'wallet',        'label'=>'Finance',            'route'=>'finance.index'],
                     ['icon'=>'sticky-note',   'label'=>'Notes',              'route'=>'notes.index'],
                 ],
             ];
@@ -809,6 +810,7 @@
             'environment': 'Environment','hardware': 'Hardware',
             'feed': 'Feed & Nutrition', 'analytics': 'Analytics',    'forecast': 'Forecast',
             'reports': 'Reports',       'notes': 'Notes',            'mortality': 'Mortality',
+            'finance': 'Finance',
             'notifications': 'Notifications', 'profile': 'Profile',
         };
         var crumb = document.getElementById('breadcrumb-current');

@@ -558,6 +558,72 @@ class DashboardController extends Controller
         ]);
     }
 
+    // A browsable log of past forecast runs, since the forecasts table
+    // already retains every day's rows (GenerateForecastJob only clears
+    // *today's* rows for the matching scope before writing a fresh batch —
+    // older forecast_date rows are never purged). This surfaces that
+    // existing history instead of leaving it only readable via the
+    // forecast-vs-actual overlay above.
+    public function forecastHistory(Request $request)
+    {
+        $cageCode = $request->get('cage');
+        $limit = 30;
+
+        $cage = $cageCode ? Cage::where('cage_code', $cageCode)->first() : null;
+
+        $forecastQuery = Forecast::query();
+        if ($cage) {
+            $forecastQuery->where('cage_id', $cage->id);
+        } else {
+            $forecastQuery->whereNull('cage_id')->whereNull('breed');
+        }
+
+        // One row per target_date — the latest forecast_date run wins when a
+        // date was forecast more than once (mirrors forecastOverlay's dedup).
+        $rows = $forecastQuery
+            ->orderByDesc('target_date')
+            ->orderByDesc('forecast_date')
+            ->orderByDesc('id')
+            ->get()
+            ->unique('target_date')
+            ->sortByDesc('target_date')
+            ->take($limit);
+
+        $targetDates = $rows->pluck('target_date')->map(fn ($d) => $d->format('Y-m-d'));
+
+        $actualScope = fn ($q) => $q->when($cageCode, fn ($cq) => $cq->whereHas('cageSlot.cage', fn ($c) => $c->where('cage_code', $cageCode)));
+        $actualByDate = ProductionLog::query()
+            ->real()
+            ->whereIn('log_date', $targetDates)
+            ->where($actualScope)
+            ->selectRaw('log_date, SUM(egg_count) as total')
+            ->groupBy('log_date')
+            ->pluck('total', 'log_date');
+
+        $today = ReportingDateService::reportingDateString();
+
+        $history = $rows->map(function ($forecast) use ($actualByDate, $today) {
+            $targetDate = $forecast->target_date->format('Y-m-d');
+            $isPending = $targetDate > $today;
+            $actual = $isPending ? null : (int) ($actualByDate->get($targetDate, 0));
+            $predicted = (int) round($forecast->predicted_egg_count);
+
+            return (object) [
+                'target_date'   => $targetDate,
+                'forecast_date' => $forecast->forecast_date->format('Y-m-d'),
+                'predicted'     => $predicted,
+                'actual'        => $actual,
+                'pending'       => $isPending,
+                'variance_pct'  => (!$isPending && $predicted > 0) ? round(($actual - $predicted) / $predicted * 100, 1) : null,
+            ];
+        })->values();
+
+        return view('dashboard._forecast-history', [
+            'history'  => $history,
+            'cageCode' => $cageCode,
+        ]);
+    }
+
     public function eggCollectionTime()
     {
         $days = (int) request('days', 7);
@@ -1256,7 +1322,7 @@ class DashboardController extends Controller
             $latestFeedDate = FeedConsumptionLog::when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))->max('log_date');
             if ($latestFeedDate && $latestFeedDate < $weekStart) {
                 $feedRefDate = $latestFeedDate;
-                $feedAsOf = Carbon::parse($latestFeedDate)->format('M j, Y');
+                $feedAsOf = Carbon::parse($latestFeedDate)->display();
             }
         }
         $feedRef = Carbon::parse($feedRefDate);
@@ -1560,7 +1626,7 @@ class DashboardController extends Controller
         $dayComplete = true;
 
         $kpiAsOf = ($this->validRangeDate($fromDate) || $this->validRangeDate($toDate))
-            ? Carbon::parse($today)->format('M j, Y')
+            ? Carbon::parse($today)->display()
             : null;
 
         return compact(
@@ -1602,7 +1668,7 @@ class DashboardController extends Controller
             } elseif ($env) {
                 $since = $env->recorded_at->isToday()
                     ? $env->recorded_at->format('g:i A')
-                    : $env->recorded_at->format('M j, g:i A');
+                    : $env->recorded_at->display() . ', ' . $env->recorded_at->format('g:i A');
                 $text .= " · DHT22 offline — no data since {$since}";
             } else {
                 $text .= ' · DHT22 offline — no data yet';

@@ -69,7 +69,7 @@
     <table class="meta-strip">
         <tr>
             <td><span class="label">Cage:</span> {{ $cageId === 'all' ? 'All Cages' : $cageId }}</td>
-            <td><span class="label">Generated:</span> {{ now()->format('F j, Y  H:i') }}</td>
+            <td><span class="label">Generated:</span> {{ now()->displayDateTime() }}</td>
             <td><span class="label">Prepared by:</span> {{ auth()->user()->name }}</td>
             <td><span class="label">Records:</span> {{ collect($sections)->sum(fn($s) => $s['rows']->count()) }}</td>
         </tr>

@@ -18,7 +18,7 @@
                 <tbody>
                     @foreach($cullingLogs as $log)
                     <tr class="border-t border-[#F0F0F0] hover:bg-[#FAFAFA]">
-                        <td class="px-3 py-2 text-[#333]">{{ $log->cull_date->format('M d, Y') }}</td>
+                        <td class="px-3 py-2 text-[#333]">{{ $log->cull_date->display() }}</td>
                         <td class="px-3 py-2 font-mono text-[#333]">{{ $log->hen->chicken_id ?? '—' }}</td>
                         <td class="px-3 py-2 text-[#333]">{{ $log->hen?->cage?->cage_code ?? '—' }}</td>
                         <td class="px-3 py-2">

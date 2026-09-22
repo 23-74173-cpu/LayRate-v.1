@@ -6,6 +6,22 @@
 
     <x-page-header title="Notes" subtitle="Short notes and reminders — optionally tagged to a cage" />
 
+    {{-- ── Category Filter ── --}}
+    <div class="flex flex-wrap gap-2">
+        <a href="{{ route('notes.index') }}"
+           class="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+           style="{{ !$category ? 'background-color:#0075de;color:#ffffff;' : 'background-color:#f6f5f4;color:#6B7280;' }}">
+            All
+        </a>
+        @foreach($categories as $cat)
+        <a href="{{ route('notes.index', ['category' => $cat]) }}"
+           class="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+           style="{{ $category === $cat ? 'background-color:#0075de;color:#ffffff;' : 'background-color:#f6f5f4;color:#6B7280;' }}">
+            {{ $cat }}
+        </a>
+        @endforeach
+    </div>
+
     {{-- ── Add Note ── --}}
     <div class="rounded-xl border p-6" style="background-color: #ffffff; border-color: #e6e6e6;">
         <form method="POST" action="{{ route('notes.store') }}">
@@ -19,6 +35,14 @@
                     <x-input-error name="body" />
                 </div>
                 <div class="flex sm:flex-col gap-3 sm:w-48">
+                    <select name="category"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            style="border-color: #e6e6e6; color: #1f1f1f;">
+                        @foreach(\App\Models\Note::CATEGORIES as $cat)
+                        <option value="{{ $cat }}" @selected(old('category', 'General') === $cat)>{{ $cat }}</option>
+                        @endforeach
+                    </select>
+                    <x-input-error name="category" />
                     <select name="cage_id"
                             class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
@@ -43,10 +67,13 @@
             <div class="flex-1 min-w-0">
                 <p class="text-sm whitespace-pre-wrap break-words" style="color: #1f1f1f;">{{ $note->body }}</p>
                 <div class="flex items-center gap-2 mt-1.5 text-xs" style="color: #a39e98;">
-                    <span>{{ $note->created_at->format('M j, Y g:i A') }}</span>
+                    <span>{{ $note->created_at->displayDateTime() }}</span>
                     @if($note->updated_at->ne($note->created_at))
                     <span>· edited</span>
                     @endif
+                    <span class="px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: #eef2ff; color: #4338ca;">
+                        {{ $note->category }}
+                    </span>
                     @if($note->cage)
                     <span class="px-2 py-0.5 rounded-full text-xs font-medium"
                           style="background-color: {{ $note->cage->colorSoft }}; color: {{ $note->cage->color }};">
@@ -56,7 +83,7 @@
                 </div>
             </div>
             <div class="flex items-center gap-1 shrink-0">
-                <button onclick="openNoteEdit({{ $note->id }}, {{ Js::from($note->body) }}, {{ $note->cage_id ?? 'null' }})"
+                <button onclick="openNoteEdit({{ $note->id }}, {{ Js::from($note->body) }}, {{ $note->cage_id ?? 'null' }}, {{ Js::from($note->category) }})"
                         class="p-1.5 rounded hover:bg-black/5 transition-colors" style="color: #615d59;" aria-label="Edit note">
                     <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                 </button>
@@ -96,6 +123,14 @@
                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1 resize-y mb-3"
                           style="border-color: #e6e6e6; color: #1f1f1f;">{{ old('body') }}</textarea>
                 <x-input-error name="body" />
+                <select name="category" id="noteEditCategory"
+                        class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1 mb-3"
+                        style="border-color: #e6e6e6; color: #1f1f1f;">
+                    @foreach(\App\Models\Note::CATEGORIES as $cat)
+                    <option value="{{ $cat }}" @selected(old('category') === $cat)>{{ $cat }}</option>
+                    @endforeach
+                </select>
+                <x-input-error name="category" />
                 <select name="cage_id" id="noteEditCage"
                         class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1 mb-4"
                         style="border-color: #e6e6e6; color: #1f1f1f;">
@@ -127,7 +162,8 @@
     openNoteEdit(
         {{ $editNote->id }},
         {{ Js::from($editNote->body) }},
-        {{ $editNote->cage_id ?? 'null' }}
+        {{ $editNote->cage_id ?? 'null' }},
+        {{ Js::from($editNote->category) }}
     );
 </x-modal-reopen>
 @endif
@@ -136,9 +172,10 @@
 </div>
 
 <script>
-function openNoteEdit(id, body, cageId) {
+function openNoteEdit(id, body, cageId, category) {
     document.getElementById('noteEditForm').action = '/notes/' + id;
     document.getElementById('noteEditBody').value = body;
+    document.getElementById('noteEditCategory').value = category;
     document.getElementById('noteEditCage').value = cageId === null ? '' : cageId;
     document.getElementById('noteEditModal').style.display = 'flex';
     document.getElementById('noteEditBody').focus();
