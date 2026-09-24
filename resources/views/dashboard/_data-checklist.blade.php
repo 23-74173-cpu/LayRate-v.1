@@ -56,7 +56,7 @@
                     <span style="font-size: 13px; font-weight: 700; color: #2c2c2c; font-family: 'Georgia', serif;">Today's Checklist</span>
                     <button onclick="document.getElementById('dataChecklistPanel').classList.add('hidden')" style="width: 20px; height: 20px; border-radius: 50%; border: none; background: #e8e0cc; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #6b5e4a; line-height: 1;">x</button>
                 </div>
-                <div style="font-size: 11px; color: #a39e98; margin-top: 2px; font-family: 'Georgia', serif;">{{ now()->display() }}</div>
+                <div style="font-size: 11px; color: #a39e98; margin-top: 2px; font-family: 'Georgia', serif;">{{ now()->format('M d, Y') }}</div>
             </div>
 
             {{-- Items --}}

@@ -59,7 +59,6 @@ class DemoDataSeeder extends Seeder
             ['cage_code' => 'CAGE-B', 'location' => '', 'rows' => 3, 'slots_per_row' => 5, 'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 1],
             ['cage_code' => 'CAGE-C', 'location' => '', 'rows' => 3, 'slots_per_row' => 5, 'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 1],
             ['cage_code' => 'CAGE-D', 'location' => '', 'rows' => 3, 'slots_per_row' => 5, 'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 0],
-            ['cage_code' => 'CAGE-T', 'location' => '', 'rows' => 3, 'slots_per_row' => 5, 'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 1],
         ];
         foreach ($cagesData as $cd) {
             Cage::firstOrCreate(['cage_code' => $cd['cage_code']], $cd);

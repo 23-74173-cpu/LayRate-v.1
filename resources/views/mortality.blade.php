@@ -64,15 +64,6 @@
                 {{-- Notes (always visible, below reason) --}}
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">ADDITIONAL NOTES</label>
-                    @if($mortalityNoteSuggestions->isNotEmpty())
-                    <select id="mortalityNoteSuggestions" onchange="if(this.value){document.getElementsByName('notes')[0].value=this.value;this.value='';}"
-                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-xs bg-white text-[#6B7280] mb-1.5 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                        <option value="">Reuse a previous note…</option>
-                        @foreach($mortalityNoteSuggestions as $suggestion)
-                        <option value="{{ $suggestion }}">{{ \Illuminate\Support\Str::limit($suggestion, 60) }}</option>
-                        @endforeach
-                    </select>
-                    @endif
                     <textarea name="notes" rows="3"
                               placeholder="Describe symptoms, location in cage, or any observations…"
                               class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] resize-none focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">{{ old('notes') }}</textarea>
@@ -211,15 +202,6 @@
 
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">ADDITIONAL NOTES</label>
-                    @if($mortalityNoteSuggestions->isNotEmpty())
-                    <select onchange="if(this.value){document.getElementById('editMortNotes').value=this.value;this.value='';}"
-                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-xs bg-white text-[#6B7280] mb-1.5 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                        <option value="">Reuse a previous note…</option>
-                        @foreach($mortalityNoteSuggestions as $suggestion)
-                        <option value="{{ $suggestion }}">{{ \Illuminate\Support\Str::limit($suggestion, 60) }}</option>
-                        @endforeach
-                    </select>
-                    @endif
                     <textarea name="notes" id="editMortNotes" rows="3"
                               class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] resize-none focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">{{ old('notes') }}</textarea>
                 </div>

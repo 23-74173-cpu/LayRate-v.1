@@ -500,14 +500,14 @@
             <div class="flex items-center gap-3 mb-4">
                 <div class="w-8 h-8 rounded-full bg-[#002D5E] text-white flex items-center justify-center text-sm font-bold shrink-0">2</div>
                 <div>
-                    <h2 class="text-base font-medium text-[#333333]">Add hens and place them on cages</h2>
+                    <h2 class="text-base font-medium text-[#333333]">Add chickens and place them on cages</h2>
                     <p class="text-xs text-[#6B7280]">Start the guided walkthrough below.</p>
                 </div>
             </div>
 
             <p class="text-xs text-[#6B7280] mb-4">
                 This tutorial walks you through opening the action menu, registering new hens, then placing them into cages.
-                You'll be taken to the Hens page and a popup will guide you, one action at a time.
+                You'll be taken to the Chickens page and a popup will guide you, one action at a time.
             </p>
 
             <button type="button" onclick="window.location.href='{{ route('chickens.index', ['walkthrough2' => '1']) }}'"

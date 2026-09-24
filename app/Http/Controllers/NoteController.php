@@ -9,28 +9,23 @@ use Illuminate\Support\Facades\Validator;
 
 class NoteController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
-        $category = $request->get('category');
-
         $notes = Note::with('cage')
-            ->when($category, fn ($q) => $q->where('category', $category))
             ->orderByDesc('created_at')
             ->paginate(20)
             ->withQueryString();
 
         $cages = Cage::orderBy('cage_code')->get();
-        $categories = Note::CATEGORIES;
 
-        return view('notes.index', compact('notes', 'cages', 'categories', 'category'));
+        return view('notes.index', compact('notes', 'cages'));
     }
 
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'body'     => 'required|string|max:2000',
-            'category' => 'nullable|in:' . implode(',', Note::CATEGORIES),
-            'cage_id'  => 'nullable|exists:cages,id',
+            'body'    => 'required|string|max:2000',
+            'cage_id' => 'nullable|exists:cages,id',
         ]);
 
         if ($validator->fails()) {
@@ -39,10 +34,7 @@ class NoteController extends Controller
                 ->withInput();
         }
 
-        $data = $validator->validated();
-        $data['category'] = $data['category'] ?? 'General';
-
-        Note::create($data);
+        Note::create($validator->validated());
 
         return redirect()->route('notes.index')->with('success', 'Note added.');
     }
@@ -50,9 +42,8 @@ class NoteController extends Controller
     public function update(Request $request, Note $note)
     {
         $validator = Validator::make($request->all(), [
-            'body'     => 'required|string|max:2000',
-            'category' => 'nullable|in:' . implode(',', Note::CATEGORIES),
-            'cage_id'  => 'nullable|exists:cages,id',
+            'body'    => 'required|string|max:2000',
+            'cage_id' => 'nullable|exists:cages,id',
         ]);
 
         if ($validator->fails()) {
@@ -62,10 +53,7 @@ class NoteController extends Controller
                 ->withInput();
         }
 
-        $data = $validator->validated();
-        $data['category'] = $data['category'] ?? 'General';
-
-        $note->update($data);
+        $note->update($validator->validated());
 
         return redirect()->route('notes.index')->with('success', 'Note updated.');
     }

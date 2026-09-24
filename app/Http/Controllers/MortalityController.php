@@ -8,7 +8,6 @@ use App\Models\CageSlot;
 use App\Models\Hen;
 use App\Models\MortalityLog;
 use App\Models\MortalityLogHen;
-use App\Models\Note;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -79,12 +78,7 @@ class MortalityController extends Controller
             }
         }
 
-        $mortalityNoteSuggestions = Note::where('category', 'Mortality')
-            ->latest()
-            ->limit(10)
-            ->pluck('body');
-
-        return view('mortality', compact('cages', 'logs', 'todayTotal', 'todayByCage', 'preselectedCageId', 'henPickerData', 'mortalityNoteSuggestions'));
+        return view('mortality', compact('cages', 'logs', 'todayTotal', 'todayByCage', 'preselectedCageId', 'henPickerData'));
     }
 
     public function logs()
@@ -167,10 +161,6 @@ class MortalityController extends Controller
                 return response()->json(['success' => false, 'errors' => ['hen_ids' => [$error]]], 422);
             }
             return back()->withErrors(['hen_ids' => $error])->withInput();
-        }
-
-        if (!empty($data['notes'])) {
-            Note::createFromModule($data['notes'], 'Mortality', $cageId);
         }
 
         $this->checkMortalitySpike($cageId, $data['log_date']);
@@ -272,10 +262,6 @@ class MortalityController extends Controller
                 }
             }
         });
-
-        if (!empty($data['notes'])) {
-            Note::createFromModule($data['notes'], 'Mortality', $mortalityLog->cage_id);
-        }
 
         $this->checkMortalitySpike($mortalityLog->cage_id, $data['log_date']);
 

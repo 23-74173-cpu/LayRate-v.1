@@ -192,7 +192,7 @@ class ReportControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Total Stocked');
-        $response->assertSee('1,332'); // 333 + 444 + 555 — NULL-cage batch included (comma-formatted since the summary now reads "1,332 eggs")
+        $response->assertSee('1332'); // 333 + 444 + 555 — NULL-cage batch included
         $response->assertSee('333');
         $response->assertSee('444');
         $response->assertSee('555');

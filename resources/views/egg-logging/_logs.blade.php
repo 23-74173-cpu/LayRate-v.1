@@ -19,7 +19,7 @@
             <tbody>
                 @forelse($logs as $log)
                 <tr class="border-b hover:bg-black/[0.02] transition-colors" style="border-color: #e6e6e6;">
-                    <td class="px-5 py-3.5 text-sm font-mono" style="color: #1f1f1f;">{{ $log->log_date->display() }}</td>
+                    <td class="px-5 py-3.5 text-sm font-mono" style="color: #1f1f1f;">{{ $log->log_date->format('Y-m-d') }}</td>
                     <td class="px-5 py-3.5 text-sm font-semibold font-mono" style="color: {{ $log->cageSlot?->cage?->color ?? '#6B7280' }}">{{ $log->cageSlot?->cage?->cage_code ?? '—' }}</td>
                     <td class="px-5 py-3.5 text-xs font-mono" style="color: #615d59;">
                         @if($log->cageSlot){{ $log->cageSlot->row_number }}-{{ $log->cageSlot->column_number }}@else — @endif

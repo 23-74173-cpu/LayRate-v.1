@@ -3,7 +3,6 @@
 namespace App\Providers;
 
 use App\Models\Alert;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -24,19 +23,6 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::define('admin', fn ($user) => $user->isAdmin());
-
-        // Single place to change the app-wide display date format
-        // (Month/Day/Year). Never use this for ISO date-key strings (form
-        // values, array/query keys, log_date comparisons) — only for text
-        // actually shown to a user.
-        Carbon::macro('display', function () {
-            /** @var \Carbon\Carbon $this */
-            return $this->format('m/d/Y');
-        });
-        Carbon::macro('displayDateTime', function () {
-            /** @var \Carbon\Carbon $this */
-            return $this->format('m/d/Y g:i A');
-        });
 
         View::composer('layouts.app', function ($view) {
             $alertCount = 0;

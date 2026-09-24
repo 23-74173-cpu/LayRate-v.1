@@ -16,7 +16,6 @@ use App\Http\Controllers\EggStockController;
 use App\Http\Controllers\EnvironmentController;
 use App\Http\Controllers\EnvironmentRelaySseController;
 use App\Http\Controllers\FeedController;
-use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\ForecastController;
 use App\Http\Controllers\HardwareItemController;
 use App\Http\Controllers\MortalityController;
@@ -81,7 +80,6 @@ Route::middleware(['auth', 'system-time-set'])->group(function () {
     Route::get('/dashboard/cage-performance', [DashboardController::class, 'cagePerformance'])->name('dashboard.cage-performance');
     Route::get('/dashboard/production-history', [DashboardController::class, 'productionHistory'])->name('dashboard.production-history');
     Route::get('/dashboard/forecast-overlay', [DashboardController::class, 'forecastOverlay'])->name('dashboard.forecast-overlay');
-    Route::get('/dashboard/forecast-history', [DashboardController::class, 'forecastHistory'])->name('dashboard.forecast-history');
     Route::get('/dashboard/egg-collection-time', [DashboardController::class, 'eggCollectionTime'])->name('dashboard.egg-collection-time');
     Route::get('/dashboard/hen-age-layrate', [DashboardController::class, 'henAgeLayrate'])->name('dashboard.hen-age-layrate');
     Route::get('/dashboard/temp-vs-hdep', [DashboardController::class, 'tempVsHdep'])->name('dashboard.temp-vs-hdep');
@@ -271,9 +269,4 @@ Route::middleware(['auth', 'system-time-set'])->group(function () {
     Route::post('/mortality',                   [MortalityController::class, 'store'])->name('mortality.store');
     Route::put('/mortality/{mortalityLog}',     [MortalityController::class, 'update'])->name('mortality.update');
     Route::delete('/mortality/{mortalityLog}',  [MortalityController::class, 'destroy'])->name('mortality.destroy')->middleware('admin');
-
-    Route::get('/finance',                        [FinanceController::class, 'index'])->name('finance.index');
-    Route::post('/finance',                       [FinanceController::class, 'store'])->name('finance.store');
-    Route::put('/finance/{financeTransaction}',   [FinanceController::class, 'update'])->name('finance.update');
-    Route::delete('/finance/{financeTransaction}', [FinanceController::class, 'destroy'])->name('finance.destroy')->middleware('admin');
 });
