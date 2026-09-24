@@ -7,6 +7,7 @@ use App\Models\Cage;
 use App\Models\FarmFeedEntry;
 use App\Models\FeedBatch;
 use App\Models\FeedConsumptionLog;
+use App\Models\Note;
 use App\Services\FcrCalculator;
 use App\Services\ReportingDateService;
 use Illuminate\Http\Request;
@@ -65,7 +66,7 @@ class FeedController extends Controller
         // reading 0. Live behavior is unchanged when data is current.
         $feedRef = $this->feedReferenceDate();
         $feedAsOf = $feedRef->toDateString() < $reportingNow->toDateString()
-            ? $feedRef->format('M j, Y')
+            ? $feedRef->format('m/d/Y')
             : null;
 
         $totalFeedWeek = FeedConsumptionLog::where('log_date', '>=', $feedRef->copy()->subDays(7)->toDateString())
@@ -231,6 +232,8 @@ class FeedController extends Controller
         $data = $validator->validated();
         $batch = FeedBatch::create($data);
 
+        Note::saveFromSection($data['notes'] ?? null, 'Feed');
+
         if ($request->expectsJson()) {
             return response()->json(['success' => true, 'batch_code' => $batch->batch_code]);
         }
@@ -254,7 +257,13 @@ class FeedController extends Controller
         }
 
         $data = $validator->validated();
+        $oldNotes = trim((string) $feedBatch->notes);
         $feedBatch->update($data);
+
+        // Only a changed note is copied (the edit box comes pre-filled).
+        if (array_key_exists('notes', $data) && trim((string) $data['notes']) !== $oldNotes) {
+            Note::saveFromSection($data['notes'], 'Feed');
+        }
 
         if ($request->expectsJson()) {
             return response()->json(['success' => true]);

@@ -53,7 +53,7 @@
                     $cageCode = $cages[$log->cage_id] ?? 'Cage #'.$log->cage_id;
                 @endphp
                 <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
-                    <td class="px-5 py-3.5 text-sm text-[#333333] font-mono">{{ $log->log_date }}</td>
+                    <td class="px-5 py-3.5 text-sm text-[#333333] font-mono">{{ \App\Services\ReportingDateService::displayDate($log->log_date) }}</td>
                     <td class="px-5 py-3.5 text-sm font-medium text-[#333333]">{{ $cageCode }}</td>
                     <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $log->avg_temp }}°C</td>
                     <td class="px-5 py-3.5 text-sm text-[#6B7280]">{{ $log->min_temp }}–{{ $log->max_temp }}°C</td>

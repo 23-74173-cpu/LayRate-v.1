@@ -2,6 +2,7 @@
 @section('title', 'Mortality Log')
 
 @section('content')
+@php $mortalityNotes = \App\Models\Note::suggestionsFor('Mortality'); @endphp
 <div class="space-y-5">
 
     <div class="flex flex-wrap items-center justify-between gap-2">
@@ -64,7 +65,8 @@
                 {{-- Notes (always visible, below reason) --}}
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">ADDITIONAL NOTES</label>
-                    <textarea name="notes" rows="3"
+                    <x-saved-note-picker category="Mortality" target="textarea[name='notes']" :notes="$mortalityNotes" />
+                    <textarea name="notes" rows="3" maxlength="1000"
                               placeholder="Describe symptoms, location in cage, or any observations…"
                               class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] resize-none focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">{{ old('notes') }}</textarea>
                     @error('notes')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
@@ -202,7 +204,8 @@
 
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">ADDITIONAL NOTES</label>
-                    <textarea name="notes" id="editMortNotes" rows="3"
+                    <x-saved-note-picker category="Mortality" target="#editMortNotes" :notes="$mortalityNotes" />
+                    <textarea name="notes" id="editMortNotes" rows="3" maxlength="1000"
                               class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] resize-none focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">{{ old('notes') }}</textarea>
                 </div>
             </div>

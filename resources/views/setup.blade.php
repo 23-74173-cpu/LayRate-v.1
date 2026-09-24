@@ -38,7 +38,7 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color:#615d59;">Current Farm Date &amp; Time</label>
-                        <div class="text-sm font-medium" style="color:#1f1f1f;">{{ $current->format('l, F j, Y g:i A') }} ({{ $timezone }})</div>
+                        <div class="text-sm font-medium" style="color:#1f1f1f;">{{ $current->format('l, m/d/Y g:i A') }} ({{ $timezone }})</div>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color:#615d59;">New Date &amp; Time <span class="text-red-500">*</span></label>

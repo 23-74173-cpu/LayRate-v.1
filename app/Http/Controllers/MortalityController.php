@@ -8,6 +8,7 @@ use App\Models\CageSlot;
 use App\Models\Hen;
 use App\Models\MortalityLog;
 use App\Models\MortalityLogHen;
+use App\Models\Note;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -163,6 +164,9 @@ class MortalityController extends Controller
             return back()->withErrors(['hen_ids' => $error])->withInput();
         }
 
+        // Saved after the record is committed, so a notes problem can't undo it.
+        Note::saveFromSection($data['notes'] ?? null, 'Mortality', $cageId);
+
         $this->checkMortalitySpike($cageId, $data['log_date']);
 
         if ($request->expectsJson()) {
@@ -191,6 +195,7 @@ class MortalityController extends Controller
 
         $data = $validator->validated();
         $oldCount = $mortalityLog->count;
+        $oldNotes = trim((string) $mortalityLog->notes);
         $newCount = (int) $data['count'];
 
         // Pre-flight check for increase: ensure enough active hens exist
@@ -262,6 +267,12 @@ class MortalityController extends Controller
                 }
             }
         });
+
+        // Only a changed note is copied, so editing just the count or date of an
+        // older record doesn't bring back a note someone removed from the list.
+        if (trim((string) ($data['notes'] ?? '')) !== $oldNotes) {
+            Note::saveFromSection($data['notes'] ?? null, 'Mortality', $mortalityLog->cage_id);
+        }
 
         $this->checkMortalitySpike($mortalityLog->cage_id, $data['log_date']);
 

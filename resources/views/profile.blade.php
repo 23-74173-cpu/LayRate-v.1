@@ -86,7 +86,7 @@
 
                     <div>
                         <label class="block text-sm text-[#333333] mb-1.5">Member Since</label>
-                        <p class="text-sm text-[#333333]">{{ auth()->user()->created_at->format('F d, Y') }}</p>
+                        <p class="text-sm text-[#333333]">{{ auth()->user()->created_at->format('m/d/Y') }}</p>
                     </div>
 
                     <button type="submit" class="bg-[#002D5E] text-white px-5 py-2.5 rounded-lg text-sm hover:bg-[#001F42]">Save Profile</button>
@@ -394,7 +394,7 @@
                 <p class="text-xs text-[#6B7280] mb-4">The Pi has no RTC and no internet. Correct the system clock here so logs and reports use the right farm date.</p>
                 <div class="flex items-center justify-between">
                     <div class="text-sm text-[#333333]">
-                        Current: <span class="font-medium">{{ now()->format('l, F j, Y g:i A') }}</span>
+                        Current: <span class="font-medium">{{ now()->format('l, m/d/Y g:i A') }}</span>
                     </div>
                     <a href="{{ route('settings.system-time') }}" class="bg-[#002D5E] text-white px-5 py-2.5 rounded-lg text-sm hover:bg-[#001F42]">
                         Set System Time
@@ -495,19 +495,19 @@
             </button>
         </div>
 
-        {{-- STEP 2: Add & place chickens --}}
+        {{-- STEP 2: Add & place hens --}}
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
             <div class="flex items-center gap-3 mb-4">
                 <div class="w-8 h-8 rounded-full bg-[#002D5E] text-white flex items-center justify-center text-sm font-bold shrink-0">2</div>
                 <div>
-                    <h2 class="text-base font-medium text-[#333333]">Add chickens and place them on cages</h2>
+                    <h2 class="text-base font-medium text-[#333333]">Add hens and place them on cages</h2>
                     <p class="text-xs text-[#6B7280]">Start the guided walkthrough below.</p>
                 </div>
             </div>
 
             <p class="text-xs text-[#6B7280] mb-4">
                 This tutorial walks you through opening the action menu, registering new hens, then placing them into cages.
-                You'll be taken to the Chickens page and a popup will guide you, one action at a time.
+                You'll be taken to the Hens page and a popup will guide you, one action at a time.
             </p>
 
             <button type="button" onclick="window.location.href='{{ route('chickens.index', ['walkthrough2' => '1']) }}'"

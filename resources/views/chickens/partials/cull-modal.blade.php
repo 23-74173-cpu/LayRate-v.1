@@ -35,6 +35,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-[#6B7280] mb-1">Notes</label>
+                    <x-saved-note-picker category="Hens" target="textarea[name='notes']" />
                     <textarea name="notes" rows="2" placeholder="Optional..."
                               class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E] resize-none">{{ old('notes') }}</textarea>
                     <x-input-error name="notes" />
@@ -101,6 +102,7 @@ function ajaxCull(form) {
         return r.json().then(function(j) { return { ok: r.ok, json: j }; });
     }).then(function(result) {
         if (result.ok) {
+            if (window.LayRateNotes) LayRateNotes.rememberFromForm(form);
             closeCullModal();
             if (typeof showNotification === 'function') {
                 showNotification(result.json.message, 'success');

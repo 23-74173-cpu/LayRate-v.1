@@ -198,7 +198,8 @@
                     </div>
                     <div>
                         <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">ADDITIONAL NOTES</label>
-                        <textarea name="notes" rows="2" placeholder="Optional details…"
+                        <x-saved-note-picker category="Mortality" target="textarea[name='notes']" />
+                        <textarea name="notes" rows="2" placeholder="Optional details…" maxlength="1000"
                                   class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] resize-none focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]"></textarea>
                     </div>
                     <x-button type="button" onclick="submitMortality(this.form)" class="w-full py-2.5">
@@ -252,7 +253,8 @@
                     </div>
                     <div>
                         <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">ADDITIONAL NOTES</label>
-                        <textarea name="notes" rows="2" placeholder="Optional details…"
+                        <x-saved-note-picker category="Hens" target="textarea[name='notes']" />
+                        <textarea name="notes" rows="2" placeholder="Optional details…" maxlength="1000"
                                   class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] resize-none focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]"></textarea>
                     </div>
                     <x-button type="button" onclick="submitCullRecord(this.form)" class="w-full py-2.5">
@@ -785,6 +787,9 @@ function mortalityAjaxSubmit(form) {
         return r.json().then(function(j) { return { ok: r.ok, json: j }; });
     }).then(function(result) {
         if (result.ok) {
+            // The server copied the note to the Notes list; offer it in the picker too.
+            if (window.LayRateNotes) LayRateNotes.rememberFromForm(form);
+
             var frame = document.getElementById('chickens-mortality-records');
             if (frame) frame.src = frame.src;
 
@@ -954,6 +959,7 @@ function cullRecordAjaxSubmit(form) {
             if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
             var reasonSelect = form.querySelector('select[name="reason"]');
             if (reasonSelect) reasonSelect.value = '';
+            if (window.LayRateNotes) LayRateNotes.rememberFromForm(form);
             var notesArea = form.querySelector('textarea[name="notes"]');
             if (notesArea) notesArea.value = '';
         } else {

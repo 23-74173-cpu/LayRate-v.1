@@ -56,6 +56,7 @@
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-[#6B7280] mb-1">Notes (optional)</label>
+                        <x-saved-note-picker category="Mortality" target="#removeNotes" />
                         <textarea name="notes" id="removeNotes" rows="2" placeholder="Additional details..."
                                   class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E] resize-none">{{ old('notes') }}</textarea>
                     </div>
@@ -164,6 +165,8 @@ function ajaxRemove(form) {
         return r.json().then(function(j) { return { ok: r.ok, json: j }; });
     }).then(function(result) {
         if (result.ok) {
+            // Notes are only kept (and copied to the Notes list) for a mortality record.
+            if (window.LayRateNotes && data.record_mortality === '1') LayRateNotes.rememberFromForm(form);
             closeRemoveModal();
             if (typeof showNotification === 'function') {
                 showNotification(result.json.message, 'success');

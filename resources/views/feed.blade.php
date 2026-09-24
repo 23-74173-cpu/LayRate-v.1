@@ -2,6 +2,7 @@
 @section('title', 'Feed & Nutrition')
 
 @section('content')
+@php $feedNotes = \App\Models\Note::suggestionsFor('Feed'); @endphp
 <div class="space-y-5">
 
     <x-page-header title="Feed & Nutrition" subtitle="Track feed batches, crude protein, and daily consumption" />
@@ -70,6 +71,7 @@
                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
 
             <label class="block text-sm text-[#333333] mb-1.5">Notes</label>
+            <x-saved-note-picker category="Feed" target="textarea[name='notes']" :notes="$feedNotes" />
             <textarea name="notes" rows="2"
                       class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-5 focus:outline-none focus:border-[#002D5E]">{{ old('notes') }}</textarea>
 
@@ -132,6 +134,7 @@
                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
 
             <label class="block text-sm text-[#333333] mb-1.5">Notes</label>
+            <x-saved-note-picker category="Feed" target="#editNotes" :notes="$feedNotes" />
             <textarea id="editNotes" name="notes" rows="2"
                       class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-5 focus:outline-none focus:border-[#002D5E]">{{ old('notes') }}</textarea>
 
@@ -360,6 +363,7 @@ function feedAjaxSubmit(form) {
     .then(function(r) { return r.json().then(function(d) { return { status: r.status, body: d }; }); })
     .then(function(res) {
         if (res.body.success) {
+            if (window.LayRateNotes) LayRateNotes.rememberFromForm(form);
             closeAllFeedModals();
             feedReloadLiveData();
             showNotification('Saved successfully.', 'success');

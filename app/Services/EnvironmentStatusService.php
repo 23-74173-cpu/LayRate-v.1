@@ -46,6 +46,44 @@ class EnvironmentStatusService
     }
 
     /**
+     * The standard (optimal) range from config/environment.php, with the
+     * same defaults as that file in case the config cache predates it.
+     */
+    public static function optimalRange(): array
+    {
+        $defaults = ['temp_min' => 18.0, 'temp_max' => 24.0, 'hum_min' => 50.0, 'hum_max' => 70.0];
+        $configured = config('environment.optimal');
+
+        return array_map('floatval', array_merge($defaults, is_array($configured) ? $configured : []));
+    }
+
+    /**
+     * Where a reading sits against a range: 'within' (inclusive), 'above',
+     * 'below', or 'none' when there is no reading. 'diff' is how far outside
+     * the range it is (0 when within).
+     */
+    public static function compareToRange(?float $value, float $min, float $max): array
+    {
+        if ($value === null) {
+            return ['state' => 'none', 'diff' => 0.0];
+        }
+
+        // Compared at the 1 decimal shown on screen, so a reading displayed
+        // as 24.0 °C never reads "above 24.0 °C by 0.0".
+        $value = round($value, 1);
+
+        if ($value > $max) {
+            return ['state' => 'above', 'diff' => round($value - $max, 1)];
+        }
+
+        if ($value < $min) {
+            return ['state' => 'below', 'diff' => round($min - $value, 1)];
+        }
+
+        return ['state' => 'within', 'diff' => 0.0];
+    }
+
+    /**
      * Overall cage status combining temperature and humidity.
      */
     public static function summary(float $temp, float $hum, array $thresholds): string

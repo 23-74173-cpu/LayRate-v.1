@@ -9,7 +9,7 @@
         <div class="mb-4">
             <h2 class="text-base font-medium text-[#333333] mb-1">Current System Time</h2>
             <p class="text-sm text-[#6B7280]">
-                Detected: <span class="font-medium text-[#333333]">{{ $current->format('l, F j, Y g:i A') }} (Asia/Manila)</span>
+                Detected: <span class="font-medium text-[#333333]">{{ $current->format('l, m/d/Y g:i A') }} (Asia/Manila)</span>
             </p>
             <p class="text-xs text-[#6B7280] mt-1">
                 PHP timezone: <span class="font-mono">{{ $timezone }}</span>

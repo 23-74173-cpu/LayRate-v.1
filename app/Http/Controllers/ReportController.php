@@ -16,7 +16,9 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ReportController extends Controller
@@ -174,18 +176,16 @@ class ReportController extends Controller
         };
     }
 
-    // Each branch used to run 4 separate round trips against the same table
-    // with the same WHERE clause, one per aggregate function (SUM, then a
-    // fresh query for AVG, then another for COUNT DISTINCT, ...). Combined
-    // into one query per branch via selectRaw() with multiple aggregates —
-    // same filters, same computed values, fewer round trips. Two fallback
-    // behaviors from the original are preserved deliberately: Eloquent's
-    // sum() falls back to 0 on an empty result set (via its own internal
-    // `?: 0`) where a raw SUM() returns NULL instead, so those fields keep
-    // an explicit `?? 0`; avg()/count() already needed that fallback in the
-    // original code (avg()) or never needed it (count() is never null), and
-    // stay exactly as they were.
-    private function buildSummary($type, $from, $to, $cageId, $reason, $allCages): ?object
+    // The summary shown above each report table, as plain "Label: value"
+    // lines (label => value, in display order). Every number carries its
+    // unit, and every figure is built from the same filters as the table
+    // under it: date range, cage, and for mortality the reason too.
+    //
+    // Each branch runs its aggregates in one selectRaw() query instead of a
+    // separate round trip per aggregate. A raw SUM() returns NULL on an empty
+    // result set (Eloquent's sum() would return 0), hence the `?? 0`s; an
+    // average over no rows is shown as "—" rather than a misleading 0.
+    private function buildSummary($type, $from, $to, $cageId, $reason, $allCages): ?array
     {
         $cageIds = $this->resolveCageIds($cageId, $allCages);
 
@@ -199,24 +199,31 @@ class ReportController extends Controller
                     ->selectRaw('SUM(egg_count) as total_eggs, AVG(hdep) as avg_hdep, COUNT(DISTINCT log_date) as days')
                     ->first();
 
-                return (object) [
-                    'total_eggs'  => $agg->total_eggs ?? 0,
-                    'avg_hdep'    => number_format($agg->avg_hdep ?? 0, 1) . '%',
-                    'total_hens'  => Hen::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->where('is_active', 1)->count(),
-                    'days'        => $agg->days ?? 0,
+                $totalHens = Hen::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->where('is_active', 1)->count();
+
+                return [
+                    'Total Eggs'   => $this->countWithUnit($agg->total_eggs ?? 0, 'egg'),
+                    'Avg HDEP'     => $agg->avg_hdep !== null ? number_format($agg->avg_hdep, 1) . '%' : '—',
+                    'Total Hens'   => $this->countWithUnit($totalHens, 'hen'),
+                    'Days Covered' => $this->countWithUnit($agg->days ?? 0, 'day'),
                 ];
             })(),
             'feed' => (function () use ($cageIds, $hasRange, $from, $to) {
                 $agg = FeedConsumptionLog::whereIn('cage_id', $cageIds)
                     ->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))
-                    ->selectRaw('SUM(feed_consumed_kg) as total_kg, AVG(feed_consumed_kg) as avg_per_day, COUNT(DISTINCT feed_batch_id) as batches, COUNT(DISTINCT log_date) as days')
+                    ->selectRaw('SUM(feed_consumed_kg) as total_kg, COUNT(DISTINCT feed_batch_id) as batches, COUNT(DISTINCT log_date) as days')
                     ->first();
 
-                return (object) [
-                    'total_kg'    => number_format($agg->total_kg ?? 0, 1),
-                    'avg_per_day' => number_format($agg->avg_per_day ?? 0, 1),
-                    'batches'     => $agg->batches ?? 0,
-                    'days'        => $agg->days ?? 0,
+                $totalKg = (float) ($agg->total_kg ?? 0);
+                $days = (int) ($agg->days ?? 0);
+
+                return [
+                    'Total Consumed' => number_format($totalKg, 1) . ' kg',
+                    // Per day, not per log row: a day can have several feedings
+                    // or cages, and the label promises kg per day.
+                    'Avg per Day'    => number_format($days > 0 ? $totalKg / $days : 0, 1) . ' kg/day',
+                    'Batches Used'   => $this->countWithUnit($agg->batches ?? 0, 'batch'),
+                    'Days Covered'   => $this->countWithUnit($days, 'day'),
                 ];
             })(),
             'environment' => (function () use ($cageIds, $hasRange, $from, $to) {
@@ -226,11 +233,11 @@ class ReportController extends Controller
                     ->selectRaw('AVG(temperature_c) as avg_temp, AVG(humidity_pct) as avg_hum, COUNT(*) as readings, SUM(CASE WHEN temperature_c > 30 OR humidity_pct > 70 THEN 1 ELSE 0 END) as alerts')
                     ->first();
 
-                return (object) [
-                    'avg_temp'    => number_format($agg->avg_temp ?? 0, 1) . '°C',
-                    'avg_hum'     => number_format($agg->avg_hum ?? 0, 1) . '%',
-                    'readings'    => $agg->readings ?? 0,
-                    'alerts'      => $agg->alerts ?? 0,
+                return [
+                    'Avg Temperature' => $agg->avg_temp !== null ? number_format($agg->avg_temp, 1) . '°C' : '—',
+                    'Avg Humidity'    => $agg->avg_hum !== null ? number_format($agg->avg_hum, 1) . '%' : '—',
+                    'Total Readings'  => $this->countWithUnit($agg->readings ?? 0, 'reading'),
+                    'Alert Readings'  => $this->countWithUnit($agg->alerts ?? 0, 'reading'),
                 ];
             })(),
             'egg_stock' => (function () use ($from, $to, $cageIds, $cageId) {
@@ -238,28 +245,118 @@ class ReportController extends Controller
                     ->selectRaw('SUM(`count`) as total_stocked, COUNT(*) as batches, COUNT(DISTINCT harvested_date) as days')
                     ->first();
 
-                return (object) [
-                    'total_stocked' => (int) ($agg->total_stocked ?? 0),
-                    'batches'       => $agg->batches ?? 0,
-                    'top_size'      => ucfirst($this->eggStockQuery($from, $to, $cageIds, $cageId)->selectRaw('egg_size, SUM(`count`) as total')->groupBy('egg_size')->orderByDesc('total')->value('egg_size') ?? '—'),
-                    'days'          => $agg->days ?? 0,
+                $sizeRows = $this->eggStockQuery($from, $to, $cageIds, $cageId)
+                    ->selectRaw('egg_size, SUM(`count`) as total')
+                    ->groupBy('egg_size')
+                    ->get();
+
+                return [
+                    'Total Stocked' => $this->countWithUnit($agg->total_stocked ?? 0, 'egg'),
+                    'Batches'       => $this->countWithUnit($agg->batches ?? 0, 'batch'),
+                    'Top Size'      => $this->describeTop($sizeRows, 'egg_size', fn($size) => ucfirst((string) $size), 'egg'),
+                    'Days Covered'  => $this->countWithUnit($agg->days ?? 0, 'day'),
                 ];
             })(),
-            'mortality' => (function () use ($cageIds, $hasRange, $from, $to, $allCages) {
-                $agg = MortalityLog::whereIn('cage_id', $cageIds)
+            'mortality' => (function () use ($cageIds, $hasRange, $from, $to, $reason, $allCages) {
+                // Same filters as mortalityReport(), including the reason
+                // filter, so the summary always matches the rows listed.
+                $filtered = fn () => MortalityLog::whereIn('cage_id', $cageIds)
                     ->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))
+                    ->when($reason !== 'all', fn($q) => $q->where('reason', $reason));
+
+                $agg = $filtered()
                     ->selectRaw('SUM(`count`) as total_deaths, COUNT(DISTINCT log_date) as days')
                     ->first();
 
-                return (object) [
-                    'total_deaths'  => $agg->total_deaths ?? 0,
-                    'top_cause'     => MortalityLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->selectRaw('reason, SUM(`count`) as total')->groupBy('reason')->orderByDesc('total')->value('reason') ?? '—',
-                    'most_affected' => optional($allCages->find(MortalityLog::whereIn('cage_id', $cageIds)->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))->selectRaw('cage_id, SUM(`count`) as total')->groupBy('cage_id')->orderByDesc('total')->value('cage_id')))->cage_code ?? '—',
-                    'days'          => $agg->days ?? 0,
+                $causeRows = $filtered()->selectRaw('reason, SUM(`count`) as total')->groupBy('reason')->get();
+                $cageRows  = $filtered()->selectRaw('cage_id, SUM(`count`) as total')->groupBy('cage_id')->get();
+
+                return [
+                    'Total Deaths'  => $this->countWithUnit($agg->total_deaths ?? 0, 'hen'),
+                    'Top Cause'     => $this->describeTop($causeRows, 'reason', null, 'hen'),
+                    'Most Affected' => $this->describeMostAffected($cageRows, $allCages),
+                    'Days Covered'  => $this->countWithUnit($agg->days ?? 0, 'day'),
                 ];
             })(),
             default => null,
         };
+    }
+
+    // "5 hens", "1 day", "0 batches"
+    private function countWithUnit($count, string $unit): string
+    {
+        $count = (int) $count;
+
+        return $count . ' ' . Str::plural($unit, $count);
+    }
+
+    // Every group tied for the highest total, sorted by name, plus that total.
+    // A plain ORDER BY total DESC LIMIT 1 has no tie-breaker and silently
+    // names one arbitrary group when several share the top count.
+    private function topGroups($rows, string $key, ?\Closure $labelFor = null): array
+    {
+        $groups = collect($rows)
+            ->map(fn($row) => [
+                'label' => $labelFor ? $labelFor($row->{$key}) : $row->{$key},
+                'total' => (int) $row->total,
+            ])
+            ->filter(fn($g) => $g['label'] !== null && $g['label'] !== '' && $g['total'] > 0);
+
+        if ($groups->isEmpty()) {
+            return [[], 0];
+        }
+
+        $max = $groups->max('total');
+        $labels = $groups->where('total', $max)->pluck('label')
+            ->sort(fn($a, $b) => strnatcasecmp($a, $b))
+            ->values()
+            ->all();
+
+        return [$labels, $max];
+    }
+
+    // "A", "A and B", "A, B, and C"
+    private function joinLabels(array $labels): string
+    {
+        if (count($labels) <= 2) {
+            return implode(' and ', $labels);
+        }
+
+        return implode(', ', array_slice($labels, 0, -1)) . ', and ' . end($labels);
+    }
+
+    // Top Cause / Top Size: "Disease (5 hens)" or, on a tie,
+    // "Disease and Heat Stress (tied, 2 hens each)".
+    private function describeTop($rows, string $key, ?\Closure $labelFor, string $unit): string
+    {
+        [$labels, $max] = $this->topGroups($rows, $key, $labelFor);
+
+        if (empty($labels)) {
+            return '—';
+        }
+
+        if (count($labels) === 1) {
+            return "{$labels[0]} (" . $this->countWithUnit($max, $unit) . ')';
+        }
+
+        return $this->joinLabels($labels) . ' (tied, ' . $this->countWithUnit($max, $unit) . ' each)';
+    }
+
+    // Most Affected: "CAGE-A (3 hens)" or, when cages share the highest death
+    // count, "CAGE-A, CAGE-B, and CAGE-C are equally affected (3 hens each)".
+    private function describeMostAffected($cageRows, $allCages): string
+    {
+        [$labels, $max] = $this->topGroups($cageRows, 'cage_id', fn($id) => $allCages->firstWhere('id', $id)?->cage_code);
+
+        if (empty($labels)) {
+            return '—';
+        }
+
+        if (count($labels) === 1) {
+            return "{$labels[0]} (" . $this->countWithUnit($max, 'hen') . ')';
+        }
+
+        return $this->joinLabels($labels) . ' are equally affected (' . $this->countWithUnit($max, 'hen') . ' each)';
     }
 
     private function productionReport($from, $to, $cageIds, $allCages, bool $withForecast = false)
@@ -310,6 +407,9 @@ class ReportController extends Controller
         // ballooning to 100+ pages for cages with many slots).
         return $logs
             ->groupBy(fn($log) => $log->log_date->format('Y-m-d') . '-' . ($log->cageSlot?->cage?->id ?? '0'))
+            // Newest first, sorted on the ISO date: the displayed mm/dd/yyyy
+            // text would not sort across years.
+            ->sortByDesc(fn($group) => $group->first()->log_date->format('Y-m-d'))
             ->map(function ($group) use ($feedLogs, $envData, $forecastMap, $withForecast) {
                 $first = $group->first();
                 $key = $first->log_date->format('Y-m-d') . '-' . ($first->cageSlot?->cage?->id ?? '0');
@@ -324,15 +424,15 @@ class ReportController extends Controller
                 $breed = $breeds->count() > 1 ? 'Mixed' : ($breeds->first() ?? '—');
 
                 $row = [
-                    'date'     => $first->log_date->format('Y-m-d'),
+                    'date'     => $first->log_date->format('m/d/Y'),
                     'cage'     => $first->cageSlot?->cage?->cage_code ?? '—',
                     'breed'    => $breed,
                     'eggs'     => $totalEggs,
                     'hens'     => $totalHens,
                     'hdep'     => number_format($hdep, 1) . '%',
-                    'feed_kg'  => $feed ? number_format($feed->feed_consumed_kg, 1) : '—',
+                    'feed_kg'  => $feed ? number_format($feed->feed_consumed_kg, 1) . ' kg' : '—',
                     'cp_pct'   => $feed?->feedBatch ? number_format($feed->feedBatch->crude_protein, 1) . '%' : '—',
-                    'temp'     => $env ? number_format($env->avg_temp, 1) : '—',
+                    'temp'     => $env ? number_format($env->avg_temp, 1) . '°C' : '—',
                     'humidity' => $env ? number_format($env->avg_hum, 1) . '%' : '—',
                 ];
 
@@ -342,7 +442,6 @@ class ReportController extends Controller
 
                 return (object) $row;
             })
-            ->sortByDesc('date')
             ->values();
     }
 
@@ -354,7 +453,7 @@ class ReportController extends Controller
             ->orderByDesc('log_date')
             ->get()
             ->map(fn($l) => (object) [
-                'date'     => $l->log_date->format('Y-m-d'),
+                'date'     => $l->log_date->format('m/d/Y'),
                 'cage'     => $l->cage?->cage_code ?? '—',
                 'batch'    => $l->feedBatch->batch_code,
                 'consumed' => number_format($l->feed_consumed_kg, 2) . ' kg',
@@ -373,7 +472,7 @@ class ReportController extends Controller
             ->limit(200)
             ->get()
             ->map(fn($l) => (object) [
-                'datetime' => $l->recorded_at->format('Y-m-d H:i'),
+                'datetime' => $l->recorded_at->format('m/d/Y g:i A'),
                 'cage'     => $l->cage?->cage_code ?? '—',
                 'temp'     => $l->temperature_c . '°C',
                 'humidity' => $l->humidity_pct . '%',
@@ -394,8 +493,8 @@ class ReportController extends Controller
         }
 
         return $query->get()->map(fn($l) => (object) [
-            'date'   => $l->log_date->format('Y-m-d'),
-                'cage'     => $l->cage?->cage_code ?? '—',
+            'date'   => $l->log_date->format('m/d/Y'),
+            'cage'   => $l->cage?->cage_code ?? '—',
             'count'  => $l->count,
             'reason' => $l->reason,
             'notes'  => $l->notes ?? '—',
@@ -419,7 +518,7 @@ class ReportController extends Controller
             ->orderByDesc('harvested_date')
             ->get()
             ->map(fn($b) => (object) [
-                'date'      => $b->harvested_date->format('Y-m-d'),
+                'date'      => $b->harvested_date->format('m/d/Y'),
                 'cage'      => $b->cage?->cage_code ?? '—',
                 'size'      => ucfirst($b->egg_size),
                 'count'     => $b->count,
@@ -456,7 +555,7 @@ class ReportController extends Controller
 
         return [
             'kind'   => 'production',
-            'labels' => $rows->map(fn($r) => $r->log_date->format('Y-m-d'))->all(),
+            'labels' => $rows->map(fn($r) => $r->log_date->format('m/d/Y'))->all(),
             'eggs'   => $rows->map(fn($r) => (int) $r->eggs)->all(),
             'hdep'   => $rows->map(fn($r) => round((float) $r->hdep, 1))->all(),
         ];
@@ -474,7 +573,7 @@ class ReportController extends Controller
 
         return [
             'kind'   => 'feed',
-            'labels' => $rows->map(fn($r) => $r->log_date->format('Y-m-d'))->all(),
+            'labels' => $rows->map(fn($r) => $r->log_date->format('m/d/Y'))->all(),
             'kg'     => $rows->map(fn($r) => round((float) $r->kg, 1))->all(),
         ];
     }
@@ -492,7 +591,7 @@ class ReportController extends Controller
 
         return [
             'kind'     => 'environment',
-            'labels'   => $rows->pluck('log_date')->all(),
+            'labels'   => $rows->map(fn($r) => Carbon::parse($r->log_date)->format('m/d/Y'))->all(),
             'temp'     => $rows->map(fn($r) => round((float) $r->avg_temp, 1))->all(),
             'humidity' => $rows->map(fn($r) => round((float) $r->avg_hum, 1))->all(),
         ];

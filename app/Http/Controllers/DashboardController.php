@@ -1256,7 +1256,7 @@ class DashboardController extends Controller
             $latestFeedDate = FeedConsumptionLog::when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))->max('log_date');
             if ($latestFeedDate && $latestFeedDate < $weekStart) {
                 $feedRefDate = $latestFeedDate;
-                $feedAsOf = Carbon::parse($latestFeedDate)->format('M j, Y');
+                $feedAsOf = Carbon::parse($latestFeedDate)->format('m/d/Y');
             }
         }
         $feedRef = Carbon::parse($feedRefDate);
@@ -1560,7 +1560,7 @@ class DashboardController extends Controller
         $dayComplete = true;
 
         $kpiAsOf = ($this->validRangeDate($fromDate) || $this->validRangeDate($toDate))
-            ? Carbon::parse($today)->format('M j, Y')
+            ? Carbon::parse($today)->format('m/d/Y')
             : null;
 
         return compact(
@@ -1602,7 +1602,7 @@ class DashboardController extends Controller
             } elseif ($env) {
                 $since = $env->recorded_at->isToday()
                     ? $env->recorded_at->format('g:i A')
-                    : $env->recorded_at->format('M j, g:i A');
+                    : $env->recorded_at->format('m/d/Y g:i A');
                 $text .= " · DHT22 offline — no data since {$since}";
             } else {
                 $text .= ' · DHT22 offline — no data yet';

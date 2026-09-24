@@ -122,8 +122,8 @@
                             <div class="text-[10px] text-[#615d59] mt-0.5">admin: {{ $item->status }}</div>
                             @endif
                         </td>
-                        <td class="px-5 py-3.5 text-sm font-mono" style="color: #615d59;">{{ $item->installation_date?->format('Y-m-d') ?? '—' }}</td>
-                        <td class="px-5 py-3.5 text-sm font-mono" style="color: #615d59;">{{ $item->last_calibration_date?->format('Y-m-d') ?? '—' }}</td>
+                        <td class="px-5 py-3.5 text-sm font-mono" style="color: #615d59;">{{ $item->installation_date?->format('m/d/Y') ?? '—' }}</td>
+                        <td class="px-5 py-3.5 text-sm font-mono" style="color: #615d59;">{{ $item->last_calibration_date?->format('m/d/Y') ?? '—' }}</td>
                         <td class="px-5 py-3.5">
                             <div class="flex items-center gap-1">
                                 <x-icon-button icon="pencil" label="Edit device" color="neutral"

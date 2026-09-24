@@ -85,6 +85,22 @@ class ReportingDateService
     }
 
     /**
+     * A Y-m-d date (e.g. a report's from/to filter) as shown to users:
+     * mm/dd/yyyy. Anything that isn't a Y-m-d date is returned unchanged
+     * instead of throwing, since these values can come straight from a URL.
+     */
+    public static function displayDate(?string $date): string
+    {
+        $date = (string) $date;
+
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || ! checkdate((int) substr($date, 5, 2), (int) substr($date, 8, 2), (int) substr($date, 0, 4))) {
+            return $date;
+        }
+
+        return substr($date, 5, 2) . '/' . substr($date, 8, 2) . '/' . substr($date, 0, 4);
+    }
+
+    /**
      * The reporting-day window for a given reporting date, as a half-open
      * [start, end) pair of naive datetime strings in the app timezone.
      *

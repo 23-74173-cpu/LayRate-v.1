@@ -71,7 +71,7 @@ class ProductionTimelineService
         return match ($groupBy) {
             'week' => 'Week '.substr($period, 5).', '.substr($period, 0, 4),
             'month' => Carbon::parse($period.'-01')->format('F Y'),
-            default => Carbon::parse($period)->format('M j, Y'),
+            default => Carbon::parse($period)->format('m/d/Y'),
         };
     }
 }

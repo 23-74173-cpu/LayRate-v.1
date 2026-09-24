@@ -37,7 +37,7 @@
                     </td>
                     <td class="px-5 py-3.5 text-sm font-medium text-[#333333]">{{ number_format($batch->count) }}</td>
                     <td class="px-5 py-3.5 text-sm text-[#6B7280]">{{ (int) ceil($batch->count / 30) }}</td>
-                    <td class="px-5 py-3.5 text-sm font-mono text-[#333333]">{{ $batch->harvested_date->format('Y-m-d') }}</td>
+                    <td class="px-5 py-3.5 text-sm font-mono text-[#333333]">{{ $batch->harvested_date->format('m/d/Y') }}</td>
                     <td class="px-5 py-3.5 text-sm font-medium" style="color:{{ $cageColor }}">{{ $cageCode }}</td>
                     <td class="px-5 py-3.5">
                         <x-status-badge :status="$batch->freshness_status" type="freshness" />

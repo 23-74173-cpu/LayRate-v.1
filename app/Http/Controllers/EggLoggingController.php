@@ -7,6 +7,7 @@ use App\Models\CageSlot;
 use App\Models\EggSizeLog;
 use App\Models\Hen;
 use App\Models\MortalityLog;
+use App\Models\Note;
 use App\Models\ProductionLog;
 use App\Services\ReportingDateService;
 use Illuminate\Http\Request;
@@ -294,6 +295,11 @@ class EggLoggingController extends Controller
             ];
         }
 
+        // Only notes the user typed ($data['notes'] stays null when the box is
+        // empty; 'Manual entry' above is the log's own placeholder).
+        $noteCageIds = $slots->pluck('cage_id')->unique()->values();
+        Note::saveFromSection($data['notes'] ?? null, 'Production', $noteCageIds->count() === 1 ? $noteCageIds->first() : null);
+
         if ($isAjax) {
             $response = ['success' => true, 'message' => 'Production log saved.', 'reminder' => true];
             if ($isMulti) {
@@ -366,6 +372,8 @@ class EggLoggingController extends Controller
                 ->withInput();
         }
 
+        $oldNotes = trim((string) $productionLog->notes);
+
         $productionLog->update([
             'log_date' => $data['log_date'],
             'egg_count' => $data['egg_count'],
@@ -380,6 +388,12 @@ class EggLoggingController extends Controller
         ]);
 
         $this->syncSizeLogs($productionLog, $data);
+
+        // Only a changed note is copied to the Notes list (the edit box comes
+        // pre-filled with the log's current notes).
+        if (trim((string) ($data['notes'] ?? '')) !== $oldNotes) {
+            Note::saveFromSection($data['notes'] ?? null, 'Production', $productionLog->cageSlot?->cage_id);
+        }
 
         return redirect()->route('eggs.logging')->with('success', 'Production log updated.');
     }

@@ -217,7 +217,7 @@
                     <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8] {{ $isLow ? 'bg-red-50' : '' }}">
                         <td class="px-5 py-3.5 text-sm font-medium text-[#333333]">{{ $batch->batch_code }}</td>
                         <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $batch->brand ?? '—' }}</td>
-                        <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $batch->date_received->format('Y-m-d') }}</td>
+                        <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $batch->date_received->format('m/d/Y') }}</td>
                         <td class="px-5 py-3.5">
                             <span class="text-xs px-2.5 py-1 rounded-full" style="background:{{ $batch->cpColor }};color:{{ $batch->cpText }}">
                                 {{ number_format($batch->crude_protein, 1) }}%
@@ -302,7 +302,7 @@
                         $isDistributed = $log->source === 'distributed';
                     @endphp
                     <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8] {{ $isDistributed ? 'bg-amber-50/50' : '' }}">
-                        <td class="px-5 py-3.5 text-sm font-mono text-[#333333]">{{ $log->log_date->format('Y-m-d') }}</td>
+                        <td class="px-5 py-3.5 text-sm font-mono text-[#333333]">{{ $log->log_date->format('m/d/Y') }}</td>
                         <td class="px-5 py-3.5 text-sm text-[#6B7280]">{{ $log->log_time?->format('H:i') ?? '—' }}</td>
                         <td class="px-5 py-3.5 text-sm font-medium" style="color:{{ $cColor }}">{{ $log->cage?->cage_code ?? '—' }}</td>
                         <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $log->feedBatch->batch_code }}</td>

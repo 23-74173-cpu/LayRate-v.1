@@ -10,7 +10,7 @@
     </div>
     <div class="text-right">
         <div class="text-sm font-bold text-[#102A4C] uppercase tracking-widest">{{ $type === 'all' ? 'All Reports' : ucfirst($type) . ' Report' }}</div>
-        <div class="text-xs text-[#6B7280] mt-0.5">{{ $from && $to ? "{$from} — {$to}" : 'All time' }}</div>
+        <div class="text-xs text-[#6B7280] mt-0.5">{{ $from && $to ? \App\Services\ReportingDateService::displayDate($from) . ' — ' . \App\Services\ReportingDateService::displayDate($to) : 'All time' }}</div>
     </div>
 </div>
 <hr style="border:none;border-top:3px solid #102A4C;margin:12px 0">

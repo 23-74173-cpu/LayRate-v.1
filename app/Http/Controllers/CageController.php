@@ -602,7 +602,7 @@ class CageController extends Controller
             ->get()
             ->map(fn ($n) => [
                 'body' => $n->body,
-                'created_at' => $n->created_at->format('M j, g:i A'),
+                'created_at' => $n->created_at->format('m/d/Y g:i A'),
             ]);
 
         return response()->json([

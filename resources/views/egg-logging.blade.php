@@ -321,6 +321,7 @@
                             {{-- Notes --}}
                             <div>
                                 <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Notes <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
+                                <x-saved-note-picker category="Production" target="textarea[name='notes']" />
                                 <textarea name="notes" rows="2" placeholder="e.g. 2 broken eggs"
                                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1 resize-y"
                                           style="border-color: #e6e6e6; color: #1f1f1f;"></textarea>
@@ -1618,6 +1619,7 @@
                             document.querySelectorAll('#sizeBreakdown .size-input').forEach(function(inp) {
                                 inp.value = '0';
                             });
+                            if (window.LayRateNotes) LayRateNotes.rememberFromForm(form);
                             var notesEl = form.querySelector('textarea[name="notes"]');
                             if (notesEl) notesEl.value = '';
 

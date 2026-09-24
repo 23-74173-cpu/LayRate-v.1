@@ -135,7 +135,7 @@
 
     <div class="footer">
         <div>
-            <div>Printed {{ now()->format('F j, Y \a\t g:i A') }}</div>
+            <div>Printed {{ now()->format('m/d/Y \a\t g:i A') }}</div>
             <div class="signature">___________________________</div>
             <div style="font-size: 11px; color: #a39e98;">Farm Manager Signature</div>
         </div>

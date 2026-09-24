@@ -34,9 +34,9 @@
                     </td>
                     <td class="px-5 py-3.5 text-sm font-medium text-[#333333]">{{ number_format($order->egg_count) }}</td>
                     <td class="px-5 py-3.5 text-sm text-[#6B7280]">{{ $order->egg_label }}</td>
-                    <td class="px-5 py-3.5 text-sm font-mono text-[#333333]">{{ $order->requested_date->format('Y-m-d') }}</td>
+                    <td class="px-5 py-3.5 text-sm font-mono text-[#333333]">{{ $order->requested_date->format('m/d/Y') }}</td>
                     <td class="px-5 py-3.5 text-sm font-mono text-[#6B7280]">
-                        {{ $order->fulfillment_date ? $order->fulfillment_date->format('Y-m-d') : 'Pending' }}
+                        {{ $order->fulfillment_date ? $order->fulfillment_date->format('m/d/Y') : 'Pending' }}
                     </td>
                     <td class="px-5 py-3.5">
                         <x-status-badge :status="$order->status" type="general" />

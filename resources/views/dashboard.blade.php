@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('title', 'Dashboard')
-@section('header-clock', now()->format('l, F j') . ' — ' . now()->format('g:i A'))
+@section('header-clock', now()->format('l, m/d/Y') . ' — ' . now()->format('g:i A'))
 
 @section('content')
 <div class="space-y-5">
@@ -419,7 +419,7 @@
             <div class="flex items-center justify-between mb-4">
                 <div>
                     <h3 class="text-[18px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Yesterday's Production Record</h3>
-                    <p class="text-xs mt-0.5" style="color: #a39e98;">{{ \Carbon\Carbon::yesterday()->format('l, F j, Y') }}</p>
+                    <p class="text-xs mt-0.5" style="color: #a39e98;">{{ \Carbon\Carbon::yesterday()->format('l, m/d/Y') }}</p>
                 </div>
                 <button onclick="closeYesterdaySummary()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                     <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
@@ -626,8 +626,10 @@
             var el = document.getElementById('dashboardClock');
             if (!el) return;
             var now = new Date();
-            el.textContent = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
-                + ' — ' + now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+            // Weekday + mm/dd/yyyy, the app's date format, whatever the browser language.
+            var mdy = String(now.getMonth() + 1).padStart(2, '0') + '/' + String(now.getDate()).padStart(2, '0') + '/' + now.getFullYear();
+            el.textContent = now.toLocaleDateString('en-US', { weekday: 'long' }) + ', ' + mdy
+                + ' — ' + now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
         }
         tick();
         if (window.__dashboardClockTimer) clearInterval(window.__dashboardClockTimer);

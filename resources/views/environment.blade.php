@@ -671,7 +671,7 @@ function openEnvLogOverride(cageId, date, currentTemp, currentHum, cageCode) {
     document.getElementById('envOverrideTemp').value = currentTemp;
     document.getElementById('envOverrideHum').value = currentHum;
     document.getElementById('envLogOverrideCageLabel').textContent = cageCode || 'Cage #' + cageId;
-    document.getElementById('envLogOverrideDateLabel').textContent = date;
+    document.getElementById('envLogOverrideDateLabel').textContent = window.LayRateDates ? LayRateDates.toDisplay(date) : date;
     document.getElementById('envLogOverrideModal').style.display = 'flex';
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }

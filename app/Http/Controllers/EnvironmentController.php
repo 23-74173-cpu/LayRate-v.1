@@ -138,11 +138,21 @@ class EnvironmentController extends Controller
 
         $avgStatus = EnvironmentStatusService::summary((float) $avgTemp, (float) $avgHum, $thresholds);
 
+        // IR Reference Card: the current coop-wide reading (same average as
+        // the Coop Avg cards) next to the standard optimal range.
+        $optimal = EnvironmentStatusService::optimalRange();
+        $reference = [
+            'temp'       => EnvironmentStatusService::compareToRange($avgTemp !== null ? (float) $avgTemp : null, $optimal['temp_min'], $optimal['temp_max']),
+            'hum'        => EnvironmentStatusService::compareToRange($avgHum !== null ? (float) $avgHum : null, $optimal['hum_min'], $optimal['hum_max']),
+            'cages'      => $latestPerCage->count(),
+            'updated_at' => $latestPerCage->map(fn ($r) => $r->env->recorded_at)->filter()->max(),
+        ];
+
         return view('environment._live-data', compact(
             'cages', 'latestPerCage', 'sensorCageIds', 'sensorReadings', 'activeSensors', 'trendData', 'summaryLogs',
             'avgTemp', 'avgHum', 'avgStatus',
             'tempValues', 'humValues',
-            'thresholds', 'range'
+            'thresholds', 'range', 'optimal', 'reference'
         ));
     }
 

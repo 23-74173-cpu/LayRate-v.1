@@ -18,7 +18,7 @@
                 <tbody>
                     @forelse($mortalityLogs as $log)
                     <tr class="border-t border-[#F0F0F0] hover:bg-[#FAFAFA]">
-                        <td class="px-3 py-2 text-[#333]">{{ $log->log_date->format('M d, Y') }}</td>
+                        <td class="px-3 py-2 text-[#333]">{{ $log->log_date->format('m/d/Y') }}</td>
                         <td class="px-3 py-2 text-[#333]">{{ $log->cage?->cage_code ?? '—' }}</td>
                         <td class="px-3 py-2 text-[#333] font-medium">{{ $log->count }}</td>
                         <td class="px-3 py-2">

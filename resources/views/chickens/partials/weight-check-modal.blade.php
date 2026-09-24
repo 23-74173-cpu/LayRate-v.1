@@ -34,6 +34,7 @@
 
                 <div>
                     <label class="block text-xs font-medium text-[#6B7280] mb-1">Notes</label>
+                    <x-saved-note-picker category="Hens" target="input[name='notes']" />
                     <input type="text" name="notes" value="{{ old('notes') }}" placeholder="Optional"
                            class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
                     <x-input-error name="notes" />

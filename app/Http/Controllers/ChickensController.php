@@ -7,6 +7,7 @@ use App\Models\CageSlot;
 use App\Models\Hen;
 use App\Models\MortalityLog;
 use App\Models\MortalityLogHen;
+use App\Models\Note;
 use App\Models\CageTransfer;
 use App\Models\CullingLog;
 use App\Models\Removal;
@@ -261,6 +262,8 @@ class ChickensController extends Controller
         [$created, $firstId, $lastId] = $hens;
         $count = count($created);
 
+        Note::saveFromSection($data['notes'] ?? null, 'Hens');
+
         session()->forget('show_no_chickens_modal');
 
         if ($count === 1) {
@@ -289,6 +292,8 @@ class ChickensController extends Controller
             'recorded_by' => auth()->id(),
         ]);
 
+        Note::saveFromSection($data['notes'] ?? null, 'Hens');
+
         return redirect()->back()->with('success', 'Health event logged.');
     }
 
@@ -308,6 +313,8 @@ class ChickensController extends Controller
             'notes'      => $data['notes'] ?? null,
             'recorded_by' => auth()->id(),
         ]);
+
+        Note::saveFromSection($data['notes'] ?? null, 'Hens');
 
         return redirect()->back()->with('success', 'Weight recorded.');
     }
@@ -363,6 +370,8 @@ class ChickensController extends Controller
             }
             return back()->withErrors(['hen_id' => implode(' ', $errors)]);
         }
+
+        Note::saveFromSection($data['notes'] ?? null, 'Hens');
 
         $msg = count($culled) . ' hen(s) culled';
         if (!empty($errors)) {
@@ -429,6 +438,8 @@ class ChickensController extends Controller
             }
             return back()->withErrors(['hen_id' => implode(' ', $errors)]);
         }
+
+        Note::saveFromSection($data['notes'] ?? null, 'Hens');
 
         $msg = count($removed) . ' hen(s) removed';
         if (!empty($errors)) {
@@ -671,6 +682,10 @@ class ChickensController extends Controller
             foreach (array_unique($mortalityCageIds) as $cageId) {
                 $this->checkMortalitySpike($cageId, $logDate);
             }
+
+            // The notes box in this dialog belongs to the mortality record.
+            $noteCageIds = array_values(array_unique($mortalityCageIds));
+            Note::saveFromSection($data['notes'] ?? null, 'Mortality', count($noteCageIds) === 1 ? $noteCageIds[0] : null);
         }
 
         $parts = ["{$removedCount} hen(s) removed"];

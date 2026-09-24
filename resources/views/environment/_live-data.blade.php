@@ -1,4 +1,7 @@
 <turbo-frame id="environment-live-data">
+    {{-- ── IR Reference Card: current vs. standard optimal range ── --}}
+    @include('environment._reference-card')
+
     {{-- ── Top Metric Cards — dashboard gradient KPI design ── --}}
     <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
         <x-kpi-card

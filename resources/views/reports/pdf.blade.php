@@ -26,10 +26,9 @@
     .meta-strip .label { font-weight: bold; color: #000000; }
     .section { margin-bottom: 18px; }
     .section-title { font-weight: bold; color: #102A4C; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; border-bottom: 1px solid #D9D9D9; padding-bottom: 4px; }
-    table.pills { width: 100%; margin-bottom: 12px; }
-    table.pills td { width: 25%; border: 1px solid #D9D9D9; text-align: center; padding: 6px; }
-    .pill-label { font-size: 8px; text-transform: uppercase; color: #6B7280; }
-    .pill-value { font-size: 14px; font-weight: bold; color: #333333; }
+    table.summary { width: 100%; margin-bottom: 12px; }
+    table.summary td { width: 50%; padding: 2px 12px 2px 0; font-size: 10px; color: #333333; vertical-align: top; }
+    .summary-label { font-weight: bold; color: #1f1f1f; }
     table.data { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
     table.data thead th { background: #E5E7EB; color: #000000; text-align: left; font-size: 8px; text-transform: uppercase; letter-spacing: 0.5px; padding: 6px 8px; }
     table.data tbody td { font-size: 9px; padding: 5px 8px; border-bottom: 1px solid #F0F0F0; }
@@ -58,7 +57,7 @@
                 </td>
                 <td>
                     <div class="doc-title">{{ $type === 'all' ? 'All Reports' : ucfirst($type) . ' Report' }}</div>
-                    <div class="doc-range">{{ $from && $to ? "{$from} — {$to}" : 'All time' }}</div>
+                    <div class="doc-range">{{ $from && $to ? \App\Services\ReportingDateService::displayDate($from) . ' — ' . \App\Services\ReportingDateService::displayDate($to) : 'All time' }}</div>
                 </td>
             </tr>
         </table>
@@ -69,7 +68,7 @@
     <table class="meta-strip">
         <tr>
             <td><span class="label">Cage:</span> {{ $cageId === 'all' ? 'All Cages' : $cageId }}</td>
-            <td><span class="label">Generated:</span> {{ now()->format('F j, Y  H:i') }}</td>
+            <td><span class="label">Generated:</span> {{ \App\Services\ReportingDateService::now()->format('m/d/Y g:i A') }}</td>
             <td><span class="label">Prepared by:</span> {{ auth()->user()->name }}</td>
             <td><span class="label">Records:</span> {{ collect($sections)->sum(fn($s) => $s['rows']->count()) }}</td>
         </tr>
@@ -81,17 +80,17 @@
         <div class="section-title">{{ $section['label'] }}</div>
         @endif
 
-        @if(($section['summary'] ?? null) !== null)
-        @php $pills = (array) $section['summary']; @endphp
-        <table class="pills">
+        {{-- Plain "Label: value" lines, two per row (dompdf has no grid). --}}
+        @if(!empty($section['summary']))
+        <table class="summary">
+            @foreach(array_chunk($section['summary'], 2, true) as $pair)
             <tr>
-                @foreach($pills as $key => $value)
-                <td>
-                    <div class="pill-label">{{ strtoupper(str_replace('_', ' ', $key)) }}</div>
-                    <div class="pill-value">{{ $value }}</div>
-                </td>
+                @foreach($pair as $label => $value)
+                <td><span class="summary-label">{{ $label }}:</span> {{ $value }}</td>
                 @endforeach
+                @if(count($pair) === 1)<td></td>@endif
             </tr>
+            @endforeach
         </table>
         @endif
 

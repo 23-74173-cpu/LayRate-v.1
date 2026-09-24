@@ -33,6 +33,11 @@
     {{-- Turbo Drive --}}
     <script type="module" src="/js/turbo.js"></script>
 
+    {{-- Date fields always show and accept mm/dd/yyyy, whatever the browser's
+         language (see the comment at the top of the file). Loaded once; it
+         watches the page for date inputs added by Turbo visits and frames. --}}
+    <script src="/js/date-mdy.js?v={{ @filemtime(public_path('js/date-mdy.js')) }}" defer></script>
+
     {{-- Slow-page loading screen: appears only when a page takes >600ms to
          render. Fast loads clear the timer and never flash it. Covers both
          Turbo Drive visits and initial hard loads. Guarded against Turbo
@@ -299,6 +304,9 @@
                 'Monitoring' => [
                     ['icon'=>'thermometer',   'label'=>'Environment',        'route'=>'environment'],
                     ['icon'=>'cpu',           'label'=>'Hardware',           'route'=>'hardware.index'],
+                ],
+                'Business' => [
+                    ['icon'=>'wallet',        'label'=>'Finance',            'route'=>'finance.index'],
                 ],
                 'Insights' => [
                     ['icon'=>'trending-up',   'label'=>'Forecast',           'route'=>'forecast', 'adminOnly' => true],
@@ -809,6 +817,7 @@
             'environment': 'Environment','hardware': 'Hardware',
             'feed': 'Feed & Nutrition', 'analytics': 'Analytics',    'forecast': 'Forecast',
             'reports': 'Reports',       'notes': 'Notes',            'mortality': 'Mortality',
+            'finance': 'Finance',
             'notifications': 'Notifications', 'profile': 'Profile',
         };
         var crumb = document.getElementById('breadcrumb-current');
@@ -1187,6 +1196,57 @@ function loadingButton(btn, label) {
     btn.innerHTML = '<span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-1 align-middle"></span>'
         + (label || 'Saving\u2026');
 }
+
+// \u2500\u2500 "Use a saved note" pickers (components/saved-note-picker.blade.php) \u2500\u2500
+// apply(): puts the picked note into the section's notes box (added on a new
+// line when the box already has text). remember(): after an AJAX save that
+// stays on the page, adds the note just typed to every picker of that
+// category, so it can be reused without a reload.
+window.LayRateNotes = {
+    _label: function (text) {
+        var flat = String(text).replace(/\s+/g, ' ').trim();
+        return flat.length > 70 ? flat.slice(0, 69) + '\u2026' : flat;
+    },
+    apply: function (select) {
+        var text = select.value;
+        select.value = '';
+        if (!text) return;
+        var selector = select.getAttribute('data-note-target');
+        var target = (select.form && select.form.querySelector(selector)) || document.querySelector(selector);
+        if (!target) return;
+        var current = target.value.trim();
+        var lines = current.split(/\r?\n/).map(function (l) { return l.trim(); });
+        if (lines.indexOf(text.trim()) === -1) {
+            var sep = target.tagName === 'TEXTAREA' ? '\n' : '; ';
+            target.value = current ? current + sep + text : text;
+            target.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        target.focus();
+    },
+    remember: function (category, text) {
+        text = String(text || '').trim();
+        if (!text || text.length > 2000) return;
+        var self = this;
+        document.querySelectorAll('select[data-note-picker]').forEach(function (select) {
+            if (select.getAttribute('data-note-category') !== category) return;
+            for (var i = 0; i < select.options.length; i++) {
+                if (select.options[i].value.toLowerCase() === text.toLowerCase()) return;
+            }
+            select.insertBefore(new Option(self._label(text), text), select.options[1] || null);
+            select.disabled = false;
+            select.options[0].textContent = select.getAttribute('data-placeholder') || 'Use a saved note\u2026';
+        });
+    },
+    // Call after a form with a picker was saved by AJAX (before clearing it).
+    rememberFromForm: function (form) {
+        if (!form || !form.querySelectorAll) return;
+        var self = this;
+        form.querySelectorAll('select[data-note-picker]').forEach(function (select) {
+            var target = form.querySelector(select.getAttribute('data-note-target'));
+            if (target) self.remember(select.getAttribute('data-note-category'), target.value);
+        });
+    },
+};
 </script>
 
 <x-confirm-modal />
