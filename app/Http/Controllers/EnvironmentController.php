@@ -25,7 +25,11 @@ class EnvironmentController extends Controller
         $relay = $this->activeRelay();
         $relayState = RelayStateService::payload($relay);
 
-        return view('environment', compact('thresholds', 'envTab', 'cages', 'relay', 'relayState'));
+        // For the hints under the Alert Thresholds inputs (same range as the
+        // IR Reference Card). Informational only: the thresholds stay manual.
+        $optimal = EnvironmentStatusService::optimalRange();
+
+        return view('environment', compact('thresholds', 'envTab', 'cages', 'relay', 'relayState', 'optimal'));
     }
 
     public function liveData(Request $request)
@@ -138,14 +142,24 @@ class EnvironmentController extends Controller
 
         $avgStatus = EnvironmentStatusService::summary((float) $avgTemp, (float) $avgHum, $thresholds);
 
-        // IR Reference Card: the current coop-wide reading (same average as
-        // the Coop Avg cards) next to the standard optimal range.
+        // IR Reference Card: the live DHT22 reading next to the standard
+        // optimal range. Only real sensor rows count here (manual entries are
+        // saved with is_override = 1): the latest one from each cage that has
+        // an active DHT22, averaged when there are several.
         $optimal = EnvironmentStatusService::optimalRange();
+        $dht22Latest = $this->latestDht22Readings($sensorCageIds);
+        $dht22Temp = $dht22Latest->isNotEmpty() ? (float) $dht22Latest->avg('temperature_c') : null;
+        $dht22Hum = $dht22Latest->isNotEmpty() ? (float) $dht22Latest->avg('humidity_pct') : null;
+        $dht22At = $dht22Latest->max('recorded_at');
         $reference = [
-            'temp'       => EnvironmentStatusService::compareToRange($avgTemp !== null ? (float) $avgTemp : null, $optimal['temp_min'], $optimal['temp_max']),
-            'hum'        => EnvironmentStatusService::compareToRange($avgHum !== null ? (float) $avgHum : null, $optimal['hum_min'], $optimal['hum_max']),
-            'cages'      => $latestPerCage->count(),
-            'updated_at' => $latestPerCage->map(fn ($r) => $r->env->recorded_at)->filter()->max(),
+            'temp_value' => $dht22Temp,
+            'hum_value'  => $dht22Hum,
+            'temp'       => EnvironmentStatusService::compareToRange($dht22Temp, $optimal['temp_min'], $optimal['temp_max']),
+            'hum'        => EnvironmentStatusService::compareToRange($dht22Hum, $optimal['hum_min'], $optimal['hum_max']),
+            'sensors'    => $dht22Latest->count(),
+            'updated_at' => $dht22At,
+            // Same 30-minute rule as the per-cage sensor cards.
+            'stale'      => $dht22At ? $dht22At->lt(now()->subMinutes(30)) : false,
         ];
 
         return view('environment._live-data', compact(
@@ -303,6 +317,34 @@ class EnvironmentController extends Controller
 
         return redirect()->route('environment')
             ->with('success', 'Thresholds saved.');
+    }
+
+    /**
+     * Latest real DHT22 reading (not demo, not a manual entry) for each of the
+     * given cages, found with one grouped query instead of loading every row.
+     */
+    private function latestDht22Readings($cageIds)
+    {
+        if (collect($cageIds)->isEmpty()) {
+            return collect();
+        }
+
+        $latestAt = EnvironmentalLog::whereIn('cage_id', $cageIds)
+            ->real()
+            ->where('is_override', false)
+            ->selectRaw('cage_id, MAX(recorded_at) as latest_at')
+            ->groupBy('cage_id');
+
+        return EnvironmentalLog::joinSub($latestAt, 'latest', function ($join) {
+                $join->on('environmental_logs.cage_id', '=', 'latest.cage_id')
+                     ->on('environmental_logs.recorded_at', '=', 'latest.latest_at');
+            })
+            ->where('environmental_logs.is_demo', false)
+            ->where('environmental_logs.is_override', false)
+            ->select('environmental_logs.*')
+            ->get()
+            ->unique('cage_id')
+            ->values();
     }
 
     private function activeRelay(): ?HardwareItem

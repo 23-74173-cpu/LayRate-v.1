@@ -24,17 +24,23 @@ class OptimalRangeAndDisplayDateTest extends TestCase
         $this->assertSame('within', EnvironmentStatusService::compareToRange(24.04, 18, 24)['state']);
     }
 
-    public function test_optimal_range_uses_config_with_defaults(): void
+    public function test_optimal_range_comes_from_config(): void
     {
-        config(['environment.optimal' => ['temp_min' => 19, 'temp_max' => 25]]);
+        config(['environment.optimal' => ['temp_min' => 19, 'temp_max' => 25, 'hum_min' => 45, 'hum_max' => 65]]);
 
         $this->assertSame(
-            ['temp_min' => 19.0, 'temp_max' => 25.0, 'hum_min' => 50.0, 'hum_max' => 70.0],
+            ['temp_min' => 19.0, 'temp_max' => 25.0, 'hum_min' => 45.0, 'hum_max' => 65.0],
             EnvironmentStatusService::optimalRange()
         );
+    }
 
+    public function test_optimal_range_reads_the_config_file_when_the_key_is_missing(): void
+    {
+        // e.g. a config cache built before config/environment.php existed.
         config(['environment.optimal' => null]);
-        $this->assertSame(18.0, EnvironmentStatusService::optimalRange()['temp_min']);
+        $fromFile = (require config_path('environment.php'))['optimal'];
+
+        $this->assertSame(array_map('floatval', $fromFile), EnvironmentStatusService::optimalRange());
     }
 
     public function test_display_date_formats_iso_dates_only(): void

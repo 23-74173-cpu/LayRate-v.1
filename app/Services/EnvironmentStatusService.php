@@ -46,15 +46,22 @@ class EnvironmentStatusService
     }
 
     /**
-     * The standard (optimal) range from config/environment.php, with the
-     * same defaults as that file in case the config cache predates it.
+     * The standard (optimal) range from config/environment.php: the single
+     * source of these numbers for the IR Reference Card and the threshold
+     * input hints.
      */
     public static function optimalRange(): array
     {
-        $defaults = ['temp_min' => 18.0, 'temp_max' => 24.0, 'hum_min' => 50.0, 'hum_max' => 70.0];
-        $configured = config('environment.optimal');
+        $range = config('environment.optimal');
 
-        return array_map('floatval', array_merge($defaults, is_array($configured) ? $configured : []));
+        // A config cache built before config/environment.php existed has no
+        // "environment" key. Read the file itself instead of keeping a second
+        // copy of the numbers here.
+        if (! is_array($range)) {
+            $range = (require config_path('environment.php'))['optimal'];
+        }
+
+        return array_map('floatval', $range);
     }
 
     /**

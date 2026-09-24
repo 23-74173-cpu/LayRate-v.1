@@ -1,7 +1,9 @@
-{{-- IR Reference Card: current coop reading next to the standard (optimal)
-     range, so it is clear at a glance whether conditions are ideal.
-     Props: $avgTemp, $avgHum, $optimal (EnvironmentStatusService::optimalRange()),
-     $reference (compareToRange() results + cages/updated_at), $thresholds. --}}
+{{-- IR Reference Card: the live DHT22 reading next to the standard (optimal)
+     range, so it is clear at a glance whether conditions are ideal. This
+     judges the live reading only; the hints in the Alert Thresholds dialog
+     judge the typed threshold values (same range, separate logic).
+     Props: $optimal (EnvironmentStatusService::optimalRange()), $thresholds,
+     $reference (DHT22 values, compareToRange() results, sensors, updated_at, stale). --}}
 @php
     $toneFor = fn (string $state) => match ($state) {
         'within' => ['#e8f5ec', '#1f6b3a', 'circle-check'],
@@ -13,7 +15,7 @@
         [
             'label'   => 'Temperature',
             'icon'    => 'thermometer',
-            'current' => $avgTemp !== null ? number_format($avgTemp, 1) . ' °C' : '—',
+            'current' => $reference['temp_value'] !== null ? number_format($reference['temp_value'], 1) . ' °C' : '—',
             'optimal' => $rangeText($optimal['temp_min'], $optimal['temp_max'], '°C'),
             'alerts'  => $rangeText($thresholds['temp_min'], $thresholds['temp_max'], '°C'),
             'result'  => $reference['temp'],
@@ -22,7 +24,7 @@
         [
             'label'   => 'Humidity',
             'icon'    => 'droplets',
-            'current' => $avgHum !== null ? number_format($avgHum, 1) . ' %' : '—',
+            'current' => $reference['hum_value'] !== null ? number_format($reference['hum_value'], 1) . ' %' : '—',
             'optimal' => $rangeText($optimal['hum_min'], $optimal['hum_max'], '%'),
             'alerts'  => $rangeText($thresholds['hum_min'], $thresholds['hum_max'], '%'),
             'result'  => $reference['hum'],
@@ -39,11 +41,16 @@
             <h2 id="ir-reference-title" class="text-sm font-semibold text-[#1f1f1f]">IR Reference: Current vs. Optimal</h2>
             <p class="text-xs text-[#6B7280] mt-0.5">
                 @if($noData)
-                    No readings yet. The optimal range is shown for reference.
+                    No live DHT22 reading yet. The optimal range is shown for reference.
+                @elseif($reference['sensors'] === 1)
+                    Current = latest DHT22 reading, {{ $reference['updated_at']->diffForHumans() }}.
                 @else
-                    Current = average of the latest reading from {{ $reference['cages'] }} {{ \Illuminate\Support\Str::plural('cage', $reference['cages']) }}@if($reference['updated_at']), updated {{ $reference['updated_at']->diffForHumans() }}@endif.
+                    Current = average of the latest DHT22 reading from {{ $reference['sensors'] }} sensors, newest {{ $reference['updated_at']->diffForHumans() }}.
                 @endif
             </p>
+            @if(! $noData && $reference['stale'])
+            <p class="text-xs font-medium mt-0.5" style="color:#9b1c24;">Stale: no new sensor reading in the last 30 minutes.</p>
+            @endif
         </div>
         @unless($noData)
         <span class="text-[11px] font-semibold uppercase px-2.5 py-1 rounded-full whitespace-nowrap"

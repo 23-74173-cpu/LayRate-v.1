@@ -76,27 +76,31 @@
             <div class="space-y-4">
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TEMP MIN (°C)</label>
-                    <input type="number" name="temp_min" step="0.5"
+                    <input type="number" name="temp_min" data-optimal-kind="temp" step="0.5"
                            value="{{ $thresholds['temp_min'] }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                    <p class="text-xs mt-1 truncate" data-optimal-hint aria-live="polite"></p>
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TEMP MAX (°C)</label>
-                    <input type="number" name="temp_max" step="0.5"
+                    <input type="number" name="temp_max" data-optimal-kind="temp" step="0.5"
                            value="{{ $thresholds['temp_max'] }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                    <p class="text-xs mt-1 truncate" data-optimal-hint aria-live="polite"></p>
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">HUMIDITY MIN (%)</label>
-                    <input type="number" name="hum_min" step="1"
+                    <input type="number" name="hum_min" data-optimal-kind="hum" step="1"
                            value="{{ $thresholds['hum_min'] }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                    <p class="text-xs mt-1 truncate" data-optimal-hint aria-live="polite"></p>
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">HUMIDITY MAX (%)</label>
-                    <input type="number" name="hum_max" step="1"
+                    <input type="number" name="hum_max" data-optimal-kind="hum" step="1"
                            value="{{ $thresholds['hum_max'] }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                    <p class="text-xs mt-1 truncate" data-optimal-hint aria-live="polite"></p>
                 </div>
             </div>
 
@@ -739,6 +743,60 @@ if (!window.__envThresholdsEscapeBound) {
             btn.disabled = false;
         });
     });
+})();
+
+// ── Threshold input hints ──
+// One line under each threshold box comparing the value being typed with the
+// standard optimal range (config/environment.php, the same numbers the IR
+// Reference Card uses). Informational only: it never blocks, changes, or
+// locks the value, and any value can still be saved.
+(function() {
+    var form = document.getElementById('threshold-form');
+    if (!form) return;
+
+    var optimal = @json($optimal);
+    var rules = {
+        temp: { min: optimal.temp_min, max: optimal.temp_max, unit: '°C',
+                above: 'may increase heat stress risk', below: 'may increase cold stress risk' },
+        hum:  { min: optimal.hum_min, max: optimal.hum_max, unit: '%',
+                above: 'may raise ammonia and breathing problems', below: 'may cause dry, dusty air' },
+    };
+
+    function num(n) { return String(Math.round(n * 10) / 10); }
+
+    function updateHint(input) {
+        var rule = rules[input.getAttribute('data-optimal-kind')];
+        var hint = input.parentNode.querySelector('[data-optimal-hint]');
+        if (!rule || !hint) return;
+
+        var raw = String(input.value).trim();
+        var value = parseFloat(raw);
+        if (raw === '' || isNaN(value)) {
+            hint.textContent = '';
+            hint.removeAttribute('title');
+            return;
+        }
+
+        var range = num(rule.min) + '–' + num(rule.max) + ' ' + rule.unit;
+        var within = value >= rule.min && value <= rule.max;
+        var text = within ? 'Within optimal range (' + range + ').'
+            : (value > rule.max ? 'Above optimal range: ' + rule.above + '.' : 'Below optimal range: ' + rule.below + '.');
+
+        hint.textContent = text;
+        hint.title = within ? text : text + ' Optimal range is ' + range + '.';
+        hint.style.color = within ? '#1f6b3a' : '#8a5a00';
+    }
+
+    function updateAll() {
+        form.querySelectorAll('[data-optimal-kind]').forEach(updateHint);
+    }
+
+    ['input', 'change'].forEach(function(type) {
+        form.addEventListener(type, function(e) {
+            if (e.target && e.target.hasAttribute && e.target.hasAttribute('data-optimal-kind')) updateHint(e.target);
+        });
+    });
+    updateAll();
 })();
 </script>
 @endpush
