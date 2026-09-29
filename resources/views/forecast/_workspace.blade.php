@@ -339,6 +339,51 @@
 
     let forecastRequestToken = 0;
 
+    // The Production Calendar is a separate turbo-frame (#production-calendar)
+    // nested inside this one. The scope buttons deliberately don't navigate the
+    // workspace frame, so without an explicit re-render the calendar would keep
+    // showing the production of whatever scope the page was first loaded with
+    // (e.g. stuck on CAGE-A after switching to Whole Farm).
+    //
+    // Re-request the frame server-side and swap its contents, preserving the
+    // month/year currently being viewed. This mirrors what Turbo does for a
+    // frame navigation — including discarding the response's trailing <script>,
+    // which must not re-execute (its top-level `var`s would redeclare) — so
+    // the drag wiring is re-bound explicitly via __calendarDayDragInit().
+    window.refreshProductionCalendar = function(params, token) {
+        const frame = document.getElementById('production-calendar');
+        if (!frame) return;
+
+        const url = new URL(window.location.href);
+        url.searchParams.set('scope', params.get('scope') || 'cage');
+        url.searchParams.set('cage', params.get('cage') || '');
+        url.searchParams.set('breed', params.get('breed') || '');
+        url.searchParams.set('horizon', params.get('horizon') || '7');
+
+        fetch(url.toString(), { headers: { 'Turbo-Frame': 'production-calendar', 'Accept': 'text/html' } })
+            .then(function(res) {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.text();
+            })
+            .then(function(html) {
+                if (token !== forecastRequestToken) return;
+
+                const parsed = new DOMParser().parseFromString(html, 'text/html');
+                const fresh = parsed.getElementById('production-calendar');
+                if (!fresh) return;
+
+                frame.replaceWith(document.importNode(fresh, true));
+                if (window.__calendarDayDragInit) window.__calendarDayDragInit();
+                if (window.lucide) {
+                    try { lucide.createIcons(); } catch (e) { /* non-fatal */ }
+                }
+            })
+            .catch(function(err) {
+                if (token !== forecastRequestToken) return;
+                console.error('[Forecast] calendar refresh failed:', err);
+            });
+    };
+
     // Fetches fresh data for the current scope/cage/breed/horizon and updates the
     // workspace in place — no Turbo frame navigation, no URL change, no history churn.
     window.refreshForecastWorkspace = function() {
@@ -369,6 +414,8 @@
             .then(function(data) {
                 if (token !== forecastRequestToken) return;
                 applyForecastData(data);
+                // Keep the calendar's actual-production layer in the same scope.
+                window.refreshProductionCalendar(params, token);
             })
             .catch(function(err) {
                 if (token !== forecastRequestToken) return;

@@ -9,13 +9,34 @@ class Forecast extends Model
 {
     public $timestamps = false;
 
-    protected $fillable = ['cage_id', 'cage_slot_id', 'breed', 'forecast_date', 'target_date', 'predicted_egg_count'];
+    protected $fillable = [
+        'cage_id',
+        'cage_slot_id',
+        'breed',
+        'forecast_date',
+        'target_date',
+        'predicted_egg_count',
+        'forecast_run_id',
+        'is_backtest',
+        'superseded_at',
+    ];
 
     protected $casts = [
         'forecast_date' => 'date',
         'target_date'   => 'date',
         'created_at'    => 'datetime',
+        'is_backtest'   => 'boolean',
+        'superseded_at' => 'datetime',
     ];
+
+    /**
+     * The prediction as it currently stands: the newest one for this
+     * (cage, breed, target_date) that has not been superseded by a later run.
+     */
+    public function scopeLive($query)
+    {
+        return $query->whereNull('superseded_at');
+    }
 
     public function cage(): BelongsTo
     {
@@ -25,6 +46,11 @@ class Forecast extends Model
     public function cageSlot(): BelongsTo
     {
         return $this->belongsTo(CageSlot::class);
+    }
+
+    public function forecastRun(): BelongsTo
+    {
+        return $this->belongsTo(ForecastRun::class, 'forecast_run_id');
     }
 
     public function getConfidenceAttribute(): int

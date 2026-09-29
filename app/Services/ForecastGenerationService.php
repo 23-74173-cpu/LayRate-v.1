@@ -138,6 +138,69 @@ class ForecastGenerationService
     }
 
     /**
+     * Actual (recorded) daily egg production for a calendar month, keyed by
+     * 'Y-m-d' so the calendar view can look a date up in O(1).
+     *
+     * Unlike farmHistorical()/cageHistorical()/breedHistorical() this is not
+     * capped to the trailing 14 days and takes an explicit inclusive range, so
+     * the Production Calendar can show any month the user navigates to.
+     *
+     * @param  string  $scope  'farm' | 'cage' | 'breed'
+     * @return Collection<string, array{egg_count:int, hen_count:int, hdep:float}>
+     */
+    public function productionForRange(string $scope, string $startDate, string $endDate, ?string $cageCode = null, ?string $breed = null): Collection
+    {
+        $query = $this->dailyTotalsQuery()
+            ->whereBetween('pl.log_date', [$startDate, $endDate]);
+
+        if ($scope === 'cage' && $cageCode) {
+            $query->where('c.cage_code', $cageCode);
+        } elseif ($scope === 'breed' && $breed) {
+            $query->whereExists($this->firstHenBreedClosure($breed));
+        }
+
+        $rows = $query
+            ->orderBy('pl.log_date')
+            ->get();
+
+        return $rows->mapWithKeys(function ($row) {
+            $date = is_object($row->date)
+                ? $row->date->format('Y-m-d')
+                : substr((string) $row->date, 0, 10);
+
+            return [$date => [
+                'egg_count' => (int) $row->egg_count,
+                'hen_count' => (int) $row->hen_count,
+                'hdep' => $row->hen_count > 0
+                    ? round(($row->egg_count / $row->hen_count) * 100, 2)
+                    : 0,
+            ]];
+        });
+    }
+
+    /**
+     * Earliest date with a real (non-demo) production log, or null when the
+     * farm has no recorded production at all.
+     *
+     * Used to bound the Production Calendar's year dropdown now that past
+     * months are navigable — without a data-derived floor the dropdown would
+     * either start arbitrarily far back or exclude real history.
+     */
+    public function earliestProductionDate(): ?string
+    {
+        $min = DB::table('production_logs')
+            ->where('is_demo', false)
+            ->whereNotNull('log_date')
+            ->min('log_date');
+
+        if ($min === null) {
+            return null;
+        }
+
+        return substr((string) $min, 0, 10);
+    }
+
+    /**
      * WHERE EXISTS closure: a cage whose FIRST active hen (lowest id) has the
      * given breed — matching the breed attribute the modeling dataset uses.
      *
@@ -164,7 +227,16 @@ class ForecastGenerationService
      * Whole farm needs at least 90 distinct dates. Per-cage / per-breed need at
      * least 90 rows for the selected cage or breed.
      */
-    public function dataSufficiency(string $scope, ?string $cageCode = null, ?string $breed = null): array
+    /**
+     * @param  string|null  $beforeDate  Upper bound for a backtest: only
+     *                                   production strictly before this date
+     *                                   counts, mirroring the training cut the
+     *                                   Python runner applies. Without it a
+     *                                   backtest would be validated against
+     *                                   records from after its own target day,
+     *                                   which the model never sees.
+     */
+    public function dataSufficiency(string $scope, ?string $cageCode = null, ?string $breed = null, ?string $beforeDate = null): array
     {
         $base = DB::table('production_logs as pl')
             ->join('cage_slots as cs', 'pl.cage_slot_id', '=', 'cs.id')
@@ -183,6 +255,10 @@ class ForecastGenerationService
                     ->whereNotNull('el.temperature_c')
                     ->whereNotNull('el.humidity_pct');
             });
+
+        if ($beforeDate !== null) {
+            $base->where('pl.log_date', '<', $beforeDate);
+        }
 
         $countQuery = (clone $base)->selectRaw('COUNT(DISTINCT pl.log_date) as cnt');
 
@@ -300,7 +376,7 @@ class ForecastGenerationService
      * in — a queue worker has no matching request, so they can never be read
      * from request() here.
      */
-    public function generateForecast(?Cage $cage, string $cageCode, ?string $breed, Collection $historical, int $horizon, bool $save = false, ?string $startDate = null, array $manualParams = []): array
+    public function generateForecast(?Cage $cage, string $cageCode, ?string $breed, Collection $historical, int $horizon, bool $save = false, ?string $startDate = null, array $manualParams = [], ?int $forecastRunId = null): array
     {
         $result = $this->executePythonForecast($cageCode, $breed, $horizon, $manualParams, $startDate);
 
@@ -314,8 +390,8 @@ class ForecastGenerationService
         ]);
 
         $forecasts = $save
-            ? $this->persistForecasts($result, $cage, $breed)
-            : $this->buildForecastCollection($result, $cage, $breed);
+            ? $this->persistForecasts($result, $cage, $breed, $forecastRunId)
+            : $this->buildForecastCollection($result, $cage, $breed, $forecastRunId);
 
         return [
             'forecasts' => $forecasts,
@@ -467,22 +543,71 @@ class ForecastGenerationService
 
     /**
      * Persist forecast rows returned by the Python runner.
+     *
+     * Every run is retained: the rows are appended and tagged with the
+     * ForecastRun that produced them, and any earlier prediction for the same
+     * (cage, breed, target_date) is soft-superseded rather than deleted. That
+     * keeps a full audit trail so a prediction can later be compared against
+     * the actual production recorded for its target date.
+     *
+     * Supersession is keyed on target_date, not on forecast_date. That matters
+     * now that backtests are allowed: a backtest of a past date supersedes
+     * only that past date's prediction and leaves unrelated forward forecasts
+     * for other dates untouched.
+     *
+     * Public so callers holding runner output can persist it against a run
+     * without routing through generateForecast()'s Python subprocess.
      */
-    private function persistForecasts(array $result, ?Cage $cage, ?string $breed): Collection
+    public function persistForecasts(array $result, ?Cage $cage, ?string $breed, ?int $forecastRunId = null): Collection
     {
-        $collection = $this->buildForecastCollection($result, $cage, $breed);
+        $collection = $this->buildForecastCollection($result, $cage, $breed, $forecastRunId);
 
-        foreach ($collection as $forecast) {
-            $forecast->save();
-        }
+        DB::transaction(function () use ($collection) {
+            foreach ($collection as $forecast) {
+                $this->supersedeExistingFor($forecast);
+                $forecast->save();
+            }
+        });
 
         return $collection;
     }
 
     /**
-     * Build an in-memory collection of Forecast models from runner output.
+     * Mark the current live prediction for a target date as superseded, so the
+     * row about to be written becomes the new live one. Runs inside a
+     * transaction with the insert so the calendar never renders a date with
+     * zero live predictions.
+     *
+     * Scope identity is the (cage_id, breed) pair: farm is (null, null),
+     * breed is (null, <breed>), cage is (<cage_id>, null). The comparisons are
+     * built from the incoming row so each shape matches only its own twin.
      */
-    private function buildForecastCollection(array $result, ?Cage $cage, ?string $breed): Collection
+    private function supersedeExistingFor(Forecast $forecast): void
+    {
+        Forecast::query()
+            ->whereNull('superseded_at')
+            ->whereDate('target_date', $forecast->target_date)
+            ->where(function ($query) use ($forecast) {
+                $forecast->cage_id === null
+                    ? $query->whereNull('cage_id')
+                    : $query->where('cage_id', $forecast->cage_id);
+
+                $forecast->breed === null
+                    ? $query->whereNull('breed')
+                    : $query->where('breed', $forecast->breed);
+            })
+            ->update(['superseded_at' => now()]);
+    }
+
+    /**
+     * Build an in-memory collection of Forecast models from runner output.
+     *
+     * A row is flagged is_backtest when its target date is strictly before the
+     * reporting date — i.e. it scores a completed day rather than predicting
+     * one. The reporting date itself is not flagged: that day is still in
+     * progress and has no comparable actual yet.
+     */
+    private function buildForecastCollection(array $result, ?Cage $cage, ?string $breed, ?int $forecastRunId = null): Collection
     {
         $forecasts = collect();
         $today = ReportingDateService::reportingDateString();
@@ -494,6 +619,8 @@ class ForecastGenerationService
                 'forecast_date' => $today,
                 'target_date' => $item['date'],
                 'predicted_egg_count' => $item['predicted_egg_count'],
+                'forecast_run_id' => $forecastRunId,
+                'is_backtest' => $item['date'] < $today,
             ]));
         }
 

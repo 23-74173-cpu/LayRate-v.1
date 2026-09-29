@@ -648,7 +648,14 @@ def evaluate_models(df):
 
 
 def _resolve_future_dates(forecast_days: int, start_date: Optional[str] = None) -> pd.DatetimeIndex:
-    """Build future forecast dates, enforcing the max 30-day-ahead limit."""
+    """Build the target dates for a run, enforcing the max 30-day-ahead limit.
+
+    Start dates in the past are permitted so a day that has already happened
+    can be forecast and then scored against the actual production recorded for
+    it. Such a run is a backtest: the caller must train only on data preceding
+    the target (see `_truncate_for_backtest`) or the prediction is contaminated
+    by the very day it is being asked to predict.
+    """
     today = pd.Timestamp(date.today())
     max_allowed_date = today + pd.Timedelta(days=MAX_FORECAST_DAYS_FROM_TODAY)
 
@@ -658,12 +665,6 @@ def _resolve_future_dates(forecast_days: int, start_date: Optional[str] = None) 
             raise ValueError(f"Invalid start_date: {start_date!r}. Use YYYY-MM-DD format.")
     else:
         start = today + pd.Timedelta(days=1)
-
-    if start < today + pd.Timedelta(days=1):
-        raise ValueError(
-            f"Forecast start date must be at least tomorrow ({(today + pd.Timedelta(days=1)).date()}). "
-            f"Received: {start.date()}."
-        )
 
     end = start + pd.Timedelta(days=forecast_days - 1)
     if end > max_allowed_date:
@@ -676,6 +677,45 @@ def _resolve_future_dates(forecast_days: int, start_date: Optional[str] = None) 
     return pd.date_range(start=start, periods=forecast_days, freq="D")
 
 
+def _truncate_for_backtest(df: pd.DataFrame, target_dates: pd.DatetimeIndex) -> pd.DataFrame:
+    """Drop every row on or after the earliest target date.
+
+    This is what makes a past-dated forecast honest. Without it the model would
+    train on the full history -- including the target day's own actual
+    production -- and then "predict" a value it has already been fitted to,
+    producing an error rate that is meaningless as a measure of accuracy.
+
+    Returns the original frame untouched when no target date precedes the last
+    historical record, which keeps the ordinary forward path byte-for-byte
+    unchanged.
+    """
+    first_target = pd.Timestamp(target_dates[0]).normalize()
+    last_hist = pd.Timestamp(df[DATE_COLUMN].max()).normalize()
+
+    if first_target > last_hist:
+        return df
+
+    train_df = df[pd.to_datetime(df[DATE_COLUMN]).dt.normalize() < first_target].copy()
+
+    if len(train_df) < MIN_REQUIRED_RECORDS:
+        raise ValueError(
+            f"Backtest of {first_target.date()} leaves only {len(train_df)} training "
+            f"record(s) once production on or after that date is excluded. "
+            f"At least {MIN_REQUIRED_RECORDS} earlier records are required. "
+            f"Choose a more recent target date."
+        )
+
+    logger.info(
+        "Backtest truncation: training on %d records ending %s to predict %s-%s",
+        len(train_df),
+        pd.Timestamp(train_df[DATE_COLUMN].max()).normalize().date(),
+        first_target.date(),
+        pd.Timestamp(target_dates[-1]).normalize().date(),
+    )
+
+    return train_df
+
+
 def automatic_forecast(df, forecast_days: int = 7, start_date: Optional[str] = None):
     if df.empty or len(df) < 2:
         raise ValueError("Dataset is too small for forecasting.")
@@ -685,6 +725,13 @@ def automatic_forecast(df, forecast_days: int = 7, start_date: Optional[str] = N
         raise ValueError(
             f"Aggregated dataset must have at least {MIN_REQUIRED_RECORDS} records. Found {len(df)}."
         )
+
+    # Resolve the targets first, then cut the history back to just before the
+    # first one. Model selection, the evaluation split, and the deployment fit
+    # all run on that truncated frame, so a past-dated run never sees the day
+    # it is predicting. For a forward run this is a no-op.
+    target_dates = _resolve_future_dates(forecast_days, start_date)
+    df = _truncate_for_backtest(df, target_dates)
 
     train_df, test_df = fixed_train_test_split(df)
 
@@ -727,22 +774,23 @@ def automatic_forecast(df, forecast_days: int = 7, start_date: Optional[str] = N
     if feed_available and recommended == "XGBoost":
         xgb_full_models = [fit_xgb_model(df, seed) for seed in XGB_SEEDS]
 
-    future_dates = _resolve_future_dates(forecast_days, start_date)
-
     last_hist_date = pd.Timestamp(df[DATE_COLUMN].max()).normalize()
     step_offsets = []
     total_steps = 0
-    for d in future_dates:
+    for d in target_dates:
         offset = (pd.Timestamp(d).normalize() - last_hist_date).days
         step_offsets.append(offset)
         total_steps = max(total_steps, offset)
     if total_steps < 1:
-        raise ValueError("Forecast dates must be after the last historical date.")
+        raise ValueError(
+            "Forecast dates must be after the last historical date available to the model "
+            f"({last_hist_date.date()})."
+        )
 
     if recommended == "XGBoost" and xgb_full_models is not None:
         last_row = df.iloc[-1]
         feature_frame = build_deployment_feature_frame(
-            last_row, future_dates,
+            last_row, target_dates,
             temp=float(last_row["Temperature_C"]),
             humidity=float(last_row["Humidity_Percent"]),
             feed=float(last_row["Total_Feed_Consumed_kg"]),
@@ -760,7 +808,7 @@ def automatic_forecast(df, forecast_days: int = 7, start_date: Optional[str] = N
     forecast_list = []
     for i in range(forecast_days):
         forecast_list.append({
-            "date": _to_native(future_dates[i]),
+            "date": _to_native(target_dates[i]),
             "predicted_egg_count": int(expected_eggs[i]),
         })
 
@@ -790,6 +838,7 @@ def manual_forecast(
     total_feed_consumed_kg: float,
     monthly_mortality: int,
     heat_stress: int,
+    start_date: Optional[str] = None,
 ):
     if df.empty or len(df) < max(XGB_LAGS):
         raise ValueError("Dataset is too small for manual XGBoost forecasting.")
@@ -799,6 +848,12 @@ def manual_forecast(
         raise ValueError(
             f"Aggregated dataset must have at least {MIN_REQUIRED_RECORDS} records. Found {len(df)}."
         )
+
+    # Same backtest discipline as automatic_forecast: resolve the targets, then
+    # cut the history back to just before the first one so the model is never
+    # fitted on the day it is being asked to predict.
+    future_dates = _resolve_future_dates(forecast_days, start_date)
+    df = _truncate_for_backtest(df, future_dates)
 
     train_df, test_df = fixed_train_test_split(df)
 
@@ -812,12 +867,6 @@ def manual_forecast(
     eval_mae, eval_rmse, eval_mape = summarize_metrics(test_df[TARGET_COLUMN], avg_preds)
 
     xgb_models = [fit_xgb_model(df, seed) for seed in XGB_SEEDS]
-
-    future_dates = pd.date_range(
-        start=pd.Timestamp(date.today()) + pd.Timedelta(days=1),
-        periods=forecast_days,
-        freq="D",
-    )
 
     rows = []
     for step_idx in range(1, forecast_days + 1):

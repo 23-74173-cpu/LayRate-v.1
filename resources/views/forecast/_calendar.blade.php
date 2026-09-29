@@ -22,30 +22,44 @@
     $todayUrl = request()->fullUrlWithQuery(['month' => now()->month, 'year' => now()->year]);
 
     $maxSelectableDate = \App\Forecast\ForecastRules::maxStartDate()->format('Y-m-d');
-    $tomorrowDate = \App\Forecast\ForecastRules::minStartDate()->format('Y-m-d');
+    // Lower bound for selecting a day to forecast. This used to be
+    // "tomorrow"; it is now the earliest date holding real production, so a
+    // day that has already happened can be forecast and then scored against
+    // the actual recorded for it. Falls back to a 5-year lookback when there
+    // is no production history yet.
+    $minSelectableDate = $forecastMinDate ?? \App\Forecast\ForecastRules::minStartDate()->format('Y-m-d');
+    $reportingDate = \App\Services\ReportingDateService::reportingDate()->format('Y-m-d');
 
-    // Calendar navigation is bounded to the present and future only:
-    //   • Year filter: current year always; the next year only when viewing
-    //     December (year end) or already viewing next year — no other years.
-    //   • Month filter: only the current month and future months. For the next
-    //     year, every month is in the future, so all 12 are offered.
+    // Calendar navigation now spans past AND future months. Past months hold the
+    // actual recorded production that a forecast is eventually compared against,
+    // so they must be browsable.
+    //   • Year filter: from the earliest year with real production data
+    //     ($calendarMinYear) through next year.
+    //   • Month filter: all 12 months, in every selectable year.
     $todayYear  = (int) now()->format('Y');
-    $todayMonth = (int) now()->format('n');
     $viewYear   = (int) $calendarMonth->format('Y');
-    $viewMonth  = (int) $calendarMonth->format('n');
+    $minYear    = (int) ($calendarMinYear ?? $todayYear);
+    $maxYear    = $todayYear + 1;
 
-    $yearOptions = [$todayYear];
-    if ($viewMonth === 12 || $viewYear === $todayYear + 1) {
-        $yearOptions[] = $todayYear + 1;
-    }
-    $yearOptions = array_values(array_unique($yearOptions));
+    $yearOptions = range($minYear, max($minYear, $maxYear));
+    $monthOptions = range(1, 12);
 
-    $monthOptions = $viewYear === $todayYear + 1 ? range(1, 12) : range($todayMonth, 12);
+    // The previous-month arrow is only disabled at the very first selectable
+    // month, instead of the old "current month" floor.
+    $isAtFirstSelectableMonth = $calendarMonth->year === $minYear
+        && (int) $calendarMonth->month === 1;
 
-    // The earliest month the calendar can show is the current month, so the
-    // previous-month arrow is disabled for the current month (and any past month
-    // reached via a crafted URL).
-    $isAtOrBeforeCurrentMonth = ! $calendarMonth->gt(now()->startOfMonth());
+    // Actual recorded production for the visible grid, keyed by 'Y-m-d'.
+    $productionByDate = $productionByDate ?? collect();
+
+    // Computed here rather than inherited from _workspace: the controller also
+    // renders this partial standalone for Turbo-Frame requests, where the
+    // workspace's $scopeLabel was never assigned.
+    $scopeLabel = match($scope) {
+        'farm' => 'Whole Farm',
+        'breed' => $breed ?? 'All Breeds',
+        default => $cageCode ?? 'All Cages',
+    };
 @endphp
 
 <turbo-frame id="production-calendar">
@@ -53,6 +67,27 @@
     {{-- Month / Year header with navigation --}}
     <div class="mb-5">
         <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Production Calendar</div>
+
+        {{-- Legend: the grid now carries two independent data types, and the
+             colour families (blue = recorded, green = predicted) are only
+             decodable with a key. --}}
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-3 text-xs text-[#6B7280]">
+            <span class="inline-flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-sm bg-[#DBEAFE] border border-[#BFDBFE]"></span>
+                <span class="font-semibold uppercase text-[10px] tracking-wide">AD</span>
+                Actual production
+                <span class="text-[#9CA3AF]">({{ $scopeLabel }})</span>
+            </span>
+            <span class="inline-flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-sm bg-[#D5E8D4] border border-[#A8D5A2]"></span>
+                Forecast
+            </span>
+            <span class="inline-flex items-center gap-1.5" title="A prediction for a day that has already happened. The model is trained only on data recorded before that day, so it can be scored fairly against the actual.">
+                <span class="w-2.5 h-2.5 rounded-sm bg-[#111827] border border-[#111827]"></span>
+                <span class="font-semibold uppercase text-[10px] tracking-wide">BT</span>
+                Backtest forecast
+            </span>
+        </div>
 
         {{-- Month/Year filter pills + Today + Clear Forecast, with Prev/Next
              right-aligned — all on one row. --}}
@@ -118,8 +153,8 @@
             </div>
 
             <div class="flex items-center gap-2">
-                @if($isAtOrBeforeCurrentMonth)
-                <span class="w-8 h-8 flex items-center justify-center rounded-lg border border-[#F0F0F0] bg-[#F9F9F7] text-[#D9D9D9] cursor-not-allowed transition-colors" title="Past months are not available">
+                @if($isAtFirstSelectableMonth)
+                <span class="w-8 h-8 flex items-center justify-center rounded-lg border border-[#F0F0F0] bg-[#F9F9F7] text-[#D9D9D9] cursor-not-allowed transition-colors" title="Earliest month with production data">
                     <i data-lucide="chevron-left" class="w-4 h-4"></i>
                 </span>
                 @else
@@ -141,10 +176,14 @@
         .production-calendar td { width: 14.285%; }
         .production-calendar .calendar-day { height: 64px; padding: 6px; }
         .production-calendar .calendar-day .forecast-badge { font-size: 9px; padding: 2px 4px; }
+        .production-calendar .calendar-day .production-badge { font-size: 9px; padding: 2px 4px; }
+        .production-calendar .calendar-day .forecast-badge { margin-top: auto; }
+        .production-calendar .calendar-day .production-badge + .forecast-badge { margin-top: 2px; }
         @media (min-width: 640px) {
             .production-calendar { border-spacing: 8px; min-width: 100%; }
             .production-calendar .calendar-day { height: 96px; padding: 8px; }
             .production-calendar .calendar-day .forecast-badge { font-size: 11px; padding: 2px 6px; }
+            .production-calendar .calendar-day .production-badge { font-size: 11px; padding: 2px 6px; }
         }
     </style>
 
@@ -176,6 +215,7 @@
                             'dateString' => $dateString,
                             'isToday' => false,
                             'forecast' => null,
+                            'production' => $productionByDate[$dateString] ?? null,
                         ]);
                     }
 
@@ -188,6 +228,7 @@
                             'dateString' => $dateString,
                             'isToday' => $dateString === $calendarToday->format('Y-m-d'),
                             'forecast' => $forecastMap[$dateString] ?? null,
+                            'production' => $productionByDate[$dateString] ?? null,
                         ]);
                     }
 
@@ -201,6 +242,7 @@
                             'dateString' => $dateString,
                             'isToday' => false,
                             'forecast' => null,
+                            'production' => $productionByDate[$dateString] ?? null,
                         ]);
                     }
 
@@ -212,13 +254,22 @@
                     @foreach($week as $cell)
                     <td class="align-top">
                         @php
-                            $isSelectable = $cell['currentMonth'] && $cell['dateString'] && $cell['dateString'] >= $tomorrowDate && $cell['dateString'] <= $maxSelectableDate;
+                            $isSelectable = $cell['currentMonth'] && $cell['dateString'] && $cell['dateString'] >= $minSelectableDate && $cell['dateString'] <= $maxSelectableDate;
+                            // A target at or before the reporting date scores a day
+                            // that already happened, so the model is trained only on
+                            // data preceding it. Surfaced so the day can be marked
+                            // as a backtest rather than a forward prediction.
+                            $isBacktestCell = $isSelectable && $cell['dateString'] < $reportingDate;
                             $hasForecast = !empty($cell['forecast']);
+                            $production = $cell['production'] ?? null;
+                            $hasProduction = is_array($production) && ($production['egg_count'] ?? 0) > 0;
                             $baseClasses = 'calendar-day rounded-lg border relative flex flex-col items-start justify-start transition-colors';
                             if (!$cell['currentMonth']) {
                                 $dayClasses = $baseClasses . ' border-[#F0F0F0] bg-[#F9F9F7] opacity-60';
                             } elseif ($hasForecast) {
                                 $dayClasses = $baseClasses . ' border-[#A8D5A2] bg-[#EBF5E9] ' . ($isSelectable ? 'hover:bg-[#D5E8D4]/60 cursor-pointer' : 'cursor-not-allowed');
+                            } elseif ($hasProduction) {
+                                $dayClasses = $baseClasses . ' border-[#BFDBFE] bg-[#EFF6FF] ' . ($isSelectable ? 'hover:border-[#002D5E] cursor-pointer' : 'cursor-not-allowed');
                             } elseif ($cell['isToday']) {
                                 $dayClasses = $baseClasses . ' border-[#002D5E] bg-[#002D5E]/5 cursor-not-allowed';
                             } else {
@@ -229,6 +280,8 @@
                                 $dayNumberClasses .= 'font-bold text-[#002D5E]';
                             } elseif ($hasForecast) {
                                 $dayNumberClasses .= 'font-semibold text-[#1F5F35]';
+                            } elseif ($hasProduction) {
+                                $dayNumberClasses .= 'font-semibold text-[#1E40AF]';
                             } elseif ($cell['currentMonth']) {
                                 $dayNumberClasses .= 'text-[#333333]';
                             } else {
@@ -245,10 +298,32 @@
                             <div class="flex items-center gap-1">
                                 <span class="{{ $dayNumberClasses }}">{{ $cell['day'] }}</span>
                             </div>
+                            {{-- Actual recorded production. Rendered above the forecast
+                                 badge so a day carrying both (possible where a forecast
+                                 was generated for a date that has since been logged)
+                                 reads actual-first. "AD" sits beside the figure so the
+                                 number is self-identifying without a legend lookup. --}}
+                            @if($hasProduction)
+                            <span class="production-badge inline-flex items-center gap-1 rounded bg-[#DBEAFE] text-[#1E40AF] font-medium whitespace-nowrap"
+                                  title="Actual: {{ number_format($production['egg_count']) }} eggs from {{ number_format($production['hen_count']) }} hens (HDEP {{ number_format($production['hdep'], 1) }}%)">
+                                <span class="text-[9px] font-bold uppercase leading-none tracking-wide opacity-80">AD</span>
+                                <span>{{ number_format($production['egg_count']) }}</span>
+                            </span>
+                            @endif
                             @if($cell['forecast'])
-                            <i data-lucide="egg" class="absolute top-1 right-1 w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#2D7D46]" title="Forecast: {{ number_format($cell['forecast']->predicted_egg_count, 0) }} eggs"></i>
-                            <span class="forecast-badge mt-auto rounded bg-[#D5E8D4] text-[#1F5F35] font-medium whitespace-nowrap">
-                                {{ number_format($cell['forecast']->predicted_egg_count, 0) }}
+                            <i data-lucide="egg" class="absolute top-1 right-1 w-3.5 h-3.5 sm:w-4 sm:h-4 {{ $isBacktestCell ? 'text-[#111827]' : 'text-[#2D7D46]' }}" title="Forecast: {{ number_format($cell['forecast']->predicted_egg_count, 0) }} eggs{{ $isBacktestCell ? ' (backtest — generated from data preceding this day)' : '' }}"></i>
+                            {{-- Backtest is solid black so it cannot be mistaken for
+                                 either the blue actual or the green forward
+                                 forecast at a glance, including in dense weeks
+                                 where a purple tint read as "highlighted". "BT"
+                                 repeats on the badge itself rather than as a
+                                 separate chip on the day number. --}}
+                            <span class="forecast-badge inline-flex items-center gap-1 rounded {{ $isBacktestCell ? 'backtest-forecast-badge bg-[#111827] text-white' : 'bg-[#D5E8D4] text-[#1F5F35]' }} font-medium whitespace-nowrap"
+                                  title="{{ $isBacktestCell ? 'Backtest prediction for a day that has already happened.' : 'Forward prediction.' }}">
+                                @if($isBacktestCell)
+                                <span class="text-[9px] font-bold uppercase leading-none tracking-wide opacity-70">BT</span>
+                                @endif
+                                <span>{{ number_format($cell['forecast']->predicted_egg_count, 0) }}</span>
                             </span>
                             @endif
                         </div>
@@ -372,20 +447,24 @@
         today.setHours(0, 0, 0, 0);
         const maxDate = new Date(today);
         maxDate.setDate(today.getDate() + 30);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(today.getDate() + 1);
+        const minDate = parseLocalDate(@json($minSelectableDate));
 
         const clicked = parseLocalDate(dateString);
         let message = '';
 
-        if (clicked < tomorrow) {
-            message = 'Forecasting is only available for future dates. Please select a date starting from tomorrow.';
+        if (clicked < minDate) {
+            message = 'This date is before the earliest day with recorded production (' +
+                      minDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) +
+                      '), so there is nothing to forecast it against.';
         } else if (clicked > maxDate) {
             message = 'Custom forecasts can only be generated up to 30 days from today (' +
                       maxDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) +
                       '). Please select a date within this range.';
         } else {
-            message = 'This date cannot be forecast. Please select a date between tomorrow and 30 days from today.';
+            message = 'This date cannot be forecast. Please select a date between ' +
+                      minDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) +
+                      ' and ' +
+                      maxDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + '.';
         }
 
         showNotification(message, 'warning');

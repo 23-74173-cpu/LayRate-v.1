@@ -584,7 +584,13 @@
     };
 
     var FORECAST_MIN_DURATION = 3000;
-    var FORECAST_MAX_DURATION = 280000;
+    // A ceiling, not a target: measured end-to-end generation is 6-9s, so
+    // anything beyond ~45s is queue wait or an outlier, not model time.
+    var FORECAST_MAX_DURATION = 45000;
+    // Durations above this were dominated by the job sitting unclaimed in the
+    // queue (observed: ~40min when no worker was running) rather than by the
+    // forecast itself. Recording those poisoned every later run's bar.
+    var FORECAST_RECORD_CEILING = 60000;
 
     function resolveForecastDuration(scope, horizon) {
         var saved = localStorage.getItem(FORECAST_STORAGE_KEYS.expectedDuration);
@@ -650,8 +656,12 @@
         if (!start) return;
         var actual = Date.now() - parseInt(start, 10);
         sessionStorage.removeItem(FORECAST_STORAGE_KEYS.startTime);
-        if (actual > 1000) {
+        if (actual > 1000 && actual <= FORECAST_RECORD_CEILING) {
             localStorage.setItem(FORECAST_STORAGE_KEYS.expectedDuration, actual);
+        } else if (actual > FORECAST_RECORD_CEILING) {
+            // Queue-stalled run, not model time: drop any stored estimate so
+            // the scope/horizon defaults apply instead of a multi-minute bar.
+            localStorage.removeItem(FORECAST_STORAGE_KEYS.expectedDuration);
         }
     }
 
@@ -690,17 +700,54 @@
 
         function tick() {
             fetch(pollUrl, { headers: { 'Accept': 'application/json' } })
-                .then(function(r) { return r.json(); })
+                .then(function(r) {
+                    if (!r.ok) {
+                        // A non-2xx means this run is no longer being tracked.
+                        // Polling on would spin silently: Laravel answers a 404
+                        // for an unknown run id with a JSON body carrying no
+                        // `status` field, so every branch below falls through
+                        // and the loop just re-schedules itself until the client
+                        // deadline. Treat it as terminal instead.
+                        throw { terminal: true, statusCode: r.status };
+                    }
+                    return r.json();
+                })
                 .then(function(data) {
+                    // Defensive: a 2xx that still has no recognisable status
+                    // would otherwise loop forever for the same reason.
+                    if (!data || !data.status) {
+                        resetForecastSubmitUi();
+                        if (window.showNotification) {
+                            window.showNotification('Lost track of this forecast run. Please try again.', 'error');
+                        }
+                        return;
+                    }
                     if (data.status === 'completed' && data.redirect_url) {
+                        // Clear the overlay *before* navigating. This branch
+                        // returns without resetting otherwise, so if
+                        // Turbo.visit() does not actually land — it can reject
+                        // its fetch (seen in the console as "Failed to fetch"),
+                        // or be a no-op on a same-URL visit — the bar stays
+                        // pinned at 95% forever while polling has already
+                        // stopped. Resetting first makes completion safe
+                        // regardless of whether navigation succeeds.
+                        resetForecastSubmitUi();
                         // recordForecastDuration() is not called here — it
                         // already runs via initForecastLoading() on the
                         // turbo:load this visit triggers, same as it did
                         // after the old synchronous redirect.
-                        if (window.Turbo) {
-                            window.Turbo.visit(data.redirect_url);
-                        } else {
-                            window.location.href = data.redirect_url;
+                        try {
+                            if (window.Turbo) {
+                                window.Turbo.visit(data.redirect_url);
+                            } else {
+                                window.location.href = data.redirect_url;
+                            }
+                        } catch (navErr) {
+                            // The overlay is already cleared and the run is
+                            // finished, so a failed navigation is not an
+                            // error the user needs to act on. Swallowing it
+                            // also keeps it out of the outer .catch, which
+                            // would otherwise post a bogus "failed" toast.
                         }
                         return;
                     }
@@ -708,6 +755,21 @@
                         resetForecastSubmitUi();
                         if (window.showNotification) {
                             window.showNotification(data.error_message || 'Forecast generation failed.', 'error');
+                        }
+                        return;
+                    }
+                    // 'stalled' is not a slow run: the job was never claimed
+                    // because no queue worker is running. Stop polling so the
+                    // spinner clears immediately, and surface the fix — the
+                    // generic timeout message below would wrongly promise the
+                    // run "will finish in the background", which it never will.
+                    if (data.status === 'stalled') {
+                        resetForecastSubmitUi();
+                        if (window.showNotification) {
+                            window.showNotification(
+                                data.error_message || 'Forecast has not started — no queue worker is running.',
+                                'error'
+                            );
                         }
                         return;
                     }
@@ -720,11 +782,27 @@
                     }
                     setTimeout(tick, FORECAST_POLL_INTERVAL_MS);
                 })
-                .catch(function() {
-                    // Transient network hiccup — keep polling instead of giving
+                .catch(function(err) {
+                    // A dead run id is terminal: retrying cannot bring it back
+                    // and silently burning the remaining deadline tells the
+                    // user nothing.
+                    if (err && err.terminal) {
+                        resetForecastSubmitUi();
+                        if (window.showNotification) {
+                            window.showNotification(
+                                'This forecast is no longer available (it may have been cleared or replaced). Generate it again.',
+                                'error'
+                            );
+                        }
+                        return;
+                    }
+                    // Transient network hiccup - keep polling instead of giving
                     // up on the first failed request.
                     if (Date.now() > deadline) {
                         resetForecastSubmitUi();
+                        if (window.showNotification) {
+                            window.showNotification('Lost connection while waiting for the forecast. Please try again.', 'warning');
+                        }
                         return;
                     }
                     setTimeout(tick, FORECAST_POLL_INTERVAL_MS);

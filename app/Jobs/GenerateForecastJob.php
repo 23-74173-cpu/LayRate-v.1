@@ -3,7 +3,6 @@
 namespace App\Jobs;
 
 use App\Models\Cage;
-use App\Models\Forecast;
 use App\Models\ForecastRun;
 use App\Services\ForecastGenerationService;
 use Illuminate\Bus\Queueable;
@@ -69,33 +68,21 @@ class GenerateForecastJob implements ShouldQueue
         try {
             $cage = $this->cageId ? Cage::find($this->cageId) : null;
 
-            [$historical, $todayDeleteQuery] = match ($this->scope) {
-                'farm' => [
-                    $service->farmHistorical(),
-                    Forecast::whereNull('cage_id')->whereNull('breed'),
-                ],
-                'breed' => [
-                    $service->breedHistorical($this->breed),
-                    Forecast::whereNull('cage_id')->where('breed', $this->breed),
-                ],
-                default => [
-                    $service->cageHistorical($this->cageCode),
-                    $cage
-                        ? Forecast::whereNull('breed')->where('cage_id', $cage->id)
-                        : Forecast::whereNull('breed')->whereNull('cage_id'),
-                ],
+            $historical = match ($this->scope) {
+                'farm' => $service->farmHistorical(),
+                'breed' => $service->breedHistorical($this->breed),
+                default => $service->cageHistorical($this->cageCode),
             };
 
-            // Deliberately deleted here, right before persisting the new
-            // result, rather than synchronously in the controller before
-            // this job was even dispatched: that would leave a window
-            // where the old forecast has already vanished from the UI but
-            // the new one isn't ready yet (worse on a queue with any
-            // backlog than it was when generation was synchronous). This
-            // way the old forecast stays visible until the moment it's
-            // replaced.
-            $todayDeleteQuery->where('forecast_date', now()->toDateString())->delete();
-
+            // The previous implementation deleted every forecast row for the
+            // current reporting date right before persisting, so re-running a
+            // forecast destroyed the prior prediction and left nothing to
+            // compare against. Persistence now appends and soft-supersedes
+            // per target_date instead (see
+            // ForecastGenerationService::persistForecasts), which keeps the
+            // old forecast visible in the UI until the exact moment it is
+            // replaced — the same UX the deferred delete gave, without the
+            // data loss.
             $result = $service->generateForecast(
                 $cage,
                 $this->cageCode,
@@ -105,6 +92,7 @@ class GenerateForecastJob implements ShouldQueue
                 true,
                 $this->startDate,
                 $this->manualParams,
+                $this->forecastRunId,
             );
 
             $run->update([
