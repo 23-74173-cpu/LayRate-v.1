@@ -1,0 +1,333 @@
+{
+  "info": {
+    "name": "LayRate 04 - Alert Threshold Configuration",
+    "description": "Table IX API suite 4/6 (admin web session; login handled once in the collection pre-request, not counted as a case). TC-API-17/18 mutate global thresholds and TC-API-18 restores the scraped originals, so a completed run leaves no residue; an aborted run may leave test values (all valid) \u2014 re-run to restore.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "loginRole",
+      "value": "admin"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "if (!pm.collectionVariables.get('authed')) {",
+          "    var base = pm.variables.get('baseUrl');",
+          "    pm.sendRequest(base + '/login', function (err, res) {",
+          "        var m = res.text().match(/name=\"_token\" value=\"([^\"]+)\"/);",
+          "        var token = m && m[1];",
+          "        pm.collectionVariables.set('csrf', token);",
+          "        pm.sendRequest({",
+          "            url: base + '/login',",
+          "            method: 'POST',",
+          "            header: { 'Content-Type': 'application/x-www-form-urlencoded' },",
+          "            body: { mode: 'urlencoded', urlencoded: [",
+          "                { key: '_token', value: token },",
+          "                { key: 'email', value: pm.variables.get(pm.variables.get('loginRole') + 'Email') },",
+          "                { key: 'password', value: pm.variables.get(pm.variables.get('loginRole') + 'Password') }",
+          "            ]}",
+          "        }, function () { pm.collectionVariables.set('authed', '1'); });",
+          "    });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "TC-API-16 environment page exposes threshold form",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/environment"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "var html = pm.response.text();",
+              "pm.test('threshold form markers present', function () {",
+              "    pm.expect(html).to.contain('Alert Thresholds');",
+              "    pm.expect(html).to.contain('name=\"temp_max\"');",
+              "});",
+              "var m = html.match(/name=\"temp_max\"[\\s\\S]{0,300}?value=\"([^\"]+)\"/);",
+              "pm.collectionVariables.set('origMax', (m && m[1]) || '30');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-API-17 valid thresholds save",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "_token",
+              "value": "{{csrfFresh}}"
+            },
+            {
+              "key": "temp_min",
+              "value": "18"
+            },
+            {
+              "key": "temp_max",
+              "value": "{{newMax}}"
+            },
+            {
+              "key": "hum_min",
+              "value": "40"
+            },
+            {
+              "key": "hum_max",
+              "value": "70"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/environment/thresholds"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var orig = parseFloat(pm.collectionVariables.get('origMax') || '30');",
+              "var next = orig >= 49 ? orig - 2 : orig + 2;",
+              "pm.collectionVariables.set('newMax', String(next));",
+              "pm.sendRequest(pm.variables.get('baseUrl') + '/environment', function (err, res) {",
+              "    var m = res.text().match(/name=\"csrf-token\" content=\"([^\"]+)\"/);",
+              "    if (m) { pm.collectionVariables.set('csrfFresh', m[1]); }",
+              "});"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('success flag', function () {",
+              "    pm.expect(pm.response.json().success).to.eql(true);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-API-18 original thresholds restored",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "_token",
+              "value": "{{csrfFresh}}"
+            },
+            {
+              "key": "temp_min",
+              "value": "18"
+            },
+            {
+              "key": "temp_max",
+              "value": "{{origMax}}"
+            },
+            {
+              "key": "hum_min",
+              "value": "40"
+            },
+            {
+              "key": "hum_max",
+              "value": "70"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/environment/thresholds"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.sendRequest(pm.variables.get('baseUrl') + '/environment', function (err, res) {",
+              "    var m = res.text().match(/name=\"csrf-token\" content=\"([^\"]+)\"/);",
+              "    if (m) { pm.collectionVariables.set('csrfFresh', m[1]); }",
+              "});"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('success flag', function () {",
+              "    pm.expect(pm.response.json().success).to.eql(true);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-API-19 inverted bounds rejected",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "_token",
+              "value": "{{csrfFresh}}"
+            },
+            {
+              "key": "temp_min",
+              "value": "30"
+            },
+            {
+              "key": "temp_max",
+              "value": "20"
+            },
+            {
+              "key": "hum_min",
+              "value": "40"
+            },
+            {
+              "key": "hum_max",
+              "value": "70"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/environment/thresholds"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.sendRequest(pm.variables.get('baseUrl') + '/environment', function (err, res) {",
+              "    var m = res.text().match(/name=\"csrf-token\" content=\"([^\"]+)\"/);",
+              "    if (m) { pm.collectionVariables.set('csrfFresh', m[1]); }",
+              "});"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 422', function () { pm.response.to.have.status(422); });",
+              "pm.test('temp_max field error', function () {",
+              "    pm.expect(pm.response.json().errors).to.have.property('temp_max');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-API-20 out-of-range max rejected",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "_token",
+              "value": "{{csrfFresh}}"
+            },
+            {
+              "key": "temp_min",
+              "value": "18"
+            },
+            {
+              "key": "temp_max",
+              "value": "99"
+            },
+            {
+              "key": "hum_min",
+              "value": "40"
+            },
+            {
+              "key": "hum_max",
+              "value": "70"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/environment/thresholds"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.sendRequest(pm.variables.get('baseUrl') + '/environment', function (err, res) {",
+              "    var m = res.text().match(/name=\"csrf-token\" content=\"([^\"]+)\"/);",
+              "    if (m) { pm.collectionVariables.set('csrfFresh', m[1]); }",
+              "});"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 422', function () { pm.response.to.have.status(422); });",
+              "pm.test('temp_max field error', function () {",
+              "    pm.expect(pm.response.json().errors).to.have.property('temp_max');",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

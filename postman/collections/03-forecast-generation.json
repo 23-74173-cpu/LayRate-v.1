@@ -1,0 +1,241 @@
+{
+  "info": {
+    "name": "LayRate 03 - Egg Production Forecast Generation",
+    "description": "Table IX API suite 3/6 (admin web session; login handled once in the collection pre-request, not counted as a case). No request here dispatches a real generation job: the error case uses an unknown cage (rejected on sufficiency), never a valid scope. Unauthenticated check is ordered LAST (it clears the cookie jar).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "loginRole",
+      "value": "admin"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "if (/unauthenticated/i.test(pm.info.requestName)) {",
+          "    // guest probe: no session, no login",
+          "} else {",
+          "    if (!pm.collectionVariables.get('authed')) {",
+          "        var base = pm.variables.get('baseUrl');",
+          "        pm.sendRequest(base + '/login', function (err, res) {",
+          "            var m = res.text().match(/name=\"_token\" value=\"([^\"]+)\"/);",
+          "            var token = m && m[1];",
+          "            pm.collectionVariables.set('csrf', token);",
+          "            pm.sendRequest({",
+          "                url: base + '/login',",
+          "                method: 'POST',",
+          "                header: { 'Content-Type': 'application/x-www-form-urlencoded' },",
+          "                body: { mode: 'urlencoded', urlencoded: [",
+          "                    { key: '_token', value: token },",
+          "                    { key: 'email', value: pm.variables.get(pm.variables.get('loginRole') + 'Email') },",
+          "                    { key: 'password', value: pm.variables.get(pm.variables.get('loginRole') + 'Password') }",
+          "                ]}",
+          "            }, function () { pm.collectionVariables.set('authed', '1'); });",
+          "        });",
+          "    }",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "TC-API-15 unauthenticated forecast page redirects to login",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/forecast?scope=farm&horizon=7",
+        "protocolProfileBehavior": {
+          "followRedirects": false
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('lands on login page after redirect', function () { pm.response.to.have.status(200); });",
+              "var html = pm.response.text();",
+              "pm.test('shows sign-in, not protected content', function () {",
+              "    pm.expect(html).to.contain('Sign in');",
+              "});",
+              "pm.test('protected content absent', function () {\n    pm.expect(html).to.not.contain('forecast-workspace');\n});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-API-11 forecast page renders workspace",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/forecast?scope=farm&horizon=7"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('workspace marker present', function () {",
+              "    pm.expect(pm.response.text()).to.contain('forecast-workspace');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-API-12 unknown cage rejected on sufficiency, no job dispatched",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "_token",
+              "value": "{{csrfFresh}}"
+            },
+            {
+              "key": "scope",
+              "value": "cage"
+            },
+            {
+              "key": "cage",
+              "value": "NOPE-000"
+            },
+            {
+              "key": "horizon",
+              "value": "7"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/forecast/generate"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.sendRequest(pm.variables.get('baseUrl') + '/environment', function (err, res) {",
+              "    var m = res.text().match(/name=\"csrf-token\" content=\"([^\"]+)\"/);",
+              "    if (m) { pm.collectionVariables.set('csrfFresh', m[1]); }",
+              "});"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('rejected with sufficiency message (redirect followed)', function () {",
+              "    pm.expect(pm.response.text()).to.contain('Need at least 90 days');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-API-13 status for nonexistent run is 404",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/forecast/status/999999"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 404', function () { pm.response.to.have.status(404); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-API-14 operator generate is forbidden",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "_token",
+              "value": "{{csrfFresh}}"
+            },
+            {
+              "key": "scope",
+              "value": "farm"
+            },
+            {
+              "key": "horizon",
+              "value": "7"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/forecast/generate"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Operator session from scratch: log OUT of the collection admin session",
+              "// first (guest middleware would otherwise bounce the login POST), then",
+              "// log in as operator, then scrape a fresh token from that session.",
+              "var base = pm.variables.get('baseUrl');",
+              "pm.sendRequest(base + '/environment', function (e0, r0) {",
+              "    var m0 = r0.text().match(/name=\"csrf-token\" content=\"([^\"]+)\"/);",
+              "    pm.sendRequest({url: base + '/logout', method: 'POST',",
+              "        header: {'Content-Type': 'application/x-www-form-urlencoded'},",
+              "        body: {mode: 'urlencoded', urlencoded: [{key:'_token', value: m0[1]}]}},",
+              "        function () {",
+              "            pm.sendRequest(base + '/login', function (e1, r1) {",
+              "                var m1 = r1.text().match(/name=\"_token\" value=\"([^\"]+)\"/);",
+              "                pm.sendRequest({url: base + '/login', method: 'POST',",
+              "                    header: {'Content-Type': 'application/x-www-form-urlencoded'},",
+              "                    body: {mode: 'urlencoded', urlencoded: [",
+              "                        {key:'_token', value: m1[1]},",
+              "                        {key:'email', value: pm.variables.get('operatorEmail')},",
+              "                        {key:'password', value: pm.variables.get('operatorPassword')}]}},",
+              "                    function () {",
+              "                        pm.sendRequest(base + '/environment', function (e2, r2) {",
+              "                            var m2 = r2.text().match(/name=\"csrf-token\" content=\"([^\"]+)\"/);",
+              "                            if (m2) { pm.collectionVariables.set('csrfFresh', m2[1]); }",
+              "                        });",
+              "                    });",
+              "            });",
+              "        });",
+              "});"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 403 (message text is debug-dependent, status is the contract)', function () {",
+              "    pm.response.to.have.status(403);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

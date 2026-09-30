@@ -1,0 +1,257 @@
+{
+  "info": {
+    "name": "LayRate 01 - Sensor Data Ingestion",
+    "description": "Table IX API suite 1/6 (device-key auth, no session).\nContract: POST /api/sensor-readings accepts top-level {readings[], recorded_at}; 200 all-accepted, 207 partial (errors[]), 422 all-rejected ('No readings were accepted.'), 401 bad/missing key. Validation failures are Laravel-default 422 {message, errors} (this endpoint is NOT success-enveloped).\nNOTE: the 200/207 cases write real rows on the target DB (env + occupancy + up-to-1 production log). IR count is 0 so egg sums stay intact. Clean up benchmark rows afterwards (see postman/README.md).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "TC-API-01 valid DHT22+IR payload accepted",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Device-Key",
+            "value": "{{deviceKey}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"recorded_at\": \"{{tsR1}}\", \"readings\": [{\"serial_number\": \"{{dhtSerial}}\", \"temperature_c\": 28.5, \"humidity_pct\": 67.0}, {\"serial_number\": \"{{irSerial}}\", \"count\": 0}]}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/sensor-readings"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Whole-second fixed clock time TODAY: distinct per request (no",
+              "// sub-second unique-key collisions), idempotent across reruns",
+              "// (updateOrCreate matches the stored second exactly).",
+              "var day = new Date().toISOString().slice(0, 10);",
+              "pm.variables.set('tsR1', day + 'T12:00:00Z');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "var body = pm.response.json();",
+              "pm.test('both legs accepted', function () {",
+              "    pm.expect(body.accepted).to.eql(2);",
+              "    var kinds = {};",
+              "    body.processed.forEach(function (p) { kinds[p.serial_number] = p.type; });",
+              "    pm.expect(kinds[pm.variables.get('dhtSerial')]).to.eql('environment');",
+              "    pm.expect(kinds[pm.variables.get('irSerial')]).to.eql('occupancy');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-API-02 over-count refused without corrupting production data",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Device-Key",
+            "value": "{{deviceKey}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"recorded_at\": \"{{tsR2}}\", \"readings\": [{\"serial_number\": \"{{dhtSerial}}\", \"temperature_c\": 28.5, \"humidity_pct\": 67.0}, {\"serial_number\": \"{{irSerial}}\", \"count\": 999}]}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/sensor-readings"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Whole-second fixed clock time TODAY: distinct per request (no",
+              "// sub-second unique-key collisions), idempotent across reruns",
+              "// (updateOrCreate matches the stored second exactly).",
+              "var day = new Date().toISOString().slice(0, 10);",
+              "pm.variables.set('tsR2', day + 'T12:05:00Z');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 207 partial', function () { pm.response.to.have.status(207); });",
+              "var body = pm.response.json();",
+              "pm.test('DHT22 leg committed, IR leg refused with hen-count error', function () {",
+              "    var kinds = {};",
+              "    (body.processed || []).forEach(function (p) { kinds[p.serial_number] = p.type; });",
+              "    pm.expect(kinds[pm.variables.get('dhtSerial')]).to.eql('environment');",
+              "    pm.expect(kinds[pm.variables.get('irSerial')]).to.be.undefined;",
+              "    pm.expect(JSON.stringify(body.errors)).to.match(/hen count/);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-API-03 unregistered serial rejected, nothing written",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Device-Key",
+            "value": "{{deviceKey}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"recorded_at\": \"{{$isoTimestamp}}\", \"readings\": [{\"serial_number\": \"NOPE-999\", \"count\": 3}]}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/sensor-readings"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 422 all-rejected', function () { pm.response.to.have.status(422); });",
+              "var body = pm.response.json();",
+              "pm.test('error names the serial, accepted is 0', function () {",
+              "    pm.expect(body.message).to.eql('No readings were accepted.');",
+              "    pm.expect(body.accepted).to.eql(0);",
+              "    pm.expect(JSON.stringify(body.errors)).to.contain('NOPE-999');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-API-04 missing device key rejected",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"recorded_at\": \"{{$isoTimestamp}}\", \"readings\": [{\"serial_number\": \"{{dhtSerial}}\", \"temperature_c\": 28.5, \"humidity_pct\": 67.0}]}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/sensor-readings"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 401', function () { pm.response.to.have.status(401); });",
+              "pm.test('missing-key message', function () {",
+              "    pm.expect(pm.response.json().message).to.eql('Missing or invalid device key.');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-API-05 malformed body fails validation",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Device-Key",
+            "value": "{{deviceKey}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"recorded_at\": \"{{$isoTimestamp}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/sensor-readings"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 422', function () { pm.response.to.have.status(422); });",
+              "pm.test('field errors present', function () {",
+              "    pm.expect(pm.response.json().errors).to.be.an('object');",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

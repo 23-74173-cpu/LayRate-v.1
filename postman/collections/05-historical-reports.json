@@ -1,0 +1,153 @@
+{
+  "info": {
+    "name": "LayRate 05 - Historical Report Generation",
+    "description": "Table IX API suite 5/6 (operator web session; login handled once in the collection pre-request, not counted as a case). Range-agnostic assertions (no hardcoded totals) so the suite runs against any deployment window. Unauthenticated check is ordered LAST (it clears the cookie jar).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "loginRole",
+      "value": "operator"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "if (/unauthenticated/i.test(pm.info.requestName)) {",
+          "    // guest probe: no session, no login",
+          "} else {",
+          "    if (!pm.collectionVariables.get('authed')) {",
+          "        var base = pm.variables.get('baseUrl');",
+          "        pm.sendRequest(base + '/login', function (err, res) {",
+          "            var m = res.text().match(/name=\"_token\" value=\"([^\"]+)\"/);",
+          "            var token = m && m[1];",
+          "            pm.collectionVariables.set('csrf', token);",
+          "            pm.sendRequest({",
+          "                url: base + '/login',",
+          "                method: 'POST',",
+          "                header: { 'Content-Type': 'application/x-www-form-urlencoded' },",
+          "                body: { mode: 'urlencoded', urlencoded: [",
+          "                    { key: '_token', value: token },",
+          "                    { key: 'email', value: pm.variables.get(pm.variables.get('loginRole') + 'Email') },",
+          "                    { key: 'password', value: pm.variables.get(pm.variables.get('loginRole') + 'Password') }",
+          "                ]}",
+          "            }, function () { pm.collectionVariables.set('authed', '1'); });",
+          "        });",
+          "    }",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "TC-API-25 unauthenticated reports redirect to login",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/reports?type=production&cage=all",
+        "protocolProfileBehavior": {
+          "followRedirects": false
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('lands on login page after redirect', function () { pm.response.to.have.status(200); });",
+              "var html = pm.response.text();",
+              "pm.test('shows sign-in, not protected content', function () {",
+              "    pm.expect(html).to.contain('Sign in');",
+              "});",
+              "pm.test('protected content absent', function () {\n    pm.expect(html).to.not.contain('Total Eggs');\n});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-API-21 production report renders summary",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/reports?type=production&cage=all"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('summary marker present', function () {",
+              "    pm.expect(pm.response.text()).to.contain('Total Eggs');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-API-22 CSV export downloads with csv content type",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/reports/csv?type=production&cage=all"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('csv content type', function () {",
+              "    pm.expect(pm.response.headers.get('Content-Type')).to.contain('text/csv');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-API-23 all-types report renders every section",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/reports?type=all&cage=all"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "var html = pm.response.text();",
+              "pm.test('production and environment sections present', function () {",
+              "    pm.expect(html).to.contain('Production Report');",
+              "    pm.expect(html).to.contain('Environment Report');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-API-24 dateless range degrades gracefully",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/reports?type=production&from=2099-01-01&to=2099-01-07&cage=all"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 200, no 500', function () { pm.response.to.have.status(200); });",
+              "pm.test('empty-state message shown', function () {",
+              "    pm.expect(pm.response.text()).to.contain('No data found');",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

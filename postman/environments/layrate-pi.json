@@ -1,0 +1,60 @@
+{
+  "id": "layrate-pi-env",
+  "name": "LayRate Pi",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "http://LayRatePI.local",
+      "description": "Pi web root (port 80 serves Laravel; :5000 is the Flask mobile API, not covered here). Override with -e if yours differs.",
+      "enabled": true
+    },
+    {
+      "key": "deviceKey",
+      "value": "REPLACE-WITH-PI-DEVICE-KEY",
+      "description": "Plaintext X-Device-Key for a device registered in the Pi devices table. NEVER commit the real key — pass via --env-var deviceKey=... instead.",
+      "enabled": true
+    },
+    {
+      "key": "adminEmail",
+      "value": "admin@layrate.local",
+      "description": "Confirm against the Pi deployment.",
+      "enabled": true
+    },
+    {
+      "key": "adminPassword",
+      "value": "password",
+      "description": "Confirm against the Pi deployment. Prefer --env-var over committing real passwords.",
+      "enabled": true
+    },
+    {
+      "key": "operatorEmail",
+      "value": "operator@layrate.local",
+      "description": "Confirm against the Pi deployment.",
+      "enabled": true
+    },
+    {
+      "key": "operatorPassword",
+      "value": "password",
+      "description": "Confirm against the Pi deployment. Prefer --env-var over committing real passwords.",
+      "enabled": true
+    },
+    {
+      "key": "dhtSerial",
+      "value": "DHT22-001",
+      "description": "DHT22 serial registered on the Pi (serial-bridge/sensors.json convention).",
+      "enabled": true
+    },
+    {
+      "key": "irSerial",
+      "value": "IRBBS-001",
+      "description": "IR break-beam serial registered on the Pi.",
+      "enabled": true
+    },
+    {
+      "key": "cageId",
+      "value": "1",
+      "description": "A cage id known to exist on the Pi.",
+      "enabled": true
+    }
+  ]
+}

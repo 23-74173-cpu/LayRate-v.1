@@ -1,0 +1,194 @@
+{
+  "info": {
+    "name": "LayRate 06 - User Authentication",
+    "description": "Table IX API suite 6/6 (no auto-login; every request manages its own CSRF/session state explicitly). Logout is ordered LAST: it kills the run session, and its test proves the kill with a nested request.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "TC-API-26 login page renders",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/login"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('sign-in marker present', function () {",
+              "    pm.expect(pm.response.text()).to.contain('Sign in');",
+              "});",
+              "var m = pm.response.text().match(/name=\"_token\" value=\"([^\"]+)\"/);",
+              "pm.collectionVariables.set('csrf', m && m[1]);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-API-27 bad credentials rejected with message",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "_token",
+              "value": "{{csrf}}"
+            },
+            {
+              "key": "email",
+              "value": "{{operatorEmail}}"
+            },
+            {
+              "key": "password",
+              "value": "definitely-wrong-password"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/login"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('rejected with invalid-credentials message (redirect followed)', function () {",
+              "    pm.expect(pm.response.text()).to.contain('Invalid email or password');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-API-28 valid operator login redirects to dashboard",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "_token",
+              "value": "{{csrf}}"
+            },
+            {
+              "key": "email",
+              "value": "{{operatorEmail}}"
+            },
+            {
+              "key": "password",
+              "value": "{{operatorPassword}}"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/login",
+        "protocolProfileBehavior": {
+          "followRedirects": false
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('lands on dashboard after redirect', function () { pm.response.to.have.status(200); });",
+              "pm.test('dashboard marker present', function () {",
+              "    pm.expect(pm.response.text()).to.contain('Dashboard');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-API-29 session persists across requests",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/dashboard"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 200 with session intact', function () { pm.response.to.have.status(200); });",
+              "pm.test('dashboard marker present', function () {",
+              "    pm.expect(pm.response.text()).to.contain('Dashboard');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-API-30 logout kills the session",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "_token",
+              "value": "{{csrfFresh}}"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/logout",
+        "protocolProfileBehavior": {
+          "followRedirects": false
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.sendRequest(pm.variables.get('baseUrl') + '/dashboard', function (err, res) {",
+              "    var m = res.text().match(/name=\"csrf-token\" content=\"([^\"]+)\"/);",
+              "    if (m) { pm.collectionVariables.set('csrfFresh', m[1]); }",
+              "});"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('lands on login page after redirect', function () { pm.response.to.have.status(200); });",
+              "pm.test('sign-in marker present', function () {",
+              "    pm.expect(pm.response.text()).to.contain('Sign in');",
+              "});",
+              "pm.sendRequest(pm.variables.get('baseUrl') + '/dashboard', function (err, res) {",
+              "    pm.test('dashboard after logout bounces to login', function () {",
+              "        pm.expect(res.text()).to.contain('Sign in');",
+              "        pm.expect(res.text()).to.not.contain('Farm Operator');",
+              "    });",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
