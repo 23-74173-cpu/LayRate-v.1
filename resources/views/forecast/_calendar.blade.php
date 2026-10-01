@@ -66,7 +66,7 @@
 <div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
     {{-- Month / Year header with navigation --}}
     <div class="mb-5">
-        <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-1">Production Calendar</div>
+        <x-card-header title="Production Calendar" subtitle="Recorded and predicted output · {{ $scopeLabel }}" icon="calendar-days" />
 
         {{-- Legend: the grid now carries two independent data types, and the
              colour families (blue = recorded, green = predicted) are only
@@ -105,7 +105,7 @@
                 @endforeach
                 <div class="relative">
                     <select name="month" onchange="this.form.submit()" aria-label="Select month"
-                            class="appearance-none cursor-pointer rounded-lg border border-[#D9D9D9] bg-white py-1.5 px-4 text-center text-sm font-semibold text-[#333333] shadow-sm transition-colors hover:border-[#002D5E]/40 hover:bg-[#F5F6F8] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30">
+                            class="appearance-none cursor-pointer rounded-lg border border-[#D9D9D9] bg-white py-1.5 px-4 text-center text-sm font-semibold text-[#333333] shadow-sm transition-colors hover:border-navy/40 hover:bg-[#F5F6F8] focus:outline-none focus:ring-2 focus:ring-navy/30">
                         @foreach($monthOptions as $m)
                         <option value="{{ $m }}" {{ $calendarMonth->month == $m ? 'selected' : '' }}>{{ $months[$m - 1] }}</option>
                         @endforeach
@@ -113,7 +113,7 @@
                 </div>
                 <div class="relative">
                     <select name="year" onchange="this.form.submit()" aria-label="Select year"
-                            class="appearance-none cursor-pointer rounded-lg border border-[#D9D9D9] bg-white py-1.5 px-4 min-w-24 text-center text-sm font-semibold text-[#333333] shadow-sm transition-colors hover:border-[#002D5E]/40 hover:bg-[#F5F6F8] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30">
+                            class="appearance-none cursor-pointer rounded-lg border border-[#D9D9D9] bg-white py-1.5 px-4 min-w-24 text-center text-sm font-semibold text-[#333333] shadow-sm transition-colors hover:border-navy/40 hover:bg-[#F5F6F8] focus:outline-none focus:ring-2 focus:ring-navy/30">
                         @foreach($yearOptions as $y)
                         <option value="{{ $y }}" {{ $calendarMonth->year == $y ? 'selected' : '' }}>{{ $y }}</option>
                         @endforeach
@@ -269,15 +269,15 @@
                             } elseif ($hasForecast) {
                                 $dayClasses = $baseClasses . ' border-[#A8D5A2] bg-[#EBF5E9] ' . ($isSelectable ? 'hover:bg-[#D5E8D4]/60 cursor-pointer' : 'cursor-not-allowed');
                             } elseif ($hasProduction) {
-                                $dayClasses = $baseClasses . ' border-[#BFDBFE] bg-[#EFF6FF] ' . ($isSelectable ? 'hover:border-[#002D5E] cursor-pointer' : 'cursor-not-allowed');
+                                $dayClasses = $baseClasses . ' border-[#BFDBFE] bg-[#EFF6FF] ' . ($isSelectable ? 'hover:border-navy cursor-pointer' : 'cursor-not-allowed');
                             } elseif ($cell['isToday']) {
-                                $dayClasses = $baseClasses . ' border-[#002D5E] bg-[#002D5E]/5 cursor-not-allowed';
+                                $dayClasses = $baseClasses . ' border-navy bg-navy/5 cursor-not-allowed';
                             } else {
-                                $dayClasses = $baseClasses . ' border-[#F0F0F0] bg-white ' . ($isSelectable ? 'hover:border-[#002D5E] cursor-pointer' : 'hover:border-[#D9D9D9] cursor-not-allowed');
+                                $dayClasses = $baseClasses . ' border-[#F0F0F0] bg-white ' . ($isSelectable ? 'hover:border-navy cursor-pointer' : 'hover:border-[#D9D9D9] cursor-not-allowed');
                             }
                             $dayNumberClasses = 'text-xs sm:text-sm ';
                             if ($cell['isToday']) {
-                                $dayNumberClasses .= 'font-bold text-[#002D5E]';
+                                $dayNumberClasses .= 'font-bold text-navy';
                             } elseif ($hasForecast) {
                                 $dayNumberClasses .= 'font-semibold text-[#1F5F35]';
                             } elseif ($hasProduction) {
@@ -342,8 +342,8 @@
     <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-auto overflow-hidden">
         <div class="flex items-center justify-between px-5 py-4 border-b border-[#F0F0F0]">
             <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-lg bg-[#002D5E]/10 flex items-center justify-center">
-                    <i data-lucide="calendar-plus" class="w-4 h-4 text-[#002D5E]"></i>
+                <div class="w-8 h-8 rounded-lg bg-navy/10 flex items-center justify-center">
+                    <i data-lucide="calendar-plus" class="w-4 h-4 text-navy"></i>
                 </div>
                 <h3 id="forecastDayModalTitle" class="text-base font-semibold text-[#333333]">Forecast this day</h3>
             </div>
@@ -353,7 +353,7 @@
         </div>
         <div class="p-5">
             <p id="forecastDayModalHint" class="text-sm text-[#333333] mb-1">Generate a single-day egg production forecast for</p>
-            <p class="text-lg font-semibold text-[#002D5E] mb-4" id="forecastDayModalDate">—</p>
+            <p class="text-lg font-semibold text-navy mb-4" id="forecastDayModalDate">—</p>
 
             <div class="mb-4">
                 <label class="block text-xs font-semibold uppercase tracking-wide text-[#6B7280] mb-2">Scope</label>
@@ -372,7 +372,7 @@
                 <div id="dayScopeCage" class="hidden mt-3">
                     <label class="block text-sm text-[#333333] mb-1.5">Select Cage</label>
                     <select id="dayCageSelect"
-                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
+                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-navy">
                         @foreach($allCages as $c)
                         <option value="{{ $c }}" {{ $c === $cageCode ? 'selected' : '' }}>{{ $c }}</option>
                         @endforeach
@@ -382,7 +382,7 @@
                 <div id="dayScopeBreed" class="hidden mt-3">
                     <label class="block text-sm text-[#333333] mb-1.5">Select Breed</label>
                     <select id="dayBreedSelect"
-                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-[#002D5E]">
+                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-navy">
                         @foreach($allBreeds as $b)
                         <option value="{{ $b }}" {{ $b === $breed ? 'selected' : '' }}>{{ $b }}</option>
                         @endforeach
@@ -398,7 +398,7 @@
                 <input type="hidden" name="start_date" id="forecastDayModalStartDate" value="">
                 <input type="hidden" name="cage" id="dayCageInput" value="{{ $scope === 'cage' ? $cageCode : 'ALL' }}">
                 <input type="hidden" name="breed" id="dayBreedInput" value="{{ $scope === 'breed' ? ($breed ?? '') : '' }}">
-                <button type="submit" class="w-full bg-[#002D5E] text-white py-3 rounded-lg text-sm font-medium hover:bg-[#001F42] transition-colors flex items-center justify-center gap-2">
+                <button type="submit" class="w-full bg-navy text-white py-3 rounded-lg text-sm font-medium hover:bg-navy transition-colors flex items-center justify-center gap-2">
                     <i data-lucide="sparkles" class="w-4 h-4"></i>
                     <span>Generate Forecast</span>
                 </button>
@@ -526,9 +526,9 @@
         const el = document.querySelector('.calendar-day[data-date="' + date + '"]');
         if (!el) return;
         if (selected) {
-            el.classList.add('ring-2', 'ring-[#002D5E]', 'ring-offset-1', 'bg-[#002D5E]/10');
+            el.classList.add('ring-2', 'ring-navy', 'ring-offset-1', 'bg-navy/10');
         } else {
-            el.classList.remove('ring-2', 'ring-[#002D5E]', 'ring-offset-1', 'bg-[#002D5E]/10');
+            el.classList.remove('ring-2', 'ring-navy', 'ring-offset-1', 'bg-navy/10');
         }
     }
 
@@ -647,9 +647,9 @@
     function syncDayDragToggleUI(enabled) {
         const btn = document.getElementById('dayDragSelectToggleBtn');
         if (!btn) return;
-        btn.classList.toggle('bg-[#002D5E]', enabled);
+        btn.classList.toggle('bg-navy', enabled);
         btn.classList.toggle('text-white', enabled);
-        btn.classList.toggle('border-[#002D5E]', enabled);
+        btn.classList.toggle('border-navy', enabled);
         btn.classList.toggle('hover:bg-[#F5F6F8]', !enabled);
         btn.classList.toggle('hover:text-[#333333]', !enabled);
         btn.classList.toggle('border-[#D9D9D9]', !enabled);
@@ -760,9 +760,9 @@
 
         document.querySelectorAll('.day-scope-btn').forEach(function(btn) {
             const isActive = btn.dataset.dayScope === scope;
-            btn.classList.toggle('bg-[#002D5E]', isActive);
+            btn.classList.toggle('bg-navy', isActive);
             btn.classList.toggle('text-white', isActive);
-            btn.classList.toggle('border-[#002D5E]', isActive);
+            btn.classList.toggle('border-navy', isActive);
             btn.classList.toggle('border-[#D9D9D9]', !isActive);
             btn.classList.toggle('text-[#6B7280]', !isActive);
             btn.classList.toggle('hover:bg-[#F5F6F8]', !isActive);

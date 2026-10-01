@@ -62,21 +62,11 @@ $hasData = $totalEggs > 0 || $performance->contains(fn ($p) => $p['hdep'] > 0);
 
 <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 h-full flex flex-col">
     {{-- Header --}}
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <div class="flex items-start gap-3">
-            <span class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style="background-color: #e8f3fe; color: #0075de;">
-                <i data-lucide="layout-grid" class="w-4 h-4"></i>
-            </span>
-            <div>
-                <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Cage Performance Overview</div>
-            </div>
-        </div>
-    </div>
+    <x-card-header title="Cage Performance Overview" subtitle="Ranked by eggs · {{ $targetDate->format('M j, Y') }}" icon="layout-grid" />
 
     @if(! $hasData)
-        <div class="rounded-xl border py-8 text-center text-sm" style="background-color: #ffffff; border-color: #e6e6e6; color: #a39e98;">
-            No production data recorded for {{ $targetDate->format('m/d/Y') }}.
-        </div>
+        <x-empty-state icon="layout-grid" message="No production data recorded for {{ $targetDate->format('m/d/Y') }}."
+                         :actionUrl="route('eggs.logging')" actionLabel="Log Eggs" />
     @else
         {{-- Ranking table (top of section) --}}
         <div class="rounded-xl border border-[#D9D9D9] overflow-x-auto mb-4">
@@ -128,7 +118,7 @@ $hasData = $totalEggs > 0 || $performance->contains(fn ($p) => $p['hdep'] > 0);
         <div class="mb-4 flex items-center justify-between">
             <span class="text-xs text-[#6B7280]">Showing top 3 of {{ $performance->count() }} cages</span>
             <button type="button" data-perf-toggle aria-expanded="false"
-                    class="inline-flex items-center gap-1 rounded-lg border border-[#D9D9D9] px-3 py-1.5 text-xs font-semibold text-[#002D5E] transition-colors hover:bg-[#F7F7F5] focus:outline-none">
+                    class="inline-flex items-center gap-1 rounded-lg border border-[#D9D9D9] px-3 py-1.5 text-xs font-semibold text-navy transition-colors hover:bg-[#F7F7F5] focus:outline-none">
                 <i data-lucide="chevron-down" class="w-3 h-3"></i>
                 <span data-perf-toggle-label>Show Full Ranking</span>
             </button>

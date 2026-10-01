@@ -1,21 +1,13 @@
 <turbo-frame id="dashboard-feed-vs-egg">
     <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 h-full flex flex-col">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
-            <div class="flex items-start gap-3">
-                <span class="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style="background-color: #fef3cd; color: #b45309;">
-                    <i data-lucide="wheat" class="w-4 h-4"></i>
-                </span>
-                <div>
-                    <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Feed vs Egg Production</div>
-                    <div class="text-xs mt-0.5" style="color: #9CA3AF;">Feed consumption vs egg output per cage-day</div>
-                    <button type="button" onclick="this.closest('.bg-white').querySelector('.interpretation-panel').classList.toggle('hidden')" class="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all hover:opacity-80" style="color: #6366f1; background-color: rgba(99,102,241,0.08);">
-                        <i data-lucide="sparkles" class="w-2.5 h-2.5"></i> Interpretation
-                    </button>
-                </div>
-            </div>
-            
-        </div>
-        <div class="interpretation-panel hidden mb-3 px-3 py-2.5 rounded-lg text-xs leading-relaxed" style="background-color: #f0f0ff; color: #3730a3; border: 1px solid rgba(99,102,241,0.15);">{{ $insight }}</div>
+        <x-card-header title="Feed vs Egg Production" subtitle="Feed consumption vs egg output per cage-day" icon="wheat">
+            <x-slot:actions>
+                <button type="button" onclick="this.closest('.bg-white').querySelector('.interpretation-panel').classList.toggle('hidden')" class="interp-btn">
+                    <i data-lucide="sparkles"></i> Interpretation
+                </button>
+            </x-slot:actions>
+        </x-card-header>
+        <div class="interpretation-panel hidden mb-3 px-3 py-2.5 rounded-lg text-xs leading-relaxed" style="background-color: #dcebfa; color: var(--color-info); border: 1px solid #b8d4fe;">{{ $insight }}</div>
         @if(count($scatterData) < 3)
             <div class="rounded-xl border py-8 text-center text-sm flex-1" style="background-color: #ffffff; border-color: #e6e6e6; color: #a39e98;">
                 Insufficient data — need at least 3 observations.
@@ -36,8 +28,8 @@
                 datasets: [{
                     label: 'Cage-Days',
                     data: data,
-                    backgroundColor: 'rgba(180, 83, 9, 0.5)',
-                    borderColor: 'rgb(180, 83, 9)',
+                    backgroundColor: LayRateChartColors.alpha(LayRateChartColors.feed, 0.5),
+                    borderColor: LayRateChartColors.feed,
                     borderWidth: 1,
                     pointRadius: 4,
                     pointHoverRadius: 6
@@ -46,7 +38,7 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { display: false }, tooltip: { backgroundColor: '#102A4C', titleFont: { size: 11, weight: '600' }, bodyFont: { size: 11 }, padding: { top: 8, bottom: 8, left: 12, right: 12 }, cornerRadius: 8, callbacks: { label: function(c) { return c.raw.x + ' kg feed — ' + c.raw.y + ' eggs'; } } } },
+                plugins: { legend: { display: false }, tooltip: { backgroundColor: LayRateChartColors.tooltip, titleFont: { size: 11, weight: '600' }, bodyFont: { size: 11 }, padding: { top: 8, bottom: 8, left: 12, right: 12 }, cornerRadius: 8, callbacks: { label: function(c) { return c.raw.x + ' kg feed — ' + c.raw.y + ' eggs'; } } } },
                 scales: {
                     x: { title: { display: true, text: 'Feed Consumed (kg)', color: '#9CA3AF', font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, color: '#9CA3AF' } },
                     y: { title: { display: true, text: 'Eggs Produced', color: '#9CA3AF', font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, color: '#9CA3AF' } }

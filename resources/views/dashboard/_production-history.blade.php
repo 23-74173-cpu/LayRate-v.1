@@ -9,44 +9,37 @@
         }
     </style>
     <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 h-auto flex flex-col lg:h-full">
-        <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3 mb-2">
-            <div class="flex items-start gap-3 flex-1 min-w-0">
-                <span class="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style="background-color: #e8f3fe; color: #0075de;">
-                    <i data-lucide="chart-line" class="w-3 h-3"></i>
-                </span>
-                <div>
-                    <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Egg Production History</div>
-                    <button type="button" onclick="this.closest('.bg-white').querySelector('.interpretation-panel').classList.toggle('hidden')" class="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all hover:opacity-80" style="color: #6366f1; background-color: rgba(99,102,241,0.08);">
-                        <i data-lucide="sparkles" class="w-2.5 h-2.5"></i> Interpretation
+        <x-card-header title="Egg Production History" subtitle="Eggs per day · {{ $days > 0 ? 'last ' . $days . ' days' : 'all time' }}" icon="chart-line">
+            <x-slot:actions>
+                <button type="button" onclick="this.closest('.bg-white').querySelector('.interpretation-panel').classList.toggle('hidden')" class="interp-btn">
+                    <i data-lucide="sparkles"></i> Interpretation
+                </button>
+                <span class="inline-flex flex-wrap items-center gap-1 rounded-lg p-1" style="background-color: #f3f4f6;">
+                    <button type="button"
+                       data-history-compare
+                       onclick="toggleProductionHistoryCompare()"
+                       class="history-compare-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all {{ $compare ? 'history-compare-active' : 'text-[#6B7280] hover:bg-[#e5e7eb]' }}"
+                       {{ $compare ? 'style="background-color: #0d47a1; color: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.1);"' : '' }}>
+                        Compare
                     </button>
-                </div>
-            </div>
-<div class="inline-flex flex-wrap items-center gap-1 rounded-lg p-1" style="background-color: #f3f4f6;">
-                <button type="button"
-                   data-history-compare
-                   onclick="toggleProductionHistoryCompare()"
-                   class="history-compare-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all {{ $compare ? 'history-compare-active' : 'text-[#6B7280] hover:bg-[#e5e7eb]' }}"
-                   {{ $compare ? 'style="background-color: #0d47a1; color: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.1);"' : '' }}>
-                    Compare
-                </button>
-                <span class="w-px h-3 mx-1" style="background-color: #d1d5db;"></span>
-                <button type="button"
-                   id="forecastToggleBtn"
-                   data-forecast-toggle
-                   onclick="toggleForecastOverlay()"
-                   class="forecast-toggle-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb]">
-                    Show Forecast
-                </button>
-            </div>
-        </div>
+                    <span class="w-px h-3 mx-1" style="background-color: #d1d5db;"></span>
+                    <button type="button"
+                       id="forecastToggleBtn"
+                       data-forecast-toggle
+                       onclick="toggleForecastOverlay()"
+                       class="forecast-toggle-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb]">
+                        Show Forecast
+                    </button>
+                </span>
+            </x-slot:actions>
+        </x-card-header>
 
-        <div class="interpretation-panel hidden mb-3 px-3 py-2.5 rounded-lg text-xs leading-relaxed" style="background-color: #f0f0ff; color: #3730a3; border: 1px solid rgba(99,102,241,0.15);">{{ $insight }}</div>
-        <div id="forecastVariancePanel" class="hidden mb-3 px-3 py-2.5 rounded-lg text-xs leading-relaxed flex items-center gap-2" style="background-color:#fef3e2; color:#92400e; border:1px solid #fde68a;"><i data-lucide="trending-up" class="w-3 h-3"></i><span id="forecastVarianceText"></span></div>
+        <div class="interpretation-panel hidden mb-3 px-3 py-2.5 rounded-lg text-xs leading-relaxed" style="background-color: #dcebfa; color: var(--color-info); border: 1px solid #b8d4fe;">{{ $insight }}</div>
+        <div id="forecastVariancePanel" class="hidden mb-3 px-3 py-2.5 rounded-lg text-xs leading-relaxed flex items-center gap-2" style="background-color:#fdf3e0; color:#8a5a00; border:1px solid #f3e3bf;"><i data-lucide="trending-up" class="w-3 h-3"></i><span id="forecastVarianceText"></span></div>
 
         @if(empty($chartData['datasets']))
-            <div class="rounded-xl border py-8 text-center text-sm" style="background-color: #ffffff; border-color: #e6e6e6; color: #a39e98;">
-                No production data for the selected period.
-            </div>
+            <x-empty-state icon="history" message="No production data for the selected period."
+                             :actionUrl="route('eggs.logging')" actionLabel="Log Eggs" />
         @else
             @php
                 $peakVal = 0; $peakLabel = '';
@@ -58,7 +51,7 @@
             @endphp
             @if($peakVal > 0)
             <div class="flex items-center gap-2 mb-3">
-                <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold" style="background-color: #e8f3fe; color: #0075de; border: 1px solid rgba(0,117,222,0.2);">
+                <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold" style="background-color: #e8f3fe; color: var(--color-navy); border: 1px solid rgba(0, 45, 94,0.2);">
                     <i data-lucide="trending-up" class="w-3 h-3"></i>
                     Peak Production — {{ number_format($peakVal) }} eggs — {{ $peakLabel }}
                 </span>
@@ -86,7 +79,7 @@
             chart.data.datasets.forEach(function(ds, i) {
                 var meta = chart.getDatasetMeta(i);
                 if (!meta.visible || !ds._fillGradient) return;
-                var color = ds.borderColor || '#102A4C';
+                var color = ds.borderColor || '#002d5e';
                 ctx.save();
                 var gradient = ctx.createLinearGradient(0, yAxis.top, 0, yAxis.bottom);
                 gradient.addColorStop(0, ds._fillGradient);
@@ -124,7 +117,7 @@
     // drawn as plain lines and keep their cage-border colors.
     if (!{{ $compare ? 'true' : 'false' }}) {
         productionChartData.datasets.forEach(function(ds) {
-            var c = ds.borderColor || '#102A4C';
+            var c = ds.borderColor || '#002d5e';
             // Convert hex to rgba for gradient
             if (c.charAt(0) === '#') {
                 var r = parseInt(c.slice(1,3), 16);
@@ -171,7 +164,7 @@
                     }
                 },
                 tooltip: {
-                    backgroundColor: '#102A4C',
+                    backgroundColor: LayRateChartColors.tooltip,
                     titleColor: '#ffffff',
                     bodyColor: '#ffffff',
                     titleFont: { size: 11, weight: '600' },
@@ -304,12 +297,13 @@
                     }
                     return;
                 }
-                // Build overlay dataset — dashed, distinct color, same labels
+                // Build overlay dataset — dashed eggs-blue, distinct from the
+                // solid actual line via dash + legend (same metric, same hue).
                 var forecastDataset = {
                     label: data.cageCode ? data.cageCode + ' Forecast' : 'Farm Forecast',
                     data: data.forecast,
-                    borderColor: '#C2703E',
-                    backgroundColor: 'rgba(194, 112, 62, 0.08)',
+                    borderColor: LayRateChartColors.eggs,
+                    backgroundColor: LayRateChartColors.alpha(LayRateChartColors.eggs, 0.08),
                     borderDash: [6, 4],
                     tension: 0.3,
                     borderWidth: 2.5,

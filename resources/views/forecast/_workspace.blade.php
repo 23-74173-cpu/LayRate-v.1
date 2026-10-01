@@ -13,7 +13,7 @@
 
         {{-- ── Inputs Panel ── --}}
         <x-card padding="p-4">
-            <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-4">Forecast Inputs</div>
+            <x-card-header title="Forecast Inputs" subtitle="Scope and horizon" icon="sliders-horizontal" />
             <form method="POST" action="{{ route('forecast.generate') }}" id="forecastForm" data-turbo="false">
                 @csrf
                 <input type="hidden" name="scope" value="{{ $scope }}" id="formScope">
@@ -23,15 +23,15 @@
                 <label class="block text-sm text-[#333333] mb-2">Scope</label>
                 <div class="flex flex-col gap-2 mb-4">
                     <a href="{{ route('forecast', ['scope'=>'farm','horizon'=>$horizon]) }}" data-forecast-scope="farm" data-turbo-frame="forecast-workspace"
-                       class="flex items-center justify-center gap-2 overflow-hidden py-2 rounded-lg text-sm border whitespace-nowrap {{ $scope === 'farm' ? 'bg-[#002D5E] text-white border-[#002D5E]' : 'border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]' }}">
+                       class="flex items-center justify-center gap-2 overflow-hidden py-2 rounded-lg text-sm border whitespace-nowrap {{ $scope === 'farm' ? 'bg-navy text-white border-navy' : 'border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]' }}">
                         <i data-lucide="globe" class="w-4 h-4 shrink-0"></i> Whole Farm
                     </a>
                     <a href="{{ route('forecast', ['scope'=>'cage','cage'=>$cageCode,'horizon'=>$horizon]) }}" data-forecast-scope="cage" data-turbo-frame="forecast-workspace"
-                       class="flex items-center justify-center gap-2 overflow-hidden py-2 rounded-lg text-sm border whitespace-nowrap {{ $scope === 'cage' ? 'bg-[#002D5E] text-white border-[#002D5E]' : 'border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]' }}">
+                       class="flex items-center justify-center gap-2 overflow-hidden py-2 rounded-lg text-sm border whitespace-nowrap {{ $scope === 'cage' ? 'bg-navy text-white border-navy' : 'border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]' }}">
                         <i data-lucide="box" class="w-4 h-4 shrink-0"></i> Per Cage
                     </a>
                     <a href="{{ route('forecast', ['scope'=>'breed','breed'=>$allBreeds->first() ?? 'ISA Brown','horizon'=>$horizon]) }}" data-forecast-scope="breed" data-turbo-frame="forecast-workspace"
-                       class="flex items-center justify-center gap-2 overflow-hidden py-2 rounded-lg text-sm border whitespace-nowrap {{ $scope === 'breed' ? 'bg-[#002D5E] text-white border-[#002D5E]' : 'border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]' }}">
+                       class="flex items-center justify-center gap-2 overflow-hidden py-2 rounded-lg text-sm border whitespace-nowrap {{ $scope === 'breed' ? 'bg-navy text-white border-navy' : 'border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]' }}">
                         <i data-lucide="bird" class="w-4 h-4 shrink-0"></i> Per Breed
                     </a>
                 </div>
@@ -39,7 +39,7 @@
                 <div id="cageScopeBlock" {!! $scope !== 'cage' ? 'style="display:none"' : '' !!}>
                     <label class="block text-sm text-[#333333] mb-2">Select Cage</label>
                     <select name="cage" id="cageSelect" onchange="window.refreshForecastWorkspace && refreshForecastWorkspace()"
-                            class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white mb-4 focus:outline-none focus:border-[#002D5E]">
+                            class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white mb-4 focus:outline-none focus:border-navy">
                         @foreach($allCages as $c)
                         <option value="{{ $c }}" {{ $c === $cageCode ? 'selected' : '' }}>{{ $c }}</option>
                         @endforeach
@@ -50,12 +50,12 @@
                 <div id="breedScopeBlock" {!! $scope !== 'breed' ? 'style="display:none"' : '' !!}>
                     <label class="block text-sm text-[#333333] mb-2">Select Breed</label>
                     <select name="breed" id="breedSelect" onchange="window.refreshForecastWorkspace && refreshForecastWorkspace()"
-                            class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white mb-4 focus:outline-none focus:border-[#002D5E]">
+                            class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white mb-4 focus:outline-none focus:border-navy">
                         @foreach($allBreeds as $b)
                         <option value="{{ $b }}" {{ $breed === $b ? 'selected' : '' }}>{{ $b }}</option>
                         @endforeach
                     </select>
-                    <p class="text-xs text-[#6B7280] mb-4">Forecasting: <span class="forecast-target-label font-medium text-[#002D5E]">{{ $breed }}</span></p>
+                    <p class="text-xs text-[#6B7280] mb-4">Forecasting: <span class="forecast-target-label font-medium text-navy">{{ $breed }}</span></p>
                 </div>
 
                 <div id="farmScopeBlock" {!! $scope !== 'farm' ? 'style="display:none"' : '' !!}>
@@ -66,14 +66,14 @@
                 <div class="flex gap-4 mb-5">
                     @foreach([7,14,30] as $h)
                     <label class="flex items-center gap-1.5 text-sm cursor-pointer">
-                        <input type="radio" name="horizon" value="{{ $h }}" {{ $horizon == $h ? 'checked' : '' }} class="accent-[#002D5E]" onchange="window.refreshForecastWorkspace && refreshForecastWorkspace()">
+                        <input type="radio" name="horizon" value="{{ $h }}" {{ $horizon == $h ? 'checked' : '' }} class="accent-navy" onchange="window.refreshForecastWorkspace && refreshForecastWorkspace()">
                         {{ $h }} days
                     </label>
                     @endforeach
                 </div>
 
                 @can('admin')
-                <button type="submit" id="generateForecastBtn" class="w-full bg-[#002D5E] text-white py-2.5 rounded-lg text-sm hover:bg-[#001F42] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                <button type="submit" id="generateForecastBtn" class="w-full bg-navy text-white py-2.5 rounded-lg text-sm hover:bg-navy transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                     <span id="btnText">Generate Forecast</span>
                 </button>
                 @endcan
@@ -124,7 +124,7 @@
             @if(isset($usedMetrics['MAPE']) && $usedMetrics['MAPE'] !== null)
             <span class="text-[#6B7280]">{{ number_format($usedMetrics['MAPE'], 1) }}% MAPE</span>
             @endif
-            <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-[#002D5E]/10 text-[#002D5E] font-medium">
+            <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-navy/10 text-navy font-medium">
                 <i data-lucide="award" class="w-3 h-3"></i>{{ $recommended }}
             </span>
         @endif
@@ -132,7 +132,7 @@
     </div>
 
     <div id="modelComparison" class="bg-white rounded-lg border border-[#D9D9D9] p-4 {{ $showMetricsBlock ? '' : 'hidden' }}">
-        <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-4">Model Comparison</div>
+        <x-card-header title="Model Comparison" subtitle="Error metrics per candidate model" icon="scale" />
 
         @if($recommended)
         <div class="flex items-center gap-3 p-4 rounded-lg bg-[#D5E8D4] text-[#1F5F35] mb-5">
@@ -203,9 +203,9 @@
     function setScopeButtonStates(scope) {
         document.querySelectorAll('[data-forecast-scope]').forEach(function(link) {
             const isActive = link.getAttribute('data-forecast-scope') === scope;
-            link.classList.remove('bg-[#002D5E]', 'text-white', 'border-[#002D5E]', 'border-[#D9D9D9]', 'text-[#6B7280]');
+            link.classList.remove('bg-navy', 'text-white', 'border-navy', 'border-[#D9D9D9]', 'text-[#6B7280]');
             if (isActive) {
-                link.classList.add('bg-[#002D5E]', 'text-white', 'border-[#002D5E]');
+                link.classList.add('bg-navy', 'text-white', 'border-navy');
             } else {
                 link.classList.add('border-[#D9D9D9]', 'text-[#6B7280]');
             }
@@ -246,7 +246,7 @@
             if (typeof used.MAPE !== 'undefined' && used.MAPE !== null) {
                 html += '<span class="text-[#6B7280]">' + Number(used.MAPE).toFixed(1) + '% MAPE</span>';
             }
-            html += '<span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-[#002D5E]/10 text-[#002D5E] font-medium">'
+            html += '<span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-navy/10 text-navy font-medium">'
                 + '<i data-lucide="award" class="w-3 h-3"></i>' + escapeHtml(recommended || '') + '</span>';
         }
         el.innerHTML = html;

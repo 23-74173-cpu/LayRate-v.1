@@ -64,13 +64,13 @@
             const nav = document.querySelector('#feed-tabs-nav');
             if (nav) {
                 nav.querySelectorAll('button').forEach(btn => {
-                    btn.classList.remove('border-[#002D5E]', 'text-[#002D5E]');
+                    btn.classList.remove('border-navy', 'text-navy');
                     btn.classList.add('border-transparent', 'text-[#6B7280]');
                 });
                 const active = nav.querySelector('button[onclick*="'+tab+'"]');
                 if (active) {
                     active.classList.remove('border-transparent', 'text-[#6B7280]');
-                    active.classList.add('border-[#002D5E]', 'text-[#002D5E]');
+                    active.classList.add('border-navy', 'text-navy');
                 }
             }
         }
@@ -103,7 +103,7 @@
                 var isActive = btn.getAttribute('data-group-by') === groupBy;
                 btn.className = 'text-xs px-3 py-1.5 rounded-full border transition-colors ' +
                     (isActive
-                        ? 'bg-[#002D5E] text-white border-[#002D5E]'
+                        ? 'bg-navy text-white border-navy'
                         : 'border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]');
             });
 
@@ -309,11 +309,11 @@
                         <td class="px-5 py-3.5 text-sm text-[#333333]">{{ number_format($log->feed_consumed_kg, 2) }} kg</td>
                         <td class="px-5 py-3.5">
                             @if($isDistributed)
-                                <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200" title="Estimated from whole-farm entry">
+                                <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-warning-bg text-warning border border-warning-border" title="Estimated from whole-farm entry">
                                     <i data-lucide="git-branch" class="w-3 h-3"></i> Estimated
                                 </span>
                             @else
-                                <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-100">
+                                <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-success-bg text-success border border-success-border">
                                     <i data-lucide="check-circle-2" class="w-3 h-3"></i> Direct
                                 </span>
                             @endif
@@ -349,15 +349,11 @@
          data-fcr-cage-id="{{ $fcrSelectedId ?? $cages->value('id') ?? '' }}"
          data-fcr-group-by="{{ $fcrGroupBy }}">
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5 relative">
-            <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
-                <div>
-                    <h3 class="text-sm font-semibold text-[#333333]">Feed Conversion Ratio</h3>
-                    <p class="text-xs text-[#6B7280]">kg feed ÷ kg egg mass (lower is better)</p>
-                </div>
-
-                <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
+            <x-card-header title="Feed Conversion Ratio" subtitle="kg feed ÷ kg egg mass (lower is better)" icon="scale">
+                <x-slot:actions>
+                    <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
                     <select id="fcr-cage-select" onchange="fcrLoad()"
-                            class="w-full sm:w-auto min-w-0 border border-[#D9D9D9] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[#002D5E]">
+                            class="w-full sm:w-auto min-w-0 border border-[#D9D9D9] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-navy">
                         <option value="all">All Cages</option>
                         @foreach($cages as $c)
                         <option value="{{ $c->id }}" {{ (int) $fcrSelectedId === $c->id ? 'selected' : '' }}>
@@ -371,13 +367,14 @@
                         <button type="button"
                                 data-group-by="{{ $value }}"
                                 onclick="fcrLoad('{{ $value }}')"
-                                class="text-xs px-3 py-1.5 rounded-full border transition-colors {{ $fcrGroupBy === $value ? 'bg-[#002D5E] text-white border-[#002D5E]' : 'border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]' }}">
+                                class="text-xs px-3 py-1.5 rounded-full border transition-colors {{ $fcrGroupBy === $value ? 'bg-navy text-white border-navy' : 'border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]' }}">
                             {{ $label }}
                         </button>
                         @endforeach
                     </div>
                 </div>
-            </div>
+                </x-slot:actions>
+            </x-card-header>
 
             {{-- Loading skeleton --}}
             <div id="fcr-loading" class="hidden">
@@ -428,15 +425,15 @@
                         </p>
                         <div class="space-y-2.5 mb-4">
                             <div class="flex items-center gap-2.5">
-                                <span class="w-2.5 h-2.5 rounded-full bg-green-500 flex-shrink-0"></span>
+                                <span class="w-2.5 h-2.5 rounded-full bg-success flex-shrink-0"></span>
                                 <span><strong>&le; {{ config('fcr.good_threshold', 2.5) }}</strong> — Efficient conversion</span>
                             </div>
                             <div class="flex items-center gap-2.5">
-                                <span class="w-2.5 h-2.5 rounded-full bg-yellow-500 flex-shrink-0"></span>
+                                <span class="w-2.5 h-2.5 rounded-full bg-warning flex-shrink-0"></span>
                                 <span><strong>{{ config('fcr.good_threshold', 2.5) }} – {{ config('fcr.warning_threshold', 4.0) }}</strong> — Monitor closely</span>
                             </div>
                             <div class="flex items-center gap-2.5">
-                                <span class="w-2.5 h-2.5 rounded-full bg-red-500 flex-shrink-0"></span>
+                                <span class="w-2.5 h-2.5 rounded-full bg-danger flex-shrink-0"></span>
                                 <span><strong>&gt; {{ config('fcr.warning_threshold', 4.0) }}</strong> — Investigate feed or flock health</span>
                             </div>
                         </div>

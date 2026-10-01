@@ -1106,7 +1106,12 @@ var cageParam = code === 'all' ? null : code;
             var f = queue[i++];
             // Skip frames already given a real src (e.g. by a filter reload).
             if (f.dataset.src && !f.getAttribute('src')) {
-                f.setAttribute('src', f.dataset.src);
+                // Apply the active cage / period / date filters (restored from
+                // sessionStorage when returning) so every frame agrees with the
+                // filter bar. Raw data-src carries no params, which used to
+                // make Cage Performance render "today" while the bar showed a
+                // restored From date.
+                f.setAttribute('src', (window.__dashboardFrameUrl && window.__dashboardFrameUrl(f.dataset.src)) || f.dataset.src);
                 // Switching lazy→eager triggers the load immediately, even for
                 // frames currently off-screen.
                 f.setAttribute('loading', 'eager');

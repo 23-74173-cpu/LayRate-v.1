@@ -1,7 +1,9 @@
 <turbo-frame id="forecast-results">
     @php
         $cageColorMap = \App\Models\Cage::getColorMap();
-        $cageColor = $scope === 'farm' ? '#102A4C' : ($cageColorMap[$cageCode ?? ''] ?? '#6B7280');
+        {{-- Canvas cannot resolve CSS var() (concatenated with alpha below),
+             so the farm-wide color stays a literal here. --}}
+        $cageColor = $scope === 'farm' ? '#002d5e' : ($cageColorMap[$cageCode ?? ''] ?? '#6B7280');
         $scopeLabel = match($scope) {
             'farm' => 'Whole Farm',
             'breed' => $breed ?? '',
@@ -11,7 +13,7 @@
 
     {{-- ── Chart Panel ── --}}
     <div class="xl:col-span-2 bg-white rounded-lg border border-[#D9D9D9] p-5 mb-8">
-        <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-4">Historical vs Forecast Eggs — {{ $scopeLabel }}</div>
+        <x-card-header title="Historical vs Forecast Eggs" subtitle="{{ $scopeLabel }}" icon="chart-line" />
         <canvas id="forecastChart" height="160"></canvas>
     </div>
 

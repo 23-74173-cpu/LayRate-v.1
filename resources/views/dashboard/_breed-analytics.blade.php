@@ -1,29 +1,20 @@
 <turbo-frame id="dashboard-breed-analytics">
     <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 h-full flex flex-col">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
-            <div class="flex items-start gap-3">
-                <span class="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style="background-color: #d1fae5; color: #059669;">
-                    <i data-lucide="award" class="w-4 h-4"></i>
-                </span>
-                <div>
-                    <div class="text-xs font-semibold tracking-[0.125px] uppercase text-[#6B7280]">HDEP by Breed</div>
-                    <div class="text-xs mt-0.5" style="color: #9CA3AF;">Average hen-day egg production by breed</div>
-                    <button type="button" onclick="this.closest('.bg-white').querySelector('.interpretation-panel').classList.toggle('hidden')" class="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all hover:opacity-80" style="color: #6366f1; background-color: rgba(99,102,241,0.08);">
-                        <i data-lucide="sparkles" class="w-2.5 h-2.5"></i> Interpretation
-                    </button>
-                </div>
-            </div>
-            
-        </div>
-        <div class="interpretation-panel hidden mb-3 px-3 py-2.5 rounded-lg text-xs leading-relaxed" style="background-color: #f0f0ff; color: #3730a3; border: 1px solid rgba(99,102,241,0.15);">{{ $insight }}</div>
+        <x-card-header title="HDEP by Breed" subtitle="Average hen-day egg production by breed" icon="award">
+            <x-slot:actions>
+                <button type="button" onclick="this.closest('.bg-white').querySelector('.interpretation-panel').classList.toggle('hidden')" class="interp-btn">
+                    <i data-lucide="sparkles"></i> Interpretation
+                </button>
+            </x-slot:actions>
+        </x-card-header>
+        <div class="interpretation-panel hidden mb-3 px-3 py-2.5 rounded-lg text-xs leading-relaxed" style="background-color: #dcebfa; color: var(--color-info); border: 1px solid #b8d4fe;">{{ $insight }}</div>
         @if(empty($data))
-            <div class="rounded-xl border py-8 text-center text-sm flex-1" style="background-color: #ffffff; border-color: #e6e6e6; color: #a39e98;">
-                No production data available for breed analysis.
-            </div>
+            <x-empty-state icon="bar-chart-3" message="No production data available for breed analysis."
+                             :actionUrl="route('eggs.logging')" actionLabel="Log Eggs" />
         @else
             @if($bestBreed)
             <div class="mb-2">
-                <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold" style="background-color: #d1fae5; color: #059669; border: 1px solid rgba(5,150,105,0.2);">
+                <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold" style="background-color: #e8f5ec; color: #1f6b3a; border: 1px solid #cfe8d6;">
                     <i data-lucide="trophy" class="w-3 h-3"></i>
                     Best Performing — {{ $bestBreed->breed }} — {{ $bestBreed->avg_hdep }}% avg HDEP
                 </span>
@@ -59,7 +50,7 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 indexAxis: 'y',
-                plugins: { legend: { display: false }, tooltip: { backgroundColor: '#102A4C', titleFont: { size: 11, weight: '600' }, bodyFont: { size: 11 }, padding: { top: 8, bottom: 8, left: 12, right: 12 }, cornerRadius: 8, callbacks: { label: function(c) { return c.raw + '% avg HDEP'; } } } },
+                plugins: { legend: { display: false }, tooltip: { backgroundColor: LayRateChartColors.tooltip, titleFont: { size: 11, weight: '600' }, bodyFont: { size: 11 }, padding: { top: 8, bottom: 8, left: 12, right: 12 }, cornerRadius: 8, callbacks: { label: function(c) { return c.raw + '% avg HDEP'; } } } },
                 scales: {
                     x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, color: '#9CA3AF', callback: function(v) { return v + '%'; } } },
                     y: { grid: { display: false }, ticks: { font: { size: 10, weight: '500' }, color: '#333' } }
