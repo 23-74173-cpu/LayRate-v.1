@@ -125,7 +125,7 @@
                     $isTiny = $uc->rows == 1 && $uc->slots_per_row == 1;
                     $isSmall = $uc->rows <= 2 || $uc->slots_per_row <= 2;
                 @endphp
-                <div class="staging-tile relative rounded-lg border-2 {{ $isTiny ? 'px-2 py-2 gap-1' : 'px-5 py-3 sm:px-4 sm:py-2' }} min-h-[3rem] flex flex-col items-center justify-center {{ $isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer' }}"
+                <div class="staging-tile relative rounded-lg border-2 {{ $isTiny ? 'px-2 py-2 gap-1' : 'px-5 py-3 sm:px-4 sm:py-2' }} min-h-[3rem] flex flex-col items-center justify-center {{ $isAdmin ? 'cursor-grab active:cursor-grabbing' : '' }}"
                      style="border-color: {{ $uc->color }}; background-color: {{ $uc->colorSoft }};"
                      draggable="{{ $isAdmin ? 'true' : 'false' }}"
                      data-cage-id="{{ $uc->id }}"
@@ -2108,6 +2108,8 @@ document.addEventListener('click', function(e) {
 function handleDragStart(e, cageId) {
     if (!IS_ADMIN) return;
     draggedCageId = cageId;
+    // Grabbing cursor for the whole page while dragging (see app.css).
+    document.documentElement.classList.add('cage-dragging');
     // Transparent drag image (hide browser default)
     var hiddenCanvas = document.createElement('canvas');
     hiddenCanvas.width = 1; hiddenCanvas.height = 1;
@@ -2184,6 +2186,7 @@ function unbindTouchDragListeners() {
 function handleTouchDragStart(cageId, touch, fromCanvas) {
     if (!IS_ADMIN) return;
     draggedCageId = cageId;
+    document.documentElement.classList.add('cage-dragging');
     draggedFromCanvas = fromCanvas;
     var m = cageMeta[cageId];
     if (!m) return;
@@ -2284,6 +2287,7 @@ function onTouchDragMove(e) {
 
 function onTouchDragEnd(e) {
     if (!touchDragState.active) return;
+    document.documentElement.classList.remove('cage-dragging');
     var cageId = draggedCageId;
     var m = cageMeta[cageId];
     if (m) {
@@ -2469,6 +2473,7 @@ function removeStagingTile(cageId) {
 }
 
 function resetDragState() {
+    document.documentElement.classList.remove('cage-dragging');
     if (draggedFromCanvas && draggedCageId) {
         var overlay = document.querySelector('.cage-overlay[data-cage-id="' + draggedCageId + '"]');
         if (overlay) overlay.style.opacity = '1';
@@ -2510,7 +2515,7 @@ function addStagingTile(cageId) {
     // (each duplicate carried its own info button, crowding the tray).
     if (area.querySelector('.staging-tile[data-cage-id="' + cageId + '"]')) return;
     var tile = document.createElement('div');
-    tile.className = 'staging-tile relative rounded-lg border-2 px-4 py-2 flex items-center justify-center ' + (IS_ADMIN ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer');
+    tile.className = 'staging-tile relative rounded-lg border-2 px-4 py-2 flex items-center justify-center ' + (IS_ADMIN ? 'cursor-grab active:cursor-grabbing' : '');
     tile.draggable = IS_ADMIN;
     tile.dataset.cageId = cageId;
     tile.dataset.cageCode = m.code;

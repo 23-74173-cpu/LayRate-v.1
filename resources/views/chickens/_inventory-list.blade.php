@@ -33,7 +33,7 @@
                         $totalCapacity = $cage->total_capacity ?? 0;
                         $occupancyPct = $totalCapacity > 0 ? round(($activeCount / $totalCapacity) * 100) : 0;
                     @endphp
-                    <div class="rounded-xl border p-4 flex flex-col gap-2 min-h-[7rem] cage-overview-card cursor-pointer transition-all hover:shadow-md"
+                    <div class="rounded-xl border p-4 flex flex-col gap-2 min-h-[7rem] cage-overview-card transition-all hover:shadow-md"
                          data-cage-id="{{ $cage->id }}"
                          data-cage-code="{{ $cage->cage_code }}"
                          data-cage-location="{{ $cage->formatted_location }}"
@@ -170,7 +170,7 @@
                                             $primaryHen = $slotHens->where('is_active', 1)->first() ?? $slotHens->first();
                                         @endphp
                                         <button type="button"
-                                                class="slot-card slot-mini flex flex-col items-center justify-center aspect-square rounded-lg border transition-all relative select-none {{ $activeHenCount === 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer' }}"
+                                                class="slot-card slot-mini flex flex-col items-center justify-center aspect-square rounded-lg border transition-all relative select-none {{ $activeHenCount === 0 ? 'opacity-50 cursor-not-allowed' : '' }}"
                                                 style="background-color: {{ $activeHenCount > 0 ? '#f0f7ff' : '#ffffff' }}; border-color: #e6e6e6;"
                                                 data-slot-id="{{ $slot->id }}"
                                                 data-cage-id="{{ $cage->id }}"

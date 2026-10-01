@@ -83,7 +83,7 @@
                     $loggedCount = $todayLoggedCountByCage[$cage->cage_code] ?? 0;
                     $allLogged = $loggedCount >= $slotCount;
                 @endphp
-                <div class="rounded-xl border p-4 flex flex-col gap-2 min-h-[7rem] cage-overview-card cursor-pointer transition-all hover:shadow-md"
+                <div class="rounded-xl border p-4 flex flex-col gap-2 min-h-[7rem] cage-overview-card transition-all hover:shadow-md"
                      data-cage-id="{{ $cage->id }}" data-cage-code="{{ $cage->cage_code }}" data-total-slots="{{ $slotCount }}"
                      onclick="switchCage('{{ $cage->id }}')"
                      role="button" tabindex="0"
@@ -184,7 +184,7 @@
                                 $activeHenCount = $slot->active_hen_count;
                             @endphp
                             <button type="button"
-                                    class="slot-card flex flex-col items-center justify-center aspect-square rounded-lg border transition-all relative select-none {{ $activeHenCount === 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer' }}"
+                                    class="slot-card flex flex-col items-center justify-center aspect-square rounded-lg border transition-all relative select-none {{ $activeHenCount === 0 ? 'opacity-50 cursor-not-allowed' : '' }}"
                                     style="background-color: {{ $isLogged ? '#eaf6ee' : '#ffffff' }}; border-color: {{ $isLogged ? '#b8dfc6' : '#e6e6e6' }};"
                                     data-slot-id="{{ $slot->id }}"
                                     data-cage-id="{{ $cage->id }}"
@@ -308,7 +308,7 @@
                                 <input type="number" name="hen_count" id="henCount" min="1" value="1" required readonly
                                        class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white cursor-not-allowed focus:outline-none"
                                        style="border-color: #e6e6e6; color: #615d59; background-color: #f6f5f4;">
-                                <div id="hdepDisplay" class="mt-2 inline-block border rounded-lg px-3 py-1.5 text-sm font-mono cursor-default"
+                                <div id="hdepDisplay" class="hint-icon mt-2 inline-block border rounded-lg px-3 py-1.5 text-sm font-mono"
                                      title="Hen-Day Egg Production = (eggs ÷ hens) × 100% — measures how many eggs were laid per hen present"
                                      style="background-color: #f6f5f4; border-color: #e6e6e6; color: #1f1f1f;">
                                     <span class="relative group">

@@ -1,6 +1,94 @@
 @import "tailwindcss";
 @source "../views/";
 
+/* ── Branded base: selection, scrollbars, native controls ────────────── */
+::selection {
+  background-color: var(--color-navy);
+  color: #ffffff;
+}
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #c9c9c9 transparent;
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: #c9c9c9;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background-color: #a8a8a8; background-clip: content-box; }
+/* Native checkboxes/radios keep native behavior, dressed in brand blue. */
+input[type="checkbox"], input[type="radio"] { accent-color: var(--color-navy); }
+/* Consistent control size only when markup sets none (utilities win). */
+:where(input[type="checkbox"], input[type="radio"]) { width: 1rem; height: 1rem; }
+
+/* ── Branded tooltip bubble (see public/js/tooltip.js) ───────────────── */
+.tooltip-bubble {
+  position: absolute;
+  z-index: 9999;
+  max-width: 240px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background-color: #1a2342;
+  color: #ffffff;
+  font-size: 12px;
+  line-height: 1.4;
+  pointer-events: none;
+  box-shadow: 0 8px 24px -8px rgba(20, 30, 60, 0.5);
+  overflow-wrap: break-word;
+}
+.tooltip-bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+}
+.tooltip-bubble:not([data-below="true"])::after {
+  top: 100%;
+  border-top-color: #1a2342;
+}
+.tooltip-bubble[data-below="true"]::after {
+  bottom: 100%;
+  border-bottom-color: #1a2342;
+}
+
+/* ── Shared native form controls (restyle only) ────────────────────────
+   One style for every <select> and date/time/month/number input,
+   matching the dashboard filters bar: brand border, lg radius, white
+   surface, navy focus. Native behavior (mobile pickers, a11y) untouched. */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: #ffffff;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  padding-right: 2.25rem !important;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23615d59' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.625rem center;
+  background-size: 1rem 1rem;
+}
+select:disabled {
+  background-color: #f0f0f0;
+  color: #a39e98;
+}
+input[type="date"], input[type="time"], input[type="month"], input[type="datetime-local"] {
+  background-color: #ffffff;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  min-height: 2.625rem;
+}
+/* Hide number spinners; steppers (x-number-input) replace them where fitted. */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
 @keyframes pageFadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }
@@ -59,35 +147,102 @@
 }
 .kpi-card:active { transform: translateY(-1px); }
 
-/* KPI icon chip — standardized 40x40 tinted badge */
-.kpi-chip {
+/* KPI icon tile — large 56px soft primary-tinted badge, vertically centered
+   in the card's left column. Uses existing primary + cage-b-soft tokens. */
+.kpi-icon-tile {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  border: 1px solid #e2e2e2;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  border: 1px solid #cfe3f8;
   box-shadow: 0 4px 10px -4px rgba(20, 30, 60, 0.1);
-  background: #F3F4F6;
-  color: #6B7280;
+  background: #dcebfa;
+  color: var(--color-navy);
+  flex-shrink: 0;
+}
+.kpi-icon-tile svg,
+.kpi-icon-tile i {
+  width: 28px;
+  height: 28px;
 }
 
-/* Optional subtle watermark — kept small and fully inside the card corner */
-.kpi-watermark {
-  position: absolute;
-  right: 6px;
-  bottom: 6px;
-  width: 48px;
-  height: 48px;
-  opacity: 0.08;
-  color: #6B7280;
-  pointer-events: none;
+/* KPI info button — small, unobtrusive, top-right of the text column.
+   Only rendered when the card has a real breakdown (data-kpi). */
+.kpi-info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  margin: -4px -4px 0 0;
+  border-radius: 9999px;
+  color: #9ca3af;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.kpi-info-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #6b7280;
+}
+.kpi-info-btn svg,
+.kpi-info-btn i {
+  width: 14px;
+  height: 14px;
 }
 
-/* KPI bottom accent bar */
-.kpi-accent {
-  position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+/* KPI number — large bold dark slate, wraps instead of clipping. .kpi-value
+   is the legacy hook class kept for runtime JS (chickens, egg stocks). */
+.kpi-number,
+.kpi-value {
+  font-size: 26px;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: #1e293b;
+  margin-top: 2px;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  min-width: 0;
+}
+@media (min-width: 640px) {
+  .kpi-number,
+  .kpi-value {
+    font-size: 28px;
+  }
+}
+/* Runtime severity flag (mortality: count > 0 via AJAX, no reload). */
+.kpi-value.is-danger {
+  color: #9b1c24;
+}
+
+.kpi-secondary {
+  margin-top: 6px;
+  min-width: 0;
+}
+
+/* Trend pills — green/red text on light tinted backgrounds so they read
+   well on the white card. Reuses ok/alert design tokens. */
+.trend-pill-up,
+.trend-pill-down {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 9999px;
+  padding: 2px 8px;
+  border: 1px solid;
+  max-width: 100%;
+}
+.trend-pill-up {
+  color: #1f6b3a;
+  background-color: #e8f5ec;
+  border-color: #cfe8d6;
+}
+.trend-pill-down {
+  color: #9b1c24;
+  background-color: #fbe4e6;
+  border-color: #f3cdd0;
 }
 
 /* KPI label — unified across all variants (plain + default) */
@@ -97,7 +252,7 @@
     audit (font-size/weight/spacing/color identical). Gap to icon handled by
     container mt-2 (default) / plain has no icon but label still uses same rule. */
 .kpi-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.125px;
   text-transform: uppercase;
@@ -106,21 +261,177 @@
   display: block;
 }
 
-/* KPI gradient value — transparent text clipped to gradient */
-.kpi-value {
-  display: inline-block;
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-  text-shadow: 0 1px 2px rgba(16,42,76,0.12);
-}
+/* (Retired: gradient-clipped KPI numbers were removed with the white-card
+   redesign. .kpi-value is now styled with .kpi-number above as solid slate.) */
 
 /* Animated progress bar fill on view */
 @keyframes barGrow {
   from { width: 0; }
 }
 .dash-bar > div { animation: barGrow 0.9s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* ── Shared modal/dialog design system ───────────────────────────────
+   Single source of truth for every dialog in the app (confirm family via
+   <x-confirm-modal>, message dialogs via <x-modal>, and all legacy
+   data-modal form dialogs which inherit the shell below).
+   Centered layout: large circular tinted icon, centered title + message,
+   centered equal-width buttons (stacked full-width on mobile). */
+
+.modal-card {
+  border-radius: 20px;
+  background-color: #ffffff;
+  box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;
+}
+
+/* Every legacy per-page dialog inherits the 20px shell radius without
+   per-file edits (Tailwind v4 utilities are layered, so this unlayered
+   rule wins over rounded-2xl/rounded-xl on modal cards only). */
+div[data-modal] > div.relative {
+  border-radius: 20px;
+}
+
+/* Large centered intent icon: ~68px tile with a 32px glyph. */
+.modal-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 68px;
+  border-radius: 9999px;
+  margin: 0 auto;
+  flex-shrink: 0;
+}
+.modal-icon svg,
+.modal-icon i {
+  width: 32px;
+  height: 32px;
+}
+.modal-icon--confirm { background-color: #dcebfa; color: var(--color-navy); }
+.modal-icon--danger  { background-color: #fbe4e6; color: #9b1c24; }
+.modal-icon--warning { background-color: #fdf3e0; color: #8a5a00; }
+.modal-icon--success { background-color: #e8f5ec; color: #1f6b3a; }
+.modal-icon--info    { background-color: #dbeafe; color: #1d4e8f; }
+/* Calm navy confirm (Sign out and other neutral confirmations). */
+.modal-icon--neutral { background-color: #e8ecf4; color: #213183; }
+
+.modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: -0.125px;
+  color: #1f1f1f;
+  text-align: center;
+}
+.modal-message {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #615d59;
+  text-align: center;
+  max-width: 38ch;
+  margin-left: auto;
+  margin-right: auto;
+  overflow-wrap: break-word;
+}
+
+/* Centered equal-width buttons; full-width stacked on mobile. */
+.modal-actions {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 12px;
+}
+@media (min-width: 640px) {
+  .modal-actions {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+}
+.modal-btn {
+  flex: 1 1 0%;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 9999px;
+  transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+.modal-btn--secondary {
+  color: #1f1f1f;
+  border: 1px solid #e6e6e6;
+  background-color: transparent;
+}
+.modal-btn--secondary:hover { background-color: #f6f5f4; }
+.modal-btn--primary { background-color: var(--color-navy); color: #fff; }
+.modal-btn--primary:hover { opacity: 0.85; }
+.modal-btn--neutral  { background-color: #213183; color: #fff; }
+.modal-btn--neutral:hover { opacity: 0.88; }
+.modal-btn--danger   { background-color: #9b1c24; color: #fff; }
+.modal-btn--danger:hover { background-color: #7a161d; }
+.modal-btn--warning  { background-color: #8a5a00; color: #fff; }
+.modal-btn--warning:hover { opacity: 0.88; }
+.modal-btn--success  { background-color: #1f6b3a; color: #fff; }
+.modal-btn--success:hover { opacity: 0.88; }
+/* Single-button state (info severity hides Cancel; action goes full-width). */
+.modal-actions--single .modal-btn { width: 100%; }
+
+/* ── Quick-actions dock (see components/quick-actions-dock.blade.php) ──
+   Always-visible bottom-right dock. Idle transparency keeps it
+   unobtrusive; hover, focus, touch, open panels or scrolling restore it.
+   Easy to tune via --dock-idle-opacity. */
+:root {
+  --dock-idle-opacity: 0.4;
+}
+#quickDock [data-dock-fade] {
+  opacity: var(--dock-idle-opacity);
+  transition: opacity 180ms ease;
+}
+/* Pending tasks stay more visible at idle. */
+#quickDock [data-dock-pending="true"] { opacity: 0.65; }
+/* The count badge always stays fully readable (counteracts parents). */
+#quickDock [data-dock-badge] { opacity: calc(1 / var(--dock-idle-opacity)); }
+#quickDock [data-dock-pending="true"] [data-dock-badge] { opacity: calc(1 / 0.65); }
+/* Full opacity: hover (fine pointers), keyboard focus, open state, touch. */
+@media (hover: hover) {
+  #quickDock:hover [data-dock-fade],
+  #quickDock:hover [data-dock-pending="true"] { opacity: 1; }
+}
+#quickDock:focus-within [data-dock-fade],
+#quickDock:focus-within [data-dock-pending="true"],
+#quickDock[data-active="true"] [data-dock-fade],
+#quickDock[data-active="true"] [data-dock-pending="true"] { opacity: 1; }
+/* While actively scrolling, recede further; restored shortly after stop. */
+#quickDock[data-scrolling="true"] [data-dock-fade] { opacity: 0.25; }
+#quickDock[data-scrolling="true"] [data-dock-badge] { opacity: calc(1 / 0.25); }
+/* Checklist panel entrance: short fade and rise. */
+@keyframes dockPanelIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+#dataChecklistPanel:not(.hidden) { animation: dockPanelIn 180ms ease-out; }
+/* Mobile: checklist becomes a full-width bottom sheet that pins to the
+   viewport bottom (fixed, so the transformed ancestors cannot move it). */
+@media (max-width: 639px) {
+  #dataChecklistPanel {
+    position: fixed !important;
+    left: 1rem !important;
+    right: 1rem !important;
+    bottom: calc(1rem + env(safe-area-inset-bottom)) !important;
+    top: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: 70vh !important;
+    margin: 0 !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #quickDock [data-dock-fade] { transition: none; }
+  #dataChecklistPanel:not(.hidden) { animation: none; }
+  #quickDock .fab-icon { transition: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #quickDock [data-dock-fade] { transition: none; }
+}
 
 /* Modern pill tabs */
 .dashboard-tab {
@@ -130,7 +441,7 @@
 .dashboard-tab-active {
   background-color: var(--color-primary);
   color: #ffffff !important;
-  box-shadow: 0 4px 12px -4px rgba(0, 117, 222, 0.45);
+  box-shadow: 0 4px 12px -4px rgba(0, 45, 94, 0.45);
 }
 
 @theme {
@@ -140,7 +451,7 @@
     --color-ink-secondary: #31302e;
     --color-ink-muted: #615d59;
     --color-ink-faint: #a39e98;
-    --color-primary: #0075de;
+    --color-primary: var(--color-navy);
     --color-primary-active: #005bab;
     --color-navy: #002d5e;
     --color-sidebar-bg: #1a2342;
@@ -153,6 +464,38 @@
     --color-alert-bg: #fbe4e6;
     --color-alert-text: #9b1c24;
     --color-alert-border: #f3cdd0;
+
+    /* Semantic aliases — one meaning = one color everywhere. ok/watch/alert
+       are the canonical triples (DESIGN-SYSTEM.md §2.2); success/danger/info
+       alias them so intent reads the same in badges, toasts, trends, modals,
+       tabs, charts and form states. */
+    --color-success: #1f6b3a;
+    --color-success-bg: #e8f5ec;
+    --color-success-border: #cfe8d6;
+    --color-warning: #8a5a00;
+    --color-warning-bg: #fdf3e0;
+    --color-warning-border: #f3e3bf;
+    --color-danger: #9b1c24;
+    --color-danger-bg: #fbe4e6;
+    --color-danger-border: #f3cdd0;
+    --color-info: #1d4e8f;
+    --color-info-bg: #dcebfa;
+    --color-info-border: #b8d4fe;
+    --color-neutral-bg: #f0f0f0;
+    --color-neutral-text: #615d59;
+    --color-neutral-border: #e6e6e6;
+
+    /* Chart series palette — fixed order, colorblind-safe (Okabe–Ito
+       inspired), primary blue first. A metric keeps its color on every
+       chart and legend: 1 eggs/production, 2 HDEP, 3 temperature,
+       4 humidity, 5 feed, 6 mortality. Never rely on color alone —
+       pair with labels/icons (see docs/design-tokens.md). */
+    --color-chart-1: var(--color-navy);
+    --color-chart-2: #009e73;
+    --color-chart-3: #e69f00;
+    --color-chart-4: #56b4e9;
+    --color-chart-5: #8a6bbf;
+    --color-chart-6: #d55e00;
     --color-cage-a: #2a9d6a;
     --color-cage-a-soft: #d6f0e3;
     --color-cage-b: #3b7bd9;
@@ -246,4 +589,273 @@
     --text-eyebrow--line-height: 1.33;
     --text-eyebrow--letter-spacing: 0.125px;
     --text-eyebrow--font-weight: 600;
+}
+
+/* ── Type scale (documented in docs/design-tokens.md) ────────────────
+   Page title (banner) · section label · card title/subtitle · KPI.
+   Card titles are TITLE CASE navy; only section + KPI labels are uppercase. */
+.page-title {
+  font-size: 22px;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.25px;
+  color: #ffffff;
+}
+@media (min-width: 640px) {
+  .page-title { font-size: 24px; }
+}
+.page-subtitle {
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.78);
+  margin-top: 2px;
+}
+/* Section label: 12px uppercase muted with icon, divider extends right. */
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  line-height: 1.33;
+}
+.section-label::after {
+  content: "";
+  flex: 1 1 0%;
+  height: 1px;
+  min-width: 24px;
+  background-color: var(--color-hairline);
+  order: 4;
+}
+.section-label-actions {
+  order: 5;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.section-label > svg,
+.section-label > i {
+  width: 16px;
+  height: 16px;
+  color: var(--color-navy);
+  flex-shrink: 0;
+}
+.section-label-meta {
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--color-ink-faint);
+  white-space: nowrap;
+}
+.card-title {
+  font-size: 15px;
+  line-height: 1.35;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+  color: var(--color-navy);
+}
+.card-subtitle {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-ink-muted);
+  margin-top: 1px;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Page header (x-page-header) ─────────────────────────────────────
+   Flat navy token, compact height, ONE calm egg outline anchored at the
+   right edge (~6% opacity, gradient-masked toward the left). */
+.page-header {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  background-color: var(--color-sidebar-bg);
+  background-image: linear-gradient(180deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0) 40%, rgba(0,0,0,0.10) 100%);
+  padding: 16px 20px;
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+@media (min-width: 640px) {
+  .page-header { flex-direction: row; align-items: center; justify-content: space-between; }
+}
+.page-header-egg {
+  position: absolute;
+  right: -28px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 190px;
+  height: 190px;
+  color: #ffffff;
+  opacity: 0.06;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 55%);
+  mask-image: linear-gradient(to right, transparent 0%, black 55%);
+}
+.page-header-egg svg,
+.page-header-egg i {
+  width: 100%;
+  height: 100%;
+  stroke-width: 1;
+}
+.page-header-actions:empty { display: none; }
+.page-header-actions {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.page-header-updated {
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.65);
+  white-space: nowrap;
+}
+
+/* ── Card header (x-card-header) ─────────────────────────────────────
+   One 36px brand-blue icon tile for every card; title + optional one-line
+   subtitle; actions slot right. min-height keeps alignment identical with
+   or without a subtitle. Colors reserved for status meaning only. */
+.card-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  min-height: 56px;
+  margin-bottom: 8px;
+}
+.card-icon-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  background-color: var(--color-info-bg);
+  color: var(--color-navy);
+  border: 1px solid var(--color-info-border);
+}
+.card-icon-tile svg,
+.card-icon-tile i {
+  width: 18px;
+  height: 18px;
+}
+/* Interpretation chip: small ghost button in the header actions slot. */
+.interp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  color: var(--color-ink-muted);
+  background-color: transparent;
+  border: 1px solid var(--color-hairline);
+  transition: background-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+.interp-btn:hover { background-color: var(--color-canvas-soft); color: var(--color-ink); }
+.interp-btn svg,
+.interp-btn i { width: 10px; height: 10px; }
+
+/* ── Global cursor rules (documented in docs/design-tokens.md) ───────
+   Tailwind v4 renders the default arrow on <button>; these restore the
+   pointer affordance in ONE place. Do not scatter cursor-pointer. */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+a[href],
+summary,
+label[for],
+select,
+input[type="checkbox"],
+input[type="radio"],
+input[type="submit"],
+input[type="button"],
+input[type="file"],
+input[type="date"],
+input[type="month"],
+input[type="time"],
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+[role="tab"],
+[role="menuitem"],
+[role="option"],
+[onclick]:not(form),
+[data-action]:not(form),
+[data-confirm]:not(form),
+[data-toggle]:not(form),
+[data-nav],
+[data-row-nav] {
+  cursor: pointer;
+}
+/* Disabled: not-allowed WITHOUT pointer-events:none (which would hide the
+   cursor entirely). Activation is blocked by the disabled attribute. */
+:disabled,
+[aria-disabled="true"],
+a.disabled,
+button.disabled,
+.disabled:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled,
+label:has(> input:disabled),
+label:has(> select:disabled),
+label:has(> textarea:disabled) {
+  cursor: not-allowed;
+}
+/* Text entry keeps the I-beam; plain surfaces keep the default arrow. */
+input[type="text"],
+input[type="search"],
+input[type="number"],
+input[type="password"],
+input[type="email"],
+input[type="tel"],
+input[type="url"],
+textarea,
+[contenteditable="true"] {
+  cursor: text;
+}
+/* Submitting / background loading states (opt-in classes, see tokens doc). */
+button.is-loading,
+form.is-submitting button[type="submit"] {
+  cursor: wait;
+}
+body.is-loading {
+  cursor: progress;
+}
+/* Drag & drop: grab on hover (utilities), grabbing while dragging. */
+html.cage-dragging,
+html.cage-dragging * {
+  cursor: grabbing !important;
+}
+/* Hover-only hint icons (no click action, tooltip only). */
+.hint-icon {
+  cursor: help;
+}
+/* Keyboard focus for JS-clickable cards/rows (they are hoverable too). */
+[data-nav]:focus-visible,
+[data-row-nav]:focus-visible,
+[role="link"]:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--color-primary-active);
+  outline-offset: 2px;
+  border-radius: 8px;
 }
