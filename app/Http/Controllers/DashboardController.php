@@ -364,7 +364,7 @@ class DashboardController extends Controller
             $datasets = [[
                 'label' => $title,
                 'data' => $dataPoints,
-                'borderColor' => '#102A4C',
+                'borderColor' => '#002d5e',
                 'backgroundColor' => 'rgba(16, 42, 76, 0.1)',
                 'tension' => 0.3,
                 'borderWidth' => 3,

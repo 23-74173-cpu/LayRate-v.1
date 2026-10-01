@@ -111,7 +111,7 @@ class Cage extends Model
     {
         return match ($this->cage_code) {
             'CAGE-A' => '#2D7D46',
-            'CAGE-B' => '#1D4E8F',
+            'CAGE-B' => '#1d4e8f',
             'CAGE-C' => '#C2703E',
             'CAGE-D' => '#6B4C8A',
             'CAGE-E' => '#A78BCA',

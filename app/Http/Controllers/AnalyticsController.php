@@ -178,7 +178,7 @@ class AnalyticsController extends Controller
             ]);
         }
 
-        $cageColor = $d['isAll'] ? '#002D5E' : $d['cage']->color;
+        $cageColor = $d['isAll'] ? '#002d5e' : $d['cage']->color;
 
         $logs = $d['logs']->map(fn($l) => [
             'date' => $l->log_date->format('Y-m-d'),

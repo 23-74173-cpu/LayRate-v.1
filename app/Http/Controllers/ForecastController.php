@@ -1153,7 +1153,7 @@ class ForecastController extends Controller
             default => $cageCode,
         };
         $cageColorMap = Cage::getColorMap();
-        $cageColor = $scope === 'farm' ? '#102A4C' : ($cageColorMap[$cageCode] ?? '#6B7280');
+        $cageColor = $scope === 'farm' ? '#002d5e' : ($cageColorMap[$cageCode] ?? '#6B7280');
         $chartTitle = $showForecast ? 'HISTORICAL DATA VS FORECASTED EGG COUNT' : 'HISTORICAL EGG COUNT';
 
         return response()->json([
