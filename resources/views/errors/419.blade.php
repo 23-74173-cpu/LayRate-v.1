@@ -15,12 +15,13 @@
     p { font-size: .875rem; color: #6B7280; margin-bottom: 1.5rem; line-height: 1.5; }
     .ref { font-size: 11px; color: #a39e98; margin-bottom: 1.5rem; }
     .btn { display: inline-flex; align-items: center; gap: .5rem; padding: .625rem 1.5rem; border-radius: .5rem; font-size: .875rem; font-weight: 500; text-decoration: none; }
-    .btn-primary { background: #002D5E; color: #fff; }
+    .btn-primary { background: var(--color-navy); color: #fff; }
     .btn-secondary { color: #1f1f1f; border: 1px solid #e6e6e6; margin-left: .75rem; background: #fff; }
 </style>
 </head>
 <body>
     <div class="card">
+        <img src="/images/layrate-logo.png" alt="LayRate logo" width="663" height="885" style="height: 64px; width: auto; margin: 0 auto 1rem;">
         <div class="icon">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9b1c24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v6h4"/><circle cx="12" cy="12" r="10"/></svg>
         </div>

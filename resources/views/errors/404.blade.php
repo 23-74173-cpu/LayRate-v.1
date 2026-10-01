@@ -14,14 +14,15 @@
     h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: .5rem; }
     p { font-size: .875rem; color: #6B7280; margin-bottom: 1.5rem; line-height: 1.5; }
     .btn { display: inline-flex; align-items: center; gap: .5rem; padding: .625rem 1.5rem; border-radius: .5rem; font-size: .875rem; font-weight: 500; text-decoration: none; }
-    .btn-primary { background: #002D5E; color: #fff; }
+    .btn-primary { background: var(--color-navy); color: #fff; }
     .btn-secondary { color: #1f1f1f; border: 1px solid #e6e6e6; margin-left: .75rem; background: #fff; }
 </style>
 </head>
 <body>
     <div class="card">
+        <img src="/images/layrate-logo.png" alt="LayRate logo" width="663" height="885" style="height: 64px; width: auto; margin: 0 auto 1rem;">
         <div class="icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#0075de" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-navy)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         </div>
         <p class="eyebrow">Error 404</p>
         <h1>Page Not Found</h1>
