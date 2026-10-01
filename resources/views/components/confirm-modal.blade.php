@@ -1,11 +1,20 @@
 {{--
     <x-confirm-modal />
     Replaces all onsubmit="return confirm('...')".
-    Severity tiers:
+    Intent tiers (visuals styled once in app.css):
       destructive — red icon + red button (permanent/irreversible actions)
-      neutral     — calm icon + navy button (standard confirmations)
+      neutral     — calm navy icon + navy button (standard confirmations,
+                    e.g. "Sign out of LayRate?")
+      confirm     — primary-blue icon + blue button (generic confirmations)
+      warning     — amber icon + amber button (caution, reversible)
+      success     — green icon + green button (acknowledge a result)
       info        — blue icon + single "Got it" button (informational)
     Default: neutral.
+
+    Layout: large circular tinted icon centered on top, centered bold title,
+    centered muted message, centered equal-width buttons (full-width stacked
+    on mobile). Small X in the top-right. Backdrop blur/dim, 20px radius,
+    ESC-to-close and click-outside preserved, action button autofocused.
 
     Usage:
       Include once in the layout or page.
@@ -32,8 +41,7 @@
 
     {{-- Card --}}
     <div
-        class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto"
-        style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;"
+        class="modal-card relative w-full max-w-md p-6 sm:p-8 max-h-screen max-h-[100dvh] overflow-y-auto"
     >
         {{-- Close X --}}
         <button
@@ -45,36 +53,35 @@
             <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
         </button>
 
-        {{-- Icon --}}
-        <div id="confirm-modal-icon" class="mb-4 flex items-center justify-center w-10 h-10 rounded-full" style="background-color: #e8ecf4;">
-            <i data-lucide="info" class="w-5 h-5" style="color: #213183;"></i>
+        {{-- Intent icon (large, centered) --}}
+        <div id="confirm-modal-icon" class="modal-icon modal-icon--neutral">
+            <i data-lucide="circle-check"></i>
         </div>
 
         {{-- Title --}}
-        <h3 id="confirm-modal-title" class="text-lg font-semibold" style="color: #1f1f1f; letter-spacing: -0.125px;">
+        <h3 id="confirm-modal-title" class="modal-title mt-4">
             Confirm action
         </h3>
 
         {{-- Message --}}
-        <p id="confirm-modal-message" class="mt-2 text-sm" style="color: #615d59;">
+        <p id="confirm-modal-message" class="modal-message">
             Are you sure you want to proceed?
         </p>
 
         {{-- Actions --}}
-        <div id="confirm-modal-actions" class="mt-6 flex items-center justify-end gap-3">
+        <div id="confirm-modal-actions" class="modal-actions">
             <button
                 id="confirm-modal-cancel"
                 type="button"
                 onclick="confirmModalClose()"
-                class="px-4 py-2 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors"
+                class="modal-btn modal-btn--secondary"
             >
                 Cancel
             </button>
             <button
                 id="confirm-modal-action"
                 type="button"
-                class="px-4 py-2 text-sm font-medium rounded-full text-white transition-colors"
-                style="background-color: #213183;"
+                class="modal-btn modal-btn--neutral"
             >
                 Confirm
             </button>
@@ -98,43 +105,57 @@
         var actionBtn  = document.getElementById('confirm-modal-action');
         var actionsRow = document.getElementById('confirm-modal-actions');
 
-        // Recreate icon element — Lucide may have already replaced the
-        // initial <i> with <svg>, so querySelector('i') would return null.
-        // By rebuilding via innerHTML we avoid that null reference entirely.
-        var lucideIcon, bgColor, iconColor;
+        // Intent visuals — classes styled once in app.css (.modal-icon-*,
+        // .modal-btn-*). Unknown severities fall back to neutral.
+        var lucideIcon, iconModifier, btnModifier;
         if (severity === 'destructive') {
             lucideIcon = 'alert-triangle';
-            bgColor = '#fbe4e6';
-            iconColor = '#9b1c24';
-            actionBtn.style.backgroundColor = '#9b1c24';
-            actionBtn.className = 'px-4 py-2 text-sm font-medium rounded-full bg-[#9b1c24] text-white hover:bg-[#7a161d] transition-colors';
+            iconModifier = 'modal-icon--danger';
+            btnModifier = 'modal-btn--danger';
             cancelBtn.classList.remove('hidden');
-            actionsRow.classList.remove('flex-col');
-            actionsRow.classList.add('flex');
+            actionsRow.classList.remove('modal-actions--single');
+            actionBtn.classList.remove('w-full');
+        } else if (severity === 'warning') {
+            lucideIcon = 'alert-triangle';
+            iconModifier = 'modal-icon--warning';
+            btnModifier = 'modal-btn--warning';
+            cancelBtn.classList.remove('hidden');
+            actionsRow.classList.remove('modal-actions--single');
+            actionBtn.classList.remove('w-full');
+        } else if (severity === 'success') {
+            lucideIcon = 'circle-check';
+            iconModifier = 'modal-icon--success';
+            btnModifier = 'modal-btn--success';
+            cancelBtn.classList.remove('hidden');
+            actionsRow.classList.remove('modal-actions--single');
+            actionBtn.classList.remove('w-full');
+        } else if (severity === 'confirm') {
+            lucideIcon = 'circle-check';
+            iconModifier = 'modal-icon--confirm';
+            btnModifier = 'modal-btn--primary';
+            cancelBtn.classList.remove('hidden');
+            actionsRow.classList.remove('modal-actions--single');
+            actionBtn.classList.remove('w-full');
         } else if (severity === 'info') {
             lucideIcon = 'circle-info';
-            bgColor = '#dbeafe';
-            iconColor = '#1D4E8F';
-            actionBtn.style.backgroundColor = '#1D4E8F';
-            actionBtn.className = 'px-4 py-2 text-sm font-medium rounded-lg bg-[#1D4E8F] text-white hover:bg-[#163d73] transition-colors';
+            iconModifier = 'modal-icon--info';
+            btnModifier = 'modal-btn--primary';
             cancelBtn.classList.add('hidden');
-            actionsRow.classList.remove('flex');
-            actionsRow.classList.add('flex-col');
+            actionsRow.classList.add('modal-actions--single');
             actionBtn.classList.add('w-full');
         } else {
             // neutral (default)
             lucideIcon = 'circle-check';
-            bgColor = '#e8ecf4';
-            iconColor = '#213183';
-            actionBtn.className = 'px-4 py-2 text-sm font-medium rounded-full text-white transition-colors';
-            actionBtn.style.backgroundColor = '#213183';
+            iconModifier = 'modal-icon--neutral';
+            btnModifier = 'modal-btn--neutral';
             cancelBtn.classList.remove('hidden');
-            actionsRow.classList.remove('flex-col');
-            actionsRow.classList.add('flex');
+            actionsRow.classList.remove('modal-actions--single');
+            actionBtn.classList.remove('w-full');
         }
 
-        iconWrap.style.backgroundColor = bgColor;
-        iconWrap.innerHTML = '<i data-lucide="' + lucideIcon + '" class="w-5 h-5" style="color: ' + iconColor + ';"></i>';
+        iconWrap.className = 'modal-icon ' + iconModifier;
+        iconWrap.innerHTML = '<i data-lucide="' + lucideIcon + '"></i>';
+        actionBtn.className = 'modal-btn ' + btnModifier;
 
         // Remove hidden from the modal itself
         document.getElementById('confirm-modal').classList.remove('hidden');

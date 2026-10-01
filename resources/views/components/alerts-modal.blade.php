@@ -20,7 +20,7 @@
 
         {{-- Icon --}}
         <div class="mb-4 flex items-center justify-center w-10 h-10 rounded-full" style="background-color: #e0f2fe;">
-            <i data-lucide="bell" class="w-5 h-5" style="color: #0075de;"></i>
+            <i data-lucide="bell" class="w-5 h-5" style="color: var(--color-navy);"></i>
         </div>
 
         {{-- Title --}}
@@ -54,7 +54,7 @@
             <button type="button" onclick="acknowledgeAlertsModal()" class="w-full sm:w-auto px-4 py-2 text-sm font-medium rounded-lg transition-colors" style="color: #1f1f1f; border: 1px solid #e6e6e6;" onmouseover="this.style.backgroundColor='#f6f5f4'" onmouseout="this.style.backgroundColor='transparent'">
                 Acknowledge
             </button>
-            <a href="{{ route('notifications.index') }}" onclick="acknowledgeAlertsModal()" class="inline-flex items-center justify-center w-full sm:w-auto px-4 py-2 text-sm font-medium rounded-lg text-white bg-[#002D5E] hover:bg-[#001F42] transition-colors">
+            <a href="{{ route('notifications.index') }}" onclick="acknowledgeAlertsModal()" class="inline-flex items-center justify-center w-full sm:w-auto px-4 py-2 text-sm font-medium rounded-lg text-white bg-navy hover:bg-navy transition-colors">
                 View all notifications
             </a>
         </div>

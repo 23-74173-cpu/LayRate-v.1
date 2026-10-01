@@ -16,10 +16,7 @@
 
         {{-- ── Record Form ── --}}
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <h2 class="text-sm font-medium text-[#333333] mb-4 flex items-center gap-2">
-                <i data-lucide="plus-circle" class="w-4 h-4 text-[#6B7280]"></i>
-                Record Mortality
-            </h2>
+            <x-card-header title="Record Mortality" icon="plus-circle" />
 
             <form action="{{ route('mortality.store') }}" method="POST" class="space-y-4"
                   data-confirm="Record this mortality? The selected hen(s) will be deactivated."
@@ -83,7 +80,7 @@
 
             {{-- Today's totals per cage — dashboard gradient KPI design --}}
             <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-                <h2 class="text-sm font-medium text-[#333333] mb-3">Today's Summary</h2>
+                <x-card-header title="Today's Summary" icon="clipboard-list" />
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     @foreach($cages as $cage)
                     @php
@@ -104,7 +101,7 @@
 
             {{-- Recent log table (lazy) --}}
             <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-                <h2 class="text-sm font-medium text-[#333333] mb-3">Recent Records</h2>
+                <x-card-header title="Recent Records" icon="history" />
                 <turbo-frame id="mortality-logs-list" src="{{ route('mortality.logs') }}" loading="lazy">
                     @include('mortality._logs-skeleton')
                 </turbo-frame>

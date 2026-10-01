@@ -1,11 +1,9 @@
 <turbo-frame id="dashboard-stats-feed">
     <div class="space-y-2">
         <div>
-            <h3 class="text-[10px] font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-2">
-                <i data-lucide="wheat" class="w-4 h-4 inline-block mr-1.5 -mt-0.5" style="color:#16a34a;"></i>
-                Feed &amp; Nutrition
-                @if($kpiAsOf ?? null)<span class="normal-case tracking-normal font-medium text-[#9ca3af]">· as of {{ $kpiAsOf }}</span>@elseif($feedAsOf ?? null)<span class="normal-case tracking-normal font-medium text-[#9ca3af]">· last logged {{ $feedAsOf }}</span>@endif
-            </h3>
+            <x-section-label title="Feed & Nutrition" icon="wheat">
+                @if($kpiAsOf ?? null)<x-slot:meta>· as of {{ $kpiAsOf }}</x-slot:meta>@elseif($feedAsOf ?? null)<x-slot:meta>· last logged {{ $feedAsOf }}</x-slot:meta>@endif
+            </x-section-label>
             <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <x-kpi-card
                     label="Avg CP% This Week"
@@ -44,7 +42,7 @@
                     :target="round($totalFeedWeek, 1)"
                     :decimals="1"
                 >
-                    <div class="text-xs font-medium mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5" style="color: #0f7a44; background-color: rgba(255,255,255,0.78); border: 1px solid rgba(31,138,79,0.35);">▲ +{{ number_format(round($feedTodayKg, 1), 1) }} kg today</div>
+                    <div class="trend-pill-up">▲ +{{ number_format(round($feedTodayKg, 1), 1) }} kg today</div>
                 </x-kpi-card>
 
                 <x-kpi-card
@@ -58,7 +56,7 @@
                     infoLabel="Feed cost per cage breakdown"
                     :value="$totalFeedCostMonth !== null && $totalFeedCostMonth > 0 ? '₱' . number_format($totalFeedCostMonth, 2) : null"
                 >
-                    <div class="text-xs font-medium mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5" style="color: #0f7a44; background-color: rgba(255,255,255,0.78); border: 1px solid rgba(31,138,79,0.35);">▲ +₱{{ number_format($feedCostToday ?? 0, 2) }} today</div>
+                    <div class="trend-pill-up">▲ +₱{{ number_format($feedCostToday ?? 0, 2) }} today</div>
                 </x-kpi-card>
             </div>
         </div>

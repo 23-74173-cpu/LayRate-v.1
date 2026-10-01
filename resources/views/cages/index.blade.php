@@ -50,10 +50,10 @@
 
     {{-- ── Farm Layout Canvas (tile-based floor-plan grid, fit-to-width on small screens) ── --}}
     <div id="farmLayoutSection" class="rounded-xl border p-4 sm:p-6" style="background-color: #ffffff; border-color: #e6e6e6;">
-        <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
-            <h3 class="text-xs font-semibold tracking-[0.05em] uppercase" style="color: #615d59;">Farm Layout</h3>
-            <div class="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end gap-2 w-full sm:w-auto">
-                <button id="clearFilterBtn" class="hidden text-xs font-medium px-3 py-1 rounded-lg transition-colors" style="color: #0075de; border: 1px solid #0075de;" onclick="clearCanvasFilter()">Show all</button>
+        <x-card-header title="Farm Layout" subtitle="Drag cages onto the grid · unplaced cages stage below" icon="layout-grid">
+            <x-slot:actions>
+                <div class="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end gap-2 w-full sm:w-auto">
+                <button id="clearFilterBtn" class="hidden text-xs font-medium px-3 py-1 rounded-lg transition-colors" style="color: var(--color-navy); border: 1px solid var(--color-navy);" onclick="clearCanvasFilter()">Show all</button>
                 @if($isAdmin)
                 <button onclick="openGridSettings()"
                         class="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
@@ -85,8 +85,9 @@
                 </div>
                 <span id="clearAllMsg" class="hidden text-xs whitespace-nowrap" style="color: #c2703e;">Cages cleared — click Save Layout</span>
                 @endif
-            </div>
-        </div>
+                </div>
+            </x-slot:actions>
+        </x-card-header>
 
         {{-- Canvas container (tile grid auto-rendered by JS, fit-to-width) --}}
         {{-- Shrink-wrapped + centered: the container takes the grid's intrinsic

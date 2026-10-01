@@ -22,7 +22,7 @@
         @if($paginator->onFirstPage())
         <span class="px-2 py-1 text-xs" style="color: #a39e98;" aria-hidden="true">‹</span>
         @else
-        <a href="{{ $paginator->previousPageUrl() }}" class="px-2 py-1 text-xs rounded transition-colors hover:bg-black/5" style="color: #0075de;" aria-label="Previous page">‹</a>
+        <a href="{{ $paginator->previousPageUrl() }}" class="px-2 py-1 text-xs rounded transition-colors hover:bg-black/5" style="color: var(--color-navy);" aria-label="Previous page">‹</a>
         @endif
 
         {{-- Page numbers — show current ± 1 --}}
@@ -30,10 +30,10 @@
             @if($page === $paginator->currentPage())
             <span class="px-2 py-1 text-xs font-semibold rounded" style="color: #1f1f1f; background-color: #f6f5f4;">{{ $page }}</span>
             @elseif($page >= $paginator->currentPage() - 1 && $page <= $paginator->currentPage() + 1)
-            <a href="{{ $url }}" class="px-2 py-1 text-xs rounded transition-colors hover:bg-black/5" style="color: #0075de;">{{ $page }}</a>
+            <a href="{{ $url }}" class="px-2 py-1 text-xs rounded transition-colors hover:bg-black/5" style="color: var(--color-navy);">{{ $page }}</a>
             @elseif($page === 1 || $page === $paginator->lastPage())
             {{-- Always show first and last page --}}
-            <a href="{{ $url }}" class="px-2 py-1 text-xs rounded transition-colors hover:bg-black/5" style="color: #0075de;">{{ $page }}</a>
+            <a href="{{ $url }}" class="px-2 py-1 text-xs rounded transition-colors hover:bg-black/5" style="color: var(--color-navy);">{{ $page }}</a>
             @elseif($page === $paginator->currentPage() - 2 || $page === $paginator->currentPage() + 2)
             {{-- Ellipsis --}}
             <span class="px-1 text-xs" style="color: #a39e98;" aria-hidden="true">…</span>
@@ -42,7 +42,7 @@
 
         {{-- Next --}}
         @if($paginator->hasMorePages())
-        <a href="{{ $paginator->nextPageUrl() }}" class="px-2 py-1 text-xs rounded transition-colors hover:bg-black/5" style="color: #0075de;" aria-label="Next page">›</a>
+        <a href="{{ $paginator->nextPageUrl() }}" class="px-2 py-1 text-xs rounded transition-colors hover:bg-black/5" style="color: var(--color-navy);" aria-label="Next page">›</a>
         @else
         <span class="px-2 py-1 text-xs" style="color: #a39e98;" aria-hidden="true">›</span>
         @endif

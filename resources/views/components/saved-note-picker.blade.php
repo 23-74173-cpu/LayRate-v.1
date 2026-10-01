@@ -26,7 +26,7 @@
         aria-label="Use a saved {{ strtolower($category) }} note"
         onchange="window.LayRateNotes && window.LayRateNotes.apply(this)"
         @disabled($savedNotes->isEmpty())
-        {{ $attributes->merge(['class' => 'w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-xs bg-white text-[#6B7280] mb-1.5 focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C] disabled:opacity-60']) }}>
+        {{ $attributes->merge(['class' => 'w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-xs bg-white text-[#6B7280] mb-1.5 focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy disabled:opacity-60']) }}>
     <option value="">{{ $savedNotes->isEmpty() ? 'No saved ' . strtolower($category) . ' notes yet' : $placeholder }}</option>
     @foreach($savedNotes as $savedNote)
     <option value="{{ $savedNote->body }}">{{ \Illuminate\Support\Str::limit(preg_replace('/\s+/', ' ', $savedNote->body), 70) }}</option>

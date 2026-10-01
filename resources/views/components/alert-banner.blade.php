@@ -63,7 +63,7 @@
                 <button
                     type="submit"
                     class="text-xs font-medium transition-colors hover:underline"
-                    style="color: #0075de;"
+                    style="color: var(--color-navy);"
                 >
                     Mark read
                 </button>

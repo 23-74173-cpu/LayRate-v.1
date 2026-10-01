@@ -169,7 +169,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {{-- Record Form --}}
             <x-card>
-                <h3 class="text-sm font-medium text-[#333333] mb-4">Record Mortality</h3>
+                <x-card-header title="Record Mortality" icon="plus-circle" />
                 <form method="POST" action="{{ route('mortality.store') }}" class="space-y-4">
                     @csrf
                     <div>
@@ -222,7 +222,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {{-- Record Cull form --}}
             <x-card>
-                <h3 class="text-sm font-medium text-[#333333] mb-4">Record Cull</h3>
+                <x-card-header title="Record Cull" icon="scissors" />
                 <form method="POST" action="{{ route('chickens.cull') }}" class="space-y-4">
                     @csrf
                     <div>

@@ -1,11 +1,9 @@
 <turbo-frame id="dashboard-stats-production">
     <div class="space-y-2">
         <div>
-            <h3 class="text-[10px] font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-2">
-                <i data-lucide="factory" class="w-4 h-4 inline-block mr-1.5 -mt-0.5" style="color:#0075de;"></i>
-                Production
-                @if($kpiAsOf ?? null)<span class="normal-case tracking-normal font-medium text-[#9ca3af]">· as of {{ $kpiAsOf }}</span>@endif
-            </h3>
+            <x-section-label title="Production" icon="factory">
+                @if($kpiAsOf ?? null)<x-slot:meta>· as of {{ $kpiAsOf }}</x-slot:meta>@endif
+            </x-section-label>
             <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <x-kpi-card
                     label="Total Hens"
@@ -23,7 +21,7 @@
                 <x-kpi-card
                     label="Today's HDEP"
                     icon="gauge"
-                    cardGradient="linear-gradient(135deg,#0075de,#1D4E8F)"
+                    cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))"
                     delay="60ms"
                     :href="route('eggs.logging')"
                     kpi="hdep"
@@ -33,7 +31,7 @@
                     :decimals="1"
                     suffix="%"
                 >
-                    <div class="text-xs font-medium mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5" style="color: {{ $hdepDelta >= 0 ? '#0f7a44' : '#b71c2c' }}; background-color: rgba(255,255,255,0.78); border: 1px solid {{ $hdepDelta >= 0 ? 'rgba(31,138,79,0.35)' : 'rgba(183,28,44,0.35)' }};">{{ $hdepDelta >= 0 ? '▲' : '▼' }} {{ abs($hdepDelta) }}% vs yesterday</div>
+                    <div class="{{ $hdepDelta >= 0 ? 'trend-pill-up' : 'trend-pill-down' }}">{{ $hdepDelta >= 0 ? '▲' : '▼' }} {{ abs($hdepDelta) }}% vs yesterday</div>
                 </x-kpi-card>
 
                 <x-kpi-card
@@ -48,7 +46,7 @@
                     :target="$eggsToday"
                     :decimals="0"
                 >
-                    <div class="text-xs font-medium mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5" style="color: {{ $eggsDelta >= 0 ? '#0f7a44' : '#b71c2c' }}; background-color: rgba(255,255,255,0.78); border: 1px solid {{ $eggsDelta >= 0 ? 'rgba(31,138,79,0.35)' : 'rgba(183,28,44,0.35)' }};">{{ $eggsDelta >= 0 ? '▲' : '▼' }} {{ abs($eggsDelta) }} vs yesterday</div>
+                    <div class="{{ $eggsDelta >= 0 ? 'trend-pill-up' : 'trend-pill-down' }}">{{ $eggsDelta >= 0 ? '▲' : '▼' }} {{ abs($eggsDelta) }} vs yesterday</div>
                 </x-kpi-card>
 
                 <x-kpi-card
@@ -63,7 +61,7 @@
                     :target="$lifetimeEggs"
                     :decimals="0"
                 >
-                    <div class="text-xs font-medium mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5" style="color: #0f7a44; background-color: rgba(255,255,255,0.78); border: 1px solid rgba(31,138,79,0.35);">▲ +{{ number_format($eggsToday) }} today</div>
+                    <div class="trend-pill-up">▲ +{{ number_format($eggsToday) }} today</div>
                 </x-kpi-card>
             </div>
         </div>

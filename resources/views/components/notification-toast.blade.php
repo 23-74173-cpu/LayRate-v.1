@@ -44,30 +44,32 @@
         return document.getElementById('notification-toast-message');
     }
 
+    // Semantic token triples — same ok/watch/alert/info colors as badges,
+    // trend pills and modals (one meaning = one color everywhere).
     var STYLES = {
         info: {
-            bg: '#eef5ff',
+            bg: '#dcebfa',
             border: '#b8d4fe',
-            text: '#1e40af',
-            icon: '<i data-lucide="info" class="w-5 h-5" style="color: #2563eb;"></i>'
+            text: 'var(--color-info)',
+            icon: '<i data-lucide="info" class="w-5 h-5" style="color: var(--color-navy);"></i>'
         },
         error: {
-            bg: '#fef2f2',
-            border: '#fecaca',
-            text: '#991b1b',
-            icon: '<i data-lucide="alert-circle" class="w-5 h-5" style="color: #dc2626;"></i>'
+            bg: '#fbe4e6',
+            border: '#f3cdd0',
+            text: '#9b1c24',
+            icon: '<i data-lucide="alert-circle" class="w-5 h-5" style="color: #9b1c24;"></i>'
         },
         success: {
-            bg: '#f0fdf4',
-            border: '#bbf7d0',
-            text: '#166534',
-            icon: '<i data-lucide="check-circle" class="w-5 h-5" style="color: #16a34a;"></i>'
+            bg: '#e8f5ec',
+            border: '#cfe8d6',
+            text: '#1f6b3a',
+            icon: '<i data-lucide="check-circle" class="w-5 h-5" style="color: #1f6b3a;"></i>'
         },
         warning: {
-            bg: '#fffbeb',
-            border: '#fde68a',
-            text: '#92400e',
-            icon: '<i data-lucide="alert-triangle" class="w-5 h-5" style="color: #d97706;"></i>'
+            bg: '#fdf3e0',
+            border: '#f3e3bf',
+            text: '#8a5a00',
+            icon: '<i data-lucide="alert-triangle" class="w-5 h-5" style="color: #8a5a00;"></i>'
         }
     };
 

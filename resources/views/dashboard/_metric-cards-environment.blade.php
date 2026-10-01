@@ -1,10 +1,7 @@
 <turbo-frame id="dashboard-stats-environment">
     <div class="space-y-2">
         <div>
-            <h3 class="text-[10px] font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-2">
-                <i data-lucide="heart-pulse" class="w-4 h-4 inline-block mr-1.5 -mt-0.5" style="color:#0891b2;"></i>
-                Environment &amp; Health
-            </h3>
+            <x-section-label title="Environment & Health" icon="heart-pulse" />
             <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 gap-3">
                 <x-kpi-card
                     label="Average Coop Temperature"

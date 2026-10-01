@@ -16,7 +16,7 @@
 @php
     $palette = [
         'neutral' => ['c' => '#615d59', 'b' => '#e6e6e6', 'hb' => '#f0efee', 'hbc' => '#d9d7d4'],
-        'blue'    => ['c' => '#0075de', 'b' => '#c9e4fb', 'hb' => '#e8f3fe', 'hbc' => '#9ccdf7'],
+        'blue'    => ['c' => 'var(--color-navy)', 'b' => '#c9e4fb', 'hb' => '#e8f3fe', 'hbc' => '#9ccdf7'],
         'green'   => ['c' => '#1f6b3a', 'b' => '#cfe8d6', 'hb' => '#e8f5ec', 'hbc' => '#a9d8b6'],
         'emerald' => ['c' => '#0e7c5a', 'b' => '#c6ebe0', 'hb' => '#e0f5ee', 'hbc' => '#93d9c6'],
         'orange'  => ['c' => '#c05621', 'b' => '#f5dcc4', 'hb' => '#fdf0e3', 'hbc' => '#ecc29c'],
@@ -24,7 +24,8 @@
         'red'     => ['c' => '#9b1c24', 'b' => '#f3cdd0', 'hb' => '#fbe4e6', 'hbc' => '#e8a3a9'],
     ];
     $p = $palette[$color] ?? $palette['neutral'];
-    $classes = 'inline-flex items-center justify-center p-1.5 rounded-full border transition-all cursor-pointer shrink-0';
+    // No cursor-pointer: the global rule (app.css) covers button:not(:disabled).
+    $classes = 'inline-flex items-center justify-center p-1.5 rounded-full border transition-all shrink-0';
 @endphp
 
 <button type="{{ $type }}"

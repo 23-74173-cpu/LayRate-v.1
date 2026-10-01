@@ -1,11 +1,9 @@
 <turbo-frame id="dashboard-stats-flock">
     <div class="space-y-2">
         <div>
-            <h3 class="text-[10px] font-semibold uppercase tracking-[0.125px] text-[#6B7280] mb-2">
-                <i data-lucide="users" class="w-4 h-4 inline-block mr-1.5 -mt-0.5" style="color:#7c3aed;"></i>
-                Flock &amp; Mortality
-                @if($kpiAsOf ?? null)<span class="normal-case tracking-normal font-medium text-[#9ca3af]">· as of {{ $kpiAsOf }}</span>@endif
-            </h3>
+            <x-section-label title="Flock & Mortality" icon="users">
+                @if($kpiAsOf ?? null)<x-slot:meta>· as of {{ $kpiAsOf }}</x-slot:meta>@endif
+            </x-section-label>
             <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 @php
                     $livabilityDenom = $totalHens + $mortalityTodayTotal;
