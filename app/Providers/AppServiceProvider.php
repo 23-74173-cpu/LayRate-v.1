@@ -55,6 +55,11 @@ class AppServiceProvider extends ServiceProvider
                 'globalAlertCount' => $alertCount,
                 'globalNewAlerts'  => $newAlerts,
                 'showAlertsModal'  => $showAlertsModal,
+                // Global quick-actions dock checklist (same data as the old
+                // dashboard-only partial; guests get nothing to render).
+                'dockCompleteness' => auth()->check()
+                    ? \App\Services\DataCompletenessService::forToday()
+                    : [],
             ]);
         });
     }
