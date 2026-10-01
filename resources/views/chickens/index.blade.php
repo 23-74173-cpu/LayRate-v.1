@@ -11,15 +11,15 @@
 
     <x-page-header title="Hens" subtitle="Manage hen inventory, movements, and mortality records" />
 
-    <x-fab>
+    @push('dock-actions')
         <button type="button" onclick="openRegisterModal()"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Register New Hens</span>
-            <div class="w-8 h-8 rounded-full bg-[#002D5E]/10 flex items-center justify-center">
-                <i data-lucide="plus" class="w-4 h-4 text-[#002D5E]"></i>
+            <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
+                <i data-lucide="plus" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
-    </x-fab>
+    @endpush
 
     {{-- Tabs --}}
     <div id="chickens-tabs-nav" class="mb-5">

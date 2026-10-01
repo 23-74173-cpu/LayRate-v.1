@@ -29,7 +29,7 @@
 
     <x-page-header title="Cages" subtitle="Manage battery cage configurations, slots, and sensor placement" />
 
-    <x-fab>
+    @push('dock-actions')
         <a href="{{ route('cages.bulk-add') }}"
            class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Bulk Add Hens</span>
@@ -46,7 +46,7 @@
             </div>
         </button>
         @endif
-    </x-fab>
+    @endpush
 
     {{-- ── Farm Layout Canvas (tile-based floor-plan grid, fit-to-width on small screens) ── --}}
     <div id="farmLayoutSection" class="rounded-xl border p-4 sm:p-6" style="background-color: #ffffff; border-color: #e6e6e6;">
