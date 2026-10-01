@@ -8,47 +8,59 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <meta name="theme-color" content="#1a2342">
+    <meta property="og:title" content="Sign In — LayRate">
+    <meta property="og:image" content="/images/layrate-logo.png">
     <link href="/css/tailwind.css" rel="stylesheet">
     <script src="/js/lucide.min.js"></script>
+    {{-- Shared branded validation (same module as the app shell) --}}
+    <script src="/js/form-validation.js" defer></script>
     <style>
-        body { min-height: 100vh; background: linear-gradient(160deg, #213183 0%, #1a2342 55%, #4a5485 100%); background-size: cover; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; overscroll-behavior: none; }
-        :focus-visible { outline: 2px solid #0075de; outline-offset: 2px; border-radius: 4px; }
+        body { min-height: 100vh; background-color: var(--color-sidebar-bg); background-image: radial-gradient(60% 40% at 50% 0%, rgba(98,174,240,0.14), rgba(98,174,240,0) 70%); background-size: cover; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; overscroll-behavior: none; }
+        :focus-visible { outline: 2px solid var(--color-navy); outline-offset: 2px; border-radius: 4px; }
 
-        .egg-decor { color: rgba(255, 255, 255, 0.10); }
+        /* Same backdrop treatment as the info page hero: egg-dot grid plus
+           hovering egg outlines drifting slowly. Pure CSS, near-zero cost. */
+        .login-dot-grid {
+            background-image: radial-gradient(rgba(255,255,255,0.14) 1.2px, transparent 1.3px);
+            background-size: 26px 26px;
+            mask-image: radial-gradient(80% 80% at 50% 40%, black 20%, transparent 100%);
+            -webkit-mask-image: radial-gradient(80% 80% at 50% 40%, black 20%, transparent 100%);
+        }
+        @keyframes driftSlow {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-14px) rotate(4deg); }
+        }
+        /* Wider wander for the far eggs so the whole backdrop feels afloat,
+           not just hovering in place. */
+        @keyframes driftWide {
+            0%, 100% { transform: translate(0, 0) rotate(-3deg); }
+            33% { transform: translate(18px, -20px) rotate(3deg); }
+            66% { transform: translate(-14px, -8px) rotate(-1deg); }
+        }
+        .float-shape { animation: driftSlow 9s ease-in-out infinite; }
+        .float-shape-2 { animation-delay: -4.5s; }
+        .float-wide { animation: driftWide 14s ease-in-out infinite; }
+        .float-wide-2 { animation-delay: -7s; animation-duration: 17s; }
+        .float-wide-3 { animation-delay: -3s; animation-duration: 11s; }
+        @media (prefers-reduced-motion: reduce) {
+            .float-shape, .float-wide { animation: none !important; }
+        }
 
-        /* Basic white card + inputs (glassmorphism removed) */
-        .glass-card {
-            position: relative;
-            background: #ffffff;
-            border: 1px solid #D9D9D9;
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(10, 22, 46, 0.18);
-        }
-        .glass-input {
-            background: #ffffff;
-            border: 1px solid #D9D9D9;
-            color: #333333;
-        }
-        .glass-input::placeholder { color: #9CA3AF; }
-        .glass-input:hover { border-color: #B0B0B0; }
-        .glass-input:focus {
-            background: #ffffff;
-            border-color: #102A4C;
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(16, 42, 76, 0.14);
-        }
-        .glass-label { color: #6B7280; }
+        /* Card + form controls reuse the app system: .modal-card supplies the
+           solid-white 20px shell + elevated shadow; inputs/labels below use
+           the same classes as every app form (border token, lg radius,
+           primary focus ring). No login-specific duplicates. */
 
         .signin-title {
-            font-family: Georgia, 'Times New Roman', 'Palatino Linotype', serif;
-            font-style: italic;
-            font-weight: 600;
-            letter-spacing: 0.01em;
+            font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+            font-weight: 700;
+            letter-spacing: -0.25px;
         }
         .signin-title-accent {
             width: 3rem; height: 3px; margin: 0.6rem auto 0;
             border-radius: 9999px;
-            background: linear-gradient(90deg, #102A4C, rgba(16, 42, 76, 0.25));
+            background: linear-gradient(90deg, var(--color-navy), rgba(0, 45, 94, 0.25));
         }
 
         /* Reverse of the landing page's circle-wipe: this page loads already
@@ -58,7 +70,7 @@
            then the fallback below force-removes it). */
         #page-wipe {
             position: fixed; inset: 0; z-index: 9999; pointer-events: none;
-            background: linear-gradient(160deg, #213183 0%, #1a2342 55%, #4a5485 100%);
+            background-color: var(--color-sidebar-bg);
             clip-path: circle(150% at 50% 50%);
             transition: clip-path 0.65s cubic-bezier(.76,0,.24,1);
         }
@@ -74,100 +86,87 @@
 <body class="min-h-screen flex items-center justify-center p-4">
 
     <div id="page-wipe"></div>
-    <div id="egg-decor" class="fixed inset-0 overflow-hidden pointer-events-none egg-decor" style="z-index:0;"></div>
+    <div class="fixed inset-0 overflow-hidden pointer-events-none" style="z-index:0;" aria-hidden="true">
+        <div class="absolute inset-0 login-dot-grid opacity-70"></div>
+        <svg class="absolute right-[8%] top-16 w-24 h-28 text-white/[0.08] float-shape hidden sm:block" viewBox="0 0 100 130" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><ellipse cx="50" cy="65" rx="38" ry="55"/></svg>
+        <svg class="absolute left-[6%] bottom-24 w-14 h-16 text-white/[0.07] float-shape float-shape-2 hidden sm:block" viewBox="0 0 100 130" fill="none" stroke="currentColor" stroke-width="4" aria-hidden="true"><ellipse cx="50" cy="65" rx="38" ry="55"/></svg>
+        <svg class="absolute left-[12%] top-[12%] w-16 h-20 text-white/[0.07] float-wide hidden md:block" viewBox="0 0 100 130" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><ellipse cx="50" cy="65" rx="38" ry="55"/></svg>
+        <svg class="absolute right-[14%] bottom-[16%] w-20 h-24 text-white/[0.08] float-wide float-wide-2 hidden md:block" viewBox="0 0 100 130" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><ellipse cx="50" cy="65" rx="38" ry="55"/></svg>
+        <svg class="absolute left-[4%] top-[46%] w-10 h-12 text-white/[0.07] float-wide float-wide-3 hidden lg:block" viewBox="0 0 100 130" fill="none" stroke="currentColor" stroke-width="4" aria-hidden="true"><ellipse cx="50" cy="65" rx="38" ry="55"/></svg>
+        <svg class="absolute right-[4%] top-[52%] w-12 h-14 text-white/[0.07] float-wide float-wide-2 hidden lg:block" viewBox="0 0 100 130" fill="none" stroke="currentColor" stroke-width="4" aria-hidden="true"><ellipse cx="50" cy="65" rx="38" ry="55"/></svg>
+        <svg class="absolute left-[22%] bottom-[8%] w-16 h-20 text-white/[0.08] float-shape float-shape-2 hidden md:block" viewBox="0 0 100 130" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><ellipse cx="50" cy="65" rx="38" ry="55"/></svg>
+    </div>
 
     <div class="w-full max-w-sm login-enter relative" style="z-index:10;">
 
-        {{-- Login Error Banner --}}
+        {{-- Login Error Banner (danger token triple, like app flash banners) --}}
         @if($errors->any())
-        <div class="mb-4 rounded-lg px-4 py-3 flex items-start gap-3" style="background-color: #fdf2f2; border: 1px solid #f3cdd0; border-left: 3px solid #e03e3e;">
-            <i data-lucide="alert-circle" class="w-4 h-4 mt-0.5 shrink-0" style="color: #c44d4d;"></i>
+        <div class="mb-4 rounded-lg px-4 py-3 flex items-start gap-3 bg-danger-bg border border-danger-border" style="border-left: 3px solid var(--color-danger);">
+            <i data-lucide="alert-circle" class="w-4 h-4 mt-0.5 shrink-0 text-danger"></i>
             <div>
-                <p class="text-xs font-semibold uppercase tracking-[0.05em]" style="color: #c44d4d;">Sign in failed</p>
-                <p class="text-sm mt-0.5" style="color: #31302e;">{{ $errors->first() }}</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.05em] text-danger">Sign in failed</p>
+                <p class="text-sm mt-0.5 text-ink">{{ $errors->first() }}</p>
             </div>
         </div>
         @endif
 
         {{-- Card --}}
-        <div class="glass-card p-7">
-            {{-- Logo — circular-cropped mark, sits directly on the glass. --}}
-            <img src="/images/logo_nobg.png"
-                 alt="LayRate — Egg Counting &amp; Forecasting System"
-                 class="w-40 mx-auto -mt-3" loading="lazy">
+        <div class="modal-card border border-hairline p-7">
+            {{-- Logo — the egg alone, centered above Sign in. --}}
+            <div class="flex justify-center">
+                <x-logo size="h-28" :eager="true" />
+            </div>
 
-            <h1 class="signin-title text-2xl mb-1 text-center" style="color: #102A4C;">Sign in</h1>
+            <h1 class="signin-title text-2xl mb-1 text-center" style="color: var(--color-navy);">Sign in</h1>
             <div class="signin-title-accent"></div>
-            <p class="text-xs mb-6 mt-3 text-center" style="color: #6B7280;">Enter your credentials to access the dashboard.</p>
+            <p class="text-xs mb-6 mt-3 text-center text-ink-muted">Enter your credentials to access the dashboard.</p>
 
             <form action="{{ route('login') }}" method="POST" class="space-y-4">
                 @csrf
 
                 <div>
-                    <label class="glass-label block text-xs tracking-wider mb-1.5">EMAIL</label>
-                    <input type="email" name="email" required autofocus
+                    <label for="email" class="block text-xs tracking-wider mb-1.5 text-ink-muted">EMAIL</label>
+                    <input type="email" name="email" id="email" required autofocus autocomplete="email"
                            value="{{ old('email') }}"
                            placeholder="operator@layrate.local"
-                           style="{{ $errors->has('email') ? 'border-color:#ef4444;' : '' }}"
-                           class="glass-input w-full rounded-lg px-3 py-2.5 text-sm focus:outline-none"
-                           autocapitalize="none" spellcheck="false">
+                           style="{{ $errors->has('email') ? 'border-color:var(--color-danger);' : '' }}"
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy"
+                           autocapitalize="none" spellcheck="false" aria-describedby="email-error">
                     @error('email')
-                    <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                    <p id="email-error" class="text-xs text-danger mt-1">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div>
-                    <label class="glass-label block text-xs tracking-wider mb-1.5">PASSWORD</label>
-                    <input type="password" name="password" required
+                    <label for="password" class="block text-xs tracking-wider mb-1.5 text-ink-muted">PASSWORD</label>
+                    <input type="password" name="password" id="password" required autocomplete="current-password"
                            placeholder="••••••••"
-                           class="glass-input w-full rounded-lg px-3 py-2.5 text-sm focus:outline-none">
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy">
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <input type="checkbox" name="remember" id="remember"
-                           class="w-3.5 h-3.5 rounded border-white/40 bg-white/10 text-[#102A4C]" style="accent-color:#fff;">
-                    <label for="remember" class="text-xs" style="color: #374151;">Remember me</label>
+                    <input type="checkbox" name="remember" id="remember" class="shrink-0">
+                    <label for="remember" class="text-xs text-ink-muted">Remember me</label>
                 </div>
 
-                <x-button type="submit" class="w-full py-2.5 mt-2" style="background-color:#27578A;">Sign In</x-button>
+                <x-button type="submit" class="w-full py-2.5 mt-2">Sign In</x-button>
 
-                <div class="text-center mt-4 pt-4 border-t border-white/15">
+                <div class="text-center mt-4 pt-4 border-t border-hairline">
                     <a href="{{ route('landing') }}"
-                       class="text-xs transition-colors" style="color: #6B7280;">
+                       class="text-xs text-ink-muted hover:text-ink transition-colors">
                         What is LayRate?
                     </a>
                 </div>
             </form>
         </div>
 
-        <p class="text-center text-xs mt-5" style="color: #6B7280;">
+        <p class="text-center text-xs mt-5" style="color: rgba(255,255,255,0.7);">
             LayRate · Offline Poultry Farm Management System
         </p>
     </div>
 
     <script>
         lucide.createIcons();
-        (function () {
-            // Decorative eggs scattered over the blue gradient background —
-            // random position, size, rotation, and translucency on every load.
-            var decor = document.getElementById('egg-decor');
-            if (!decor) return;
-            var opacities = ['0.30', '0.40', '0.50', '0.60', '0.70'];
-            var count = 40;
-            for (var i = 0; i < count; i++) {
-                var egg = document.createElement('div');
-                egg.style.position = 'absolute';
-                egg.style.left = (Math.random() * 100).toFixed(2) + '%';
-                egg.style.top = (Math.random() * 100).toFixed(2) + '%';
-                egg.style.width = (16 + Math.random() * 48).toFixed(1) + 'px';
-                egg.style.height = (16 + Math.random() * 48).toFixed(1) + 'px';
-                egg.style.opacity = opacities[i % opacities.length];
-                egg.style.transform = 'rotate(' + (Math.random() * 360).toFixed(0) + 'deg)';
-                egg.innerHTML = '<i data-lucide="egg" class="w-full h-full"></i>';
-                decor.appendChild(egg);
-            }
-            if (window.lucide) lucide.createIcons();
-        })();
         document.addEventListener('DOMContentLoaded', function () {
             var wipe = document.getElementById('page-wipe');
             var card = document.querySelector('.login-enter');
