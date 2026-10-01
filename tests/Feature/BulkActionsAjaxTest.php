@@ -3,12 +3,16 @@
 namespace Tests\Feature;
 
 use Tests\TestCase;
+use App\Models\Cage;
 use App\Models\User;
 use App\Models\Hen;
 use App\Models\CageSlot;
+use Tests\Concerns\SeedsBaselineFarm;
 
 class BulkActionsAjaxTest extends TestCase
 {
+    use SeedsBaselineFarm;
+
     protected User $user;
 
     protected function setUp(): void
@@ -18,6 +22,17 @@ class BulkActionsAjaxTest extends TestCase
         $this->seed(\Database\Seeders\ReferenceDataSeeder::class);
         $this->seed(\Database\Seeders\StructuralDataSeeder::class);
         $this->seed(\Database\Seeders\DemoDataSeeder::class);
+        // DemoDataSeeder populates hens only into pre-existing slots, but
+        // StructuralDataSeeder ran before any cages existed — so backfill
+        // slots here and place baseline hens for the ajax actions.
+        $cageA = Cage::where('cage_code', 'CAGE-A')->firstOrFail();
+        $this->placeBaselineHen($cageA, 'TEST-HEN-001');
+        $this->placeBaselineHen($cageA, 'TEST-HEN-002');
+        $this->placeBaselineHen($cageA, 'TEST-HEN-003');
+        // Cull/removal actions decrement slot occupancy — keep the hens'
+        // slot in sync so unsigned counters never underflow.
+        CageSlot::where('cage_id', $cageA->id)->orderBy('slot_number')->first()
+            ->update(['current_occupancy' => 3]);
         $this->user = User::firstOrFail();
     }
 

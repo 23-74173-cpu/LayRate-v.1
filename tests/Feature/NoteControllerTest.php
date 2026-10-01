@@ -19,7 +19,13 @@ class NoteControllerTest extends TestCase
         $this->seed(DatabaseSeeder::class);
 
         $this->user = User::where('email', 'operator@layrate.local')->firstOrFail();
-        $this->cage = Cage::where('cage_code', 'CAGE-A')->firstOrFail();
+        // DatabaseSeeder is deployment-safe and creates no cages; the demo
+        // cages (CAGE-A…) only come from DemoDataSeeder. Create the cage this
+        // suite needs directly instead of depending on demo data.
+        $this->cage = Cage::firstOrCreate(['cage_code' => 'CAGE-A'], [
+            'location' => '', 'rows' => 3, 'slots_per_row' => 5,
+            'max_chickens_per_slot' => 4, 'total_capacity' => 60, 'is_active' => 1,
+        ]);
     }
 
     public function test_index_page_loads(): void

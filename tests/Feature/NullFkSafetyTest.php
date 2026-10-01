@@ -12,6 +12,7 @@ use App\Models\MortalityLog;
 use App\Models\ProductionLog;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
+use Tests\Concerns\SeedsBaselineFarm;
 use Tests\TestCase;
 
 /**
@@ -22,6 +23,8 @@ use Tests\TestCase;
  */
 class NullFkSafetyTest extends TestCase
 {
+    use SeedsBaselineFarm;
+
     private User $user;
     private Cage $cage;
 
@@ -29,6 +32,9 @@ class NullFkSafetyTest extends TestCase
     {
         parent::setUp();
         $this->seed(DatabaseSeeder::class);
+
+        $cages = $this->seedBaselineCages();
+        $this->seedBaselineSlots($cages['CAGE-A']);
 
         $this->user = User::where('email', 'admin@layrate.local')->first();
         $this->cage = Cage::where('cage_code', 'CAGE-A')->first();
@@ -64,7 +70,7 @@ class NullFkSafetyTest extends TestCase
         ]);
 
         // feed_batch_id is NOT NULL; use a valid feed batch
-        $feedBatch = FeedBatch::first();
+        $feedBatch = $this->seedBaselineFeedBatch();
         FeedConsumptionLog::create([
             'cage_id'          => null,
             'feed_batch_id'    => $feedBatch->id,
@@ -76,7 +82,7 @@ class NullFkSafetyTest extends TestCase
 
     public function test_dashboard_returns_200_with_null_fk_logs(): void
     {
-        $this->actingAs($this->user)->get('/')->assertOk();
+        $this->actingAs($this->user)->get(route('dashboard'))->assertOk();
     }
 
     public function test_chickens_index_returns_200_with_null_fk_logs(): void

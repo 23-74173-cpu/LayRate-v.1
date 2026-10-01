@@ -15,10 +15,13 @@ use App\Services\FcrCalculator;
 use Carbon\Carbon;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\SeedsBaselineFarm;
 use Tests\TestCase;
 
 class FeedBatchManagementTest extends TestCase
 {
+    use SeedsBaselineFarm;
+
     private User $user;
     private Cage $cage;
     private Cage $testCage;
@@ -27,6 +30,9 @@ class FeedBatchManagementTest extends TestCase
     {
         parent::setUp();
         $this->seed(DatabaseSeeder::class);
+        // Baseline cages only (no demo content: demo consumption logs would
+        // pollute this suite's exact month-sum and remaining-kg assertions).
+        $this->seedBaselineCages();
 
         $this->user = User::where('email', 'admin@layrate.local')->first();
         $cages = Cage::where('is_active', 1)->orderBy('cage_code')->get()->keyBy('cage_code');

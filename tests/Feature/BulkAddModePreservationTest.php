@@ -7,6 +7,7 @@ use App\Models\CageSlot;
 use App\Models\Hen;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
+use Tests\Concerns\SeedsBaselineFarm;
 use Tests\TestCase;
 
 /**
@@ -20,6 +21,8 @@ use Tests\TestCase;
  */
 class BulkAddModePreservationTest extends TestCase
 {
+    use SeedsBaselineFarm;
+
     private User $user;
     private Cage $cage;
 
@@ -27,6 +30,9 @@ class BulkAddModePreservationTest extends TestCase
     {
         parent::setUp();
         $this->seed(DatabaseSeeder::class);
+        $cages = $this->seedBaselineCages();
+        $this->seedBaselineSlots($cages['CAGE-D']);
+        $this->makeUnplacedHen('TEST-UNPLACED-001');
 
         $this->user = User::where('email', 'admin@layrate.local')->first();
         $this->cage = Cage::where('cage_code', 'CAGE-A')->first();

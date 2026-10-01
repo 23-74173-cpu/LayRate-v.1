@@ -12,6 +12,7 @@ use App\Models\MortalityLog;
 use App\Models\ProductionLog;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
+use Tests\Concerns\SeedsBaselineFarm;
 use Tests\TestCase;
 
 /**
@@ -22,6 +23,8 @@ use Tests\TestCase;
  */
 class CageDeleteFlowTest extends TestCase
 {
+    use SeedsBaselineFarm;
+
     private User $user;
     private Cage $cage;
     private int $activeHenCount;
@@ -33,7 +36,7 @@ class CageDeleteFlowTest extends TestCase
         $this->seed(DatabaseSeeder::class);
 
         $this->user = User::where('email', 'admin@layrate.local')->first();
-        $this->feedBatch = FeedBatch::first();
+        $this->feedBatch = $this->seedBaselineFeedBatch();
 
         // Dedicated test cage so data isolation is clear
         $this->cage = Cage::create([

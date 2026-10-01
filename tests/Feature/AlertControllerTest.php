@@ -6,10 +6,13 @@ use App\Models\Alert;
 use App\Models\Cage;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
+use Tests\Concerns\SeedsBaselineFarm;
 use Tests\TestCase;
 
 class AlertControllerTest extends TestCase
 {
+    use SeedsBaselineFarm;
+
     private User $admin;
     private Cage $cage;
 
@@ -17,6 +20,7 @@ class AlertControllerTest extends TestCase
     {
         parent::setUp();
         $this->seed(DatabaseSeeder::class);
+        $this->seedBaselineCages();
 
         $this->admin = User::where('email', 'admin@layrate.local')->firstOrFail();
         $this->cage = Cage::where('cage_code', 'CAGE-A')->firstOrFail();

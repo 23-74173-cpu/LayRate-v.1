@@ -11,6 +11,7 @@ use App\Models\MortalityLogHen;
 use App\Models\ProductionLog;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
+use Tests\Concerns\SeedsBaselineFarm;
 use Tests\TestCase;
 
 /**
@@ -19,6 +20,8 @@ use Tests\TestCase;
  */
 class MassAssignmentSafetyTest extends TestCase
 {
+    use SeedsBaselineFarm;
+
     private User $user;
     private Cage $cage;
     private CageSlot $slot;
@@ -27,9 +30,12 @@ class MassAssignmentSafetyTest extends TestCase
     {
         parent::setUp();
         $this->seed(DatabaseSeeder::class);
+        $cages = $this->seedBaselineCages();
+        $this->seedOccupiedSlots($cages['CAGE-A']);
         $this->user = User::where('email', 'admin@layrate.local')->first();
         $this->cage = Cage::where('cage_code', 'CAGE-A')->first();
         $this->slot = $this->cage->cageSlots->first();
+        $this->seedBaselineMortalityLog($this->cage, $this->user->id);
     }
 
     public function test_hen_mass_assign_cage_slot_id_is_ignored(): void

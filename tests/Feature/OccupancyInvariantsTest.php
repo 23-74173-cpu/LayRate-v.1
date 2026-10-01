@@ -10,6 +10,7 @@ use App\Models\MortalityLogHen;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\SeedsBaselineFarm;
 use Tests\TestCase;
 
 /**
@@ -18,6 +19,8 @@ use Tests\TestCase;
  */
 class OccupancyInvariantsTest extends TestCase
 {
+    use SeedsBaselineFarm;
+
     private User $user;
     private Cage $cage;
     private Cage $emptyCage;
@@ -26,6 +29,10 @@ class OccupancyInvariantsTest extends TestCase
     {
         parent::setUp();
         $this->seed(DatabaseSeeder::class);
+        $cages = $this->seedBaselineCages();
+        // Full occupancy: capacity-guard tests need at least one full slot.
+        $this->seedOccupiedSlots($cages['CAGE-A'], 4);
+        $this->seedBaselineSlots($cages['CAGE-D']);
 
         $this->user = User::where('email', 'admin@layrate.local')->first();
         $this->cage = Cage::where('cage_code', 'CAGE-A')->first();
