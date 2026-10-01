@@ -11,7 +11,7 @@
             @php
                 $isActive = $key === $activeTab;
                 $classes = 'pb-2 text-sm font-medium border-b-2 transition-colors shrink-0 whitespace-nowrap ' .
-                    ($isActive ? 'border-[#002D5E] text-[#002D5E]' : 'border-transparent text-[#6B7280] hover:text-[#333]');
+                    ($isActive ? 'border-navy text-navy' : 'border-transparent text-[#6B7280] hover:text-[#333]');
             @endphp
             <a href="{{ route($tab['route']) }}" class="{{ $classes }}"
                data-turbo-frame="egg-content"
@@ -27,29 +27,29 @@
         Header sync payloads for tabs that need page-header actions. Kept as
         hidden templates, outside the frame, so they survive every frame swap
         untouched. The sync script below clones the one matching the active
-        tab's key (id="egg-fab-actions-{tabKey}") into the FAB menu
-        (#egg-fab-menu).
+        tab's key (id="egg-fab-actions-{tabKey}") into the dock "+" menu
+        (#dockFabMenu, rendered once in the global dock).
     --}}
     <template id="egg-fab-actions-stocks">
         <button type="button" onclick="openEggWeightsModal()"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Egg Weights</span>
             <div class="w-8 h-8 rounded-full bg-[#6B4C8A]/10 flex items-center justify-center">
-                <i data-lucide="weight" class="w-4 h-4 text-[#6B4C8A]"></i>
+                <i data-lucide="weight" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
         <button type="button" onclick="openThresholdsModal()"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Thresholds</span>
             <div class="w-8 h-8 rounded-full bg-[#C2703E]/10 flex items-center justify-center">
-                <i data-lucide="sliders" class="w-4 h-4 text-[#C2703E]"></i>
+                <i data-lucide="sliders" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
         <button type="button" onclick="document.getElementById('addStockModal').style.display = 'flex'"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Add Stock</span>
-            <div class="w-8 h-8 rounded-full bg-[#002D5E]/10 flex items-center justify-center">
-                <i data-lucide="plus" class="w-4 h-4 text-[#002D5E]"></i>
+            <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
+                <i data-lucide="plus" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
     </template>
@@ -57,8 +57,8 @@
         <button type="button" onclick="document.getElementById('addOrderModal').style.display = 'flex'"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Add Pre-Order</span>
-            <div class="w-8 h-8 rounded-full bg-[#002D5E]/10 flex items-center justify-center">
-                <i data-lucide="plus" class="w-4 h-4 text-[#002D5E]"></i>
+            <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
+                <i data-lucide="plus" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
     </template>
@@ -66,7 +66,7 @@
     <script>
     (function() {
         var links = document.querySelectorAll('nav a[data-tab-key]');
-        var MENU_ID = 'egg-fab-menu';
+        var MENU_ID = 'dockFabMenu';
 
         function syncActive() {
             var activeLink = null;
@@ -80,11 +80,11 @@
             // persistent window flag in the click handler, so returning to the
             // section via the sidebar or the Back button restores it correctly.
             links.forEach(function(a) {
-                a.classList.remove('border-[#002D5E]', 'text-[#002D5E]');
+                a.classList.remove('border-navy', 'text-navy');
                 a.classList.add('border-transparent', 'text-[#6B7280]', 'hover:text-[#333]');
             });
             activeLink.classList.remove('border-transparent', 'text-[#6B7280]', 'hover:text-[#333]');
-            activeLink.classList.add('border-[#002D5E]', 'text-[#002D5E]');
+            activeLink.classList.add('border-navy', 'text-navy');
 
             var subtitleEl = document.getElementById('egg-header-subtitle');
             if (subtitleEl) subtitleEl.textContent = activeLink.dataset.subtitle;
@@ -113,11 +113,11 @@
         links.forEach(function(link) {
             link.addEventListener('click', function(e) {
                 links.forEach(function(a) {
-                    a.classList.remove('border-[#002D5E]', 'text-[#002D5E]');
+                    a.classList.remove('border-navy', 'text-navy');
                     a.classList.add('border-transparent', 'text-[#6B7280]', 'hover:text-[#333]');
                 });
                 this.classList.remove('border-transparent', 'text-[#6B7280]', 'hover:text-[#333]');
-                this.classList.add('border-[#002D5E]', 'text-[#002D5E]');
+                this.classList.add('border-navy', 'text-navy');
 
                 history.replaceState({}, '', this.getAttribute('href'));
             });
@@ -157,6 +157,6 @@
     to those tabs from any other egg page swaps only the frame, leaving the FAB
     (and its create buttons) permanently absent. Rendering it unconditionally and
     letting syncActive() hide it where no action template exists keeps the create
-    buttons available no matter which tab you start on.
+    buttons available no matter which tab you start on. The "+" toggle itself
+    now lives in the global dock; syncActive() below targets #dockFabMenu.
 --}}
-<x-fab menu-id="egg-fab-menu"></x-fab>

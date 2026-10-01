@@ -17,7 +17,7 @@
                 <div>
                     <label class="block text-xs mb-1" style="color: #615d59;">Cage</label>
                     <select name="cage_id" onchange="recentLogsFilter()"
-                            class="w-full min-w-0 sm:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            class="w-full min-w-0 sm:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">All Cages</option>
                         @foreach($cages as $c)
@@ -32,7 +32,7 @@
                 <div>
                     <label class="block text-xs mb-1" style="color: #615d59;">Slot</label>
                     <select name="cage_slot_id" onchange="recentLogsFilter()"
-                            class="w-full min-w-0 sm:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            class="w-full min-w-0 sm:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">All Slots</option>
                         @foreach($cageSlots as $slot)
@@ -47,7 +47,7 @@
                 <div>
                     <label class="block text-xs mb-1" style="color: #615d59;">Breed</label>
                     <select name="breed" onchange="recentLogsFilter()"
-                            class="w-full min-w-0 sm:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            class="w-full min-w-0 sm:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">All Breeds</option>
                         @foreach($breeds as $b)
@@ -66,7 +66,7 @@
                         <label class="inline-flex items-center gap-1.5 text-sm cursor-pointer" style="color: #31302e;">
                             <input type="checkbox" name="logged_via[]" value="{{ $value }}" onchange="recentLogsFilter()"
                                    {{ in_array($value, (array) $filters['logged_via']) ? 'checked' : '' }}
-                                   class="rounded border-gray-300 text-[#0075de] focus:ring-[#0075de]">
+                                   class="rounded border-gray-300 text-navy focus:ring-navy">
                             {{ $label }}
                         </label>
                         @endforeach

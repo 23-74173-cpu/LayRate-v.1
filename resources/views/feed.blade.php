@@ -7,16 +7,16 @@
 
     <x-page-header title="Feed & Nutrition" subtitle="Track feed batches, crude protein, and daily consumption" />
 
-    <x-fab>
+    @push('dock-actions')
         <button type="button"
                 onclick="document.getElementById('addBatchModal').classList.remove('hidden'); document.getElementById('addBatchModal').classList.add('flex');"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Add Feed Batch</span>
-            <div class="w-8 h-8 rounded-full bg-[#C2703E]/10 flex items-center justify-center">
-                <i data-lucide="plus" class="w-4 h-4 text-[#C2703E]"></i>
+            <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
+                <i data-lucide="plus" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
-    </x-fab>
+    @endpush
 
     {{-- Live Data (lazy): metrics, tabs, batches, consumption --}}
     <turbo-frame id="feed-live-data" src="{{ route('feed.live-data', request()->only('cage_id')) }}" loading="lazy">
@@ -41,39 +41,39 @@
 
             <label class="block text-sm text-[#333333] mb-1.5">Brand</label>
             <input name="brand" value="{{ old('brand') }}" placeholder="e.g. Purina, Nutrena"
-                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-navy">
 
             <label class="block text-sm text-[#333333] mb-1.5">Crude Protein % <span class="text-[#9B1C24]">*</span></label>
             <input name="crude_protein" type="number" step="0.1" min="0" max="100" value="{{ old('crude_protein') }}" required
-                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-navy">
             <x-input-error name="crude_protein" />
 
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-sm text-[#333333] mb-1.5">Total Quantity (kg)</label>
                     <input name="total_quantity_kg" type="number" step="0.01" min="0" value="{{ old('total_quantity_kg') }}"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-navy">
                 </div>
                 <div>
                     <label class="block text-sm text-[#333333] mb-1.5">Unit Cost (per kg)</label>
                     <input name="unit_cost" type="number" step="0.01" min="0" value="{{ old('unit_cost') }}"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-navy">
                 </div>
             </div>
 
             <label class="block text-sm text-[#333333] mb-1.5">Date Received <span class="text-[#9B1C24]">*</span></label>
             <input name="date_received" type="date" value="{{ old('date_received', now()->toDateString()) }}" required
-                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-navy">
             <x-input-error name="date_received" />
 
             <label class="block text-sm text-[#333333] mb-1.5">Low Stock Threshold (kg)</label>
             <input name="low_stock_threshold" type="number" step="0.01" min="0" value="{{ old('low_stock_threshold') }}" placeholder="e.g. 100"
-                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-navy">
 
             <label class="block text-sm text-[#333333] mb-1.5">Notes</label>
             <x-saved-note-picker category="Feed" target="textarea[name='notes']" :notes="$feedNotes" />
             <textarea name="notes" rows="2"
-                      class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-5 focus:outline-none focus:border-[#002D5E]">{{ old('notes') }}</textarea>
+                      class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-5 focus:outline-none focus:border-navy">{{ old('notes') }}</textarea>
 
             <div class="flex gap-3 mt-5">
                 <button type="button" onclick="closeAddBatchModal()"
@@ -109,34 +109,34 @@
 
             <label class="block text-sm text-[#333333] mb-1.5">Brand</label>
             <input id="editBrand" name="brand" value="{{ old('brand') }}"
-                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-navy">
 
             <label class="block text-sm text-[#333333] mb-1.5">Crude Protein % <span class="text-[#9B1C24]">*</span></label>
             <input id="editCp" name="crude_protein" type="number" step="0.1" value="{{ old('crude_protein') }}"
-                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-navy">
             <x-input-error name="crude_protein" />
 
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-sm text-[#333333] mb-1.5">Total Quantity (kg)</label>
                     <input id="editQty" name="total_quantity_kg" type="number" step="0.01" min="0" value="{{ old('total_quantity_kg') }}"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-navy">
                 </div>
                 <div>
                     <label class="block text-sm text-[#333333] mb-1.5">Unit Cost (per kg)</label>
                     <input id="editCost" name="unit_cost" type="number" step="0.01" min="0" value="{{ old('unit_cost') }}"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-navy">
                 </div>
             </div>
 
             <label class="block text-sm text-[#333333] mb-1.5">Low Stock Threshold (kg)</label>
             <input id="editThreshold" name="low_stock_threshold" type="number" step="0.01" min="0" value="{{ old('low_stock_threshold') }}"
-                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-navy">
 
             <label class="block text-sm text-[#333333] mb-1.5">Notes</label>
             <x-saved-note-picker category="Feed" target="#editNotes" :notes="$feedNotes" />
             <textarea id="editNotes" name="notes" rows="2"
-                      class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-5 focus:outline-none focus:border-[#002D5E]">{{ old('notes') }}</textarea>
+                      class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-5 focus:outline-none focus:border-navy">{{ old('notes') }}</textarea>
 
             <div class="flex gap-3 mt-5">
                 <button type="button" onclick="closeEditBatchModal()"
@@ -144,7 +144,7 @@
                         style="color: #1f1f1f; border: 1px solid #e6e6e6;"
                         onmouseover="this.style.backgroundColor='#f6f5f4'"
                         onmouseout="this.style.backgroundColor='transparent'">Cancel</button>
-                <button type="submit" class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity" style="background-color: #0075de;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Save</button>
+                <button type="submit" class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity" style="background-color: var(--color-navy);" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Save</button>
             </div>
         </form>
     </div>
@@ -183,14 +183,14 @@
 
             <label class="block text-sm text-[#333333] mb-1.5">Cage <span class="text-[#9B1C24]">*</span></label>
             <select name="cage_id" required
-                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-navy">
                 <option value="">Select cage...</option>
             </select>
             <x-input-error name="cage_id" />
 
             <label class="block text-sm text-[#333333] mb-1.5">Feed Batch <span class="text-[#9B1C24]">*</span></label>
             <select name="feed_batch_id" required
-                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-navy">
                 <option value="">Select batch...</option>
             </select>
             <x-input-error name="feed_batch_id" />
@@ -199,19 +199,19 @@
                 <div>
                     <label class="block text-sm text-[#333333] mb-1.5">Date <span class="text-[#9B1C24]">*</span></label>
                     <input name="log_date" type="date" value="{{ old('log_date', \App\Services\ReportingDateService::reportingDateString()) }}" required
-                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-navy">
                     <x-input-error name="log_date" />
                 </div>
                 <div>
                     <label class="block text-sm text-[#333333] mb-1.5">Time</label>
                     <input name="log_time" type="time" value="{{ old('log_time', now()->format('H:i')) }}" required
-                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-navy">
                 </div>
             </div>
 
             <label class="block text-sm text-[#333333] mb-1.5">Consumed (kg) <span class="text-[#9B1C24]">*</span></label>
             <input name="feed_consumed_kg" type="number" step="0.01" min="0" required id="consumptionKgInput" value="{{ old('feed_consumed_kg') }}"
-                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-1 focus:outline-none focus:border-[#002D5E]">
+                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-1 focus:outline-none focus:border-navy">
             <x-input-error name="feed_consumed_kg" />
             <p id="consumptionExceedsWarning" class="hidden text-xs text-[#9B1C24] mb-4"></p>
 
@@ -266,7 +266,7 @@
 
             <label class="block text-sm text-[#333333] mb-1.5">Feed Batch <span class="text-[#9B1C24]">*</span></label>
             <select name="feed_batch_id" required
-                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                    class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-navy">
                 <option value="">Select batch...</option>
             </select>
             <x-input-error name="feed_batch_id" />
@@ -275,19 +275,19 @@
                 <div>
                     <label class="block text-sm text-[#333333] mb-1.5">Date <span class="text-[#9B1C24]">*</span></label>
                     <input name="log_date" type="date" value="{{ old('log_date', \App\Services\ReportingDateService::reportingDateString()) }}" required
-                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-navy">
                     <x-input-error name="log_date" />
                 </div>
                 <div>
                     <label class="block text-sm text-[#333333] mb-1.5">Time</label>
                     <input name="log_time" type="time" value="{{ old('log_time', now()->format('H:i')) }}" required
-                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+                           class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-navy">
                 </div>
             </div>
 
             <label class="block text-sm text-[#333333] mb-1.5">Total Fed (kg) <span class="text-[#9B1C24]">*</span></label>
             <input name="total_kg" type="number" step="0.01" min="0" required id="farmKgInput" value="{{ old('total_kg') }}"
-                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-1 focus:outline-none focus:border-[#002D5E]">
+                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-1 focus:outline-none focus:border-navy">
             <x-input-error name="total_kg" />
             <p id="farmExceedsWarning" class="hidden text-xs text-[#9B1C24] mb-4"></p>
 

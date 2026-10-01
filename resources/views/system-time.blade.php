@@ -22,8 +22,8 @@
                 <label for="system_time" class="block text-sm text-[#333333] mb-1.5">New Date &amp; Time</label>
                 <input id="system_time" type="datetime-local" name="system_time" required
                        value="{{ old('system_time', $current->format('Y-m-d\TH:i')) }}"
-                       class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#002D5E]">
-                @error('system_time')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
+                       class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-navy">
+                @error('system_time')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
             </div>
 
             <div class="bg-[#FFF3CD] border border-[#FFE69C] rounded-lg p-4 text-sm text-[#664D03]">
@@ -35,7 +35,7 @@
                 <a href="{{ route('dashboard') }}" class="px-5 py-2.5 rounded-lg text-sm border border-[#D9D9D9] text-[#333333] hover:bg-gray-50">
                     Skip for now
                 </a>
-                <button type="submit" class="bg-[#002D5E] text-white px-5 py-2.5 rounded-lg text-sm hover:bg-[#001F42]">
+                <button type="submit" class="bg-navy text-white px-5 py-2.5 rounded-lg text-sm hover:bg-navy">
                     Set System Time
                 </button>
             </div>

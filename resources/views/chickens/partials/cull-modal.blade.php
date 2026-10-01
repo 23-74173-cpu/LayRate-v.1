@@ -15,15 +15,15 @@
                     <span id="cullHenText" class="text-[#333] font-medium ml-1"></span>
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-[#6B7280] mb-1">Cull Date <span class="text-red-500">*</span></label>
+                    <label class="block text-xs font-medium text-[#6B7280] mb-1">Cull Date <span class="text-danger">*</span></label>
                     <input type="date" name="cull_date" required value="{{ old('cull_date', today()->toDateString()) }}"
-                           class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
+                           class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-navy">
                     <x-input-error name="cull_date" />
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-[#6B7280] mb-1">Reason <span class="text-red-500">*</span></label>
+                    <label class="block text-xs font-medium text-[#6B7280] mb-1">Reason <span class="text-danger">*</span></label>
                     <select name="reason" required
-                            class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
+                            class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-navy">
                         <option value="">Select reason...</option>
                         <option value="low_production" {{ old('reason') === 'low_production' ? 'selected' : '' }}>Low Production</option>
                         <option value="illness" {{ old('reason') === 'illness' ? 'selected' : '' }}>Illness</option>
@@ -37,7 +37,7 @@
                     <label class="block text-xs font-medium text-[#6B7280] mb-1">Notes</label>
                     <x-saved-note-picker category="Hens" target="textarea[name='notes']" />
                     <textarea name="notes" rows="2" placeholder="Optional..."
-                              class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E] resize-none">{{ old('notes') }}</textarea>
+                              class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-navy resize-none">{{ old('notes') }}</textarea>
                     <x-input-error name="notes" />
                 </div>
                 <input type="hidden" name="hen_id" id="cullHenId" value="">

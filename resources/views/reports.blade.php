@@ -81,7 +81,7 @@
                 <div class="col-span-2 sm:col-span-1">
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">REPORT TYPE</label>
                     <select name="type" id="reportType"
-                            class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                            class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         <option value="production" {{ $type === 'production' ? 'selected' : '' }}>Production Report</option>
                         <option value="feed"        {{ $type === 'feed'       ? 'selected' : '' }}>Feed Report</option>
                         <option value="environment" {{ $type === 'environment'? 'selected' : '' }}>Environment Report</option>
@@ -93,17 +93,17 @@
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">FROM</label>
                     <input type="date" name="from" value="{{ $from }}"
-                           class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                           class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TO</label>
                     <input type="date" name="to" value="{{ $to }}"
-                           class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                           class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CAGE</label>
                     <select name="cage"
-                            class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                            class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         <option value="all" {{ $cageId === 'all' ? 'selected' : '' }}>All Cages</option>
                         @foreach($allCages as $c)
                         <option value="{{ $c->cage_code }}" {{ $cageId === $c->cage_code ? 'selected' : '' }}>{{ $c->cage_code }}</option>
@@ -115,7 +115,7 @@
                 <div id="reasonFilter" class="{{ in_array($type, ['mortality', 'all']) ? '' : 'hidden' }}">
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">REASON</label>
                     <select name="reason"
-                            class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                            class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         <option value="all" {{ $reason === 'all' ? 'selected' : '' }}>All Reasons</option>
                         @foreach(\App\Models\MortalityLog::REASONS as $r)
                         <option value="{{ $r }}" {{ $reason === $r ? 'selected' : '' }}>{{ $r }}</option>
@@ -125,13 +125,13 @@
 
                 <div id="withForecastFilter" class="{{ $type === 'production' ? '' : 'hidden' }} col-span-2 sm:col-span-1 flex items-center gap-2 pb-2">
                     <input type="checkbox" name="withForecast" id="reportWithForecast" value="1" {{ ($withForecast ?? false) ? 'checked' : '' }}
-                           class="rounded border-[#D9D9D9] text-[#102A4C] focus:ring-[#102A4C]/30">
+                           class="rounded border-[#D9D9D9] text-navy focus:ring-navy/30">
                     <label for="reportWithForecast" class="text-xs tracking-wider text-[#6B7280] select-none cursor-pointer">INCLUDE FORECAST COMPARISON</label>
                 </div>
 
                 <div class="col-span-2 sm:col-span-1 flex items-center gap-2 pb-2">
                     <input type="checkbox" name="charts" id="reportCharts" value="1" {{ ($charts ?? false) ? 'checked' : '' }}
-                           class="rounded border-[#D9D9D9] text-[#102A4C] focus:ring-[#102A4C]/30">
+                           class="rounded border-[#D9D9D9] text-navy focus:ring-navy/30">
                     <label for="reportCharts" class="text-xs tracking-wider text-[#6B7280] select-none cursor-pointer">INCLUDE GRAPHS</label>
                 </div>
 
@@ -172,8 +172,8 @@
         {{-- Reports export loading overlay --}}
         <div id="reportsExportLoadingOverlay" class="fixed inset-0 min-h-screen min-h-[100dvh] bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
             <div class="bg-white rounded-xl shadow-xl p-8 max-w-sm w-full mx-4 text-center">
-                <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#102A4C]/10 mb-4">
-                    <svg class="animate-spin h-6 w-6 text-[#102A4C]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-navy/10 mb-4">
+                    <svg class="animate-spin h-6 w-6 text-navy" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
@@ -181,7 +181,7 @@
                 <h3 class="text-lg font-semibold text-[#333333] mb-1">Exporting report</h3>
                 <p class="text-sm text-[#6B7280] mb-4">Generating your file...</p>
                 <div class="w-full bg-[#F0F0F0] rounded-full h-2 overflow-hidden">
-                    <div id="reportsProgressBar" class="bg-[#102A4C] h-full rounded-full" style="width: 0%;"></div>
+                    <div id="reportsProgressBar" class="bg-navy h-full rounded-full" style="width: 0%;"></div>
                 </div>
             </div>
         </div>
@@ -194,7 +194,7 @@
         {{-- One labeled section per report type — own heading, pills, chart, table --}}
         @foreach($sections as $section)
         <div class="mb-10 {{ !$loop->first ? 'pt-6 border-t border-[#D9D9D9] report-section-break' : '' }}">
-            <h2 class="text-sm font-bold text-[#102A4C] uppercase tracking-wide mb-4">{{ $section['label'] }}</h2>
+            <h2 class="text-sm font-bold text-navy uppercase tracking-wide mb-4">{{ $section['label'] }}</h2>
 
             @include('reports._summary-pills', ['type' => $section['type'], 'summary' => $section['summary']])
 
@@ -322,8 +322,8 @@ function reportChartConfig(chart) {
                 data: {
                     labels: chart.labels,
                     datasets: [
-                        { label: 'Eggs', data: chart.eggs, borderColor: '#102A4C', backgroundColor: '#102A4C22', tension: 0.3, fill: true, yAxisID: 'y' },
-                        { label: 'HDEP %', data: chart.hdep, borderColor: '#C99A3C', backgroundColor: '#C99A3C22', tension: 0.3, yAxisID: 'y1' }
+                        { label: 'Eggs', data: chart.eggs, borderColor: LayRateChartColors.eggs, backgroundColor: LayRateChartColors.alpha(LayRateChartColors.eggs, 0.13), tension: 0.3, fill: true, yAxisID: 'y' },
+                        { label: 'HDEP %', data: chart.hdep, borderColor: LayRateChartColors.hdep, backgroundColor: LayRateChartColors.alpha(LayRateChartColors.hdep, 0.13), tension: 0.3, yAxisID: 'y1' }
                     ]
                 },
                 options: {
@@ -337,7 +337,7 @@ function reportChartConfig(chart) {
         case 'feed':
             return {
                 type: 'bar',
-                data: { labels: chart.labels, datasets: [{ label: 'kg consumed', data: chart.kg, backgroundColor: '#102A4C' }] },
+                data: { labels: chart.labels, datasets: [{ label: 'kg consumed', data: chart.kg, backgroundColor: LayRateChartColors.feed }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
             };
         case 'environment':
@@ -346,8 +346,8 @@ function reportChartConfig(chart) {
                 data: {
                     labels: chart.labels,
                     datasets: [
-                        { label: 'Temp °C', data: chart.temp, borderColor: '#c0392b', tension: 0.3 },
-                        { label: 'Humidity %', data: chart.humidity, borderColor: '#2980b9', tension: 0.3 }
+                        { label: 'Temp °C', data: chart.temp, borderColor: LayRateChartColors.temp, tension: 0.3 },
+                        { label: 'Humidity %', data: chart.humidity, borderColor: LayRateChartColors.humidity, tension: 0.3 }
                     ]
                 },
                 options: { responsive: true, maintainAspectRatio: false }
@@ -355,13 +355,13 @@ function reportChartConfig(chart) {
         case 'mortality':
             return {
                 type: 'bar',
-                data: { labels: chart.labels, datasets: [{ label: 'Deaths', data: chart.counts, backgroundColor: '#9b1c24' }] },
+                data: { labels: chart.labels, datasets: [{ label: 'Deaths', data: chart.counts, backgroundColor: LayRateChartColors.mortality }] },
                 options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }
             };
         case 'egg_stock':
             return {
                 type: 'bar',
-                data: { labels: chart.labels, datasets: [{ label: 'Count', data: chart.counts, backgroundColor: '#2d6a4f' }] },
+                data: { labels: chart.labels, datasets: [{ label: 'Count', data: chart.counts, backgroundColor: LayRateChartColors.eggs }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
             };
     }
@@ -648,7 +648,7 @@ function exportReportWithCharts(format) {
         })
         .catch(function(err) {
             console.error('Export failed:', err);
-            alert('Export failed. Please try again.');
+            if (window.showNotification) window.showNotification('Export failed. Please try again.', 'error');
         })
         .finally(function() {
             if (progressRaf) cancelAnimationFrame(progressRaf);

@@ -19,12 +19,12 @@
             <div class="space-y-4">
                 <div class="flex items-center gap-2">
                     <p class="text-sm text-[#6B7280]">
-                        Moving <strong id="moveCount" class="text-[#002D5E]">0</strong> selected
+                        Moving <strong id="moveCount" class="text-navy">0</strong> selected
                     </p>
                     <label class="flex items-center gap-1 text-sm text-[#6B7280]">
                         · move
                         <input type="number" name="move_count" id="moveCountInput" value="0" min="1"
-                               class="w-14 border border-[#D9D9D9] rounded px-2 py-1 text-sm text-center focus:outline-none focus:ring-1 focus:ring-[#002D5E]"
+                               class="w-14 border border-[#D9D9D9] rounded px-2 py-1 text-sm text-center focus:outline-none focus:ring-1 focus:ring-navy"
                                oninput="onMoveCountChange()">
                         hen(s)
                     </label>
@@ -44,20 +44,20 @@
 
                 {{-- Destination Cage --}}
                 <div>
-                    <label class="block text-xs font-medium text-[#6B7280] mb-1">Destination Cage <span class="text-red-500">*</span></label>
+                    <label class="block text-xs font-medium text-[#6B7280] mb-1">Destination Cage <span class="text-danger">*</span></label>
                     @php
                         $availableCages = $cages->filter(fn($c) => $c->cageSlots->contains(fn($s) => $s->remaining > 0));
                     @endphp
                     @if($availableCages->isEmpty())
-                    <div id="moveNoCages" class="p-3 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-700">
+                    <div id="moveNoCages" class="p-3 bg-warning-bg border border-warning rounded text-xs text-warning">
                         No cages with available space.
                     </div>
-                    <select id="destCageSelect" required disabled class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E] disabled:bg-[#F5F6F8] disabled:text-[#9CA3AF] mt-2">
+                    <select id="destCageSelect" required disabled class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-navy disabled:bg-[#F5F6F8] disabled:text-[#9CA3AF] mt-2">
                         <option value="">No cages available</option>
                     </select>
                     @else
                     <select id="destCageSelect" required
-                            class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]"
+                            class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-navy"
                             onchange="loadDestSlots()">
                         <option value="">Select cage...</option>
                         @foreach($availableCages as $c)
@@ -72,18 +72,18 @@
 
                 {{-- Destination Slot --}}
                 <div>
-                    <label class="block text-xs font-medium text-[#6B7280] mb-1">Destination Slot <span class="text-red-500">*</span></label>
+                    <label class="block text-xs font-medium text-[#6B7280] mb-1">Destination Slot <span class="text-danger">*</span></label>
                     <div class="flex gap-2">
                         <select name="destination_slot_id" id="destSlotSelect" required disabled
-                                class="flex-1 border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E] disabled:bg-[#F5F6F8] disabled:text-[#9CA3AF]">
+                                class="flex-1 border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-navy disabled:bg-[#F5F6F8] disabled:text-[#9CA3AF]">
                             <option value="">Select cage first...</option>
                         </select>
                         <button type="button" id="autoAssignBtn" onclick="autoAssignSlot()" disabled
                                 class="text-xs px-3 py-2 rounded-lg font-medium text-white transition-colors disabled:opacity-50"
-                                style="background-color:#0075de;" title="Auto-assign to best available slot">Auto</button>
+                                style="background-color:var(--color-navy);" title="Auto-assign to best available slot">Auto</button>
                     </div>
                     <x-input-error name="destination_slot_id" />
-                    <div id="moveNoSlots" class="hidden mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-700">
+                    <div id="moveNoSlots" class="hidden mt-2 p-3 bg-warning-bg border border-warning rounded text-xs text-warning">
                         No slots with enough space available.
                     </div>
                 </div>
@@ -96,19 +96,19 @@
                     <div>
                         <label class="block text-xs font-medium text-[#6B7280] mb-1">Transfer Date</label>
                         <input type="date" name="transfer_date" id="moveTransferDate" value="{{ old('transfer_date', today()->toDateString()) }}"
-                               class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
+                               class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-navy">
                         <x-input-error name="transfer_date" />
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-[#6B7280] mb-1">Reason</label>
                         <input type="text" name="transfer_reason" value="{{ old('transfer_reason') }}" placeholder="e.g. Rebalancing"
-                               class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
+                               class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-navy">
                         <x-input-error name="transfer_reason" />
                     </div>
                 </div>
 
                 {{-- Error --}}
-                <div id="moveError" class="hidden text-xs text-red-500"></div>
+                <div id="moveError" class="hidden text-xs text-danger"></div>
             </div>
 
             {{-- Footer --}}
@@ -315,7 +315,7 @@ function checkMoveAvailability() {
         submitBtn.disabled = false;
     } else {
         availabilityEl.classList.remove('hidden');
-        availabilityEl.className = 'text-xs font-medium text-red-500';
+        availabilityEl.className = 'text-xs font-medium text-danger';
         availabilityEl.textContent = 'Insufficient capacity. Only ' + remaining + ' space' + (remaining !== 1 ? 's' : '') + ' available but ' + toMove + ' needed.';
         submitBtn.disabled = true;
     }

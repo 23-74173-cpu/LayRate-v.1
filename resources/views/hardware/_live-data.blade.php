@@ -18,7 +18,7 @@
         <x-kpi-card
             label="DHT22"
             icon="thermometer"
-            cardGradient="linear-gradient(135deg,#0075de,#1D4E8F)"
+            cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))"
             delay="120ms"
             :value="$dht22Count"
         />
@@ -52,7 +52,7 @@
                     @php
                         $typeColors = [
                             'IR_breakbeam' => ['#2D7D46', '#d6f0e3'],
-                            'DHT22'        => ['#1D4E8F', '#dcebfa'],
+                            'DHT22'        => ['var(--color-info)', '#dcebfa'],
                             'relay'        => ['#C2703E', '#fae3d0'],
                             'other'        => ['#6B4C8A', '#e9e0f5'],
                         ];
@@ -111,7 +111,7 @@
                                     'stale'        => ['#8a5a00', '#fdf3e0'],
                                     'disconnected' => ['#615d59', '#F0F0EC'],
                                     'faulty'       => ['#9b1c24', '#fbe4e6'],
-                                    'recovering'   => ['#0075de', '#e8f3fe'],
+                                    'recovering'   => ['var(--color-navy)', '#e8f3fe'],
                                     'unknown'      => ['#615d59', '#F0F0EC'],
                                 ];
                                 [$hc, $hb] = $hMeta[$h] ?? $hMeta['unknown'];

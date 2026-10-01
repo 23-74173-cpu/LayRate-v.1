@@ -16,7 +16,7 @@
         ]" active="{{ $tab }}" />
     </div>
 
-    <div class="max-w-2xl mx-auto space-y-5">
+    <div class="w-full space-y-5">
 
         {{-- ============================================ --}}
         {{-- PROFILE TAB --}}
@@ -25,13 +25,13 @@
 
             {{-- Identity header --}}
             <div class="bg-white rounded-lg border border-[#D9D9D9] p-5 flex items-center gap-4">
-                <div class="w-14 h-14 rounded-full bg-[#002D5E] text-white flex items-center justify-center text-xl font-semibold shrink-0">
+                <div class="w-14 h-14 rounded-full bg-navy text-white flex items-center justify-center text-xl font-semibold shrink-0">
                     {{ collect(explode(' ', auth()->user()->name))->map(fn($w) => mb_substr($w, 0, 1))->take(2)->implode('') }}
                 </div>
                 <div class="min-w-0">
                     <div class="text-base font-semibold text-[#333333] truncate">{{ auth()->user()->name }}</div>
                     <div class="text-sm text-[#6B7280] truncate">{{ auth()->user()->email }}</div>
-                    <span class="inline-block mt-1 text-xs px-2 py-0.5 rounded-full bg-[#002D5E]/10 text-[#002D5E] capitalize">{{ auth()->user()->role }}</span>
+                    <span class="inline-block mt-1 text-xs px-2 py-0.5 rounded-full bg-navy/10 text-navy capitalize">{{ auth()->user()->role }}</span>
                 </div>
             </div>
 
@@ -41,19 +41,19 @@
                 <p class="text-xs text-[#6B7280] mb-4">Records logged with this account since day 1.</p>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                     <div class="bg-white border border-[#D9D9D9] rounded-lg p-4 text-center">
-                        <div class="text-2xl font-bold text-[#002D5E] leading-none tracking-[-0.5px]">{{ number_format($activity->egg_logs) }}</div>
+                        <div class="text-2xl font-bold text-navy leading-none tracking-[-0.5px]">{{ number_format($activity->egg_logs) }}</div>
                         <div class="text-xs text-[#6B7280] mt-1">Egg log entries</div>
                     </div>
                     <div class="bg-white border border-[#D9D9D9] rounded-lg p-4 text-center">
-                        <div class="text-2xl font-bold text-[#002D5E] leading-none tracking-[-0.5px]">{{ number_format($activity->eggs_total) }}</div>
+                        <div class="text-2xl font-bold text-navy leading-none tracking-[-0.5px]">{{ number_format($activity->eggs_total) }}</div>
                         <div class="text-xs text-[#6B7280] mt-1">Eggs recorded</div>
                     </div>
                     <div class="bg-white border border-[#D9D9D9] rounded-lg p-4 text-center">
-                        <div class="text-2xl font-bold text-[#002D5E] leading-none tracking-[-0.5px]">{{ number_format($activity->feed_logs) }}</div>
+                        <div class="text-2xl font-bold text-navy leading-none tracking-[-0.5px]">{{ number_format($activity->feed_logs) }}</div>
                         <div class="text-xs text-[#6B7280] mt-1">Feed entries</div>
                     </div>
                     <div class="bg-white border border-[#D9D9D9] rounded-lg p-4 text-center">
-                        <div class="text-2xl font-bold text-[#002D5E] leading-none tracking-[-0.5px]">{{ number_format($activity->mortality_logs) }}</div>
+                        <div class="text-2xl font-bold text-navy leading-none tracking-[-0.5px]">{{ number_format($activity->mortality_logs) }}</div>
                         <div class="text-xs text-[#6B7280] mt-1">Mortality records</div>
                     </div>
                 </div>
@@ -67,15 +67,15 @@
                     <div>
                         <label class="block text-sm text-[#333333] mb-1.5">Name</label>
                         <input type="text" name="name" value="{{ old('name', auth()->user()->name) }}" required
-                               class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#002D5E]">
-                        @error('name')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
+                               class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-navy">
+                        @error('name')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
                     </div>
 
                     <div>
                         <label class="block text-sm text-[#333333] mb-1.5">Email</label>
                         <input type="email" name="email" value="{{ old('email', auth()->user()->email) }}" required
-                               class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#002D5E]">
-                        @error('email')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
+                               class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-navy">
+                        @error('email')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
                     </div>
 
                     <div>
@@ -89,7 +89,7 @@
                         <p class="text-sm text-[#333333]">{{ auth()->user()->created_at->format('m/d/Y') }}</p>
                     </div>
 
-                    <button type="submit" class="bg-[#002D5E] text-white px-5 py-2.5 rounded-lg text-sm hover:bg-[#001F42]">Save Profile</button>
+                    <button type="submit" class="bg-navy text-white px-5 py-2.5 rounded-lg text-sm hover:bg-navy">Save Profile</button>
                 </form>
             </div>
 
@@ -105,7 +105,7 @@
                     </div>
                     <div class="flex items-center justify-between">
                         <span class="text-sm text-[#333333]">Account Role</span>
-                        <span class="text-xs px-2 py-0.5 rounded-full bg-[#002D5E]/10 text-[#002D5E] capitalize">
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-navy/10 text-navy capitalize">
                             {{ auth()->user()->role }}
                         </span>
                     </div>
@@ -131,36 +131,36 @@
                         <label class="block text-sm text-[#333333] mb-1.5">Current Password</label>
                         <div class="input-with-toggle relative">
                             <input type="password" name="current_password" required
-                                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-[#002D5E]">
+                                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-navy">
                             <button type="button" onclick="toggleVisibility(this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] hover:text-[#333333] transition-colors" aria-label="Show password">
                                 <i data-lucide="eye" class="w-4 h-4"></i>
                             </button>
                         </div>
-                        @error('current_password')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
+                        @error('current_password')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
                     </div>
                     <div>
                         <label class="block text-sm text-[#333333] mb-1.5">New Password</label>
                         <div class="input-with-toggle relative">
                             <input type="password" name="password" required
-                                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-[#002D5E]">
+                                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-navy">
                             <button type="button" onclick="toggleVisibility(this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] hover:text-[#333333] transition-colors" aria-label="Show password">
                                 <i data-lucide="eye" class="w-4 h-4"></i>
                             </button>
                         </div>
                         <p class="text-xs text-[#6B7280] mt-1">Minimum 8 characters.</p>
-                        @error('password')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
+                        @error('password')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
                     </div>
                     <div>
                         <label class="block text-sm text-[#333333] mb-1.5">Confirm New Password</label>
                         <div class="input-with-toggle relative">
                             <input type="password" name="password_confirmation" required
-                                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-[#002D5E]">
+                                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-navy">
                             <button type="button" onclick="toggleVisibility(this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] hover:text-[#333333] transition-colors" aria-label="Show password">
                                 <i data-lucide="eye" class="w-4 h-4"></i>
                             </button>
                         </div>
                     </div>
-                    <button type="submit" class="bg-[#002D5E] text-white px-5 py-2.5 rounded-lg text-sm hover:bg-[#001F42]">Update Password</button>
+                    <button type="submit" class="bg-navy text-white px-5 py-2.5 rounded-lg text-sm hover:bg-navy">Update Password</button>
                 </form>
             </div>
 
@@ -175,7 +175,7 @@
                         <label class="block text-sm text-[#333333] mb-1.5">Current PIN</label>
                         <div class="input-with-toggle relative">
                             <input type="password" name="current_pin" inputmode="numeric" maxlength="6"
-                                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-[#002D5E]"
+                                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-navy"
                                    placeholder="Leave blank to verify with password instead">
                             <button type="button" onclick="toggleVisibility(this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] hover:text-[#333333] transition-colors" aria-label="Show PIN">
                                 <i data-lucide="eye" class="w-4 h-4"></i>
@@ -186,36 +186,36 @@
                         <label class="block text-sm text-[#333333] mb-1.5">Or Current Password</label>
                         <div class="input-with-toggle relative">
                             <input type="password" name="current_password"
-                                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-[#002D5E]">
+                                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-navy">
                             <button type="button" onclick="toggleVisibility(this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] hover:text-[#333333] transition-colors" aria-label="Show password">
                                 <i data-lucide="eye" class="w-4 h-4"></i>
                             </button>
                         </div>
-                        @error('current_pin')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
+                        @error('current_pin')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
                     </div>
                     @endif
                     <div>
                         <label class="block text-sm text-[#333333] mb-1.5">New PIN (4-6 digits)</label>
                         <div class="input-with-toggle relative">
                             <input type="password" name="pin" inputmode="numeric" maxlength="6" required
-                                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-[#002D5E]">
+                                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-navy">
                             <button type="button" onclick="toggleVisibility(this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] hover:text-[#333333] transition-colors" aria-label="Show PIN">
                                 <i data-lucide="eye" class="w-4 h-4"></i>
                             </button>
                         </div>
-                        @error('pin')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
+                        @error('pin')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
                     </div>
                     <div>
                         <label class="block text-sm text-[#333333] mb-1.5">Confirm New PIN</label>
                         <div class="input-with-toggle relative">
                             <input type="password" name="pin_confirmation" inputmode="numeric" maxlength="6" required
-                                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-[#002D5E]">
+                                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-navy">
                             <button type="button" onclick="toggleVisibility(this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] hover:text-[#333333] transition-colors" aria-label="Show PIN">
                                 <i data-lucide="eye" class="w-4 h-4"></i>
                             </button>
                         </div>
                     </div>
-                    <button type="submit" class="bg-[#002D5E] text-white px-5 py-2.5 rounded-lg text-sm hover:bg-[#001F42]">Save PIN</button>
+                    <button type="submit" class="bg-navy text-white px-5 py-2.5 rounded-lg text-sm hover:bg-navy">Save PIN</button>
                 </form>
             </div>
 
@@ -225,7 +225,7 @@
                 <div class="flex items-center justify-between mb-1">
                     <h2 class="text-base font-medium text-[#333333]">Team</h2>
                     <button type="button" onclick="openAddUserModal()"
-                            class="flex items-center gap-1.5 bg-[#002D5E] text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-[#001F42] transition-colors">
+                            class="flex items-center gap-1.5 bg-navy text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-navy transition-colors">
                         <i data-lucide="user-plus" class="w-3.5 h-3.5"></i> Add User
                     </button>
                 </div>
@@ -302,7 +302,7 @@
                 <p class="text-xs text-[#6B7280] mb-4">Devices currently signed in to your account. Use the Danger Zone below to sign out every device except this one.</p>
                 <div class="space-y-2">
                     @forelse($sessions as $s)
-                    <div class="flex items-center justify-between border border-[#D9D9D9] rounded-lg px-4 py-2.5 {{ $s->current ? 'bg-[#002D5E]/5' : '' }}">
+                    <div class="flex items-center justify-between border border-[#D9D9D9] rounded-lg px-4 py-2.5 {{ $s->current ? 'bg-navy/5' : '' }}">
                         <div class="flex items-center gap-3 min-w-0">
                             <i data-lucide="{{ str_contains($s->device, 'Android') || str_contains($s->device, 'iOS') ? 'smartphone' : 'monitor' }}" class="w-4 h-4 text-[#6B7280] shrink-0"></i>
                             <div class="min-w-0">
@@ -340,12 +340,12 @@
                             @csrf
                             <div class="input-with-toggle relative">
                                 <input type="password" name="logout_password" placeholder="Enter current password to confirm" required
-                                       class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-[#002D5E]">
+                                       class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-navy">
                                 <button type="button" onclick="toggleVisibility(this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] hover:text-[#333333] transition-colors" aria-label="Show password">
                                     <i data-lucide="eye" class="w-4 h-4"></i>
                                 </button>
                             </div>
-                            @error('logout_password')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
+                            @error('logout_password')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
                             <button type="submit" class="w-full sm:w-auto border border-red-300 text-red-700 bg-white hover:bg-red-50 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors">
                                 Sign out of all other devices
                             </button>
@@ -371,7 +371,7 @@
                     <div class="border border-[#D9D9D9] rounded-lg p-4">
                         <div class="flex items-center justify-between mb-2">
                             <h3 class="text-sm font-medium text-[#333333]">{{ $group }}</h3>
-                            <a href="{{ $cfg['route'] }}" class="text-xs text-[#0075DE] hover:underline">Edit →</a>
+                            <a href="{{ $cfg['route'] }}" class="text-xs text-navy hover:underline">Edit →</a>
                         </div>
                         <dl class="space-y-1">
                             @foreach($cfg['values'] as $label => $value)
@@ -396,7 +396,7 @@
                     <div class="text-sm text-[#333333]">
                         Current: <span class="font-medium">{{ now()->format('l, m/d/Y g:i A') }}</span>
                     </div>
-                    <a href="{{ route('settings.system-time') }}" class="bg-[#002D5E] text-white px-5 py-2.5 rounded-lg text-sm hover:bg-[#001F42]">
+                    <a href="{{ route('settings.system-time') }}" class="bg-navy text-white px-5 py-2.5 rounded-lg text-sm hover:bg-navy">
                         Set System Time
                     </a>
                 </div>
@@ -413,7 +413,7 @@
                     @csrf
                     <button type="submit"
                             class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
-                            style="color: #0075de; border: 1px solid #0075de;"
+                            style="color: var(--color-navy); border: 1px solid var(--color-navy);"
                             onmouseover="this.style.backgroundColor='#f0f7ff'"
                             onmouseout="this.style.backgroundColor='transparent'">
                         <i data-lucide="database" class="w-4 h-4"></i>
@@ -451,12 +451,12 @@
                         @csrf
                         <div class="input-with-toggle relative">
                             <input type="password" name="admin_password" placeholder="Enter admin password to confirm" required
-                                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-[#002D5E]">
+                                   class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-navy">
                             <button type="button" onclick="toggleVisibility(this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] hover:text-[#333333] transition-colors" aria-label="Show password">
                                 <i data-lucide="eye" class="w-4 h-4"></i>
                             </button>
                         </div>
-                        @error('admin_password')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
+                        @error('admin_password')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
                         <x-button type="submit" variant="danger" class="w-full sm:w-auto">
                             Clear database
                         </x-button>
@@ -475,7 +475,7 @@
         {{-- STEP 1: Create a cage and view its details --}}
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
             <div class="flex items-center gap-3 mb-4">
-                <div class="w-8 h-8 rounded-full bg-[#002D5E] text-white flex items-center justify-center text-sm font-bold shrink-0">1</div>
+                <div class="w-8 h-8 rounded-full bg-navy text-white flex items-center justify-center text-sm font-bold shrink-0">1</div>
                 <div>
                     <h2 class="text-base font-medium text-[#333333]">Create a cage and view its details</h2>
                     <p class="text-xs text-[#6B7280]">Start the guided walkthrough below.</p>
@@ -490,7 +490,7 @@
 
             <button type="button" onclick="window.location.href='{{ route('cages.index', ['walkthrough' => '1']) }}'"
                     class="inline-flex items-center gap-2 text-sm font-medium text-white px-4 py-2.5 rounded-lg hover:brightness-95 transition-colors"
-                    style="background-color:#002D5E;">
+                    style="background-color:var(--color-navy);">
                 <i data-lucide="play" class="w-4 h-4"></i> Start Walkthrough
             </button>
         </div>
@@ -498,7 +498,7 @@
         {{-- STEP 2: Add & place hens --}}
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
             <div class="flex items-center gap-3 mb-4">
-                <div class="w-8 h-8 rounded-full bg-[#002D5E] text-white flex items-center justify-center text-sm font-bold shrink-0">2</div>
+                <div class="w-8 h-8 rounded-full bg-navy text-white flex items-center justify-center text-sm font-bold shrink-0">2</div>
                 <div>
                     <h2 class="text-base font-medium text-[#333333]">Add hens and place them on cages</h2>
                     <p class="text-xs text-[#6B7280]">Start the guided walkthrough below.</p>
@@ -512,7 +512,7 @@
 
             <button type="button" onclick="window.location.href='{{ route('chickens.index', ['walkthrough2' => '1']) }}'"
                     class="inline-flex items-center gap-2 text-sm font-medium text-white px-4 py-2.5 rounded-lg hover:brightness-95 transition-colors"
-                    style="background-color:#002D5E;">
+                    style="background-color:var(--color-navy);">
                 <i data-lucide="play" class="w-4 h-4"></i> Start Walkthrough
             </button>
         </div>
@@ -520,7 +520,7 @@
         {{-- STEP 3: Log eggs --}}
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
             <div class="flex items-center gap-3 mb-4">
-                <div class="w-8 h-8 rounded-full bg-[#002D5E] text-white flex items-center justify-center text-sm font-bold shrink-0">3</div>
+                <div class="w-8 h-8 rounded-full bg-navy text-white flex items-center justify-center text-sm font-bold shrink-0">3</div>
                 <div>
                     <h2 class="text-base font-medium text-[#333333]">Log daily egg production</h2>
                     <p class="text-xs text-[#6B7280]">Start the guided walkthrough below.</p>
@@ -534,7 +534,7 @@
 
             <button type="button" onclick="window.location.href='{{ route('eggs.logging', ['walkthrough3' => '1']) }}'"
                     class="inline-flex items-center gap-2 text-sm font-medium text-white px-4 py-2.5 rounded-lg hover:brightness-95 transition-colors"
-                    style="background-color:#002D5E;">
+                    style="background-color:var(--color-navy);">
                 <i data-lucide="play" class="w-4 h-4"></i> Start Walkthrough
             </button>
         </div>
@@ -559,17 +559,17 @@
               data-loading="Creating account..." data-loading-title="Adding User">
             @csrf
             <label class="block text-sm text-[#333333] mb-1.5">Name</label>
-            <input name="name" required class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+            <input name="name" required class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-navy">
 
             <label class="block text-sm text-[#333333] mb-1.5">Email</label>
-            <input name="email" type="email" required class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+            <input name="email" type="email" required class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-navy">
 
             <label class="block text-sm text-[#333333] mb-1.5">Temporary Password</label>
-            <input name="password" type="password" required minlength="8" class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-1 focus:outline-none focus:border-[#002D5E]">
+            <input name="password" type="password" required minlength="8" class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-1 focus:outline-none focus:border-navy">
             <p class="text-xs text-[#6B7280] mb-4">Minimum 8 characters. Share this with the new user — they can change it in their own Settings.</p>
 
             <label class="block text-sm text-[#333333] mb-1.5">Role</label>
-            <select name="role" required class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-5 bg-white focus:outline-none focus:border-[#002D5E]">
+            <select name="role" required class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-5 bg-white focus:outline-none focus:border-navy">
                 <option value="operator">Operator</option>
                 <option value="admin">Admin</option>
             </select>
@@ -595,13 +595,13 @@
         <form id="editUserForm" method="POST" data-loading="Saving changes..." data-loading-title="Saving">
             @csrf @method('PUT')
             <label class="block text-sm text-[#333333] mb-1.5">Name</label>
-            <input id="editUserName" name="name" required class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+            <input id="editUserName" name="name" required class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-navy">
 
             <label class="block text-sm text-[#333333] mb-1.5">Email</label>
-            <input id="editUserEmail" name="email" type="email" required class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#002D5E]">
+            <input id="editUserEmail" name="email" type="email" required class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-navy">
 
             <label class="block text-sm text-[#333333] mb-1.5">Role</label>
-            <select id="editUserRole" name="role" required class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-5 bg-white focus:outline-none focus:border-[#002D5E]">
+            <select id="editUserRole" name="role" required class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm mb-5 bg-white focus:outline-none focus:border-navy">
                 <option value="operator">Operator</option>
                 <option value="admin">Admin</option>
             </select>
@@ -671,13 +671,13 @@
         const nav = document.getElementById('profile-tabs-nav');
         if (nav) {
             nav.querySelectorAll('button').forEach(btn => {
-                btn.classList.remove('border-[#002D5E]', 'text-[#002D5E]');
+                btn.classList.remove('border-navy', 'text-navy');
                 btn.classList.add('border-transparent', 'text-[#6B7280]');
             });
             const active = nav.querySelector('button[onclick*="\'' + tab + '\'" ]');
             if (active) {
                 active.classList.remove('border-transparent', 'text-[#6B7280]');
-                active.classList.add('border-[#002D5E]', 'text-[#002D5E]');
+                active.classList.add('border-navy', 'text-navy');
             }
         }
 

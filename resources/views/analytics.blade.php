@@ -14,7 +14,7 @@
         <a href="{{ route('analytics', ['cage'=>'performance','period'=>$period]) }}"
            data-cage-tab="performance"
            class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0"
-           style="border-bottom-color: {{ $isPerfTab ? '#002D5E' : 'transparent' }}; color: {{ $isPerfTab ? '#1f1f1f' : '#6B7280' }};">
+           style="border-bottom-color: {{ $isPerfTab ? 'var(--color-navy)' : 'transparent' }}; color: {{ $isPerfTab ? '#1f1f1f' : '#6B7280' }};">
             <i data-lucide="gauge" class="w-3.5 h-3.5 inline-block mr-1.5"></i>
             Performance
         </a>
@@ -41,9 +41,9 @@
     @if(!$isPerformance)
     @php $kpiColor = $isAll ? '#333333' : $cage->color; @endphp
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <x-kpi-card label="Cage" icon="warehouse" cardGradient="linear-gradient(135deg,#002D5E,#1D4E8F)" delay="0ms" :value="'<span id=\'kpi-cage\'>' . ($isAll ? 'All Cages' : $cageCode) . '</span>'" />
+        <x-kpi-card label="Cage" icon="warehouse" cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))" delay="0ms" :value="'<span id=\'kpi-cage\'>' . ($isAll ? 'All Cages' : $cageCode) . '</span>'" />
         <x-kpi-card label="Breed" icon="bird" cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)" delay="60ms" :value="'<span id=\'kpi-breed\'>' . ($isAll ? 'Mixed' : ($cage->hens->first()?->breed ?? '—')) . '</span>'" />
-        <x-kpi-card label="Avg HDEP" icon="gauge" cardGradient="linear-gradient(135deg,#0075de,#1D4E8F)" delay="120ms" :value="'<span id=\'kpi-avg-hdep\'>' . ($avgHdep === '-' ? '-' : $avgHdep . '%') . '</span>'" />
+        <x-kpi-card label="Avg HDEP" icon="gauge" cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))" delay="120ms" :value="'<span id=\'kpi-avg-hdep\'>' . ($avgHdep === '-' ? '-' : $avgHdep . '%') . '</span>'" />
         <x-kpi-card label="Best Day" icon="trending-up" cardGradient="linear-gradient(135deg,#8B5CF6,#6B4C8A)" delay="180ms" :value="'<span id=\'kpi-best-day\'>' . ($bestDay === '-' ? '-' : $bestDay . '%') . '</span>'" />
         <x-kpi-card label="Worst Day" icon="trending-down" cardGradient="linear-gradient(135deg,#d97706,#C2703E)" delay="240ms" :value="'<span id=\'kpi-worst-day\'>' . ($worstDay === '-' ? '-' : $worstDay . '%') . '</span>'" />
         <x-kpi-card label="Flock Age" icon="clock" cardGradient="linear-gradient(135deg,#0d9488,#2C7C91)" delay="300ms" :value="'<span id=\'kpi-flock-age\'>' . ($isAll ? '—' : ($cage->hens->first() ? $cage->hens->first()->current_age_weeks . ' wks' : '—')) . '</span>'" />
@@ -60,7 +60,7 @@
         <a href="{{ route('analytics', ['cage'=>$cageCode,'period'=>$key]) }}"
            data-period-tab="{{ $key }}"
            class="period-tab px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0"
-           style="border-bottom-color: {{ $isP ? '#002D5E' : 'transparent' }}; color: {{ $isP ? '#1f1f1f' : '#6B7280' }};">
+           style="border-bottom-color: {{ $isP ? 'var(--color-navy)' : 'transparent' }}; color: {{ $isP ? '#1f1f1f' : '#6B7280' }};">
             <i data-lucide="{{ $icon }}" class="w-3.5 h-3.5 inline-block mr-1.5"></i>
             {{ $label }}
         </a>
@@ -338,7 +338,7 @@ if (!window.__analyticsListenersBound) {
         // Update active tab styling immediately
         document.querySelectorAll('[data-period-tab]').forEach(function(t) {
             var act = t.dataset.periodTab === period;
-            t.style.borderBottomColor = act ? '#002D5E' : 'transparent';
+            t.style.borderBottomColor = act ? 'var(--color-navy)' : 'transparent';
             t.style.color = act ? '#1f1f1f' : '#6B7280';
         });
 

@@ -33,8 +33,8 @@
         <a href="{{ route('cages.bulk-add') }}"
            class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Bulk Add Hens</span>
-            <div class="w-8 h-8 rounded-full bg-[#002D5E]/10 flex items-center justify-center">
-                <i data-lucide="bird" class="w-4 h-4 text-[#002D5E]"></i>
+            <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
+                <i data-lucide="bird" class="w-4 h-4 text-navy"></i>
             </div>
         </a>
         @if($isAdmin)
@@ -42,7 +42,7 @@
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Add Cage</span>
             <div class="w-8 h-8 rounded-full bg-[#2D7D46]/10 flex items-center justify-center">
-                <i data-lucide="plus" class="w-4 h-4 text-[#2D7D46]"></i>
+                <i data-lucide="plus" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
         @endif
@@ -108,7 +108,7 @@
             </div>
             {{-- Saving overlay --}}
             <div id="farmSaveOverlay" class="hidden absolute inset-0 z-10 items-center justify-center rounded-lg" style="background-color: rgba(255,255,255,0.7);">
-                <i data-lucide="loader" class="animate-spin w-8 h-8" style="color: #0075de;"></i>
+                <i data-lucide="loader" class="animate-spin w-8 h-8" style="color: var(--color-navy);"></i>
             </div>
         </div>
 
@@ -171,7 +171,7 @@
             #cageInfoPopup .back-face { transform: rotateY(180deg); }
             #cageInfoBackdrop { transition: opacity 0.2s ease; }
             #cageInfoPopup .slot-mini { transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease; }
-            #cageInfoPopup .slot-mini:hover { transform: scale(1.15); box-shadow: 0 2px 8px rgba(0,0,0,0.15); border-color: #0075de !important; z-index: 1; }
+            #cageInfoPopup .slot-mini:hover { transform: scale(1.15); box-shadow: 0 2px 8px rgba(0,0,0,0.15); border-color: var(--color-navy) !important; z-index: 1; }
             #cageInfoPopup .slot-mini:active { transform: scale(1.05); }
 
             /* Info button becomes a compact corner chip with a View label on mobile. */
@@ -245,13 +245,13 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Rows</label>
                     <input type="number" id="gridSettingsRows" value="{{ $gridRows }}" min="1" max="50"
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Columns</label>
                     <input type="number" id="gridSettingsCols" value="{{ $gridCols }}" min="1" max="50"
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                 </div>
             </div>
@@ -274,7 +274,7 @@
     {{-- ── Toggle + All Cages Section ── --}}
     <div>
         <button id="toggleAllCagesBtn" onclick="toggleAllCages()" class="flex items-center gap-2 text-sm font-medium mb-3 transition-colors" style="color: #615d59;">
-            <i data-lucide="layout-grid" class="w-4 h-4" style="color: #0075de;"></i>
+            <i data-lucide="layout-grid" class="w-4 h-4" style="color: var(--color-navy);"></i>
             <span>Show All Cages</span>
             <i data-lucide="chevron-down" id="toggleAllCagesIcon" class="w-4 h-4 transition-transform duration-200"></i>
         </button>
@@ -284,7 +284,7 @@
             <div class="cage-tabs flex items-center gap-0 border-b overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]" style="border-color: #e6e6e6; -webkit-overflow-scrolling: touch;">
         <button type="button" onclick="filterCage('all')" class="cage-tab px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap cursor-pointer"
                 data-tab="all"
-                style="border-bottom-color: #002D5E; color: #1f1f1f;">
+                style="border-bottom-color: var(--color-navy); color: #1f1f1f;">
             All
             <span class="ml-1 text-xs" style="color: #a39e98;">({{ $cages->count() }})</span>
         </button>
@@ -331,7 +331,7 @@
             }
             $sizeColors = [
                 'small'    => ['bg' => '#d6f0e3', 'txt' => '#2D7D46'],
-                'medium'   => ['bg' => '#dcebfa', 'txt' => '#1D4E8F'],
+                'medium'   => ['bg' => '#dcebfa', 'txt' => 'var(--color-info)'],
                 'large'    => ['bg' => '#fae3d0', 'txt' => '#C2703E'],
                 'jumbo'    => ['bg' => '#e9e0f5', 'txt' => '#6B4C8A'],
                 'unsorted' => ['bg' => '#f0f0f0', 'txt' => '#6B7280'],
@@ -361,7 +361,7 @@
                         <div class="flex items-center gap-1 shrink-0">
                             <span id="occupancy-{{ $cage->id }}" class="text-sm font-semibold" style="color:{{ $occupancyPct >= 90 ? '#9b1c24' : ($occupancyPct >= 75 ? '#c2703e' : '#1f1f1f') }};">{{ $currentHens }}/{{ $cage->total_capacity ?? '?' }}</span>
                             <a href="{{ route('cages.bulk-add') }}?cage_id={{ $cage->id }}"
-                               class="icon-btn" style="color:#0075de;" aria-label="Bulk add hens" title="Add hens">
+                               class="icon-btn" style="color:var(--color-navy);" aria-label="Bulk add hens" title="Add hens">
                                 <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
                             </a>
                             <button onclick="flipCage({{ $cage->id }})"
@@ -404,9 +404,9 @@
                             data-slot-id="{{ $slot->id }}"
                             data-original-number="{{ $slot->slot_number }}">
                                 @if($isSensor)
-                                <span class="absolute top-0 right-0 w-1.5 h-1.5 rounded-bl" style="background-color:#0075de;" title="Sensor equipped"></span>
+                                <span class="absolute top-0 right-0 w-1.5 h-1.5 rounded-bl" style="background-color:var(--color-navy);" title="Sensor equipped"></span>
                                 @endif
-                                <span class="slot-reorder-number hidden text-xs font-bold" style="color:#002D5E;">{{ $slot->slot_number }}</span>
+                                <span class="slot-reorder-number hidden text-xs font-bold" style="color:var(--color-navy);">{{ $slot->slot_number }}</span>
                                 @if($occupancy > 0)
                                 <span id="slot-occ-{{ $slot->id }}" class="text-xs font-semibold" style="color:{{ $isSensor ? '#1f6b3a' : '#1f1f1f' }};">{{ $occupancy }}</span>
                                 @else
@@ -419,7 +419,7 @@
                         <div id="reorderBar-{{ $cage->id }}" class="hidden mt-2 flex items-center justify-between text-xs" style="color:#615d59;">
                             <span>Drag slots to renumber</span>
                             <div class="flex items-center gap-2">
-                                <button onclick="saveReorder({{ $cage->id }})" class="px-2 py-1 rounded text-white text-xs font-medium" style="background-color:#002D5E;">Save</button>
+                                <button onclick="saveReorder({{ $cage->id }})" class="px-2 py-1 rounded text-white text-xs font-medium" style="background-color:var(--color-navy);">Save</button>
                                 <button onclick="cancelReorder({{ $cage->id }})" class="px-2 py-1 rounded text-xs" style="background-color:#e6e6e6;">Cancel</button>
                             </div>
                         </div>
@@ -549,7 +549,7 @@
                 <div class="space-y-4">
                     <div class="rounded-lg p-3" style="background-color: #f0f7ff; border: 1px solid #b3d4fc;">
                         <div class="flex items-center gap-2">
-                            <i data-lucide="info" class="w-4 h-4" style="color: #0075de;"></i>
+                            <i data-lucide="info" class="w-4 h-4" style="color: var(--color-navy);"></i>
                             <div>
                                 <p class="text-sm font-medium" style="color: #005baa;">Cage code will be auto-generated</p>
                                 <p class="text-xs" style="color: #615d59;" id="addNextCode">Next: CAGE-{{ $nextCageCode }}</p>
@@ -565,7 +565,7 @@
                             <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Rows</label>
                             <input type="number" name="rows" id="addRows" value="{{ old('rows', 3) }}" min="1" max="10"
                                    oninput="updateAddPreview()"
-                                   class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                   class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                             <x-input-error name="rows" />
                         </div>
@@ -573,7 +573,7 @@
                             <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Slots</label>
                             <input type="number" name="slots_per_row" id="addSlotsPerRow" value="{{ old('slots_per_row', 5) }}" min="1" max="100"
                                    oninput="updateAddPreview()"
-                                   class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                   class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                             <x-input-error name="slots_per_row" />
                         </div>
@@ -581,7 +581,7 @@
                             <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Max/Slot</label>
                             <input type="number" name="max_chickens_per_slot" id="addMaxPerSlot" value="{{ old('max_chickens_per_slot', 4) }}" min="1" max="10"
                                    oninput="updateAddPreview()"
-                                   class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                   class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                             <x-input-error name="max_chickens_per_slot" />
                         </div>
@@ -596,7 +596,7 @@
                         </div>
                         <div class="flex justify-between text-sm mt-1">
                             <span style="color: #615d59;">Total capacity</span>
-                            <span class="font-semibold" style="color: #0075de;" id="addSummaryCapacity">60 hens</span>
+                            <span class="font-semibold" style="color: var(--color-navy);" id="addSummaryCapacity">60 hens</span>
                         </div>
                     </div>
 
@@ -655,9 +655,9 @@
                 </button>
                 <button type="button" onclick="closeNoChickensModal(); openRegisterModal()"
                         class="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors"
-                        style="color: #ffffff; background-color: #002D5E;"
+                        style="color: #ffffff; background-color: var(--color-navy);"
                         onmouseover="this.style.backgroundColor='#0a3d7a'"
-                        onmouseout="this.style.backgroundColor='#002D5E'">
+                        onmouseout="this.style.backgroundColor='var(--color-navy)'">
                     Register Hens
                 </button>
             </div>
@@ -714,26 +714,26 @@
                             <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Rows</label>
                             <input type="number" name="rows" id="editRows" value="{{ old('rows', 3) }}" min="1" max="10"
                                    oninput="updateEditPreview()"
-                                   class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                   class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Slots</label>
                             <input type="number" name="slots_per_row" id="editSlotsPerRow" value="{{ old('slots_per_row', 5) }}" min="1" max="100"
                                    oninput="updateEditPreview()"
-                                   class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                   class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Max/Slot</label>
                             <input type="number" name="max_chickens_per_slot" id="editMaxPerSlot" value="{{ old('max_chickens_per_slot', 4) }}" min="1" max="10"
                                    oninput="updateEditPreview()"
-                                   class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                   class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <input id="editActive" name="is_active" type="checkbox" value="1" class="w-4 h-4 rounded" style="accent-color: #0075de;" {{ old('is_active', true) ? 'checked' : '' }}>
+                        <input id="editActive" name="is_active" type="checkbox" value="1" class="w-4 h-4 rounded" style="accent-color: var(--color-navy);" {{ old('is_active', true) ? 'checked' : '' }}>
                         <label for="editActive" class="text-sm" style="color: #31302e;">Active</label>
                     </div>
 
@@ -746,7 +746,7 @@
                         </div>
                         <div class="flex justify-between text-sm mt-1">
                             <span style="color: #615d59;">Total capacity</span>
-                            <span class="font-semibold" style="color: #0075de;" id="editSummaryCapacity">60 hens</span>
+                            <span class="font-semibold" style="color: var(--color-navy);" id="editSummaryCapacity">60 hens</span>
                         </div>
                     </div>
 
@@ -763,7 +763,7 @@
                     <div class="border-t pt-4" style="border-color: #e6e6e6;">
                         <div class="flex items-center justify-between mb-1">
                             <div class="flex items-center gap-2">
-                                <i data-lucide="scan-line" class="w-4 h-4" style="color: #0075de;"></i>
+                                <i data-lucide="scan-line" class="w-4 h-4" style="color: var(--color-navy);"></i>
                                 <span class="text-xs font-semibold tracking-[0.05em] uppercase" style="color: #615d59;">Counting sensor (IR break beam)</span>
                             </div>
                             <span id="irAvailability" class="text-xs" style="color: #a39e98;"></span>
@@ -778,7 +778,7 @@
                     <div class="border-t pt-4" style="border-color: #e6e6e6;">
                         <div class="flex items-center justify-between mb-1">
                             <div class="flex items-center gap-2">
-                                <i data-lucide="thermometer" class="w-4 h-4" style="color: #0075de;"></i>
+                                <i data-lucide="thermometer" class="w-4 h-4" style="color: var(--color-navy);"></i>
                                 <span class="text-xs font-semibold tracking-[0.05em] uppercase" style="color: #615d59;">Temperature &amp; Humidity sensor (DHT22)</span>
                             </div>
                             <span id="dhtAvailability" class="text-xs" style="color: #a39e98;"></span>
@@ -789,7 +789,7 @@
                         </div>
                         <button type="button" id="addDhtBtn" onclick="addDht22()"
                                 class="mt-2 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
-                                style="color: #0075de; border: 1px solid #0075de;">
+                                style="color: var(--color-navy); border: 1px solid var(--color-navy);">
                             + Add DHT22
                         </button>
                         <p id="dhtLimitMsg" class="hidden text-xs mt-1" style="color: #9b1c24;"></p>
@@ -827,7 +827,7 @@ function filterCage(code) {
     const cageColors = @json(\App\Models\Cage::getColorMap());
     document.querySelectorAll('.cage-tab').forEach(tab => {
         if (tab.dataset.tab === code) {
-            tab.style.borderBottomColor = code === 'all' ? '#002D5E' : (cageColors[code] || '#002D5E');
+            tab.style.borderBottomColor = code === 'all' ? 'var(--color-navy)' : (cageColors[code] || 'var(--color-navy)');
             tab.style.color = '#1f1f1f';
         } else {
             tab.style.borderBottomColor = 'transparent';
@@ -894,7 +894,7 @@ function buildSlotHenListHtml(data, cageCode) {
     // Move All / Remove All buttons
     const ids = data.hens.map(h => h.id).join(',');
     html += '<div class="mt-3 flex items-center gap-2">';
-    html += '<button type="button" onclick="openMoveModal(\'' + ids + '\', ' + data.hens.length + ', \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + (data.hens[0]?.breed || '') + '\')" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors" style="color: #002D5E; border: 1px solid #002D5E; background-color: #ffffff;" onmouseover="this.style.backgroundColor=#f0f7ff" onmouseout="this.style.backgroundColor=#ffffff"><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i> Move All</button>';
+    html += '<button type="button" onclick="openMoveModal(\'' + ids + '\', ' + data.hens.length + ', \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + (data.hens[0]?.breed || '') + '\')" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors" style="color: var(--color-navy); border: 1px solid var(--color-navy); background-color: #ffffff;" onmouseover="this.style.backgroundColor=#f0f7ff" onmouseout="this.style.backgroundColor=#ffffff"><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i> Move All</button>';
     html += '<button type="button" onclick="openRemoveModal(\'' + ids + '\', ' + data.hens.length + ', \'' + cageCode + ' slot ' + data.slot.slot_number + '\', \'' + (data.hens[0]?.breed || '') + '\')" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors" style="color: #9b1c24; border: 1px solid #f0c8cb; background-color: #ffffff;" onmouseover="this.style.backgroundColor=#fbe4e6" onmouseout="this.style.backgroundColor=#ffffff"><i data-lucide="trash-2" class="w-3 h-3"></i> Remove All</button>';
     html += '</div>';
 
@@ -1227,7 +1227,7 @@ function openEditModal(id, cageCode, locationRow, locationCol, rows, slotsPerRow
                     html += '<label class="flex items-center gap-1.5 cursor-pointer">';
                     // Hidden 0 ensures unchecked state is actually posted (item 15 fix)
                     html += '<input type="hidden" name="slots[' + slot.id + '][has_sensor]" value="0">';
-                    html += '<input type="checkbox" class="ir-sensor-box w-4 h-4 rounded" name="slots[' + slot.id + '][has_sensor]" value="1" ' + checked + ' data-slot-id="' + slot.id + '" onchange="updateIrAvailability()" style="accent-color: #0075de;">';
+                    html += '<input type="checkbox" class="ir-sensor-box w-4 h-4 rounded" name="slots[' + slot.id + '][has_sensor]" value="1" ' + checked + ' data-slot-id="' + slot.id + '" onchange="updateIrAvailability()" style="accent-color: var(--color-navy);">';
                     html += '<span class="text-xs" style="color: #615d59;">Sensor</span>';
                     html += '</label>';
                     // Device ID is auto-generated + read-only (item 24)
@@ -1609,10 +1609,10 @@ function renderCageInfoPopupSlotCell(m, s, cellPx) {
         slotBorder = '#e6e6e6';
         slotContent = '<span style="font-size:' + fontSize + ';color:#d1d5db;">—</span>';
     }
-    var sensorDot = isSensor ? '<span class="absolute top-0 right-0 w-1.5 h-1.5 rounded-bl" style="background-color:#0075de;"></span>' : '';
+    var sensorDot = isSensor ? '<span class="absolute top-0 right-0 w-1.5 h-1.5 rounded-bl" style="background-color:var(--color-navy);"></span>' : '';
     return '<button type="button" onclick="expandSlotInPopup(this)" class="slot-mini rounded flex flex-col items-center justify-center relative cursor-pointer transition-colors" data-cage-id="' + m.id + '" data-slot-id="' + s.id + '" data-cage-code="' + m.code.replace(/"/g, '&quot;') + '" data-original-number="' + s.number + '" style="width:' + cell + 'px;height:' + cell + 'px;background-color:' + slotBg + ';border:1px solid ' + slotBorder + ';touch-action:manipulation;min-width:' + cell + 'px;min-height:' + cell + 'px;" title="Slot ' + s.row + '-' + s.col + ': ' + occupancy + ' hens' + (isSensor ? ' (sensor equipped)' : '') + '" aria-label="Slot ' + s.row + '-' + s.col + ', ' + occupancy + ' hens">'
         + sensorDot
-        + '<span class="slot-reorder-number hidden font-bold" style="font-size:' + fontSize + ';color:#002D5E;">' + s.number + '</span>'
+        + '<span class="slot-reorder-number hidden font-bold" style="font-size:' + fontSize + ';color:var(--color-navy);">' + s.number + '</span>'
         + slotContent + '</button>';
 }
 
@@ -1642,7 +1642,7 @@ function renderCageInfoPopupContent(m) {
         + '</div>'
         + '<div class="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">'
         + '<span class="text-sm font-semibold" style="color:' + occupancyColor + ';">' + m.current_occupancy + '/' + (m.total_capacity || '?') + '</span>'
-        + '<a href="' + m.bulk_add_url + '" class="icon-btn labeled" style="color:#0075de;" aria-label="Bulk add hens" title="Add hens"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i><span class="btn-label">Add hens</span></a>'
+        + '<a href="' + m.bulk_add_url + '" class="icon-btn labeled" style="color:var(--color-navy);" aria-label="Bulk add hens" title="Add hens"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i><span class="btn-label">Add hens</span></a>'
         + '<button onclick="flipCageInfoPopup()" class="icon-btn labeled" style="color:#615d59;" aria-label="Show details" title="Details & settings"><i data-lucide="info" class="w-3.5 h-3.5"></i><span class="btn-label">Details</span></button>'
         + '</div>'
         + '</div>';
@@ -1653,7 +1653,7 @@ function renderCageInfoPopupContent(m) {
         + '<div id="popupReorderBar-' + m.id + '" class="hidden mt-2 flex items-center justify-between text-xs" style="color:#615d59;">'
         + '<span>Drag slots to renumber</span>'
         + '<div class="flex items-center gap-2">'
-        + '<button onclick="savePopupReorder(' + m.id + ')" class="px-2 py-1 rounded text-white text-xs font-medium" style="background-color:#002D5E;">Save</button>'
+        + '<button onclick="savePopupReorder(' + m.id + ')" class="px-2 py-1 rounded text-white text-xs font-medium" style="background-color:var(--color-navy);">Save</button>'
         + '<button onclick="cancelPopupReorder(' + m.id + ')" class="px-2 py-1 rounded text-xs" style="background-color:#e6e6e6;">Cancel</button>'
         + '</div>'
         + '</div>'
@@ -1984,7 +1984,7 @@ function cageOverlayHtml(cageId, c) {
     var w = c.width * (TILE_SIZE + TILE_GAP) - TILE_GAP;
     var h = c.height * (TILE_SIZE + TILE_GAP) - TILE_GAP;
     var isSelected = (selectedCageId === cageId);
-    var borderColor = isSelected ? '#002D5E' : c.color;
+    var borderColor = isSelected ? 'var(--color-navy)' : c.color;
     var borderWidth = isSelected ? 3 : 2;
     var shadow = isSelected ? '0 0 0 2px rgba(0,45,94,0.25)' : 'none';
     var btns = '';
@@ -2046,9 +2046,9 @@ if (window.__cageDragTouchEnabled === undefined) {
 function syncCageDragToggleUI(enabled) {
     var btn = document.getElementById('cageDragToggleBtn');
     if (!btn) return;
-    btn.classList.toggle('bg-[#002D5E]', enabled);
+    btn.classList.toggle('bg-navy', enabled);
     btn.classList.toggle('text-white', enabled);
-    btn.classList.toggle('border-[#002D5E]', enabled);
+    btn.classList.toggle('border-navy', enabled);
     btn.classList.toggle('text-[#6B7280]', !enabled);
     btn.classList.toggle('border-[#D9D9D9]', !enabled);
     btn.classList.toggle('hover:bg-[#F5F6F8]', !enabled);
@@ -2807,7 +2807,7 @@ function handleTileClick(e, cageId, cageCode) {
     document.getElementById('clearFilterBtn').classList.remove('hidden');
     document.querySelectorAll('.cage-tab').forEach(function(tab) {
         if (tab.dataset.tab === cageCode) {
-            tab.style.borderBottomColor = '#002D5E';
+            tab.style.borderBottomColor = 'var(--color-navy)';
             tab.style.color = '#1f1f1f';
         } else {
             tab.style.borderBottomColor = 'transparent';
@@ -2858,22 +2858,22 @@ bindStagingInfoButtons();
         ov.id = 'wtOverlay';
         ov.style.cssText = 'position:fixed;inset:0;z-index:90;display:none;pointer-events:none;';
         ov.innerHTML =
-            '<div id="wtSpotlight" style="position:fixed;border-radius:12px;border:3px solid #0075de;background:transparent;transition:all .2s ease;pointer-events:none;z-index:91;"></div>'
+            '<div id="wtSpotlight" style="position:fixed;border-radius:12px;border:3px solid var(--color-navy);background:transparent;transition:all .2s ease;pointer-events:none;z-index:91;"></div>'
             + '<div id="wtDimT" style="position:fixed;left:0;top:0;right:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
             + '<div id="wtDimB" style="position:fixed;left:0;bottom:0;right:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
             + '<div id="wtDimL" style="position:fixed;left:0;top:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
             + '<div id="wtDimR" style="position:fixed;right:0;top:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
             + '<div id="wtTooltip" style="position:fixed;max-width:340px;background:#fff;border:1px solid #e6e6e6;border-radius:14px;padding:16px 18px;box-shadow:0 20px 50px rgba(0,0,0,0.3);z-index:92;pointer-events:none;">'
-            + '<div id="wtStepLabel" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#0075de;margin-bottom:6px;"></div>'
+            + '<div id="wtStepLabel" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--color-navy);margin-bottom:6px;"></div>'
             + '<div id="wtStepText" style="font-size:14px;line-height:1.5;color:#1f1f1f;"></div>'
-            + '<button id="wtNext" style="display:none;margin-top:12px;padding:8px 16px;font-size:12px;font-weight:600;color:#fff;background:#002D5E;border:0;border-radius:8px;cursor:pointer;pointer-events:auto;">Next</button>'
+            + '<button id="wtNext" style="display:none;margin-top:12px;padding:8px 16px;font-size:12px;font-weight:600;color:#fff;background:var(--color-navy);border:0;border-radius:8px;cursor:pointer;pointer-events:auto;">Next</button>'
             + '</div>'
             + '<div id="wtDone" style="display:none;position:fixed;inset:0;z-index:95;background:rgba(15,20,35,0.72);align-items:center;justify-content:center;pointer-events:auto;">'
             + '<div style="max-width:380px;width:calc(100% - 2rem);background:#fff;border-radius:20px;padding:32px 28px;text-align:center;box-shadow:0 30px 70px rgba(0,0,0,0.45);">'
             + '<div style="width:64px;height:64px;margin:0 auto 18px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#e8f5ec;color:#1f6b3a;" id="wtDoneIcon"><i data-lucide="check" style="width:34px;height:34px;"></i></div>'
             + '<div style="font-size:20px;font-weight:700;color:#1f1f1f;" id="wtDoneTitle">Cage setup complete!</div>'
             + '<div style="font-size:14px;color:#6B7280;margin-top:8px;" id="wtDoneText">You created, placed, and reviewed your cage. Great job!</div>'
-            + '<button id="wtDoneBtn" style="margin-top:24px;padding:11px 28px;font-size:14px;font-weight:600;color:#fff;background:#002D5E;border:0;border-radius:10px;cursor:pointer;">Done</button>'
+            + '<button id="wtDoneBtn" style="margin-top:24px;padding:11px 28px;font-size:14px;font-weight:600;color:#fff;background:var(--color-navy);border:0;border-radius:10px;cursor:pointer;">Done</button>'
             + '</div>'
             + '</div>'
             + '<div id="wtSkip" style="position:fixed;top:16px;right:16px;z-index:93;background:#fff;border:1px solid #e6e6e6;color:#615d59;font-size:13px;padding:8px 14px;border-radius:999px;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,0.15);pointer-events:auto;">End tutorial</div>';
@@ -3211,7 +3211,7 @@ function openDeleteModal(id, code) {
         '<div style="background:#f6f5f4;border-radius:8px;padding:12px;margin-bottom:12px;">' +
         '<div style="font-weight:500;margin-bottom:8px;color:#31302e;">Hens in this cage (<span id="delHenCount">…</span> active)</div>' +
         '<label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;color:#615d59;">' +
-        '<input type="radio" name="delHensAction" value="move" checked style="accent-color:#0075de;">' +
+        '<input type="radio" name="delHensAction" value="move" checked style="accent-color:var(--color-navy);">' +
         'Move to unplaced (return to hen inventory)</label>' +
         '<label style="display:flex;align-items:center;gap:8px;color:#615d59;">' +
         '<input type="radio" name="delHensAction" value="delete" style="accent-color:#9b1c24;">' +
@@ -3219,7 +3219,7 @@ function openDeleteModal(id, code) {
         '</div>' +
         '<div style="background:#f6f5f4;border-radius:8px;padding:12px;margin-bottom:12px;">' +
         '<label style="display:flex;align-items:center;gap:8px;color:#615d59;">' +
-        '<input type="checkbox" id="delReturnSensors" checked style="accent-color:#0075de;">' +
+        '<input type="checkbox" id="delReturnSensors" checked style="accent-color:var(--color-navy);">' +
         'Return <span id="delSensorCount">…</span> sensor(s) to inventory</label>' +
         '<p style="font-size:12px;margin-top:4px;margin-left:24px;color:#a39e98;">If unchecked, sensors are deleted with the cage.</p>' +
         '</div>' +
@@ -3227,16 +3227,16 @@ function openDeleteModal(id, code) {
         '<div style="font-weight:500;margin-bottom:8px;color:#31302e;">Preserve historical records</div>' +
         '<p style="font-size:12px;margin-bottom:8px;color:#a39e98;">Checked records survive deletion (FK removed). Unchecked are permanently deleted.</p>' +
         '<label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;color:#615d59;">' +
-        '<input type="checkbox" id="delPreserveProduction" checked style="accent-color:#0075de;">' +
+        '<input type="checkbox" id="delPreserveProduction" checked style="accent-color:var(--color-navy);">' +
         'Egg production logs (<span class="del-log-count" data-type="production">…</span>)</label>' +
         '<label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;color:#615d59;">' +
-        '<input type="checkbox" id="delPreserveMortality" checked style="accent-color:#0075de;">' +
+        '<input type="checkbox" id="delPreserveMortality" checked style="accent-color:var(--color-navy);">' +
         'Mortality records (<span class="del-log-count" data-type="mortality">…</span>)</label>' +
         '<label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;color:#615d59;">' +
-        '<input type="checkbox" id="delPreserveFeed" checked style="accent-color:#0075de;">' +
+        '<input type="checkbox" id="delPreserveFeed" checked style="accent-color:var(--color-navy);">' +
         'Feed consumption logs (<span class="del-log-count" data-type="feed">…</span>)</label>' +
         '<label style="display:flex;align-items:center;gap:8px;color:#615d59;">' +
-        '<input type="checkbox" id="delPreserveEnvironment" checked style="accent-color:#0075de;">' +
+        '<input type="checkbox" id="delPreserveEnvironment" checked style="accent-color:var(--color-navy);">' +
         'Environment logs (<span class="del-log-count" data-type="env">…</span>)</label>' +
         '</div></div>';
     confirmModal(msg, form, 'Delete', 'destructive');

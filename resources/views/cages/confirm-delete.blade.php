@@ -75,22 +75,22 @@
                 <div class="space-y-2">
                     <label class="flex items-center gap-2 text-sm cursor-pointer">
                         <input type="checkbox" name="preserve_production" value="1" {{ old('preserve_production', true) ? 'checked' : '' }}
-                               class="rounded border-gray-300 text-[#0075de] focus:ring-[#0075de]">
+                               class="rounded border-gray-300 text-navy focus:ring-navy">
                         <span style="color: #1f1f1f;">Preserve production logs ({{ $productionLogCount }})</span>
                     </label>
                     <label class="flex items-center gap-2 text-sm cursor-pointer">
                         <input type="checkbox" name="preserve_mortality" value="1" {{ old('preserve_mortality', true) ? 'checked' : '' }}
-                               class="rounded border-gray-300 text-[#0075de] focus:ring-[#0075de]">
+                               class="rounded border-gray-300 text-navy focus:ring-navy">
                         <span style="color: #1f1f1f;">Preserve mortality records ({{ $mortalityCount }})</span>
                     </label>
                     <label class="flex items-center gap-2 text-sm cursor-pointer">
                         <input type="checkbox" name="preserve_feed" value="1" {{ old('preserve_feed', true) ? 'checked' : '' }}
-                               class="rounded border-gray-300 text-[#0075de] focus:ring-[#0075de]">
+                               class="rounded border-gray-300 text-navy focus:ring-navy">
                         <span style="color: #1f1f1f;">Preserve feed consumption logs ({{ $feedLogCount }})</span>
                     </label>
                     <label class="flex items-center gap-2 text-sm cursor-pointer">
                         <input type="checkbox" name="preserve_environment" value="1" {{ old('preserve_environment', true) ? 'checked' : '' }}
-                               class="rounded border-gray-300 text-[#0075de] focus:ring-[#0075de]">
+                               class="rounded border-gray-300 text-navy focus:ring-navy">
                         <span style="color: #1f1f1f;">Preserve environmental logs ({{ $envLogCount }})</span>
                     </label>
                 </div>
@@ -102,7 +102,7 @@
                 <div class="space-y-2">
                     <label class="flex items-center gap-2 text-sm cursor-pointer">
                         <input type="radio" name="hens_action" value="move" {{ old('hens_action', 'move') === 'move' ? 'checked' : '' }}
-                               class="border-gray-300 text-[#0075de] focus:ring-[#0075de]">
+                               class="border-gray-300 text-navy focus:ring-navy">
                         <span style="color: #1f1f1f;">Detach hens (null out cage_slot_id, keep hen records)</span>
                     </label>
                     <label class="flex items-center gap-2 text-sm cursor-pointer">
@@ -117,7 +117,7 @@
             <div class="mb-5">
                 <label class="flex items-center gap-2 text-sm cursor-pointer">
                     <input type="checkbox" name="return_sensors" value="1" {{ old('return_sensors', true) ? 'checked' : '' }}
-                           class="rounded border-gray-300 text-[#0075de] focus:ring-[#0075de]">
+                           class="rounded border-gray-300 text-navy focus:ring-navy">
                     <span style="color: #1f1f1f;">Return sensors to spare inventory</span>
                 </label>
             </div>

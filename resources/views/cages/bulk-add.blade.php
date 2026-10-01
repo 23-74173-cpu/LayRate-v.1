@@ -7,7 +7,7 @@
     {{-- Header --}}
     <div class="flex flex-wrap items-center justify-between gap-2">
         <div class="flex items-center gap-3">
-            <a href="{{ route('chickens.index') }}" class="text-[#6B7280] hover:text-[#002D5E]" aria-label="Back to inventory">
+            <a href="{{ route('chickens.index') }}" class="text-[#6B7280] hover:text-navy" aria-label="Back to inventory">
                 <i data-lucide="arrow-left" class="w-5 h-5"></i>
             </a>
             <h1 class="text-xl font-medium text-[#333333]">Place Unplaced Hens</h1>
@@ -17,7 +17,7 @@
 
     @if($unplacedHens->isEmpty())
     <div class="bg-white rounded-lg border border-[#D9D9D9] p-10 text-center text-sm text-[#9CA3AF]">
-        No unplaced hens available. <a href="{{ route('chickens.index') }}" class="text-[#002D5E] underline">Register new hens</a> first.
+        No unplaced hens available. <a href="{{ route('chickens.index') }}" class="text-navy underline">Register new hens</a> first.
     </div>
     @else
 
@@ -50,18 +50,18 @@
             <div class="flex flex-wrap items-center justify-between gap-2 px-5 py-3"
                  style="background: #F0F4FF; border-bottom: 1px solid #CCDDFF;">
                 <div class="flex flex-wrap items-center gap-3">
-                    <span class="text-sm font-semibold text-[#1D4E8F]">Step 1: Select Hens</span>
+                    <span class="text-sm font-semibold text-info">Step 1: Select Hens</span>
                     <label class="flex items-center gap-1 text-xs text-[#6B7280] cursor-pointer">
                         <input type="checkbox" id="selectAllHens" onchange="toggleSelectAll()"
-                               class="w-3 h-3 rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]">
+                               class="w-3 h-3 rounded border-[#D9D9D9] text-navy focus:ring-navy">
                         Select all
                     </label>
                     <span class="text-xs text-[#6B7280]">
-                        <strong id="henCount" class="text-[#002D5E]">0</strong> selected
+                        <strong id="henCount" class="text-navy">0</strong> selected
                     </span>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
-                    <select id="henBreedFilter" class="border border-[#D9D9D9] rounded px-2 py-1 text-xs min-w-0 max-w-full focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="filterUnplaced()">
+                    <select id="henBreedFilter" class="border border-[#D9D9D9] rounded px-2 py-1 text-xs min-w-0 max-w-full focus:outline-none focus:ring-1 focus:ring-navy" onchange="filterUnplaced()">
                         <option value="">All breeds ({{ $unplacedHens->count() }})</option>
                         @foreach($unplacedBreeds as $b)
                         <option value="{{ $b }}">{{ $b }} ({{ $unplacedBreedCounts[$b] ?? 0 }} available)</option>
@@ -74,7 +74,7 @@
                 @foreach($unplacedHens as $hen)
                 <label class="hen-row flex items-center gap-3 px-4 py-2 hover:bg-[#FAFAFA] text-xs cursor-pointer"
                        data-breed="{{ $hen->breed }}">
-                    <input type="checkbox" class="hen-checkbox w-3.5 h-3.5 rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]"
+                    <input type="checkbox" class="hen-checkbox w-3.5 h-3.5 rounded border-[#D9D9D9] text-navy focus:ring-navy"
                            value="{{ $hen->id }}"
                            onchange="updateHenSelection()">
                     <span class="w-28 font-mono text-[#6B7280]">{{ $hen->chicken_id ?? '—' }}</span>
@@ -88,9 +88,9 @@
 
         {{-- ── Step 2: Choose Cage ── --}}
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <label class="block text-xs font-semibold text-[#1D4E8F] mb-2">Step 2: Choose Cage</label>
+            <label class="block text-xs font-semibold text-info mb-2">Step 2: Choose Cage</label>
             <select name="cage_id" id="cageSelect" required data-slots-url-base="{{ url('cages') }}"
-                    class="w-full max-w-md border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]"
+                    class="w-full max-w-md border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-navy"
                     onchange="loadCageSlots()">
                 <option value="">Select cage...</option>
                 @foreach($cages as $c)
@@ -108,15 +108,15 @@
         {{-- ── Step 3: Choose Mode + Slot Grid ── --}}
         <div id="step3Mode" class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
             <div id="step3ModePicker" class="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3 border-b border-[#D9D9D9]" style="background: #FAFAFA;">
-                <span class="text-xs font-semibold text-[#1D4E8F]">Step 3: Placement Mode</span>
+                <span class="text-xs font-semibold text-info">Step 3: Placement Mode</span>
                 <label class="flex items-center gap-1.5 text-xs cursor-pointer">
                     <input type="radio" name="mode_radio" value="manual" {{ old('mode', 'manual') === 'manual' ? 'checked' : '' }} onchange="switchMode('manual')"
-                           class="w-3.5 h-3.5 text-[#002D5E]">
+                           class="w-3.5 h-3.5 text-navy">
                     Manual slot pick
                 </label>
                 <label class="flex items-center gap-1.5 text-xs cursor-pointer">
                     <input type="radio" name="mode_radio" value="auto" {{ old('mode') === 'auto' ? 'checked' : '' }} onchange="switchMode('auto')"
-                           class="w-3.5 h-3.5 text-[#002D5E]">
+                           class="w-3.5 h-3.5 text-navy">
                     Auto-distribute
                 </label>
             </div>
@@ -124,8 +124,8 @@
             {{-- Placement mode info --}}
             <div class="px-5 py-3 border-b border-[#D9D9D9]" style="background:#F0F4FF;">
                 <div class="flex gap-3 items-start">
-                    <i data-lucide="info" class="w-4 h-4 shrink-0 mt-0.5" style="color:#1D4E8F;"></i>
-                    <div class="text-xs leading-relaxed" style="color:#1D4E8F;">
+                    <i data-lucide="info" class="w-4 h-4 shrink-0 mt-0.5" style="color:var(--color-info);"></i>
+                    <div class="text-xs leading-relaxed" style="color:var(--color-info);">
                         <div class="font-semibold mb-1">Choose a placement mode:</div>
                         <div><strong>Manual slot pick</strong> — you click the exact slot cells where hens go. Click or click-and-drag across cells to select several.</div>
                         <div class="mt-1"><strong>Auto-distribute</strong> — the system spreads the selected hens evenly across the cage's available slots for you.</div>
@@ -138,10 +138,10 @@
                 <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
                     <span class="text-xs font-medium text-[#6B7280] uppercase tracking-wider">Click slots to select</span>
                     <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#9CA3AF]">
-                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded border-2 border-[#002D5E] bg-[#002D5E]/10"></span> selected</span>
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded border-2 border-navy bg-navy/10"></span> selected</span>
                         <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-white border border-[#D9D9D9]"></span> available</span>
                         <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-[#F5F6F8] border border-[#D9D9D9]"></span> occupied</span>
-                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-emerald-500"></span> sensor</span>
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-success"></span> sensor</span>
                     </div>
                 </div>
                 <div id="slotGridContainer" class="flex justify-center">
@@ -155,7 +155,7 @@
                 <div>
                     <label class="block text-xs font-medium text-[#6B7280] mb-1">Hens per slot</label>
                         <input type="number" id="chickensPerSlot" name="chickens_per_slot" min="1" max="10" value="{{ old('chickens_per_slot', 4) }}"
-                               class="w-24 border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]"
+                               class="w-24 border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-navy"
                                oninput="updateAutoSummary()">
                     </div>
                     <div id="autoSummary" class="text-xs text-[#6B7280] pt-5">
@@ -168,9 +168,9 @@
         {{-- ── Summary + Submit ── --}}
         <div class="bg-white rounded-lg border border-[#D9D9D9] px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="flex flex-wrap items-center gap-4 text-sm text-[#6B7280]">
-                <span>Hens: <strong id="summaryHens" class="text-[#002D5E]">0</strong></span>
-                <span>Slots: <strong id="summarySlots" class="text-[#002D5E]">0</strong></span>
-                <span class="text-red-500 hidden" id="summaryError"></span>
+                <span>Hens: <strong id="summaryHens" class="text-navy">0</strong></span>
+                <span>Slots: <strong id="summarySlots" class="text-navy">0</strong></span>
+                <span class="text-danger hidden" id="summaryError"></span>
             </div>
             <div class="grid grid-cols-3 sm:flex sm:items-center gap-2 w-full sm:w-auto">
                 <button type="button" onclick="clearAll()" class="w-full sm:w-auto text-center px-4 py-2 text-sm border border-[#D9D9D9] rounded hover:bg-[#F5F6F8] text-[#6B7280]">
@@ -178,7 +178,7 @@
                 </button>
                 <a href="{{ route('chickens.index') }}" class="w-full sm:w-auto text-center px-4 py-2 text-sm border border-[#D9D9D9] rounded hover:bg-[#F5F6F8]">Cancel</a>
                 <button type="submit" id="submitBtn" disabled
-                        class="w-full sm:w-auto text-center px-5 py-2 text-sm bg-[#002D5E] text-white rounded hover:bg-[#001F42] disabled:opacity-40 disabled:cursor-not-allowed">
+                        class="w-full sm:w-auto text-center px-5 py-2 text-sm bg-navy text-white rounded hover:bg-navy disabled:opacity-40 disabled:cursor-not-allowed">
                     Place Hens
                 </button>
             </div>
@@ -315,7 +315,7 @@
             .catch(err => {
                 slotsLoadFailed = true;
                 console.error('loadCageSlots fetch error:', err);
-                container.innerHTML = '<p class="text-sm text-red-500 py-8 text-center">Failed to load slots (' + err.message + ').</p>';
+                container.innerHTML = '<p class="text-sm text-danger py-8 text-center">Failed to load slots (' + err.message + ').</p>';
                 updateAutoSummary();
             });
     }
@@ -345,7 +345,7 @@
                 const remaining = currentMaxPerSlot - occupancy;
                 const isFull = remaining <= 0;
                 const bgClass = isSensor ? 'bg-emerald-50 border-emerald-200' : (isFull ? 'bg-[#F5F6F8] border-[#E5E7EB]' : 'bg-white border-[#E5E7EB]');
-                const selClass = selectedSlots.has(slot.id) ? 'ring-2 ring-[#002D5E] ring-offset-1 bg-[#002D5E]/10' : '';
+                const selClass = selectedSlots.has(slot.id) ? 'ring-2 ring-navy ring-offset-1 bg-navy/10' : '';
                 const cursorClass = isFull ? 'cursor-not-allowed opacity-50' : 'cursor-pointer';
                 const title = isFull ? 'Slot ' + r + '-' + c + ' (at capacity)' : 'Slot ' + r + '-' + c + ' (' + remaining + ' space)';
 
@@ -353,7 +353,7 @@
                              data-slot-id="${slot.id}"
                              data-remaining="${remaining}"
                              title="${title}">
-                    ${isSensor ? '<div class="absolute top-0 right-0 w-2 h-2 rounded-bl bg-emerald-500"></div>' : ''}
+                    ${isSensor ? '<div class="absolute top-0 right-0 w-2 h-2 rounded-bl bg-success"></div>' : ''}
                     <span class="text-xs font-mono text-[#6B7280]">${slot.slot_number}</span>
                     <span class="text-xs text-[#9CA3AF]">${occupancy}/${currentMaxPerSlot}</span>
                 </div>`;
@@ -399,10 +399,10 @@
         const id = el.dataset.slotId;
         if (selectedSlots.has(id)) {
             selectedSlots.delete(id);
-            el.classList.remove('ring-2', 'ring-[#002D5E]', 'ring-offset-1', 'bg-[#002D5E]/10');
+            el.classList.remove('ring-2', 'ring-navy', 'ring-offset-1', 'bg-navy/10');
         } else {
             selectedSlots.add(id);
-            el.classList.add('ring-2', 'ring-[#002D5E]', 'ring-offset-1', 'bg-[#002D5E]/10');
+            el.classList.add('ring-2', 'ring-navy', 'ring-offset-1', 'bg-navy/10');
         }
         const slotIdsInput = document.getElementById('slotIdsInput');
         if (slotIdsInput) slotIdsInput.value = Array.from(selectedSlots).join(',');
@@ -434,7 +434,7 @@
 
         if (cageSlots.length === 0) {
             if (slotsLoadFailed) {
-                autoSummary.innerHTML = '<span class="text-red-500">Failed to load slot data.</span>';
+                autoSummary.innerHTML = '<span class="text-danger">Failed to load slot data.</span>';
             } else {
                 autoSummary.innerHTML =
                     'Will distribute <strong>' + henCount + '</strong> hens across available slots. <span class="text-[#9CA3AF]">Loading slots...</span>';
@@ -447,7 +447,7 @@
         const available = cageSlots.filter(s => (s.current_occupancy || 0) < maxPerSlot);
 
         if (available.length === 0) {
-            autoSummary.innerHTML = '<span class="text-red-500">No available slots in this cage.</span>';
+            autoSummary.innerHTML = '<span class="text-danger">No available slots in this cage.</span>';
             validateForm();
             return;
         }
@@ -518,7 +518,7 @@
         document.querySelectorAll('.hen-checkbox:checked').forEach(el => el.checked = false);
         selectedSlots.forEach(id => {
             const el = document.querySelector(`[data-slot-id="${id}"]`);
-            if (el) el.classList.remove('ring-2', 'ring-[#002D5E]', 'ring-offset-1', 'bg-[#002D5E]/10');
+            if (el) el.classList.remove('ring-2', 'ring-navy', 'ring-offset-1', 'bg-navy/10');
         });
         selectedSlots.clear();
         document.getElementById('slotIdsInput').value = '';
@@ -552,22 +552,22 @@
         ov.id = 'wt2bOverlay';
         ov.style.cssText = 'position:fixed;inset:0;z-index:90;display:none;pointer-events:none;';
         ov.innerHTML =
-            '<div id="wt2bSpotlight" style="position:fixed;border-radius:12px;border:3px solid #0075de;background:transparent;transition:all .2s ease;pointer-events:none;z-index:91;"></div>'
+            '<div id="wt2bSpotlight" style="position:fixed;border-radius:12px;border:3px solid var(--color-navy);background:transparent;transition:all .2s ease;pointer-events:none;z-index:91;"></div>'
             + '<div id="wt2bDimT" style="position:fixed;left:0;top:0;right:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
             + '<div id="wt2bDimB" style="position:fixed;left:0;bottom:0;right:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
             + '<div id="wt2bDimL" style="position:fixed;left:0;top:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
             + '<div id="wt2bDimR" style="position:fixed;right:0;top:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
             + '<div id="wt2bTooltip" style="position:fixed;max-width:340px;background:#fff;border:1px solid #e6e6e6;border-radius:14px;padding:16px 18px;box-shadow:0 20px 50px rgba(0,0,0,0.3);z-index:92;pointer-events:none;">'
-            + '<div id="wt2bStepLabel" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#0075de;margin-bottom:6px;"></div>'
+            + '<div id="wt2bStepLabel" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--color-navy);margin-bottom:6px;"></div>'
             + '<div id="wt2bStepText" style="font-size:14px;line-height:1.5;color:#1f1f1f;"></div>'
-            + '<button id="wt2bNext" style="display:none;margin-top:12px;padding:8px 16px;font-size:12px;font-weight:600;color:#fff;background:#002D5E;border:0;border-radius:8px;cursor:pointer;pointer-events:auto;">Next</button>'
+            + '<button id="wt2bNext" style="display:none;margin-top:12px;padding:8px 16px;font-size:12px;font-weight:600;color:#fff;background:var(--color-navy);border:0;border-radius:8px;cursor:pointer;pointer-events:auto;">Next</button>'
             + '</div>'
             + '<div id="wt2bDone" style="display:none;position:fixed;inset:0;z-index:95;background:rgba(15,20,35,0.72);align-items:center;justify-content:center;pointer-events:auto;">'
             + '<div style="max-width:380px;width:calc(100% - 2rem);background:#fff;border-radius:20px;padding:32px 28px;text-align:center;box-shadow:0 30px 70px rgba(0,0,0,0.45);">'
             + '<div style="width:64px;height:64px;margin:0 auto 18px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#e8f5ec;color:#1f6b3a;"><i data-lucide="check" style="width:34px;height:34px;"></i></div>'
             + '<div style="font-size:20px;font-weight:700;color:#1f1f1f;">Hens placed!</div>'
             + '<div style="font-size:14px;color:#6B7280;margin-top:8px;">Your hens are now assigned to the selected cage.</div>'
-            + '<button id="wt2bDoneBtn" style="margin-top:24px;padding:11px 28px;font-size:14px;font-weight:600;color:#fff;background:#002D5E;border:0;border-radius:10px;cursor:pointer;">Done</button>'
+            + '<button id="wt2bDoneBtn" style="margin-top:24px;padding:11px 28px;font-size:14px;font-weight:600;color:#fff;background:var(--color-navy);border:0;border-radius:10px;cursor:pointer;">Done</button>'
             + '</div>'
             + '</div>'
             + '<div id="wt2bSkip" style="position:fixed;top:16px;right:16px;z-index:93;background:#fff;border:1px solid #e6e6e6;color:#615d59;font-size:13px;padding:8px 14px;border-radius:999px;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,0.15);pointer-events:auto;">End tutorial</div>';

@@ -18,9 +18,9 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-medium text-[#6B7280] mb-1">Date <span class="text-red-500">*</span></label>
+                    <label class="block text-xs font-medium text-[#6B7280] mb-1">Date <span class="text-danger">*</span></label>
                     <input type="date" name="removal_date" required value="{{ old('removal_date', today()->toDateString()) }}"
-                           class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
+                           class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-navy">
                     <x-input-error name="removal_date" />
                 </div>
 
@@ -33,15 +33,15 @@
                 {{-- Sell/Transfer fields --}}
                 <div id="removalSellFields" class="space-y-3">
                     <div>
-                        <label class="block text-xs font-medium text-[#6B7280] mb-1">Reason <span class="text-red-500">*</span></label>
+                        <label class="block text-xs font-medium text-[#6B7280] mb-1">Reason <span class="text-danger">*</span></label>
                         <input type="text" name="reason" value="{{ old('reason') }}" placeholder="e.g. Sold, Transferred to another farm"
-                               class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
+                               class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-navy">
                         <x-input-error name="reason" />
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-[#6B7280] mb-1">Destination</label>
                         <input type="text" name="destination" value="{{ old('destination') }}" placeholder="e.g. Buyer name, Farm name"
-                               class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
+                               class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-navy">
                         <x-input-error name="destination" />
                     </div>
                 </div>
@@ -49,9 +49,9 @@
                 {{-- Mortality fields --}}
                 <div id="removalMortalityFields" class="hidden space-y-3">
                     <div>
-                        <label class="block text-xs font-medium text-[#6B7280] mb-1">Cause <span class="text-red-500">*</span></label>
+                        <label class="block text-xs font-medium text-[#6B7280] mb-1">Cause <span class="text-danger">*</span></label>
                         <select name="mortality_reason"
-                                class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
+                                class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-navy">
                             <option value="">Select cause...</option>
                             @foreach(['Disease', 'Heat Stress', 'Injury', 'Predator', 'Unknown', 'Other'] as $reason)
                             <option value="{{ $reason }}" {{ old('mortality_reason') === $reason ? 'selected' : '' }}>{{ $reason }}</option>
@@ -65,12 +65,12 @@
                     <label class="block text-xs font-medium text-[#6B7280] mb-1">Notes</label>
                     <x-saved-note-picker category="Hens" target="textarea[name='notes']" />
                     <textarea name="notes" rows="2" placeholder="Optional..."
-                              class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E] resize-none">{{ old('notes') }}</textarea>
+                              class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-navy resize-none">{{ old('notes') }}</textarea>
                     <x-input-error name="notes" />
                 </div>
 
                 <input type="hidden" name="hen_id" id="removalHenId" value="">
-                <div id="removalError" class="hidden text-xs text-red-500"></div>
+                <div id="removalError" class="hidden text-xs text-danger"></div>
             </div>
             <div class="flex gap-3 mt-5">
                 <button type="button" onclick="closeRemovalModal()"

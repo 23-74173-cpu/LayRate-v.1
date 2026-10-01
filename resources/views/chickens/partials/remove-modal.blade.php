@@ -36,7 +36,7 @@
                 {{-- Record as mortality --}}
                 <div class="flex items-center gap-2">
                     <input type="checkbox" name="record_mortality" id="recordMortality" value="1" checked
-                           class="w-4 h-4 text-[#002D5E] rounded border-[#D9D9D9] focus:ring-[#002D5E]"
+                           class="w-4 h-4 text-navy rounded border-[#D9D9D9] focus:ring-navy"
                            onchange="document.getElementById('mortalityFields').classList.toggle('hidden', !this.checked)">
                     <label for="recordMortality" class="text-sm text-[#333]">Record as mortality</label>
                 </div>
@@ -46,7 +46,7 @@
                     <div>
                         <label class="block text-xs font-medium text-[#6B7280] mb-1">Reason</label>
                     <select name="reason" id="removeReason"
-                            class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
+                            class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-navy">
                         <option value="">Select reason...</option>
                         @foreach(['Disease', 'Heat Stress', 'Injury', 'Predator', 'Unknown', 'Other'] as $reason)
                         <option value="{{ $reason }}" {{ old('reason') === $reason ? 'selected' : '' }}>{{ $reason }}</option>
@@ -58,11 +58,11 @@
                         <label class="block text-xs font-medium text-[#6B7280] mb-1">Notes (optional)</label>
                         <x-saved-note-picker category="Mortality" target="#removeNotes" />
                         <textarea name="notes" id="removeNotes" rows="2" placeholder="Additional details..."
-                                  class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E] resize-none">{{ old('notes') }}</textarea>
+                                  class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-navy resize-none">{{ old('notes') }}</textarea>
                     </div>
                 </div>
 
-                <div id="removeError" class="hidden text-xs text-red-500"></div>
+                <div id="removeError" class="hidden text-xs text-danger"></div>
             </div>
 
             {{-- Footer --}}

@@ -12,8 +12,8 @@
     // out of the "Record Transaction" form.
     $editFailed = (bool) session('reopen_edit_finance');
     $addOld = fn ($key, $default = null) => $editFailed ? $default : old($key, $default);
-    $inputClass = 'w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]';
-    $filterClass = 'w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]';
+    $inputClass = 'w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy';
+    $filterClass = 'w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy';
 @endphp
 <div class="space-y-5">
 
@@ -30,7 +30,7 @@
             <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">{{ $hasFilters ? 'For the selected filters' : 'All recorded expenses' }}</div>
         </x-kpi-card>
         <x-kpi-card label="Net Balance" icon="wallet"
-                    cardGradient="{{ $net >= 0 ? 'linear-gradient(135deg,#0075de,#1D4E8F)' : 'linear-gradient(135deg,#dc2626,#9b1c24)' }}" delay="120ms"
+                    cardGradient="{{ $net >= 0 ? 'linear-gradient(135deg,var(--color-navy),var(--color-info))' : 'linear-gradient(135deg,#dc2626,#9b1c24)' }}" delay="120ms"
                     :value="$moneyValue($net, $net < 0)">
             <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">{{ $net >= 0 ? 'Income minus expenses' : 'Expenses are higher than income' }}</div>
         </x-kpi-card>
@@ -93,7 +93,7 @@
             <form method="POST" action="{{ route('finance.store') }}" class="space-y-4" data-finance-form>
                 @csrf
                 <div>
-                    <label for="financeAddType" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TYPE <span class="text-red-500">*</span></label>
+                    <label for="financeAddType" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TYPE <span class="text-danger">*</span></label>
                     <select name="type" id="financeAddType" required data-finance-type class="{{ $inputClass }}">
                         <option value="">Select type…</option>
                         <option value="income" @selected($addOld('type') === 'income')>Income</option>
@@ -102,7 +102,7 @@
                     @unless($editFailed)<x-input-error name="type" />@endunless
                 </div>
                 <div>
-                    <label for="financeAddCategory" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CATEGORY <span class="text-red-500">*</span></label>
+                    <label for="financeAddCategory" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CATEGORY <span class="text-danger">*</span></label>
                     <select name="category" id="financeAddCategory" required data-finance-category class="{{ $inputClass }}">
                         <option value="">Select category…</option>
                         @foreach($categories as $type => $list)
@@ -117,13 +117,13 @@
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label for="financeAddAmount" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">AMOUNT (₱) <span class="text-red-500">*</span></label>
+                        <label for="financeAddAmount" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">AMOUNT (₱) <span class="text-danger">*</span></label>
                         <input type="number" name="amount" id="financeAddAmount" step="0.01" min="0.01" max="99999999.99" required
                                value="{{ $addOld('amount') }}" placeholder="0.00" class="{{ $inputClass }}">
                         @unless($editFailed)<x-input-error name="amount" />@endunless
                     </div>
                     <div>
-                        <label for="financeAddDate" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">DATE <span class="text-red-500">*</span></label>
+                        <label for="financeAddDate" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">DATE <span class="text-danger">*</span></label>
                         <input type="date" name="date" id="financeAddDate" required max="{{ $today }}"
                                value="{{ $addOld('date', $today) }}" class="{{ $inputClass }}">
                         @unless($editFailed)<x-input-error name="date" />@endunless

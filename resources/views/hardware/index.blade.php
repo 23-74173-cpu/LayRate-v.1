@@ -6,26 +6,26 @@
 
     <x-page-header title="Hardware Inventory" subtitle="Manage sensors, relays, and other hardware devices" />
 
-    <x-fab>
+    @push('dock-actions')
         <button type="button" onclick="openAddModal()"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Add Device</span>
-            <div class="w-8 h-8 rounded-full bg-[#2D7D46]/10 flex items-center justify-center">
-                <i data-lucide="plus" class="w-4 h-4 text-[#2D7D46]"></i>
+            <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
+                <i data-lucide="plus" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
-    </x-fab>
+    @endpush
 
     @if(session('new_device_key'))
-    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5">
+    <div class="bg-warning-bg border border-warning-border rounded-xl p-4 mb-5">
         <div class="flex items-start gap-3">
-            <i data-lucide="key-round" class="w-5 h-5 text-amber-700 mt-0.5"></i>
+            <i data-lucide="key-round" class="w-5 h-5 text-warning mt-0.5"></i>
             <div class="flex-1">
-                <p class="text-sm font-medium text-amber-900">New API key for {{ $devices->firstWhere('id', session('new_device_id'))?->name ?? 'device' }}</p>
-                <p class="text-xs text-amber-800 mt-1">Copy this key now. It will not be shown again.</p>
+                <p class="text-sm font-medium text-warning">New API key for {{ $devices->firstWhere('id', session('new_device_id'))?->name ?? 'device' }}</p>
+                <p class="text-xs text-warning mt-1">Copy this key now. It will not be shown again.</p>
                 <div class="mt-2 flex items-center gap-2">
-                    <code class="flex-1 bg-white border border-amber-200 rounded-lg px-3 py-2 text-sm font-mono text-amber-900 break-all">{{ session('new_device_key') }}</code>
-                    <button type="button" onclick="navigator.clipboard.writeText('{{ session('new_device_key') }}')" class="text-xs px-3 py-2 rounded-lg bg-amber-200 text-amber-900 hover:bg-amber-300 transition-colors">Copy</button>
+                    <code class="flex-1 bg-white border border-warning-border rounded-lg px-3 py-2 text-sm font-mono text-ink break-all">{{ session('new_device_key') }}</code>
+                    <button type="button" onclick="navigator.clipboard.writeText('{{ session('new_device_key') }}')" class="text-xs px-3 py-2 rounded-lg bg-warning-border text-warning hover:brightness-95 transition-colors">Copy</button>
                 </div>
             </div>
         </div>
@@ -57,7 +57,7 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Device Type</label>
                     <select name="device_type" id="addDeviceType" required onchange="updateAddAssignment()"
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select type…</option>
                         <option value="IR_breakbeam" {{ old('device_type') === 'IR_breakbeam' ? 'selected' : '' }}>IR Breakbeam</option>
@@ -70,14 +70,14 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Serial Number</label>
                     <input type="text" name="serial_number" value="{{ old('serial_number') }}" required maxlength="100"
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                     <x-input-error name="serial_number" />
                 </div>
                 <div id="addCageSlotGroup" class="hidden">
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Cage Slot</label>
                     <select id="addSlotCageFilter" onchange="filterAddSlots()"
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1 mb-2"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1 mb-2"
                             style="border-color: #e6e6e6; color: #1f1f1f;" aria-label="Filter slots by cage">
                         <option value="">All cages…</option>
                         @foreach($cages as $cage)
@@ -85,7 +85,7 @@
                         @endforeach
                     </select>
                     <select name="cage_slot_id" id="addCageSlot"
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select slot…</option>
                         @foreach($cageSlots as $slot)
@@ -97,7 +97,7 @@
                 <div id="addExtraSlotsGroup" class="hidden">
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Additional Slots <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">— same sensor covers more</span></label>
                     <select name="cage_slot_ids[]" id="addExtraSlots" multiple size="6"
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;" onchange="updateExtraCount('add')">
                         @foreach($cageSlots as $slot)
                         <option value="{{ $slot->id }}" data-cage-id="{{ $slot->cage_id }}">{{ $slot->cage->cage_code }} · Slot {{ $slot->row_number }}-{{ $slot->column_number }}</option>
@@ -111,7 +111,7 @@
                 <div id="addCageGroup" class="hidden">
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Cage</label>
                     <select name="cage_id"
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select cage…</option>
                         @foreach($cages as $cage)
@@ -123,7 +123,7 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Status</label>
                     <select name="status" id="addStatus" required onchange="onAddStatusChange()"
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="active" {{ old('status') === 'active' ? 'selected' : '' }}>Active</option>
                         <option value="spare" {{ old('status') === 'spare' ? 'selected' : '' }}>Spare</option>
@@ -135,13 +135,13 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Installation Date <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
                     <input type="date" name="installation_date" value="{{ old('installation_date') }}"
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Last Calibration <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
                     <input type="date" name="last_calibration_date" value="{{ old('last_calibration_date') }}"
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                 </div>
             </div>
@@ -185,7 +185,7 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Device Type</label>
                     <select name="device_type" id="editDeviceType" required onchange="updateEditAssignment()"
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="IR_breakbeam">IR Breakbeam</option>
                         <option value="DHT22">DHT22 Temp/Humidity</option>
@@ -197,14 +197,14 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Serial Number</label>
                     <input type="text" name="serial_number" id="editSerial" value="{{ old('serial_number', $editItem->serial_number ?? '') }}" required maxlength="100"
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                     <x-input-error name="serial_number" />
                 </div>
                 <div id="editCageSlotGroup" class="hidden">
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Cage Slot</label>
                     <select id="editSlotCageFilter" onchange="filterEditSlots()"
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1 mb-2"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1 mb-2"
                             style="border-color: #e6e6e6; color: #1f1f1f;" aria-label="Filter slots by cage">
                         <option value="">All cages…</option>
                         @foreach($cages as $cage)
@@ -212,7 +212,7 @@
                         @endforeach
                     </select>
                     <select name="cage_slot_id" id="editCageSlot"
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select slot…</option>
                         @foreach($cageSlots as $slot)
@@ -224,7 +224,7 @@
                 <div id="editExtraSlotsGroup" class="hidden">
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Additional Slots <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">— same sensor covers more</span></label>
                     <select name="cage_slot_ids[]" id="editExtraSlots" multiple size="6"
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;" onchange="updateExtraCount('edit')">
                         @foreach($cageSlots as $slot)
                         <option value="{{ $slot->id }}" data-cage-id="{{ $slot->cage_id }}">{{ $slot->cage->cage_code }} · Slot {{ $slot->row_number }}-{{ $slot->column_number }}</option>
@@ -238,7 +238,7 @@
                 <div id="editCageGroup" class="hidden">
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Cage</label>
                     <select name="cage_id" id="editCage"
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select cage…</option>
                         @foreach($cages as $cage)
@@ -250,7 +250,7 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Status</label>
                     <select name="status" id="editStatus" required onchange="onEditStatusChange()"
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="active" {{ old('status', $editItem->status ?? '') === 'active' ? 'selected' : '' }}>Active</option>
                         <option value="spare" {{ old('status', $editItem->status ?? '') === 'spare' ? 'selected' : '' }}>Spare</option>
@@ -262,13 +262,13 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Installation Date <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
                     <input type="date" name="installation_date" id="editInstallDate" value="{{ old('installation_date', $editItem->installation_date ?? '') }}"
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Last Calibration <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
                     <input type="date" name="last_calibration_date" id="editCalDate" value="{{ old('last_calibration_date', $editItem->last_calibration_date ?? '') }}"
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                 </div>
             </div>

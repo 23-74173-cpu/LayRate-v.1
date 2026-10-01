@@ -23,7 +23,7 @@
             $isLowStock = $threshold > 0 && $pool <= $threshold;
             $gradients = [
                 'small'    => 'linear-gradient(135deg,#16a34a,#2D7D46)',
-                'medium'   => 'linear-gradient(135deg,#0075de,#1D4E8F)',
+                'medium'   => 'linear-gradient(135deg,var(--color-navy),var(--color-info))',
                 'large'    => 'linear-gradient(135deg,#d97706,#C2703E)',
                 'jumbo'    => 'linear-gradient(135deg,#8B5CF6,#6B4C8A)',
                 'unsorted' => 'linear-gradient(135deg,#6B7280,#4B5563)',
@@ -81,14 +81,14 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">HARVESTED DATE</label>
                     <input type="date" name="harvested_date" value="{{ now()->toDateString() }}" required
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                     <p class="text-xs mt-1" style="color: #9CA3AF;">Determines which harvest pool eggs are drawn from.</p>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG SIZE</label>
                     <select name="egg_size" id="addStockEggSize" required
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select size…</option>
                         @foreach(['small','medium','large','jumbo','unsorted'] as $sz)
@@ -101,7 +101,7 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG COUNT</label>
                     <input type="number" name="count" id="addStockCount" min="1" placeholder="Enter quantity" required
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                     <p id="addStockPoolHint" class="text-xs mt-1" style="color: #a39e98;">Select a size and source cage to see available pool.</p>
                     <p id="addStockExceedsWarning" class="hidden text-xs mt-1" style="color: #9B1C24;"></p>
@@ -117,25 +117,25 @@
                         <div>
                             <label class="block text-xs text-[#2D7D46] font-medium mb-1">Small</label>
                             <input type="number" name="classify_small" min="0" placeholder="0"
-                                   class="classify-input w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                   class="classify-input w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                         <div>
-                            <label class="block text-xs text-[#1D4E8F] font-medium mb-1">Medium</label>
+                            <label class="block text-xs text-info font-medium mb-1">Medium</label>
                             <input type="number" name="classify_medium" min="0" placeholder="0"
-                                   class="classify-input w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                   class="classify-input w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                         <div>
                             <label class="block text-xs text-[#C2703E] font-medium mb-1">Large</label>
                             <input type="number" name="classify_large" min="0" placeholder="0"
-                                   class="classify-input w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                   class="classify-input w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                         <div>
                             <label class="block text-xs text-[#6B4C8A] font-medium mb-1">Jumbo</label>
                             <input type="number" name="classify_jumbo" min="0" placeholder="0"
-                                   class="classify-input w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                   class="classify-input w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                     </div>
@@ -149,7 +149,7 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">SOURCE CAGE <span class="font-normal normal-case tracking-normal" style="color: #9CA3AF;">— pool scope</span></label>
                     <select name="cage_id" id="stockCageSelect"
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">All Cages (farm-wide pool)</option>
                         @foreach($cages as $cage)
@@ -161,7 +161,7 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">PRODUCTION LOG <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
                     <select name="source_production_log_id" id="stockLogSelect"
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select log…</option>
                     </select>
@@ -172,7 +172,7 @@
                 <button type="button" onclick="closeAddStockModal()"
                         class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">Cancel</button>
                 <button type="submit" id="addStockBtn"
-                        class="flex-1 py-2.5 text-sm font-medium rounded-lg bg-[#002D5E] text-white hover:bg-[#001F42] transition-colors">Add Stock</button>
+                        class="flex-1 py-2.5 text-sm font-medium rounded-lg bg-navy text-white hover:bg-navy transition-colors">Add Stock</button>
             </div>
         </form>
     </div>
@@ -195,7 +195,7 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG SIZE</label>
                     <select name="egg_size" id="editEggSize" required
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="small">Small</option>
                         <option value="medium">Medium</option>
@@ -208,14 +208,14 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG COUNT</label>
                     <input type="number" name="count" id="editEggCount" min="1" required
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                     <x-input-error name="count" />
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">HARVESTED DATE</label>
                     <input type="date" name="harvested_date" id="editHarvestedDate" required
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                     <x-input-error name="harvested_date" />
                 </div>
@@ -254,36 +254,36 @@
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">SMALL (g)</label>
                     <input type="number" name="egg_weight_small" step="0.1" min="1" max="500"
                            value="{{ $eggWeights['small'] }}"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">MEDIUM (g)</label>
                     <input type="number" name="egg_weight_medium" step="0.1" min="1" max="500"
                            value="{{ $eggWeights['medium'] }}"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">LARGE (g)</label>
                     <input type="number" name="egg_weight_large" step="0.1" min="1" max="500"
                            value="{{ $eggWeights['large'] }}"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">JUMBO (g)</label>
                     <input type="number" name="egg_weight_jumbo" step="0.1" min="1" max="500"
                            value="{{ $eggWeights['jumbo'] }}"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">FALLBACK (g)</label>
                     <input type="number" name="egg_weight_fallback" step="0.1" min="1" max="500"
                            value="{{ $eggWeights['fallback'] }}"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                 </div>
             </div>
 
             @if($errors->any())
-            <div class="mt-4 text-xs text-red-500 leading-relaxed">{{ implode('<br>', $errors->all()) }}</div>
+            <div class="mt-4 text-xs text-danger leading-relaxed">{{ implode('<br>', $errors->all()) }}</div>
             @endif
 
             <div class="flex gap-3 mt-5">
@@ -315,13 +315,13 @@
                     <h3 class="text-xs font-medium tracking-[0.05em] uppercase mb-3" style="color: #615d59;">Low-Stock Thresholds</h3>
                     <p class="text-xs text-[#6B7280] mb-4">Minimum available pool per size before alert triggers. Set to 0 to disable.</p>
                     <div class="grid grid-cols-2 gap-4">
-                        @foreach(['small' => '#2D7D46', 'medium' => '#1D4E8F', 'large' => '#C2703E', 'jumbo' => '#6B4C8A', 'unsorted' => '#6B7280'] as $sz => $szColor)
+                        @foreach(['small' => '#2D7D46', 'medium' => 'var(--color-info)', 'large' => '#C2703E', 'jumbo' => '#6B4C8A', 'unsorted' => '#6B7280'] as $sz => $szColor)
                         @php $key = "egg_low_stock_threshold_{$sz}"; $label = $sz === 'unsorted' ? 'Unsorted' : ucfirst($sz); @endphp
                         <div>
                             <label class="block text-xs tracking-wider mb-1.5" style="color: {{ $szColor }}">{{ $label }}</label>
                             <input type="number" name="{{ $key }}" min="0" placeholder="0"
                                    value="{{ $eggStockThresholds[$sz] ?? 0 }}"
-                                   class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                                   class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         </div>
                         @endforeach
                     </div>
@@ -335,13 +335,13 @@
                             <label class="block text-xs tracking-wider text-[#1f6b3a] mb-1.5">Fresh (≤ days)</label>
                             <input type="number" name="egg_freshness_fresh_days" min="1" placeholder="7"
                                    value="{{ $freshnessThresholds['fresh_days'] }}"
-                                   class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                                   class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         </div>
                         <div>
                             <label class="block text-xs tracking-wider text-[#8a5a00] mb-1.5">Aging (≤ days)</label>
                             <input type="number" name="egg_freshness_aging_days" min="1" placeholder="14"
                                    value="{{ $freshnessThresholds['aging_days'] }}"
-                                   class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                                   class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         </div>
                     </div>
                 </div>

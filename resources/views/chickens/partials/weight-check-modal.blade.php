@@ -19,16 +19,16 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-medium text-[#6B7280] mb-1">Date <span class="text-red-500">*</span></label>
+                    <label class="block text-xs font-medium text-[#6B7280] mb-1">Date <span class="text-danger">*</span></label>
                     <input type="date" name="check_date" required value="{{ old('check_date', today()->toDateString()) }}"
-                           class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
+                           class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-navy">
                     <x-input-error name="check_date" />
                 </div>
 
                 <div>
-                    <label class="block text-xs font-medium text-[#6B7280] mb-1">Weight (kg) <span class="text-red-500">*</span></label>
+                    <label class="block text-xs font-medium text-[#6B7280] mb-1">Weight (kg) <span class="text-danger">*</span></label>
                     <input type="number" name="weight_kg" required step="0.01" min="0" max="20" value="{{ old('weight_kg') }}" placeholder="e.g. 1.75"
-                           class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
+                           class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-navy">
                     <x-input-error name="weight_kg" />
                 </div>
 
@@ -36,7 +36,7 @@
                     <label class="block text-xs font-medium text-[#6B7280] mb-1">Notes</label>
                     <x-saved-note-picker category="Hens" target="input[name='notes']" />
                     <input type="text" name="notes" value="{{ old('notes') }}" placeholder="Optional"
-                           class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#002D5E]">
+                           class="w-full border border-[#D9D9D9] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-navy">
                     <x-input-error name="notes" />
                 </div>
 

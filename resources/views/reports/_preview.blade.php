@@ -22,7 +22,7 @@
 
     @foreach($sections as $section)
     <div class="mb-10 {{ !$loop->first ? 'pt-6 border-t border-[#D9D9D9]' : '' }}">
-        <h2 class="text-sm font-bold text-[#102A4C] uppercase tracking-wide mb-4">{{ $section['label'] }}</h2>
+        <h2 class="text-sm font-bold text-navy uppercase tracking-wide mb-4">{{ $section['label'] }}</h2>
 
         @include('reports._summary-pills', ['type' => $section['type'], 'summary' => $section['summary']])
 

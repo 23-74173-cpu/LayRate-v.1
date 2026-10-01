@@ -41,7 +41,9 @@
     (function() {
         var logs = @json($logs->map(fn($l) => ['date'=>$l->log_date->format('Y-m-d'),'hdep'=>(float)$l->hdep,'eggs'=>(int)$l->egg_count]));
         var feedLogs = @json($feedLogs->map(fn($l) => ['date'=>$l->log_date->format('Y-m-d'),'kg'=>(float)$l->feed_consumed_kg]));
-        var cageColor = '{{ $isAll ? '#002D5E' : $cage->color }}';
+        // Canvas cannot resolve CSS var() (and this value is concatenated with
+        // an alpha suffix below), so the farm-wide color stays a literal here.
+        var cageColor = '{{ $isAll ? '#002d5e' : $cage->color }}';
         var isAll = {{ $isAll ? 'true' : 'false' }};
         var cageCode = '{{ $cageCode }}';
 

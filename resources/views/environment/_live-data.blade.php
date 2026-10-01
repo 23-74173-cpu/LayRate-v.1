@@ -26,7 +26,7 @@
             class="col-span-2 sm:col-span-1"
             label="Active Sensors"
             icon="radio"
-            cardGradient="linear-gradient(135deg,#0075de,#1D4E8F)"
+            cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))"
             delay="120ms"
             :value="$activeSensors . ' sensors'"
         >
@@ -134,7 +134,7 @@
     <div class="flex items-center justify-between mb-3">
         <span class="text-sm font-semibold text-[#1f1f1f]">Trend Charts</span>
         <select id="trendRange" onchange="changeTrendRange(this.value)"
-                class="text-xs border border-[#D9D9D9] rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30">
+                class="text-xs border border-[#D9D9D9] rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-navy/30">
             <option value="24h" {{ ($range ?? '24h') === '24h' ? 'selected' : '' }}>24 Hours</option>
             <option value="week" {{ ($range ?? '24h') === 'week' ? 'selected' : '' }}>Week</option>
             <option value="month" {{ ($range ?? '24h') === 'month' ? 'selected' : '' }}>Month</option>

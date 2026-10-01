@@ -88,12 +88,12 @@
         <div class="relative w-full max-w-6xl rounded-2xl p-4 sm:p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
             <div class="flex items-start justify-between gap-3 mb-4 sm:mb-5">
                 <div class="flex items-center gap-3 min-w-0">
-                    <span class="shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center" id="cageSlotsModalIcon" style="background-color: #e8f3fe; color: #0075de;">
+                    <span class="shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center" id="cageSlotsModalIcon" style="background-color: #e8f3fe; color: var(--color-navy);">
                         <i data-lucide="box" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                     </span>
                     <div class="min-w-0">
                         <h2 class="text-lg sm:text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">
-                            Cage <span id="cageSlotsModalTitle" style="color: #0075de;">—</span>
+                            Cage <span id="cageSlotsModalTitle" style="color: var(--color-navy);">—</span>
                         </h2>
                         <p id="cageSlotsModalSubtitle" class="text-xs mt-0.5 truncate" style="color: #9CA3AF;">Select a slot to view its hens</p>
                     </div>
@@ -189,7 +189,7 @@
                                                 title="{{ $activeHenCount === 0 ? 'No hens assigned to this slot' : 'Slot ' . $slot->row_number . '-' . $slot->column_number . ': ' . $activeHenCount . ' hens' }}"
                                                 onclick="showSlotHens({{ $cage->id }}, {{ $slot->id }})">
                                             @if($isSensor)
-                                            <span class="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full" style="background-color: #0075de;" title="Sensor equipped"></span>
+                                            <span class="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full" style="background-color: var(--color-navy);" title="Sensor equipped"></span>
                                             @endif
                                             @if($activeHenCount === 0)
                                             <span class="text-xs text-center leading-tight" style="color: #a39e98;">No<br>hens</span>
@@ -241,7 +241,7 @@
                                         </span>
                                         @if($slot->hasBreakbeam())
                                         <span class="flex items-center gap-0.5 text-emerald-600 whitespace-nowrap">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> sensor
+                                            <span class="w-1.5 h-1.5 rounded-full bg-success"></span> sensor
                                         </span>
                                         @endif
                                         <span class="text-[#9CA3AF] whitespace-nowrap">
@@ -272,7 +272,7 @@
                                     <div class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 border-t border-[#F0F0F0] bg-[#F5F6F8] text-xs font-semibold uppercase tracking-wider text-[#6B7280] sm:min-w-[560px]">
                                         <label class="flex items-center gap-1 cursor-pointer shrink-0" title="Select all in this slot">
                                             <input type="checkbox" onchange="toggleAllInSlot(this)"
-                                                   class="w-3 h-3 rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]">
+                                                   class="w-3 h-3 rounded border-[#D9D9D9] text-navy focus:ring-navy">
                                         </label>
                                         <span data-col="id" class="min-w-0 flex-1 sm:flex-none sm:w-24 shrink sm:shrink-0 truncate col-toggle">Hen ID</span>
                                         <span data-col="breed" class="w-24 shrink-0 truncate col-toggle hidden sm:inline">Breed</span>
@@ -283,7 +283,7 @@
                                     </div>
                                     @foreach($displayHens as $hen)
                                     <div class="flex flex-wrap sm:flex-nowrap items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 border-t border-[#F5F5F5] hover:bg-[#FAFAFA] text-xs sm:min-w-[560px]">
-                                        <input type="checkbox" class="hen-checkbox w-3.5 h-3.5 shrink-0 rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]"
+                                        <input type="checkbox" class="hen-checkbox w-3.5 h-3.5 shrink-0 rounded border-[#D9D9D9] text-navy focus:ring-navy"
                                                value="{{ $hen->id }}"
                                                onclick="updateBulkBar()">
                                         <span data-col="id" class="min-w-0 flex-1 sm:flex-none sm:w-24 shrink sm:shrink-0 truncate font-mono text-[#6B7280] col-toggle">{{ $hen->tag_code ?? $hen->chicken_id ?? '—' }}</span>

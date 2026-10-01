@@ -6,29 +6,29 @@
 
     <x-page-header title="Environment" subtitle="Monitor coop temperature, humidity, and alert thresholds" />
 
-    <x-fab>
+    @push('dock-actions')
         <button type="button" onclick="openEnvFanModal()"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Cooling Fan</span>
-            <div class="w-8 h-8 rounded-full bg-[#6B4C8A]/10 flex items-center justify-center">
-                <i data-lucide="fan" class="w-4 h-4 text-[#6B4C8A]"></i>
+            <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
+                <i data-lucide="fan" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
         <button type="button" onclick="openEnvManualModal()"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Manual Entry</span>
-            <div class="w-8 h-8 rounded-full bg-[#6B4C8A]/10 flex items-center justify-center">
-                <i data-lucide="pen-line" class="w-4 h-4 text-[#6B4C8A]"></i>
+            <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
+                <i data-lucide="pen-line" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
         <button type="button" onclick="openEnvThresholdsModal()"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Configure Thresholds</span>
-            <div class="w-8 h-8 rounded-full bg-[#6B4C8A]/10 flex items-center justify-center">
-                <i data-lucide="sliders" class="w-4 h-4 text-[#6B4C8A]"></i>
+            <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
+                <i data-lucide="sliders" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
-    </x-fab>
+    @endpush
 
     {{-- Page-level tabs: Live Data / Log History --}}
     <x-underline-tabs :tabs="[
@@ -78,28 +78,28 @@
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TEMP MIN (°C)</label>
                     <input type="number" name="temp_min" data-optimal-kind="temp" step="0.5"
                            value="{{ $thresholds['temp_min'] }}"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                     <p class="text-xs mt-1 truncate" data-optimal-hint aria-live="polite"></p>
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TEMP MAX (°C)</label>
                     <input type="number" name="temp_max" data-optimal-kind="temp" step="0.5"
                            value="{{ $thresholds['temp_max'] }}"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                     <p class="text-xs mt-1 truncate" data-optimal-hint aria-live="polite"></p>
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">HUMIDITY MIN (%)</label>
                     <input type="number" name="hum_min" data-optimal-kind="hum" step="1"
                            value="{{ $thresholds['hum_min'] }}"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                     <p class="text-xs mt-1 truncate" data-optimal-hint aria-live="polite"></p>
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">HUMIDITY MAX (%)</label>
                     <input type="number" name="hum_max" data-optimal-kind="hum" step="1"
                            value="{{ $thresholds['hum_max'] }}"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                     <p class="text-xs mt-1 truncate" data-optimal-hint aria-live="polite"></p>
                 </div>
             </div>
@@ -133,14 +133,14 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Temperature (°C)</label>
                     <input type="number" name="temperature_c" id="envOverrideTemp" step="0.1" required
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                     <x-input-error name="temperature_c" />
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Humidity (%)</label>
                     <input type="number" name="humidity_pct" id="envOverrideHum" step="1" required
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                     <x-input-error name="humidity_pct" />
                 </div>
@@ -176,7 +176,7 @@
                     <span id="relayStatusBadge" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold leading-none whitespace-nowrap"
                           style="background:#F0F0F0; color:#615d59; border:1px solid #E6E6E6;">—</span>
                     <span id="relayModeBadge" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold leading-none whitespace-nowrap"
-                          style="background:#eef2fb; color:#002D5E; border:1px solid #d6e0f2;">AUTO</span>
+                          style="background:#eef2fb; color:var(--color-navy); border:1px solid #d6e0f2;">AUTO</span>
                 </div>
                 <div id="relaySubtext" class="text-xs text-[#6B7280] mt-1">Waiting for sensor signal…</div>
             </div>
@@ -189,7 +189,7 @@
                     class="relay-action-btn inline-flex items-center justify-center rounded-lg border border-[#D9D9D9] px-4 py-2 text-sm font-medium text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">Fan OFF</button>
             <button type="button" data-relay-action="auto"
                     class="relay-action-btn inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors"
-                    style="background:#002D5E;">AUTO</button>
+                    style="background:var(--color-navy);">AUTO</button>
         </div>
 
         <div class="flex gap-3 mt-5">
@@ -216,7 +216,7 @@
             <div class="sm:col-span-2">
                 <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color:#615d59;">Cage</label>
                 <select name="cage_id" id="envManualCage" required
-                        class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                        class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                         style="border-color:#e6e6e6;color:#1f1f1f;">
                     <option value="">Select cage…</option>
                     <option value="all" {{ old('cage_id') === 'all' ? 'selected' : '' }}>All Cages</option>
@@ -228,13 +228,13 @@
             <div>
                 <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color:#615d59;">Temperature (°C)</label>
                 <input type="number" name="temperature_c" id="envManualTemp" step="0.1" min="-10" max="60" required
-                       class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                       class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                        style="border-color:#e6e6e6;color:#1f1f1f;">
             </div>
             <div>
                 <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color:#615d59;">Humidity (%)</label>
                 <input type="number" name="humidity_pct" id="envManualHum" step="1" min="0" max="100" required
-                       class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                       class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                        style="border-color:#e6e6e6;color:#1f1f1f;">
             </div>
             <div id="envManualMsg" class="hidden mt-3 text-sm sm:col-span-2"></div>
@@ -242,7 +242,7 @@
                 <button type="button" onclick="closeEnvManualModal()"
                         class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">Cancel</button>
                 <button type="submit" class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white hover:brightness-95 transition-colors"
-                        style="background-color:#002D5E;">
+                        style="background-color:var(--color-navy);">
                     <i data-lucide="save" class="w-4 h-4"></i> Save Reading
                 </button>
             </div>
@@ -264,7 +264,7 @@ function switchEnvTab(tab) {
         var key = btn.getAttribute('onclick').match(/'(\w+)'/)?.[1];
         var isActive = key === tab;
         btn.className = 'pb-2 text-sm font-medium border-b-2 transition-colors ' +
-            (isActive ? 'border-[#002D5E] text-[#002D5E]' : 'border-transparent text-[#6B7280] hover:text-[#333]');
+            (isActive ? 'border-navy text-navy' : 'border-transparent text-[#6B7280] hover:text-[#333]');
     });
     if (tab === 'live') {
         startLivePolling();
@@ -509,7 +509,7 @@ function applyRelayState(state) {
         badge.textContent = 'Safety Block';
         badge.style.background = '#fbe4e6'; badge.style.color = '#9b1c24'; badge.style.borderColor = '#f3cdd0';
     } else if (on) {
-        if (bubble) { bubble.style.background = '#e8f0fb'; bubble.style.color = '#002D5E'; bubble.classList.add('layrate-fan-spinning'); }
+        if (bubble) { bubble.style.background = '#e8f0fb'; bubble.style.color = 'var(--color-navy)'; bubble.classList.add('layrate-fan-spinning'); }
         badge.textContent = 'Fan ON';
         badge.style.background = '#e8f5ec'; badge.style.color = '#1f6b3a'; badge.style.borderColor = '#cfe8d6';
     } else {
@@ -523,7 +523,7 @@ function applyRelayState(state) {
         modeBadge.style.background = '#fbe4e6'; modeBadge.style.color = '#9b1c24'; modeBadge.style.borderColor = '#f3cdd0';
     } else {
         modeBadge.textContent = 'AUTO';
-        modeBadge.style.background = '#eef2fb'; modeBadge.style.color = '#002D5E'; modeBadge.style.borderColor = '#d6e0f2';
+        modeBadge.style.background = '#eef2fb'; modeBadge.style.color = 'var(--color-navy)'; modeBadge.style.borderColor = '#d6e0f2';
     }
 
     if (!online) {
@@ -549,9 +549,9 @@ function paintRelayButtons(activeAction) {
         var action = btn.getAttribute('data-relay-action');
         var active = action === activeAction;
         if (active) {
-            btn.style.background = '#002D5E';
+            btn.style.background = 'var(--color-navy)';
             btn.style.color = '#ffffff';
-            btn.style.borderColor = '#002D5E';
+            btn.style.borderColor = 'var(--color-navy)';
         } else {
             btn.style.background = '#ffffff';
             btn.style.color = '#6B7280';

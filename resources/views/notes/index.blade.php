@@ -11,7 +11,7 @@
         'Hens'        => ['#e8f5ec', '#1f6b3a'],
         'Feed'        => ['#eef6e3', '#3f6212'],
         'Environment' => ['#e3f1f5', '#1e5f74'],
-        'Reports'     => ['#e8eefb', '#1D4E8F'],
+        'Reports'     => ['#e8eefb', 'var(--color-info)'],
     ];
     $editFailed = (bool) session('reopen_edit_note');
     $addOld = fn ($key, $default = null) => $editFailed ? $default : old($key, $default);
@@ -23,20 +23,21 @@
 
     {{-- ── Add Note ── --}}
     <div class="rounded-xl border p-6" style="background-color: #ffffff; border-color: #e6e6e6;">
-        <form method="POST" action="{{ route('notes.store') }}">
+        <form method="POST" action="{{ route('notes.store') }}" novalidate>
             @csrf
             <input type="hidden" name="return_category" value="{{ $category }}">
             <div class="flex flex-col sm:flex-row gap-3">
                 <div class="flex-1">
-                    <textarea name="body" rows="2" required maxlength="{{ \App\Models\Note::MAX_LENGTH }}"
+                    <textarea name="body" id="noteAddBody" rows="2" required maxlength="{{ \App\Models\Note::MAX_LENGTH }}"
                               placeholder="Write a note…"
-                              class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1 resize-y"
+                              data-error-message="Please add a note before saving."
+                              class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1 resize-y"
                               style="border-color: #e6e6e6; color: #1f1f1f;">{{ $addOld('body') }}</textarea>
                     @unless($editFailed)<x-input-error name="body" />@endunless
                 </div>
                 <div class="flex flex-col gap-3 sm:w-48">
                     <select name="category" aria-label="Category"
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         @foreach($categories as $cat)
                         <option value="{{ $cat }}" @selected($addOld('category', $category ?? \App\Models\Note::DEFAULT_CATEGORY) === $cat)>{{ $cat }}</option>
@@ -44,7 +45,7 @@
                     </select>
                     @unless($editFailed)<x-input-error name="category" />@endunless
                     <select name="cage_id" aria-label="Cage tag"
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">No cage tag</option>
                         @foreach($cages as $cage)
@@ -63,14 +64,14 @@
     <nav class="flex flex-wrap gap-2" aria-label="Filter notes by category">
         <a href="{{ route('notes.index') }}"
            class="px-3 py-1.5 rounded-full text-xs font-medium transition-colors border"
-           style="{{ $category === null ? 'background-color:#102A4C;color:#ffffff;border-color:#102A4C;' : 'background-color:#ffffff;color:#615d59;border-color:#e6e6e6;' }}"
+           style="{{ $category === null ? 'background-color:var(--color-navy);color:#ffffff;border-color:var(--color-navy);' : 'background-color:#ffffff;color:#615d59;border-color:#e6e6e6;' }}"
            @if($category === null) aria-current="page" @endif>
             All <span class="opacity-75">({{ $totalNotes }})</span>
         </a>
         @foreach($categories as $cat)
         <a href="{{ route('notes.index', ['category' => $cat]) }}"
            class="px-3 py-1.5 rounded-full text-xs font-medium transition-colors border"
-           style="{{ $category === $cat ? 'background-color:#102A4C;color:#ffffff;border-color:#102A4C;' : 'background-color:#ffffff;color:#615d59;border-color:#e6e6e6;' }}"
+           style="{{ $category === $cat ? 'background-color:var(--color-navy);color:#ffffff;border-color:var(--color-navy);' : 'background-color:#ffffff;color:#615d59;border-color:#e6e6e6;' }}"
            @if($category === $cat) aria-current="page" @endif>
             {{ $cat }} <span class="opacity-75">({{ $categoryCounts[$cat] ?? 0 }})</span>
         </a>
@@ -136,17 +137,18 @@
                     <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
                 </button>
             </div>
-            <form id="noteEditForm" method="POST" action="">
+            <form id="noteEditForm" method="POST" action="" novalidate>
                 @csrf
                 @method('PUT')
                 <input type="hidden" name="return_category" value="{{ $category }}">
                 <textarea name="body" id="noteEditBody" rows="4" required maxlength="{{ \App\Models\Note::MAX_LENGTH }}"
-                          class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1 resize-y mb-3"
+                          data-error-message="Please add a note before saving."
+                          class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1 resize-y mb-3"
                           style="border-color: #e6e6e6; color: #1f1f1f;">{{ old('body') }}</textarea>
                 @if($editFailed)<x-input-error name="body" />@endif
                 <label for="noteEditCategory" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CATEGORY</label>
                 <select name="category" id="noteEditCategory"
-                        class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1 mb-3"
+                        class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1 mb-3"
                         style="border-color: #e6e6e6; color: #1f1f1f;">
                     @foreach($categories as $cat)
                     <option value="{{ $cat }}">{{ $cat }}</option>
@@ -155,7 +157,7 @@
                 @if($editFailed)<x-input-error name="category" />@endif
                 <label for="noteEditCage" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CAGE TAG</label>
                 <select name="cage_id" id="noteEditCage"
-                        class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1 mb-4"
+                        class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1 mb-4"
                         style="border-color: #e6e6e6; color: #1f1f1f;">
                     <option value="">No cage tag</option>
                     @foreach($cages as $cage)
@@ -195,6 +197,9 @@
 </div>
 
 <script>
+// NOTE: inline note validation now lives in the shared /js/form-validation.js
+// module (same message via data-error-message above). Server-side validation
+// in NoteController + lang/en/validation.php stays authoritative.
 function openNoteEdit(id, body, cageId, category) {
     document.getElementById('noteEditForm').action = '/notes/' + id;
     document.getElementById('noteEditBody').value = body;

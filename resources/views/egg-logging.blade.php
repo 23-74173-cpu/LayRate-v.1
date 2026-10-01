@@ -203,7 +203,7 @@
                                     title="{{ $activeHenCount === 0 ? 'No hens assigned to this slot' : '' }}">
 
                                     @if($isSensor)
-                                    <span class="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full" style="background-color: #0075de;"></span>
+                                    <span class="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full" style="background-color: var(--color-navy);"></span>
                                     @endif
 
                                     @if($isLogged)
@@ -279,7 +279,7 @@
                             <div>
                                 <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Date</label>
                                 <input type="date" name="log_date" value="{{ \App\Services\ReportingDateService::reportingDateString() }}" required
-                                       class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                       class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                        style="border-color: #e6e6e6; color: #1f1f1f;">
                             </div>
 
@@ -324,7 +324,7 @@
                                 <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Notes <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
                                 <x-saved-note-picker category="Production" target="textarea[name='notes']" />
                                 <textarea name="notes" rows="2" placeholder="e.g. 2 broken eggs"
-                                          class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1 resize-y"
+                                          class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1 resize-y"
                                           style="border-color: #e6e6e6; color: #1f1f1f;"></textarea>
                             </div>
                         </div>
@@ -340,28 +340,28 @@
                                     <label class="block text-xs text-center mb-1" style="color: #2D7D46;">Small</label>
                                     <input type="number" name="size_small" min="0" value="0"
                                            oninput="checkSizeSum(); validateForm()"
-                                           class="size-input w-full border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                           class="size-input w-full border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                            style="border-color: #e6e6e6; color: #1f1f1f;">
                                 </div>
                                 <div>
-                                    <label class="block text-xs text-center mb-1" style="color: #1D4E8F;">Medium</label>
+                                    <label class="block text-xs text-center mb-1" style="color: var(--color-info);">Medium</label>
                                     <input type="number" name="size_medium" min="0" value="0"
                                            oninput="checkSizeSum(); validateForm()"
-                                           class="size-input w-full border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                           class="size-input w-full border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                            style="border-color: #e6e6e6; color: #1f1f1f;">
                                 </div>
                                 <div>
                                     <label class="block text-xs text-center mb-1" style="color: #C2703E;">Large</label>
                                     <input type="number" name="size_large" min="0" value="0"
                                            oninput="checkSizeSum(); validateForm()"
-                                           class="size-input w-full border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                           class="size-input w-full border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                            style="border-color: #e6e6e6; color: #1f1f1f;">
                                 </div>
                                 <div>
                                     <label class="block text-xs text-center mb-1" style="color: #6B4C8A;">Jumbo</label>
                                     <input type="number" name="size_jumbo" min="0" value="0"
                                            oninput="checkSizeSum(); validateForm()"
-                                           class="size-input w-full border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                                           class="size-input w-full border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                            style="border-color: #e6e6e6; color: #1f1f1f;">
                                 </div>
                             </div>
@@ -415,7 +415,7 @@
                         <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Total Eggs</label>
                         <input type="number" id="tcTotalEggs" min="0" placeholder="0"
                                oninput="validateTotalCageLog()"
-                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                style="border-color: #e6e6e6; color: #1f1f1f;">
                         <p id="tcError" class="hidden text-xs mt-1" style="color: #9b1c24;"></p>
                         <p class="text-xs mt-1" style="color: #a39e98;">Eggs are distributed randomly across slots — every slot gets at least 1 (max per slot = hens in that slot).</p>
@@ -471,13 +471,13 @@
             <div id="overridePinSection">
                 <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Override PIN</label>
                 <input type="password" id="overridePinInput" inputmode="numeric" maxlength="6" autocomplete="off"
-                       class="w-full border rounded-lg px-3 py-2.5 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                       class="w-full border rounded-lg px-3 py-2.5 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                        style="border-color: #e6e6e6; color: #1f1f1f;">
             </div>
             <div id="overridePasswordSection" class="hidden">
                 <p class="text-xs mb-2" style="color: #615d59;">No override PIN set — verify with your login password instead.</p>
                 <input type="password" id="overridePasswordInput"
-                       class="w-full border rounded-lg px-3 py-2.5 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                       class="w-full border rounded-lg px-3 py-2.5 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                        style="border-color: #e6e6e6; color: #1f1f1f;">
             </div>
             <p id="overrideError" class="hidden text-xs mb-3" style="color: #9b1c24;"></p>
@@ -513,7 +513,7 @@
                     </div>
                     <div class="flex justify-between pt-1 border-t" style="border-color: #e6e6e6;">
                         <span style="color: #615d59;">Total eggs to record</span>
-                        <span id="confirmTotalEggs" class="font-semibold" style="color: #0075de;"></span>
+                        <span id="confirmTotalEggs" class="font-semibold" style="color: var(--color-navy);"></span>
                     </div>
                 </div>
                 <p class="text-xs" style="color: #a39e98;">This action will create or update production logs for all selected slots.</p>
@@ -767,7 +767,7 @@
         function clearAllSlotSelections() {
             document.querySelectorAll('.slot-card').forEach(resetSlotStyle);
             document.querySelectorAll('.slot-card').forEach(function(c) {
-                c.classList.remove('ring-2', 'ring-[#0075de]', 'ring-offset-1', 'bg-[#0075de]/10');
+                c.classList.remove('ring-2', 'ring-navy', 'ring-offset-1', 'bg-navy/10');
             });
             selectedSlotIds.clear();
             isMultiSelect = false;
@@ -782,10 +782,10 @@
             var id = el.dataset.slotId;
             if (selectedSlotIds.has(id)) {
                 selectedSlotIds.delete(id);
-                el.classList.remove('ring-2', 'ring-[#0075de]', 'ring-offset-1', 'bg-[#0075de]/10');
+                el.classList.remove('ring-2', 'ring-navy', 'ring-offset-1', 'bg-navy/10');
             } else {
                 selectedSlotIds.add(id);
-                el.classList.add('ring-2', 'ring-[#0075de]', 'ring-offset-1', 'bg-[#0075de]/10');
+                el.classList.add('ring-2', 'ring-navy', 'ring-offset-1', 'bg-navy/10');
             }
             document.getElementById('cageSlotIdsInput').value = Array.from(selectedSlotIds).join(',');
         }
@@ -941,7 +941,7 @@
                 var r = parseInt(el.dataset.row), c = parseInt(el.dataset.col);
                 if (r >= rMin && r <= rMax && c >= cMin && c <= cMax) {
                     selectedSlotIds.add(el.dataset.slotId);
-                    el.classList.add('ring-2', 'ring-[#0075de]', 'ring-offset-1', 'bg-[#0075de]/10');
+                    el.classList.add('ring-2', 'ring-navy', 'ring-offset-1', 'bg-navy/10');
                 }
             });
             document.getElementById('cageSlotIdsInput').value = Array.from(selectedSlotIds).join(',');
@@ -1019,7 +1019,7 @@
             document.querySelectorAll('.cage-overview-card').forEach(function(card) {
                 var isSelected = card.dataset.cageId == cageId;
                 if (isSelected) {
-                    card.style.borderColor = '#0075de';
+                    card.style.borderColor = 'var(--color-navy)';
                     card.style.borderWidth = '2px';
                     card.style.backgroundColor = '#f0f7ff';
                 } else {
@@ -1755,22 +1755,22 @@
         ov.id = 'wt3Overlay';
         ov.style.cssText = 'position:fixed;inset:0;z-index:90;display:none;pointer-events:none;';
         ov.innerHTML =
-            '<div id="wt3Spotlight" style="position:fixed;border-radius:12px;border:3px solid #0075de;background:transparent;transition:all .2s ease;pointer-events:none;z-index:91;"></div>'
+            '<div id="wt3Spotlight" style="position:fixed;border-radius:12px;border:3px solid var(--color-navy);background:transparent;transition:all .2s ease;pointer-events:none;z-index:91;"></div>'
             + '<div id="wt3DimT" style="position:fixed;left:0;top:0;right:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
             + '<div id="wt3DimB" style="position:fixed;left:0;bottom:0;right:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
             + '<div id="wt3DimL" style="position:fixed;left:0;top:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
             + '<div id="wt3DimR" style="position:fixed;right:0;top:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
             + '<div id="wt3Tooltip" style="position:fixed;max-width:340px;background:#fff;border:1px solid #e6e6e6;border-radius:14px;padding:16px 18px;box-shadow:0 20px 50px rgba(0,0,0,0.3);z-index:92;pointer-events:none;">'
-            + '<div id="wt3StepLabel" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#0075de;margin-bottom:6px;"></div>'
+            + '<div id="wt3StepLabel" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--color-navy);margin-bottom:6px;"></div>'
             + '<div id="wt3StepText" style="font-size:14px;line-height:1.5;color:#1f1f1f;"></div>'
-            + '<button id="wt3Next" style="display:none;margin-top:12px;padding:8px 16px;font-size:12px;font-weight:600;color:#fff;background:#002D5E;border:0;border-radius:8px;cursor:pointer;pointer-events:auto;">Next</button>'
+            + '<button id="wt3Next" style="display:none;margin-top:12px;padding:8px 16px;font-size:12px;font-weight:600;color:#fff;background:var(--color-navy);border:0;border-radius:8px;cursor:pointer;pointer-events:auto;">Next</button>'
             + '</div>'
             + '<div id="wt3Done" style="display:none;position:fixed;inset:0;z-index:95;background:rgba(15,20,35,0.72);align-items:center;justify-content:center;pointer-events:auto;">'
             + '<div style="max-width:380px;width:calc(100% - 2rem);background:#fff;border-radius:20px;padding:32px 28px;text-align:center;box-shadow:0 30px 70px rgba(0,0,0,0.45);">'
             + '<div style="width:64px;height:64px;margin:0 auto 18px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#e8f5ec;color:#1f6b3a;"><i data-lucide="check" style="width:34px;height:34px;"></i></div>'
             + '<div style="font-size:20px;font-weight:700;color:#1f1f1f;">Egg record saved!</div>'
             + '<div style="font-size:14px;color:#6B7280;margin-top:8px;">Your daily egg production for this cage slot is logged.</div>'
-            + '<button id="wt3DoneBtn" style="margin-top:24px;padding:11px 28px;font-size:14px;font-weight:600;color:#fff;background:#002D5E;border:0;border-radius:10px;cursor:pointer;">Done</button>'
+            + '<button id="wt3DoneBtn" style="margin-top:24px;padding:11px 28px;font-size:14px;font-weight:600;color:#fff;background:var(--color-navy);border:0;border-radius:10px;cursor:pointer;">Done</button>'
             + '</div>'
             + '</div>'
             + '<div id="wt3Skip" style="position:fixed;top:16px;right:16px;z-index:93;background:#fff;border:1px solid #e6e6e6;color:#615d59;font-size:13px;padding:8px 14px;border-radius:999px;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,0.15);pointer-events:auto;">End tutorial</div>';

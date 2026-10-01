@@ -21,7 +21,7 @@
             <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">{{ ucfirst($groupBy) }} aggregates</div>
         </x-kpi-card>
 
-        <x-kpi-card label="Active Cages" icon="warehouse" cardGradient="linear-gradient(135deg,#0075de,#1D4E8F)" delay="120ms" :value="$byCage->count()">
+        <x-kpi-card label="Active Cages" icon="warehouse" cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))" delay="120ms" :value="$byCage->count()">
             <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">with production records</div>
         </x-kpi-card>
 
@@ -79,7 +79,7 @@
             <a href="{{ route('egg-production-history', ['group_by' => $value]) }}"
                data-turbo-frame="egg-content"
                class="text-xs px-3 py-1 rounded-full border transition-colors {{ $groupBy === $value ? 'font-semibold text-white' : '' }}"
-               style="{{ $groupBy === $value ? 'background-color: #0075de; border-color: #0075de;' : 'background-color: #ffffff; border-color: #e6e6e6; color: #31302e;' }}">
+               style="{{ $groupBy === $value ? 'background-color: var(--color-navy); border-color: var(--color-navy);' : 'background-color: #ffffff; border-color: #e6e6e6; color: #31302e;' }}">
                 {{ $label }}
             </a>
             @endforeach

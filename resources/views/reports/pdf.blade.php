@@ -16,16 +16,16 @@
     .pdf-footer { position: fixed; bottom: -30px; left: 0px; right: 0px; text-align: center; font-size: 8px; color: #9CA3AF; }
     .letterhead { width: 100%; margin-bottom: 4px; }
     .letterhead td { vertical-align: top; }
-    .brand-name { font-weight: bold; color: #102A4C; font-size: 13px; }
+    .brand-name { font-weight: bold; color: var(--color-navy); font-size: 13px; }
     .brand-sub { color: #6B7280; font-size: 9px; }
-    .doc-title { text-align: right; font-weight: bold; color: #102A4C; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+    .doc-title { text-align: right; font-weight: bold; color: var(--color-navy); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
     .doc-range { text-align: right; color: #6B7280; font-size: 9px; margin-top: 2px; }
-    hr.rule { border: none; border-top: 3px solid #102A4C; margin: 10px 0; }
+    hr.rule { border: none; border-top: 3px solid var(--color-navy); margin: 10px 0; }
     .meta-strip { width: 100%; margin-bottom: 14px; font-size: 9px; color: #000000; }
     .meta-strip td { padding-right: 12px; }
     .meta-strip .label { font-weight: bold; color: #000000; }
     .section { margin-bottom: 18px; }
-    .section-title { font-weight: bold; color: #102A4C; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; border-bottom: 1px solid #D9D9D9; padding-bottom: 4px; }
+    .section-title { font-weight: bold; color: var(--color-navy); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; border-bottom: 1px solid #D9D9D9; padding-bottom: 4px; }
     table.summary { width: 100%; margin-bottom: 12px; }
     table.summary td { width: 50%; padding: 2px 12px 2px 0; font-size: 10px; color: #333333; vertical-align: top; }
     .summary-label { font-weight: bold; color: #1f1f1f; }
@@ -49,7 +49,7 @@
         <table class="letterhead">
             <tr>
                 <td style="width:40px;vertical-align:middle;">
-                    <img src="{{ public_path('images/layrate-logo-mark.png') }}" style="width:32px;height:32px;">
+                    <img src="{{ public_path('images/layrate-logo.png') }}" style="width:auto;height:32px;">
                 </td>
                 <td>
                     <div class="brand-name">LayRate Poultry Farm</div>

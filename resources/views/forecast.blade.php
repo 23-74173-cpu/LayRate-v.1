@@ -20,7 +20,7 @@
 
     {{-- ── Forecast KPI Cards — dashboard gradient KPI design ── --}}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <x-kpi-card label="Weeks in month" icon="calendar-range" cardGradient="linear-gradient(135deg,#0075de,#1D4E8F)" delay="0ms" :value="$weeksInMonth" />
+        <x-kpi-card label="Weeks in month" icon="calendar-range" cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))" delay="0ms" :value="$weeksInMonth" />
         <x-kpi-card label="Days in month" icon="calendar-days" cardGradient="linear-gradient(135deg,#8B5CF6,#6B4C8A)" delay="60ms" :value="$daysInMonth" />
         <x-kpi-card label="Forecast days" icon="trending-up" cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)" delay="120ms" :value="count($forecastMap)" />
         <x-kpi-card label="Current week" icon="calendar-check" cardGradient="linear-gradient(135deg,#d97706,#C2703E)" delay="180ms" :value="$calendarToday->weekOfMonth" />
@@ -105,18 +105,18 @@
 
             <div id="syncCountdown" class="mt-5 p-3 rounded-lg text-center" style="background-color:#f0f4ff; border:1px solid #d6e0f2;">
                 <div class="text-[10px] uppercase tracking-wider font-medium mb-1" style="color:#6B7280;">Next automatic sync</div>
-                <div id="syncCountdownTimer" class="text-lg font-bold tabular-nums" style="color:#002D5E;">--:--:--</div>
+                <div id="syncCountdownTimer" class="text-lg font-bold tabular-nums" style="color:var(--color-navy);">--:--:--</div>
             </div>
 
             <div class="mt-6 grid grid-cols-1 gap-3 text-center">
                 <button type="button" id="lockDownloadBtn"
                         class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-white hover:brightness-95 transition-colors"
-                        style="background-color:#002D5E;">
+                        style="background-color:var(--color-navy);">
                     <i data-lucide="download" class="w-4 h-4"></i> Download forecast sheet
                 </button>
                 <button type="button" id="lockInputRecordsBtn"
                         class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors"
-                        style="color:#002D5E; border:1px solid #d6e0f2; background-color:#eef2fb;">
+                        style="color:var(--color-navy); border:1px solid #d6e0f2; background-color:#eef2fb;">
                     <i data-lucide="table" class="w-4 h-4"></i> View input records status
                 </button>
                 <button type="button" id="lockImportBtn"
@@ -185,8 +185,8 @@
         <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-auto overflow-hidden max-h-[85vh] flex flex-col">
             <div class="flex items-center justify-between px-5 py-4 border-b border-[#F0F0F0]">
                 <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-lg bg-[#002D5E]/10 flex items-center justify-center">
-                        <i data-lucide="database" class="w-4 h-4 text-[#002D5E]"></i>
+                    <div class="w-8 h-8 rounded-lg bg-navy/10 flex items-center justify-center">
+                        <i data-lucide="database" class="w-4 h-4 text-navy"></i>
                     </div>
                     <h3 class="text-base font-semibold text-[#333333]">Forecast Input Records</h3>
                 </div>
@@ -196,7 +196,7 @@
             </div>
             <div class="p-5 overflow-y-auto">
                 <div id="inputRecordsContent" class="text-center py-8 text-[#6B7280] text-sm">
-                    <i data-lucide="loader" class="w-6 h-6 mx-auto mb-2 animate-spin" style="color:#0075de;"></i>
+                    <i data-lucide="loader" class="w-6 h-6 mx-auto mb-2 animate-spin" style="color:var(--color-navy);"></i>
                     Loading records…
                 </div>
             </div>
@@ -211,8 +211,8 @@
     <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-auto overflow-hidden">
         <div class="flex items-center justify-between px-5 py-4 border-b border-[#F0F0F0]">
             <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-lg bg-[#002D5E]/10 flex items-center justify-center">
-                    <i data-lucide="download" class="w-4 h-4 text-[#002D5E]"></i>
+                <div class="w-8 h-8 rounded-lg bg-navy/10 flex items-center justify-center">
+                    <i data-lucide="download" class="w-4 h-4 text-navy"></i>
                 </div>
                 <h3 class="text-base font-semibold text-[#333333]">Download input sheet</h3>
             </div>
@@ -233,15 +233,15 @@
                     <label for="templateStartDate" class="block text-sm text-[#333333] mb-1">Start date</label>
                     <input type="date" name="start_date" id="templateStartDate" required
                            value="{{ $defaultStartDate }}"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#002D5E]">
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-navy">
                 </div>
                 <div class="mb-4">
                     <label for="templateEndDate" class="block text-sm text-[#333333] mb-1">End date</label>
                     <input type="date" name="end_date" id="templateEndDate" required
                            value="{{ $defaultEndDate }}"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#002D5E]">
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-navy">
                 </div>
-                <button type="submit" class="w-full bg-[#002D5E] text-white py-3 rounded-lg text-sm font-medium hover:bg-[#001F42] transition-colors flex items-center justify-center gap-2">
+                <button type="submit" class="w-full bg-navy text-white py-3 rounded-lg text-sm font-medium hover:bg-navy transition-colors flex items-center justify-center gap-2">
                     <i data-lucide="download" class="w-5 h-5 shrink-0"></i>
                     <span>Download sheet</span>
                 </button>
@@ -253,66 +253,56 @@
 {{-- Forecast generation loading overlay --}}
 <div id="forecastLoadingOverlay" class="fixed inset-0 min-h-screen min-h-[100dvh] bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
     <div class="bg-white rounded-xl shadow-xl p-8 max-w-sm w-full mx-4 text-center">
-        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#002D5E]/10 mb-4">
-            <svg class="animate-spin h-6 w-6 text-[#002D5E]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-navy/10 mb-4">
+            <svg class="animate-spin h-6 w-6 text-navy" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
         </div>
         <h3 class="text-lg font-semibold text-[#333333] mb-1">Generating Forecast</h3>
         <p class="text-sm text-[#6B7280] mb-4">Please wait while the model trains and produces predictions...</p>
-        <p id="forecastStatusText" class="text-xs text-[#002D5E] font-medium mb-2 h-4">Loading historical data...</p>
+        <p id="forecastStatusText" class="text-xs text-navy font-medium mb-2 h-4">Loading historical data...</p>
         <div class="w-full bg-[#F0F0F0] rounded-full h-2.5 overflow-hidden">
-            <div id="forecastProgressBar" class="bg-[#002D5E] h-2.5 rounded-full" style="width: 0%"></div>
+            <div id="forecastProgressBar" class="bg-navy h-2.5 rounded-full" style="width: 0%"></div>
         </div>
         <p id="forecastProgressText" class="text-xs text-[#6B7280] mt-2">0%</p>
     </div>
 </div>
 
-{{-- Floating Action Button --}}
-<div class="fixed bottom-6 right-3 z-40 flex flex-col items-end gap-3 pointer-events-none">
-    {{-- FAB Menu --}}
-    <div id="fabMenu" class="flex flex-col items-end gap-2 mb-1 mr-2 transition-all duration-200 opacity-0 invisible translate-y-4 pointer-events-auto">
+{{-- Floating actions live in the global dock (same buttons, same handlers) --}}
+@push('dock-actions')
         <button type="button" id="fabDownloadBtn" class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Download input sheet</span>
-            <div class="w-8 h-8 rounded-full bg-[#002D5E]/10 flex items-center justify-center">
-                <i data-lucide="download" class="w-4 h-4 text-[#002D5E]"></i>
+            <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
+                <i data-lucide="download" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
         <a href="{{ route('forecast.input-records.download') }}" data-turbo="false"
            class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Download Production Data</span>
-            <div class="w-8 h-8 rounded-full bg-[#C2703E]/10 flex items-center justify-center">
-                <i data-lucide="database" class="w-4 h-4 text-[#C2703E]"></i>
+            <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
+                <i data-lucide="database" class="w-4 h-4 text-navy"></i>
             </div>
         </a>
         <button type="button" id="fabInputRecordsBtn" class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>View input records status</span>
-            <div class="w-8 h-8 rounded-full bg-[#0075de]/10 flex items-center justify-center">
-                <i data-lucide="table" class="w-4 h-4 text-[#0075de]"></i>
+            <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
+                <i data-lucide="table" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
         <button type="button" id="fabImportBtn" class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Import production data</span>
-            <div class="w-8 h-8 rounded-full bg-[#2D7D46]/10 flex items-center justify-center">
-                <i data-lucide="upload" class="w-4 h-4 text-[#2D7D46]"></i>
+            <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
+                <i data-lucide="upload" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
         <button type="button" id="fabExportBtn" class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Export Forecast Report</span>
-            <div class="w-8 h-8 rounded-full bg-[#6B4C8A]/10 flex items-center justify-center">
-                <i data-lucide="file-down" class="w-4 h-4 text-[#6B4C8A]"></i>
+            <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
+                <i data-lucide="file-down" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
-    </div>
-
-    {{-- FAB Toggle --}}
-    <button type="button" id="fabToggle"
-        class="w-16 h-12 rounded-full bg-surface text-ink border border-hairline shadow-soft hover:bg-canvas-soft transition-colors flex items-center justify-center flex-shrink-0 pointer-events-auto"
-        aria-label="Open menu" aria-expanded="false">
-        <i data-lucide="plus" id="fabIcon" class="w-6 h-6 transition-transform duration-200 ease-out"></i>
-    </button>
-</div>
+@endpush
 
 {{-- Import Modal --}}
 <div id="importModal" class="fixed inset-0 min-h-screen min-h-[100dvh] bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
@@ -349,7 +339,7 @@
                             class="w-full bg-transparent border-0 p-0 text-inherit resize-none focus:ring-0 focus:outline-none select-all"
                         ></textarea>
                         <button type="button" id="copyImportFeedbackBtn"
-                            class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[#002D5E] hover:text-[#001b3d]">
+                            class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-navy hover:text-[#001b3d]">
                             <i data-lucide="copy" class="w-3.5 h-3.5"></i>
                             <span>Copy message</span>
                         </button>
@@ -416,19 +406,19 @@
 
                     {{-- Invalid rows detail --}}
                     <div id="previewInvalidDetail" class="hidden mb-3">
-                        <div class="rounded-lg border border-amber-200 bg-amber-50 overflow-hidden">
-                            <div class="px-4 py-2.5 border-b border-amber-200">
-                                <p class="text-xs font-semibold text-amber-800 uppercase tracking-wide">Skipped rows</p>
+                        <div class="rounded-lg border border-warning-border bg-warning-bg overflow-hidden">
+                            <div class="px-4 py-2.5 border-b border-warning-border">
+                                <p class="text-xs font-semibold text-warning uppercase tracking-wide">Skipped rows</p>
                             </div>
                             <div class="max-h-40 overflow-y-auto">
                                 <table class="w-full text-xs">
-                                    <thead class="bg-amber-50 sticky top-0">
+                                    <thead class="bg-warning-bg sticky top-0">
                                         <tr>
-                                            <th class="px-4 py-1.5 text-left font-medium text-amber-800">Row</th>
-                                            <th class="px-4 py-1.5 text-left font-medium text-amber-800">Reason</th>
+                                            <th class="px-4 py-1.5 text-left font-medium text-warning">Row</th>
+                                            <th class="px-4 py-1.5 text-left font-medium text-warning">Reason</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="previewInvalidRowsTable" class="divide-y divide-amber-100"></tbody>
+                                    <tbody id="previewInvalidRowsTable" class="divide-y divide-warning-border"></tbody>
                                 </table>
                             </div>
                         </div>
@@ -535,40 +525,13 @@
     if (window.__layrateForecastInitialized) return;
     window.__layrateForecastInitialized = true;
 
+    // FAB menu now lives in the global dock (#dockFabMenu); the shared
+    // delegated .fab-toggle handler in layouts/app drives it. This bridge
+    // keeps existing toggleFab() call sites working with identical results.
     function toggleFab() {
-        const fabMenu = document.getElementById('fabMenu');
-        const fabIcon = document.getElementById('fabIcon');
-        const fabToggle = document.getElementById('fabToggle');
-        if (!fabMenu) return;
-        const isOpen = !fabMenu.classList.contains('invisible');
-
-        if (isOpen) {
-            fabMenu.classList.add('invisible', 'opacity-0', 'translate-y-4');
-            fabMenu.classList.remove('opacity-100', 'translate-y-0');
-            if (fabIcon) fabIcon.style.transform = 'rotate(0deg)';
-
-            if (fabToggle) {
-                fabToggle.setAttribute('aria-expanded', 'false');
-                fabToggle.setAttribute('aria-label', 'Open menu');
-            }
-        } else {
-            fabMenu.classList.remove('invisible', 'opacity-0', 'translate-y-4');
-            fabMenu.classList.add('opacity-100', 'translate-y-0');
-            if (fabIcon) fabIcon.style.transform = 'rotate(45deg)';
-
-            if (fabToggle) {
-                fabToggle.setAttribute('aria-expanded', 'true');
-                fabToggle.setAttribute('aria-label', 'Close menu');
-            }
-        }
+        const toggle = document.querySelector('#quickDock .fab-toggle');
+        if (toggle) toggle.click();
     }
-
-    document.addEventListener('click', function() {
-        const m = document.getElementById('fabMenu');
-        if (m && !m.classList.contains('invisible')) {
-            toggleFab();
-        }
-    });
 
     var _forecastIsSubmitting = false;
 
@@ -1183,10 +1146,11 @@
             });
         }
 
-        // ── FAB & Import Modal ──
-        const fabToggle = document.getElementById('fabToggle');
-        const fabMenu = document.getElementById('fabMenu');
-        const fabIcon = document.getElementById('fabIcon');
+        // ── FAB & Import Modal ── (toggle/menu live in the global dock;
+        // open/close handled by the shared delegated handler)
+        const fabToggle = document.querySelector('#quickDock .fab-toggle');
+        const fabMenu = document.getElementById('dockFabMenu');
+        const fabIcon = document.querySelector('#quickDock .fab-icon');
         const importModal = document.getElementById('importModal');
         const fabImportBtn = document.getElementById('fabImportBtn');
         const closeImportModalBtn = document.getElementById('closeImportModal');
@@ -1242,16 +1206,8 @@
             if (downloadTemplateModal) downloadTemplateModal.style.display = 'none';
         }
 
-        if (fabToggle && fabMenu) {
-            fabToggle.addEventListener('click', function(e) {
-                e.stopPropagation();
-                toggleFab();
-            });
-
-            fabMenu.addEventListener('click', function(e) {
-                e.stopPropagation();
-            });
-        }
+        // Toggle + outside-close are handled by the shared delegated
+        // .fab-toggle handler in layouts/app (same behavior as before).
 
         if (fabImportBtn) {
             fabImportBtn.addEventListener('click', function() {
@@ -1280,7 +1236,7 @@
             if (!inputRecordsModal) return;
             inputRecordsModal.style.display = 'flex';
             if (inputRecordsContent) {
-                inputRecordsContent.innerHTML = '<div class="text-center py-8 text-[#6B7280] text-sm"><i data-lucide="loader" class="w-6 h-6 mx-auto mb-2 animate-spin" style="color:#0075de;"></i>Loading records…</div>';
+                inputRecordsContent.innerHTML = '<div class="text-center py-8 text-[#6B7280] text-sm"><i data-lucide="loader" class="w-6 h-6 mx-auto mb-2 animate-spin" style="color:var(--color-navy);"></i>Loading records…</div>';
                 if (window.lucide) lucide.createIcons();
             }
             fetch('{{ route("forecast.input-records") }}', { headers: { 'Accept': 'application/json' } })
@@ -1305,16 +1261,16 @@
             var rows = data.rows || [];
             var perCage = s.per_cage || [];
 
-            var html = '<div class="mb-4 p-3 rounded-lg flex items-start gap-2 text-xs" style="background-color:#eef2fb; color:#002D5E; border:1px solid #d6e0f2;">'
+            var html = '<div class="mb-4 p-3 rounded-lg flex items-start gap-2 text-xs" style="background-color:#eef2fb; color:var(--color-navy); border:1px solid #d6e0f2;">'
                 + '<i data-lucide="info" class="w-4 h-4 shrink-0 mt-0.5"></i>'
                 + '<span>The system fills this table automatically each day (after midnight). Every recorded production day is added so the forecast has enough history.</span>'
                 + '</div>';
 
             html += '<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4 text-center">'
-                + '<div class="bg-[#F5F6F8] rounded-lg p-3"><div class="text-lg font-bold text-[#002D5E]">' + (s.total_records ?? 0) + '</div><div class="text-[10px] uppercase tracking-wider text-[#6B7280]">Records</div></div>'
-                + '<div class="bg-[#F5F6F8] rounded-lg p-3"><div class="text-lg font-bold text-[#002D5E]">' + (s.distinct_days ?? 0) + '</div><div class="text-[10px] uppercase tracking-wider text-[#6B7280]">Days</div></div>'
-                + '<div class="bg-[#F5F6F8] rounded-lg p-3"><div class="text-sm font-bold text-[#002D5E]">' + (s.min_date ?? '—') + '</div><div class="text-[10px] uppercase tracking-wider text-[#6B7280]">From</div></div>'
-                + '<div class="bg-[#F5F6F8] rounded-lg p-3"><div class="text-sm font-bold text-[#002D5E]">' + (s.max_date ?? '—') + '</div><div class="text-[10px] uppercase tracking-wider text-[#6B7280]">To</div></div>'
+                + '<div class="bg-[#F5F6F8] rounded-lg p-3"><div class="text-lg font-bold text-navy">' + (s.total_records ?? 0) + '</div><div class="text-[10px] uppercase tracking-wider text-[#6B7280]">Records</div></div>'
+                + '<div class="bg-[#F5F6F8] rounded-lg p-3"><div class="text-lg font-bold text-navy">' + (s.distinct_days ?? 0) + '</div><div class="text-[10px] uppercase tracking-wider text-[#6B7280]">Days</div></div>'
+                + '<div class="bg-[#F5F6F8] rounded-lg p-3"><div class="text-sm font-bold text-navy">' + (s.min_date ?? '—') + '</div><div class="text-[10px] uppercase tracking-wider text-[#6B7280]">From</div></div>'
+                + '<div class="bg-[#F5F6F8] rounded-lg p-3"><div class="text-sm font-bold text-navy">' + (s.max_date ?? '—') + '</div><div class="text-[10px] uppercase tracking-wider text-[#6B7280]">To</div></div>'
                 + '</div>';
 
             if (perCage.length > 0) {
@@ -1504,7 +1460,7 @@
             })
             .catch(function(err) {
                 console.error('Forecast export error:', err);
-                alert(err.message || 'Export failed. Please try again.');
+                if (window.showNotification) window.showNotification(err.message || 'Export failed. Please try again.', 'error');
             })
             .finally(function() {
                 hideExportLoading();

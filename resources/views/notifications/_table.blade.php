@@ -22,7 +22,7 @@
                             @endif
                             <span class="text-xs" style="color: #a39e98;">· {{ $alert->triggered_at->diffForHumans() }}</span>
                             @if(!$alert->is_read)
-                            <span class="w-1.5 h-1.5 rounded-full bg-[#0075de]"></span>
+                            <span class="w-1.5 h-1.5 rounded-full bg-navy"></span>
                             @endif
                         </div>
                         <p class="text-sm mt-0.5" style="color: #1f1f1f;">{{ $alert->message }}</p>
@@ -31,7 +31,7 @@
                             @if(!$alert->is_read)
                             <form method="POST" action="{{ route('alerts.read', $alert) }}" class="inline" data-turbo="false">
                                 @csrf
-                                <button type="submit" class="text-xs font-medium hover:underline" style="color: #0075de;">Mark read</button>
+                                <button type="submit" class="text-xs font-medium hover:underline" style="color: var(--color-navy);">Mark read</button>
                             </form>
                             @else
                             <span class="text-xs" style="color: #6B7280;">Read</span>

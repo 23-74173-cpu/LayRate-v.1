@@ -36,7 +36,7 @@
             .no-print { display: none; }
         }
         .no-print { margin-top: 16px; }
-        .no-print button { padding: 8px 20px; font-size: 14px; font-weight: 500; border: none; border-radius: 6px; background-color: #0075de; color: #fff; cursor: pointer; }
+        .no-print button { padding: 8px 20px; font-size: 14px; font-weight: 500; border: none; border-radius: 6px; background-color: var(--color-navy); color: #fff; cursor: pointer; }
         .no-print button:hover { opacity: 0.85; }
     </style>
 </head>

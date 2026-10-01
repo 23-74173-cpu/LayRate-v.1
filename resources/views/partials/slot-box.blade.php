@@ -24,7 +24,7 @@ $primaryHen = $slot->primaryHen();
     {{-- Normal view --}}
     <div class="absolute inset-0 flex flex-col items-center justify-center transition-opacity group-hover:opacity-0">
         @if($isSensor)
-            <div class="absolute top-0 right-0 w-2 h-2 rounded-bl bg-emerald-500"></div>
+            <div class="absolute top-0 right-0 w-2 h-2 rounded-bl bg-success"></div>
         @endif
         <span class="text-xs font-mono text-[#6B7280]">{{ $slotNumber }}</span>
         @if($primaryHen)

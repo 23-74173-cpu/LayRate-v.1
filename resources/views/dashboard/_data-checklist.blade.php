@@ -6,7 +6,7 @@
             'label' => 'Eggs',
             'icon'  => 'egg',
             'route' => route('eggs.logging'),
-            'color' => '#0075de',
+            'color' => 'var(--color-navy)',
             'bg'    => '#e8f4fd',
         ],
         [

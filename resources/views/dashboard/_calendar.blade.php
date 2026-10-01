@@ -26,7 +26,7 @@
     {{-- Month / Year header with navigation --}}
     <div class="mb-5">
         <div class="flex items-center gap-2 mb-3">
-            <span class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: #e8f3fe; color: #0075de;">
+            <span class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: #e8f3fe; color: var(--color-navy);">
                 <i data-lucide="calendar-days" class="w-4 h-4"></i>
             </span>
             <div class="text-sm font-semibold tracking-[0.125px] uppercase text-[#6B7280]">Daily Egg Logs</div>
@@ -46,7 +46,7 @@
                 @endforeach
                 <div class="relative">
                     <select name="cage" onchange="this.form.requestSubmit()" aria-label="Filter by cage"
-                            class="appearance-none cursor-pointer rounded-lg border border-[#D9D9D9] bg-white py-1.5 pl-3 pr-8 text-sm font-semibold text-[#333333] shadow-sm transition-colors hover:border-[#002D5E]/40 hover:bg-[#F5F6F8] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30">
+                            class="appearance-none cursor-pointer rounded-lg border border-[#D9D9D9] bg-white py-1.5 pl-3 pr-8 text-sm font-semibold text-[#333333] shadow-sm transition-colors hover:border-navy/40 hover:bg-[#F5F6F8] focus:outline-none focus:ring-2 focus:ring-navy/30">
                         <option value="">All Cages</option>
                         @foreach($cageOptions as $c)
                         <option value="{{ $c->cage_code }}" {{ $cageCode === $c->cage_code ? 'selected' : '' }}>{{ $c->cage_code }}</option>
@@ -55,7 +55,7 @@
                 </div>
                 <div class="relative">
                     <select name="month" onchange="this.form.requestSubmit()" aria-label="Select month"
-                            class="appearance-none cursor-pointer rounded-lg border border-[#D9D9D9] bg-white py-1.5 px-4 text-center text-sm font-semibold text-[#333333] shadow-sm transition-colors hover:border-[#002D5E]/40 hover:bg-[#F5F6F8] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30">
+                            class="appearance-none cursor-pointer rounded-lg border border-[#D9D9D9] bg-white py-1.5 px-4 text-center text-sm font-semibold text-[#333333] shadow-sm transition-colors hover:border-navy/40 hover:bg-[#F5F6F8] focus:outline-none focus:ring-2 focus:ring-navy/30">
                         @foreach(range(1, 12) as $m)
                         <option value="{{ $m }}" {{ $calendarMonth->month == $m ? 'selected' : '' }}>{{ $months[$m - 1] }}</option>
                         @endforeach
@@ -63,7 +63,7 @@
                 </div>
                 <div class="relative">
                     <select name="year" onchange="this.form.requestSubmit()" aria-label="Select year"
-                            class="appearance-none cursor-pointer rounded-lg border border-[#D9D9D9] bg-white py-1.5 px-4 min-w-24 text-center text-sm font-semibold text-[#333333] shadow-sm transition-colors hover:border-[#002D5E]/40 hover:bg-[#F5F6F8] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30">
+                            class="appearance-none cursor-pointer rounded-lg border border-[#D9D9D9] bg-white py-1.5 px-4 min-w-24 text-center text-sm font-semibold text-[#333333] shadow-sm transition-colors hover:border-navy/40 hover:bg-[#F5F6F8] focus:outline-none focus:ring-2 focus:ring-navy/30">
                         @foreach($yearOptions as $y)
                         <option value="{{ $y }}" {{ $calendarMonth->year == $y ? 'selected' : '' }}>{{ $y }}</option>
                         @endforeach
@@ -178,7 +178,7 @@
                             if (! $cell['currentMonth']) {
                                 $dayClasses = $baseClasses . ' border-[#F0F0F0] bg-[#F9F9F7] opacity-60';
                             } elseif ($cell['isToday']) {
-                                $dayClasses = $baseClasses . ' border-[#002D5E] bg-[#002D5E]/5';
+                                $dayClasses = $baseClasses . ' border-navy bg-navy/5';
                             } elseif ($hasLogs) {
                                 $dayClasses = $baseClasses . ' border-[#BFDBFE] bg-[#EFF6FF]';
                             } else {
@@ -186,7 +186,7 @@
                             }
                             $dayNumberClasses = 'text-xs sm:text-sm ';
                             if ($cell['isToday']) {
-                                $dayNumberClasses .= 'font-bold text-[#002D5E]';
+                                $dayNumberClasses .= 'font-bold text-navy';
                             } elseif ($hasLogs) {
                                 $dayNumberClasses .= 'font-semibold text-[#1E40AF]';
                             } elseif ($cell['currentMonth']) {

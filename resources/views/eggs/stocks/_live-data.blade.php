@@ -22,7 +22,7 @@
                     $cageSoft = $batch->cage?->color_soft ?? '#f0f0f0';
                     $sizeColors = [
                         'small'    => ['#2D7D46', '#d6f0e3', '#b8e0cc'],
-                        'medium'   => ['#1D4E8F', '#dcebfa', '#b3d4fc'],
+                        'medium'   => ['var(--color-info)', '#dcebfa', '#b3d4fc'],
                         'large'    => ['#C2703E', '#fae3d0', '#f3c9a8'],
                         'jumbo'    => ['#6B4C8A', '#e9e0f5', '#d4c5e8'],
                         'unsorted' => ['#6B7280', '#f0f0f0', '#e0e0e0'],

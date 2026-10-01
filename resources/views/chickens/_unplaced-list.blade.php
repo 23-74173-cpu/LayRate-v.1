@@ -4,8 +4,8 @@
         <button type="button" onclick="toggleUnplaced()"
                 class="flex items-center gap-3 text-left cursor-pointer" style="flex: 1; min-width: 0;">
             <span class="flex items-center gap-3">
-                <i data-lucide="chevron-right" class="w-4 h-4 shrink-0" style="color: #1D4E8F; transition: transform 0.2s ease;" id="unplacedChevron"></i>
-                <span class="text-sm font-semibold text-[#1D4E8F]">Unplaced</span>
+                <i data-lucide="chevron-right" class="w-4 h-4 shrink-0" style="color: var(--color-info); transition: transform 0.2s ease;" id="unplacedChevron"></i>
+                <span class="text-sm font-semibold text-info">Unplaced</span>
                 <span class="text-xs px-1.5 py-0.5 rounded-full bg-white/80 text-[#6B7280]">
                     {{ $unplacedCount }} hen(s)
                 </span>
@@ -13,7 +13,7 @@
         </button>
         <div class="flex items-center gap-2 shrink-0">
             <a href="{{ route('cages.bulk-add', ['hen_ids' => $unplacedHens->pluck('id')->join(',')]) }}"
-               class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg text-white bg-[#002D5E] hover:bg-[#001F42] transition-colors">
+               class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg text-white bg-navy hover:bg-navy transition-colors">
                 <i data-lucide="arrow-right" class="w-3 h-3"></i> Place into cage
             </a>
         </div>

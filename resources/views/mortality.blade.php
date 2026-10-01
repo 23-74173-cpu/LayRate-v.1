@@ -29,27 +29,27 @@
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">DATE</label>
                     <input type="date" name="log_date" required
                            value="{{ old('log_date', \App\Services\ReportingDateService::reportingDateString()) }}"
-                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
-                    @error('log_date')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+                    @error('log_date')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
                 </div>
 
                 {{-- Hens --}}
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">SELECT HENS <span class="text-red-500">*</span></label>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">SELECT HENS <span class="text-danger">*</span></label>
                     <input type="hidden" name="hen_ids" id="mortalityHenIds" value="">
                     <button type="button" onclick="openHenPickerModal()" id="henPickerBtn"
-                            class="w-full flex items-center justify-between border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white text-left focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C] transition-colors hover:border-[#9CA3AF]">
+                            class="w-full flex items-center justify-between border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white text-left focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy transition-colors hover:border-[#9CA3AF]">
                         <span id="henPickerLabel" class="text-[#9CA3AF]">Click to select hens...</span>
                         <i data-lucide="chevron-right" class="w-4 h-4 text-[#9CA3AF]"></i>
                     </button>
-                    @error('hen_ids')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
+                    @error('hen_ids')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
                 </div>
 
                 {{-- Reason dropdown --}}
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CAUSE OF DEATH</label>
                     <select name="reason" required id="reasonSelect"
-                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white text-[#333333] focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         <option value="">Select reason…</option>
                         @foreach(\App\Models\MortalityLog::REASONS as $reason)
                         <option value="{{ $reason }}" {{ old('reason') === $reason ? 'selected' : '' }}>
@@ -57,7 +57,7 @@
                         </option>
                         @endforeach
                     </select>
-                    @error('reason')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
+                    @error('reason')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
                 </div>
 
                 {{-- Notes (always visible, below reason) --}}
@@ -66,8 +66,8 @@
                     <x-saved-note-picker category="Mortality" target="textarea[name='notes']" :notes="$mortalityNotes" />
                     <textarea name="notes" rows="3" maxlength="1000"
                               placeholder="Describe symptoms, location in cage, or any observations…"
-                              class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] resize-none focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">{{ old('notes') }}</textarea>
-                    @error('notes')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
+                              class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] resize-none focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">{{ old('notes') }}</textarea>
+                    @error('notes')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
                 </div>
 
                 <x-button type="submit" id="mortalitySubmitBtn" class="w-full py-2.5">
@@ -125,13 +125,13 @@
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-[10px] font-semibold uppercase tracking-wider text-[#6B7280] mb-1">Cage</label>
-                    <select id="pickerCageSelect" onchange="onPickerCageChange()" class="w-full border border-[#D9D9D9] rounded-lg px-2.5 py-1.5 text-xs text-[#333333] bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                    <select id="pickerCageSelect" onchange="onPickerCageChange()" class="w-full border border-[#D9D9D9] rounded-lg px-2.5 py-1.5 text-xs text-[#333333] bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         <option value="">All cages</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-[10px] font-semibold uppercase tracking-wider text-[#6B7280] mb-1">Slot</label>
-                    <select id="pickerSlotSelect" onchange="onPickerFilterChange()" class="w-full border border-[#D9D9D9] rounded-lg px-2.5 py-1.5 text-xs text-[#333333] bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]" disabled>
+                    <select id="pickerSlotSelect" onchange="onPickerFilterChange()" class="w-full border border-[#D9D9D9] rounded-lg px-2.5 py-1.5 text-xs text-[#333333] bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy" disabled>
                         <option value="">All slots</option>
                     </select>
                 </div>
@@ -139,19 +139,19 @@
             <div class="relative">
                 <i data-lucide="search" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style="color: #9CA3AF;"></i>
                 <input type="text" id="pickerSearch" placeholder="Search by ID..." oninput="onPickerFilterChange()"
-                       class="w-full border border-[#D9D9D9] rounded-lg pl-8 pr-2.5 py-1.5 text-xs text-[#333333] bg-white focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                       class="w-full border border-[#D9D9D9] rounded-lg pl-8 pr-2.5 py-1.5 text-xs text-[#333333] bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
             </div>
         </div>
         <div id="henPickerList" class="flex-1 overflow-y-auto px-5 py-3" style="scrollbar-width: thin;"></div>
         <div class="flex items-center justify-between px-5 py-3 border-t border-[#E6E6E6] bg-[#FAFAFA] rounded-b-xl">
-            <span id="modalHenCount" class="text-xs font-semibold text-[#102A4C]">0 selected</span>
+            <span id="modalHenCount" class="text-xs font-semibold text-navy">0 selected</span>
             <div class="flex gap-2">
                 <button type="button" onclick="closeHenPickerModal()"
                         class="px-4 py-1.5 text-xs font-medium rounded-lg border border-[#D9D9D9] text-[#333333] hover:bg-[#F0F0F0] transition-colors">
                     Cancel
                 </button>
                 <button type="button" onclick="confirmHenSelection()"
-                        class="px-4 py-1.5 text-xs font-medium rounded-lg bg-[#102A4C] text-white hover:bg-[#1D4E8F] transition-colors">
+                        class="px-4 py-1.5 text-xs font-medium rounded-lg bg-navy text-white hover:bg-info transition-colors">
                     Confirm Selection
                 </button>
             </div>
@@ -177,21 +177,21 @@
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">DATE</label>
                     <input type="date" name="log_date" id="editMortDate" required
-                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                     <x-input-error name="log_date" />
                 </div>
 
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">NUMBER OF DEATHS</label>
                     <input type="number" name="count" id="editMortCount" min="1" required
-                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                     <x-input-error name="count" />
                 </div>
 
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CAUSE OF DEATH</label>
                     <select name="reason" id="editMortReason" required
-                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">
+                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white text-[#333333] focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         <option value="">Select reason…</option>
                         @foreach(\App\Models\MortalityLog::REASONS as $reason)
                         <option value="{{ $reason }}">{{ $reason }}</option>
@@ -204,7 +204,7 @@
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">ADDITIONAL NOTES</label>
                     <x-saved-note-picker category="Mortality" target="#editMortNotes" :notes="$mortalityNotes" />
                     <textarea name="notes" id="editMortNotes" rows="3" maxlength="1000"
-                              class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] resize-none focus:outline-none focus:ring-2 focus:ring-[#102A4C]/30 focus:border-[#102A4C]">{{ old('notes') }}</textarea>
+                              class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] resize-none focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">{{ old('notes') }}</textarea>
                 </div>
             </div>
 
@@ -218,9 +218,9 @@
                 </button>
                 <button type="submit"
                         class="flex-1 py-2.5 text-sm font-medium rounded-lg text-white transition-colors"
-                        style="background-color: #102A4C;"
-                        onmouseover="this.style.backgroundColor='#1D4E8F'"
-                        onmouseout="this.style.backgroundColor='#102A4C'">
+                        style="background-color: var(--color-navy);"
+                        onmouseover="this.style.backgroundColor='var(--color-info)'"
+                        onmouseout="this.style.backgroundColor='var(--color-navy)'">
                     Save Changes
                 </button>
             </div>
@@ -361,14 +361,14 @@ function onPickerFilterChange() {
         var cage = entry[0], cageHens = entry[1];
         html += '<div class="mb-3 last:mb-0">';
         html += '<div class="flex items-center gap-2 px-3 py-1.5 bg-[#F5F6F8] rounded-lg mb-1">';
-        html += '<input type="checkbox" class="cage-all-check rounded border-[#D9D9D9] text-[#102A4C] focus:ring-[#102A4C]/30" onchange="toggleCageHens(\'' + cage + '\', this.checked)">';
+        html += '<input type="checkbox" class="cage-all-check rounded border-[#D9D9D9] text-navy focus:ring-navy/30" onchange="toggleCageHens(\'' + cage + '\', this.checked)">';
         html += '<span class="text-xs font-semibold text-[#333333]">' + cage + ' <span class="text-[#9CA3AF] font-normal">(' + cageHens.length + ')</span></span>';
         html += '</div>';
         html += '<div class="divide-y divide-[#F0F0F0] border border-[#E6E6E6] rounded-lg overflow-hidden">';
         cageHens.forEach(function(h) {
             var checked = savedIds.indexOf(h.id) !== -1 ? 'checked' : '';
             html += '<label class="flex items-center gap-2.5 px-3 py-1.5 hover:bg-[#FAFAFA] cursor-pointer transition-colors hen-row">';
-            html += '<input type="checkbox" class="hen-cage-check rounded border-[#D9D9D9] text-[#102A4C] focus:ring-[#102A4C]/30" data-hen-id="' + h.id + '" ' + checked + ' onchange="updateModalHenCount()">';
+            html += '<input type="checkbox" class="hen-cage-check rounded border-[#D9D9D9] text-navy focus:ring-navy/30" data-hen-id="' + h.id + '" ' + checked + ' onchange="updateModalHenCount()">';
             html += '<span class="text-xs text-[#333333]">' + h.chicken_id + '</span>';
             if (h.tag_code) html += ' <span class="text-[10px] text-[#9CA3AF]">(' + h.tag_code + ')</span>';
             if (h._slot && h._slot !== '—') html += '<span class="text-[10px] text-[#9CA3AF]">Slot ' + h._slot + '</span>';

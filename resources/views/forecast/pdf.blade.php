@@ -6,16 +6,16 @@
     body { font-family: Georgia, 'Times New Roman', serif; color: #333333; font-size: 11px; }
     .letterhead { width: 100%; margin-bottom: 4px; }
     .letterhead td { vertical-align: top; }
-    .brand-name { font-weight: bold; color: #102A4C; font-size: 13px; }
+    .brand-name { font-weight: bold; color: var(--color-navy); font-size: 13px; }
     .brand-sub { color: #6B7280; font-size: 9px; }
-    .doc-title { text-align: right; font-weight: bold; color: #102A4C; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+    .doc-title { text-align: right; font-weight: bold; color: var(--color-navy); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
     .doc-range { text-align: right; color: #6B7280; font-size: 9px; margin-top: 2px; }
-    hr.rule { border: none; border-top: 3px solid #102A4C; margin: 10px 0; }
+    hr.rule { border: none; border-top: 3px solid var(--color-navy); margin: 10px 0; }
     .meta-strip { width: 100%; margin-bottom: 14px; font-size: 9px; color: #000000; }
     .meta-strip td { padding-right: 12px; }
     .meta-strip .label { font-weight: bold; color: #000000; }
     .section { margin-bottom: 18px; }
-    .section-title { font-weight: bold; color: #102A4C; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; border-bottom: 1px solid #D9D9D9; padding-bottom: 4px; }
+    .section-title { font-weight: bold; color: var(--color-navy); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; border-bottom: 1px solid #D9D9D9; padding-bottom: 4px; }
     table.data { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
     table.data thead th { background: #E5E7EB; color: #000000; text-align: left; font-size: 8px; text-transform: uppercase; letter-spacing: 0.5px; padding: 6px 8px; }
     table.data tbody td { font-size: 9px; padding: 5px 8px; border-bottom: 1px solid #F0F0F0; }
@@ -40,7 +40,7 @@
 <table class="letterhead">
     <tr>
         <td style="width:40px;vertical-align:middle;">
-            <div style="width:32px;height:32px;background:#102A4C;color:#fff;font-size:14px;font-weight:bold;text-align:center;line-height:32px;border-radius:4px;">L</div>
+            <div style="width:32px;height:32px;background:var(--color-navy);color:#fff;font-size:14px;font-weight:bold;text-align:center;line-height:32px;border-radius:4px;">L</div>
         </td>
         <td>
             <div class="brand-name">LayRate Poultry Farm</div>

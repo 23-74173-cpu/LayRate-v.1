@@ -20,13 +20,13 @@
                     <div>
                         <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Rows</label>
                         <input type="number" name="rows" value="4" min="1" max="50" required
-                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                style="border-color: #e6e6e6; color: #1f1f1f;">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Columns</label>
                         <input type="number" name="cols" value="4" min="1" max="50" required
-                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
+                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                style="border-color: #e6e6e6; color: #1f1f1f;">
                     </div>
                 </div>
@@ -47,7 +47,7 @@
                     <span>Cage</span>
                 </label>
                 <select id="dashboardCageSelect" onchange="filterDashboard(this.value)"
-                        class="w-full sm:w-44 shrink-0 border border-[#D9D9D9] rounded-lg px-3 py-2.5 sm:py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#002D5E] focus:border-[#002D5E]">
+                        class="w-full sm:w-44 shrink-0 border border-[#D9D9D9] rounded-lg px-3 py-2.5 sm:py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy">
                     <option value="all" {{ request('cage', 'all') === 'all' ? 'selected' : '' }}>All Cages ({{ $cages->count() }})</option>
                     @foreach($cages as $cage)
                         <option value="{{ $cage->cage_code }}" {{ request('cage') === $cage->cage_code ? 'selected' : '' }}>{{ $cage->cage_code }}</option>
@@ -64,7 +64,7 @@
                 </label>
                 <div class="inline-flex items-center gap-1 rounded-lg p-1 w-full sm:w-auto shrink-0" style="background-color: #f3f4f6;" id="dashboardGlobalPeriod">
                     <button type="button" data-global-days="7" onclick="setGlobalDays(7)" class="global-days-btn flex-1 sm:flex-none text-center px-3 py-2 sm:py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb]">Week</button>
-                    <button type="button" data-global-days="30" onclick="setGlobalDays(30)" class="global-days-btn flex-1 sm:flex-none text-center px-3 py-2 sm:py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb]" style="background-color: #0075de; color: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">Month</button>
+                    <button type="button" data-global-days="30" onclick="setGlobalDays(30)" class="global-days-btn flex-1 sm:flex-none text-center px-3 py-2 sm:py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb]" style="background-color: var(--color-navy); color: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">Month</button>
                     <button type="button" data-global-days="0" onclick="setGlobalDays(0)" class="global-days-btn flex-1 sm:flex-none text-center px-3 py-2 sm:py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb]">Full</button>
                 </div>
             </div>
@@ -81,7 +81,7 @@
                        max="{{ now()->toDateString() }}"
                        onchange="setDashboardFromDate(this.value)"
                        title="Show analytics from this date"
-                       class="w-full sm:w-44 shrink-0 border border-[#D9D9D9] rounded-lg px-2.5 py-2.5 sm:py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#002D5E] focus:border-[#002D5E]">
+                       class="w-full sm:w-44 shrink-0 border border-[#D9D9D9] rounded-lg px-2.5 py-2.5 sm:py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy">
             </div>
 
             <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 sm:shrink-0">
@@ -93,14 +93,15 @@
                        max="{{ now()->toDateString() }}"
                        onchange="setDashboardToDate(this.value)"
                        title="Show analytics up to this date"
-                       class="w-full sm:w-44 shrink-0 border border-[#D9D9D9] rounded-lg px-2.5 py-2.5 sm:py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#002D5E] focus:border-[#002D5E]">
+                       class="w-full sm:w-44 shrink-0 border border-[#D9D9D9] rounded-lg px-2.5 py-2.5 sm:py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy">
             </div>
             </div>
         </div>
     </div>
 
     <div class="space-y-6">
-        @include('dashboard._data-checklist')
+        {{-- Checklist lives in the global dock now (layouts/app) — kept out
+             of the page so it never renders twice. --}}
 
         @php
             $analyticsTabs = [
@@ -421,7 +422,7 @@
                 <div class="flex items-center justify-between py-2.5 px-3 rounded-xl" style="background-color: #f9f7f4;">
                     <div class="flex items-center gap-2.5">
                         <span class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: #e8f4fd;">
-                            <i data-lucide="egg" class="w-4 h-4" style="color: #0075de;"></i>
+                            <i data-lucide="egg" class="w-4 h-4" style="color: var(--color-navy);"></i>
                         </span>
                         <span class="text-sm font-medium" style="color: #615d59;">Eggs Collected</span>
                     </div>
@@ -462,7 +463,7 @@
                 </div>
             </div>
 
-            <button onclick="closeYesterdaySummary()" class="w-full mt-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors" style="background-color: #0075de;">
+            <button onclick="closeYesterdaySummary()" class="w-full mt-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors" style="background-color: var(--color-navy);">
                 Got it
             </button>
         </div>
@@ -798,7 +799,7 @@
     function setButtonActive(btn, active) {
         if (active) {
             btn.classList.remove('text-[#6B7280]', 'hover:bg-[#e5e7eb]');
-            btn.style.backgroundColor = '#0075de';
+            btn.style.backgroundColor = 'var(--color-navy)';
             btn.style.color = '#ffffff';
             btn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.1)';
         } else {

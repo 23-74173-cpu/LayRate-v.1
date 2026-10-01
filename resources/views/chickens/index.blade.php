@@ -3,9 +3,9 @@
 
 @section('content')
 <style>
-.slot-mini-active { outline: 2px solid #002D5E; outline-offset: 1px; box-shadow: 0 0 0 3px rgba(0,45,94,0.15); }
+.slot-mini-active { outline: 2px solid var(--color-navy); outline-offset: 1px; box-shadow: 0 0 0 3px rgba(0,45,94,0.15); }
 .slot-card { cursor: pointer; }
-.slot-card:hover { border-color: #0075de; }
+.slot-card:hover { border-color: var(--color-navy); }
 </style>
 <div class="space-y-5">
 
@@ -46,7 +46,7 @@
                     <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Status</label>
                     <div class="flex items-center">
                         @foreach(['all' => 'All', 'active' => 'Active', 'inactive' => 'Inactive'] as $val => $label)
-                        <label class="status-pill px-3 py-1.5 text-xs border border-[#D9D9D9] {{ $loop->first ? 'rounded-l' : ($loop->last ? 'rounded-r' : '') }} -ml-px {{ $loop->first ? 'ml-0' : '' }} cursor-pointer transition-colors {{ $isActive === $val ? 'bg-[#002D5E] text-white z-10 border-[#002D5E]' : 'bg-white text-[#6B7280] hover:bg-[#F5F6F8]' }}">
+                        <label class="status-pill px-3 py-1.5 text-xs border border-[#D9D9D9] {{ $loop->first ? 'rounded-l' : ($loop->last ? 'rounded-r' : '') }} -ml-px {{ $loop->first ? 'ml-0' : '' }} cursor-pointer transition-colors {{ $isActive === $val ? 'bg-navy text-white z-10 border-navy' : 'bg-white text-[#6B7280] hover:bg-[#F5F6F8]' }}">
                             <input type="radio" name="status" value="{{ $val }}" class="hidden" onchange="filterInventory()" {{ $isActive === $val ? 'checked' : '' }}>
                             {{ $label }}
                         </label>
@@ -58,7 +58,7 @@
                 <div>
                     <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Tag Code</label>
                     <input type="text" name="search" value="{{ $search }}" placeholder="Search tag..."
-                           class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-full min-w-0 sm:w-40 focus:outline-none focus:ring-1 focus:ring-[#002D5E]"
+                           class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-full min-w-0 sm:w-40 focus:outline-none focus:ring-1 focus:ring-navy"
                            id="tagSearchInput"
                            oninput="debounceFilter()">
                 </div>
@@ -66,7 +66,7 @@
                 {{-- Cage --}}
                 <div>
                     <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Cage</label>
-                    <select name="cage_id" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-full min-w-0 sm:w-auto focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="filterInventory()">
+                    <select name="cage_id" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-full min-w-0 sm:w-auto focus:outline-none focus:ring-1 focus:ring-navy" onchange="filterInventory()">
                         <option value="">All Cages</option>
                         @foreach($cages as $c)
                         <option value="{{ $c->id }}" {{ $cageId == $c->id ? 'selected' : '' }}>{{ $c->cage_code }}</option>
@@ -77,7 +77,7 @@
                 {{-- Breed --}}
                 <div>
                     <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Breed</label>
-                    <select name="breed" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-full min-w-0 sm:w-auto focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="filterInventory()">
+                    <select name="breed" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-full min-w-0 sm:w-auto focus:outline-none focus:ring-1 focus:ring-navy" onchange="filterInventory()">
                         <option value="">All Breeds</option>
                         @foreach($breeds as $b)
                         <option value="{{ $b }}" {{ $breed == $b ? 'selected' : '' }}>{{ $b }}</option>
@@ -88,7 +88,7 @@
                 {{-- Sort --}}
                 <div>
                     <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Sort</label>
-                    <select name="sort" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-full min-w-0 sm:w-auto focus:outline-none focus:ring-1 focus:ring-[#002D5E]" onchange="filterInventory()">
+                    <select name="sort" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-full min-w-0 sm:w-auto focus:outline-none focus:ring-1 focus:ring-navy" onchange="filterInventory()">
                         <option value="" {{ $sort === '' ? 'selected' : '' }}>Hen ID (A-Z)</option>
                         <option value="chicken_id_desc" {{ $sort === 'chicken_id_desc' ? 'selected' : '' }}>Hen ID (Z-A)</option>
                         <option value="age_asc" {{ $sort === 'age_asc' ? 'selected' : '' }}>Age (Youngest)</option>
@@ -110,7 +110,7 @@
         {{-- Bulk Action Bar --}}
         <div id="bulkActionBar" class="hidden bg-white rounded-lg border border-[#D9D9D9] px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <span class="text-sm text-[#6B7280]">
-                <strong id="bulkCount" class="text-[#002D5E]">0</strong> hen(s) selected
+                <strong id="bulkCount" class="text-navy">0</strong> hen(s) selected
             </span>
             <div class="grid grid-cols-3 gap-2 w-full sm:flex sm:w-auto sm:items-center sm:gap-2">
                 <x-button variant="outline-primary" size="sm" onclick="bulkMove()" class="w-full sm:w-auto">
@@ -173,23 +173,23 @@
                 <form method="POST" action="{{ route('mortality.store') }}" class="space-y-4">
                     @csrf
                     <div>
-                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">DATE <span class="text-red-500">*</span></label>
+                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">DATE <span class="text-danger">*</span></label>
                         <input type="date" name="log_date" required value="{{ today()->toDateString() }}"
-                               class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]">
+                               class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                     </div>
                     <div>
-                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">SELECT HENS <span class="text-red-500">*</span></label>
+                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">SELECT HENS <span class="text-danger">*</span></label>
                         <input type="hidden" name="hen_ids" id="mortalityHenIds" value="">
                         <button type="button" onclick="setPickerContext('mortalityHenIds', 'henPickerLabel')" id="henPickerBtn"
-                                class="w-full flex items-center justify-between border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white text-left focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E] transition-colors hover:border-[#9CA3AF]">
+                                class="w-full flex items-center justify-between border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white text-left focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy transition-colors hover:border-[#9CA3AF]">
                             <span id="henPickerLabel" class="text-[#9CA3AF]">Click to select hens...</span>
                             <i data-lucide="chevron-right" class="w-4 h-4 text-[#9CA3AF]"></i>
                         </button>
                     </div>
                     <div>
-                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CAUSE OF DEATH <span class="text-red-500">*</span></label>
+                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CAUSE OF DEATH <span class="text-danger">*</span></label>
                         <select name="reason" required
-                                class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]">
+                                class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                             <option value="">Select reason…</option>
                             @foreach(['Disease', 'Heat Stress', 'Injury', 'Predator', 'Unknown', 'Other'] as $reason)
                             <option value="{{ $reason }}">{{ $reason }}</option>
@@ -200,7 +200,7 @@
                         <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">ADDITIONAL NOTES</label>
                         <x-saved-note-picker category="Mortality" target="textarea[name='notes']" />
                         <textarea name="notes" rows="2" placeholder="Optional details…" maxlength="1000"
-                                  class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] resize-none focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]"></textarea>
+                                  class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] resize-none focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy"></textarea>
                     </div>
                     <x-button type="button" onclick="submitMortality(this.form)" class="w-full py-2.5">
                         Save Record
@@ -226,23 +226,23 @@
                 <form method="POST" action="{{ route('chickens.cull') }}" class="space-y-4">
                     @csrf
                     <div>
-                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CULL DATE <span class="text-red-500">*</span></label>
+                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CULL DATE <span class="text-danger">*</span></label>
                         <input type="date" name="cull_date" required value="{{ today()->toDateString() }}"
-                               class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]">
+                               class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                     </div>
                     <div>
-                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">SELECT HENS <span class="text-red-500">*</span></label>
+                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">SELECT HENS <span class="text-danger">*</span></label>
                         <input type="hidden" name="hen_id" id="cullingHenIds" value="">
                         <button type="button" onclick="setPickerContext('cullingHenIds', 'cullingHenLabel')" id="cullingHenBtn"
-                                class="w-full flex items-center justify-between border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white text-left focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E] transition-colors hover:border-[#9CA3AF]">
+                                class="w-full flex items-center justify-between border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white text-left focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy transition-colors hover:border-[#9CA3AF]">
                             <span id="cullingHenLabel" class="text-[#9CA3AF]">Click to select hens...</span>
                             <i data-lucide="chevron-right" class="w-4 h-4 text-[#9CA3AF]"></i>
                         </button>
                     </div>
                     <div>
-                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">REASON <span class="text-red-500">*</span></label>
+                        <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">REASON <span class="text-danger">*</span></label>
                         <select name="reason" required
-                                class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]">
+                                class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                             <option value="">Select reason...</option>
                             <option value="low_production">Low Production</option>
                             <option value="illness">Illness</option>
@@ -255,7 +255,7 @@
                         <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">ADDITIONAL NOTES</label>
                         <x-saved-note-picker category="Hens" target="textarea[name='notes']" />
                         <textarea name="notes" rows="2" placeholder="Optional details…" maxlength="1000"
-                                  class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] resize-none focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]"></textarea>
+                                  class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] resize-none focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy"></textarea>
                     </div>
                     <x-button type="button" onclick="submitCullRecord(this.form)" class="w-full py-2.5">
                         Save Record
@@ -302,13 +302,13 @@
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-[10px] font-semibold uppercase tracking-wider text-[#6B7280] mb-1">Cage</label>
-                    <select id="pickerCageSelect" onchange="onPickerCageChange()" class="w-full border border-[#D9D9D9] rounded-lg px-2.5 py-1.5 text-xs text-[#333333] bg-white focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]">
+                    <select id="pickerCageSelect" onchange="onPickerCageChange()" class="w-full border border-[#D9D9D9] rounded-lg px-2.5 py-1.5 text-xs text-[#333333] bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         <option value="">All cages</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-[10px] font-semibold uppercase tracking-wider text-[#6B7280] mb-1">Slot</label>
-                    <select id="pickerSlotSelect" onchange="onPickerFilterChange()" class="w-full border border-[#D9D9D9] rounded-lg px-2.5 py-1.5 text-xs text-[#333333] bg-white focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]" disabled>
+                    <select id="pickerSlotSelect" onchange="onPickerFilterChange()" class="w-full border border-[#D9D9D9] rounded-lg px-2.5 py-1.5 text-xs text-[#333333] bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy" disabled>
                         <option value="">All slots</option>
                     </select>
                 </div>
@@ -316,19 +316,19 @@
             <div class="relative">
                 <i data-lucide="search" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style="color: #9CA3AF;"></i>
                 <input type="text" id="pickerSearch" placeholder="Search by ID..." oninput="onPickerFilterChange()"
-                       class="w-full border border-[#D9D9D9] rounded-lg pl-8 pr-2.5 py-1.5 text-xs text-[#333333] bg-white focus:outline-none focus:ring-2 focus:ring-[#002D5E]/30 focus:border-[#002D5E]">
+                       class="w-full border border-[#D9D9D9] rounded-lg pl-8 pr-2.5 py-1.5 text-xs text-[#333333] bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
             </div>
         </div>
         <div id="henPickerList" class="flex-1 overflow-y-auto px-5 py-3" style="scrollbar-width: thin;"></div>
         <div class="flex items-center justify-between px-5 py-3 border-t border-[#E6E6E6] bg-[#FAFAFA] rounded-b-xl">
-            <span id="modalHenCount" class="text-xs font-semibold text-[#002D5E]">0 selected</span>
+            <span id="modalHenCount" class="text-xs font-semibold text-navy">0 selected</span>
             <div class="flex gap-2">
                 <button type="button" onclick="closeHenPickerModal()"
                         class="px-4 py-1.5 text-xs font-medium rounded-lg border border-[#D9D9D9] text-[#333333] hover:bg-[#F0F0F0] transition-colors">
                     Cancel
                 </button>
                 <button type="button" onclick="confirmHenSelection()"
-                        class="px-4 py-1.5 text-xs font-medium rounded-lg bg-[#002D5E] text-white hover:bg-[#1D4E8F] transition-colors">
+                        class="px-4 py-1.5 text-xs font-medium rounded-lg bg-navy text-white hover:bg-info transition-colors">
                     Confirm Selection
                 </button>
             </div>
@@ -348,7 +348,7 @@
 function updateStatusPills() {
     const labels = document.querySelectorAll('.status-pill');
     labels.forEach(l => {
-        l.classList.remove('bg-[#002D5E]', 'text-white');
+        l.classList.remove('bg-navy', 'text-white');
         l.classList.add('bg-white', 'text-[#6B7280]', 'hover:bg-[#F5F6F8]');
     });
     const checked = document.querySelector('input[name="status"]:checked');
@@ -356,7 +356,7 @@ function updateStatusPills() {
         const label = checked.closest('label');
         if (label) {
             label.classList.remove('bg-white', 'text-[#6B7280]', 'hover:bg-[#F5F6F8]');
-            label.classList.add('bg-[#002D5E]', 'text-white');
+            label.classList.add('bg-navy', 'text-white');
         }
     }
 }
@@ -440,13 +440,13 @@ function switchTab(tab) {
     const nav = document.getElementById('chickens-tabs-nav');
     if (nav) {
         nav.querySelectorAll('button').forEach(btn => {
-            btn.classList.remove('border-[#002D5E]', 'text-[#002D5E]');
+            btn.classList.remove('border-navy', 'text-navy');
             btn.classList.add('border-transparent', 'text-[#6B7280]');
         });
         const active = nav.querySelector('button[onclick*="'+tab+'"]');
         if (active) {
             active.classList.remove('border-transparent', 'text-[#6B7280]');
-            active.classList.add('border-[#002D5E]', 'text-[#002D5E]');
+            active.classList.add('border-navy', 'text-navy');
         }
     }
 }
@@ -455,7 +455,7 @@ function switchChickenCage(cageId) {
     document.querySelectorAll('.cage-overview-card').forEach(function(card) {
         var isSelected = card.dataset.cageId == cageId;
         if (isSelected) {
-            card.style.borderColor = '#0075de';
+            card.style.borderColor = 'var(--color-navy)';
             card.style.borderWidth = '2px';
             card.style.backgroundColor = '#f0f7ff';
         } else {
@@ -487,7 +487,7 @@ function switchChickenCage(cageId) {
     var iconEl = document.getElementById('cageSlotsModalIcon');
     if (iconEl && card) {
         iconEl.style.backgroundColor = card.dataset.cageSoft || '#e8f3fe';
-        iconEl.style.color = card.dataset.cageColor || '#0075de';
+        iconEl.style.color = card.dataset.cageColor || 'var(--color-navy)';
     }
     var modal = document.getElementById('cageSlotsModal');
     if (modal) modal.style.display = 'flex';
@@ -701,14 +701,14 @@ function onPickerFilterChange() {
         var cage = entry[0], cageHens = entry[1];
         html += '<div class="mb-3 last:mb-0">';
         html += '<div class="flex items-center gap-2 px-3 py-1.5 bg-[#F5F6F8] rounded-lg mb-1">';
-        html += '<input type="checkbox" class="cage-all-check rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]/30" onchange="toggleCageHens(\'' + cage + '\', this.checked)">';
+        html += '<input type="checkbox" class="cage-all-check rounded border-[#D9D9D9] text-navy focus:ring-navy/30" onchange="toggleCageHens(\'' + cage + '\', this.checked)">';
         html += '<span class="text-xs font-semibold text-[#333333]">' + cage + ' <span class="text-[#9CA3AF] font-normal">(' + cageHens.length + ')</span></span>';
         html += '</div>';
         html += '<div class="divide-y divide-[#F0F0F0] border border-[#E6E6E6] rounded-lg overflow-hidden">';
         cageHens.forEach(function(h) {
             var checked = savedIds.indexOf(h.id) !== -1 ? 'checked' : '';
             html += '<label class="flex items-center gap-2.5 px-3 py-1.5 hover:bg-[#FAFAFA] cursor-pointer transition-colors hen-row">';
-            html += '<input type="checkbox" class="hen-cage-check rounded border-[#D9D9D9] text-[#002D5E] focus:ring-[#002D5E]/30" data-hen-id="' + h.id + '" ' + checked + ' onchange="updateModalHenCount()">';
+            html += '<input type="checkbox" class="hen-cage-check rounded border-[#D9D9D9] text-navy focus:ring-navy/30" data-hen-id="' + h.id + '" ' + checked + ' onchange="updateModalHenCount()">';
             html += '<span class="text-xs text-[#333333]">' + h.chicken_id + '</span>';
             if (h.tag_code) html += ' <span class="text-[10px] text-[#9CA3AF]">(' + h.tag_code + ')</span>';
             if (h._slot && h._slot !== '—') html += '<span class="text-[10px] text-[#9CA3AF]">Slot ' + h._slot + '</span>';
@@ -793,12 +793,12 @@ function mortalityAjaxSubmit(form) {
             var frame = document.getElementById('chickens-mortality-records');
             if (frame) frame.src = frame.src;
 
-            // Mortality KPI — runtime gradient toggle (intentional exception):
+            // Mortality KPI — runtime severity toggle (intentional exception):
             // Unlike other x-kpi-card usages which are purely declarative via Blade props,
-            // mortality's visual severity (red gradient when count>0 vs solid when 0) depends on
+            // mortality's visual severity (red number when count>0 vs slate when 0) depends on
             // live count that changes via AJAX without a page reload (mortalityAjaxSubmit).
-            // This JS toggles .kpi-value's gradient at runtime so the card reflects current
-            // severity immediately. Do not remove as "cruft" — it is the only kpi-card that
+            // This JS toggles .kpi-value's .is-danger class at runtime so the card reflects
+            // current severity immediately. Do not remove as "cruft" — it is the only kpi-card that
             // requires JS-driven style behavior.
 
             // TODO: Legacy plain-box fallback is dead code post-migration — safe to delete after verification.
@@ -821,14 +821,14 @@ function mortalityAjaxSubmit(form) {
                     var curTotal = parseInt(totalValueEl.textContent) || 0;
                     totalValueEl.textContent = curTotal + result.json.count;
                 }
-                // If newly >0 and was solid, apply gradient (kpi-card case)
+                // If newly >0, flag severity red (kpi-card case). The white-card
+                // design has no gradients, so this toggles the .is-danger number
+                // color instead of the retired gradient background.
                 if (totalCard.classList.contains('kpi-card')) {
                     var tv = totalCard.querySelector('.kpi-value');
-                    if (tv && !tv.style.backgroundImage) {
+                    if (tv) {
                         var newValCheck = parseInt(totalValueEl.textContent) || 0;
-                        if (newValCheck > 0) {
-                            tv.style.backgroundImage = 'linear-gradient(135deg,#dc2626,#9b1c24)';
-                        }
+                        tv.classList.toggle('is-danger', newValCheck > 0);
                     }
                 }
             }
@@ -1019,22 +1019,22 @@ document.addEventListener('keydown', function(e) {
         ov.id = 'wt2Overlay';
         ov.style.cssText = 'position:fixed;inset:0;z-index:90;display:none;pointer-events:none;';
         ov.innerHTML =
-            '<div id="wt2Spotlight" style="position:fixed;border-radius:12px;border:3px solid #0075de;background:transparent;transition:all .2s ease;pointer-events:none;z-index:91;"></div>'
+            '<div id="wt2Spotlight" style="position:fixed;border-radius:12px;border:3px solid var(--color-navy);background:transparent;transition:all .2s ease;pointer-events:none;z-index:91;"></div>'
             + '<div id="wt2DimT" style="position:fixed;left:0;top:0;right:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
             + '<div id="wt2DimB" style="position:fixed;left:0;bottom:0;right:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
             + '<div id="wt2DimL" style="position:fixed;left:0;top:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
             + '<div id="wt2DimR" style="position:fixed;right:0;top:0;background:rgba(15,20,35,0.55);pointer-events:auto;z-index:90;display:none;"></div>'
             + '<div id="wt2Tooltip" style="position:fixed;max-width:340px;background:#fff;border:1px solid #e6e6e6;border-radius:14px;padding:16px 18px;box-shadow:0 20px 50px rgba(0,0,0,0.3);z-index:92;pointer-events:none;">'
-            + '<div id="wt2StepLabel" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#0075de;margin-bottom:6px;"></div>'
+            + '<div id="wt2StepLabel" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--color-navy);margin-bottom:6px;"></div>'
             + '<div id="wt2StepText" style="font-size:14px;line-height:1.5;color:#1f1f1f;"></div>'
-            + '<button id="wt2Next" style="display:none;margin-top:12px;padding:8px 16px;font-size:12px;font-weight:600;color:#fff;background:#002D5E;border:0;border-radius:8px;cursor:pointer;pointer-events:auto;">Next</button>'
+            + '<button id="wt2Next" style="display:none;margin-top:12px;padding:8px 16px;font-size:12px;font-weight:600;color:#fff;background:var(--color-navy);border:0;border-radius:8px;cursor:pointer;pointer-events:auto;">Next</button>'
             + '</div>'
             + '<div id="wt2Done" style="display:none;position:fixed;inset:0;z-index:95;background:rgba(15,20,35,0.72);align-items:center;justify-content:center;pointer-events:auto;">'
             + '<div style="max-width:380px;width:calc(100% - 2rem);background:#fff;border-radius:20px;padding:32px 28px;text-align:center;box-shadow:0 30px 70px rgba(0,0,0,0.45);">'
             + '<div style="width:64px;height:64px;margin:0 auto 18px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#e8f5ec;color:#1f6b3a;"><i data-lucide="check" style="width:34px;height:34px;"></i></div>'
             + '<div style="font-size:20px;font-weight:700;color:#1f1f1f;">Hens registered!</div>'
             + '<div style="font-size:14px;color:#6B7280;margin-top:8px;">Your new hens are ready to be placed into cages.</div>'
-            + '<button id="wt2DoneBtn" style="margin-top:24px;padding:11px 28px;font-size:14px;font-weight:600;color:#fff;background:#002D5E;border:0;border-radius:10px;cursor:pointer;">Done</button>'
+            + '<button id="wt2DoneBtn" style="margin-top:24px;padding:11px 28px;font-size:14px;font-weight:600;color:#fff;background:var(--color-navy);border:0;border-radius:10px;cursor:pointer;">Done</button>'
             + '</div>'
             + '</div>'
             + '<div id="wt2Skip" style="position:fixed;top:16px;right:16px;z-index:93;background:#fff;border:1px solid #e6e6e6;color:#615d59;font-size:13px;padding:8px 14px;border-radius:999px;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,0.15);pointer-events:auto;">End tutorial</div>';
