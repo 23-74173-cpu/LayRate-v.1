@@ -286,10 +286,11 @@
                             {{-- Egg Count --}}
                             <div>
                                 <label id="eggCountLabel" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Egg Count</label>
-                                <input type="number" name="egg_count" id="eggCount" min="0" required
+                                <x-number-input name="egg_count" id="eggCount" min="0" value="{{ old('egg_count', '') }}" required
                                        oninput="computeHdep(); checkSizeSum(); validateForm()"
-                                       class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0075de] focus:ring-offset-1"
-                                       style="border-color: #e6e6e6; color: #1f1f1f;">
+                                       data-error-message="Enter the egg count for this slot."
+                                       class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                                       style="border-color: #e6e6e6; color: #1f1f1f;" />
                                 @error('egg_count')
                                 <p class="text-xs mt-1" style="color: #9b1c24;">{{ $message }}</p>
                                 @enderror
