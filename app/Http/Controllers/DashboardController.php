@@ -501,12 +501,14 @@ class DashboardController extends Controller
             $summary = null;
         }
 
-        // Also shape a chart-compatible dataset for the frontend overlay
+        // Also shape a chart-compatible dataset for the frontend overlay.
+        // Actual production uses the eggs metric color; the forecast line
+        // shares the hue (same metric) and stays distinct via dash + legend.
         $actualDataset = [
             'label' => $cageCode ? $cageCode . ' Actual' : 'Total Production',
             'data' => $actual,
-            'borderColor' => '#102A4C',
-            'backgroundColor' => 'rgba(16, 42, 76, 0.1)',
+            'borderColor' => '#0075de',
+            'backgroundColor' => 'rgba(0, 117, 222, 0.1)',
             'tension' => 0.3,
             'borderWidth' => 3,
             'pointRadius' => 4,
@@ -516,8 +518,8 @@ class DashboardController extends Controller
         $forecastDataset = [
             'label' => $cageCode ? $cageCode . ' Forecast' : 'Farm Forecast',
             'data' => $forecast,
-            'borderColor' => '#C2703E',
-            'backgroundColor' => 'rgba(194, 112, 62, 0.1)',
+            'borderColor' => '#0075de',
+            'backgroundColor' => 'rgba(0, 117, 222, 0.08)',
             'borderDash' => [6, 4],
             'tension' => 0.3,
             'borderWidth' => 2.5,
