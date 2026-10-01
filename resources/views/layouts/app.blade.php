@@ -12,11 +12,14 @@
     <link rel="manifest" href="/manifest.json">
     <title>{{ $title ?? 'LayRate' }} — LayRate Farm Monitor</title>
 
-    {{-- Favicons --}}
+    {{-- Favicons (generated from /images/layrate-logo.png) --}}
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <meta property="og:image" content="/images/layrate-logo.png">
+    <meta property="og:title" content="LayRate Farm Monitor">
 
     {{-- Inter Font (self-hosted) --}}
     <link rel="stylesheet" href="/css/inter.css">
@@ -33,10 +36,22 @@
     {{-- Turbo Drive --}}
     <script type="module" src="/js/turbo.js"></script>
 
+    {{-- Shared chart metric palette (CSS-var backed, hardcoded fallbacks).
+         Synchronous in head so inline chart configs can use it on first paint. --}}
+    <script src="/js/chart-colors.js?v={{ @filemtime(public_path('js/chart-colors.js')) }}"></script>
+
     {{-- Date fields always show and accept mm/dd/yyyy, whatever the browser's
          language (see the comment at the top of the file). Loaded once; it
          watches the page for date inputs added by Turbo visits and frames. --}}
     <script src="/js/date-mdy.js?v={{ @filemtime(public_path('js/date-mdy.js')) }}" defer></script>
+
+    {{-- Branded client-side validation (replaces native bubbles site-wide).
+         Delegated + Turbo-aware; opt out per form with data-native-validation. --}}
+    <script src="/js/form-validation.js?v={{ @filemtime(public_path('js/form-validation.js')) }}" defer></script>
+
+    {{-- Branded tooltips replacing native title="" bubbles (auto-upgrade,
+         delegated + Turbo-aware). --}}
+    <script src="/js/tooltip.js?v={{ @filemtime(public_path('js/tooltip.js')) }}" defer></script>
 
     {{-- Slow-page loading screen: appears only when a page takes >600ms to
          render. Fast loads clear the timer and never flash it. Covers both
@@ -53,7 +68,7 @@
         #app-loading-overlay.visible { opacity: 1; pointer-events: auto; }
         #app-loading-overlay .al-spinner {
             width: 40px; height: 40px; border-radius: 50%;
-            border: 3px solid rgba(0, 117, 222, 0.2); border-top-color: #0075de;
+            border: 3px solid rgba(0, 45, 94, 0.2); border-top-color: var(--color-navy);
             animation: app-spin 0.8s linear infinite;
         }
         #app-loading-overlay .al-text { font-size: 13px; font-weight: 500; color: #6B7280; letter-spacing: 0.02em; }
@@ -114,19 +129,48 @@
         * { -webkit-tap-highlight-color: transparent; }
         html { height: 100%; height: -webkit-fill-available; }
         body { background-color: #F0F0F0; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; height: 100%; height: -webkit-fill-available; overflow: hidden; overscroll-behavior: none; }
+        /* ── Sidebar shell: flat deep navy shared with login, landing hero
+               and dashboard banner (tokens: --color-sidebar-bg #1a2342,
+               --color-secondary #213183). At most a whisper of vertical
+               light so the surface reads flat, plus a hairline divider
+               against the content area. ── */
+        #sidebar {
+            background-color: var(--color-sidebar-bg);
+            background-image: linear-gradient(180deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0) 28%, rgba(0,0,0,0) 72%, rgba(0,0,0,0.10) 100%);
+            border-right: 1px solid rgba(255,255,255,0.09);
+        }
+        /* ── Active nav item: soft translucent fill + 3px brand-sky rail ── */
         .nav-active {
-            background: rgba(255,255,255,.18) !important;
-            box-shadow: inset 2px 0 0 0 rgba(255,255,255,0.9), inset 0 0 0 1px rgba(255,255,255,.22);
+            position: relative;
+            background: rgba(255,255,255,.10) !important;
+            border-radius: 8px;
             color: #ffffff !important;
+            font-weight: 600;
+        }
+        .nav-active::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 6px;
+            bottom: 6px;
+            width: 3px;
+            border-radius: 9999px;
+            background: #62aef0;
         }
         .nav-active i, .nav-active .sidebar-label { color: #ffffff !important; }
+        /* ── Sign out reads as an exit action on hover ── */
+        .signout-link:hover {
+            background-color: rgba(251,113,133,.14) !important;
+            color: #fecdd3 !important;
+        }
+        .signout-link:hover i { color: #fecdd3 !important; }
         .scrollbar-thin::-webkit-scrollbar { width: 4px; height: 4px; }
         .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
         .scrollbar-thin::-webkit-scrollbar-thumb { background: #D9D9D9; border-radius: 9999px; }
         [x-cloak] { display: none !important; }
 
         :focus-visible {
-            outline: 2px solid #0075de;
+            outline: 2px solid var(--color-navy);
             outline-offset: 2px;
             border-radius: 4px;
         }
@@ -150,15 +194,21 @@
 
             /* Collapsed: center the brand logo without cropping and drop the
                side gutters so the 44px logo fits 64px of sidebar exactly. */
-            #sidebar.w-16 > .flex,
-            .sidebar-collapsed #sidebar > .flex {
+            #sidebar.w-16 .brand-block,
+            .sidebar-collapsed #sidebar .brand-block {
                 padding-left: 0 !important;
                 padding-right: 0 !important;
-                justify-content: center !important;
+                border-bottom-color: transparent !important;
             }
+            #sidebar.w-16 .brand-block > .flex,
+            .sidebar-collapsed #sidebar .brand-block > .flex { justify-content: center !important; }
 
             #sidebar.w-16 nav,
             .sidebar-collapsed #sidebar nav { overflow-x: hidden !important; }
+
+            /* Collapsed rail: the portrait egg alone at ~34px tall. */
+            #sidebar.w-16 .brand-block img,
+            .sidebar-collapsed #sidebar .brand-block img { height: 34px !important; }
 
             /* Apply collapsed width synchronously before paint (Turbo-safe replacement for document.write) */
             html.sidebar-collapsed #sidebar { width: 4rem !important; }
@@ -177,6 +227,14 @@
         }
         .turbo-loaded { animation: turboFade 120ms ease-out; }
     </style>
+
+    {{-- No-JS fallback: entrance animations must never leave content hidden.
+         (With JS they end at full opacity via fill modes; this covers the
+         case where CSS animations are interrupted or scripting is off.) --%>
+    <noscript><style>
+        .page-wrapper, .page-wrapper > .space-y-5 > *, .dash-rise, .dash-pop,
+        .turbo-loaded, .login-enter { opacity: 1 !important; transform: none !important; animation: none !important; }
+    </style></noscript>
 
     {{-- Print: the root flex row and main column are both pinned to a fixed
          viewport height with overflow:hidden on screen (so only the sidebar's
@@ -202,7 +260,7 @@
 <style>
 #turbo-loading-bar {
     position: fixed; top: 0; left: 0; height: 3px;
-    background: linear-gradient(90deg, #0075de, #62aef0);
+    background: linear-gradient(90deg, var(--color-navy), #62aef0);
     z-index: 9999; pointer-events: none;
     width: 0%; opacity: 0;
     transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s;
@@ -272,20 +330,22 @@
            style="width: 16rem; height: 100vh; height: -webkit-fill-available; height: 100dvh;">
 
         {{-- TOP: Brand + Arrow (mobile close / desktop unused) --}}
-        <div class="flex items-center justify-between px-4 pt-3 pb-1 shrink-0">
-            <div class="logo-wrap flex items-center gap-2.5 overflow-hidden">
-                <div class="w-11 h-11 rounded-lg bg-white flex items-center justify-center shrink-0 p-1 shadow-sm">
-                    <img src="/images/layrate-logo-white.png" alt="LayRate logo" class="w-full h-full object-contain" loading="lazy">
+        <div class="brand-block px-4 pt-3 pb-3 shrink-0 border-b border-white/10">
+            <div class="flex items-center justify-between">
+                <div class="logo-wrap flex items-center gap-2.5 overflow-hidden">
+                    {{-- THE logo sits directly on the navy: white egg with dark
+                         outline needs no tile or effects to stand out. --}}
+                    <x-logo size="h-11" class="shrink-0" />
+                    <div class="logo-text overflow-hidden whitespace-nowrap">
+                        <div class="text-white text-sm font-bold leading-tight">LayRate</div>
+                        <div class="text-white/60 text-xs leading-tight">Farm Monitor</div>
+                    </div>
                 </div>
-                <div class="logo-text overflow-hidden whitespace-nowrap">
-                    <div class="text-white text-sm font-semibold">LayRate</div>
-                    <div class="text-white/75 text-xs">Farm Monitor</div>
-                </div>
+                {{-- Arrow button: mobile drawer close only (hidden on desktop) --}}
+                <button id="sidebar-arrow" class="lg:hidden text-white/50 hover:text-white transition-colors p-1 rounded shrink-0" aria-label="Close menu">
+                    <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                </button>
             </div>
-            {{-- Arrow button: mobile drawer close only (hidden on desktop) --}}
-            <button id="sidebar-arrow" class="lg:hidden text-white/50 hover:text-white transition-colors p-1 rounded shrink-0" aria-label="Close menu">
-                <i data-lucide="chevron-left" class="w-5 h-5"></i>
-            </button>
         </div>
 
         {{-- MIDDLE: Main nav (scrollable) --}}
@@ -324,7 +384,7 @@
                 @continue
             @endif
             <div class="mt-3 first:mt-0">
-                <div class="sidebar-section px-3 pb-0.5 text-[9px] uppercase tracking-widest text-white/70 font-semibold whitespace-nowrap">{{ $sectionName }}</div>
+                <div class="sidebar-section px-3 pb-1 text-[10px] uppercase tracking-[0.14em] text-white/80 font-semibold whitespace-nowrap">{{ $sectionName }}</div>
                 @foreach($visible as $item)
                 <a href="{{ route($item['route']) }}"
                    data-route="{{ $item['route'] === 'dashboard' ? 'dashboard' : explode('.', $item['route'])[0] }}"
@@ -356,7 +416,7 @@
                   data-confirm="Sign out of LayRate?" data-confirm-action="Sign out" data-confirm-severity="neutral">
                 @csrf
                 <button type="submit"
-                        class="nav-link group w-full flex items-center gap-3 px-3 py-2 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors"
+                        class="signout-link nav-link group w-full flex items-center gap-3 px-3 py-2 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors"
                         title="Sign out" aria-label="Sign out">
                     <span class="flex items-center gap-3 min-w-0 transition-transform duration-200 ease-out group-hover:-translate-y-0.5 group-hover:translate-x-1">
                         <i data-lucide="log-out" class="w-[19px] h-[19px] shrink-0"></i>
@@ -391,19 +451,23 @@
                 @hasSection('header-clock')
                 <span class="text-xs text-ink-muted whitespace-nowrap hidden sm:inline">@yield('header-clock')</span>
                 @endif
-                <a href="{{ route('notifications.index') }}" class="relative text-ink hover:text-ink-muted transition-colors" aria-label="Notifications">
-                    <i data-lucide="bell" class="w-4 h-4"></i>
+                <a href="{{ route('notifications.index') }}" class="relative rounded-full p-1.5 text-ink hover:bg-black/5 transition-colors" aria-label="Notifications">
+                    <i data-lucide="bell" class="w-5 h-5 block"></i>
                     @if($globalAlertCount > 0)
-                    <span class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-alert-text text-white text-xs rounded-full flex items-center justify-center font-bold">{{ $globalAlertCount }}</span>
+                    <span class="absolute -top-0.5 -right-0.5 min-w-3.5 h-3.5 px-0.5 bg-alert-text text-white text-[10px] leading-3.5 rounded-full flex items-center justify-center font-bold">{{ $globalAlertCount }}</span>
                     @endif
                 </a>
                 <div class="relative pl-2 border-l border-hairline">
                     <button id="profileMenuBtn" type="button"
                             class="flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-black/5 transition-colors"
                             aria-haspopup="true" aria-expanded="false" aria-label="Account menu">
+                        @php
+                            $initials = collect(preg_split('/\s+/', trim(auth()->user()->name ?? '')))->filter()->map(fn($p) => mb_strtoupper(mb_substr($p, 0, 1)))->take(2)->implode('');
+                        @endphp
+                        <span class="w-7 h-7 rounded-full bg-secondary text-white text-[11px] font-semibold flex items-center justify-center shrink-0" aria-hidden="true">{{ $initials !== '' ? $initials : '•' }}</span>
                         <div class="text-right hidden sm:block">
-                            <div class="text-xs text-ink leading-tight">{{ auth()->user()->name }}</div>
-                            <div class="text-xs text-ink-muted uppercase tracking-wider">{{ auth()->user()->role }}</div>
+                            <div class="text-xs font-medium text-ink leading-tight">{{ auth()->user()->name }}</div>
+                            <div class="text-[10px] text-ink-muted uppercase tracking-wider leading-tight">{{ auth()->user()->role }}</div>
                         </div>
                         <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-ink-muted"></i>
                     </button>
@@ -429,20 +493,20 @@
 
         {{-- Flash messages --}}
         @if(session('success'))
-        <div class="mx-4 mt-3 flex items-center gap-2 bg-green-50 border border-green-200 text-green-800 px-4 py-2.5 rounded-lg text-sm">
-            <i data-lucide="check-circle" class="w-4 h-4 text-green-600 shrink-0"></i>
+        <div class="mx-4 mt-3 flex items-center gap-2 bg-success-bg border border-success-border text-success px-4 py-2.5 rounded-lg text-sm" role="status">
+            <i data-lucide="check-circle" class="w-4 h-4 text-success shrink-0"></i>
             {{ session('success') }}
         </div>
         @endif
         @if(session('error'))
-        <div class="mx-4 mt-3 flex items-center gap-2 bg-red-50 border border-red-200 text-red-800 px-4 py-2.5 rounded-lg text-sm">
-            <i data-lucide="alert-triangle" class="w-4 h-4 text-red-600 shrink-0"></i>
+        <div class="mx-4 mt-3 flex items-center gap-2 bg-danger-bg border border-danger-border text-danger px-4 py-2.5 rounded-lg text-sm" role="alert">
+            <i data-lucide="alert-triangle" class="w-4 h-4 text-danger shrink-0"></i>
             {{ session('error') }}
         </div>
         @endif
         @if(session('forecast_warning'))
-        <div class="mx-4 mt-3 flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-2.5 rounded-lg text-sm">
-            <i data-lucide="alert-circle" class="w-4 h-4 text-amber-600 shrink-0"></i>
+        <div class="mx-4 mt-3 flex items-center gap-2 bg-warning-bg border border-warning-border text-warning px-4 py-2.5 rounded-lg text-sm" role="status">
+            <i data-lucide="alert-circle" class="w-4 h-4 text-warning shrink-0"></i>
             {{ session('forecast_warning') }}
         </div>
         @endif
@@ -514,28 +578,25 @@
     var restoreUntil = 0;
 
     // ── Shared Floating Action Button (delegated, bound once) ──
-    // Used by every section's FAB (the shared fab component). The markup lives
-    // in <main> and is re-rendered on every Turbo visit, so handlers are
-    // delegated to document (a permanent ancestor) instead of being bound per
-    // element. The Forecast module's FAB predates this and binds its own
-    // handlers by id — it shares the visual style but not the
-    // .fab-toggle/.fab-menu classes, so there is no double-handling.
+    // Drives the "+" menu inside the global quick-actions dock (and any
+    // legacy .fab markup). The menu uses `hidden` (fully out of flow) rather
+    // than opacity-only hiding, so a closed menu never reserves space.
+    // Handlers are delegated to document (a permanent ancestor) instead of
+    // being bound per element, so they survive Turbo visits.
     document.addEventListener('click', function(e) {
         var toggle = e.target.closest('.fab-toggle');
         if (toggle) {
             var fab = toggle.closest('.fab');
             var menu = fab ? fab.querySelector('.fab-menu') : null;
             var icon = fab ? fab.querySelector('.fab-icon') : null;
-            var isOpen = menu && !menu.classList.contains('invisible');
+            var isOpen = menu && !menu.classList.contains('hidden');
             if (isOpen) {
-                menu.classList.add('invisible', 'opacity-0', 'translate-y-4');
-                menu.classList.remove('opacity-100', 'translate-y-0');
+                menu.classList.add('hidden');
                 toggle.setAttribute('aria-expanded', 'false');
                 toggle.setAttribute('aria-label', 'Open menu');
                 if (icon) icon.style.transform = 'rotate(0deg)';
             } else {
-                menu.classList.remove('invisible', 'opacity-0', 'translate-y-4');
-                menu.classList.add('opacity-100', 'translate-y-0');
+                menu.classList.remove('hidden');
                 toggle.setAttribute('aria-expanded', 'true');
                 toggle.setAttribute('aria-label', 'Close menu');
                 if (icon) icon.style.transform = 'rotate(45deg)';
@@ -543,12 +604,11 @@
             return;
         }
         // Outside click closes any open FAB menu
-        document.querySelectorAll('.fab .fab-menu:not(.invisible)').forEach(function(menu) {
+        document.querySelectorAll('.fab .fab-menu:not(.hidden)').forEach(function(menu) {
             var fab = menu.closest('.fab');
             var fabToggle = fab ? fab.querySelector('.fab-toggle') : null;
             var icon = fab ? fab.querySelector('.fab-icon') : null;
-            menu.classList.add('invisible', 'opacity-0', 'translate-y-4');
-            menu.classList.remove('opacity-100', 'translate-y-0');
+            menu.classList.add('hidden');
             if (fabToggle) {
                 fabToggle.setAttribute('aria-expanded', 'false');
                 fabToggle.setAttribute('aria-label', 'Open menu');
@@ -804,9 +864,11 @@
                 link.classList.add('nav-active');
                 link.classList.remove('text-white/85', 'hover:text-white', 'hover:bg-white/10');
                 link.classList.add('text-white');
+                link.setAttribute('aria-current', 'page');
             } else {
                 link.classList.remove('nav-active', 'text-white');
                 link.classList.add('text-white/85', 'hover:text-white', 'hover:bg-white/10');
+                link.removeAttribute('aria-current');
             }
         });
 
@@ -945,6 +1007,14 @@ window.__applyChartDefaults = function(full) {
     Chart.defaults.plugins.legend.labels.pointStyle = 'circle';
     Chart.defaults.plugins.legend.labels.boxWidth = 10;
     Chart.defaults.plugins.legend.labels.padding = 12;
+    // Legend labels toggle datasets on click — pointer on hover, default off.
+    // (Canvas-drawn, so CSS cannot target them; defaults are the one place.)
+    Chart.defaults.plugins.legend.onHover = function(e) {
+        if (e && e.native && e.native.target) e.native.target.style.cursor = 'pointer';
+    };
+    Chart.defaults.plugins.legend.onLeave = function(e) {
+        if (e && e.native && e.native.target) e.native.target.style.cursor = 'default';
+    };
     Chart.defaults.elements.bar.borderRadius = 4;
     if (full !== false) {
         Chart.defaults.scale.grid = { color: 'rgba(0,0,0,0.06)' };
@@ -1253,6 +1323,12 @@ window.LayRateNotes = {
 <x-notification-toast />
 <x-loading-modal />
 <x-transaction-logger />
+
+{{-- Global quick-actions dock (checklist on every authenticated page) --}}
+<x-quick-actions-dock :dataCompleteness="$dockCompleteness ?? []" />
+
+{{-- Shared dock behavior (delegated, init-guarded, Turbo-safe) --}}
+<script src="/js/quick-dock.js?v={{ @filemtime(public_path('js/quick-dock.js')) }}" defer></script>
 
 {{-- Libraries needed by inline scripts in @stack('scripts') --}}
 <script src="/js/lucide.min.js"></script>

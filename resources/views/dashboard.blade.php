@@ -5,42 +5,7 @@
 @section('content')
 <div class="space-y-5">
 
-    {{-- ── Dashboard Header ── --}}
-    <div class="relative overflow-hidden bg-linear-to-br from-secondary to-sidebar-bg rounded-lg p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4" id="dashHeader" style="min-height: 72px;">
-        {{-- Decorative egg bubbles --}}
-        <div class="page-header-egg-decor" aria-hidden="true"
-             style="position:absolute; inset:0; z-index:0; pointer-events:none; color:#9ca3af;"></div>
-
-        <script data-turbo-eval>
-        (function () {
-            var decor = document.querySelector('.page-header-egg-decor');
-            if (!decor || decor.getAttribute('data-eggs')) return;
-            decor.setAttribute('data-eggs', '1');
-            var opacities = ['0.30', '0.38', '0.46', '0.55'];
-            var count = 34;
-            for (var i = 0; i < count; i++) {
-                var egg = document.createElement('div');
-                egg.style.position = 'absolute';
-                egg.style.left = (45 + Math.random() * 55).toFixed(2) + '%';
-                egg.style.top = (Math.random() * 100).toFixed(2) + '%';
-                egg.style.width = (12 + Math.random() * 24).toFixed(1) + 'px';
-                egg.style.height = (12 + Math.random() * 24).toFixed(1) + 'px';
-                egg.style.opacity = opacities[i % opacities.length];
-                egg.style.transform = 'rotate(' + (Math.random() * 360).toFixed(0) + 'deg)';
-                egg.innerHTML = '<i data-lucide="egg" class="w-full h-full"></i>';
-                decor.appendChild(egg);
-            }
-            decor.style.webkitMaskImage = 'linear-gradient(to right, transparent 0%, black 40%)';
-            decor.style.maskImage = 'linear-gradient(to right, transparent 0%, black 40%)';
-            if (window.lucide) lucide.createIcons();
-        })();
-        </script>
-
-        <div class="relative z-[1]">
-            <div class="text-xl font-bold text-white">Dashboard</div>
-            <div class="text-sm text-white/75 mt-1">Farm performance overview and analytics</div>
-        </div>
-    </div>
+    <x-page-header title="Dashboard" subtitle="Farm performance overview and analytics" />
 
     {{-- Onboarding Modal --}}
     @if($needsOnboarding)
@@ -189,8 +154,9 @@
                     btn.classList.toggle('border-transparent', !isActive);
                     btn.classList.toggle('text-ink-muted', !isActive);
                     // Tailwind also accepts hex form — keep both in sync for robustness
-                    btn.classList.toggle('border-[#002D5E]', isActive);
-                    btn.classList.toggle('text-[#002D5E]', isActive);
+                    btn.classList.toggle('border-navy', isActive);
+                    btn.classList.toggle('text-navy', isActive);
+                    btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
                 });
                 document.querySelectorAll('.analytics-section').forEach(function(el) {
                     el.classList.toggle('active-section', el.dataset.analyticsSection === section);
@@ -204,6 +170,8 @@
             window.filterAnalytics = filterAnalytics;
 
             // Restore the previously active section + filters (fall back to Production).
+            // Filter values restore immediately (plain JS vars, no DOM needed);
+            // the tab/panel sync itself is deferred (see below).
             var __dashSaved = window.__dashboardReadState();
             window.__dashboardRestored = !!__dashSaved;
             if (__dashSaved) {
@@ -213,7 +181,29 @@
                 if (typeof __dashSaved.days === 'number') window.__dashboardGlobalDays = __dashSaved.days;
                 if (typeof __dashSaved.mortalityDays === 'number') window.__dashboardMortalityDays = __dashSaved.mortalityDays;
             }
-            filterAnalytics((__dashSaved && ['production','environmental','feed','flock'].indexOf(__dashSaved.section) >= 0) ? __dashSaved.section : 'production');
+            // Deferred: this script parses BEFORE the .analytics-section panels
+            // below it, so an immediate restore updated only the tab buttons and
+            // left Production visible ("Flock active + Production shown"). Wait
+            // for the panels, and re-apply after Turbo snapshot restores (where
+            // scripts don't re-run) so tab state and visible panel always match
+            // on load, tab clicks, and Turbo navigation.
+            window.__dashboardRestoreTab = function() {
+                var s = window.__dashboardReadState();
+                filterAnalytics((s && ['production','environmental','feed','flock'].indexOf(s.section) >= 0) ? s.section : 'production');
+            };
+            if (document.querySelector('.analytics-section')) {
+                window.__dashboardRestoreTab();
+            } else {
+                document.addEventListener('DOMContentLoaded', window.__dashboardRestoreTab, { once: true });
+            }
+            if (!window.__dashboardTabResyncBound) {
+                window.__dashboardTabResyncBound = true;
+                document.addEventListener('turbo:render', function() {
+                    if (window.__dashboardSection && document.querySelector('.analytics-section')) {
+                        filterAnalytics(window.__dashboardSection);
+                    }
+                });
+            }
             </script>
 
             {{-- ═══ SECTION 1 — Production Performance ═══ --}}

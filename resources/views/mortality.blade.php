@@ -5,12 +5,13 @@
 @php $mortalityNotes = \App\Models\Note::suggestionsFor('Mortality'); @endphp
 <div class="space-y-5">
 
-    <div class="flex flex-wrap items-center justify-between gap-2">
-        <x-page-header title="Mortality Log" subtitle="Record and track hen mortality per cage" />
-        <span class="text-xs px-3 py-1.5 rounded-full bg-[#F8D7DA] text-[#721C24] border border-[#F5C6CB] shrink-0 ml-0 sm:ml-3">
-            {{ $todayTotal }} recorded today
-        </span>
-    </div>
+    <x-page-header title="Mortality Log" subtitle="Record and track hen mortality per cage">
+        <x-slot:actions>
+            <span class="text-xs px-3 py-1.5 rounded-full bg-[#F8D7DA] text-[#721C24] border border-[#F5C6CB] whitespace-nowrap">
+                {{ $todayTotal }} recorded today
+            </span>
+        </x-slot:actions>
+    </x-page-header>
 
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
 
