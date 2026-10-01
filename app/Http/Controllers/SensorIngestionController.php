@@ -97,16 +97,26 @@ class SensorIngestionController extends Controller
                         continue;
                     }
 
-                    $envLog = EnvironmentalLog::updateOrCreate(
-                        [
+                    if ($this->dhtReadingSavedRecently($hardwareItem->cage_id, $recordedAt)) {
+                        // Not stored (see config environment.dht22_save_interval_seconds),
+                        // but still checked against the alert thresholds.
+                        $envLog = new EnvironmentalLog([
                             'cage_id' => $hardwareItem->cage_id,
-                            'recorded_at' => $recordedAt,
-                        ],
-                        [
                             'temperature_c' => (float) $reading['temperature_c'],
                             'humidity_pct' => (float) $reading['humidity_pct'],
-                        ]
-                    );
+                        ]);
+                    } else {
+                        $envLog = EnvironmentalLog::updateOrCreate(
+                            [
+                                'cage_id' => $hardwareItem->cage_id,
+                                'recorded_at' => $recordedAt,
+                            ],
+                            [
+                                'temperature_c' => (float) $reading['temperature_c'],
+                                'humidity_pct' => (float) $reading['humidity_pct'],
+                            ]
+                        );
+                    }
 
                     EnvironmentAlertService::check($envLog);
 
@@ -378,6 +388,31 @@ class SensorIngestionController extends Controller
                 'error' => config('app.debug') ? $e->getMessage() : 'Internal server error.',
             ], 500);
         }
+    }
+
+    /**
+     * True when a sensor reading for this cage was already stored within the
+     * configured interval before $recordedAt, so this one is not stored.
+     * Compared against the timestamp the way EnvironmentalLog stores it, and
+     * strictly earlier, so re-sending the same reading (same recorded_at)
+     * still updates that row like before. Manual overrides don't count.
+     */
+    private function dhtReadingSavedRecently(int $cageId, $recordedAt): bool
+    {
+        $interval = (int) config('environment.dht22_save_interval_seconds', 30);
+        if ($interval <= 0) {
+            return false;
+        }
+
+        $at = (new EnvironmentalLog)->fromDateTime($recordedAt);
+        $windowStart = \Illuminate\Support\Carbon::parse($at)->subSeconds($interval)->toDateTimeString();
+
+        return EnvironmentalLog::where('cage_id', $cageId)
+            ->where('is_override', false)
+            ->where('is_demo', false)
+            ->where('recorded_at', '>', $windowStart)
+            ->where('recorded_at', '<', $at)
+            ->exists();
     }
 
     private static function diedTodayCount(int $cageId, string $logDate): int

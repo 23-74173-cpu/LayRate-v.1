@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Device;
 use Closure;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -53,6 +54,36 @@ class DeviceAuth
      * already-existing worst case stays as slow as it always was.
      */
     private function resolveDevice(string $plainKey): ?Device
+    {
+        // Fast path: one indexed lookup by the key's SHA-256 (no bcrypt).
+        // Wrapped so a database that hasn't run the api_key_lookup migration
+        // yet (e.g. mid-deploy) simply falls back to the bcrypt check below.
+        try {
+            $device = Device::where('api_key_lookup', Device::lookupFor($plainKey))
+                ->where('is_active', true)
+                ->first();
+            if ($device) {
+                return $device;
+            }
+        } catch (QueryException $e) {
+            // fall through
+        }
+
+        $device = $this->resolveDeviceByHash($plainKey);
+
+        // Remember the fast lookup so this key skips bcrypt from now on.
+        if ($device) {
+            try {
+                $device->rememberApiKeyLookup($plainKey);
+            } catch (QueryException $e) {
+                // Column not there yet: keep using the bcrypt path.
+            }
+        }
+
+        return $device;
+    }
+
+    private function resolveDeviceByHash(string $plainKey): ?Device
     {
         if (preg_match('/^lr_(\d+)_/', $plainKey, $m)) {
             $device = Device::where('id', (int) $m[1])->where('is_active', true)->first();

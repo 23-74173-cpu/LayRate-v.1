@@ -39,7 +39,10 @@ class Device extends Model
     {
         $plain = 'lr_' . $this->id . '_' . Str::random(40);
 
-        $this->update(['api_key_hash' => Hash::make($plain)]);
+        $this->forceFill([
+            'api_key_hash'   => Hash::make($plain),
+            'api_key_lookup' => self::lookupFor($plain),
+        ])->save();
 
         return $plain;
     }
@@ -50,5 +53,37 @@ class Device extends Model
     public function verifyApiKey(string $plainKey): bool
     {
         return Hash::check($plainKey, $this->api_key_hash);
+    }
+
+    /**
+     * SHA-256 of a plain key, stored in api_key_lookup so DeviceAuth can find
+     * the device with one indexed lookup instead of a bcrypt check on every
+     * sensor reading. Safe for these keys because they are 40 random
+     * characters (a fast hash is only a problem for guessable passwords).
+     */
+    public static function lookupFor(string $plainKey): string
+    {
+        return hash('sha256', $plainKey);
+    }
+
+    /**
+     * Store the fast lookup for a key that just passed verifyApiKey().
+     * Lets keys issued before api_key_lookup existed switch to the fast
+     * path on their first request, with no change on the device side.
+     */
+    public function rememberApiKeyLookup(string $plainKey): void
+    {
+        $this->forceFill(['api_key_lookup' => self::lookupFor($plainKey)])->saveQuietly();
+    }
+
+    protected static function booted(): void
+    {
+        // Any change to the key hash (new key, revoked key) drops the old
+        // fast lookup, so a replaced key can never keep working through it.
+        static::saving(function (Device $device) {
+            if ($device->isDirty('api_key_hash') && ! $device->isDirty('api_key_lookup')) {
+                $device->api_key_lookup = null;
+            }
+        });
     }
 }

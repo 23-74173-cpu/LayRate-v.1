@@ -27,7 +27,6 @@ class EggCountSseController extends Controller
         }
 
         $lastCounts = [];
-        $lastCageStats = null;
 
         $allSlotIds = CageSlot::pluck('cage_id', 'id');
 
@@ -36,76 +35,60 @@ class EggCountSseController extends Controller
         header('Connection: keep-alive');
         header('X-Accel-Buffering: no');
 
-        $maxRuntime = 8;
-        $start = time();
+        // One pass per connection: send the current counts and end the
+        // response. The browser's EventSource reconnects by itself after the
+        // retry delay, so the page still updates about every 2 seconds. The
+        // old version looped with sleep(1) for 8 seconds per connection,
+        // keeping a PHP-FPM worker busy the whole time, so a few open Egg
+        // Logging tabs could use up the worker pool and make every other
+        // request wait in line.
+        echo "retry: 2000\n\n";
 
-        while (! connection_aborted() && (time() - $start) < $maxRuntime) {
-            $today = ReportingDateService::reportingDateString();
+        $today = ReportingDateService::reportingDateString();
 
-            $logs = ProductionLog::whereIn('cage_slot_id', $slotIds)
-                ->where('log_date', $today)
-                ->get();
+        $logs = ProductionLog::whereIn('cage_slot_id', $slotIds)
+            ->where('log_date', $today)
+            ->get();
 
-            $changed = false;
-
-            foreach ($logs as $log) {
-                $slotId = $log->cage_slot_id;
-                $current = ['egg_count' => $log->egg_count, 'hen_count' => $log->hen_count];
-
-                if (($lastCounts[$slotId] ?? null) !== $current) {
-                    $lastCounts[$slotId] = $current;
-                    $changed = true;
-                }
-            }
-
-            foreach ($slotIds as $sid) {
-                if (! isset($lastCounts[$sid])) {
-                    $lastCounts[$sid] = ['egg_count' => 0, 'hen_count' => 0];
-                    $changed = true;
-                }
-            }
-
-            if ($changed) {
-                echo "event: count\n";
-                echo "data: " . json_encode(['counts' => $lastCounts]) . "\n\n";
-                ob_flush();
-                flush();
-            }
-
-            $todayLogs = ProductionLog::where('log_date', $today)->get();
-            $cageStats = [];
-
-            foreach ($todayLogs as $log) {
-                $cageId = $allSlotIds[$log->cage_slot_id] ?? null;
-                if (! $cageId) continue;
-
-                if (! isset($cageStats[$cageId])) {
-                    $cageStats[$cageId] = ['total_eggs' => 0, 'logged_slots' => []];
-                }
-                $cageStats[$cageId]['total_eggs'] += $log->egg_count;
-                $cageStats[$cageId]['logged_slots'][$log->cage_slot_id] = true;
-            }
-
-            foreach ($cageStats as $cageId => &$stats) {
-                $stats['logged_count'] = count($stats['logged_slots']);
-                unset($stats['logged_slots']);
-            }
-            unset($stats);
-
-            $statsJson = json_encode($cageStats);
-            if ($statsJson !== $lastCageStats) {
-                $lastCageStats = $statsJson;
-                echo "event: cage_stats\n";
-                echo "data: $statsJson\n\n";
-                ob_flush();
-                flush();
-            }
-
-            echo ": heartbeat\n\n";
-            ob_flush();
-            flush();
-
-            sleep(1);
+        foreach ($logs as $log) {
+            $lastCounts[$log->cage_slot_id] = ['egg_count' => $log->egg_count, 'hen_count' => $log->hen_count];
         }
+
+        foreach ($slotIds as $sid) {
+            if (! isset($lastCounts[$sid])) {
+                $lastCounts[$sid] = ['egg_count' => 0, 'hen_count' => 0];
+            }
+        }
+
+        echo "event: count\n";
+        echo "data: " . json_encode(['counts' => $lastCounts]) . "\n\n";
+
+        $todayLogs = ProductionLog::where('log_date', $today)->get();
+        $cageStats = [];
+
+        foreach ($todayLogs as $log) {
+            $cageId = $allSlotIds[$log->cage_slot_id] ?? null;
+            if (! $cageId) continue;
+
+            if (! isset($cageStats[$cageId])) {
+                $cageStats[$cageId] = ['total_eggs' => 0, 'logged_slots' => []];
+            }
+            $cageStats[$cageId]['total_eggs'] += $log->egg_count;
+            $cageStats[$cageId]['logged_slots'][$log->cage_slot_id] = true;
+        }
+
+        foreach ($cageStats as $cageId => &$stats) {
+            $stats['logged_count'] = count($stats['logged_slots']);
+            unset($stats['logged_slots']);
+        }
+        unset($stats);
+
+        echo "event: cage_stats\n";
+        echo "data: " . json_encode($cageStats) . "\n\n";
+
+        if (ob_get_level() > 0) {
+            ob_flush();
+        }
+        flush();
     }
 }

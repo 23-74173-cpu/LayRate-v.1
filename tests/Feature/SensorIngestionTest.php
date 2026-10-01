@@ -601,4 +601,116 @@ class SensorIngestionTest extends TestCase
         $response->assertUnauthorized();
         $this->assertNoTestEnvironmentalLogs();
     }
+
+    private function dhtPayload(float $temp, string $recordedAt): array
+    {
+        return [
+            'readings' => [
+                [
+                    'serial_number' => 'DHT22-TEST-001',
+                    'temperature_c' => $temp,
+                    'humidity_pct' => 60.0,
+                ],
+            ],
+            'recorded_at' => $recordedAt,
+        ];
+    }
+
+    public function test_dht22_readings_inside_save_interval_are_not_stored(): void
+    {
+        config(['environment.dht22_save_interval_seconds' => 30]);
+        $this->dht22Item();
+        $key = $this->deviceKey();
+        $start = now()->startOfMinute();
+
+        $this->postReadings($this->dhtPayload(27.0, $start->toDateTimeString()), $key)->assertOk();
+        $this->postReadings($this->dhtPayload(27.1, $start->copy()->addSeconds(2)->toDateTimeString()), $key)
+            ->assertOk()
+            ->assertJsonPath('accepted', 1);
+        $this->postReadings($this->dhtPayload(27.2, $start->copy()->addSeconds(30)->toDateTimeString()), $key)->assertOk();
+
+        $this->assertEquals(
+            [27.0, 27.2],
+            EnvironmentalLog::where('cage_id', $this->cage->id)->orderBy('recorded_at')
+                ->pluck('temperature_c')->map(fn ($t) => (float) $t)->all()
+        );
+    }
+
+    public function test_dht22_reading_skipped_by_save_interval_still_raises_alert(): void
+    {
+        config(['environment.dht22_save_interval_seconds' => 30]);
+        Setting::set('temp_max', 32);
+        $this->dht22Item();
+        $key = $this->deviceKey();
+        $start = now()->startOfMinute();
+
+        $this->postReadings($this->dhtPayload(27.0, $start->toDateTimeString()), $key)->assertOk();
+        $this->postReadings($this->dhtPayload(36.0, $start->copy()->addSeconds(2)->toDateTimeString()), $key)->assertOk();
+
+        $this->assertEquals(1, EnvironmentalLog::where('cage_id', $this->cage->id)->count());
+        $this->assertEquals(1, Alert::where('cage_id', $this->cage->id)->where('alert_type', 'temperature_high')->count());
+    }
+
+    public function test_dht22_save_interval_zero_stores_every_reading(): void
+    {
+        config(['environment.dht22_save_interval_seconds' => 0]);
+        $this->dht22Item();
+        $key = $this->deviceKey();
+        $start = now()->startOfMinute();
+
+        $this->postReadings($this->dhtPayload(27.0, $start->toDateTimeString()), $key)->assertOk();
+        $this->postReadings($this->dhtPayload(27.1, $start->copy()->addSeconds(2)->toDateTimeString()), $key)->assertOk();
+
+        $this->assertEquals(2, EnvironmentalLog::where('cage_id', $this->cage->id)->count());
+    }
+
+    public function test_device_key_lookup_is_remembered_after_first_request(): void
+    {
+        $this->dht22Item();
+        $key = $this->deviceKey();
+        $this->assertNull($this->device->fresh()->api_key_lookup);
+
+        $this->postReadings($this->dhtPayload(27.0, now()->toDateTimeString()), $key)->assertOk();
+
+        $this->assertEquals(Device::lookupFor($key), $this->device->fresh()->api_key_lookup);
+
+        // Second request goes through the fast lookup and still works.
+        $this->postReadings($this->dhtPayload(27.5, now()->addMinute()->toDateTimeString()), $key)->assertOk();
+    }
+
+    public function test_replaced_device_key_stops_working_through_lookup(): void
+    {
+        $this->dht22Item();
+        $oldKey = $this->deviceKey();
+        $this->postReadings($this->dhtPayload(27.0, now()->toDateTimeString()), $oldKey)->assertOk();
+        $this->assertNotNull($this->device->fresh()->api_key_lookup);
+
+        $this->device->fresh()->update(['api_key_hash' => Hash::make('lr_testkey_replacement')]);
+
+        $this->postReadings($this->dhtPayload(27.5, now()->addMinute()->toDateTimeString()), $oldKey)->assertUnauthorized();
+        $this->postReadings($this->dhtPayload(27.5, now()->addMinutes(2)->toDateTimeString()), 'lr_testkey_replacement')->assertOk();
+    }
+
+    public function test_regenerated_device_key_works_and_old_key_does_not(): void
+    {
+        $this->dht22Item();
+        $oldKey = $this->deviceKey();
+        $this->postReadings($this->dhtPayload(27.0, now()->toDateTimeString()), $oldKey)->assertOk();
+
+        $newKey = $this->device->fresh()->generateApiKey();
+
+        $this->postReadings($this->dhtPayload(27.5, now()->addMinute()->toDateTimeString()), $oldKey)->assertUnauthorized();
+        $this->postReadings($this->dhtPayload(27.5, now()->addMinutes(2)->toDateTimeString()), $newKey)->assertOk();
+    }
+
+    public function test_inactive_device_key_is_rejected_after_lookup_was_remembered(): void
+    {
+        $this->dht22Item();
+        $key = $this->deviceKey();
+        $this->postReadings($this->dhtPayload(27.0, now()->toDateTimeString()), $key)->assertOk();
+
+        $this->device->fresh()->update(['is_active' => false]);
+
+        $this->postReadings($this->dhtPayload(27.5, now()->addMinute()->toDateTimeString()), $key)->assertUnauthorized();
+    }
 }

@@ -123,7 +123,14 @@ class ChickensController extends Controller
         $search = $request->query('search');
         $sort = $request->query('sort', '');
 
-        $hens = Hen::with(['cageSlot.cage.cageSlots.hardwareItems'])
+        // Sensor relations on both slot paths the view uses (the cage grid and
+        // each hen's own slot), so hasBreakbeam() doesn't query once per slot.
+        $hens = Hen::with([
+            'cageSlot.hardwareItems',
+            'cageSlot.additionalSensors',
+            'cageSlot.cage.cageSlots.hardwareItems',
+            'cageSlot.cage.cageSlots.additionalSensors',
+        ])
             ->when($cageId, fn($q) => $q->whereHas('cageSlot', fn($q) => $q->where('cage_id', $cageId)))
             ->when($breed, fn($q) => $q->where('breed', $breed))
             ->when($isActive !== 'all', fn($q) => $q->where('is_active', $isActive === 'active'))

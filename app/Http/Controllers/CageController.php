@@ -27,6 +27,7 @@ class CageController extends Controller
     {
         $cages = Cage::with([
             'cageSlots.hardwareItems',
+            'cageSlots.additionalSensors',
             'hens' => fn ($q) => $q->where('is_active', 1)->orderBy('id'),
         ])->orderBy('cage_code')->get();
 
@@ -61,6 +62,7 @@ class CageController extends Controller
         if ($editCageId = session('edit_cage_id')) {
             $editCage = Cage::with([
                 'cageSlots.hardwareItems',
+                'cageSlots.additionalSensors',
                 'hens' => fn ($q) => $q->where('is_active', 1)->orderBy('id'),
             ])->find($editCageId);
         }
@@ -1019,7 +1021,7 @@ class CageController extends Controller
 
     public function printLabel(Cage $cage)
     {
-        $cage->load(['cageSlots', 'hens' => fn ($q) => $q->where('is_active', 1)->orderBy('id')]);
+        $cage->load(['cageSlots.hardwareItems', 'cageSlots.additionalSensors', 'hens' => fn ($q) => $q->where('is_active', 1)->orderBy('id')]);
 
         $hensBySlot = $cage->hens->groupBy('cage_slot_id');
 

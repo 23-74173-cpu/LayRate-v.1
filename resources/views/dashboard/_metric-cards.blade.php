@@ -3,7 +3,7 @@
         {{-- Production Metrics --}}
         <div>
             <x-section-label title="Production" icon="factory">
-                @if($kpiAsOf ?? null)<x-slot:meta>· as of {{ $kpiAsOf }}</x-slot:meta>@endif
+                @if($kpiAsOf ?? null)<x-slot:meta>· as of {{ $kpiAsOf }}</x-slot:meta> @endif
             </x-section-label>
             <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <x-kpi-card
@@ -176,7 +176,7 @@
         },
         'lifetime-eggs': {
             title: 'Lifetime Eggs by Cage',
-            rows: {!! $cages->map(fn($c) => ['label' => $c->cage_code, 'color' => $c->color, 'bgColor' => $c->colorSoft, 'value' => number_format($c->productionLogs->sum('egg_count')) . ' eggs'])->values()->toJson() !!}
+            rows: {!! $cages->map(fn($c) => ['label' => $c->cage_code, 'color' => $c->color, 'bgColor' => $c->colorSoft, 'value' => number_format($c->lifetime_eggs ?? $c->productionLogs->sum('egg_count')) . ' eggs'])->values()->toJson() !!}
         },
         env: {
             title: 'Environment by Cage',

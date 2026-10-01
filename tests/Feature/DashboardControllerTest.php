@@ -88,11 +88,15 @@ class DashboardControllerTest extends TestCase
 
     public function test_unscoped_dashboard_aggregates_across_both_cages(): void
     {
-        $response = $this->actingAs($this->admin)->get(route('dashboard'));
-        $response->assertOk();
+        // KPI numbers are rendered by the lazy stats frames, not the page shell.
+        $stats = $this->actingAs($this->admin)->get(route('dashboard.stats'));
+        $stats->assertOk();
 
         // Farm-wide: today's eggs = 4 (A) + 1 (B) = 5.
-        $this->assertEquals(5, $response->viewData('eggsToday'));
+        $this->assertEquals(5, $stats->viewData('eggsToday'));
+
+        $response = $this->actingAs($this->admin)->get(route('dashboard'));
+        $response->assertOk();
 
         // The single global period filter drives every analytics card.
         $response->assertSee('data-global-days');

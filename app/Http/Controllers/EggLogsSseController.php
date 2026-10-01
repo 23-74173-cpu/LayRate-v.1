@@ -16,25 +16,23 @@ class EggLogsSseController extends Controller
         header('Connection: keep-alive');
         header('X-Accel-Buffering: no');
 
-        $maxRuntime = 10;
-        $start = time();
+        // One pass per connection, then the browser's EventSource reconnects
+        // after the retry delay (3 s, the same check interval as before). The
+        // old 10-second sleep loop kept a PHP-FPM worker busy per open tab.
+        // The page only reloads its list when latest_id goes past the id it
+        // already has, so sending the same id again is harmless.
+        echo "retry: 3000\n\n";
 
-        while (! connection_aborted() && (time() - $start) < $maxRuntime) {
-            $latestId = (int) ProductionLog::max('id');
+        $latestId = (int) ProductionLog::max('id');
 
-            if ($latestId > $lastKnownId) {
-                echo "event: log_update\n";
-                echo "data: " . json_encode(['latest_id' => $latestId]) . "\n\n";
-                $lastKnownId = $latestId;
-                ob_flush();
-                flush();
-            }
-
-            echo ": heartbeat\n\n";
-            ob_flush();
-            flush();
-
-            sleep(3);
+        if ($latestId > $lastKnownId) {
+            echo "event: log_update\n";
+            echo "data: " . json_encode(['latest_id' => $latestId]) . "\n\n";
         }
+
+        if (ob_get_level() > 0) {
+            ob_flush();
+        }
+        flush();
     }
 }

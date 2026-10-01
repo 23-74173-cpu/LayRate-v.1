@@ -321,29 +321,21 @@ class EnvironmentController extends Controller
 
     /**
      * Latest real DHT22 reading (not demo, not a manual entry) for each of the
-     * given cages, found with one grouped query instead of loading every row.
+     * given cages: one small query per cage, each reading the newest rows
+     * through the (cage_id, recorded_at) index. A grouped MAX(recorded_at)
+     * query had to scan every reading the cages ever sent.
      */
     private function latestDht22Readings($cageIds)
     {
-        if (collect($cageIds)->isEmpty()) {
-            return collect();
-        }
-
-        $latestAt = EnvironmentalLog::whereIn('cage_id', $cageIds)
-            ->real()
-            ->where('is_override', false)
-            ->selectRaw('cage_id, MAX(recorded_at) as latest_at')
-            ->groupBy('cage_id');
-
-        return EnvironmentalLog::joinSub($latestAt, 'latest', function ($join) {
-                $join->on('environmental_logs.cage_id', '=', 'latest.cage_id')
-                     ->on('environmental_logs.recorded_at', '=', 'latest.latest_at');
-            })
-            ->where('environmental_logs.is_demo', false)
-            ->where('environmental_logs.is_override', false)
-            ->select('environmental_logs.*')
-            ->get()
-            ->unique('cage_id')
+        return collect($cageIds)
+            ->filter()
+            ->unique()
+            ->map(fn ($cageId) => EnvironmentalLog::where('cage_id', $cageId)
+                ->real()
+                ->where('is_override', false)
+                ->orderByDesc('recorded_at')
+                ->first())
+            ->filter()
             ->values();
     }
 

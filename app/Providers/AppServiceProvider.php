@@ -32,22 +32,27 @@ class AppServiceProvider extends ServiceProvider
             if (auth()->check()) {
                 $acknowledgedIds = session()->get('alerts_acknowledged_ids', []);
 
-                $unreadAlerts = Alert::where('is_read', false)
-                    ->with('cage')
-                    ->orderByDesc('triggered_at')
-                    ->get();
+                // Runs on every page: only the unread IDs are fetched here.
+                // Full alert rows (with their cage) are loaded only when some
+                // are new to this session and the popup will show them.
+                $unreadIds = Alert::where('is_read', false)->pluck('id')->all();
 
                 // Prune stale IDs (read/deleted alerts) so the session list
                 // can't grow unbounded across logins.
-                $unreadIds = $unreadAlerts->pluck('id')->all();
                 $pruned = array_values(array_intersect($acknowledgedIds, $unreadIds));
                 if (count($pruned) !== count($acknowledgedIds)) {
                     session()->put('alerts_acknowledged_ids', $pruned);
                     $acknowledgedIds = $pruned;
                 }
 
-                $alertCount = $unreadAlerts->count();
-                $newAlerts = $unreadAlerts->whereNotIn('id', $acknowledgedIds);
+                $alertCount = count($unreadIds);
+                $newIds = array_values(array_diff($unreadIds, $acknowledgedIds));
+                if (! empty($newIds)) {
+                    $newAlerts = Alert::whereIn('id', $newIds)
+                        ->with('cage')
+                        ->orderByDesc('triggered_at')
+                        ->get();
+                }
                 $showAlertsModal = $newAlerts->isNotEmpty();
             }
 

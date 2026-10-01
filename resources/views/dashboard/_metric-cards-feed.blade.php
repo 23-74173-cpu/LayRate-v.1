@@ -2,7 +2,7 @@
     <div class="space-y-2">
         <div>
             <x-section-label title="Feed & Nutrition" icon="wheat">
-                @if($kpiAsOf ?? null)<x-slot:meta>· as of {{ $kpiAsOf }}</x-slot:meta>@elseif($feedAsOf ?? null)<x-slot:meta>· last logged {{ $feedAsOf }}</x-slot:meta>@endif
+                @if($kpiAsOf ?? null)<x-slot:meta>· as of {{ $kpiAsOf }}</x-slot:meta> @elseif($feedAsOf ?? null)<x-slot:meta>· last logged {{ $feedAsOf }}</x-slot:meta> @endif
             </x-section-label>
             <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <x-kpi-card

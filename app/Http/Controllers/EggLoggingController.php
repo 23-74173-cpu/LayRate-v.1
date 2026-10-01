@@ -27,6 +27,9 @@ class EggLoggingController extends Controller
         $cageSlots = CageSlot::with([
             'cage',
             'hens' => fn ($q) => $q->where('is_active', 1),
+            // hasBreakbeam() is called for every slot in the grid.
+            'hardwareItems',
+            'additionalSensors',
         ])->whereHas('cage', fn ($q) => $q->where('is_active', 1))
             ->orderBy('cage_id')
             ->orderBy('slot_number')

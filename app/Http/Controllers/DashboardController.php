@@ -10,6 +10,7 @@ use App\Models\Forecast;
 use App\Models\MortalityLog;
 use App\Models\ProductionLog;
 use App\Models\Setting;
+use App\Services\DataCompletenessService;
 use App\Services\EnvironmentStatusService;
 use App\Services\ReportingDateService;
 use Carbon\Carbon;
@@ -29,9 +30,165 @@ class DashboardController extends Controller
             return redirect()->route('setup');
         }
 
-        $data = $this->buildDashboardData(null, 1, request('from_date'), request('to_date'));
+        // The page shell only shows the cage filter, the onboarding prompt and
+        // the reporting date; every KPI card and chart is a lazy frame with
+        // its own request (stats.*, charts). Building the full dashboard data
+        // here (~180 queries) only to discard all but these values made this
+        // the slowest page in the Chapter IV response-time test.
+        // The "Yesterday's Production Record" popup on this page needs the
+        // farm-wide yesterday numbers; they come from the same helpers the
+        // builder uses.
+        $snapshotDate = $this->snapshotDate(request('from_date'), request('to_date'));
+        $yesterday = $snapshotDate->copy()->subDay()->toDateString();
+        ['eggs' => $eggsYesterday, 'hdep' => $yesterdayHdep] = $this->farmProductionForDay($yesterday);
 
-        return view('dashboard', $data);
+        return view('dashboard', [
+            'cages'                   => Cage::all(),
+            'today'                   => $snapshotDate->toDateString(),
+            'needsOnboarding'         => $this->needsOnboarding(),
+            'dayComplete'             => true,
+            'mortalityDays'           => 1,
+            'eggsYesterday'           => $eggsYesterday,
+            'yesterdayHdep'           => $yesterdayHdep,
+            'yesterdayMortalityTotal' => $this->mortalityTotalForDay(null, $yesterday),
+            'yesterdayFeedTotal'      => $this->feedTotalForDay(null, $yesterday),
+        ]);
+    }
+
+    /**
+     * Cages (optionally one cage) with today's per-cage stats attached:
+     * today_eggs, hen_count, today_hdep, breed, has_sensor, sensor_status,
+     * and the latest real environment reading. The first part of
+     * buildDashboardData(), on its own so the Cage Performance frame can use
+     * it without building every other dashboard number.
+     */
+    private function cagesWithTodayStats(?string $cageCode, string $today)
+    {
+        // 'productionLogs' used to be eager-loaded here unconditionally — every
+        // dashboard view (the most-visited page in the app) pulled every
+        // production_logs row ever recorded, for every cage, into PHP memory,
+        // just to filter it back down to "today's rows" per cage a few lines
+        // below. That grows without bound for the life of the deployment.
+        // Replaced with a single grouped SQL query below (today's per-cage
+        // totals) plus, for the cage-scoped branch, two more small aggregate
+        // queries (yesterday, lifetime) — nothing here loads a production_logs
+        // row into PHP anymore; only pre-aggregated SUM/AVG/COUNT results do.
+        // latestEnvironmentLog is set below from latestRealPerCage(), so it is
+        // not eager-loaded here (that query was thrown away). The unused
+        // feedConsumptionLogs eager load (every feed log ever recorded) is
+        // gone too. cageSlots.additionalSensors lets hasBreakbeam() answer
+        // from memory instead of one query per slot.
+        $cagesQuery = Cage::with([
+            'cageSlots.hardwareItems',
+            'cageSlots.additionalSensors',
+            'hardwareItems',
+            'hens' => fn ($q) => $q->where('is_active', 1),
+        ]);
+
+        if ($cageCode) {
+            $cagesQuery->where('cage_code', $cageCode);
+        }
+
+        $cages = $cagesQuery->get();
+        $cageIds = $cages->pluck('id');
+
+        // Swap the eager-loaded latest reading for the latest REAL one per
+        // cage (demo-quarantined; see EnvironmentalLog::latestRealPerCage).
+        // Downstream reads ($liveReadings, sensorStatusText) are unchanged.
+        $latestReal = EnvironmentalLog::latestRealPerCage($cageIds);
+        $cages->each(fn ($cage) => $cage->setRelation(
+            'latestEnvironmentLog', $latestReal->get($cage->id)
+        ));
+
+        $todayEggsByCage = ProductionLog::query()
+            ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
+            ->whereIn('cage_slots.cage_id', $cageIds)
+            ->where('production_logs.log_date', $today)
+            ->where('production_logs.is_demo', false)
+            ->selectRaw('cage_slots.cage_id as cage_id, SUM(production_logs.egg_count) as total')
+            ->groupBy('cage_slots.cage_id')
+            ->pluck('total', 'cage_id');
+
+        // Per-cage lifetime eggs for the "Lifetime Eggs by Cage" breakdown,
+        // the same total as $cage->productionLogs->sum('egg_count') (every
+        // log through the cage's slots), summed by the database instead of
+        // loading every production log of every cage into PHP.
+        $lifetimeEggsByCage = ProductionLog::query()
+            ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
+            ->whereIn('cage_slots.cage_id', $cageIds)
+            ->selectRaw('cage_slots.cage_id as cage_id, SUM(production_logs.egg_count) as total')
+            ->groupBy('cage_slots.cage_id')
+            ->pluck('total', 'cage_id');
+
+        // Attach today's stats to each cage
+        $cages->each(function ($cage) use ($todayEggsByCage, $lifetimeEggsByCage) {
+            $cage->lifetime_eggs = (int) ($lifetimeEggsByCage[$cage->id] ?? 0);
+            $cage->today_eggs = (int) ($todayEggsByCage[$cage->id] ?? 0);
+            $cage->hen_count = $cage->hens->count();
+            // HDEP today = eggs collected again ÷ hens in the cage, as a percentage
+            $cage->today_hdep = $cage->hen_count > 0 ? round($cage->today_eggs / $cage->hen_count * 100, 1) : 0;
+            $cage->breed = $cage->hens->first()?->breed ?? '—';
+            $cage->has_sensor = $cage->cageSlots->contains(fn ($s) => $s->hasBreakbeam()) || $cage->hasDht22();
+            $cage->sensor_status = $this->sensorStatusText($cage);
+        });
+
+        return $cages;
+    }
+
+    /**
+     * Farm-wide eggs and average HDEP for one day. Only logs still tied to a
+     * live cage slot count (see the global branch of buildDashboardData()).
+     */
+    private function farmProductionForDay(string $date): array
+    {
+        $logs = ProductionLog::where('log_date', $date)->real()->whereNotNull('cage_slot_id')->get();
+
+        return [
+            'eggs' => $logs->sum('egg_count'),
+            'hdep' => $logs->count() ? round($logs->avg('hdep'), 1) : 0,
+        ];
+    }
+
+    private function mortalityTotalForDay(?string $cageCode, string $date)
+    {
+        return MortalityLog::where('log_date', $date)
+            ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
+            ->sum('count');
+    }
+
+    private function feedTotalForDay(?string $cageCode, string $date)
+    {
+        return FeedConsumptionLog::where('log_date', $date)
+            ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
+            ->sum('feed_consumed_kg');
+    }
+
+    /**
+     * Snapshot as-of: an explicit to_date (falling back to from_date) makes
+     * all "today" KPI cards show the selected day's values (eggs, HDEP,
+     * mortality, feed) instead of the live reporting date. Future dates are
+     * clamped back to the reporting date.
+     */
+    private function snapshotDate(?string $fromDate, ?string $toDate): Carbon
+    {
+        $snapshotDate = ReportingDateService::reportingDate();
+        foreach ([$fromDate, $toDate] as $bound) {
+            if ($bound && preg_match('/^\d{4}-\d{2}-\d{2}$/', $bound)) {
+                $candidate = Carbon::parse($bound);
+                if ($candidate->greaterThan($snapshotDate)) {
+                    $candidate = $snapshotDate->copy();
+                }
+                $snapshotDate = $candidate;
+            }
+        }
+
+        return $snapshotDate;
+    }
+
+    private function needsOnboarding(): bool
+    {
+        return Setting::where('key', 'farm_grid_rows')->doesntExist()
+            || Setting::where('key', 'farm_grid_cols')->doesntExist();
     }
 
     public function stats()
@@ -71,9 +228,9 @@ class DashboardController extends Controller
 
     public function feedMortality()
     {
-        $data = $this->buildDashboardData(request('cage'));
-
-        return view('dashboard._feed-mortality', $data);
+        // The frame is an empty placeholder (the view uses no data), so the
+        // full dashboard build it used to run here was thrown away.
+        return view('dashboard._feed-mortality');
     }
 
     public function calendar()
@@ -128,7 +285,11 @@ class DashboardController extends Controller
     {
         $cageCode = request('cage');
 
-        $data = $this->buildDashboardData($cageCode);
+        // Only the cages with today's stats are used here (see the view);
+        // the rest of buildDashboardData() was computed and thrown away.
+        // Same "today" as before: buildDashboardData($cageCode) had no date
+        // filter, so it used the live reporting date.
+        $data = ['cages' => $this->cagesWithTodayStats($cageCode, $this->snapshotDate(null, null)->toDateString())];
 
         // HDEP is reported for a single date only: the selected To date when
         // one is set, otherwise the selected From date, otherwise the
@@ -154,7 +315,7 @@ class DashboardController extends Controller
             ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
             ->whereIn('cage_slots.cage_id', $cageIds)
             ->where('production_logs.is_demo', false)
-            ->whereDate('production_logs.log_date', $dateStr)
+            ->where('production_logs.log_date', $dateStr)
             ->selectRaw('cage_slots.cage_id as cage_id, SUM(production_logs.egg_count) as total_eggs, AVG(production_logs.hdep) as avg_hdep')
             ->groupBy('cage_slots.cage_id')
             ->get()
@@ -729,8 +890,10 @@ class DashboardController extends Controller
         $points = EnvironmentalLog::select('cage_id', DB::raw('DATE(recorded_at) as log_date'), DB::raw('AVG(temperature_c) as avg_temp'))
             ->real()
             ->whereIn('cage_id', $cageIds)
-            ->where(DB::raw('DATE(recorded_at)'), '<=', $endDate)
-            ->when($startDate, fn ($q) => $q->where(DB::raw('DATE(recorded_at)'), '>=', $startDate))
+            // Same days as DATE(recorded_at) BETWEEN start AND end, written as
+            // a time range so the recorded_at index can be used.
+            ->where('recorded_at', '<=', $endDate . ' 23:59:59')
+            ->when($startDate, fn ($q) => $q->where('recorded_at', '>=', $startDate . ' 00:00:00'))
             ->groupBy('cage_id', 'log_date')
             ->get();
 
@@ -787,8 +950,10 @@ class DashboardController extends Controller
         $points = EnvironmentalLog::select('cage_id', DB::raw('DATE(recorded_at) as log_date'), DB::raw('AVG(humidity_pct) as avg_hum'))
             ->real()
             ->whereIn('cage_id', $cageIds)
-            ->where(DB::raw('DATE(recorded_at)'), '<=', $endDate)
-            ->when($startDate, fn ($q) => $q->where(DB::raw('DATE(recorded_at)'), '>=', $startDate))
+            // Same days as DATE(recorded_at) BETWEEN start AND end, written as
+            // a time range so the recorded_at index can be used.
+            ->where('recorded_at', '<=', $endDate . ' 23:59:59')
+            ->when($startDate, fn ($q) => $q->where('recorded_at', '>=', $startDate . ' 00:00:00'))
             ->groupBy('cage_id', 'log_date')
             ->get();
 
@@ -1146,8 +1311,10 @@ class DashboardController extends Controller
         $envByCageDate = EnvironmentalLog::select('cage_id', 'recorded_at', DB::raw('AVG(temperature_c) as avg_temp'), DB::raw('AVG(humidity_pct) as avg_hum'))
             ->real()
             ->whereIn('cage_id', $cageIds)
-            ->where(DB::raw('DATE(recorded_at)'), '<=', $endDate)
-            ->when($startDate, fn ($q) => $q->where(DB::raw('DATE(recorded_at)'), '>=', $startDate))
+            // Same days as DATE(recorded_at) BETWEEN start AND end, written as
+            // a time range so the recorded_at index can be used.
+            ->where('recorded_at', '<=', $endDate . ' 23:59:59')
+            ->when($startDate, fn ($q) => $q->where('recorded_at', '>=', $startDate . ' 00:00:00'))
             ->groupBy('cage_id', 'recorded_at')
             ->get();
 
@@ -1227,20 +1394,7 @@ class DashboardController extends Controller
 
     public function buildDashboardData(?string $cageCode = null, int $mortalityDays = 1, ?string $fromDate = null, ?string $toDate = null): array
     {
-        // Snapshot as-of: an explicit to_date (falling back to from_date) makes
-        // all "today" KPI cards show the selected day's values (eggs, HDEP,
-        // mortality, feed) instead of the live reporting date. Future dates
-        // are clamped back to the reporting date.
-        $snapshotDate = ReportingDateService::reportingDate();
-        foreach ([$fromDate, $toDate] as $bound) {
-            if ($bound && preg_match('/^\d{4}-\d{2}-\d{2}$/', $bound)) {
-                $candidate = Carbon::parse($bound);
-                if ($candidate->greaterThan($snapshotDate)) {
-                    $candidate = $snapshotDate->copy();
-                }
-                $snapshotDate = $candidate;
-            }
-        }
+        $snapshotDate = $this->snapshotDate($fromDate, $toDate);
         $today = $snapshotDate->toDateString();
         $yesterday = $snapshotDate->copy()->subDay()->toDateString();
         $weekStart = $snapshotDate->copy()->subDays(7)->toDateString();
@@ -1265,60 +1419,10 @@ class DashboardController extends Controller
         $feedWeekStart = $feedRef->copy()->subDays(7)->toDateString();
         $feedMonthStart = $feedRef->copy()->startOfMonth()->toDateString();
 
-        $needsOnboarding = Setting::where('key', 'farm_grid_rows')->doesntExist()
-            || Setting::where('key', 'farm_grid_cols')->doesntExist();
+        $needsOnboarding = $this->needsOnboarding();
 
-        // 'productionLogs' used to be eager-loaded here unconditionally — every
-        // dashboard view (the most-visited page in the app) pulled every
-        // production_logs row ever recorded, for every cage, into PHP memory,
-        // just to filter it back down to "today's rows" per cage a few lines
-        // below. That grows without bound for the life of the deployment.
-        // Replaced with a single grouped SQL query below (today's per-cage
-        // totals) plus, for the cage-scoped branch, two more small aggregate
-        // queries (yesterday, lifetime) — nothing here loads a production_logs
-        // row into PHP anymore; only pre-aggregated SUM/AVG/COUNT results do.
-        $cagesQuery = Cage::with([
-            'latestEnvironmentLog',
-            'cageSlots.hardwareItems',
-            'hardwareItems',
-            'hens' => fn ($q) => $q->where('is_active', 1),
-            'feedConsumptionLogs',
-        ]);
-
-        if ($cageCode) {
-            $cagesQuery->where('cage_code', $cageCode);
-        }
-
-        $cages = $cagesQuery->get();
+        $cages = $this->cagesWithTodayStats($cageCode, $today);
         $cageIds = $cages->pluck('id');
-
-        // Swap the eager-loaded latest reading for the latest REAL one per
-        // cage (demo-quarantined; see EnvironmentalLog::latestRealPerCage).
-        // Downstream reads ($liveReadings, sensorStatusText) are unchanged.
-        $latestReal = EnvironmentalLog::latestRealPerCage($cageIds);
-        $cages->each(fn ($cage) => $cage->setRelation(
-            'latestEnvironmentLog', $latestReal->get($cage->id)
-        ));
-
-        $todayEggsByCage = ProductionLog::query()
-            ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
-            ->whereIn('cage_slots.cage_id', $cageIds)
-            ->whereDate('production_logs.log_date', $today)
-            ->where('production_logs.is_demo', false)
-            ->selectRaw('cage_slots.cage_id as cage_id, SUM(production_logs.egg_count) as total')
-            ->groupBy('cage_slots.cage_id')
-            ->pluck('total', 'cage_id');
-
-        // Attach today's stats to each cage
-        $cages->each(function ($cage) use ($todayEggsByCage) {
-            $cage->today_eggs = (int) ($todayEggsByCage[$cage->id] ?? 0);
-            $cage->hen_count = $cage->hens->count();
-            // HDEP today = eggs collected again ÷ hens in the cage, as a percentage
-            $cage->today_hdep = $cage->hen_count > 0 ? round($cage->today_eggs / $cage->hen_count * 100, 1) : 0;
-            $cage->breed = $cage->hens->first()?->breed ?? '—';
-            $cage->has_sensor = $cage->cageSlots->contains(fn ($s) => $s->hasBreakbeam()) || $cage->hasDht22();
-            $cage->sensor_status = $this->sensorStatusText($cage);
-        });
 
         // Total active hens
         if ($cageCode) {
@@ -1329,7 +1433,7 @@ class DashboardController extends Controller
             $yesterdayStats = ProductionLog::query()
                 ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
                 ->whereIn('cage_slots.cage_id', $cageIds)
-                ->whereDate('production_logs.log_date', $yesterday)
+                ->where('production_logs.log_date', $yesterday)
                 ->where('production_logs.is_demo', false)
                 ->selectRaw('COUNT(*) as log_count, AVG(production_logs.hdep) as avg_hdep, SUM(production_logs.egg_count) as total_eggs')
                 ->first();
@@ -1356,33 +1460,36 @@ class DashboardController extends Controller
             // keeps the global overview consistent with the per-cage branch
             // above (which joins cage_slots and therefore already skips them),
             // preventing deleted-cage eggs from inflating eggsToday/HDEP.
-            $todayLogs = ProductionLog::whereDate('log_date', $today)->real()->whereNotNull('cage_slot_id')->get();
+            $todayLogs = ProductionLog::where('log_date', $today)->real()->whereNotNull('cage_slot_id')->get();
             // HDEP today = eggs collected today ÷ all hens in the cages, as a percentage
             $todayHdep = $totalHens > 0 ? round($todayLogs->sum('egg_count') / $totalHens * 100, 1) : 0;
-            $yesterdayLogs = ProductionLog::whereDate('log_date', $yesterday)->real()->whereNotNull('cage_slot_id')->get();
-            $yesterdayHdep = $yesterdayLogs->count() ? round($yesterdayLogs->avg('hdep'), 1) : 0;
+            ['eggs' => $eggsYesterday, 'hdep' => $yesterdayHdep] = $this->farmProductionForDay($yesterday);
             $hdepDelta = round($todayHdep - $yesterdayHdep, 1);
             $eggsToday = $todayLogs->sum('egg_count')
                 ?: $cages->sum(fn ($c) => $c->today_eggs);
-            $eggsYesterday = $yesterdayLogs->sum('egg_count');
             $lifetimeEggs = ProductionLog::real()->whereNotNull('cage_slot_id')->sum('egg_count');
         }
 
         $eggsDelta = round($eggsToday - $eggsYesterday);
 
         // Coop environment averages
-        $todayEnvLogs = EnvironmentalLog::whereIn('cage_id', $cages->pluck('id'))
+        // Averaged by the database over the same calendar day as before
+        // (whereDate('recorded_at', $today)), but as a range so the
+        // recorded_at index is used and no rows are loaded into PHP. Loading
+        // the day's readings meant ~43,000 rows per DHT22 sensor.
+        $todayEnv = EnvironmentalLog::whereIn('cage_id', $cages->pluck('id'))
             ->real()
-            ->whereDate('recorded_at', $today)
-            ->get();
-        $avgTemp = $todayEnvLogs->count() ? round($todayEnvLogs->avg('temperature_c'), 1) : null;
-        $avgHum = $todayEnvLogs->count() ? round($todayEnvLogs->avg('humidity_pct'), 1) : null;
+            ->whereBetween('recorded_at', [$today . ' 00:00:00', $today . ' 23:59:59'])
+            ->selectRaw('COUNT(*) as readings, AVG(temperature_c) as avg_temp, AVG(humidity_pct) as avg_hum')
+            ->first();
+        $avgTemp = $todayEnv->readings ? round((float) $todayEnv->avg_temp, 1) : null;
+        $avgHum = $todayEnv->readings ? round((float) $todayEnv->avg_hum, 1) : null;
 
         // Feed today — sum ALL of today's logs per cage (not just the most recent)
         $feedPerHenKg = (float) Setting::get('feed_per_hen_daily', 0.12);
 
         $feedToday = FeedConsumptionLog::with('cage')
-            ->whereDate('log_date', $today)
+            ->where('log_date', $today)
             ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
             ->orderByDesc('log_date')
             ->get()
@@ -1472,8 +1579,8 @@ class DashboardController extends Controller
             ? $today
             : $snapshotDate->copy()->subDays($mortalityDays - 1)->toDateString();
         $mortalityToday = MortalityLog::with('cage')
-            ->whereDate('log_date', '>=', $mortalityStartDate)
-            ->whereDate('log_date', '<=', $today)
+            ->where('log_date', '>=', $mortalityStartDate)
+            ->where('log_date', '<=', $today)
             ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
             ->get()
             ->groupBy(fn ($l) => $l->cage?->cage_code ?? 'Deleted Cage')
@@ -1481,14 +1588,10 @@ class DashboardController extends Controller
         $mortalityTodayTotal = $mortalityToday->sum();
 
         // Yesterday's mortality
-        $yesterdayMortalityTotal = MortalityLog::whereDate('log_date', $yesterday)
-            ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
-            ->sum('count');
+        $yesterdayMortalityTotal = $this->mortalityTotalForDay($cageCode, $yesterday);
 
         // Yesterday's feed consumed
-        $yesterdayFeedTotal = FeedConsumptionLog::whereDate('log_date', $yesterday)
-            ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
-            ->sum('feed_consumed_kg');
+        $yesterdayFeedTotal = $this->feedTotalForDay($cageCode, $yesterday);
 
         // Live readings per cage
         $liveReadings = $cages->map(function ($cage) use ($thresholds) {
@@ -1522,33 +1625,21 @@ class DashboardController extends Controller
             ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
             ->join('cages', 'cages.id', '=', 'cage_slots.cage_id')
             ->whereIn('cages.cage_code', $activeCageCodes)
-            ->whereDate('production_logs.log_date', $today)
+            ->where('production_logs.log_date', $today)
             ->where('production_logs.is_demo', false)
             ->distinct('cages.cage_code')
             ->count('cages.cage_code');
 
         // Env logs store recorded_at as calendar datetime, but we need to
-        // match by reporting date. Fetch the range and convert in PHP.
-        $envLogsForRange = EnvironmentalLog::query()
-            ->join('cages', 'cages.id', '=', 'environmental_logs.cage_id')
-            ->whereIn('cages.cage_code', $activeCageCodes)
-            ->where('environmental_logs.is_demo', false)
-            ->whereBetween(DB::raw('DATE(environmental_logs.recorded_at)'), [$yesterday, $today])
-            ->select('cages.cage_code', 'environmental_logs.recorded_at')
-            ->get()
-            ->map(fn ($r) => [
-                'cage_code' => $r->cage_code,
-                'reporting_date' => ReportingDateService::reportingDateFor($r->recorded_at)->toDateString(),
-            ]);
-
-        $cagesWithEnv = $envLogsForRange->where('reporting_date', $today)
-            ->pluck('cage_code')->unique()->count();
+        // match by reporting date: counted by the database over the
+        // reporting-day window (same query as the dock checklist).
+        $cagesWithEnv = DataCompletenessService::cagesWithEnvReadings($activeCageCodes, $today);
 
         // Feed logs now store log_date as reporting date (like production_logs).
         $cagesWithFeed = FeedConsumptionLog::query()
             ->join('cages', 'cages.id', '=', 'feed_consumption_logs.cage_id')
             ->whereIn('cages.cage_code', $activeCageCodes)
-            ->whereDate('feed_consumption_logs.log_date', $today)
+            ->where('feed_consumption_logs.log_date', $today)
             ->distinct()
             ->pluck('cages.cage_code')
             ->count();

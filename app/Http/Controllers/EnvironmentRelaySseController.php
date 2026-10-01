@@ -12,9 +12,8 @@ class EnvironmentRelaySseController extends Controller
      * Server-Sent Events stream for the relay/fan widget.
      *
      * Follows the same polling-DB-and-push pattern as EggCountSseController
-     * (no Redis/queue needed): emits a `relay_state` event whenever the relay
-     * snapshot changes, plus an initial snapshot on connect and heartbeats so
-     * proxies keep the connection open. Browsers reconnect after the 8s cap.
+     * (no Redis/queue needed): each connection gets the current `relay_state`
+     * snapshot, and the browser reconnects every ~2 s for the next one.
      */
     public function stream(Request $request)
     {
@@ -23,32 +22,25 @@ class EnvironmentRelaySseController extends Controller
         header('Connection: keep-alive');
         header('X-Accel-Buffering: no');
 
-        $lastPayload = null;
-        $maxRuntime = 8;
-        $start = time();
+        // One pass per connection: send the current relay state and end the
+        // response; the browser's EventSource reconnects after the retry
+        // delay. The old 8-second sleep loop kept a PHP-FPM worker busy for
+        // every open Environment tab. Applying the same state again on the
+        // page is harmless.
+        echo "retry: 2000\n\n";
 
-        while (! connection_aborted() && (time() - $start) < $maxRuntime) {
-            $relay = HardwareItem::with('lastChangedBy')
-                ->where('device_type', 'relay')
-                ->where('status', 'active')
-                ->orderBy('id')
-                ->first();
+        $relay = HardwareItem::with('lastChangedBy')
+            ->where('device_type', 'relay')
+            ->where('status', 'active')
+            ->orderBy('id')
+            ->first();
 
-            $payload = RelayStateService::payload($relay);
+        echo "event: relay_state\n";
+        echo 'data: ' . json_encode(RelayStateService::payload($relay)) . "\n\n";
 
-            if ($payload !== $lastPayload) {
-                $lastPayload = $payload;
-                echo "event: relay_state\n";
-                echo 'data: ' . json_encode($payload) . "\n\n";
-                ob_flush();
-                flush();
-            }
-
-            echo ": heartbeat\n\n";
+        if (ob_get_level() > 0) {
             ob_flush();
-            flush();
-
-            sleep(1);
         }
+        flush();
     }
 }

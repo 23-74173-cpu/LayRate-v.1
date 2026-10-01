@@ -34,16 +34,29 @@ class EnvironmentalLog extends Model
      * setRelation('latestEnvironmentLog', ...) so downstream reads stay
      * unchanged.
      *
-     * @return \Illuminate\Support\Collection<int, static|null>
+     * One small query per cage, each reading a single row through the
+     * (cage_id, recorded_at) unique index. The old version loaded every
+     * reading of every cage into PHP to keep only the newest one: with a
+     * DHT22 reading every 2 seconds that is ~43,000 rows per sensor per day,
+     * which made the Dashboard, Environment, and Hardware pages slower every
+     * day and eventually ran PHP out of memory.
+     *
+     * Only cages that have a reading are in the result (same as before).
+     *
+     * @return \Illuminate\Support\Collection<int, static>
      */
     public static function latestRealPerCage(iterable $cageIds): \Illuminate\Support\Collection
     {
-        return static::whereIn('cage_id', $cageIds)
-            ->real()
-            ->orderByDesc('recorded_at')
-            ->get()
-            ->groupBy('cage_id')
-            ->map(fn ($group) => $group->first());
+        return collect($cageIds)
+            ->filter()
+            ->unique()
+            ->mapWithKeys(fn ($cageId) => [
+                $cageId => static::where('cage_id', $cageId)
+                    ->real()
+                    ->orderByDesc('recorded_at')
+                    ->first(),
+            ])
+            ->filter();
     }
 
     public function cage(): BelongsTo

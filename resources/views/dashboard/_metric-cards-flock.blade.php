@@ -2,7 +2,7 @@
     <div class="space-y-2">
         <div>
             <x-section-label title="Flock & Mortality" icon="users">
-                @if($kpiAsOf ?? null)<x-slot:meta>· as of {{ $kpiAsOf }}</x-slot:meta>@endif
+                @if($kpiAsOf ?? null)<x-slot:meta>· as of {{ $kpiAsOf }}</x-slot:meta> @endif
             </x-section-label>
             <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 @php

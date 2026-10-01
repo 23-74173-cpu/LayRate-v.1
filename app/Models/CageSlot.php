@@ -52,6 +52,12 @@ class CageSlot extends Model
 
     public function primaryHen(): ?Hen
     {
+        // Use the eager-loaded hens when present: slot grids (Egg Logging)
+        // call this once per slot, which was one query per slot.
+        if ($this->relationLoaded('hens')) {
+            return $this->hens->where('is_active', 1)->first();
+        }
+
         return $this->hens()->where('is_active', 1)->first();
     }
 
@@ -79,6 +85,14 @@ class CageSlot extends Model
             ->exists()) {
             return true;
         }
+        // Answer from the eager-loaded relation when present: slot grids call
+        // this once per slot, and the query below would run for every slot.
+        if ($this->relationLoaded('additionalSensors')) {
+            return $this->additionalSensors
+                ->where('device_type', 'IR_breakbeam')
+                ->where('status', 'active')
+                ->isNotEmpty();
+        }
         return $this->additionalSensors()
             ->where('device_type', 'IR_breakbeam')
             ->where('status', 'active')
@@ -97,7 +111,10 @@ class CageSlot extends Model
         if ($primary) {
             return $primary->serial_number;
         }
-        return $this->additionalSensors()->where('device_type', 'IR_breakbeam')->where('status', 'active')->first()?->serial_number ?? '';
+        $extra = $this->relationLoaded('additionalSensors')
+            ? $this->additionalSensors->where('device_type', 'IR_breakbeam')->where('status', 'active')->first()
+            : $this->additionalSensors()->where('device_type', 'IR_breakbeam')->where('status', 'active')->first();
+        return $extra?->serial_number ?? '';
     }
 
     public function getStatusAttribute(): string
