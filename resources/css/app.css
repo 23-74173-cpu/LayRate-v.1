@@ -170,6 +170,31 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   width: 28px;
   height: 28px;
 }
+/* Phones: two cards per row leave about 50px beside a 56px icon, so values
+   broke mid-number ("106" / ".3%", "Fee" / "d"). Stack a smaller icon above
+   the text instead; the text then gets the card's full width. The info
+   button stays in the top-right corner, level with the icon. */
+@media (max-width: 639.98px) {
+  .kpi-card {
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+  }
+  .kpi-card > .kpi-icon-tile {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+  }
+  .kpi-card > .kpi-icon-tile svg,
+  .kpi-card > .kpi-icon-tile i {
+    width: 20px;
+    height: 20px;
+  }
+  .kpi-card > .min-w-0 {
+    width: 100%;
+    padding-right: 0;
+  }
+}
 
 /* KPI info button — small, unobtrusive, absolute top-right corner of every
    card (the text column keeps right padding so long values never slide

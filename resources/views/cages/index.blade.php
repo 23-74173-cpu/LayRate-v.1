@@ -48,6 +48,26 @@
         @endif
     @endpush
 
+    {{-- ── Cage KPIs (from CageController::index, no extra queries) ── --}}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <x-kpi-card label="Active Cages" infoKey="cages.active" icon="warehouse" delay="0ms"
+                    :value="number_format($cageKpis['active'])">
+            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">{{ number_format($cageKpis['total']) }} total · {{ number_format($cageKpis['slots']) }} slots</div>
+        </x-kpi-card>
+        <x-kpi-card label="Hens Housed" infoKey="cages.hens-housed" icon="bird" delay="60ms"
+                    :value="number_format($occupiedSpaces)">
+            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">{{ number_format($cageKpis['fill_pct'], 1) }}% of {{ number_format($totalCapacity) }} capacity</div>
+        </x-kpi-card>
+        <x-kpi-card label="Open Spaces" infoKey="cages.open-spaces" icon="square-dashed" delay="120ms"
+                    :value="number_format($availableSpaces)">
+            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">{{ number_format($cageKpis['empty_slots']) }} empty {{ Str::plural('slot', $cageKpis['empty_slots']) }}</div>
+        </x-kpi-card>
+        <x-kpi-card label="Sensor Coverage" infoKey="cages.sensor-coverage" icon="radio" delay="180ms"
+                    :value="number_format($cageKpis['sensor_slots'])">
+            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">of {{ number_format($cageKpis['slots']) }} slots have an IR sensor</div>
+        </x-kpi-card>
+    </div>
+
     {{-- ── Farm Layout Canvas (tile-based floor-plan grid, fit-to-width on small screens) ── --}}
     <div id="farmLayoutSection" class="rounded-xl border p-4 sm:p-6" style="background-color: #ffffff; border-color: #e6e6e6;">
         <x-card-header title="Farm Layout" subtitle="Drag cages onto the grid · unplaced cages stage below" icon="layout-grid">

@@ -62,6 +62,43 @@
     {{-- ── Stacked Layout: Cage Overview row above Log Entry ── --}}
     <div class="space-y-6">
 
+        {{-- ── Today's KPIs: same numbers as the Cage Overview below. The
+             overview is updated live (sensor stream, saves), and the script
+             after this grid re-reads it, so these never drift from it. ── --}}
+        @php
+            $kpiEggs = $cages->sum(fn ($c) => (int) ($todayByCage[$c->cage_code] ?? 0));
+            $kpiHens = $cages->sum(fn ($c) => (int) ($henCountByCage[$c->id] ?? 0));
+            $kpiSlots = $cages->sum(fn ($c) => $c->rows * $c->slots_per_row);
+            $kpiSlotsLogged = $cages->sum(fn ($c) => min((int) ($todayLoggedCountByCage[$c->cage_code] ?? 0), $c->rows * $c->slots_per_row));
+            $kpiCagesComplete = $cages->filter(fn ($c) => ($todayLoggedCountByCage[$c->cage_code] ?? 0) >= $c->rows * $c->slots_per_row)->count();
+            $kpiHdep = $kpiHens > 0 ? round($kpiEggs / $kpiHens * 100, 1) : 0;
+            // Card values (numbers only, rendered as HTML by x-kpi-card); the
+            // ids let the live refresh below update them in place.
+            $kpiOf = fn ($n) => '<span class="text-base font-semibold" style="color:#6B7280"> / ' . number_format($n) . '</span>';
+            $kpiEggsHtml = '<span id="elKpiEggs">' . number_format($kpiEggs) . '</span>';
+            $kpiHdepHtml = '<span id="elKpiHdep">' . number_format($kpiHdep, 1) . '</span>%';
+            $kpiSlotsHtml = '<span id="elKpiSlots">' . number_format($kpiSlotsLogged) . '</span>' . $kpiOf($kpiSlots);
+            $kpiCagesHtml = '<span id="elKpiCages">' . $kpiCagesComplete . '</span>' . $kpiOf($cages->count());
+        @endphp
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3" id="eggLoggingKpis" data-hens="{{ $kpiHens }}">
+            <x-kpi-card label="Eggs Today" infoKey="egg-logging.eggs-today" icon="egg" delay="0ms"
+                        :value="$kpiEggsHtml">
+                <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">across {{ $cages->count() }} active {{ Str::plural('cage', $cages->count()) }}</div>
+            </x-kpi-card>
+            <x-kpi-card label="Today's HDEP" infoKey="egg-logging.hdep-today" icon="gauge" delay="60ms"
+                        :value="$kpiHdepHtml">
+                <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">{{ number_format($kpiHens) }} {{ Str::plural('hen', $kpiHens) }} placed</div>
+            </x-kpi-card>
+            <x-kpi-card label="Slots Logged" infoKey="egg-logging.slots-logged" icon="grid-3x3" delay="120ms"
+                        :value="$kpiSlotsHtml">
+                <div class="text-xs mt-1.5 font-medium" style="color: #615d59;"><span id="elKpiSlotsLeft">{{ number_format(max(0, $kpiSlots - $kpiSlotsLogged)) }}</span> left to log</div>
+            </x-kpi-card>
+            <x-kpi-card label="Cages Complete" infoKey="egg-logging.cages-complete" icon="circle-check" delay="180ms"
+                        :value="$kpiCagesHtml">
+                <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">every slot logged today</div>
+            </x-kpi-card>
+        </div>
+
         {{-- ── Cage Overview (full-width row) ── --}}
         <x-card>
             <x-slot:headerSlot>
@@ -126,6 +163,47 @@
                 @endforeach
             </div>
         </x-card>
+
+        <script>
+        (function () {
+            // Re-read the Cage Overview (the live source of truth on this page)
+            // whenever it changes. Re-runs on every frame render; the previous
+            // observer belongs to the replaced overview, so it is dropped.
+            if (window.__eggKpiObserver) { window.__eggKpiObserver.disconnect(); window.__eggKpiObserver = null; }
+            var num = function (el) { return el ? (parseInt(String(el.textContent).replace(/[^0-9]/g, ''), 10) || 0) : 0; };
+            function refresh() {
+                var box = document.getElementById('eggLoggingKpis');
+                if (!box) return;
+                var eggs = 0, slots = 0, logged = 0, complete = 0;
+                document.querySelectorAll('.cage-overview-card[data-cage-id]').forEach(function (card) {
+                    var id = card.getAttribute('data-cage-id');
+                    var total = parseInt(card.getAttribute('data-total-slots'), 10) || 0;
+                    var loggedEl = document.getElementById('cage-logged-' + id);
+                    var done = loggedEl ? (parseInt(String(loggedEl.textContent).split('/')[0].replace(/[^0-9]/g, ''), 10) || 0) : 0;
+                    eggs += num(document.getElementById('cage-eggs-' + id));
+                    slots += total;
+                    logged += Math.min(done, total);
+                    if (done >= total) complete++;
+                });
+                var hens = parseInt(box.getAttribute('data-hens'), 10) || 0;
+                var set = function (id, text) { var el = document.getElementById(id); if (el && el.textContent !== text) el.textContent = text; };
+                set('elKpiEggs', eggs.toLocaleString());
+                set('elKpiHdep', (hens > 0 ? Math.round(eggs / hens * 1000) / 10 : 0).toFixed(1));
+                set('elKpiSlots', logged.toLocaleString());
+                set('elKpiSlotsLeft', Math.max(0, slots - logged).toLocaleString());
+                set('elKpiCages', String(complete));
+            }
+            var overview = document.querySelector('.cage-overview-card') && document.querySelector('.cage-overview-card').parentElement;
+            if (!overview || !window.MutationObserver) return;
+            var pending = false;
+            window.__eggKpiObserver = new MutationObserver(function () {
+                if (pending) return;
+                pending = true;
+                requestAnimationFrame(function () { pending = false; refresh(); });
+            });
+            window.__eggKpiObserver.observe(overview, { subtree: true, childList: true, characterData: true });
+        })();
+        </script>
 
         {{-- ── Log Entry (full-width row) ── --}}
         <x-card>

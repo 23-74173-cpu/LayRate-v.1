@@ -21,6 +21,30 @@
 
     <x-page-header title="Notes" subtitle="Notes and reminders, sorted by section. Notes typed in Mortality, Egg Logging, Feed, and Hens are saved here too." />
 
+    {{-- ── Note KPIs (all notes) ── --}}
+    @php
+        $topSection = $categoryCounts->sortDesc()->keys()->first();
+        $topSectionCount = $topSection ? (int) $categoryCounts[$topSection] : 0;
+    @endphp
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <x-kpi-card label="Total Notes" infoKey="notes.total" icon="notebook-pen" delay="0ms"
+                    :value="number_format($totalNotes)">
+            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">across {{ $categoryCounts->filter()->count() }} {{ Str::plural('section', $categoryCounts->filter()->count()) }}</div>
+        </x-kpi-card>
+        <x-kpi-card label="This Week" infoKey="notes.this-week" icon="calendar-plus" delay="60ms"
+                    :value="number_format($noteStats['this_week'])">
+            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">added in the last 7 days</div>
+        </x-kpi-card>
+        <x-kpi-card label="Top Section" infoKey="notes.top-section" icon="tags" delay="120ms"
+                    :value="$topSection ? e($topSection) : null">
+            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">{{ $topSection ? number_format($topSectionCount) . ' ' . Str::plural('note', $topSectionCount) : 'No notes yet' }}</div>
+        </x-kpi-card>
+        <x-kpi-card label="Linked to a Cage" infoKey="notes.cage-linked" icon="warehouse" delay="180ms"
+                    :value="number_format($noteStats['cage_linked'])">
+            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">of {{ number_format($totalNotes) }} notes</div>
+        </x-kpi-card>
+    </div>
+
     {{-- ── Add Note ── --}}
     <div class="rounded-xl border p-6" style="background-color: #ffffff; border-color: #e6e6e6;">
         <form method="POST" action="{{ route('notes.store') }}" novalidate>

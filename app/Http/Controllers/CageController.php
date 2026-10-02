@@ -75,7 +75,19 @@ class CageController extends Controller
         $occupiedSpaces = $activeCages->sum(fn ($cage) => $cage->hens->count());
         $availableSpaces = max(0, $totalCapacity - $occupiedSpaces);
 
-        return view('cages.index', compact('cages', 'nextCageCode', 'gridRows', 'gridCols', 'spareCounts', 'editCage', 'eggSizeByCage', 'totalCapacity', 'occupiedSpaces', 'availableSpaces'));
+        // KPI cards: computed from the cages already loaded above (slots,
+        // their sensors and active hens are eager loaded), so no extra queries.
+        $activeSlots = $activeCages->flatMap(fn ($cage) => $cage->cageSlots);
+        $cageKpis = [
+            'active' => $activeCages->count(),
+            'total' => $cages->count(),
+            'slots' => $activeSlots->count(),
+            'empty_slots' => $activeSlots->filter(fn ($slot) => (int) $slot->current_occupancy === 0)->count(),
+            'sensor_slots' => $activeSlots->filter(fn ($slot) => $slot->hasBreakbeam())->count(),
+            'fill_pct' => $totalCapacity > 0 ? round($occupiedSpaces / $totalCapacity * 100, 1) : 0,
+        ];
+
+        return view('cages.index', compact('cages', 'nextCageCode', 'gridRows', 'gridCols', 'spareCounts', 'editCage', 'eggSizeByCage', 'totalCapacity', 'occupiedSpaces', 'availableSpaces', 'cageKpis'));
     }
 
     public function store(Request $request)

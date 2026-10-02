@@ -102,6 +102,41 @@ return [
         'size-availability' => 'Sellable eggs of this size. Produced minus committed to open orders. A shortfall line appears when orders exceed stock.',
     ],
 
+    'egg-logging' => [
+        'eggs-today' => 'Eggs logged today across all active cages. The sum of the egg counts in the Cage Overview below, and it updates live as slots are logged or sensors report.',
+        'hdep-today' => 'Hen-day egg production for today, as a percentage. Eggs logged today divided by the hens placed in active cages, times one hundred. Updates live with the egg count.',
+        'slots-logged' => 'Cage slots with an egg log for today, out of all slots in active cages. The subtext shows how many are still left to log.',
+        'cages-complete' => 'Active cages where every slot has been logged today. A cage counts once all of its slots have a log for today.',
+    ],
+
+    'cages' => [
+        'active' => 'Cages currently in use, out of every cage set up on the farm. Inactive cages are kept for history but take no hens.',
+        'hens-housed' => 'Active hens placed in active cages, out of the total hen capacity of those cages. The subtext shows how full the farm is.',
+        'open-spaces' => 'Hen spaces still free in active cages: capacity minus hens placed. The subtext counts slots that are completely empty.',
+        'sensor-coverage' => 'Slots in active cages covered by an active IR breakbeam sensor (directly or through a multi-slot sensor), out of all slots in active cages.',
+    ],
+
+    'recent-logs' => [
+        'records' => 'Egg log records that match the filters above. With no filters, every record ever logged.',
+        'eggs' => 'Total eggs across the records that match the filters above.',
+        'sensor-share' => 'Share of the matching records that came from the IR sensors instead of manual entry.',
+        'overridden' => 'Matching records where a person corrected a sensor count with a verified override.',
+    ],
+
+    'calendar' => [
+        'month-total' => 'Eggs collected in the month shown on the calendar. Follows the cage selected in the calendar.',
+        'daily-average' => 'Average eggs per logged day in the month shown: the month total divided by the days that have at least one log.',
+        'best-day' => 'The day with the most eggs collected in the month shown, and its total.',
+        'days-logged' => 'Days in the month shown that have at least one egg log, out of the days so far (or the whole month, for past months).',
+    ],
+
+    'notes' => [
+        'total' => 'Every note saved, from this page and from the notes typed in other sections.',
+        'this-week' => 'Notes added in the last 7 days, today included.',
+        'top-section' => 'The section with the most notes, and how many it has.',
+        'cage-linked' => 'Notes tied to a specific cage, out of all notes.',
+    ],
+
     'profile' => [
         'egg-logs' => 'Daily egg log entries recorded under your account.',
         'eggs-total' => 'Eggs across all entries recorded under your account.',

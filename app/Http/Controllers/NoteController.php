@@ -30,7 +30,13 @@ class NoteController extends Controller
         $cages = Cage::orderBy('cage_code')->get();
         $categories = Note::CATEGORIES;
 
-        return view('notes.index', compact('notes', 'cages', 'categories', 'category', 'categoryCounts'));
+        // KPI cards (all notes, whatever category is being viewed).
+        $noteStats = [
+            'this_week' => Note::where('created_at', '>=', now()->subDays(6)->startOfDay())->count(),
+            'cage_linked' => Note::whereNotNull('cage_id')->count(),
+        ];
+
+        return view('notes.index', compact('notes', 'cages', 'categories', 'category', 'categoryCounts', 'noteStats'));
     }
 
     public function store(Request $request)

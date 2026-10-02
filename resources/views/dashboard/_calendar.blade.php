@@ -21,7 +21,37 @@
     $todayUrl = request()->fullUrlWithQuery(['month' => now()->month, 'year' => now()->year]);
 @endphp
 
+@php
+    // KPI cards for the month shown (same cage filter). Built from $logs,
+    // which already holds every day of this month, so no extra queries.
+    $kpiMonthDays = $logs->filter(fn ($d, $date) => $date >= $monthStart->format('Y-m-d') && $date <= $monthEnd->format('Y-m-d'));
+    $kpiBestDate = $kpiMonthDays->sortByDesc('eggs')->keys()->first();
+    $kpiBestEggs = $kpiBestDate ? (int) $kpiMonthDays[$kpiBestDate]->eggs : 0;
+    $kpiAvg = $monthLoggedDays > 0 ? $monthTotalEggs / $monthLoggedDays : 0;
+    $kpiToday = \App\Services\ReportingDateService::reportingDate();
+    $kpiDaysSoFar = $monthStart->greaterThan($kpiToday) ? 0
+        : ($monthEnd->lessThan($kpiToday) ? $daysInMonth : (int) $kpiToday->day);
+    $kpiDaysHtml = number_format($monthLoggedDays) . '<span class="text-base font-semibold" style="color:#6B7280"> / ' . $kpiDaysSoFar . '</span>';
+@endphp
 <turbo-frame id="dashboard-calendar">
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+    <x-kpi-card label="Month Total" infoKey="calendar.month-total" icon="egg" delay="0ms"
+                :value="number_format($monthTotalEggs)">
+        <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">eggs in {{ $months[$calendarMonth->month - 1] }} {{ $calendarMonth->year }}{{ $cageCode ? ' · ' . $cageCode : '' }}</div>
+    </x-kpi-card>
+    <x-kpi-card label="Daily Average" infoKey="calendar.daily-average" icon="chart-line" delay="60ms"
+                :value="number_format($kpiAvg)">
+        <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">eggs per logged day</div>
+    </x-kpi-card>
+    <x-kpi-card label="Best Day" infoKey="calendar.best-day" icon="trophy" delay="120ms"
+                :value="$kpiBestDate ? number_format($kpiBestEggs) : null">
+        <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">{{ $kpiBestDate ? \Illuminate\Support\Carbon::parse($kpiBestDate)->format('m/d/Y') : 'No logs this month' }}</div>
+    </x-kpi-card>
+    <x-kpi-card label="Days Logged" infoKey="calendar.days-logged" icon="calendar-check" delay="180ms"
+                :value="$kpiDaysHtml">
+        <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">{{ $kpiDaysSoFar === $daysInMonth ? 'days in the month' : 'days so far this month' }}</div>
+    </x-kpi-card>
+</div>
 <div class="bg-white rounded-2xl border border-[#e6e6e6] p-5 dash-rise" style="animation-delay: 100ms;">
     {{-- Month / Year header with navigation --}}
     <div class="mb-5">

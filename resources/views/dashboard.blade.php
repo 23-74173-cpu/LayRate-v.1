@@ -217,7 +217,7 @@
             <div class="analytics-section active-section" data-analytics-section="production">
                 <div class="space-y-4">
                     <turbo-frame id="dashboard-stats-production" data-src="{{ route('dashboard.stats.production', ['cage' => request('cage'), 'from_date' => request('from_date'), 'to_date' => request('to_date')]) }}" loading="lazy" class="block">
-                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[408px] sm:min-h-[258px] lg:min-h-[153px]"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-4 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[346px] sm:min-h-[258px] lg:min-h-[153px]"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-4 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
                     </turbo-frame>
                     <div id="production-charts-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start lg:items-stretch">
                         <turbo-frame id="dashboard-cage-performance" data-src="{{ route('dashboard.cage-performance') }}" loading="lazy" class="block h-full">
@@ -249,7 +249,7 @@
             <div class="analytics-section" data-analytics-section="environmental">
                 <div class="space-y-4">
                     <turbo-frame id="dashboard-stats-environment" data-src="{{ route('dashboard.stats.environment', ['cage' => request('cage'), 'from_date' => request('from_date'), 'to_date' => request('to_date')]) }}" loading="lazy" class="block">
-                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[153px] sm:min-h-0"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-3 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[158px] sm:min-h-0"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-3 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
                     </turbo-frame>
                     <turbo-frame id="dashboard-heat-stress" data-src="{{ route('dashboard.heat-stress', ['days' => 30]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[485px]">
@@ -279,7 +279,7 @@
             <div class="analytics-section" data-analytics-section="feed">
                 <div class="space-y-4">
                     <turbo-frame id="dashboard-stats-feed" data-src="{{ route('dashboard.stats.feed', ['cage' => request('cage'), 'from_date' => request('from_date'), 'to_date' => request('to_date')]) }}" loading="lazy" class="block">
-                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[391px] sm:min-h-[239px] lg:min-h-[150px]"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-4 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[316px] sm:min-h-[239px] lg:min-h-[150px]"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-4 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
                     </turbo-frame>
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
                     <turbo-frame id="dashboard-feed-by-cage" data-src="{{ route('dashboard.feed-by-cage', ['days' => 30]) }}" loading="lazy" class="block">
@@ -303,7 +303,7 @@
             <div class="analytics-section" data-analytics-section="flock">
                 <div class="space-y-4">
                     <turbo-frame id="dashboard-stats-flock" data-src="{{ route('dashboard.stats.flock', ['cage' => request('cage'), 'from_date' => request('from_date'), 'to_date' => request('to_date')]) }}" loading="lazy" class="block">
-                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[233px] sm:min-h-[216px] lg:min-h-0"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-3 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[282px] sm:min-h-[216px] lg:min-h-0"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-3 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
                     </turbo-frame>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
                     <turbo-frame id="dashboard-breed-analytics" data-src="{{ route('dashboard.breed-analytics', ['days' => 30]) }}" loading="lazy" class="block">

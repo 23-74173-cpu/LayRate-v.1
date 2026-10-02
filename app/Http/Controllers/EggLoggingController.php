@@ -103,7 +103,17 @@ class EggLoggingController extends Controller
         $logsQuery = $this->buildFilteredLogsQuery($request);
         $logs = $logsQuery->paginate(5)->withQueryString();
 
-        return view('egg-logging._logs', compact('logs', 'filters'));
+        // KPI cards over every record matching the filters (not just this
+        // page). Same filtered query, without its eager loads and ordering.
+        $kpiBase = fn () => $this->buildFilteredLogsQuery($request)->setEagerLoads([])->reorder();
+        $logStats = [
+            'records' => $logs->total(),
+            'eggs' => (int) $kpiBase()->sum('egg_count'),
+            'sensor' => $kpiBase()->where('logged_via', 'sensor')->count(),
+            'overridden' => $kpiBase()->whereNotNull('overridden_by_user_id')->count(),
+        ];
+
+        return view('egg-logging._logs', compact('logs', 'filters', 'logStats'));
     }
 
     private function logFilters(Request $request): array
