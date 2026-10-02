@@ -153,6 +153,7 @@ Route::middleware(['auth', 'system-time-set'])->group(function () {
     Route::get('/eggs/stocks',                         [EggStockController::class, 'index'])->name('eggs.stocks');
     Route::get('/eggs/stocks/live-data',                [EggStockController::class, 'liveData'])->name('eggs.stocks.live-data');
     Route::get('/eggs/stocks/pool-data',                [EggStockController::class, 'poolData'])->name('eggs.stocks.pool-data');
+    Route::get('/eggs/stocks/scan',                     [EggStockController::class, 'scan'])->name('eggs.stocks.scan');
     Route::post('/eggs/stocks',                        [EggStockController::class, 'store'])->name('eggs.stocks.store');
     Route::put('/eggs/stocks/{batch}',                 [EggStockController::class, 'update'])->name('eggs.stocks.update');
     Route::delete('/eggs/stocks/{batch}',              [EggStockController::class, 'destroy'])->name('eggs.stocks.destroy')->middleware('admin');

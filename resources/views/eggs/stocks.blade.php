@@ -11,6 +11,14 @@
     <turbo-frame id="egg-content">
     <div class="space-y-5">
 
+    {{-- ── Freshness QR scanner (phones only; see eggs/stocks/_qr-scanner) ── --}}
+    <button type="button" onclick="openEggQrScanner()"
+            class="md:hidden flex items-center justify-center gap-2.5 w-full rounded-2xl px-4 py-3.5 text-sm font-semibold text-white shadow-soft active:brightness-90 transition"
+            style="background-color: var(--color-navy);">
+        <i data-lucide="scan-qr-code" class="w-5 h-5"></i>
+        Scan Egg QR for Freshness
+    </button>
+
     {{-- ── Summary Cards — dashboard gradient KPI design ── --}}
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3" id="summaryCards">
         @foreach($sizes as $size)
@@ -357,6 +365,8 @@
         </form>
     </div>
 </div>
+
+@include('eggs.stocks._qr-scanner')
 
 <script>
 @php

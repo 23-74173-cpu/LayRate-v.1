@@ -420,6 +420,73 @@ class EggStockController extends Controller
         return back()->with('success', 'Stock batch deleted.');
     }
 
+    /**
+     * Look up a scanned egg stock label (the QR printed by qr() below:
+     * "LAYRATE|id|harvested Y-m-d|cage code|size|count") and report the
+     * batch's freshness. Uses the live batch row when it still exists, so
+     * the result reflects edits made after the label was printed; falls back
+     * to the label's own date when the batch is gone.
+     */
+    public function scan(Request $request)
+    {
+        $code = trim((string) $request->query('code', ''));
+
+        if (! preg_match('/^LAYRATE\|(\d+)\|(\d{4}-\d{2}-\d{2})\|([^|]*)\|([a-z]+)\|(\d+)$/i', $code, $m)
+            || ! checkdate((int) substr($m[2], 5, 2), (int) substr($m[2], 8, 2), (int) substr($m[2], 0, 4))) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'This QR code is not a LayRate egg stock label.',
+            ], 422);
+        }
+
+        [, $id, $labelDate, $labelCage, $labelSize, $labelCount] = $m;
+        $batch = EggStockBatch::with('cage')->find((int) $id);
+
+        $harvested = $batch
+            ? $batch->harvested_date->copy()
+            : \Illuminate\Support\Carbon::createFromFormat('Y-m-d', $labelDate)->startOfDay();
+        $size = $batch ? $batch->egg_size : strtolower($labelSize);
+        $count = $batch ? (int) $batch->count : (int) $labelCount;
+        $cageCode = $batch ? ($batch->cage?->cage_code ?? '—') : ($labelCage !== 'UNKNOWN' && $labelCage !== '' ? $labelCage : '—');
+
+        $status = EggStockBatch::freshnessForDate($harvested);
+        $thresholds = EggStockBatch::freshnessThresholds();
+        $daysOld = max(0, (int) $harvested->diffInDays(now()));
+        $freshUntil = $harvested->copy()->addDays($thresholds['fresh_days'])->format('m/d/Y');
+        $agingUntil = $harvested->copy()->addDays($thresholds['aging_days'])->format('m/d/Y');
+
+        $message = match ($status) {
+            'fresh' => "Fresh until {$freshUntil}.",
+            'aging' => "Sell or use soon: it turns old after {$agingUntil}.",
+            default => "Harvested more than {$thresholds['aging_days']} days ago.",
+        };
+
+        return response()->json([
+            'ok' => true,
+            'found' => (bool) $batch,
+            // The batch was edited after this label was printed.
+            'changed' => $batch && ($batch->harvested_date->toDateString() !== $labelDate || $batch->egg_size !== strtolower($labelSize)),
+            'batch' => [
+                'id' => (int) $id,
+                'size' => $size,
+                'size_label' => ucfirst($size),
+                'count' => $count,
+                'trays' => (int) ceil($count / 30),
+                'harvested' => $harvested->format('m/d/Y'),
+                'harvested_iso' => $harvested->toDateString(),
+                'cage_code' => $cageCode,
+            ],
+            'freshness' => [
+                'status' => $status,
+                'label' => ucfirst($status),
+                'days_old' => $daysOld,
+                'message' => $message,
+                'fresh_days' => $thresholds['fresh_days'],
+                'aging_days' => $thresholds['aging_days'],
+            ],
+        ]);
+    }
+
     public function qr(EggStockBatch $batch)
     {
         $cageCode = $batch->cage?->cage_code ?? 'UNKNOWN';

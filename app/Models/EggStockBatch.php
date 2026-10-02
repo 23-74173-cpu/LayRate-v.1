@@ -220,7 +220,16 @@ class EggStockBatch extends Model
 
     public function getFreshnessStatusAttribute(): string
     {
-        $days = (int) $this->harvested_date->diffInDays(now());
+        return self::freshnessForDate($this->harvested_date);
+    }
+
+    /**
+     * Freshness (fresh / aging / old) of eggs harvested on the given date.
+     * Shared by the batch table and the egg QR scanner, so both always agree.
+     */
+    public static function freshnessForDate(\DateTimeInterface $harvestedDate): string
+    {
+        $days = (int) \Illuminate\Support\Carbon::instance($harvestedDate)->diffInDays(now());
         $thresholds = self::freshnessThresholds();
 
         if ($days < 0 || $days <= $thresholds['fresh_days']) {
