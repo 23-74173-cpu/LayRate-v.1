@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="turbo-cache-control" content="no-preview">
+    {{-- No hover prefetch: on the Pi (and php artisan serve) every hovered
+         sidebar link was a full page request queued ahead of the real click. --}}
+    <meta name="turbo-prefetch" content="false">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
@@ -234,7 +237,7 @@
 
     {{-- No-JS fallback: entrance animations must never leave content hidden.
          (With JS they end at full opacity via fill modes; this covers the
-         case where CSS animations are interrupted or scripting is off.) --%>
+         case where CSS animations are interrupted or scripting is off.) --}}
     <noscript><style>
         .page-wrapper, .page-wrapper > .space-y-5 > *, .dash-rise, .dash-pop,
         .turbo-loaded, .login-enter { opacity: 1 !important; transform: none !important; animation: none !important; }
@@ -282,11 +285,15 @@
 {{-- ── Turbo loading bar control ─────────────────────────────────────────── --}}
 <script>
 (function() {
-    var bar = document.getElementById('turbo-loading-bar');
-    if (!bar) return;
+    // Bound once: Turbo re-runs this script on every visit, and the bar
+    // element is replaced each time, so it is looked up inside the handlers.
+    if (window.__turboBarBound) return;
+    window.__turboBarBound = true;
     var timer;
 
     document.addEventListener('turbo:before-visit', function() {
+        var bar = document.getElementById('turbo-loading-bar');
+        if (!bar) return;
         clearTimeout(timer);
         bar.style.width = '0%';
         bar.classList.add('active');
@@ -297,6 +304,8 @@
     });
 
     document.addEventListener('turbo:load', function() {
+        var bar = document.getElementById('turbo-loading-bar');
+        if (!bar) return;
         clearTimeout(timer);
         bar.style.transition = 'width 0.3s ease-out';
         bar.style.width = '100%';
@@ -1063,7 +1072,11 @@ window.__applyChartDefaults = function(full) {
         Chart.defaults.layout = { padding: { top: 10, bottom: 10, left: 10, right: 10 } };
     }
 };
-window.__applyChartDefaults();
+// Applied right after chart.min.js loads (end of <body>), not here: this point
+// runs before Chart exists on a full page load, so these defaults used to be
+// skipped there, and on Turbo visits only some charts picked them up from the
+// previous page's copy of Chart.js (one page could mix both looks). Chart.js
+// now loads once and stays loaded, so applying it once covers every chart.
 
 // ── Shared chart lifecycle manager ──
 // Every chart on every page routes through this helper so that:
@@ -1408,11 +1421,64 @@ window.LayRateNotes = {
 <x-quick-actions-dock :dataCompleteness="$dockCompleteness ?? []" />
 
 {{-- Shared dock behavior (delegated, init-guarded, Turbo-safe) --}}
-<script src="/js/quick-dock.js?v={{ @filemtime(public_path('js/quick-dock.js')) }}" defer></script>
+<script src="/js/quick-dock.js?v={{ @filemtime(public_path('js/quick-dock.js')) }}" defer data-turbo-eval="false"></script>
 
-{{-- Libraries needed by inline scripts in @stack('scripts') --}}
-<script src="/js/lucide.min.js"></script>
-<script src="/js/chart.min.js"></script>
+{{-- Libraries needed by inline scripts in @stack('scripts').
+     data-turbo-eval="false": they run once per full page load and stay loaded.
+     Without it Turbo re-downloaded and re-ran all ~615 KB on every visit,
+     right while the new page was painting. Only this layout loads Turbo, so
+     every Turbo visit starts from a page that already ran them. --}}
+<script src="/js/lucide.min.js" data-turbo-eval="false"></script>
+<script src="/js/chart.min.js" data-turbo-eval="false"></script>
+<script data-turbo-eval="false">
+// App chart defaults (font sizes, legend, crosshair plugin, animation), once
+// per full page load. See window.__applyChartDefaults above. full=false, the
+// same as the recovery path: replacing scale.grid/layout on a Chart module
+// that has only just loaded leaves bar charts unable to paint (confirmed
+// again here: the Dashboard bar charts went blank), so grid and padding stay
+// at Chart.js's own values, as they always were after a full page load.
+if (typeof window.__applyChartDefaults === 'function') window.__applyChartDefaults(false);
+
+// Icons: render only what is new. Lucide keeps data-lucide on the <svg> it
+// creates, so every full createIcons() call replaced every icon on the page
+// again (the Dashboard rebuilt ~830 icons to show ~70; Hens ~1,600 per visit).
+// Each drawn icon is stamped with data-lucide-drawn="<name>". Icons whose
+// stamp matches their current data-lucide are set aside during the call; an
+// icon whose data-lucide was changed (chevron/eye toggles) still re-renders.
+(function () {
+    var L = window.lucide;
+    if (!L || L.__layrateOnlyNew || typeof L.createIcons !== 'function') return;
+    var original = L.createIcons;
+    L.createIcons = function (options) {
+        var opts = options || {};
+        if (opts.nameAttr && opts.nameAttr !== 'data-lucide') return original.call(this, options);
+        var root = opts.root || document;
+        if (!root.querySelectorAll) return original.call(this, options);
+        var all = root.querySelectorAll('[data-lucide]');
+        var drawn = [];
+        var pending = 0;
+        for (var i = 0; i < all.length; i++) {
+            var el = all[i];
+            var name = el.getAttribute('data-lucide');
+            if (el.getAttribute('data-lucide-drawn') === name) drawn.push([el, name]);
+            else pending++;
+        }
+        if (!pending && !root.querySelector('[icon-name]')) return;
+        for (var j = 0; j < drawn.length; j++) drawn[j][0].removeAttribute('data-lucide');
+        try {
+            return original.call(this, options);
+        } finally {
+            for (var k = 0; k < drawn.length; k++) drawn[k][0].setAttribute('data-lucide', drawn[k][1]);
+            var svgs = root.querySelectorAll('svg[data-lucide]');
+            for (var s = 0; s < svgs.length; s++) {
+                var n = svgs[s].getAttribute('data-lucide');
+                if (svgs[s].getAttribute('data-lucide-drawn') !== n) svgs[s].setAttribute('data-lucide-drawn', n);
+            }
+        }
+    };
+    L.__layrateOnlyNew = true;
+})();
+</script>
 
 @stack('scripts')
 </body>

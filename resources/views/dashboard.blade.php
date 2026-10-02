@@ -142,11 +142,16 @@
                     }));
                 } catch (e) {}
             };
-            document.addEventListener('pagehide', function() {
-                if (window.__dashboardWriteState) window.__dashboardWriteState();
-            });
+            if (!window.__dashboardPagehideBound) {
+                window.__dashboardPagehideBound = true;
+                document.addEventListener('pagehide', function() {
+                    if (window.__dashboardWriteState) window.__dashboardWriteState();
+                });
+            }
 
-            function filterAnalytics(section) {
+            // staggerLoad: start the section's frames one after another
+            // (page load / tab restore) instead of all at once (tab clicks).
+            function filterAnalytics(section, staggerLoad) {
                 window.__dashboardSection = section;
                 document.querySelectorAll('button[onclick^="filterAnalytics("]').forEach(function(btn) {
                     var isActive = btn.getAttribute('onclick') === "filterAnalytics('" + section + "')";
@@ -164,7 +169,7 @@
                 });
                 // Load this section's frames on demand (data-src → src) so coming back
                 // to the dashboard only renders the section you were last on.
-                if (window.__dashboardActivateSection) window.__dashboardActivateSection(section);
+                if (window.__dashboardActivateSection) window.__dashboardActivateSection(section, staggerLoad === true);
                 if (window.__dashboardWriteState) window.__dashboardWriteState();
                 if (window.lucide) lucide.createIcons();
             }
@@ -190,7 +195,7 @@
             // on load, tab clicks, and Turbo navigation.
             window.__dashboardRestoreTab = function() {
                 var s = window.__dashboardReadState();
-                filterAnalytics((s && ['production','environmental','feed','flock'].indexOf(s.section) >= 0) ? s.section : 'production');
+                filterAnalytics((s && ['production','environmental','feed','flock'].indexOf(s.section) >= 0) ? s.section : 'production', true);
             };
             if (document.querySelector('.analytics-section')) {
                 window.__dashboardRestoreTab();
@@ -201,7 +206,8 @@
                 window.__dashboardTabResyncBound = true;
                 document.addEventListener('turbo:render', function() {
                     if (window.__dashboardSection && document.querySelector('.analytics-section')) {
-                        filterAnalytics(window.__dashboardSection);
+                        // true: frames not started yet keep the one-by-one start.
+                        filterAnalytics(window.__dashboardSection, true);
                     }
                 });
             }
@@ -211,7 +217,7 @@
             <div class="analytics-section active-section" data-analytics-section="production">
                 <div class="space-y-4">
                     <turbo-frame id="dashboard-stats-production" data-src="{{ route('dashboard.stats.production', ['cage' => request('cage'), 'from_date' => request('from_date'), 'to_date' => request('to_date')]) }}" loading="lazy" class="block">
-                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-4 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[408px] sm:min-h-[258px] lg:min-h-[153px]"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-4 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
                     </turbo-frame>
                     <div id="production-charts-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start lg:items-stretch">
                         <turbo-frame id="dashboard-cage-performance" data-src="{{ route('dashboard.cage-performance') }}" loading="lazy" class="block h-full">
@@ -223,14 +229,14 @@
                         </turbo-frame>
 
                         <turbo-frame id="dashboard-egg-collection-time" data-src="{{ route('dashboard.egg-collection-time', ['days' => 30]) }}" loading="lazy" class="block self-start lg:h-full">
-                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse h-auto lg:h-full">
+                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse h-auto lg:h-full min-h-[288px] lg:min-h-[378px]">
                                 <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                                 <div class="h-[120px] bg-gray-100 rounded-xl"></div>
                             </div>
                         </turbo-frame>
 
                         <turbo-frame id="dashboard-hen-age-layrate" data-src="{{ route('dashboard.hen-age-layrate', ['days' => 30]) }}" loading="lazy" class="block self-start lg:h-full">
-                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse h-auto lg:h-full">
+                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse h-auto lg:h-full min-h-[260px] lg:min-h-[378px]">
                                 <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                                 <div class="h-[120px] bg-gray-100 rounded-xl"></div>
                             </div>
@@ -243,24 +249,24 @@
             <div class="analytics-section" data-analytics-section="environmental">
                 <div class="space-y-4">
                     <turbo-frame id="dashboard-stats-environment" data-src="{{ route('dashboard.stats.environment', ['cage' => request('cage'), 'from_date' => request('from_date'), 'to_date' => request('to_date')]) }}" loading="lazy" class="block">
-                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-3 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[153px] sm:min-h-0"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-3 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
                     </turbo-frame>
                     <turbo-frame id="dashboard-heat-stress" data-src="{{ route('dashboard.heat-stress', ['days' => 30]) }}" loading="lazy" class="block">
-                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[485px]">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                             <div class="h-[110px] bg-gray-100 rounded-xl"></div>
                         </div>
                     </turbo-frame>
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
                         <turbo-frame id="dashboard-temp-vs-hdep" data-src="{{ route('dashboard.temp-vs-hdep', ['days' => 30]) }}" loading="lazy" class="block">
-                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
+                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[310px] lg:min-h-[357px]">
                                 <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                                 <div class="h-[110px] bg-gray-100 rounded-xl"></div>
                             </div>
                         </turbo-frame>
 
                         <turbo-frame id="dashboard-hum-vs-hdep" data-src="{{ route('dashboard.hum-vs-hdep', ['days' => 30]) }}" loading="lazy" class="block">
-                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
+                            <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[310px] lg:min-h-[357px]">
                                 <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                                 <div class="h-[110px] bg-gray-100 rounded-xl"></div>
                             </div>
@@ -273,18 +279,18 @@
             <div class="analytics-section" data-analytics-section="feed">
                 <div class="space-y-4">
                     <turbo-frame id="dashboard-stats-feed" data-src="{{ route('dashboard.stats.feed', ['cage' => request('cage'), 'from_date' => request('from_date'), 'to_date' => request('to_date')]) }}" loading="lazy" class="block">
-                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-4 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[391px] sm:min-h-[239px] lg:min-h-[150px]"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-4 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
                     </turbo-frame>
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
                     <turbo-frame id="dashboard-feed-by-cage" data-src="{{ route('dashboard.feed-by-cage', ['days' => 30]) }}" loading="lazy" class="block">
-                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[324px] lg:min-h-[357px]">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                             <div class="h-[110px] bg-gray-100 rounded-xl"></div>
                         </div>
                     </turbo-frame>
 
                     <turbo-frame id="dashboard-feed-vs-egg" data-src="{{ route('dashboard.feed-vs-egg', ['days' => 30]) }}" loading="lazy" class="block">
-                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[310px] lg:min-h-[357px]">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                             <div class="h-[110px] bg-gray-100 rounded-xl"></div>
                         </div>
@@ -297,32 +303,32 @@
             <div class="analytics-section" data-analytics-section="flock">
                 <div class="space-y-4">
                     <turbo-frame id="dashboard-stats-flock" data-src="{{ route('dashboard.stats.flock', ['cage' => request('cage'), 'from_date' => request('from_date'), 'to_date' => request('to_date')]) }}" loading="lazy" class="block">
-                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-3 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[233px] sm:min-h-[216px] lg:min-h-0"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-3 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
                     </turbo-frame>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
                     <turbo-frame id="dashboard-breed-analytics" data-src="{{ route('dashboard.breed-analytics', ['days' => 30]) }}" loading="lazy" class="block">
-                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[284px] lg:min-h-[392px]">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                             <div class="h-[120px] bg-gray-100 rounded-xl"></div>
                         </div>
                     </turbo-frame>
 
                     <turbo-frame id="dashboard-mortality-by-cause" data-src="{{ route('dashboard.mortality-by-cause', ['days' => 30]) }}" loading="lazy" class="block">
-                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[285px] lg:min-h-[392px]">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                             <div class="h-[120px] bg-gray-100 rounded-xl"></div>
                         </div>
                     </turbo-frame>
 
                     <turbo-frame id="dashboard-flock-age-by-cage" data-src="{{ route('dashboard.flock-age-by-cage') }}" loading="lazy" class="block">
-                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[324px] lg:min-h-[391px]">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                             <div class="h-[120px] bg-gray-100 rounded-xl"></div>
                         </div>
                     </turbo-frame>
 
                     <turbo-frame id="dashboard-mortality-trend" data-src="{{ route('dashboard.mortality-trend', ['days' => 30]) }}" loading="lazy" class="block">
-                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse">
+                        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[284px] lg:min-h-[391px]">
                             <div class="h-4 w-48 bg-gray-200 rounded mb-4"></div>
                             <div class="h-[110px] bg-gray-100 rounded-xl"></div>
                         </div>
@@ -753,17 +759,31 @@
     // Activates (data-src → src) every still-unloaded frame inside a given analytics
     // section. Called when a tab is switched to, so hidden sections only fetch when
     // they're actually shown.
-    window.__dashboardActivateSection = function(section) {
+    // stagger: on page load / tab restore, start the frames one after another
+    // (same 280ms gap as the sequential loader below) instead of all at once,
+    // so their charts and icons don't all land in the same moment. The first
+    // frame still starts right away. Tab clicks keep loading all at once.
+    window.__dashboardActivateSection = function(section, stagger) {
         var sec = null;
         document.querySelectorAll('.analytics-section').forEach(function(el) {
             if (el.dataset.analyticsSection === section) sec = el;
         });
         if (!sec) return;
+        var pending = [];
         sec.querySelectorAll('turbo-frame[data-src]').forEach(function(f) {
-            if (f.dataset.src && !f.getAttribute('src')) {
+            if (f.dataset.src && !f.getAttribute('src')) pending.push(f);
+        });
+        pending.forEach(function(f, n) {
+            function start() {
+                // Skip if already started (by the loader or a filter) or if its
+                // tab was hidden meanwhile: it loads when shown again.
+                if (!f.isConnected || f.getAttribute('src')) return;
+                if (f.closest('.analytics-section:not(.active-section)')) return;
                 f.setAttribute('src', (window.__dashboardFrameUrl && window.__dashboardFrameUrl(f.dataset.src)) || f.dataset.src);
                 f.setAttribute('loading', 'eager');
             }
+            if (stagger && n > 0) setTimeout(start, n * 280);
+            else start();
         });
     };
 
@@ -771,6 +791,14 @@
     function reloadFramePreservingScroll(frameId, url) {
         var frame = document.getElementById(frameId);
         if (!frame) return;
+
+        // A frame in a hidden tab that never loaded: don't fetch it now (a
+        // filter change used to load all 18 frames). Keep the filtered URL so
+        // it loads with these filters when its tab is opened.
+        if (!frame.getAttribute('src') && frame.closest('.analytics-section:not(.active-section)')) {
+            frame.dataset.src = url;
+            return;
+        }
 
         var scrollRoot = document.querySelector('.page-wrapper') || document.documentElement;
         var savedScroll = scrollRoot.scrollTop || window.scrollY || 0;
@@ -976,9 +1004,13 @@
             if (frames[k].style.height) frames[k].style.height = '';
         }
     };
-    document.addEventListener('turbo:frame-load', function () { window.equalizeProductionCharts(); });
-    window.addEventListener('load', window.equalizeProductionCharts);
-    window.addEventListener('resize', window.equalizeProductionCharts);
+    // Bound once: this script re-runs on every Dashboard visit.
+    if (!window.__dashboardEqualizeBound) {
+        window.__dashboardEqualizeBound = true;
+        document.addEventListener('turbo:frame-load', function () { window.equalizeProductionCharts(); });
+        window.addEventListener('load', function () { window.equalizeProductionCharts(); });
+        window.addEventListener('resize', function () { window.equalizeProductionCharts(); });
+    }
     window.equalizeProductionCharts();
 
     // ── Cage filter: reloads Turbo Frames with ?cage=CODE ──
@@ -1007,9 +1039,16 @@ var cageParam = code === 'all' ? null : code;
         var m = document.getElementById('yesterdaySummaryModal');
         if (m) m.style.display = 'none';
     }
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') closeYesterdaySummary();
-    });
+    // Escape for both daily popups, bound once (this script re-runs on every
+    // Dashboard visit).
+    if (!window.__dashboardPopupEscBound) {
+        window.__dashboardPopupEscBound = true;
+        document.addEventListener('keydown', function(e) {
+            if (e.key !== 'Escape') return;
+            if (typeof window.closeYesterdaySummary === 'function') window.closeYesterdaySummary();
+            if (typeof window.closeDayComplete === 'function') window.closeDayComplete();
+        });
+    }
 
     (function() {
         var reportingDate = '{{ $today }}';
@@ -1039,9 +1078,6 @@ var cageParam = code === 'all' ? null : code;
         var m = document.getElementById('dayCompleteModal');
         if (m) m.style.display = 'none';
     }
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') closeDayComplete();
-    });
 
     (function() {
         var dayComplete = {{ $dayComplete ? 'true' : 'false' }};
@@ -1065,9 +1101,11 @@ var cageParam = code === 'all' ? null : code;
 
     {{-- Sequential frame loader + smooth 1-by-1 entrance --}}
     <style>
+        /* Fade only: cards and charts inside a frame already have their own
+           entrance, and sliding the frame too made content move twice. */
         @keyframes frameFadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to   { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; }
+            to   { opacity: 1; }
         }
         turbo-frame.frame-fade-in { animation: frameFadeIn 0.4s ease-out both; }
         @media (prefers-reduced-motion: reduce) {

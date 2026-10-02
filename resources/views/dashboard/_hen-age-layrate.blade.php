@@ -1,8 +1,8 @@
 <turbo-frame id="dashboard-hen-age-layrate">
     <style>
         @keyframes chartFadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to   { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; }
+            to   { opacity: 1; }
         }
         .hal-fade-in { animation: chartFadeIn 0.35s ease-out both; }
     </style>

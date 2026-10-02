@@ -98,10 +98,13 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   animation: pageFadeIn 150ms ease-out forwards;
 }
 
-/* Dashboard card entrance + count-up helpers */
+/* Dashboard card entrance + count-up helpers.
+   Fade only (it used to also slide up 14px): with the page, frame and chart
+   entrances all moving at once, content kept shifting for about a second
+   after every page load. */
 @keyframes dashRise {
-  from { opacity: 0; transform: translateY(14px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 .dash-rise { animation: dashRise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
@@ -116,16 +119,16 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
    Targets the top-level sections inside each page's space-y-5 wrapper, so no
    per-page changes are needed. Hidden modals (display:none) and lazy frames
    are unaffected. */
+/* Shorter and tighter than before (0.5s with up to 360ms of delay), so a
+   page is settled in under half a second. */
 .page-wrapper > .space-y-5 > * {
-  animation: dashRise 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation: dashRise 0.3s ease-out backwards;
 }
 .page-wrapper > .space-y-5 > *:nth-child(1) { animation-delay: 0ms; }
-.page-wrapper > .space-y-5 > *:nth-child(2) { animation-delay: 60ms; }
-.page-wrapper > .space-y-5 > *:nth-child(3) { animation-delay: 120ms; }
-.page-wrapper > .space-y-5 > *:nth-child(4) { animation-delay: 180ms; }
-.page-wrapper > .space-y-5 > *:nth-child(5) { animation-delay: 240ms; }
-.page-wrapper > .space-y-5 > *:nth-child(6) { animation-delay: 300ms; }
-.page-wrapper > .space-y-5 > *:nth-child(n+7) { animation-delay: 360ms; }
+.page-wrapper > .space-y-5 > *:nth-child(2) { animation-delay: 40ms; }
+.page-wrapper > .space-y-5 > *:nth-child(3) { animation-delay: 80ms; }
+.page-wrapper > .space-y-5 > *:nth-child(4) { animation-delay: 120ms; }
+.page-wrapper > .space-y-5 > *:nth-child(n+5) { animation-delay: 160ms; }
 
 @media (prefers-reduced-motion: reduce) {
   .page-wrapper > .space-y-5 > *,

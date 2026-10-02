@@ -13,6 +13,11 @@
 --}}
 <script>
 (function() {
+    // Bound once: this script re-runs on every Turbo visit, and each copy
+    // used to log the same submit again.
+    if (window.__transactionLoggerBound) return;
+    window.__transactionLoggerBound = true;
+
     const SENSITIVE = /password|pin|token/i;
 
     document.addEventListener('submit', function(e) {

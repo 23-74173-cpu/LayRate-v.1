@@ -189,13 +189,6 @@
         }
     });
 
-    // Escape key closes modal
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            confirmModalClose();
-        }
-    });
-
     // Auto-wire forms with data-confirm attribute
     function wireConfirmForms() {
         document.querySelectorAll('form[data-confirm]:not([data-confirm-wired])').forEach(function(form) {
@@ -215,9 +208,23 @@
     }
 
     wireConfirmForms();
+    window.__wireConfirmForms = wireConfirmForms;
 
-    // Re-wire after Turbo frame/page loads
-    document.addEventListener('turbo:frame-load', wireConfirmForms);
-    document.addEventListener('turbo:load', wireConfirmForms);
+    // Document-level listeners are bound once: this script re-runs on every
+    // Turbo visit and used to stack another copy each time.
+    if (!window.__confirmModalBound) {
+        window.__confirmModalBound = true;
+
+        // Escape key closes modal
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                window.confirmModalClose();
+            }
+        });
+
+        // Re-wire after Turbo frame/page loads
+        document.addEventListener('turbo:frame-load', function() { window.__wireConfirmForms(); });
+        document.addEventListener('turbo:load', function() { window.__wireConfirmForms(); });
+    }
 })();
 </script>

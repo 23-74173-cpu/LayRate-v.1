@@ -1,4 +1,4 @@
-<div class="rounded-2xl border p-5 h-auto flex flex-col lg:h-full" style="background-color: #ffffff; border-color: #e6e6e6;">
+<div class="rounded-2xl border p-5 h-auto flex flex-col lg:h-full min-h-[356px] sm:min-h-[328px]" style="background-color: #ffffff; border-color: #e6e6e6;">
     <div class="flex items-start gap-3 mb-4">
         <div class="w-8 h-8 rounded-lg" style="background-color: #e6e6e6;"></div>
         <div class="space-y-2 flex-1">

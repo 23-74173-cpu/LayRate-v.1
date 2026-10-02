@@ -356,6 +356,7 @@ function reportChartConfig(chart) {
                     responsive: true, maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
                     plugins: { layrateCrosshair: { enabled: true } },
+                }
             };
         case 'mortality':
             return {

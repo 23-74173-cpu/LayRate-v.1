@@ -47,13 +47,18 @@
         el.classList.remove('flex');
     };
 
+    // Listeners below are bound once: this script re-runs on every Turbo
+    // visit and used to stack another copy of each one per visit.
+    if (window.__loadingModalBound) return;
+    window.__loadingModalBound = true;
+
     // Auto-wire: document-level bubble listener runs after per-form handlers,
     // so a data-confirm interception (defaultPrevented) never shows the overlay.
     document.addEventListener('submit', function(e) {
         var form = e.target;
         if (!form.matches || !form.matches('form[data-loading]')) return;
         if (e.defaultPrevented) return;
-        showLoadingModal(
+        window.showLoadingModal(
             form.getAttribute('data-loading-title') || 'Processing',
             form.getAttribute('data-loading') || 'Please wait...'
         );
@@ -61,8 +66,9 @@
 
     // Hide whenever a new page/frame finishes rendering, or on back/forward
     // restore — covers success, validation-error re-render, and history nav.
-    document.addEventListener('turbo:load', hideLoadingModal);
-    document.addEventListener('turbo:render', hideLoadingModal);
-    window.addEventListener('pageshow', hideLoadingModal);
+    function hide() { window.hideLoadingModal(); }
+    document.addEventListener('turbo:load', hide);
+    document.addEventListener('turbo:render', hide);
+    window.addEventListener('pageshow', hide);
 })();
 </script>

@@ -459,17 +459,23 @@ function stopLivePolling() {
     }
 }
 
-document.addEventListener('turbo:load', function() {
-    var livePanel = document.getElementById('panelLiveData');
-    if (livePanel && !livePanel.classList.contains('hidden')) {
-        startLivePolling();
-        startRelaySSE();
-    }
-});
-document.addEventListener('turbo:before-cache', function() {
-    stopLivePolling();
-    stopRelaySSE();
-});
+// Bound once: this script re-runs on every visit to this page, and each copy
+// used to add another pair of listeners. The functions are page globals, so
+// the first pair always calls the latest definitions.
+if (!window.__envLiveLifecycleBound) {
+    window.__envLiveLifecycleBound = true;
+    document.addEventListener('turbo:load', function() {
+        var livePanel = document.getElementById('panelLiveData');
+        if (livePanel && !livePanel.classList.contains('hidden')) {
+            window.startLivePolling();
+            window.startRelaySSE();
+        }
+    });
+    document.addEventListener('turbo:before-cache', function() {
+        if (typeof window.stopLivePolling === 'function') window.stopLivePolling();
+        if (typeof window.stopRelaySSE === 'function') window.stopRelaySSE();
+    });
+}
 
 // ── Relay / Fan — SSE-driven state + manual control ──
 var __relayInitial = @json($relayState ?? ['configured' => false]);

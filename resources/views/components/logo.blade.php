@@ -7,6 +7,9 @@
  * favicons/meta) use this component or the same file:
  *   public/images/layrate-logo.png  (663×885, transparent, egg + rooster
  *   emblem, no shadow, no wordmark — do not redraw, recolor or recreate)
+ * This component serves layrate-logo-sm.png: the same file scaled down to
+ * 252×336 (enough for the 112px login logo on 3x screens), ~94 KB instead
+ * of ~417 KB. Regenerate it from the master if the logo ever changes.
  *
  * The egg is portrait (~3:4). Aspect ratio is always preserved
  * (object-contain + intrinsic width/height attrs, so no layout shift and
@@ -38,13 +41,13 @@
 
 @if($showWordmark)
 <span {{ $attributes->merge(['class' => 'inline-flex items-center gap-2']) }}>
-    <img src="/images/layrate-logo.png" alt="{{ $alt }}" width="663" height="885"
+    <img src="/images/layrate-logo-sm.png" alt="{{ $alt }}" width="252" height="336"
          class="{{ $size }} w-auto object-contain shrink-0"
          loading="{{ $eager ? 'eager' : 'lazy' }}" @if($eager) fetchpriority="high" @endif>
     <span class="{{ $wordmarkClass }}" aria-hidden="true">LayRate</span>
 </span>
 @else
-<img src="/images/layrate-logo.png" alt="{{ $alt }}" width="663" height="885"
+<img src="/images/layrate-logo-sm.png" alt="{{ $alt }}" width="252" height="336"
      {{ $attributes->merge(['class' => $size . ' w-auto object-contain']) }}
      loading="{{ $eager ? 'eager' : 'lazy' }}" @if($eager) fetchpriority="high" @endif>
 @endif
