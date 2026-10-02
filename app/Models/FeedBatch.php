@@ -74,7 +74,13 @@ class FeedBatch extends Model
         if ($this->total_quantity_kg === null) {
             return null;
         }
-        $consumed = $this->consumptionLogs()->sum('feed_consumed_kg');
+        // Prefer the preloaded withSum aggregate when the caller eager-loaded
+        // it (feed live-data does): one SUM for all rows instead of one query
+        // per batch. Falls back to the query so single-model contexts behave
+        // exactly as before.
+        $consumed = array_key_exists('consumed_sum', $this->attributes)
+            ? (float) $this->attributes['consumed_sum']
+            : $this->consumptionLogs()->sum('feed_consumed_kg');
         return round(max(0, $this->total_quantity_kg - $consumed), 2);
     }
 

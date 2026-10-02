@@ -41,13 +41,17 @@ class FeedController extends Controller
 
     public function liveData()
     {
-        // Full, unpaginated list — needed for the avg CP% stat and to populate
-        // the consumption/farm-entry modal <select> dropdowns with every batch,
-        // not just whichever page the table happens to be on.
-        $allBatches = FeedBatch::orderByDesc('date_received')->get();
-        $avgCp = $allBatches->avg('crude_protein');
+        // Lean batch fetch: the page only needs id/code/cost/qty for the modal
+        // dropdowns and the JS remaining-kg map (accessors read the preloaded
+        // consumed_sum, so no per-batch SUM queries). avg CP% is a single
+        // aggregate instead of hydrating every batch ever recorded.
+        $allBatches = FeedBatch::orderByDesc('date_received')
+            ->withSum('consumptionLogs as consumed_sum', 'feed_consumed_kg')
+            ->get(['id', 'batch_code', 'unit_cost', 'total_quantity_kg']);
+        $avgCp = FeedBatch::avg('crude_protein');
 
-        $batches = FeedBatch::orderByDesc('date_received')->paginate(5)->withQueryString();
+        $batches = FeedBatch::withSum('consumptionLogs as consumed_sum', 'feed_consumed_kg')
+            ->orderByDesc('date_received')->paginate(5)->withQueryString();
 
         $preselectedCageId = (int) request('cage_id') ?: null;
 
@@ -157,8 +161,18 @@ class FeedController extends Controller
             : ReportingDateService::reportingDayEnd()->subSecond();
         $dayStart = $dayEnd->copy()->subDays($periodDays - 1);
 
+        // Bound the timeline fetch to recent periods only (the tab renders the
+        // latest 5 and totals "shown periods"). Previously unbounded: every
+        // production + feed row ever recorded was hydrated on each view.
+        $timelineSince = match ($groupBy) {
+            'month' => $dayEnd->copy()->subMonths(11)->startOfDay(),
+            'week'  => $dayEnd->copy()->subWeeks(11)->startOfDay(),
+            default => $dayEnd->copy()->subDays(29)->startOfDay(),
+        };
+
         $label = null;
         $selectedCageId = null;
+        $cage = null;
 
         if ($cageId === 'all' || $cageId === null) {
             if ($cageId === 'all') {
@@ -166,7 +180,7 @@ class FeedController extends Controller
                     $dayStart,
                     $dayEnd
                 );
-                $fcrTimeline = FcrCalculator::timelineAll($groupBy);
+                $fcrTimeline = FcrCalculator::timelineAll($groupBy, $timelineSince);
                 $label       = 'All Cages';
                 $selectedCageId = 'all';
             } else {
@@ -179,7 +193,7 @@ class FeedController extends Controller
             $selectedCageId = (int) $cageId;
             $cage = Cage::find($selectedCageId);
             if ($cage) {
-                $fcrTimeline = FcrCalculator::timeline($cage, $groupBy);
+                $fcrTimeline = FcrCalculator::timeline($cage, $groupBy, $timelineSince);
                 $fcrCurrent  = FcrCalculator::forCage(
                     $cage,
                     $dayStart,
@@ -193,12 +207,22 @@ class FeedController extends Controller
             }
         }
 
+        // All-time header totals via SQL aggregates (no date bound, no model
+        // hydration): identical row sets and weight math to the old unbounded
+        // timeline sums, so the header cards read exactly as before.
+        $fcrTotals = ['feed_kg' => 0.0, 'egg_mass_kg' => 0.0];
+        if ($cageId === 'all' || ($cage ?? null)) {
+            $fcrTotals = FcrCalculator::allTimeTotals($cageId === 'all' ? null : $cage);
+        }
+
         return [
             'fcrCurrent'    => $fcrCurrent,
             'fcrTimeline'   => $fcrTimeline,
             'fcrGroupBy'    => $groupBy,
             'fcrCageLabel'  => $label,
             'fcrSelectedId' => $selectedCageId,
+            'fcrTotalFeedKg'    => $fcrTotals['feed_kg'],
+            'fcrTotalEggMassKg' => $fcrTotals['egg_mass_kg'],
         ];
     }
 

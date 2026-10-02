@@ -407,6 +407,8 @@
                     'fcrGroupBy'    => $fcrGroupBy,
                     'fcrCageLabel'  => $fcrCageLabel,
                     'fcrSelectedId' => $fcrSelectedId,
+                    'fcrTotalFeedKg'    => $fcrTotalFeedKg,
+                    'fcrTotalEggMassKg' => $fcrTotalEggMassKg,
                 ])
             </div>
 

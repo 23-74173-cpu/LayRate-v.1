@@ -26,7 +26,7 @@
         icon="package"
         cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
         delay="60ms"
-        :value="number_format($fcrTimeline->sum('feed_kg'), 1) . ' kg'"
+        :value="number_format($fcrTotalFeedKg, 1) . ' kg'"
     >
         <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">shown periods</div>
     </x-kpi-card>
@@ -36,7 +36,7 @@
         icon="egg"
         cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
         delay="120ms"
-        :value="number_format($fcrTimeline->sum('egg_mass_kg'), 2) . ' kg'"
+        :value="number_format($fcrTotalEggMassKg, 2) . ' kg'"
     >
         <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">egg counts + weights</div>
     </x-kpi-card>

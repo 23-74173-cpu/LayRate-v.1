@@ -8,6 +8,7 @@ use App\Models\ProductionLog;
 use App\Models\Setting;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Feed Conversion Ratio (FCR) calculator.
@@ -85,6 +86,65 @@ class FcrCalculator
         }
 
         return round($feedKg / $eggMassKg, 2);
+    }
+
+    /**
+     * All-time feed + egg-mass totals for the FCR header cards.
+     *
+     * Same row sets and the same per-log weight arithmetic as the timeline
+     * builders (real() scope, cage scoping, size weights with fallback), but
+     * as two SQL aggregates with no model hydration and no date bound — so
+     * the header cards show what they showed before the timeline fetch was
+     * windowed. Only float summation order (SQL vs PHP) and the old
+     * per-period rounding can shift the last displayed digit.
+     *
+     * @return array{feed_kg: float, egg_mass_kg: float}
+     */
+    public static function allTimeTotals(?Cage $cage = null): array
+    {
+        $feedQuery = FeedConsumptionLog::query();
+        if ($cage) {
+            $feedQuery->where('cage_id', $cage->id);
+        } else {
+            $feedQuery->whereHas('cage', fn ($q) => $q->where('is_active', 1));
+        }
+        $feedKg = (float) $feedQuery->sum('feed_consumed_kg');
+
+        $weights = Setting::eggWeights();
+        $bindings = [
+            (float) $weights['small'], (float) $weights['medium'],
+            (float) $weights['large'], (float) $weights['jumbo'],
+            (float) $weights['fallback'],
+        ];
+
+        $perLog = DB::table('production_logs as pl')
+            ->where('pl.is_demo', false)
+            ->selectRaw(
+                'pl.id, pl.egg_count, COUNT(esl.id) AS size_rows, ' .
+                'COALESCE(SUM(esl.`count` * CASE esl.egg_size ' .
+                "WHEN 'small' THEN ? WHEN 'medium' THEN ? WHEN 'large' THEN ? WHEN 'jumbo' THEN ? ELSE ? END), 0) AS sized_grams",
+                $bindings
+            )
+            ->leftJoin('egg_size_logs as esl', 'esl.production_log_id', '=', 'pl.id')
+            ->groupBy('pl.id', 'pl.egg_count');
+
+        if ($cage) {
+            $perLog->join('cage_slots as cs', 'cs.id', '=', 'pl.cage_slot_id')
+                ->where('cs.cage_id', $cage->id);
+        } else {
+            $perLog->join('cage_slots as cs', 'cs.id', '=', 'pl.cage_slot_id')
+                ->join('cages as c', 'c.id', '=', 'cs.cage_id')
+                ->where('c.is_active', 1);
+        }
+
+        $totalGrams = (float) (DB::query()->fromSub($perLog, 'sized')
+            ->selectRaw(
+                'SUM(CASE WHEN sized.size_rows = 0 THEN sized.egg_count * ? ELSE sized.sized_grams END) AS total_grams',
+                [(float) $weights['fallback']]
+            )
+            ->value('total_grams') ?? 0);
+
+        return ['feed_kg' => $feedKg, 'egg_mass_kg' => $totalGrams / 1000];
     }
 
     /**
