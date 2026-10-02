@@ -6,28 +6,28 @@
     @endif
     <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
         <x-kpi-card
-            label="Avg CP% This Week"
+            label="Avg CP% This Week" infoKey="feed.avg-cp"
             icon="flask-conical"
             cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
             delay="0ms"
             :value="number_format($avgCp, 1) . '%'"
         />
         <x-kpi-card
-            label="Avg Feed/Cage/Day"
+            label="Avg Feed/Cage/Day" infoKey="feed.avg-per-cage-day"
             icon="scale"
             cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
             delay="60ms"
             :value="$avgFeedPerCage . ' kg'"
         />
         <x-kpi-card
-            label="Total Feed Used"
+            label="Total Feed Used" infoKey="feed.total-week"
             icon="package"
             cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
             delay="120ms"
             :value="number_format($totalFeedWeek, 1) . ' kg'"
         />
         <x-kpi-card
-            label="Feed Cost This Month"
+            label="Feed Cost This Month" infoKey="feed.cost-month"
             icon="banknote"
             cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
             delay="180ms"
@@ -271,17 +271,6 @@
     {{-- Daily Consumption Panel --}}
     <div id="tab-consumption" class="tab-panel hidden">
         <turbo-frame id="tab-consumption-frame">
-        {{-- Primary actions — these are the two things operators do most on this
-             tab, so they're full-size primary buttons up top, not small/muted
-             secondary ones a barn worker could miss on a tablet. --}}
-        <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-end gap-3 mb-4">
-            <x-button onclick="openFarmEntryModal(null, null, '{{ now()->toDateString() }}', '{{ now()->format('H:i') }}', null)" class="w-full sm:w-auto">
-                <i data-lucide="scale" class="w-4 h-4"></i> Log Whole-Farm Feeding
-            </x-button>
-            <x-button onclick="openConsumptionModal(null, null, '{{ now()->toDateString() }}', '{{ now()->format('H:i') }}', null, null)" class="w-full sm:w-auto">
-                <i data-lucide="plus" class="w-4 h-4"></i> Add Consumption
-            </x-button>
-        </div>
         <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-x-auto">
             <table class="w-full">
                 <thead>

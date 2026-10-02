@@ -6,7 +6,7 @@
             </x-section-label>
             <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <x-kpi-card
-                    label="Total Hens"
+                    label="Total Hens" infoKey="hens.total"
                     icon="bird"
                     cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)"
                     delay="0ms"
@@ -19,7 +19,7 @@
                 />
 
                 <x-kpi-card
-                    label="Today's HDEP"
+                    label="Today's HDEP" infoKey="production.hdep-today"
                     icon="gauge"
                     cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))"
                     delay="60ms"
@@ -35,7 +35,7 @@
                 </x-kpi-card>
 
                 <x-kpi-card
-                    label="Eggs Today"
+                    label="Eggs Today" infoKey="production.eggs-today"
                     icon="egg"
                     cardGradient="linear-gradient(135deg,#d97706,#C2703E)"
                     delay="120ms"
@@ -50,7 +50,7 @@
                 </x-kpi-card>
 
                 <x-kpi-card
-                    label="Lifetime Eggs"
+                    label="Lifetime Eggs" infoKey="production.lifetime-eggs"
                     icon="layers"
                     cardGradient="linear-gradient(135deg,#8B5CF6,#6B4C8A)"
                     delay="180ms"

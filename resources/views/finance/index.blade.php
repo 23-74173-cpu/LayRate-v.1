@@ -21,18 +21,18 @@
 
     {{-- ── Summary ── --}}
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <x-kpi-card label="Total Income" icon="trending-up" cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)" delay="0ms"
+        <x-kpi-card label="Total Income" infoKey="finance.income" icon="trending-up" cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)" delay="0ms"
                     :value="$moneyValue($totalIncome)">
-            <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">{{ $hasFilters ? 'For the selected filters' : 'All recorded income' }}</div>
+            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">{{ $hasFilters ? 'For the selected filters' : 'All recorded income' }}</div>
         </x-kpi-card>
-        <x-kpi-card label="Total Expenses" icon="trending-down" cardGradient="linear-gradient(135deg,#dc2626,#9b1c24)" delay="60ms"
+        <x-kpi-card label="Total Expenses" infoKey="finance.expenses" icon="trending-down" cardGradient="linear-gradient(135deg,#dc2626,#9b1c24)" delay="60ms"
                     :value="$moneyValue($totalExpense)">
-            <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">{{ $hasFilters ? 'For the selected filters' : 'All recorded expenses' }}</div>
+            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">{{ $hasFilters ? 'For the selected filters' : 'All recorded expenses' }}</div>
         </x-kpi-card>
-        <x-kpi-card label="Net Balance" icon="wallet"
+        <x-kpi-card label="Net Balance" infoKey="finance.net" icon="wallet"
                     cardGradient="{{ $net >= 0 ? 'linear-gradient(135deg,var(--color-navy),var(--color-info))' : 'linear-gradient(135deg,#dc2626,#9b1c24)' }}" delay="120ms"
                     :value="$moneyValue($net, $net < 0)">
-            <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">{{ $net >= 0 ? 'Income minus expenses' : 'Expenses are higher than income' }}</div>
+            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">{{ $net >= 0 ? 'Income minus expenses' : 'Expenses are higher than income' }}</div>
         </x-kpi-card>
     </div>
 

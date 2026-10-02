@@ -88,13 +88,13 @@
                         $count = $todayByCage[$cage->cage_code] ?? 0;
                     @endphp
                     <x-kpi-card
-                        label="{{ $cage->cage_code }}"
+                        label="{{ $cage->cage_code }}" infoKey="mortality.cage-today"
                         icon="heart-crack"
                         cardGradient="linear-gradient(135deg,#ec4899,#9d174d)"
                         delay="{{ $loop->index * 60 }}ms"
                         :value="$count"
                     >
-                        <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">{{ $count === 1 ? 'hen' : 'hens' }}</div>
+                        <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">{{ $count === 1 ? 'hen' : 'hens' }}</div>
                     </x-kpi-card>
                     @endforeach
                 </div>

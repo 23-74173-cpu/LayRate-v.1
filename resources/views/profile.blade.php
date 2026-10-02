@@ -40,22 +40,10 @@
                 <h2 class="text-base font-medium text-[#333333] mb-1">Your Activity</h2>
                 <p class="text-xs text-[#6B7280] mb-4">Records logged with this account since day 1.</p>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                    <div class="bg-white border border-[#D9D9D9] rounded-lg p-4 text-center">
-                        <div class="text-2xl font-bold text-navy leading-none tracking-[-0.5px]">{{ number_format($activity->egg_logs) }}</div>
-                        <div class="text-xs text-[#6B7280] mt-1">Egg log entries</div>
-                    </div>
-                    <div class="bg-white border border-[#D9D9D9] rounded-lg p-4 text-center">
-                        <div class="text-2xl font-bold text-navy leading-none tracking-[-0.5px]">{{ number_format($activity->eggs_total) }}</div>
-                        <div class="text-xs text-[#6B7280] mt-1">Eggs recorded</div>
-                    </div>
-                    <div class="bg-white border border-[#D9D9D9] rounded-lg p-4 text-center">
-                        <div class="text-2xl font-bold text-navy leading-none tracking-[-0.5px]">{{ number_format($activity->feed_logs) }}</div>
-                        <div class="text-xs text-[#6B7280] mt-1">Feed entries</div>
-                    </div>
-                    <div class="bg-white border border-[#D9D9D9] rounded-lg p-4 text-center">
-                        <div class="text-2xl font-bold text-navy leading-none tracking-[-0.5px]">{{ number_format($activity->mortality_logs) }}</div>
-                        <div class="text-xs text-[#6B7280] mt-1">Mortality records</div>
-                    </div>
+                    <x-kpi-card label="Egg Log Entries" icon="clipboard-list" infoKey="profile.egg-logs" delay="0ms" :value="number_format($activity->egg_logs)" />
+                    <x-kpi-card label="Eggs Recorded" icon="egg" infoKey="profile.eggs-total" delay="60ms" :value="number_format($activity->eggs_total)" />
+                    <x-kpi-card label="Feed Entries" icon="wheat" infoKey="profile.feed-logs" delay="120ms" :value="number_format($activity->feed_logs)" />
+                    <x-kpi-card label="Mortality Records" icon="heart-crack" infoKey="profile.mortality-logs" delay="180ms" :value="number_format($activity->mortality_logs)" />
                 </div>
             </div>
 

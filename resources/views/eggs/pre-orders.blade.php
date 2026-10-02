@@ -27,17 +27,17 @@
             $isDeficit = $data['deficit'] > 0;
         @endphp
         <x-kpi-card
-            label="{{ $label }}"
+            label="{{ $label }}" infoKey="preorders.size-availability"
             icon="egg"
             cardGradient="{{ $cardGradient }}"
             delay="{{ $loop->index * 60 }}ms"
             :value="number_format($data['available'])"
         >
-            <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">{{ number_format($data['logged']) }} produced · {{ number_format($data['committed']) }} committed</div>
+            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">{{ number_format($data['logged']) }} produced · {{ number_format($data['committed']) }} committed</div>
             @if($isDeficit)
-            <div class="text-xs mt-1 font-semibold" style="color: #ffffff;">Shortfall: {{ number_format($data['deficit']) }} eggs</div>
+            <div class="text-xs mt-1 font-semibold" style="color: #9b1c24;">Shortfall: {{ number_format($data['deficit']) }} eggs</div>
             @else
-            <div class="text-xs mt-1 font-medium" style="color: rgba(255,255,255,0.85);">+{{ number_format($data['forecasted']) }} forecasted</div>
+            <div class="text-xs mt-1 font-medium" style="color: #615d59;">+{{ number_format($data['forecasted']) }} forecasted</div>
             @endif
         </x-kpi-card>
         @endforeach

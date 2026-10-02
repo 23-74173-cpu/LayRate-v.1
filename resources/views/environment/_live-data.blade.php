@@ -5,32 +5,32 @@
     {{-- ── Top Metric Cards — dashboard gradient KPI design ── --}}
     <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
         <x-kpi-card
-            label="Coop Avg Temp"
+            label="Coop Avg Temp" infoKey="environment.avg-temp"
             icon="thermometer"
             cardGradient="linear-gradient(135deg,#f59e0b,#C2703E)"
             delay="0ms"
             :value="($avgTemp ? number_format($avgTemp,1) : '—') . '°C'"
         >
-            <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">Spread {{ $tempValues->count() > 1 ? number_format(max(0, $tempValues->max() - $tempValues->min()), 1) . '°C across cages' : 'across cages' }}</div>
+            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">Spread {{ $tempValues->count() > 1 ? number_format(max(0, $tempValues->max() - $tempValues->min()), 1) . '°C across cages' : 'across cages' }}</div>
         </x-kpi-card>
         <x-kpi-card
-            label="Coop Avg Humidity"
+            label="Coop Avg Humidity" infoKey="environment.avg-humidity"
             icon="droplets"
             cardGradient="linear-gradient(135deg,#0d9488,#2C7C91)"
             delay="60ms"
             :value="($avgHum ? number_format($avgHum,1) : '—') . '%'"
         >
-            <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">Spread {{ $humValues->count() > 1 ? number_format(max(0, $humValues->max() - $humValues->min()), 1) . '% across cages' : 'across cages' }}</div>
+            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">Spread {{ $humValues->count() > 1 ? number_format(max(0, $humValues->max() - $humValues->min()), 1) . '% across cages' : 'across cages' }}</div>
         </x-kpi-card>
         <x-kpi-card
             class="col-span-2 sm:col-span-1"
-            label="Active Sensors"
+            label="Active Sensors" infoKey="environment.active-sensors"
             icon="radio"
             cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))"
             delay="120ms"
             :value="$activeSensors . ' sensors'"
         >
-            <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">{{ $activeSensors > 0 ? 'One node mapped per cage' : 'All entries are manual logs' }}</div>
+            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">{{ $activeSensors > 0 ? 'One node mapped per cage' : 'All entries are manual logs' }}</div>
         </x-kpi-card>
     </div>
 
@@ -183,7 +183,7 @@
                         const r = rows.find(r => r.period === l);
                         return r ? r[field] : null;
                     });
-                    sets.push({ label: name, data, borderColor: cageColors[cageId] || '#6B7280', tension: 0.3, pointRadius: 3, borderWidth: 1.5, fill: false });
+                    sets.push({ label: name, data, borderColor: cageColors[cageId] || '#6B7280', tension: 0.3, pointRadius: 0, pointHoverRadius: 5, borderWidth: 1.5, fill: false });
                 }
                 return sets;
             }
@@ -191,12 +191,18 @@
             const chartOpts = {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { display: true } },
+                interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { display: true }, layrateCrosshair: { enabled: true } },
                 scales: {
                     x: { ticks: { autoSkip: true, maxRotation: 45, minRotation: 0 } },
                     y: {},
                 }
             };
+
+            // The 10s poll re-renders on live canvases: animate the entry only
+            // on first paint so background refreshes never replay it.
+            if (window.__envChartsPainted) chartOpts.animation = false;
+            window.__envChartsPainted = true;
 
             const tempWrap  = document.getElementById('envTempChartWrap');
             const humWrap   = document.getElementById('envHumChartWrap');

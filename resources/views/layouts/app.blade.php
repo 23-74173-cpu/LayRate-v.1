@@ -53,6 +53,10 @@
          delegated + Turbo-aware). --}}
     <script src="/js/tooltip.js?v={{ @filemtime(public_path('js/tooltip.js')) }}" defer></script>
 
+    {{-- KPI card explanation popovers for every info button (delegated,
+         Turbo-aware, binds once). --}}
+    <script src="/js/kpi-info.js?v={{ @filemtime(public_path('js/kpi-info.js')) }}" defer></script>
+
     {{-- Slow-page loading screen: appears only when a page takes >600ms to
          render. Fast loads clear the timer and never flash it. Covers both
          Turbo Drive visits and initial hard loads. Guarded against Turbo
@@ -1016,6 +1020,44 @@ window.__applyChartDefaults = function(full) {
         if (e && e.native && e.native.target) e.native.target.style.cursor = 'default';
     };
     Chart.defaults.elements.bar.borderRadius = 4;
+    // Entry animation for every chart: no horizontal sweep anywhere (x never
+    // animates — that sweep is what made charts look like they slid in from
+    // the left); y rises from the axis baseline over ~600ms with easeOutQuart
+    // (the library's native initial y-from). Bars keep growing from base;
+    // pie/doughnut keep their own rotate/scale (separate options, untouched).
+    // Merged (not replaced) so colors/numbers/legend defaults above survive.
+    // Respects prefers-reduced-motion (re-evaluated on every defaults pass).
+    var __reduceChartMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    Chart.defaults.animations = Object.assign({}, Chart.defaults.animations, {
+        x: { duration: 0 },
+        y: { duration: __reduceChartMotion ? 0 : 600, easing: 'easeOutQuart' },
+    });
+    // Container resizes (sidebar, dock, fonts, scrollbars) must not replay
+    // the entry animation — debounce the resize handling instead.
+    Chart.defaults.resizeDelay = 120;
+    // Subtle vertical hover crosshair for line/area charts. Registered once
+    // globally; individual charts opt in via options.plugins.layrateCrosshair.
+    if (typeof Chart.register === 'function' && !Chart.registry.plugins.get('layrateCrosshair')) {
+        Chart.register({
+            id: 'layrateCrosshair',
+            afterDraw: function (chart, args, opts) {
+                if (!opts || !opts.enabled) return;
+                var active = chart.tooltip && chart.tooltip.getActiveElements ? chart.tooltip.getActiveElements() : [];
+                if (!active.length || !active[0].element) return;
+                var x = active[0].element.x;
+                var area = chart.chartArea;
+                var ctx = chart.ctx;
+                ctx.save();
+                ctx.strokeStyle = (opts && opts.color) || 'rgba(0,45,94,0.18)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(x, area.top);
+                ctx.lineTo(x, area.bottom);
+                ctx.stroke();
+                ctx.restore();
+            }
+        });
+    }
     if (full !== false) {
         Chart.defaults.scale.grid = { color: 'rgba(0,0,0,0.06)' };
         Chart.defaults.layout = { padding: { top: 10, bottom: 10, left: 10, right: 10 } };
@@ -1092,8 +1134,17 @@ window.LayRateChart = {
             try { orphaned.destroy(); } catch (e) { /* already gone */ }
         }
         this._configs[id] = config;
+        // Turbo cache restores (back/forward preview, <html data-turbo-preview>)
+        // must not replay the entry animation: render this one with animation
+        // off, without touching the stored config (fresh visits keep animating).
+        var renderConfig = config;
+        if (document.documentElement.hasAttribute('data-turbo-preview')) {
+            renderConfig = Object.assign({}, config, {
+                options: Object.assign({}, config.options, { animation: false })
+            });
+        }
         try {
-            const instance = new Chart(canvas, config);
+            const instance = new Chart(canvas, renderConfig);
             this._instances[id] = instance;
             // Defensive self-heal: intermittently (observed live, root cause not fully
             // pinned down despite extensive investigation — ruled out stale scale/data,
@@ -1120,6 +1171,35 @@ window.LayRateChart = {
             console.error('[LayRateChart] Failed to create chart "' + id + '":', e);
             return null;
         }
+    },
+
+    // Update-in-place for toggles/filters on the same canvas: when a live
+    // chart of the same type already exists, swap labels + datasets (+ the
+    // complete options, so legend toggles still apply) and morph via
+    // chart.update() instead of replaying the entry animation. Callers must
+    // only use this when the chart type is unchanged (true for every current
+    // call site: period/compare/forecast toggles and same-canvas refetches).
+    // Anything else (missing canvas, type change, no live instance) falls
+    // back to create(), which keeps the entry animation on first creation.
+    setData(id, config) {
+        const canvas = document.getElementById(id);
+        const live = (this._instances[id] && this._instances[id].canvas === canvas)
+            ? this._instances[id]
+            : (typeof Chart !== 'undefined' && canvas ? Chart.getChart(canvas) : null);
+        if (live && canvas && config && config.data && live.config && live.config.type === config.type) {
+            try {
+                live.config.data.labels = config.data.labels;
+                live.config.data.datasets = config.data.datasets;
+                if (config.options) live.config.options = config.options;
+                live.update();
+                this._instances[id] = live;
+                this._configs[id] = config;
+                return live;
+            } catch (e) {
+                console.error('[LayRateChart] setData failed for "' + id + '", recreating:', e);
+            }
+        }
+        return this.create(id, config);
     },
 
     _verifyBarPainted(id, config, canvas, instance, retryCount) {

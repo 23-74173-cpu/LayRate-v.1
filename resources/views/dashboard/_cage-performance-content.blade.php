@@ -229,7 +229,6 @@ function perfBarOpts() {
     return {
         responsive: true,
         maintainAspectRatio: false,
-        animation: { duration: 600, easing: 'easeOutQuart' },
         layout: { padding: { top: 16 } },
         plugins: { legend: { display: false } },
         scales: {
@@ -243,7 +242,6 @@ function perfPieOpts() {
     return {
         responsive: true,
         maintainAspectRatio: false,
-        animation: { duration: 600, easing: 'easeOutQuart' },
         layout: { padding: { top: 8, bottom: 8, left: 8, right: 8 } },
         plugins: {
             legend: {

@@ -1,7 +1,7 @@
 @php
     use App\Services\FcrStatusService;
 
-    $periodLabel = match($fcrGroupBy) { 'month' => 'MONTH', 'week' => 'WEEK', default => 'DAY' };
+    $periodLabel = match($fcrGroupBy) { 'month' => 'month', 'week' => 'week', default => 'day' };
     $cageDisplay = $fcrCageLabel ?? ($fcrSelectedId === 'all' ? 'All Cages' : 'the selected cage');
 
     $summaryStatus = FcrStatusService::status($fcrCurrent);
@@ -13,32 +13,32 @@
 @endphp
 <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-5">
     <x-kpi-card
-        label="FCR (THIS {{ $periodLabel }})"
+        label="FCR (This {{ $periodLabel }})" infoKey="feed.fcr-current"
         icon="scale"
         cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
         delay="0ms"
         :value="$fcrCurrent !== null ? number_format($fcrCurrent, 2) : 'N/A'"
     >
-        <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">lower is better · {{ $summaryLabel }}</div>
+        <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">lower is better · {{ $summaryLabel }}</div>
     </x-kpi-card>
     <x-kpi-card
-        label="FEED CONSUMED"
+        label="Feed Consumed" infoKey="feed.fcr-consumed"
         icon="package"
         cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
         delay="60ms"
         :value="number_format($fcrTotalFeedKg, 1) . ' kg'"
     >
-        <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">shown periods</div>
+        <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">shown periods</div>
     </x-kpi-card>
     <x-kpi-card
         class="col-span-2 md:col-span-1"
-        label="EST. EGG MASS"
+        label="Est. Egg Mass" infoKey="feed.fcr-egg-mass"
         icon="egg"
         cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
         delay="120ms"
         :value="number_format($fcrTotalEggMassKg, 2) . ' kg'"
     >
-        <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">egg counts + weights</div>
+        <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">egg counts + weights</div>
     </x-kpi-card>
 </div>
 @if($fcrTimeline->isEmpty())

@@ -144,12 +144,9 @@
                 mode: 'index',
                 intersect: false,
             },
-            animation: {
-                duration: 600,
-                easing: 'easeOutQuart',
-            },
             layout: { padding: { top: 12, right: 12, bottom: 0, left: 4 } },
             plugins: {
+                layrateCrosshair: { enabled: true },
                 legend: {
                     display: productionChartData.datasets.length > 1,
                     position: 'bottom',
@@ -210,7 +207,7 @@
             elements: {
                 line: {
                     tension: 0.4,
-                    borderWidth: 2.5,
+                    borderWidth: 2,
                     fill: true
                 },
                 point: {
@@ -306,8 +303,8 @@
                     backgroundColor: LayRateChartColors.alpha(LayRateChartColors.eggs, 0.08),
                     borderDash: [6, 4],
                     tension: 0.3,
-                    borderWidth: 2.5,
-                    pointRadius: 3,
+                    borderWidth: 2,
+                    pointRadius: 0,
                     pointHoverRadius: 5,
                     fill: false,
                     spanGaps: true

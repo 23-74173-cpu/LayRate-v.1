@@ -168,14 +168,18 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   height: 28px;
 }
 
-/* KPI info button — small, unobtrusive, top-right of the text column.
-   Only rendered when the card has a real breakdown (data-kpi). */
+/* KPI info button — small, unobtrusive, absolute top-right corner of every
+   card (the text column keeps right padding so long values never slide
+   under it). Pointer comes from the global button rule. */
 .kpi-info-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 4px;
-  margin: -4px -4px 0 0;
   border-radius: 9999px;
   color: #9ca3af;
   transition: background-color 0.2s ease, color 0.2s ease;
@@ -184,10 +188,75 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   background-color: rgba(0, 0, 0, 0.05);
   color: #6b7280;
 }
+.kpi-info-btn:focus-visible {
+  outline: 2px solid var(--color-primary-active);
+  outline-offset: 2px;
+}
 .kpi-info-btn svg,
 .kpi-info-btn i {
   width: 14px;
   height: 14px;
+}
+/* Dev-only flag for cards rendered without explanation text. Only ever
+   emitted when config('app.debug') is true — never in production. */
+.kpi-info-missing {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  border: 1px dashed #9b1c24;
+  color: #9b1c24;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+/* KPI explanation popover (see public/js/kpi-info.js). White surface,
+   hairline border, soft shadow, 12px radius, max 280px, 13px body text. */
+.kpi-popover {
+  position: fixed;
+  z-index: 9999;
+  max-width: 280px;
+  width: max-content;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background-color: #ffffff;
+  border: 1px solid var(--color-hairline);
+  box-shadow: var(--shadow-elevated);
+  color: var(--color-ink-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.kpi-popover-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--color-navy);
+  margin-bottom: 4px;
+}
+.kpi-popover-text {
+  color: var(--color-ink-muted);
+  overflow-wrap: break-word;
+}
+.kpi-popover-breakdown {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-navy);
+  border-radius: 9999px;
+  padding: 4px 10px;
+  border: 1px solid var(--color-hairline);
+  transition: background-color 0.15s ease;
+}
+.kpi-popover-breakdown:hover { background-color: var(--color-canvas-soft); }
+.kpi-popover-breakdown:focus-visible {
+  outline: 2px solid var(--color-primary-active);
+  outline-offset: 2px;
 }
 
 /* KPI number — large bold dark slate, wraps instead of clipping. .kpi-value
@@ -409,6 +478,18 @@ div[data-modal] > div.relative {
   to { opacity: 1; transform: translateY(0); }
 }
 #dataChecklistPanel:not(.hidden) { animation: dockPanelIn 180ms ease-out; }
+/* "+" menu entrance: items rise and fade with a slight stagger. Uses the
+   :not(.hidden) trick (same as the checklist panel) so no JS changes are
+   needed — the animation replays each time the menu is unhidden. The +
+   icon itself already rotates via its transition-transform class. */
+@keyframes dockMenuItemIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+#dockFabMenu:not(.hidden) > * { animation: dockMenuItemIn 240ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+#dockFabMenu:not(.hidden) > *:nth-child(2) { animation-delay: 45ms; }
+#dockFabMenu:not(.hidden) > *:nth-child(3) { animation-delay: 90ms; }
+#dockFabMenu:not(.hidden) > *:nth-child(n+4) { animation-delay: 135ms; }
 /* Mobile: checklist becomes a full-width bottom sheet that pins to the
    viewport bottom (fixed, so the transformed ancestors cannot move it). */
 @media (max-width: 639px) {
@@ -427,6 +508,7 @@ div[data-modal] > div.relative {
 @media (prefers-reduced-motion: reduce) {
   #quickDock [data-dock-fade] { transition: none; }
   #dataChecklistPanel:not(.hidden) { animation: none; }
+  #dockFabMenu:not(.hidden) > * { animation: none; }
   #quickDock .fab-icon { transition: none !important; }
 }
 @media (prefers-reduced-motion: reduce) {

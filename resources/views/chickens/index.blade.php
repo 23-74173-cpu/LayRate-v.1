@@ -139,7 +139,7 @@
         {{-- Summary Cards — 3-card layout: Deaths Today / Livability / Total --}}
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5" id="mortality-summary">
             <x-kpi-card
-                label="Deaths Today"
+                label="Deaths Today" infoKey="hens-page.deaths-today"
                 icon="skull"
                 cardGradient="linear-gradient(135deg,#ec4899,#9d174d)"
                 delay="0ms"
@@ -147,7 +147,7 @@
                 data-mortality-total
             />
             <x-kpi-card
-                label="Livability Rate"
+                label="Livability Rate" infoKey="hens-page.livability-rate"
                 icon="heart"
                 cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)"
                 delay="60ms"
@@ -157,7 +157,7 @@
                 data-starting-hens="{{ $startingHens }}"
             />
             <x-kpi-card
-                label="Total Mortality"
+                label="Total Mortality" infoKey="hens-page.total-mortality"
                 icon="skull"
                 cardGradient="linear-gradient(135deg,#ec4899,#9d174d)"
                 delay="120ms"

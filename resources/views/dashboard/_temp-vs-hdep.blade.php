@@ -31,7 +31,7 @@
                     backgroundColor: LayRateChartColors.alpha(LayRateChartColors.temp, 0.5),
                     borderColor: LayRateChartColors.temp,
                     borderWidth: 1,
-                    pointRadius: 4,
+                    pointRadius: data.length >= 100 ? 2 : 4,
                     pointHoverRadius: 6
                 }]
             },

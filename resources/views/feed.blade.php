@@ -9,6 +9,22 @@
 
     @push('dock-actions')
         <button type="button"
+                onclick="openConsumptionModal()"
+                class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>Add Consumption</span>
+            <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
+                <i data-lucide="wheat" class="w-4 h-4 text-navy"></i>
+            </div>
+        </button>
+        <button type="button"
+                onclick="openFarmEntryModal()"
+                class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>Log Whole-Farm Feeding</span>
+            <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
+                <i data-lucide="shopping-basket" class="w-4 h-4 text-navy"></i>
+            </div>
+        </button>
+        <button type="button"
                 onclick="document.getElementById('addBatchModal').classList.remove('hidden'); document.getElementById('addBatchModal').classList.add('flex');"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Add Feed Batch</span>

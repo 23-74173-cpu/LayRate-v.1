@@ -67,13 +67,14 @@
                 data: {
                     labels: allLabels,
                     datasets: [
-                        { label: 'Historical', data: histData, borderColor: '#31302e', backgroundColor: 'transparent', tension: 0.3, pointRadius: 3, borderWidth: 2 },
-                        { label: 'Forecast', data: fcData, borderColor: cageColor, backgroundColor: cageColor + '22', tension: 0.3, borderDash: [5,3], pointRadius: 3, fill: true, borderWidth: 2 },
+                        { label: 'Historical', data: histData, borderColor: '#31302e', backgroundColor: 'transparent', tension: 0.3, pointRadius: 0, pointHoverRadius: 5, borderWidth: 2 },
+                        { label: 'Forecast', data: fcData, borderColor: cageColor, backgroundColor: cageColor + '22', tension: 0.3, borderDash: [5,3], pointRadius: 0, pointHoverRadius: 5, fill: true, borderWidth: 2 },
                     ]
                 },
                 options: {
                     responsive: true,
-                    plugins: { legend: { display: true } },
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { display: true }, layrateCrosshair: { enabled: true } },
                     scales: {
                         x: {},
                         y: { beginAtZero: true },

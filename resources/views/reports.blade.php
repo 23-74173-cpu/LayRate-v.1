@@ -322,12 +322,14 @@ function reportChartConfig(chart) {
                 data: {
                     labels: chart.labels,
                     datasets: [
-                        { label: 'Eggs', data: chart.eggs, borderColor: LayRateChartColors.eggs, backgroundColor: LayRateChartColors.alpha(LayRateChartColors.eggs, 0.13), tension: 0.3, fill: true, yAxisID: 'y' },
-                        { label: 'HDEP %', data: chart.hdep, borderColor: LayRateChartColors.hdep, backgroundColor: LayRateChartColors.alpha(LayRateChartColors.hdep, 0.13), tension: 0.3, yAxisID: 'y1' }
+                        { label: 'Eggs', data: chart.eggs, borderColor: LayRateChartColors.eggs, backgroundColor: LayRateChartColors.alpha(LayRateChartColors.eggs, 0.13), tension: 0.3, pointRadius: 0, pointHoverRadius: 5, fill: true, borderWidth: 1.5, yAxisID: 'y' },
+                        { label: 'HDEP %', data: chart.hdep, borderColor: LayRateChartColors.hdep, backgroundColor: LayRateChartColors.alpha(LayRateChartColors.hdep, 0.13), tension: 0.3, pointRadius: 0, pointHoverRadius: 5, borderWidth: 1.5, yAxisID: 'y1' }
                     ]
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { layrateCrosshair: { enabled: true } },
                     scales: {
                         y:  { position: 'left', title: { display: true, text: 'Eggs', font: { size: 10 } } },
                         y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'HDEP %', font: { size: 10 } } }
@@ -346,11 +348,14 @@ function reportChartConfig(chart) {
                 data: {
                     labels: chart.labels,
                     datasets: [
-                        { label: 'Temp °C', data: chart.temp, borderColor: LayRateChartColors.temp, tension: 0.3 },
-                        { label: 'Humidity %', data: chart.humidity, borderColor: LayRateChartColors.humidity, tension: 0.3 }
+                        { label: 'Temp °C', data: chart.temp, borderColor: LayRateChartColors.temp, tension: 0.3, pointRadius: 0, pointHoverRadius: 5, borderWidth: 1.5 },
+                        { label: 'Humidity %', data: chart.humidity, borderColor: LayRateChartColors.humidity, tension: 0.3, pointRadius: 0, pointHoverRadius: 5, borderWidth: 1.5 }
                     ]
                 },
-                options: { responsive: true, maintainAspectRatio: false }
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { layrateCrosshair: { enabled: true } },
             };
         case 'mortality':
             return {
@@ -458,7 +463,9 @@ window.renderReportCharts = function(charts) {
                         if (typeof syncChartPrintImage === 'function') syncChartPrintImage(chartId);
                     }
                 }]);
-                window.LayRateChart.create(chartId, config);
+                // setData morphs live charts on filter changes (no entry replay);
+                // first paint falls back to create().
+                window.LayRateChart.setData(chartId, config);
                 createdIds.push(chartId);
                 if (config.type === 'bar') barChartIds.push(chartId);
             }

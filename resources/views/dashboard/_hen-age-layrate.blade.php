@@ -108,7 +108,7 @@
                 data: halData.data,
                 borderColor: LayRateChartColors.hdep,
                 backgroundColor: LayRateChartColors.alpha(LayRateChartColors.hdep, 0.2),
-                borderWidth: 2.5,
+                borderWidth: 2,
                 fill: true,
                 tension: 0.4,
                 pointRadius: 0,
@@ -121,10 +121,14 @@
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            animation: { duration: 600, easing: 'easeOutQuart' },
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
             layout: { padding: { top: 12, right: 8, bottom: 0, left: 0 } },
             plugins: {
                 legend: { display: false },
+                layrateCrosshair: { enabled: true },
                 tooltip: {
                     backgroundColor: LayRateChartColors.tooltip,
                     titleColor: '#ffffff',

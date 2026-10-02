@@ -6,7 +6,7 @@
             </x-section-label>
             <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <x-kpi-card
-                    label="Avg CP% This Week"
+                    label="Avg CP% This Week" infoKey="feed.avg-cp"
                     icon="flask-conical"
                     cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
                     delay="240ms"
@@ -18,7 +18,7 @@
                 />
 
                 <x-kpi-card
-                    label="Avg Feed/Cage/Day"
+                    label="Avg Feed/Cage/Day" infoKey="feed.avg-per-cage-day"
                     icon="scale"
                     cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
                     delay="280ms"
@@ -31,7 +31,7 @@
                 />
 
                 <x-kpi-card
-                    label="Total Feed Used"
+                    label="Total Feed Used" infoKey="feed.total-week"
                     icon="package"
                     cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
                     delay="320ms"
@@ -46,7 +46,7 @@
                 </x-kpi-card>
 
                 <x-kpi-card
-                    label="Feed Cost This Month"
+                    label="Feed Cost This Month" infoKey="feed.cost-month"
                     icon="banknote"
                     cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
                     delay="360ms"

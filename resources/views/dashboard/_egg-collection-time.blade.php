@@ -95,7 +95,7 @@
                 data: ectData.data,
                 borderColor: LayRateChartColors.eggs,
                 backgroundColor: LayRateChartColors.alpha(LayRateChartColors.eggs, 0.2),
-                borderWidth: 2.5,
+                borderWidth: 2,
                 fill: true,
                 tension: 0.4,
                 pointRadius: 0,
@@ -108,13 +108,14 @@
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            animation: {
-                duration: 600,
-                easing: 'easeOutQuart',
+            interaction: {
+                mode: 'index',
+                intersect: false,
             },
             layout: { padding: { top: 8, right: 4, bottom: 0, left: 0 } },
             plugins: {
                 legend: { display: false },
+                layrateCrosshair: { enabled: true },
                 tooltip: {
                     backgroundColor: LayRateChartColors.tooltip,
                     titleColor: '#ffffff',

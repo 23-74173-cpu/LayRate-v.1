@@ -68,6 +68,8 @@
     'kpi' => null,
     'ariaLabel' => null,
     'infoLabel' => null,
+    'info' => null,
+    'infoKey' => null,
     'variant' => 'default',
     'target' => null,
     'decimals' => 0,
@@ -85,7 +87,16 @@
     }
     $hasSecondary = trim((string) $secondaryContent) !== '';
     $outerAriaLabel = $ariaLabel ?? ($label ? 'Go to ' . $label : null);
-    $infoAriaLabel = $infoLabel ?? ($label ? $label . ' breakdown' : 'Breakdown');
+    $infoAriaLabel = 'About ' . ($label ?: 'this metric');
+    // Explanation popover text: literal `info` wins, otherwise the lang key.
+    // A card with neither gets a visible warning in debug builds so it is
+    // easy to spot (never shown in production).
+    $infoText = $info;
+    if ($infoText === null && $infoKey !== null && \Illuminate\Support\Facades\Lang::has('kpi-info.' . $infoKey)) {
+        $infoText = \Illuminate\Support\Facades\Lang::get('kpi-info.' . $infoKey);
+    }
+    $missingInfo = ($infoText === null || trim((string) $infoText) === '') && config('app.debug');
+    $plainLabel = trim(strip_tags((string) $label));
 @endphp
 
 <div {{ $attributes->merge(['class' => 'kpi-card dash-rise relative overflow-hidden rounded-2xl border border-[#E6E6E6] bg-white dark:bg-surface p-4 flex items-start gap-4']) }}
@@ -93,19 +104,28 @@
      @if($isClickable) role="link" tabindex="0" aria-label="{{ $outerAriaLabel }}" data-nav="{{ $href }}" @endif
      @if($kpi) data-kpi="{{ $kpi }}" @endif
 >
+    {{-- Explanation popover trigger: always rendered, same corner on every
+         card. Click is caught in the capture phase by kpi-info.js, which also
+         stops card navigation. The per-cage breakdown (data-kpi) moved inside
+         the popover as an explicit action. --}}
+    <button type="button" class="kpi-info-btn"
+            data-kpi-popover
+            data-info-title="{{ $plainLabel }}"
+            data-info-text="{{ $infoText ?? '' }}"
+            @if($kpi) data-kpi-breakdown="{{ $kpi }}" @endif
+            aria-label="{{ $infoAriaLabel }}">
+        <i data-lucide="info"></i>
+    </button>
     @if($icon)
         <span class="kpi-icon-tile shrink-0" aria-hidden="true">
             <i data-lucide="{{ $icon }}"></i>
         </span>
     @endif
-    <div class="relative min-w-0 flex-1">
+    <div class="relative min-w-0 flex-1 pr-6">
         <div class="flex items-start justify-between gap-2">
             <span class="kpi-label min-w-0 flex-1">{{ $label }}</span>
-            @if($kpi)
-                <button type="button" class="kpi-info-btn shrink-0"
-                        onclick="event.stopPropagation(); openKpiModal('{{ $kpi }}')" aria-label="{{ $infoAriaLabel }}">
-                    <i data-lucide="info"></i>
-                </button>
+            @if($missingInfo)
+                <span class="kpi-info-missing" title="Missing kpi info text: add info= or infoKey= to this card">!</span>
             @endif
         </div>
 

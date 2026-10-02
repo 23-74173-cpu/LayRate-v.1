@@ -32,26 +32,26 @@
             $icons = ['small' => 'egg', 'medium' => 'egg', 'large' => 'egg', 'jumbo' => 'egg', 'unsorted' => 'layers'];
         @endphp
         <x-kpi-card
-            label="{{ $label }}"
+            label="{{ $label }}" infoKey="stocks.size-stock"
             icon="{{ $icons[$size] }}"
             cardGradient="{{ $cardGradient }}"
             delay="{{ $loop->index * 60 }}ms"
             :value="number_format($total)"
             data-size="{{ $size }}"
         >
-            <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">{{ $trays }} {{ $trays === 1 ? 'tray' : 'trays' }} · {{ number_format($pool) }} available</div>
+            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">{{ $trays }} {{ $trays === 1 ? 'tray' : 'trays' }} · {{ number_format($pool) }} available</div>
         </x-kpi-card>
         @endforeach
         {{-- Sold vs available — sold is driven by fulfilled pre-orders, not a flag --}}
         <x-kpi-card
-            label="Sold"
+            label="Sold" infoKey="stocks.sold"
             icon="receipt"
             cardGradient="linear-gradient(135deg,#334155,#0f172a)"
             delay="300ms"
             :value="number_format($soldTotal ?? 0)"
             data-size="sold"
         >
-            <div class="text-xs mt-1.5 font-medium" style="color: rgba(255,255,255,0.85);">{{ $soldTrays ?? 0 }} {{ ($soldTrays ?? 0) === 1 ? 'tray' : 'trays' }} · {{ number_format($availableTotal ?? 0) }} available</div>
+            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">{{ $soldTrays ?? 0 }} {{ ($soldTrays ?? 0) === 1 ? 'tray' : 'trays' }} · {{ number_format($availableTotal ?? 0) }} available</div>
         </x-kpi-card>
     </div>
 

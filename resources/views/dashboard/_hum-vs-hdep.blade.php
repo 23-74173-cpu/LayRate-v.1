@@ -31,7 +31,7 @@
                     backgroundColor: LayRateChartColors.alpha(LayRateChartColors.humidity, 0.5),
                     borderColor: LayRateChartColors.humidity,
                     borderWidth: 1,
-                    pointRadius: 4,
+                    pointRadius: data.length >= 100 ? 2 : 4,
                     pointHoverRadius: 6
                 }]
             },

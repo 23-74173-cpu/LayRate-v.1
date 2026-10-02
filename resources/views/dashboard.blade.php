@@ -650,7 +650,9 @@
 
         function flushQueue() {
             queue.forEach(function (item) {
-                LayRateChart.create(item.id, item.config);
+                // setData morphs live charts (Compare/Forecast toggles) and
+                // falls back to create() on first paint (entry animation kept).
+                LayRateChart.setData(item.id, item.config);
             });
             queue = [];
         }
@@ -1106,7 +1108,13 @@ var cageParam = code === 'all' ? null : code;
             if (i >= queue.length) return;
             var f = queue[i++];
             // Skip frames already given a real src (e.g. by a filter reload).
-            if (f.dataset.src && !f.getAttribute('src')) {
+            // Skip frames inside still-hidden tabs: charts initialized at zero
+            // size replay their entry animation from the wrong geometry when
+            // the tab is shown. Hidden sections load on first show via
+            // __dashboardActivateSection (tab clicks + restored active tab),
+            // which keeps the loaded-once behavior — no reload on re-visits.
+            var inHiddenSection = f.closest && f.closest('.analytics-section:not(.active-section)');
+            if (f.dataset.src && !f.getAttribute('src') && !inHiddenSection) {
                 // Apply the active cage / period / date filters (restored from
                 // sessionStorage when returning) so every frame agrees with the
                 // filter bar. Raw data-src carries no params, which used to

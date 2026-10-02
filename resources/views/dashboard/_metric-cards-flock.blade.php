@@ -12,7 +12,7 @@
 
                 <x-kpi-card
                     class="col-span-2 sm:col-span-1"
-                    label="Mortality Today"
+                    label="Mortality Today" infoKey="flock.mortality-today"
                     icon="heart-crack"
                     cardGradient="linear-gradient(135deg,#ec4899,#9d174d)"
                     delay="0ms"
@@ -24,7 +24,7 @@
                 />
 
                 <x-kpi-card
-                    label="Livability"
+                    label="Livability" infoKey="flock.livability"
                     icon="shield-check"
                     cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)"
                     delay="60ms"
@@ -34,7 +34,7 @@
                 />
 
                 <x-kpi-card
-                    label="Yesterday's Mortality"
+                    label="Yesterday's Mortality" infoKey="flock.mortality-yesterday"
                     icon="calendar-x"
                     cardGradient="linear-gradient(135deg,#d97706,#C2703E)"
                     delay="120ms"

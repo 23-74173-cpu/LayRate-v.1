@@ -497,7 +497,7 @@ class DashboardController extends Controller
                     'pointBorderColor' => $color,
                     'pointBorderWidth' => 2,
                     'tension' => 0.4,
-                    'borderWidth' => 2.5,
+                    'borderWidth' => 1.5,
                     'pointRadius' => 0,
                     'pointHoverRadius' => 5,
                     'fill' => false,
@@ -528,9 +528,9 @@ class DashboardController extends Controller
                 'borderColor' => '#002d5e',
                 'backgroundColor' => 'rgba(16, 42, 76, 0.1)',
                 'tension' => 0.3,
-                'borderWidth' => 3,
-                'pointRadius' => 4,
-                'pointHoverRadius' => 6,
+                'borderWidth' => 2,
+                'pointRadius' => 0,
+                'pointHoverRadius' => 5,
                 'fill' => true,
             ]];
         }
@@ -672,8 +672,8 @@ class DashboardController extends Controller
             'backgroundColor' => 'rgba(0, 117, 222, 0.1)',
             'tension' => 0.3,
             'borderWidth' => 3,
-            'pointRadius' => 4,
-            'pointHoverRadius' => 6,
+            'pointRadius' => 0,
+            'pointHoverRadius' => 5,
             'fill' => false,
         ];
         $forecastDataset = [
@@ -684,7 +684,7 @@ class DashboardController extends Controller
             'borderDash' => [6, 4],
             'tension' => 0.3,
             'borderWidth' => 2.5,
-            'pointRadius' => 3,
+            'pointRadius' => 0,
             'pointHoverRadius' => 5,
             'fill' => false,
         ];

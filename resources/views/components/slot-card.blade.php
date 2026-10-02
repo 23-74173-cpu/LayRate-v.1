@@ -46,7 +46,7 @@
         "
     >
         @if($slot->hasBreakbeam())
-            <span class="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full" style="background-color: #0075de;"></span>
+            <span class="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full" style="background-color: var(--color-navy);"></span>
         @endif
         @if($isEmpty)
             <span class="text-xs" style="color: #a39e98;">—</span>

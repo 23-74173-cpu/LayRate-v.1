@@ -7,7 +7,7 @@
             </x-section-label>
             <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <x-kpi-card
-                    label="Total Hens"
+                    label="Total Hens" infoKey="hens.total"
                     icon="bird"
                     cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)"
                     delay="0ms"
@@ -19,7 +19,7 @@
                 />
 
                 <x-kpi-card
-                    label="Today's HDEP"
+                    label="Today's HDEP" infoKey="production.hdep-today"
                     icon="gauge"
                     cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))"
                     delay="60ms"
@@ -35,7 +35,7 @@
                 </x-kpi-card>
 
                 <x-kpi-card
-                    label="Eggs Today"
+                    label="Eggs Today" infoKey="production.eggs-today"
                     icon="egg"
                     cardGradient="linear-gradient(135deg,#d97706,#C2703E)"
                     delay="120ms"
@@ -49,7 +49,7 @@
                 </x-kpi-card>
 
                 <x-kpi-card
-                    label="Lifetime Eggs"
+                    label="Lifetime Eggs" infoKey="production.lifetime-eggs"
                     icon="layers"
                     cardGradient="linear-gradient(135deg,#8B5CF6,#6B4C8A)"
                     delay="180ms"
@@ -69,7 +69,7 @@
             <x-section-label title="Environment & Health" icon="heart-pulse" />
             <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 gap-3">
                 <x-kpi-card
-                    label="Average Coop Temperature"
+                    label="Average Coop Temperature" infoKey="environment.avg-temp"
                     icon="thermometer"
                     cardGradient="linear-gradient(135deg,#f59e0b,#C2703E)"
                     delay="120ms"
@@ -83,7 +83,7 @@
                 />
 
                 <x-kpi-card
-                    label="Average Humidity"
+                    label="Average Humidity" infoKey="environment.avg-humidity"
                     icon="droplets"
                     cardGradient="linear-gradient(135deg,#0d9488,#2C7C91)"
                     delay="160ms"
@@ -103,7 +103,7 @@
             <x-section-label title="Feed & Nutrition" icon="wheat" />
             <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <x-kpi-card
-                    label="Avg CP% This Week"
+                    label="Avg CP% This Week" infoKey="feed.avg-cp"
                     icon="flask-conical"
                     cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
                     delay="240ms"
@@ -115,7 +115,7 @@
                 />
 
                 <x-kpi-card
-                    label="Avg Feed/Cage/Day"
+                    label="Avg Feed/Cage/Day" infoKey="feed.avg-per-cage-day"
                     icon="scale"
                     cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
                     delay="280ms"
@@ -128,7 +128,7 @@
                 />
 
                 <x-kpi-card
-                    label="Total Feed Used"
+                    label="Total Feed Used" infoKey="feed.total-week"
                     icon="package"
                     cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
                     delay="320ms"
@@ -143,7 +143,7 @@
                 </x-kpi-card>
 
                 <x-kpi-card
-                    label="Feed Cost This Month"
+                    label="Feed Cost This Month" infoKey="feed.cost-month"
                     icon="banknote"
                     cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
                     delay="360ms"
