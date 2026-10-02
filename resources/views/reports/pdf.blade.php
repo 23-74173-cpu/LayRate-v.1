@@ -49,7 +49,9 @@
         <table class="letterhead">
             <tr>
                 <td style="width:40px;vertical-align:middle;">
+                    @if($gdAvailable ?? true)
                     <img src="{{ public_path('images/layrate-logo.png') }}" style="width:auto;height:32px;">
+                    @endif
                 </td>
                 <td>
                     <div class="brand-name">LayRate Poultry Farm</div>
@@ -94,7 +96,7 @@
         </table>
         @endif
 
-        @if(!empty($chartImages) && isset($chartImages[$section['type']]))
+        @if(!empty($chartImages) && isset($chartImages[$section['type']]) && ($gdAvailable ?? true))
         <img src="{{ $chartImages[$section['type']] }}" style="width:100%;height:auto;margin-bottom:12px;">
         @endif
 

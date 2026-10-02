@@ -282,12 +282,12 @@ class ReportController extends Controller
         };
     }
 
-    // "5 hens", "1 day", "0 batches"
+    // "5 hens", "1 day", "0 batches" — thousands-separated ("12,345 eggs")
     private function countWithUnit($count, string $unit): string
     {
         $count = (int) $count;
 
-        return $count . ' ' . Str::plural($unit, $count);
+        return number_format($count) . ' ' . Str::plural($unit, $count);
     }
 
     // Every group tied for the highest total, sorted by name, plus that total.
@@ -798,7 +798,14 @@ class ReportController extends Controller
         $rangeLabel = ($from && $to) ? "{$from}_to_{$to}" : 'all_time';
         $filename = "layrate_{$type}_{$rangeLabel}.pdf";
 
-        $chartImages = $this->validateChartImages($request->input('chart_images', []));
+        // dompdf renders <img> via GD. Without the extension every image
+        // (letterhead logo, chart overlays) throws, including on the retry —
+        // so skip images entirely and render a text-only PDF instead of 500.
+        $gdAvailable = extension_loaded('gd');
+        if (! $gdAvailable) {
+            Log::warning('Report PDF export: GD extension missing, rendering without images.');
+        }
+        $chartImages = $gdAvailable ? $this->validateChartImages($request->input('chart_images', [])) : [];
 
         if ($type === 'all') {
             $sections = $this->buildSections($from, $to, $cageId, $reason, $withForecast, $allCages, false);
@@ -819,6 +826,7 @@ class ReportController extends Controller
                 'to'          => $to,
                 'cageId'      => $cageId,
                 'chartImages' => $chartImages,
+                'gdAvailable' => $gdAvailable,
             ])->setPaper('a4', 'portrait');
 
             return $pdf->download($filename);
@@ -831,6 +839,7 @@ class ReportController extends Controller
                 'to'          => $to,
                 'cageId'      => $cageId,
                 'chartImages' => [],
+                'gdAvailable' => $gdAvailable,
             ])->setPaper('a4', 'portrait');
 
             return $pdf->download($filename);
