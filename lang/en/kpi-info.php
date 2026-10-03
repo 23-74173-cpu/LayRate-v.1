@@ -20,9 +20,9 @@ return [
     ],
 
     'production' => [
-        'hdep-today' => 'Hen-day egg production for today, as a percentage. Eggs collected today divided by hens in active cages, times one hundred. Follows the cage filter and covers today only. The pill compares against yesterday.',
-        'eggs-today' => 'Eggs collected today across active cages. The sum of today\u{2019}s production logs. Follows the cage filter and covers today only. The pill shows the change since yesterday.',
-        'lifetime-eggs' => 'Every egg ever logged, across all cages and all time. A running sum of production logs. The pill shows how many were added today.',
+        'hdep-today' => 'Hen-day egg production for today, as a percentage. Eggs collected today divided by hens in active cages, times one hundred. Follows the cage filter and covers today only. When today differs from yesterday, a pill shows the change.',
+        'eggs-today' => 'Eggs collected today across active cages. The sum of today\u{2019}s production logs. Follows the cage filter and covers today only. When today differs from yesterday, a pill shows the change.',
+        'lifetime-eggs' => 'Every egg ever logged, across all cages and all time. A running sum of production logs. When eggs were added today, a pill shows how many.',
     ],
 
     'environment' => [
@@ -34,7 +34,7 @@ return [
     'feed' => [
         'avg-cp' => 'Average crude protein across feed batches for the week. The mean of batch protein percentages. Batches at or above 17.5 percent show green in the batch list.',
         'avg-per-cage-day' => 'Average feed eaten per cage per day over the last 7 days. Total feed used, divided by active cages and by 7 days.',
-        'total-week' => 'Feed consumed in the last 7 days, across all cages. The sum of consumption logs. The pill shows today\u{2019}s share.',
+        'total-week' => 'Feed consumed in the last 7 days, across all cages. The sum of consumption logs. When feed was logged today, a pill shows today\u{2019}s share.',
         'cost-month' => 'Feed money spent this month. Consumption multiplied by each batch\u{2019}s unit cost. Shows a dash when no batch costs are recorded.',
         'fcr-current' => 'Feed conversion for this period: kilograms of feed per kilogram of egg mass. Lower is better. Under 2.5 is good and above 4 needs attention, per your FCR settings.',
         'fcr-consumed' => 'Total feed behind the FCR table below. The sum of feed kilograms over the periods shown.',

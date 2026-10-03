@@ -30,9 +30,11 @@
                     :target="$todayHdep"
                     :decimals="1"
                     suffix="%"
-                >
-                    <div class="{{ $hdepDelta >= 0 ? 'trend-pill-up' : 'trend-pill-down' }}">{{ $hdepDelta >= 0 ? '▲' : '▼' }} {{ abs($hdepDelta) }}% vs yesterday</div>
-                </x-kpi-card>
+                    :trend="$hdepDelta"
+                    :trendDecimals="1"
+                    trendSuffix="%"
+                    trendCompare="vs yesterday"
+                />
 
                 <x-kpi-card
                     label="Eggs Today" infoKey="production.eggs-today"
@@ -45,9 +47,10 @@
                     infoLabel="Eggs per cage breakdown"
                     :target="$eggsToday"
                     :decimals="0"
-                >
-                    <div class="{{ $eggsDelta >= 0 ? 'trend-pill-up' : 'trend-pill-down' }}">{{ $eggsDelta >= 0 ? '▲' : '▼' }} {{ abs($eggsDelta) }} vs yesterday</div>
-                </x-kpi-card>
+                    :trend="$eggsDelta"
+                    :trendDecimals="0"
+                    trendCompare="vs yesterday"
+                />
 
                 <x-kpi-card
                     label="Lifetime Eggs" infoKey="production.lifetime-eggs"
@@ -60,9 +63,8 @@
                     infoLabel="Lifetime eggs per cage breakdown"
                     :target="$lifetimeEggs"
                     :decimals="0"
-                >
-                    <div class="trend-pill-up">▲ +{{ number_format($eggsToday) }} today</div>
-                </x-kpi-card>
+                    :todayCount="$eggsToday"
+                />
             </div>
         </div>
     </div>

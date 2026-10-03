@@ -30,9 +30,11 @@
                     :target="$todayHdep"
                     :decimals="1"
                     suffix="%"
-                >
-                    <div class="{{ $hdepDelta >= 0 ? 'trend-pill-up' : 'trend-pill-down' }}">{{ $hdepDelta >= 0 ? '▲' : '▼' }} {{ abs($hdepDelta) }}% vs yesterday</div>
-                </x-kpi-card>
+                    :trend="$hdepDelta"
+                    :trendDecimals="1"
+                    trendSuffix="%"
+                    trendCompare="vs yesterday"
+                />
 
                 <x-kpi-card
                     label="Eggs Today" infoKey="production.eggs-today"
@@ -44,9 +46,10 @@
                     ariaLabel="Go to Egg Logging"
                     infoLabel="Eggs per cage breakdown"
                     :target="$eggsToday"
-                >
-                    <div class="{{ $eggsDelta >= 0 ? 'trend-pill-up' : 'trend-pill-down' }}">{{ $eggsDelta >= 0 ? '▲' : '▼' }} {{ abs($eggsDelta) }} vs yesterday</div>
-                </x-kpi-card>
+                    :trend="$eggsDelta"
+                    :trendDecimals="0"
+                    trendCompare="vs yesterday"
+                />
 
                 <x-kpi-card
                     label="Lifetime Eggs" infoKey="production.lifetime-eggs"
@@ -58,9 +61,8 @@
                     ariaLabel="Go to Egg Production History"
                     infoLabel="Lifetime eggs per cage breakdown"
                     :target="$lifetimeEggs"
-                >
-                    <div class="trend-pill-up">▲ +{{ number_format($eggsToday) }} today</div>
-                </x-kpi-card>
+                    :todayCount="$eggsToday"
+                />
             </div>
         </div>
 
@@ -138,9 +140,10 @@
                     infoLabel="Total feed used per cage breakdown"
                     :target="round($totalFeedWeek, 1)"
                     :decimals="1"
-                >
-                    <div class="trend-pill-up">▲ +{{ number_format(round($feedTodayKg, 1), 1) }} kg today</div>
-                </x-kpi-card>
+                    :todayCount="$feedTodayKg"
+                    :todayDecimals="1"
+                    todaySuffix=" kg"
+                />
 
                 <x-kpi-card
                     label="Feed Cost This Month" infoKey="feed.cost-month"
@@ -152,9 +155,10 @@
                     ariaLabel="Go to Feed"
                     infoLabel="Feed cost per cage breakdown"
                     :value="$totalFeedCostMonth !== null && $totalFeedCostMonth > 0 ? '₱' . number_format($totalFeedCostMonth, 2) : null"
-                >
-                    <div class="trend-pill-up">▲ +₱{{ number_format($feedCostToday ?? 0, 2) }} today</div>
-                </x-kpi-card>
+                    :todayCount="$feedCostToday"
+                    :todayDecimals="2"
+                    todayPrefix="₱"
+                />
             </div>
         </div>
     </div>

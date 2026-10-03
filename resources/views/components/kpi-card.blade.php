@@ -37,16 +37,34 @@
  *   @param string|null $ariaLabel Outer aria-label (defaults to "Go to {label}")
  *   @param string|null $infoLabel Aria-label for info button
  *   @param string $variant        "default" | "plain" (both render white)
- *   @param mixed $target          Animated target number
- *   @param int $decimals          Decimals for animated count
- *   @param string|null $suffix    Suffix after animated count (e.g. "%", "°")
- *
- * Slots:
- *   default / $secondary – trend pill or subtext, e.g.
- *     <div class="trend-pill-up">▲ 1.2% vs yesterday</div>
- *     Prefer .trend-pill-up / .trend-pill-down (app.css) so trends read
- *     well on the white card.
- *
+  *   @param mixed $target          Animated target number
+  *   @param int $decimals          Decimals for animated count
+  *   @param string|null $suffix    Suffix after animated count (e.g. "%", "°")
+  *   @param mixed $trend           Delta for the "vs …" pill (e.g. HDEP change
+  *                                 since yesterday). Shown only when it rounds
+  *                                 to a nonzero value at $trendDecimals.
+  *   @param int $trendDecimals     Displayed precision of the trend pill
+  *   @param string $trendSuffix    Unit after the trend number (e.g. "%")
+  *   @param string $trendCompare   Comparison label (e.g. "vs yesterday")
+  *   @param mixed $todayCount      Count for the "+N today" pill (e.g. eggs
+  *                                 added today). Shown only when nonzero at
+  *                                 $todayDecimals; hidden when null/missing.
+  *   @param int $todayDecimals     Displayed precision of the today pill
+  *   @param string $todayPrefix    Unit before the today number (e.g. "₱")
+  *   @param string $todaySuffix    Unit after the today number (e.g. " kg")
+  *   @param string $todayLabel     Label after the today number ("today")
+  *
+  * Slots:
+  *   default / $secondary – plain subtext (no pill markup needed anymore;
+  *     pass :trend / :todayCount instead so the zero-suppression rule below
+  *     applies). Rendered as-is when neither prop is given.
+  *
+  * Pill rule (single place): a pill renders only for a real, nonzero change
+  *   measured at the displayed precision. Exactly zero, values that round to
+  *   zero, and missing data (null / non-numeric) render an invisible
+  *   placeholder instead, so the card keeps its row height next to cards
+  *   that do show a pill.
+  *
  * Layout: width controlled by the parent grid
  * (e.g. grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3). The text column
  * uses min-w-0 + break-words so long values wrap instead of clipping.
@@ -74,6 +92,15 @@
     'target' => null,
     'decimals' => 0,
     'suffix' => null,
+    'trend' => null,
+    'trendDecimals' => 0,
+    'trendSuffix' => '',
+    'trendCompare' => '',
+    'todayCount' => null,
+    'todayDecimals' => 0,
+    'todayPrefix' => '',
+    'todaySuffix' => '',
+    'todayLabel' => 'today',
 ])
 
 @php
@@ -97,6 +124,15 @@
     }
     $missingInfo = ($infoText === null || trim((string) $infoText) === '') && config('app.debug');
     $plainLabel = trim(strip_tags((string) $label));
+    // Pill visibility (single rule for every card): only a real, nonzero
+    // change measured at the displayed precision renders a pill. Zero,
+    // values that round to zero (e.g. 0.04 shown as 0.0), and missing data
+    // (null / non-numeric / empty periods) render nothing visible.
+    $trendValue = is_numeric($trend) ? (float) $trend : null;
+    $trendShown = $trendValue !== null && round($trendValue, (int) $trendDecimals) != 0;
+    $todayValue = is_numeric($todayCount) ? (float) $todayCount : null;
+    $todayShown = $todayValue !== null && round($todayValue, (int) $todayDecimals) != 0;
+    $pillSuppressed = ($trend !== null || $todayCount !== null) && ! $trendShown && ! $todayShown;
 @endphp
 
 <div {{ $attributes->merge(['class' => 'kpi-card dash-rise relative overflow-hidden rounded-2xl border border-[#E6E6E6] bg-white dark:bg-surface p-4 flex items-start gap-4']) }}
@@ -143,8 +179,19 @@
             <div class="kpi-number kpi-value"><span class="text-lg text-[#9CA3AF]">&mdash;</span></div>
         @endif
 
-        @if($hasSecondary)
+        @if($trendShown)
+            {{-- Delta pill: arrow follows the sign, color follows the existing
+                 up = green / down = red token logic. --}}
+            <div class="kpi-secondary"><div class="{{ $trendValue >= 0 ? 'trend-pill-up' : 'trend-pill-down' }}">{{ $trendValue >= 0 ? '▲' : '▼' }} {{ number_format(abs($trendValue), (int) $trendDecimals, '.', '') }}{{ $trendSuffix }} {{ $trendCompare }}</div></div>
+        @elseif($todayShown)
+            {{-- "+N today" pill: always an up/green count pill when meaningful. --}}
+            <div class="kpi-secondary"><div class="trend-pill-up">▲ +{{ $todayPrefix }}{{ number_format(round($todayValue, (int) $todayDecimals), (int) $todayDecimals) }}{{ $todaySuffix }} {{ $todayLabel }}</div></div>
+        @elseif($hasSecondary)
             <div class="kpi-secondary">{{ $secondaryContent }}</div>
+        @elseif($pillSuppressed)
+            {{-- Zero / no-data pill: invisible placeholder keeps this card's
+                 row height aligned with cards that do show a pill. --}}
+            <div class="kpi-secondary" aria-hidden="true"><div class="trend-pill-up" style="visibility:hidden">▲ +0</div></div>
         @endif
     </div>
 </div>

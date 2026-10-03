@@ -41,9 +41,10 @@
                     infoLabel="Total feed used per cage breakdown"
                     :target="round($totalFeedWeek, 1)"
                     :decimals="1"
-                >
-                    <div class="trend-pill-up">▲ +{{ number_format(round($feedTodayKg, 1), 1) }} kg today</div>
-                </x-kpi-card>
+                    :todayCount="$feedTodayKg"
+                    :todayDecimals="1"
+                    todaySuffix=" kg"
+                />
 
                 <x-kpi-card
                     label="Feed Cost This Month" infoKey="feed.cost-month"
@@ -55,9 +56,10 @@
                     ariaLabel="Go to Feed"
                     infoLabel="Feed cost per cage breakdown"
                     :value="$totalFeedCostMonth !== null && $totalFeedCostMonth > 0 ? '₱' . number_format($totalFeedCostMonth, 2) : null"
-                >
-                    <div class="trend-pill-up">▲ +₱{{ number_format($feedCostToday ?? 0, 2) }} today</div>
-                </x-kpi-card>
+                    :todayCount="$feedCostToday"
+                    :todayDecimals="2"
+                    todayPrefix="₱"
+                />
             </div>
         </div>
     </div>
