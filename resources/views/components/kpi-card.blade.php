@@ -158,7 +158,7 @@
             <i data-lucide="{{ $icon }}"></i>
         </span>
     @endif
-    <div class="relative min-w-0 flex-1 pr-6">
+    <div class="relative min-w-0 flex-1 pr-10">
         <div class="flex items-start justify-between gap-2">
             <span class="kpi-label min-w-0 flex-1">{{ $label }}</span>
             @if($missingInfo)

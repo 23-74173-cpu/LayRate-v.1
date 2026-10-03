@@ -197,13 +197,15 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
     width: 100%;
     align-self: stretch;
     /* Keep the text clear of the absolute info button, as on desktop. */
-    padding-right: 1.5rem;
+    padding-right: 2.5rem;
   }
 }
 
-/* KPI info button — small, unobtrusive, absolute top-right corner of every
-   card (the text column keeps right padding so long values never slide
-   under it). Pointer comes from the global button rule. */
+/* KPI info button — absolute top-right corner of every card. The hit area
+   is a 32px circle (16px glyph + 8px padding) so it is easy to press on
+   touch screens, while the glyph stays visually quiet. The text column
+   keeps right padding so long values never slide under it. Pointer comes
+   from the global button rule. */
 .kpi-info-btn {
   position: absolute;
   top: 8px;
@@ -212,7 +214,7 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 4px;
+  padding: 8px;
   border-radius: 9999px;
   color: #9ca3af;
   transition: background-color 0.2s ease, color 0.2s ease;
@@ -227,8 +229,8 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 }
 .kpi-info-btn svg,
 .kpi-info-btn i {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
 }
 /* Dev-only flag for cards rendered without explanation text. Only ever
    emitted when config('app.debug') is true — never in production. */

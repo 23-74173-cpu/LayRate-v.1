@@ -155,7 +155,7 @@
                     {{-- Tray-size info button (w-5): on tiny 1x1 cards it renders
                          in-flow below the label so it can never overlap it;
                          larger cards keep the absolute corner position. --}}
-                    <button class="cage-info-btn w-5 h-5 rounded-full flex items-center justify-center {{ $isTiny ? 'order-last' : '' }}" data-cage-id="{{ $uc->id }}" style="{{ $isTiny ? 'position:static;' : 'position:absolute; bottom:2px; right:2px;' }} background-color:transparent; color: {{ $uc->color }}; line-height:1;" title="Cage info" aria-label="Cage info"><i data-lucide="info" class="w-3 h-3"></i></button>
+                    <button class="cage-info-btn w-6 h-6 rounded-full flex items-center justify-center {{ $isTiny ? 'order-last' : '' }}" data-cage-id="{{ $uc->id }}" style="{{ $isTiny ? 'position:static;' : 'position:absolute; bottom:2px; right:2px;' }} background-color:transparent; color: {{ $uc->color }}; line-height:1;" title="Cage info" aria-label="Cage info"><i data-lucide="info" class="w-3.5 h-3.5"></i></button>
                     @if($isTiny)
                     <span class="font-bold leading-none text-center" style="font-size:14px;color: {{ $uc->color }};overflow:hidden;text-overflow:ellipsis;max-width:100%;display:inline-block;">
                         {{ \Illuminate\Support\Str::after($uc->cage_code, 'CAGE-') }}
@@ -217,9 +217,9 @@
                    at every width: tray cards are too small for the View chip —
                    e.g. a 1x1 cage card is narrower than the chip itself. These
                    come after the chip rules so they win on equal specificity. */
-                .staging-tile .cage-info-btn { width: 20px !important; height: 20px !important; min-width: 0 !important; padding: 0 !important; gap: 0; bottom: 4px !important; right: 4px !important; border-radius: 9999px !important; display: inline-flex !important; align-items: center; justify-content: center; background-color: rgba(255,255,255,0.92) !important; border: 1px solid rgba(0,0,0,0.12) !important; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+                .staging-tile .cage-info-btn { width: 24px !important; height: 24px !important; min-width: 0 !important; padding: 0 !important; gap: 0; bottom: 4px !important; right: 4px !important; border-radius: 9999px !important; display: inline-flex !important; align-items: center; justify-content: center; background-color: rgba(255,255,255,0.92) !important; border: 1px solid rgba(0,0,0,0.12) !important; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
                 .staging-tile .cage-info-btn i,
-                .staging-tile .cage-info-btn svg { width: 12px !important; height: 12px !important; }
+                .staging-tile .cage-info-btn svg { width: 14px !important; height: 14px !important; }
                 .staging-tile .cage-info-btn::after { content: none !important; }
                 .cage-overlay .cage-info-btn { height: calc(26px * var(--cage-info-btn-scale, 1)) !important; min-width: calc(26px * var(--cage-info-btn-scale, 1)); padding: 0 calc(8px * var(--cage-info-btn-scale, 1)) !important; gap: calc(3px * var(--cage-info-btn-scale, 1)); bottom: calc(6px * var(--cage-info-btn-scale, 1)) !important; right: calc(6px * var(--cage-info-btn-scale, 1)) !important; }
                 .cage-overlay .cage-info-btn i,
@@ -2543,7 +2543,7 @@ function addStagingTile(cageId) {
     tile.style.borderColor = m.color;
     tile.style.backgroundColor = m.colorSoft;
     tile.innerHTML = '<span class="text-sm font-semibold" style="color:' + m.color + ';">' + m.code + '</span>'
-        + '<button class="cage-info-btn w-5 h-5 rounded-full flex items-center justify-center" data-cage-id="' + cageId + '" style="position:absolute; bottom:2px; right:2px; background-color:transparent; color:' + m.color + '; line-height:1;" title="Cage info" aria-label="Cage info"><i data-lucide="info" class="w-3 h-3"></i></button>';
+        + '<button class="cage-info-btn w-6 h-6 rounded-full flex items-center justify-center" data-cage-id="' + cageId + '" style="position:absolute; bottom:2px; right:2px; background-color:transparent; color:' + m.color + '; line-height:1;" title="Cage info" aria-label="Cage info"><i data-lucide="info" class="w-3.5 h-3.5"></i></button>';
     var infoBtn = tile.querySelector('.cage-info-btn');
     if (infoBtn) bindCageInfoButton(infoBtn);
     tile.addEventListener('dragstart', function(e) { handleDragStart(e, cageId); });
