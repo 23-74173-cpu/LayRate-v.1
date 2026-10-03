@@ -126,23 +126,20 @@
                      role="button" tabindex="0"
                      onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); switchCage('{{ $cage->id }}'); }"
                      style="background-color: #ffffff; border-color: #e6e6e6;">
-                    <div class="flex items-center justify-between gap-2">
-                        <x-cage-color :cage="$cage" />
-                        <span class="text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shrink-0"
-                              style="background-color: {{ $cage->colorSoft }}; color: {{ $cage->color }};">
-                            {{ $slotCount }} slot{{ $slotCount !== 1 ? 's' : '' }}
-                        </span>
-                    </div>
-                    <span class="text-xs truncate" style="color: #615d59;">{{ $cage->formatted_location }}</span>
                     @php $henCount = $henCountByCage[$cage->id] ?? 0; @endphp
-                    <div class="flex items-center gap-1.5 text-xs mt-0.5">
-                        @if($henCount === 0)
-                            <span class="inline-flex items-center gap-1 font-semibold" style="color: #9b1c24;">
-                                <i data-lucide="alert-circle" class="w-3 h-3"></i> Cage Empty
+                    <div class="flex items-center justify-between gap-2">
+                        <x-cage-color :cage="$cage" class="min-w-0 flex-1" :truncate="true" />
+                        @if($henCount > 0)
+                            <span class="text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shrink-0"
+                                  style="background-color: {{ $cage->colorSoft }}; color: {{ $cage->color }};"
+                                  title="{{ $henCount }} {{ Str::plural('hen', $henCount) }} in {{ $cage->cage_code }}">
+                                {{ $henCount }} {{ Str::plural('hen', $henCount) }}
                             </span>
                         @else
-                            <span style="color: #1f6b3a;">
-                                <strong>{{ $henCount }}</strong> hen{{ $henCount !== 1 ? 's' : '' }}
+                            <span class="text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shrink-0"
+                                  style="background-color: #f3f4f6; color: #6b7280;"
+                                  title="No hens in {{ $cage->cage_code }}">
+                                Empty
                             </span>
                         @endif
                     </div>

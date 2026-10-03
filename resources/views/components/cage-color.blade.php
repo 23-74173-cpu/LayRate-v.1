@@ -10,8 +10,9 @@
       - label (bool, default true) — show the cage code text
       - soft (bool, default false) — use soft bg tint instead of dot
       - class (string, default '') — additional classes on the wrapper
+      - truncate (bool, default false) — ellipsis + tooltip on the label (opt-in, default rendering unchanged)
 --}}
-@props(['cage', 'dot' => true, 'label' => true, 'soft' => false, 'class' => ''])
+@props(['cage', 'dot' => true, 'label' => true, 'soft' => false, 'class' => '', 'truncate' => false])
 
 <span class="inline-flex items-center gap-1.5 {{ $class }}">
     @if($soft)
@@ -29,7 +30,7 @@
             ></span>
         @endif
         @if($label)
-            <span class="text-sm font-medium" style="color: {{ $cage->color }}">
+            <span class="text-sm font-medium{{ $truncate ? ' truncate min-w-0' : '' }}" style="color: {{ $cage->color }}"@if($truncate) title="{{ $cage->cage_code }}"@endif>
                 {{ $cage->cage_code }}
             </span>
         @endif
