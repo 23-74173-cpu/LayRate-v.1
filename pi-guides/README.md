@@ -18,6 +18,7 @@ ssh layratepi@LayRatePI.local
 | 4 | [Pi Backup & Recovery](04-backup-recovery.md) | Backing up configs, restoring after SD card failure |
 | 5 | [SD Card Direct Access](05-sd-card-access.md) | Accessing files when Pi is offline, SD card in USB adapter |
 | 6 | [Quick Reference](06-quick-reference.md) | All paths, services, commands in one page |
+| 7 | [HTTPS with Private CA](07-https-private-ca.md) | Cert install on devices, renewal, portal behaviour |
 
 ## Pi Summary
 
