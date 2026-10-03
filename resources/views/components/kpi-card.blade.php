@@ -5,9 +5,10 @@
  * Single reusable KPI card used system-wide (dashboard, analytics, forecast,
  * feed, environment, hardware, finance, chickens, mortality, eggs).
  *
- * Design: solid white card, horizontal two-column layout —
- *   left:  large 56px icon in a soft primary-tinted rounded tile
- *   right: uppercase label, large bold value, trend/subtext line
+  * Design: solid white card, horizontal two-column layout —
+  *   left:  large 72px icon in a soft primary-tinted rounded tile,
+  *     vertically centered against the whole text column
+  *   right: uppercase label, large bold value, trend/subtext line
  *
  * Backward-compatibility notes:
  *   - `cardGradient`, `gradient` and `accent` props are accepted but ignored.
@@ -135,7 +136,7 @@
     $pillSuppressed = ($trend !== null || $todayCount !== null) && ! $trendShown && ! $todayShown;
 @endphp
 
-<div {{ $attributes->merge(['class' => 'kpi-card dash-rise relative overflow-hidden rounded-2xl border border-[#E6E6E6] bg-white dark:bg-surface p-4 flex items-start gap-4']) }}
+<div {{ $attributes->merge(['class' => 'kpi-card dash-rise relative overflow-hidden rounded-2xl border border-[#E6E6E6] bg-white dark:bg-surface p-4 flex items-center gap-4']) }}
      style="animation-delay: {{ $delay }};"
      @if($isClickable) role="link" tabindex="0" aria-label="{{ $outerAriaLabel }}" data-nav="{{ $href }}" @endif
      @if($kpi) data-kpi="{{ $kpi }}" @endif

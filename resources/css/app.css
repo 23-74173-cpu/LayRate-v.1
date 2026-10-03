@@ -150,15 +150,16 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 }
 .kpi-card:active { transform: translateY(-1px); }
 
-/* KPI icon tile — large 56px soft primary-tinted badge, vertically centered
-   in the card's left column. Uses existing primary + cage-b-soft tokens. */
+/* KPI icon tile — large 72px soft primary-tinted badge, vertically centered
+   against the full text column (the card uses align-items: center). Glyph
+   is ~55% of the tile. Uses existing primary + cage-b-soft tokens. */
 .kpi-icon-tile {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
   border: 1px solid #cfe3f8;
   box-shadow: 0 4px 10px -4px rgba(20, 30, 60, 0.1);
   background: #dcebfa;
@@ -167,32 +168,36 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 }
 .kpi-icon-tile svg,
 .kpi-icon-tile i {
-  width: 28px;
-  height: 28px;
+  width: 40px;
+  height: 40px;
 }
-/* Phones: two cards per row leave about 50px beside a 56px icon, so values
+/* Phones: two cards per row leave little room beside a 72px icon, so values
    broke mid-number ("106" / ".3%", "Fee" / "d"). Stack a smaller icon above
-   the text instead; the text then gets the card's full width. The info
-   button stays in the top-right corner, level with the icon. */
+   the text instead; the icon stays horizontally centered while the text
+   column stretches full width and stays left-aligned. The info button stays
+   in the top-right corner, level with the icon. */
 @media (max-width: 639.98px) {
   .kpi-card {
     flex-direction: column;
+    align-items: center;
     gap: 10px;
     padding: 14px;
   }
   .kpi-card > .kpi-icon-tile {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
+    width: 64px;
+    height: 64px;
+    border-radius: 14px;
   }
   .kpi-card > .kpi-icon-tile svg,
   .kpi-card > .kpi-icon-tile i {
-    width: 20px;
-    height: 20px;
+    width: 36px;
+    height: 36px;
   }
   .kpi-card > .min-w-0 {
     width: 100%;
-    padding-right: 0;
+    align-self: stretch;
+    /* Keep the text clear of the absolute info button, as on desktop. */
+    padding-right: 1.5rem;
   }
 }
 
