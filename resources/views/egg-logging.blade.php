@@ -120,28 +120,43 @@
                     $loggedCount = $todayLoggedCountByCage[$cage->cage_code] ?? 0;
                     $allLogged = $loggedCount >= $slotCount;
                 @endphp
-                <div class="rounded-xl border p-4 flex flex-col gap-2 min-h-[7rem] cage-overview-card transition-all hover:shadow-md"
+                <div class="rounded-xl border p-4 flex flex-col gap-1.5 min-h-[5.5rem] cage-overview-card transition-all hover:shadow-md"
                      data-cage-id="{{ $cage->id }}" data-cage-code="{{ $cage->cage_code }}" data-total-slots="{{ $slotCount }}"
                      onclick="switchCage('{{ $cage->id }}')"
                      role="button" tabindex="0"
                      onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); switchCage('{{ $cage->id }}'); }"
                      style="background-color: #ffffff; border-color: #e6e6e6;">
-                    @php $henCount = $henCountByCage[$cage->id] ?? 0; @endphp
+                    @php
+                        $henCount = $henCountByCage[$cage->id] ?? 0;
+                        // Real hen capacity: cages.total_capacity, set at creation and
+                        // on resize as rows x slots_per_row x max_chickens_per_slot
+                        // (CageController@store/@update). Already on the model, no query.
+                        $henCapacity = (int) ($cage->total_capacity ?? 0);
+                        $overCapacity = $henCapacity > 0 && $henCount > $henCapacity;
+                    @endphp
                     <div class="flex items-center justify-between gap-2">
-                        <x-cage-color :cage="$cage" class="min-w-0 flex-1" :truncate="true" />
-                        @if($henCount > 0)
-                            <span class="text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shrink-0"
-                                  style="background-color: {{ $cage->colorSoft }}; color: {{ $cage->color }};"
-                                  title="{{ $henCount }} {{ Str::plural('hen', $henCount) }} in {{ $cage->cage_code }}">
-                                {{ $henCount }} {{ Str::plural('hen', $henCount) }}
-                            </span>
-                        @else
-                            <span class="text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shrink-0"
-                                  style="background-color: #f3f4f6; color: #6b7280;"
-                                  title="No hens in {{ $cage->cage_code }}">
-                                Empty
-                            </span>
-                        @endif
+                        <span class="min-w-0 flex-1 flex items-center gap-2">
+                            <x-cage-color :cage="$cage" class="min-w-0 flex-1" :truncate="true" />
+                            @if($henCapacity > 0)
+                                <span class="text-xs whitespace-nowrap shrink-0" style="font-variant-numeric: tabular-nums;"
+                                      title="{{ $henCount }} of {{ $henCapacity }} hens in {{ $cage->cage_code }}{{ $overCapacity ? ' — over capacity' : '' }}{{ $henCount === 0 ? ' — empty cage' : '' }}"
+                                      aria-label="{{ $henCount }} of {{ $henCapacity }} hens{{ $overCapacity ? ', over capacity' : ($henCount === 0 ? ', empty cage' : '') }}">
+                                    @if($overCapacity)
+                                        <i data-lucide="alert-circle" class="w-3 h-3 inline-block" style="color: #9b1c24; vertical-align: -2px;"></i>
+                                    @endif
+                                    <strong class="font-semibold" style="color: {{ $overCapacity ? '#9b1c24' : ($henCount === 0 ? '#6b7280' : $cage->color) }};">{{ number_format($henCount) }}</strong><span style="color: #6b7280;">/{{ number_format($henCapacity) }}</span>
+                                </span>
+                            @else
+                                <span class="text-xs font-medium whitespace-nowrap shrink-0" style="color: {{ $cage->color }}; font-variant-numeric: tabular-nums;"
+                                      title="{{ $henCount }} {{ Str::plural('hen', $henCount) }} in {{ $cage->cage_code }}">
+                                    {{ number_format($henCount) }} {{ Str::plural('hen', $henCount) }}
+                                </span>
+                            @endif
+                        </span>
+                        <span class="text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shrink-0"
+                              style="background-color: {{ $cage->colorSoft }}; color: {{ $cage->color }};">
+                            {{ $slotCount }} slot{{ $slotCount !== 1 ? 's' : '' }}
+                        </span>
                     </div>
                     <div class="flex items-center gap-2 text-xs mt-auto" style="color: #a39e98;">
                         <span>Logged:</span>
