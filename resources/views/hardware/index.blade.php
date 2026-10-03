@@ -7,6 +7,8 @@
     <x-page-header title="Hardware Inventory" subtitle="Manage sensors, relays, and other hardware devices" />
 
     @push('dock-actions')
+        {{-- Hardware create is admin-only server-side; hide the entry for operators so they never hit a dead button. --}}
+        @if(auth()->user()->isAdmin())
         <button type="button" onclick="openAddModal()"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Add Device</span>
@@ -14,6 +16,7 @@
                 <i data-lucide="plus" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
+        @endif
     @endpush
 
     @if(session('new_device_key'))

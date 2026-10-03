@@ -179,7 +179,7 @@ Route::middleware(['auth', 'system-time-set'])->group(function () {
 
     Route::get('/hardware',                    [HardwareItemController::class, 'index'])->name('hardware.index');
     Route::get('/hardware/live-data',          [HardwareItemController::class, 'liveData'])->name('hardware.live-data');
-    Route::post('/hardware',                   [HardwareItemController::class, 'store'])->name('hardware.store');
+    Route::post('/hardware',                   [HardwareItemController::class, 'store'])->name('hardware.store')->middleware('admin');
     Route::put('/hardware/{hardwareItem}',     [HardwareItemController::class, 'update'])->name('hardware.update')->middleware('admin');
     Route::delete('/hardware/{hardwareItem}',  [HardwareItemController::class, 'destroy'])->name('hardware.destroy')->middleware('admin');
 
