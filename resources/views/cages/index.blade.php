@@ -2129,8 +2129,6 @@ document.addEventListener('click', function(e) {
 function handleDragStart(e, cageId) {
     if (!IS_ADMIN) return;
     draggedCageId = cageId;
-    // Grabbing cursor for the whole page while dragging (see app.css).
-    document.documentElement.classList.add('cage-dragging');
     // Transparent drag image (hide browser default)
     var hiddenCanvas = document.createElement('canvas');
     hiddenCanvas.width = 1; hiddenCanvas.height = 1;
@@ -2172,6 +2170,9 @@ function handleDragStart(e, cageId) {
     grabOffsetCol = Math.max(0, Math.min(grabOffsetCol, m.slots_per_row));
     grabOffsetRow = Math.max(0, Math.min(grabOffsetRow, m.rows));
 
+    // Grabbing cursor for the whole page while dragging (see app.css).
+    // Added last so an early exit above can never leave it stuck on.
+    document.documentElement.classList.add('cage-dragging');
     bindDragListeners();
 }
 
@@ -2182,7 +2183,11 @@ function bindDragListeners() {
     var canvas = document.getElementById('farmCanvas');
     document.addEventListener('dragover', function(e) { e.preventDefault(); showGhost(e); });
     document.addEventListener('dragend', function(e) { hideGhost(); unbindDragListeners(); resetDragState(); });
-    document.addEventListener('drop', function(e) { e.preventDefault(); hideGhost(); handleCanvasDrop(e); });
+    // Reset here too: if the drop lands outside the canvas (e.g. onto a
+    // Turbo nav link) the page can navigate before dragend ever fires,
+    // which used to leave the grabbing cursor stuck on <html> — and <html>
+    // survives Turbo visits, so every later section inherited it.
+    document.addEventListener('drop', function(e) { e.preventDefault(); hideGhost(); handleCanvasDrop(e); resetDragState(); });
 }
 
 function unbindDragListeners() {
@@ -2206,11 +2211,13 @@ function unbindTouchDragListeners() {
 
 function handleTouchDragStart(cageId, touch, fromCanvas) {
     if (!IS_ADMIN) return;
-    draggedCageId = cageId;
-    document.documentElement.classList.add('cage-dragging');
-    draggedFromCanvas = fromCanvas;
     var m = cageMeta[cageId];
     if (!m) return;
+    draggedCageId = cageId;
+    // Added after the meta check so an unknown cage can never leave the
+    // grabbing cursor stuck on.
+    document.documentElement.classList.add('cage-dragging');
+    draggedFromCanvas = fromCanvas;
 
     var cellW = TILE_SIZE + TILE_GAP;
     var cellH = TILE_SIZE + TILE_GAP;
@@ -2502,6 +2509,17 @@ function resetDragState() {
     draggedCageId = null;
     draggedFromCanvas = false;
 }
+
+// Safety net: the grabbing class lives on <html>, which Turbo preserves
+// across visits — so any drag interrupted by navigation (drop outside the
+// window, drop onto a nav link, Escape-then-click) used to poison every
+// later section with a stuck grabbing cursor. Never carry it to a new page.
+document.addEventListener('turbo:before-visit', function() {
+    document.documentElement.classList.remove('cage-dragging');
+});
+document.addEventListener('turbo:render', function() {
+    document.documentElement.classList.remove('cage-dragging');
+});
 
 // ── Remove from Canvas ──
 function confirmRemoveCage(cageId) {
