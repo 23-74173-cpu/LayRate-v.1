@@ -7,6 +7,8 @@
     <x-page-header title="Environment" subtitle="Monitor coop temperature, humidity, and alert thresholds" />
 
     @push('dock-actions')
+        {{-- Fan control is admin-only server-side; hide the entry for operators so they never hit a dead button. --}}
+        @if(auth()->user()->isAdmin())
         <button type="button" onclick="openEnvFanModal()"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Cooling Fan</span>
@@ -14,6 +16,7 @@
                 <i data-lucide="fan" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
+        @endif
         <button type="button" onclick="openEnvManualModal()"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Manual Entry</span>

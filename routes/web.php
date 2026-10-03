@@ -172,7 +172,7 @@ Route::middleware(['auth', 'system-time-set'])->group(function () {
     Route::put('/environment/logs/{cageId}/{date}', [EnvironmentController::class, 'updateLog'])->name('environment.logs.update');
     Route::post('/environment/manual',   [EnvironmentController::class, 'storeManual'])->name('environment.manual');
     Route::post('/environment/thresholds', [EnvironmentController::class, 'saveThresholds'])->name('environment.thresholds');
-    Route::post('/environment/relay', [EnvironmentController::class, 'controlRelay'])->name('environment.relay.control');
+    Route::post('/environment/relay', [EnvironmentController::class, 'controlRelay'])->name('environment.relay.control')->middleware('admin');
     Route::get('/environment/relay-stream', [EnvironmentRelaySseController::class, 'stream'])->name('environment.relay-stream');
     Route::post('/eggs/stocks/egg-weights', [EggStockController::class, 'saveEggWeights'])->name('eggs.stocks.egg-weights');
     Route::post('/eggs/stocks/thresholds', [EggStockController::class, 'saveThresholds'])->name('eggs.stocks.thresholds');
@@ -180,7 +180,7 @@ Route::middleware(['auth', 'system-time-set'])->group(function () {
     Route::get('/hardware',                    [HardwareItemController::class, 'index'])->name('hardware.index');
     Route::get('/hardware/live-data',          [HardwareItemController::class, 'liveData'])->name('hardware.live-data');
     Route::post('/hardware',                   [HardwareItemController::class, 'store'])->name('hardware.store');
-    Route::put('/hardware/{hardwareItem}',     [HardwareItemController::class, 'update'])->name('hardware.update');
+    Route::put('/hardware/{hardwareItem}',     [HardwareItemController::class, 'update'])->name('hardware.update')->middleware('admin');
     Route::delete('/hardware/{hardwareItem}',  [HardwareItemController::class, 'destroy'])->name('hardware.destroy')->middleware('admin');
 
     Route::middleware('admin')->group(function () {
