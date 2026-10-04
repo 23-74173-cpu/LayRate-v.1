@@ -124,6 +124,7 @@ Route::middleware(['auth', 'system-time-set'])->group(function () {
 
     Route::get('/chickens',              [ChickensController::class, 'index'])->name('chickens.index');
     Route::get('/chickens/inventory-list', [ChickensController::class, 'inventoryList'])->name('chickens.inventory-list');
+    Route::get('/chickens/foot-tags-pdf', [\App\Http\Controllers\PrintableTagsController::class, 'henFootTags'])->name('chickens.foot-tags-pdf');
     Route::get('/chickens/mortality-records', [ChickensController::class, 'mortalityRecords'])->name('chickens.mortality-records');
     Route::post('/chickens',               [ChickensController::class, 'store'])->name('chickens.store');
     Route::post('/chickens/health-event',  [ChickensController::class, 'storeHealthEvent'])->name('chickens.health-event');
@@ -154,6 +155,7 @@ Route::middleware(['auth', 'system-time-set'])->group(function () {
     Route::get('/eggs/stocks/live-data',                [EggStockController::class, 'liveData'])->name('eggs.stocks.live-data');
     Route::get('/eggs/stocks/pool-data',                [EggStockController::class, 'poolData'])->name('eggs.stocks.pool-data');
     Route::get('/eggs/stocks/scan',                     [EggStockController::class, 'scan'])->name('eggs.stocks.scan');
+    Route::get('/eggs/stocks/labels-pdf',               [\App\Http\Controllers\PrintableTagsController::class, 'eggStockLabels'])->name('eggs.stocks.labels-pdf');
     Route::post('/eggs/stocks',                        [EggStockController::class, 'store'])->name('eggs.stocks.store');
     Route::put('/eggs/stocks/{batch}',                 [EggStockController::class, 'update'])->name('eggs.stocks.update');
     Route::delete('/eggs/stocks/{batch}',              [EggStockController::class, 'destroy'])->name('eggs.stocks.destroy')->middleware('admin');

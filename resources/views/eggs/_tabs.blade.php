@@ -39,6 +39,13 @@
                 <i data-lucide="scan-qr-code" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
+        <button type="button" onclick="document.getElementById('eggLabelsModal').style.display = 'flex'"
+                class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>Print All QR Labels</span>
+            <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
+                <i data-lucide="printer" class="w-4 h-4 text-navy"></i>
+            </div>
+        </button>
         <button type="button" onclick="openEggWeightsModal()"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Egg Weights</span>
@@ -98,7 +105,15 @@
             if (subtitleEl) subtitleEl.textContent = activeLink.dataset.subtitle;
 
             var menu = document.getElementById(MENU_ID);
-            if (!menu) return;
+            if (!menu) {
+                // Full page load: this script runs before the global dock at
+                // the end of <body> exists, which left the "+" menu empty (and
+                // hidden) after a refresh. Fill it once the page is parsed.
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', syncActive, { once: true });
+                }
+                return;
+            }
             var fab = menu.closest('.fab');
             var tpl = document.getElementById('egg-fab-actions-' + activeLink.dataset.tabKey);
             if (!tpl) {

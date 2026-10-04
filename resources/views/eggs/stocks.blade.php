@@ -368,6 +368,19 @@
 
 @include('eggs.stocks._qr-scanner')
 
+{{-- Print all QR labels (PDF), opened from the dock "+" menu --}}
+<x-print-pdf-modal id="eggLabelsModal" title="Print QR Labels" :action="route('eggs.stocks.labels-pdf')"
+    description="Every stock batch on one sheet, 3 labels per row with cut lines. Each label shows the size, egg count, harvest date, cage, batch number and freshness dates, so a cut label can't be put on the wrong tray.">
+    <div>
+        <label for="eggLabelsRange" class="block text-xs font-medium tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Batches</label>
+        <select id="eggLabelsRange" name="range" class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+            <option value="all">All batches</option>
+            <option value="7">Harvested in the last 7 days</option>
+            <option value="30">Harvested in the last 30 days</option>
+        </select>
+    </div>
+</x-print-pdf-modal>
+
 <script>
 @php
     $cageLogsJson = $productionLogs->map(function($logs) {

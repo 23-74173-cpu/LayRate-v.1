@@ -201,6 +201,32 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   }
 }
 
+/* Tablets and laptops: narrow cards (Egg Stocks shows six per row; most
+   grids get tight around 1024–1366px) broke numbers into stacked digits
+   ("7" / "2" / "5"). The text column may not shrink below its longest
+   unbreakable piece (a number such as "2,790", or the longest label word),
+   and the card wraps: when icon + number don't fit side by side, the text
+   drops under the icon. Cards that fit keep the side-by-side layout, so
+   nothing changes where numbers already read correctly. */
+@media (min-width: 640px) {
+  .kpi-card {
+    flex-wrap: wrap;
+    row-gap: 10px;
+    /* Keep a wrapped card's icon and text together (the default spread the
+       spare height between the two rows). A one-row card renders exactly as
+       before: its single row stays centered in the card. */
+    align-content: center;
+  }
+  .kpi-card > .min-w-0 {
+    min-width: min-content;
+  }
+  .kpi-card .kpi-number {
+    /* overflow-wrap: break-word (kept) still prevents overflow, but unlike
+       word-break it doesn't shrink the min-content width to one digit. */
+    word-break: normal;
+  }
+}
+
 /* KPI info button — absolute top-right corner of every card. The hit area
    is a 32px circle (16px glyph + 8px padding) so it is easy to press on
    touch screens, while the glyph stays visually quiet. The text column

@@ -19,7 +19,28 @@
                 <i data-lucide="plus" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
+        <button type="button" onclick="document.getElementById('henFootTagsModal').style.display = 'flex'"
+                class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>Print Foot Tags</span>
+            <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
+                <i data-lucide="printer" class="w-4 h-4 text-navy"></i>
+            </div>
+        </button>
     @endpush
+
+    {{-- Hen foot tags (PDF): long strips that wrap around the leg --}}
+    <x-print-pdf-modal id="henFootTagsModal" title="Print Foot Tags" :action="route('chickens.foot-tags-pdf')"
+        description="Long strips, 2 per row with cut lines. Each strip shows the hen's tag code, its cage and slot, breed and chicken ID. Wrap it around the leg and glue the grey tab underneath.">
+        <div>
+            <label for="henFootTagsCage" class="block text-xs font-medium tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Hens</label>
+            <select id="henFootTagsCage" name="cage_id" class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+                <option value="">All active hens</option>
+                @foreach($cages->where('is_active', 1) as $tagCage)
+                    <option value="{{ $tagCage->id }}">{{ $tagCage->cage_code }} only</option>
+                @endforeach
+            </select>
+        </div>
+    </x-print-pdf-modal>
 
     {{-- Tabs --}}
     <div id="chickens-tabs-nav" class="mb-5">

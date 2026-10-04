@@ -489,12 +489,15 @@ class EggStockController extends Controller
 
     public function qr(EggStockBatch $batch)
     {
-        $cageCode = $batch->cage?->cage_code ?? 'UNKNOWN';
-        $qrData = "LAYRATE|{$batch->id}|{$batch->harvested_date->toDateString()}|{$cageCode}|{$batch->egg_size}|{$batch->count}";
+        // Same payload as the printable PDF labels (one source of truth).
+        $qrData = PrintableTagsController::eggStockPayload($batch);
+        $thresholds = EggStockBatch::freshnessThresholds();
 
         return view('eggs.qr-print', [
             'batch' => $batch,
             'qrData' => $qrData,
+            'freshUntil' => $batch->harvested_date->copy()->addDays($thresholds['fresh_days'])->format('m/d/Y'),
+            'oldAfter' => $batch->harvested_date->copy()->addDays($thresholds['aging_days'])->format('m/d/Y'),
         ]);
     }
 }
