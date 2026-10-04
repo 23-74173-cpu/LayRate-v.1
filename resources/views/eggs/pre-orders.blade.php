@@ -154,6 +154,7 @@
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                     <x-input-error name="egg_count" />
                     <div id="orderTrayLabel" class="mt-1 text-xs" style="color: #6B7280;"></div>
+                    <div id="orderTotalLine" class="mt-1 text-xs font-semibold tabular-nums" style="color: #1f1f1f;" aria-live="polite"></div>
                     <div id="orderRemainingIndicator" class="hidden mt-1 text-xs"></div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
@@ -271,6 +272,10 @@
                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1 resize-y"
                               style="border-color: #e6e6e6; color: #1f1f1f;"></textarea>
                 </div>
+                <div class="rounded-lg px-3 py-2.5 text-sm flex items-center justify-between" style="background-color: #f6f5f4;">
+                    <span class="text-xs font-semibold tracking-[0.05em] uppercase" style="color: #615d59;">Order total</span>
+                    <span id="editSnapshotTotal" class="font-semibold tabular-nums" style="color: #1f1f1f;">—</span>
+                </div>
             </div>
 
             <div class="flex gap-3 mt-5">
@@ -376,6 +381,7 @@ function onOrderCountChange() {
 
     if (count < 1 || !selected) {
         trayLabel.textContent = selected ? 'Enter a count.' : 'Select a size first.';
+        updateOrderTotal('', 0);
         if (remainingEl) remainingEl.classList.add('hidden');
         if (submitBtn) submitBtn.disabled = true;
         return;
@@ -383,6 +389,7 @@ function onOrderCountChange() {
 
     var label = eggCountLabel(count);
     trayLabel.textContent = label;
+    updateOrderTotal(selected, count);
 
     var avail = getAvailableForSize(selected);
     if (avail < 1) {
@@ -417,7 +424,56 @@ function closeAddOrderModal() {
     document.getElementById('addOrderModal').style.display = 'none';
 }
 
-function openEditStatus(id, currentStatus, fulfillmentDate, customerName, eggSize, eggCount, requestedDate, notes) {
+// ── Order total preview — JS mirror of App\Services\EggPricingService.
+// Same branches, same order, same integer-cent formula: trays × tray price
+// + loose part, where the loose part is loose × piece price, else a single
+// half-up rounding of (loose × tray / 30) at the end. Display only —
+// the server recomputes the authoritative total at save time.
+var EGGS_PER_TRAY = 30;
+var EGG_PRICES = @json($priceMap ?? []);
+var PRICE_SETTINGS_URL = @json(auth()->user()->isAdmin() ? route('profile', ['tab' => 'system']) : null);
+
+function peso(cents) {
+    return '₱' + (cents / 100).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+function updateOrderTotal(size, count) {
+    var line = document.getElementById('orderTotalLine');
+    if (!line) return;
+    line.textContent = '';
+    if (!size || count < 1) return;
+    var price = EGG_PRICES[size];
+    if (!price || price.tray === null || price.tray === undefined || price.tray === '') {
+        line.style.color = '#a39e98';
+        line.style.fontWeight = '400';
+        line.textContent = 'No price set for this size'
+            + (PRICE_SETTINGS_URL ? ' — set it in Egg Prices' : '');
+        line.style.cursor = PRICE_SETTINGS_URL ? 'pointer' : '';
+        line.onclick = PRICE_SETTINGS_URL ? function() { window.location.href = PRICE_SETTINGS_URL; } : null;
+        return;
+    }
+    line.style.color = '#1f1f1f';
+    line.style.fontWeight = '600';
+    line.style.cursor = '';
+    line.onclick = null;
+    var trayCents = Math.round(parseFloat(price.tray) * 100);
+    var trays = Math.floor(count / EGGS_PER_TRAY);
+    var loose = count % EGGS_PER_TRAY;
+    var hasPiece = price.piece !== null && price.piece !== undefined && price.piece !== '';
+    var pieceCents = hasPiece ? Math.round(parseFloat(price.piece) * 100) : null;
+    var derived = loose > 0 && !hasPiece;
+    var looseCents = loose === 0 ? 0 : (hasPiece ? loose * pieceCents : Math.floor((2 * loose * trayCents + EGGS_PER_TRAY) / (2 * EGGS_PER_TRAY)));
+    var parts = [];
+    var plain = function(c) { return (c / 100).toFixed(2); };
+    if (trays > 0) parts.push(trays + (trays === 1 ? ' tray' : ' trays') + ' × ' + plain(trayCents));
+    if (loose > 0) {
+        if (derived) parts.push(loose + ' pcs = ' + plain(looseCents) + ' (tray price / ' + EGGS_PER_TRAY + ' per egg)');
+        else parts.push(loose + ' pcs × ' + plain(pieceCents));
+    }
+    line.textContent = 'Total: ' + peso(trays * trayCents + looseCents) + ' (' + parts.join(' + ') + ')';
+}
+
+function openEditStatus(id, currentStatus, fulfillmentDate, customerName, eggSize, eggCount, requestedDate, notes, snapshotTotal) {
     document.getElementById('editStatusForm').action = '/eggs/pre-orders/' + id;
     document.getElementById('editCustomerName').value = customerName || '';
     document.getElementById('editEggSize').value = eggSize || 'medium';
@@ -426,6 +482,7 @@ function openEditStatus(id, currentStatus, fulfillmentDate, customerName, eggSiz
     document.getElementById('editFulfillmentDate').value = fulfillmentDate || '';
     document.getElementById('editStatusSelect').value = currentStatus || 'pending';
     document.getElementById('editNotes').value = notes || '';
+    document.getElementById('editSnapshotTotal').textContent = snapshotTotal || '—';
     document.getElementById('editStatusModal').style.display = 'flex';
 }
 
@@ -489,7 +546,8 @@ function closeEditStatusModal() {
         '{{ $editOrder->egg_size }}',
         {{ $editOrder->egg_count }},
         '{{ $editOrder->requested_date->toDateString() }}',
-        '{{ addslashes($editOrder->notes ?? '') }}'
+        '{{ addslashes($editOrder->notes ?? '') }}',
+        '{{ $editOrder->total_amount !== null ? '₱' . number_format((float) $editOrder->total_amount, 2) : '—' }}'
     );
 </x-modal-reopen>
 @endif

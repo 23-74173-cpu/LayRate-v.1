@@ -3,12 +3,16 @@
 namespace App\Models;
 
 use App\Enums\EggSize;
+use App\Services\EggPricingService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class PreOrder extends Model
 {
+    /** Eggs per commercial tray — also mirrored as EGGS_PER_TRAY in JS. */
+    public const EGGS_PER_TRAY = 30;
+
     protected $fillable = [
         'customer_name',
         'customer_reference',
@@ -18,17 +22,24 @@ class PreOrder extends Model
         'fulfillment_date',
         'status',
         'notes',
+        'unit_price_tray',
+        'unit_price_piece',
+        'total_amount',
+        'tray_size',
     ];
 
     protected $casts = [
         'egg_count' => 'integer',
         'requested_date' => 'date',
         'fulfillment_date' => 'date',
+        'unit_price_tray' => 'decimal:2',
+        'unit_price_piece' => 'decimal:2',
+        'total_amount' => 'decimal:2',
     ];
 
     public function getTrayCountAttribute(): int
     {
-        return (int) ceil($this->egg_count / 30);
+        return (int) ceil($this->egg_count / self::EGGS_PER_TRAY);
     }
 
     public static function eggLabel(int $count): string
@@ -53,7 +64,7 @@ class PreOrder extends Model
             return number_format($dozens, 1) . ' dozen';
         }
 
-        $trays = round($count / 30, 1);
+        $trays = round($count / self::EGGS_PER_TRAY, 1);
         return number_format($count) . ' eggs (' . $trays . ' trays)';
     }
 
@@ -95,8 +106,31 @@ class PreOrder extends Model
                 );
             }
 
+            // Server-authoritative price snapshot; anything from the browser
+            // is ignored (the form never sends a total).
+            $data = array_merge($data, self::priceSnapshot(
+                $data['egg_size'], (int) $data['egg_count']
+            ));
+
             return self::create($data);
         });
+    }
+
+    /**
+     * Snapshot the current prices for a size+count. All-null when the size
+     * has no tray price — callers must never backfill old rows with this.
+     */
+    public static function priceSnapshot(string $size, int $count): array
+    {
+        $price = EggPrice::where('egg_size', $size)->first();
+
+        return EggPricingService::snapshotFor(
+            $size,
+            $count,
+            $price?->price_per_tray,
+            $price?->price_per_piece,
+            self::EGGS_PER_TRAY
+        );
     }
 
     /**
@@ -115,6 +149,12 @@ class PreOrder extends Model
             $wasPending = $oldStatus === 'pending';
             $isPending = $newStatus === 'pending';
 
+            // Re-snapshot only when the priced inputs changed and the order
+            // stays open; fulfilled/cancelled snapshots are frozen history.
+            if (($newSize !== $oldSize || $newCount !== $oldCount) && $isPending) {
+                $data = array_merge($data, self::priceSnapshot($newSize, $newCount));
+            }
+
             if ($newSize === $oldSize && $newCount <= $oldCount && $wasPending === $isPending) {
                 $this->update($data);
                 return;
@@ -129,7 +169,7 @@ class PreOrder extends Model
 
             if ($newCount > $available) {
                 throw new \OverflowException(
-                    "Only {$available} {$newSize} egg(s) in stock (after subtracting other pending pre-orders)."
+                    "Only {$available} " . EggSize::labelFor($newSize) . " egg(s) in stock (after subtracting other pending pre-orders)."
                 );
             }
 

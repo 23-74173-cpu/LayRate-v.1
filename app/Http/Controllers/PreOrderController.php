@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\EggSize;
 use App\Models\Alert;
+use App\Models\EggPrice;
 use App\Models\EggSizeLog;
 use App\Models\EggStockBatch;
 use App\Models\Hen;
@@ -113,6 +114,10 @@ class PreOrderController extends Controller
             'orders' => $orders,
             'summary' => $summary,
             'editOrder' => $editOrder,
+            'priceMap' => EggPrice::all()->keyBy('egg_size')->map(fn ($p) => [
+                'tray' => $p->price_per_tray,
+                'piece' => $p->price_per_piece,
+            ])->all(),
             'filters' => [
                 'status' => $statusFilter ?? 'all',
                 'egg_size' => $sizeFilter ?? 'all',

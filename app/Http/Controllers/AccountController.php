@@ -96,7 +96,15 @@ class AccountController extends Controller
             ],
         ] : null;
 
-        return view('profile', compact('staff', 'tab', 'team', 'activity', 'sessions', 'farmSettings'));
+        // Admin-only egg price table for the System tab (null = not set).
+        $eggPrices = $user->isAdmin()
+            ? \App\Models\EggPrice::all()->keyBy('egg_size')->all()
+            : null;
+        $lastPriceChange = $user->isAdmin()
+            ? \App\Models\EggPriceHistory::with('changedBy')->latest()->first()
+            : null;
+
+        return view('profile', compact('staff', 'tab', 'team', 'activity', 'sessions', 'farmSettings', 'eggPrices', 'lastPriceChange'));
     }
 
     public function storeUser(Request $request)

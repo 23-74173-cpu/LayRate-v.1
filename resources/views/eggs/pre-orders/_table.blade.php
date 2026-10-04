@@ -11,6 +11,7 @@
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">REQUESTED</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">FULFILLED</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">STATUS</th>
+                    <th class="text-right text-xs text-[#6B7280] px-5 py-3 font-medium tabular-nums">TOTAL</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">ACTIONS</th>
                 </tr>
             </thead>
@@ -42,10 +43,11 @@
                     <td class="px-5 py-3.5">
                         <x-status-badge :status="$order->status" type="general" />
                     </td>
+                    <td class="px-5 py-3.5 text-sm font-medium text-right tabular-nums" style="color: #333333;">{{ $order->total_amount !== null ? '₱' . number_format((float) $order->total_amount, 2) : '—' }}</td>
                     <td class="px-5 py-3.5">
                         <div class="flex items-center gap-2">
                             <x-icon-button icon="pencil" label="Edit pre-order" color="neutral"
-                                onclick="openEditStatus({{ $order->id }}, '{{ $order->status }}', '{{ $order->fulfillment_date?->toDateString() ?? '' }}', '{{ addslashes($order->customer_name) }}', '{{ $order->egg_size }}', {{ $order->egg_count }}, '{{ $order->requested_date->toDateString() }}', '{{ addslashes($order->notes ?? '') }}')" />
+                                onclick="openEditStatus({{ $order->id }}, '{{ $order->status }}', '{{ $order->fulfillment_date?->toDateString() ?? '' }}', '{{ addslashes($order->customer_name) }}', '{{ $order->egg_size }}', {{ $order->egg_count }}, '{{ $order->requested_date->toDateString() }}', '{{ addslashes($order->notes ?? '') }}', '{{ $order->total_amount !== null ? '₱' . number_format((float) $order->total_amount, 2) : '—' }}')" />
                             @can('admin')
                             <form action="{{ route('eggs.preorders.destroy', $order) }}" method="POST" data-turbo="false"
                                   data-confirm="Cancel this pre-order?" data-confirm-action="Cancel" data-confirm-severity="destructive">

@@ -411,6 +411,70 @@
             </div>
             @endif
 
+            {{-- Admin: egg prices --}}
+            @if(auth()->user()->isAdmin())
+            <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+                <h2 class="text-base font-medium text-[#333333] mb-1">Egg Prices</h2>
+                <p class="text-xs text-[#6B7280] mb-4">Per-tray (30 eggs) and per-piece selling prices in pesos, used for pre-order totals. Blank means not set. Changing prices affects only future orders.</p>
+                @php $allEmpty = collect(\App\Enums\EggSize::saleValues())->every(fn ($sz) => empty($eggPrices[$sz] ?? null)); @endphp
+                @if($allEmpty)
+                <p class="text-xs mb-4 rounded-lg px-3 py-2" style="background-color: #f6f5f4; color: #6B7280;">No prices set yet — pre-order totals will show as unpriced until you save prices below.</p>
+                @endif
+                <form method="POST" action="{{ route('settings.egg-prices.update') }}"
+                      onsubmit="var btn=this.querySelector('button[type=submit]');btn.disabled=true;btn.textContent='Saving\u2026';">
+                    @csrf @method('PUT')
+                    <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b" style="border-color: #e6e6e6;">
+                                <th class="text-left text-xs font-medium py-2 pr-3" style="color: #6B7280;">SIZE</th>
+                                <th class="text-right text-xs font-medium py-2 pr-3" style="color: #6B7280;">PER TRAY (₱)</th>
+                                <th class="text-right text-xs font-medium py-2" style="color: #6B7280;">PER PIECE (₱)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach(\App\Enums\EggSize::saleValues() as $sz)
+                            <tr class="border-b" style="border-color: #f0f0f0;">
+                                <td class="py-2 pr-3 font-medium" style="color: #333333;">{{ \App\Enums\EggSize::labelFor($sz) }}</td>
+                                <td class="py-2 pr-3">
+                                    <div class="flex items-center justify-end gap-1">
+                                        <span class="text-xs" style="color: #a39e98;">₱</span>
+                                        <input type="number" name="prices[{{ $sz }}][tray]" step="0.01" min="0" max="999999.99" placeholder="—"
+                                               value="{{ old("prices.{$sz}.tray", $eggPrices[$sz]->price_per_tray ?? '') }}"
+                                               class="w-28 border rounded-lg px-2 py-1.5 text-sm text-right bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                                               style="border-color: #e6e6e6; color: #1f1f1f;">
+                                    </div>
+                                    <x-input-error name="prices.{{ $sz }}.tray" />
+                                </td>
+                                <td class="py-2">
+                                    <div class="flex items-center justify-end gap-1">
+                                        <span class="text-xs" style="color: #a39e98;">₱</span>
+                                        <input type="number" name="prices[{{ $sz }}][piece]" step="0.01" min="0" max="999999.99" placeholder="—"
+                                               value="{{ old("prices.{$sz}.piece", $eggPrices[$sz]->price_per_piece ?? '') }}"
+                                               class="w-28 border rounded-lg px-2 py-1.5 text-sm text-right bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                                               style="border-color: #e6e6e6; color: #1f1f1f;">
+                                    </div>
+                                    <x-input-error name="prices.{{ $sz }}.piece" />
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                    </div>
+                    <div class="flex items-center justify-between gap-3 mt-4">
+                        <p class="text-xs" style="color: #a39e98;">
+                            @if(!empty($lastPriceChange))
+                            Last updated by {{ $lastPriceChange->changedBy?->name ?? '—' }} on {{ $lastPriceChange->created_at->format('m/d/Y') }}
+                            @else
+                            Never updated
+                            @endif
+                        </p>
+                        <x-button type="submit" class="px-6 py-2">Save Prices</x-button>
+                    </div>
+                </form>
+            </div>
+            @endif
+
             {{-- Admin: clear database --}}
             @if(auth()->user()->isAdmin())
             <div class="bg-white rounded-lg border border-red-200 p-5">

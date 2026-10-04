@@ -11,6 +11,7 @@ use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\EggCountSseController;
 use App\Http\Controllers\EggLoggingController;
 use App\Http\Controllers\EggLogsSseController;
+use App\Http\Controllers\EggPriceController;
 use App\Http\Controllers\EggProductionHistoryController;
 use App\Http\Controllers\EggStockController;
 use App\Http\Controllers\EnvironmentController;
@@ -252,6 +253,7 @@ Route::middleware(['auth', 'system-time-set'])->group(function () {
     Route::post('/settings/clear-database', [AccountController::class, 'clearDatabase'])->name('settings.clear-database')->middleware('admin');
     Route::get('/settings/system-time', [SystemTimeController::class, 'show'])->name('settings.system-time')->middleware('admin');
     Route::post('/settings/system-time', [SystemTimeController::class, 'update'])->name('settings.system-time.update')->middleware('admin');
+    Route::put('/settings/egg-prices', [EggPriceController::class, 'update'])->name('settings.egg-prices.update')->middleware('admin');
     Route::redirect('/account', '/profile', 301);
     Route::post('/account/password', [AccountController::class, 'updatePassword'])->name('account.password');
     Route::post('/account/pin',      [AccountController::class, 'updatePin'])->name('account.pin');
