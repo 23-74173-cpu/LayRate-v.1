@@ -67,6 +67,15 @@
                 <i data-lucide="plus" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
+        @if(auth()->user()->isAdmin())
+        <button type="button" onclick="openEggPricesModal()"
+                class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>Egg Prices</span>
+            <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
+                <i data-lucide="tag" class="w-4 h-4 text-navy"></i>
+            </div>
+        </button>
+        @endif
     </template>
     <template id="egg-fab-actions-preorders">
         <button type="button" onclick="document.getElementById('addOrderModal').style.display = 'flex'"
@@ -76,7 +85,44 @@
                 <i data-lucide="plus" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
+        @if(auth()->user()->isAdmin())
+        <button type="button" onclick="openEggPricesModal()"
+                class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>Egg Prices</span>
+            <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
+                <i data-lucide="tag" class="w-4 h-4 text-navy"></i>
+            </div>
+        </button>
+        @endif
     </template>
+
+    {{-- Egg Prices modal (admin-only entry via the dock). The form loads on
+         demand through the frame so egg pages never pay for it unopened. --}}
+    <div id="eggPricesModal" data-modal data-close="closeEggPricesModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+        <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEggPricesModal()"></div>
+        <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+            <div class="flex items-center justify-between mb-1">
+                <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Egg Prices</h2>
+                <button type="button" onclick="closeEggPricesModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                    <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+                </button>
+            </div>
+            <p class="text-xs text-[#6B7280] mb-4">Per-tray (30 eggs) and per-piece selling prices in pesos. Typing one fills in the other — clear a field to leave it unset.</p>
+            <turbo-frame id="eggPricesFrame" target="_top">
+                <p class="text-xs" style="color: #a39e98;">Loading prices…</p>
+            </turbo-frame>
+        </div>
+    </div>
+    <script>
+    function openEggPricesModal() {
+        document.getElementById('eggPricesFrame').src = '{{ route('settings.egg-prices.index') }}';
+        document.getElementById('eggPricesModal').style.display = 'flex';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+    function closeEggPricesModal() {
+        document.getElementById('eggPricesModal').style.display = 'none';
+    }
+    </script>
 
     <script>
     (function() {

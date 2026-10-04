@@ -7,9 +7,22 @@ use App\Models\EggPrice;
 use App\Models\EggPriceHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class EggPriceController extends Controller
 {
+    /**
+     * Price form data for the dock modal (same partial as the Profile card).
+     * Served through a turbo-frame so egg pages never pay for it unopened.
+     */
+    public function index()
+    {
+        return view('settings.egg-prices-modal', [
+            'eggPrices' => EggPrice::all()->keyBy('egg_size')->all(),
+            'lastPriceChange' => EggPriceHistory::with('changedBy')->latest()->first(),
+        ]);
+    }
+
     /**
      * Save the admin-configured egg prices (per size: tray + piece, either
      * blank for "not set"). Every change — including the first entry, whose
@@ -26,10 +39,21 @@ class EggPriceController extends Controller
             $rules["prices.{$size}.piece"] = 'nullable|decimal:0,2|min:0|max:999999.99';
         }
 
-        $validated = $request->validate($rules, [], [
+        $validator = Validator::make($request->all(), $rules, [], [
             'prices.*.tray' => 'tray price',
             'prices.*.piece' => 'piece price',
         ]);
+
+        // The form also lives in the Egg Management dock modal: validation
+        // failures always land back on the Profile System tab, where the
+        // same form (and its error slots) is waiting.
+        if ($validator->fails()) {
+            return redirect()->route('profile', ['tab' => 'system'])
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $validated = $validator->validated();
 
         DB::transaction(function () use ($validated, $request) {
             foreach (EggSize::saleValues() as $size) {
