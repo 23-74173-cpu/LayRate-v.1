@@ -415,7 +415,7 @@
             @if(auth()->user()->isAdmin())
             <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
                 <h2 class="text-base font-medium text-[#333333] mb-1">Egg Prices</h2>
-                <p class="text-xs text-[#6B7280] mb-4">Per-tray (30 eggs) and per-piece selling prices in pesos, used for pre-order totals. Blank means not set. Changing prices affects only future orders.</p>
+                <p class="text-xs text-[#6B7280] mb-4">Per-tray (30 eggs) and per-piece selling prices in pesos, used for pre-order totals. Typing one fills in the other — clear a field to leave it unset. Changing prices affects only future orders.</p>
                 @php $allEmpty = collect(\App\Enums\EggSize::saleValues())->every(fn ($sz) => empty($eggPrices[$sz] ?? null)); @endphp
                 @if($allEmpty)
                 <p class="text-xs mb-4 rounded-lg px-3 py-2" style="background-color: #f6f5f4; color: #6B7280;">No prices set yet — pre-order totals will show as unpriced until you save prices below.</p>
@@ -441,11 +441,10 @@
                                         <span class="text-xs" style="color: #a39e98;">₱</span>
                                         <input type="number" name="prices[{{ $sz }}][tray]" id="priceTray{{ $sz }}" step="0.01" min="0" max="999999.99" placeholder="—"
                                                value="{{ old("prices.{$sz}.tray", $eggPrices[$sz]->price_per_tray ?? '') }}"
-                                               oninput="updatePriceHints('{{ $sz }}')"
+                                               oninput="mirrorPriceFromTray('{{ $sz }}')"
                                                class="w-28 border rounded-lg px-2 py-1.5 text-sm text-right bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                                style="border-color: #e6e6e6; color: #1f1f1f;">
                                     </div>
-                                    <div id="priceTrayHint{{ $sz }}" class="text-xs text-right mt-0.5 tabular-nums" style="color: #a39e98;"></div>
                                     <x-input-error name="prices.{{ $sz }}.tray" />
                                 </td>
                                 <td class="py-2">
@@ -453,11 +452,10 @@
                                         <span class="text-xs" style="color: #a39e98;">₱</span>
                                         <input type="number" name="prices[{{ $sz }}][piece]" id="pricePiece{{ $sz }}" step="0.01" min="0" max="999999.99" placeholder="—"
                                                value="{{ old("prices.{$sz}.piece", $eggPrices[$sz]->price_per_piece ?? '') }}"
-                                               oninput="updatePriceHints('{{ $sz }}')"
+                                               oninput="mirrorPriceFromPiece('{{ $sz }}')"
                                                class="w-28 border rounded-lg px-2 py-1.5 text-sm text-right bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                                style="border-color: #e6e6e6; color: #1f1f1f;">
                                     </div>
-                                    <div id="pricePieceHint{{ $sz }}" class="text-xs text-right mt-0.5 tabular-nums" style="color: #a39e98;"></div>
                                     <x-input-error name="prices.{{ $sz }}.piece" />
                                 </td>
                             </tr>
@@ -477,29 +475,25 @@
                     </div>
                 </form>
                 <script>
-                // Live tray<->piece conversion hints. Display only — hints never
-                // write into the other field, so blank stays "not set".
-                // Integer-cent math, half-up, same as the server pricing rule.
-                function updatePriceHints(sz) {
+                // Live tray<->piece conversion, written into the other input.
+                // The field being typed in wins; clearing it clears the mirror
+                // back to blank ("not set"). Integer-cent math, half-up.
+                function mirrorPriceFromTray(sz) {
                     var trayEl = document.getElementById('priceTray' + sz);
                     var pieceEl = document.getElementById('pricePiece' + sz);
-                    var trayHint = document.getElementById('priceTrayHint' + sz);
-                    var pieceHint = document.getElementById('pricePieceHint' + sz);
                     if (!trayEl || !pieceEl) return;
-                    var tray = parseFloat(trayEl.value);
-                    var piece = parseFloat(pieceEl.value);
-                    if (trayHint) {
-                        trayHint.textContent = (!isNaN(piece) && pieceEl.value !== '')
-                            ? '≈ ₱' + ((Math.round(piece * 100) * 30) / 100).toFixed(2) + '/tray'
-                            : '';
-                    }
-                    if (pieceHint) {
-                        pieceHint.textContent = (!isNaN(tray) && trayEl.value !== '')
-                            ? '≈ ₱' + (Math.round(Math.round(tray * 100) / 30) / 100).toFixed(2) + '/pc'
-                            : '';
-                    }
+                    if (trayEl.value === '' || isNaN(parseFloat(trayEl.value))) { pieceEl.value = ''; return; }
+                    var trayCents = Math.round(parseFloat(trayEl.value) * 100);
+                    pieceEl.value = (Math.round(trayCents / 30) / 100).toFixed(2);
                 }
-                @json(\App\Enums\EggSize::saleValues()).forEach(updatePriceHints);
+                function mirrorPriceFromPiece(sz) {
+                    var trayEl = document.getElementById('priceTray' + sz);
+                    var pieceEl = document.getElementById('pricePiece' + sz);
+                    if (!trayEl || !pieceEl) return;
+                    if (pieceEl.value === '' || isNaN(parseFloat(pieceEl.value))) { trayEl.value = ''; return; }
+                    var pieceCents = Math.round(parseFloat(pieceEl.value) * 100);
+                    trayEl.value = ((pieceCents * 30) / 100).toFixed(2);
+                }
                 </script>
             </div>
             @endif
