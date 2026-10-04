@@ -391,26 +391,6 @@
             </div>
             @endif
 
-            {{-- Admin: database backup --}}
-            @if(auth()->user()->isAdmin())
-            <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-                <h2 class="text-base font-medium text-[#333333] mb-1">Database Backup</h2>
-                <p class="text-xs text-[#6B7280] mb-4">Export a full SQL dump of the database. The download starts automatically.</p>
-                <form method="POST" action="{{ route('settings.backup.now') }}" data-turbo="false"
-                      onsubmit="var btn=this.querySelector('button[type=submit]');btn.disabled=true;btn.textContent='Backing up\u2026';">
-                    @csrf
-                    <button type="submit"
-                            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
-                            style="color: var(--color-navy); border: 1px solid var(--color-navy);"
-                            onmouseover="this.style.backgroundColor='#f0f7ff'"
-                            onmouseout="this.style.backgroundColor='transparent'">
-                        <i data-lucide="database" class="w-4 h-4"></i>
-                        Backup Database Now
-                    </button>
-                </form>
-            </div>
-            @endif
-
             {{-- Admin: egg prices --}}
             @if(auth()->user()->isAdmin())
             <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
@@ -495,6 +475,26 @@
                     trayEl.value = ((pieceCents * 30) / 100).toFixed(2);
                 }
                 </script>
+            </div>
+            @endif
+
+            {{-- Admin: database backup --}}
+            @if(auth()->user()->isAdmin())
+            <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+                <h2 class="text-base font-medium text-[#333333] mb-1">Database Backup</h2>
+                <p class="text-xs text-[#6B7280] mb-4">Export a full SQL dump of the database. The download starts automatically.</p>
+                <form method="POST" action="{{ route('settings.backup.now') }}" data-turbo="false"
+                      onsubmit="var btn=this.querySelector('button[type=submit]');btn.disabled=true;btn.textContent='Backing up\u2026';">
+                    @csrf
+                    <button type="submit"
+                            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+                            style="color: var(--color-navy); border: 1px solid var(--color-navy);"
+                            onmouseover="this.style.backgroundColor='#f0f7ff'"
+                            onmouseout="this.style.backgroundColor='transparent'">
+                        <i data-lucide="database" class="w-4 h-4"></i>
+                        Backup Database Now
+                    </button>
+                </form>
             </div>
             @endif
 
