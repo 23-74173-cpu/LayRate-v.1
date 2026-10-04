@@ -187,6 +187,9 @@
                 <button type="submit" id="addOrderSubmitBtn"
                         class="flex-1 bg-navy text-white py-2.5 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed">Add Pre-Order</button>
             </div>
+            @if(!empty($autopostOn))
+            <p class="text-xs mt-3" style="color: #a39e98;">Auto-posting is on — marking this order paid later posts its total to Finance. Full payments only.</p>
+            @endif
         </form>
     </div>
 </div>
@@ -266,6 +269,13 @@
                     </select>
                     <x-input-error name="status" />
                 </div>
+                @if(auth()->user()->isAdmin())
+                <label class="flex items-start gap-2 rounded-lg px-3 py-2.5 text-sm" style="background-color: #f6f5f4;">
+                    <input type="checkbox" name="mark_paid" value="1" class="mt-0.5 shrink-0">
+                    <span style="color: #333333;">Mark as paid now <span style="color: #a39e98;">(full payment only — posts the order total to Finance as income)</span></span>
+                </label>
+                @endif
+                <x-input-error name="payment_status" />
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">NOTES <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
                     <textarea name="notes" id="editNotes" rows="2"
@@ -276,6 +286,9 @@
                     <span class="text-xs font-semibold tracking-[0.05em] uppercase" style="color: #615d59;">Order total</span>
                     <span id="editSnapshotTotal" class="font-semibold tabular-nums" style="color: #1f1f1f;">—</span>
                 </div>
+                @if(!empty($autopostOn))
+                <p class="text-xs" style="color: #a39e98;">Auto-posting is on{{ !empty($autopostDate) ? ' since ' . $autopostDate : '' }} — marking paid posts the total to Finance. Full payments only.</p>
+                @endif
             </div>
 
             <div class="flex gap-3 mt-5">

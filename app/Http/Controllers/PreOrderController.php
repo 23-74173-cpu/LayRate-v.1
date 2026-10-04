@@ -10,8 +10,10 @@ use App\Models\EggStockBatch;
 use App\Models\Hen;
 use App\Models\PreOrder;
 use App\Models\ProductionLog;
+use App\Services\FinancePostingService;
 use App\Services\ReportingDateService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -118,6 +120,8 @@ class PreOrderController extends Controller
                 'tray' => $p->price_per_tray,
                 'piece' => $p->price_per_piece,
             ])->all(),
+            'autopostOn' => FinancePostingService::autopostOn(),
+            'autopostDate' => FinancePostingService::cutover(),
             'filters' => [
                 'status' => $statusFilter ?? 'all',
                 'egg_size' => $sizeFilter ?? 'all',
@@ -198,8 +202,42 @@ class PreOrderController extends Controller
             $data['fulfillment_date'] = ReportingDateService::reportingDateString();
         }
 
+        // Marking paid is admin-only (operators keep fulfil/cancel as today);
+        // enforced here, not just by hiding the checkbox.
+        $markPaid = $request->boolean('mark_paid');
+
+        if ($markPaid && ! $request->user()->isAdmin()) {
+            abort(403, 'Only admins can mark orders paid.');
+        }
+
+        $wasPaid = $order->payment_status === 'paid';
+        $oldStatus = $order->status;
+
         try {
-            $order->updateWithinPool($data);
+            DB::transaction(function () use ($order, $data, $request, $markPaid, $wasPaid, $oldStatus) {
+                $order->updateWithinPool($data);
+                $order->refresh();
+
+                if ($markPaid && ! $wasPaid && $order->status !== 'cancelled') {
+                    $order->update(['payment_status' => 'paid', 'paid_at' => ReportingDateService::now()]);
+                    $order->refresh();
+                    FinancePostingService::postOrderIncome($order, $request->user()->id);
+                } elseif ($markPaid && ! $wasPaid) {
+                    // Paid and cancelled in one save: record payment, post
+                    // nothing for a dead order.
+                    $order->update(['payment_status' => 'paid', 'paid_at' => ReportingDateService::now()]);
+                    $order->refresh();
+                }
+
+                if ($wasPaid && $oldStatus !== 'cancelled' && $order->status === 'cancelled') {
+                    FinancePostingService::reverseOrderIncome($order, $request->user()->id);
+                }
+            });
+        } catch (\DomainException $e) {
+            return redirect()->route('eggs.preorders')
+                ->with('reopen_edit_order', $order->id)
+                ->withErrors(['payment_status' => $e->getMessage()])
+                ->withInput();
         } catch (\OverflowException $e) {
             return redirect()->route('eggs.preorders')
                 ->with('reopen_edit_order', $order->id)

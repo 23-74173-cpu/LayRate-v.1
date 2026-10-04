@@ -49,6 +49,8 @@ class FinanceController extends Controller
             'totalExpense' => $totalExpense,
             'net'          => $totalIncome - $totalExpense,
             'breakdown'    => $breakdown,
+            'autopostOn'   => \App\Services\FinancePostingService::autopostOn(),
+            'autopostDate' => \App\Services\FinancePostingService::cutover(),
         ]);
     }
 
@@ -71,6 +73,12 @@ class FinanceController extends Controller
 
     public function update(Request $request, FinanceTransaction $financeTransaction)
     {
+        // Auto-posted rows are corrected through their source (cancel the
+        // order, edit the batch) — never edited by hand.
+        if ($financeTransaction->source_type !== null) {
+            abort(403, 'Auto-posted entries cannot be edited manually.');
+        }
+
         $validator = $this->validator($request);
 
         if ($validator->fails()) {
@@ -87,9 +95,31 @@ class FinanceController extends Controller
 
     public function destroy(FinanceTransaction $financeTransaction)
     {
+        if ($financeTransaction->source_type !== null) {
+            abort(403, 'Auto-posted entries cannot be deleted manually.');
+        }
+
         $financeTransaction->delete();
 
         return redirect()->route('finance.index')->with('success', 'Transaction deleted.');
+    }
+
+    /**
+     * Save the autopost cutover date (admin only). Empty means OFF — nothing
+     * auto-posts and nothing dated before a set cutover ever will.
+     */
+    public function updateCutover(Request $request)
+    {
+        $data = $request->validate([
+            'finance_autopost_start' => 'nullable|date_format:Y-m-d',
+        ]);
+
+        \App\Models\Setting::set(
+            'finance_autopost_start',
+            ($data['finance_autopost_start'] ?? null) ?: null
+        );
+
+        return redirect()->route('finance.index')->with('success', 'Auto-posting setting saved.');
     }
 
     private function validator(Request $request)

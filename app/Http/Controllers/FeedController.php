@@ -9,6 +9,7 @@ use App\Models\FeedBatch;
 use App\Models\FeedConsumptionLog;
 use App\Models\Note;
 use App\Services\FcrCalculator;
+use App\Services\FinancePostingService;
 use App\Services\ReportingDateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +19,11 @@ class FeedController extends Controller
 {
     public function index()
     {
-        return view('feed', ['preselectedCageId' => (int) request('cage_id') ?: null]);
+        return view('feed', [
+            'preselectedCageId' => (int) request('cage_id') ?: null,
+            'autopostOn' => FinancePostingService::autopostOn(),
+            'autopostDate' => FinancePostingService::cutover(),
+        ]);
     }
 
     public function batchSessionData()
@@ -254,7 +259,24 @@ class FeedController extends Controller
         }
 
         $data = $validator->validated();
-        $batch = FeedBatch::create($data);
+
+        try {
+            $batch = DB::transaction(function () use ($data, $request) {
+                $batch = FeedBatch::create($data);
+                FinancePostingService::syncBatchExpense($batch->refresh(), null, auth()->id());
+
+                return $batch;
+            });
+        } catch (\DomainException $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => ['batch' => $e->getMessage()]], 422);
+            }
+
+            return redirect()->back()
+                ->with('reopen_add_batch', true)
+                ->withErrors(['batch' => $e->getMessage()])
+                ->withInput();
+        }
 
         Note::saveFromSection($data['notes'] ?? null, 'Feed');
 
@@ -282,7 +304,29 @@ class FeedController extends Controller
 
         $data = $validator->validated();
         $oldNotes = trim((string) $feedBatch->notes);
-        $feedBatch->update($data);
+        $oldTriple = [
+            'unit_cost' => $feedBatch->unit_cost,
+            'total_quantity_kg' => $feedBatch->total_quantity_kg,
+            'date_received' => $feedBatch->date_received instanceof \DateTimeInterface
+                ? $feedBatch->date_received->format('Y-m-d')
+                : $feedBatch->date_received,
+        ];
+
+        try {
+            DB::transaction(function () use ($feedBatch, $data, $oldTriple) {
+                $feedBatch->update($data);
+                FinancePostingService::syncBatchExpense($feedBatch->refresh(), $oldTriple, auth()->id());
+            });
+        } catch (\DomainException $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => ['batch' => $e->getMessage()]], 422);
+            }
+
+            return redirect()->back()
+                ->with('reopen_edit_batch', $feedBatch->id)
+                ->withErrors(['batch' => $e->getMessage()])
+                ->withInput();
+        }
 
         // Only a changed note is copied (the edit box comes pre-filled).
         if (array_key_exists('notes', $data) && trim((string) $data['notes']) !== $oldNotes) {
@@ -568,7 +612,10 @@ class FeedController extends Controller
             return redirect()->back()->with('error', "Cannot delete this batch — {$count} consumption log(s) reference it. Remove those records first.");
         }
 
-        $feedBatch->delete();
+        DB::transaction(function () use ($feedBatch) {
+            $feedBatch->delete();
+            FinancePostingService::reverseBatchExpense($feedBatch, auth()->id());
+        });
 
         if (request()->expectsJson()) {
             return response()->json(['success' => true]);

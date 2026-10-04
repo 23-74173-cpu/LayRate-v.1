@@ -99,6 +99,9 @@
                         onmouseout="this.style.backgroundColor='transparent'">Cancel</button>
                 <x-button type="submit" class="flex-1 py-2.5">Add Batch</x-button>
             </div>
+            @if(!empty($autopostOn))
+            <p class="text-xs mt-3" style="color: #a39e98;">Auto-posting is on — this batch posts its Feed Cost to Finance automatically.</p>
+            @endif
         </form>
     </div>
 </div>
@@ -162,6 +165,9 @@
                         onmouseout="this.style.backgroundColor='transparent'">Cancel</button>
                 <button type="submit" class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity" style="background-color: var(--color-navy);" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Save</button>
             </div>
+            @if(!empty($autopostOn))
+            <p class="text-xs mt-3" style="color: #a39e98;">Auto-posting is on — saving updates the linked Feed Cost entry in Finance.</p>
+            @endif
         </form>
     </div>
 </div>

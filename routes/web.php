@@ -280,4 +280,5 @@ Route::middleware(['auth', 'system-time-set'])->group(function () {
     Route::post('/finance',                        [FinanceController::class, 'store'])->name('finance.store');
     Route::put('/finance/{financeTransaction}',    [FinanceController::class, 'update'])->name('finance.update');
     Route::delete('/finance/{financeTransaction}', [FinanceController::class, 'destroy'])->name('finance.destroy')->middleware('admin');
+    Route::put('/settings/finance-autopost', [FinanceController::class, 'updateCutover'])->name('settings.finance-autopost.update')->middleware('admin');
 });

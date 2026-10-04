@@ -36,6 +36,28 @@
         </x-kpi-card>
     </div>
 
+    {{-- ── Auto-posting notice ── --}}
+    @if(!empty($autopostOn))
+    <p class="text-xs rounded-lg px-4 py-2.5" style="background-color: #eef4ff; color: #1d4e8f;">Auto-posting is on since {{ $autopostDate }} — paid pre-orders post Egg Sales income and new feed batches post Feed Cost automatically. Please don't enter those two by hand.</p>
+    @else
+    <p class="text-xs rounded-lg px-4 py-2.5" style="background-color: #f6f5f4; color: #6B7280;">Auto-posting is off — record all income and expenses manually below.</p>
+    @endif
+
+    @if(auth()->user()->isAdmin())
+    <x-card padding="p-4">
+        <form method="POST" action="{{ route('settings.finance-autopost.update') }}" class="flex flex-wrap items-end gap-3">
+            @csrf @method('PUT')
+            <div>
+                <label for="autopostDate" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">AUTO-POST FROM</label>
+                <input type="date" id="autopostDate" name="finance_autopost_start" value="{{ $autopostDate ?? '' }}" max="{{ $today }}" class="{{ $filterClass }}">
+                <x-input-error name="finance_autopost_start" />
+            </div>
+            <x-button type="submit" class="px-5 py-2">Save</x-button>
+            <p class="text-xs basis-full" style="color: #a39e98;">Empty means off. Nothing dated before the set date is ever auto-posted.</p>
+        </form>
+    </x-card>
+    @endif
+
     {{-- ── Filters ── --}}
     <x-card padding="p-4">
         <form method="GET" action="{{ route('finance.index') }}" class="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-end sm:gap-x-4 sm:gap-y-3 gap-3">
@@ -215,15 +237,20 @@
                                   style="background-color: {{ $txn->isIncome() ? '#e8f5ec' : '#fbe4e6' }}; color: {{ $txn->isIncome() ? '#1f6b3a' : '#9b1c24' }};">
                                 {{ $txn->isIncome() ? 'Income' : 'Expense' }}
                             </span>
+                            @if($txn->source_type !== null)
+                            <span class="px-2 py-0.5 rounded-full text-xs font-medium ml-1" title="Posted automatically — correct it through its order or batch"
+                                  style="background-color: #eef2ff; color: #1d4e8f;">Auto</span>
+                            @endif
                         </td>
                         <td class="px-5 py-3 text-[#333333]">{{ $txn->category }}</td>
                         <td class="px-5 py-3 text-[#6B7280]">{{ $txn->cage?->cage_code ?? 'Whole farm' }}</td>
                         <td class="px-5 py-3 text-[#6B7280] break-words" style="max-width: 20rem;">{{ $txn->description ?: '—' }}</td>
-                        <td class="px-5 py-3 text-right font-semibold whitespace-nowrap" style="color: {{ $txn->isIncome() ? '#1f6b3a' : '#9b1c24' }};">
-                            {{ $txn->isIncome() ? '+' : '-' }}{{ $peso($txn->amount) }}
+                        <td class="px-5 py-3 text-right font-semibold whitespace-nowrap" style="color: {{ (float) $txn->amount < 0 ? '#9b1c24' : ($txn->isIncome() ? '#1f6b3a' : '#9b1c24') }};">
+                            {{ (float) $txn->amount < 0 ? '−' : ($txn->isIncome() ? '+' : '-') }}{{ $peso($txn->amount) }}
                         </td>
                         <td class="px-5 py-3 text-[#6B7280] whitespace-nowrap">{{ $txn->recorder?->name ?? '—' }}</td>
                         <td class="px-5 py-3">
+                            @if($txn->source_type === null)
                             <div class="flex items-center justify-end gap-1">
                                 <button type="button"
                                         onclick="openFinanceEdit({{ Js::from([
@@ -249,6 +276,11 @@
                                 </form>
                                 @endcan
                             </div>
+                            @else
+                            <div class="flex items-center justify-end">
+                                <span class="text-xs" style="color: #a39e98;" title="Correct through its order or batch">Locked</span>
+                            </div>
+                            @endif
                         </td>
                     </tr>
                     @empty

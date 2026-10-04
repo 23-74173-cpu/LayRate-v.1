@@ -26,12 +26,15 @@ class PreOrder extends Model
         'unit_price_piece',
         'total_amount',
         'tray_size',
+        'payment_status',
+        'paid_at',
     ];
 
     protected $casts = [
         'egg_count' => 'integer',
         'requested_date' => 'date',
         'fulfillment_date' => 'date',
+        'paid_at' => 'datetime',
         'unit_price_tray' => 'decimal:2',
         'unit_price_piece' => 'decimal:2',
         'total_amount' => 'decimal:2',

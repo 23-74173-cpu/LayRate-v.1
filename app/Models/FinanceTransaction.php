@@ -8,8 +8,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class FinanceTransaction extends Model
 {
     // recorded_by is set by the controller from the signed-in user, never
-    // from request input.
-    protected $fillable = ['type', 'category', 'amount', 'description', 'date', 'cage_id'];
+    // from request input. source_type/source_id/kind are set only by
+    // FinancePostingService (the request validator whitelists other keys),
+    // and mark auto-posted rows the UI must not let anyone edit or delete.
+    protected $fillable = ['type', 'category', 'amount', 'description', 'date', 'cage_id', 'source_type', 'source_id', 'kind'];
 
     protected $casts = [
         'date'   => 'date',
