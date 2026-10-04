@@ -52,7 +52,9 @@ class PrintableTagsController extends Controller
 
         $data = $request->validate([
             'paper' => 'nullable|in:' . implode(',', array_keys(self::PAPERS)),
-            'range' => 'nullable|in:all,7,30',
+            'range' => 'nullable|in:all,7,30,custom',
+            'from_date' => 'nullable|date|required_if:range,custom',
+            'to_date' => 'nullable|date|required_if:range,custom|after_or_equal:from_date',
             'ids'   => 'nullable|array',
             'ids.*' => 'integer',
         ]);
@@ -61,7 +63,10 @@ class PrintableTagsController extends Controller
 
         $batches = EggStockBatch::with('cage')
             ->when(! empty($data['ids']), fn ($q) => $q->whereIn('id', $data['ids']))
-            ->when(empty($data['ids']) && $range !== 'all', fn ($q) => $q->where(
+            ->when(empty($data['ids']) && ($range ?? 'all') === 'custom', fn ($q) => $q->whereBetween(
+                'harvested_date', [$data['from_date'], $data['to_date']]
+            ))
+            ->when(empty($data['ids']) && ($range ?? 'all') !== 'all' && ($range ?? 'all') !== 'custom', fn ($q) => $q->where(
                 'harvested_date', '>=', now()->subDays((int) $range - 1)->toDateString()
             ))
             ->orderByDesc('harvested_date')

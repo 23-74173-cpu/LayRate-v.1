@@ -385,14 +385,64 @@
 {{-- Print all QR labels (PDF), opened from the dock "+" menu --}}
 <x-print-pdf-modal id="eggLabelsModal" title="Print QR Labels" :action="route('eggs.stocks.labels-pdf')"
     description="Every stock batch on one sheet, 3 labels per row with cut lines. Each label shows the size, egg count, harvest date, cage, batch number and freshness dates, so a cut label can't be put on the wrong tray.">
-    <div>
+    <div id="eggLabelsRangeWrap">
         <label for="eggLabelsRange" class="block text-xs font-medium tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Batches</label>
-        <select id="eggLabelsRange" name="range" class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+        <select id="eggLabelsRange" name="range" onchange="onEggLabelsRangeChange()"
+                class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
             <option value="all">All batches</option>
             <option value="7">Harvested in the last 7 days</option>
             <option value="30">Harvested in the last 30 days</option>
+            <option value="custom">Custom date range…</option>
         </select>
     </div>
+    <div id="eggLabelsCustomWrap" style="display: none;">
+        <label class="block text-xs font-medium tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Harvested between</label>
+        <div class="grid grid-cols-2 gap-3">
+            <div>
+                <label for="eggLabelsFrom" class="block text-xs mb-1" style="color: #6B7280;">FROM</label>
+                <input type="date" id="eggLabelsFrom" name="from_date" oninput="onEggLabelsCustomInput()"
+                       class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+            </div>
+            <div>
+                <label for="eggLabelsTo" class="block text-xs mb-1" style="color: #6B7280;">TO</label>
+                <input type="date" id="eggLabelsTo" name="to_date" oninput="onEggLabelsCustomInput()"
+                       class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+            </div>
+        </div>
+        <button type="button" onclick="resetEggLabelsRange()" class="text-xs mt-2 hover:underline" style="color: var(--color-navy);">← Back to presets</button>
+    </div>
+    <script>
+    (function() {
+        var modal = document.getElementById('eggLabelsModal');
+        function showPresets() {
+            document.getElementById('eggLabelsRangeWrap').style.display = '';
+            document.getElementById('eggLabelsCustomWrap').style.display = 'none';
+            document.getElementById('eggLabelsRange').value = 'all';
+            document.getElementById('eggLabelsFrom').value = '';
+            document.getElementById('eggLabelsTo').value = '';
+        }
+        window.onEggLabelsRangeChange = function() {
+            var custom = document.getElementById('eggLabelsRange').value === 'custom';
+            document.getElementById('eggLabelsRangeWrap').style.display = custom ? 'none' : '';
+            document.getElementById('eggLabelsCustomWrap').style.display = custom ? '' : 'none';
+            if (custom) document.getElementById('eggLabelsFrom').focus();
+        };
+        window.onEggLabelsCustomInput = function() {
+            // Both dates cleared → nothing to filter by, back to the dropdown.
+            if (!document.getElementById('eggLabelsFrom').value && !document.getElementById('eggLabelsTo').value) {
+                showPresets();
+            }
+        };
+        window.resetEggLabelsRange = showPresets;
+        // The modal opens/closes via inline display changes elsewhere, so
+        // watch it: leaving the modal always restores the normal dropdown.
+        if (modal && window.MutationObserver) {
+            new MutationObserver(function() {
+                if (modal.style.display === 'none') showPresets();
+            }).observe(modal, {attributes: true, attributeFilter: ['style']});
+        }
+    })();
+    </script>
 </x-print-pdf-modal>
 
 <script>
