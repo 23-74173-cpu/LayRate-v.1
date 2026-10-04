@@ -50,18 +50,77 @@ class FcrCalculator
             ->whereBetween('log_date', [$start->toDateString(), $end->toDateString()])
             ->sum('feed_consumed_kg');
 
-        $eggMassKg = ProductionLog::with('eggSizeLogs')
-            ->real()
-            ->whereHas('cageSlot', fn ($q) => $q->where('cage_id', $cage->id))
-            ->whereBetween('log_date', [$start->toDateString(), $end->toDateString()])
-            ->get()
-            ->sum(fn ($log) => self::eggMassForLog($log));
+        $eggMassKg = self::eggMassByDate($cage, false, $start->toDateString(), $end->toDateString())->sum();
 
         if ($feedKg <= 0 || $eggMassKg <= 0) {
             return null;
         }
 
         return round($feedKg / $eggMassKg, 2);
+    }
+
+    /**
+     * Egg mass (kg) per log date, computed in SQL with exactly the rule of
+     * eggMassForLog(): a log with egg size rows weighs SUM(count x size
+     * weight, fallback weight for any other size); a log without size rows
+     * weighs egg_count x fallback weight. Same row set as the old Eloquent
+     * fetches: real logs only, slot must exist, scoped to one cage or to
+     * active cages. Returns one row per day instead of hydrating every
+     * production log and its size rows (about 23,000 models for an 11-month
+     * FCR view), which made the FCR panel take ~3 s. Only float summation
+     * order can differ, far below the 3-decimal / 2-decimal display rounding.
+     *
+     * @return Collection<string, float>  'Y-m-d' => kg
+     */
+    private static function eggMassByDate(?Cage $cage, bool $activeCagesOnly, ?string $from = null, ?string $to = null): Collection
+    {
+        $weights = Setting::eggWeights();
+
+        $perLog = DB::table('production_logs as pl')
+            ->where('pl.is_demo', false)
+            ->selectRaw(
+                'pl.id, pl.log_date, pl.egg_count, COUNT(esl.id) AS size_rows, ' .
+                'COALESCE(SUM(esl.`count` * CASE esl.egg_size ' .
+                "WHEN 'small' THEN ? WHEN 'medium' THEN ? WHEN 'large' THEN ? WHEN 'jumbo' THEN ? ELSE ? END), 0) AS sized_grams",
+                [
+                    (float) $weights['small'], (float) $weights['medium'],
+                    (float) $weights['large'], (float) $weights['jumbo'],
+                    (float) $weights['fallback'],
+                ]
+            )
+            ->leftJoin('egg_size_logs as esl', 'esl.production_log_id', '=', 'pl.id')
+            ->join('cage_slots as cs', 'cs.id', '=', 'pl.cage_slot_id')
+            ->when($cage, fn ($q) => $q->where('cs.cage_id', $cage->id))
+            ->when($activeCagesOnly, fn ($q) => $q->join('cages as c', 'c.id', '=', 'cs.cage_id')->where('c.is_active', 1))
+            ->when($from, fn ($q) => $q->where('pl.log_date', '>=', $from))
+            ->when($to, fn ($q) => $q->where('pl.log_date', '<=', $to))
+            ->groupBy('pl.id', 'pl.log_date', 'pl.egg_count');
+
+        return DB::query()->fromSub($perLog, 'sized')
+            ->selectRaw(
+                'sized.log_date, SUM(CASE WHEN sized.size_rows = 0 THEN sized.egg_count * ? ELSE sized.sized_grams END) AS grams',
+                [(float) $weights['fallback']]
+            )
+            ->groupBy('sized.log_date')
+            ->orderBy('sized.log_date')
+            ->pluck('grams', 'log_date')
+            ->map(fn ($grams) => (float) $grams / 1000);
+    }
+
+    /**
+     * Egg mass per period (day/week/month key), from eggMassByDate().
+     *
+     * @return Collection<string, float>
+     */
+    private static function eggMassByPeriod(Collection $byDate, string $groupBy): Collection
+    {
+        $byPeriod = [];
+        foreach ($byDate as $date => $kg) {
+            $period = ProductionTimelineService::periodForDate(Carbon::parse($date), $groupBy);
+            $byPeriod[$period] = ($byPeriod[$period] ?? 0) + $kg;
+        }
+
+        return collect($byPeriod);
     }
 
     /**
@@ -74,12 +133,7 @@ class FcrCalculator
             ->whereHas('cage', fn ($q) => $q->where('is_active', 1))
             ->sum('feed_consumed_kg');
 
-        $eggMassKg = ProductionLog::with('eggSizeLogs')
-            ->real()
-            ->whereHas('cageSlot.cage', fn ($q) => $q->where('is_active', 1))
-            ->whereBetween('log_date', [$start->toDateString(), $end->toDateString()])
-            ->get()
-            ->sum(fn ($log) => self::eggMassForLog($log));
+        $eggMassKg = self::eggMassByDate(null, true, $start->toDateString(), $end->toDateString())->sum();
 
         if ($feedKg <= 0 || $eggMassKg <= 0) {
             return null;
@@ -151,15 +205,10 @@ class FcrCalculator
      * Timeline of FCR per period (day/week/month) across all active cages.
      *
      * $since is optional and defaults to unbounded (existing callers/tests
-     * are unaffected) — but every current caller (FeedController's FCR tab)
-     * does call this with no bound at all, meaning it loads every
-     * production_logs + feed_consumption_logs row ever recorded, with
-     * eggSizeLogs eager-loaded per production row, on every view of that
-     * tab. Weighted egg-mass-per-size is business-critical enough that this
-     * intentionally does NOT change the SQL that computes it — only adds
-     * the option to bound the row-level fetch by date, which the caller can
-     * opt into once a sensible default window is decided (see the
-     * accompanying report — this is flagged, not silently changed).
+     * are unaffected); FeedController's FCR tab passes a recent window.
+     * Egg mass comes from eggMassByDate() (one SQL row per day, same
+     * per-size weight rule as eggMassForLog()) instead of hydrating every
+     * production log with its egg size rows.
      *
      * @return Collection Each item: period, label, feed_kg, egg_mass_kg, fcr
      */
@@ -168,13 +217,6 @@ class FcrCalculator
         if (! in_array($groupBy, ['day', 'week', 'month'])) {
             $groupBy = 'day';
         }
-
-        $productionLogs = ProductionLog::with('eggSizeLogs')
-            ->real()
-            ->whereHas('cageSlot.cage', fn ($q) => $q->where('is_active', 1))
-            ->when($since, fn ($q) => $q->where('log_date', '>=', $since->toDateString()))
-            ->orderBy('log_date')
-            ->get();
 
         $feedLogs = FeedConsumptionLog::whereHas('cage', fn ($q) => $q->where('is_active', 1))
             ->when($since, fn ($q) => $q->where('log_date', '>=', $since->toDateString()))
@@ -185,9 +227,10 @@ class FcrCalculator
             fn ($log) => ProductionTimelineService::periodForDate($log->log_date, $groupBy)
         )->map(fn ($group) => $group->sum('feed_consumed_kg'));
 
-        $eggMassByPeriod = $productionLogs->groupBy(
-            fn ($log) => ProductionTimelineService::periodForDate($log->log_date, $groupBy)
-        )->map(fn ($group) => $group->sum(fn ($log) => self::eggMassForLog($log)));
+        $eggMassByPeriod = self::eggMassByPeriod(
+            self::eggMassByDate(null, true, $since?->toDateString()),
+            $groupBy
+        );
 
         $periods = $feedByPeriod->keys()->merge($eggMassByPeriod->keys())->unique()->sortDesc()->values();
 
@@ -208,9 +251,8 @@ class FcrCalculator
     /**
      * Timeline of FCR per period (day/week/month) for a cage.
      *
-     * $since is optional and defaults to unbounded — see the note on
-     * timelineAll() above; the same "flagged, not silently changed" reasoning
-     * applies here.
+     * $since is optional and defaults to unbounded; egg mass comes from
+     * eggMassByDate(), as in timelineAll() above.
      *
      * @return Collection Each item: period, label, feed_kg, egg_mass_kg, fcr
      */
@@ -219,14 +261,6 @@ class FcrCalculator
         if (! in_array($groupBy, ['day', 'week', 'month'])) {
             $groupBy = 'day';
         }
-
-        // Fetch all relevant logs for the cage.
-        $productionLogs = ProductionLog::with('eggSizeLogs')
-            ->real()
-            ->whereHas('cageSlot', fn ($q) => $q->where('cage_id', $cage->id))
-            ->when($since, fn ($q) => $q->where('log_date', '>=', $since->toDateString()))
-            ->orderBy('log_date')
-            ->get();
 
         $feedLogs = FeedConsumptionLog::where('cage_id', $cage->id)
             ->when($since, fn ($q) => $q->where('log_date', '>=', $since->toDateString()))
@@ -238,9 +272,10 @@ class FcrCalculator
             fn ($log) => ProductionTimelineService::periodForDate($log->log_date, $groupBy)
         )->map(fn ($group) => $group->sum('feed_consumed_kg'));
 
-        $eggMassByPeriod = $productionLogs->groupBy(
-            fn ($log) => ProductionTimelineService::periodForDate($log->log_date, $groupBy)
-        )->map(fn ($group) => $group->sum(fn ($log) => self::eggMassForLog($log)));
+        $eggMassByPeriod = self::eggMassByPeriod(
+            self::eggMassByDate($cage, false, $since?->toDateString()),
+            $groupBy
+        );
 
         // Build union of periods from both feed and production data.
         $periods = $feedByPeriod->keys()->merge($eggMassByPeriod->keys())->unique()->sortDesc()->values();
