@@ -12,18 +12,6 @@ use Illuminate\Support\Facades\Validator;
 class EggPriceController extends Controller
 {
     /**
-     * Price form data for the dock modal (same partial as the Profile card).
-     * Served through a turbo-frame so egg pages never pay for it unopened.
-     */
-    public function index()
-    {
-        return view('settings.egg-prices-modal', [
-            'eggPrices' => EggPrice::all()->keyBy('egg_size')->all(),
-            'lastPriceChange' => EggPriceHistory::with('changedBy')->latest()->first(),
-        ]);
-    }
-
-    /**
      * Save the admin-configured egg prices (per size: tray + piece, either
      * blank for "not set"). Every change — including the first entry, whose
      * old values are NULL — is recorded in the history table in the same

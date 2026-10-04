@@ -108,14 +108,11 @@
                 </button>
             </div>
             <p class="text-xs text-[#6B7280] mb-4">Per-tray (30 eggs) and per-piece selling prices in pesos. Typing one fills in the other — clear a field to leave it unset.</p>
-            <turbo-frame id="eggPricesFrame" target="_top">
-                <p class="text-xs" style="color: #a39e98;">Loading prices…</p>
-            </turbo-frame>
+            @include('settings._egg-prices-form')
         </div>
     </div>
     <script>
     function openEggPricesModal() {
-        document.getElementById('eggPricesFrame').src = '{{ route('settings.egg-prices.index') }}';
         document.getElementById('eggPricesModal').style.display = 'flex';
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }

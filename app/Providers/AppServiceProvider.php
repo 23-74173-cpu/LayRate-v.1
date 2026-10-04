@@ -24,6 +24,19 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::define('admin', fn ($user) => $user->isAdmin());
 
+        // Egg prices for the dock modal on egg pages (admins only; two tiny
+        // queries). Rendered server-side with the modal — no lazy loading.
+        View::composer('eggs._tabs', function ($view) {
+            $user = auth()->user();
+
+            $view->with('eggPrices', $user?->isAdmin()
+                ? \App\Models\EggPrice::all()->keyBy('egg_size')->all()
+                : []);
+            $view->with('lastPriceChange', $user?->isAdmin()
+                ? \App\Models\EggPriceHistory::with('changedBy')->latest()->first()
+                : null);
+        });
+
         View::composer('layouts.app', function ($view) {
             $alertCount = 0;
             $newAlerts = collect();
