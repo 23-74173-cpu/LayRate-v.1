@@ -390,10 +390,12 @@
         <select id="eggLabelsRange" name="range" onchange="onEggLabelsRangeChange()"
                 class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
             <option value="all">All batches</option>
-            <option value="7">Harvested in the last 7 days</option>
+            <option value="7" selected>Harvested in the last 7 days</option>
             <option value="30">Harvested in the last 30 days</option>
             <option value="custom">Custom date range…</option>
+            <option value="selected" id="eggLabelsSelectedOpt">Selected batches (0)</option>
         </select>
+        <p id="eggLabelsSelectedHint" class="text-xs mt-1.5 hidden" style="color: #9b1c24;">Tick at least one batch in the stock table first.</p>
     </div>
     <div id="eggLabelsCustomWrap" style="display: none;">
         <label class="block text-xs font-medium tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Harvested between</label>
@@ -417,9 +419,13 @@
         function showPresets() {
             document.getElementById('eggLabelsRangeWrap').style.display = '';
             document.getElementById('eggLabelsCustomWrap').style.display = 'none';
-            document.getElementById('eggLabelsRange').value = 'all';
+            document.getElementById('eggLabelsRange').value = '7';
             document.getElementById('eggLabelsFrom').value = '';
             document.getElementById('eggLabelsTo').value = '';
+            var hint = document.getElementById('eggLabelsSelectedHint');
+            if (hint) hint.classList.add('hidden');
+            var form = modal ? modal.querySelector('form') : null;
+            if (form) form.querySelectorAll('input[name="ids[]"]').forEach(function(i) { i.remove(); });
         }
         window.onEggLabelsRangeChange = function() {
             var custom = document.getElementById('eggLabelsRange').value === 'custom';
@@ -434,11 +440,41 @@
             }
         };
         window.resetEggLabelsRange = showPresets;
+        window.getEggLabelsSelectedIds = function() {
+            var ids = [];
+            document.querySelectorAll('.batch-select:checked').forEach(function(cb) { ids.push(cb.value); });
+            return ids;
+        };
+        function refreshSelectedCount() {
+            var n = window.getEggLabelsSelectedIds().length;
+            var opt = document.getElementById('eggLabelsSelectedOpt');
+            if (opt) opt.textContent = 'Selected batches (' + n + ')';
+        }
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.classList && e.target.classList.contains('batch-select')) refreshSelectedCount();
+        });
+        var labelsForm = modal ? modal.querySelector('form') : null;
+        if (labelsForm) labelsForm.addEventListener('submit', function(e) {
+            labelsForm.querySelectorAll('input[name="ids[]"]').forEach(function(i) { i.remove(); });
+            if (document.getElementById('eggLabelsRange').value !== 'selected') return;
+            var ids = window.getEggLabelsSelectedIds();
+            if (!ids.length) {
+                e.preventDefault();
+                document.getElementById('eggLabelsSelectedHint').classList.remove('hidden');
+                return;
+            }
+            ids.forEach(function(id) {
+                var h = document.createElement('input');
+                h.type = 'hidden'; h.name = 'ids[]'; h.value = id;
+                labelsForm.appendChild(h);
+            });
+        });
         // The modal opens/closes via inline display changes elsewhere, so
         // watch it: leaving the modal always restores the normal dropdown.
         if (modal && window.MutationObserver) {
             new MutationObserver(function() {
                 if (modal.style.display === 'none') showPresets();
+                else refreshSelectedCount();
             }).observe(modal, {attributes: true, attributeFilter: ['style']});
         }
     })();

@@ -5,6 +5,7 @@
         <table class="w-full">
             <thead>
                 <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
+                    <th class="px-3 py-3 w-8" aria-label="Select batch"></th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">SIZE</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">COUNT</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">TRAYS</th>
@@ -31,6 +32,9 @@
                     [$sBg, $sTxt, $sBorder] = $sizeColors[$batch->egg_size];
                 @endphp
                 <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]" data-batch-id="{{ $batch->id }}">
+                    <td class="pl-3 py-3.5">
+                        <input type="checkbox" class="batch-select shrink-0" value="{{ $batch->id }}" aria-label="Select batch #{{ $batch->id }} for printing">
+                    </td>
                     <td class="px-5 py-3.5">
                         <span class="px-2.5 py-1 rounded-full text-xs font-semibold" style="background:{{ $sBg }};color:{{ $sTxt }};border:1px solid {{ $sBorder }}">
                             {{ \App\Enums\EggSize::labelFor($batch->egg_size) }}
@@ -60,7 +64,7 @@
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="7" class="px-5 py-10 text-center text-sm text-[#6B7280]">No stock batches yet.</td></tr>
+                <tr><td colspan="8" class="px-5 py-10 text-center text-sm text-[#6B7280]">No stock batches yet.</td></tr>
                 @endforelse
                 @if($batches->count() > 0)
                 {{-- Blank filler rows so a short last page still holds the full
@@ -68,7 +72,7 @@
                      as real batches are added. --}}
                 @for($i = 0; $i < $batches->perPage() - $batches->count(); $i++)
                 <tr class="empty-filler-row" aria-hidden="true">
-                    <td colspan="7" class="px-5 py-3.5">&nbsp;</td>
+                    <td colspan="8" class="px-5 py-3.5">&nbsp;</td>
                 </tr>
                 @endfor
                 @endif

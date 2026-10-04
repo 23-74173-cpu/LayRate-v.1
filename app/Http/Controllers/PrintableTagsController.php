@@ -52,7 +52,7 @@ class PrintableTagsController extends Controller
 
         $data = $request->validate([
             'paper' => 'nullable|in:' . implode(',', array_keys(self::PAPERS)),
-            'range' => 'nullable|in:all,7,30,custom',
+            'range' => 'nullable|in:all,7,30,custom,selected',
             'from_date' => 'nullable|date|required_if:range,custom',
             'to_date' => 'nullable|date|required_if:range,custom|after_or_equal:from_date',
             'ids'   => 'nullable|array',
@@ -66,12 +66,23 @@ class PrintableTagsController extends Controller
             ->when(empty($data['ids']) && ($range ?? 'all') === 'custom', fn ($q) => $q->whereBetween(
                 'harvested_date', [$data['from_date'], $data['to_date']]
             ))
-            ->when(empty($data['ids']) && ($range ?? 'all') !== 'all' && ($range ?? 'all') !== 'custom', fn ($q) => $q->where(
+            ->when(empty($data['ids']) && ($range ?? 'all') !== 'all' && ($range ?? 'all') !== 'custom' && ($range ?? 'all') !== 'selected', fn ($q) => $q->where(
                 'harvested_date', '>=', now()->subDays((int) $range - 1)->toDateString()
             ))
             ->orderByDesc('harvested_date')
             ->orderByDesc('id')
             ->get();
+
+        if (empty($data['ids']) && ($range ?? 'all') === 'selected') {
+            return response(
+                '<!DOCTYPE html><html><body style="font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:90vh;margin:0;">'
+                . '<div style="max-width:28rem;text-align:center;color:#333;">'
+                . '<h2 style="font-size:1.1rem;">No batches selected</h2>'
+                . '<p style="font-size:0.9rem;">Close this tab, tick at least one batch in the stock table, and print again.</p>'
+                . '</div></body></html>',
+                422
+            );
+        }
 
         if ($batches->count() > self::MAX_LABELS) {
             // The form opens the PDF in a new tab, so a back-redirect with
