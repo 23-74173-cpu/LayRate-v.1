@@ -21,6 +21,7 @@
                         'small'  => ['#2D7D46', '#d6f0e3', '#b8e0cc'],
                         'medium' => ['var(--color-info)', '#dcebfa', '#b3d4fc'],
                         'large'  => ['#C2703E', '#fae3d0', '#f3c9a8'],
+                        'xl'     => ['var(--color-teal-600)', '#d3f0ec', '#a8ddd5'],
                         'jumbo'  => ['#6B4C8A', '#e9e0f5', '#d4c5e8'],
                     ];
                     [$szBg, $szTxt, $szBorder] = $sizeColors[$order->egg_size];
@@ -29,7 +30,7 @@
                     <td class="px-5 py-3.5 text-sm font-medium text-[#333333]">{{ $order->customer_name }}</td>
                     <td class="px-5 py-3.5">
                         <span class="px-2.5 py-1 rounded-full text-xs font-semibold" style="background:{{ $szBg }};color:{{ $szTxt }};border:1px solid {{ $szBorder }}">
-                            {{ ucfirst($order->egg_size) }}
+                            {{ \App\Enums\EggSize::labelFor($order->egg_size) }}
                         </span>
                     </td>
                     <td class="px-5 py-3.5 text-sm font-medium text-[#333333]">{{ number_format($order->egg_count) }}</td>

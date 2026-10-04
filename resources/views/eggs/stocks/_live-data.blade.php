@@ -24,6 +24,7 @@
                         'small'    => ['#2D7D46', '#d6f0e3', '#b8e0cc'],
                         'medium'   => ['var(--color-info)', '#dcebfa', '#b3d4fc'],
                         'large'    => ['#C2703E', '#fae3d0', '#f3c9a8'],
+                        'xl'       => ['var(--color-teal-600)', '#d3f0ec', '#a8ddd5'],
                         'jumbo'    => ['#6B4C8A', '#e9e0f5', '#d4c5e8'],
                         'unsorted' => ['#6B7280', '#f0f0f0', '#e0e0e0'],
                     ];
@@ -32,7 +33,7 @@
                 <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]" data-batch-id="{{ $batch->id }}">
                     <td class="px-5 py-3.5">
                         <span class="px-2.5 py-1 rounded-full text-xs font-semibold" style="background:{{ $sBg }};color:{{ $sTxt }};border:1px solid {{ $sBorder }}">
-                            {{ ucfirst($batch->egg_size) }}
+                            {{ \App\Enums\EggSize::labelFor($batch->egg_size) }}
                         </span>
                     </td>
                     <td class="px-5 py-3.5 text-sm font-medium text-[#333333]">{{ number_format($batch->count) }}</td>

@@ -20,6 +20,10 @@
     @php $recordCount = collect($sections)->sum(fn($s) => $s['rows']->total()); @endphp
     @include('reports._meta-strip', ['cageId' => $cageId, 'recordCount' => $recordCount])
 
+    @if(!empty($xlNote ?? false))
+    <p class="text-xs mb-4" style="color: #a39e98;">Size data before {{ \App\Enums\EggSize::xlGoLive() }} counts XL eggs under Large.</p>
+    @endif
+
     @foreach($sections as $section)
     <div class="mb-10 {{ !$loop->first ? 'pt-6 border-t border-[#D9D9D9]' : '' }}">
         <h2 class="text-sm font-bold text-navy uppercase tracking-wide mb-4">{{ $section['label'] }}</h2>
@@ -58,6 +62,10 @@
 
     @include('reports._letterhead', ['type' => $type, 'from' => $from, 'to' => $to])
     @include('reports._meta-strip', ['cageId' => $cageId, 'recordCount' => $rows->total()])
+
+    @if(!empty($xlNote ?? false))
+    <p class="text-xs mb-4" style="color: #a39e98;">Size data before {{ \App\Enums\EggSize::xlGoLive() }} counts XL eggs under Large.</p>
+    @endif
 
     @include('reports._summary-pills')
 

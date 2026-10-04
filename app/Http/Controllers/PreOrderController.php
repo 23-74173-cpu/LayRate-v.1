@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\EggSize;
 use App\Models\Alert;
 use App\Models\EggSizeLog;
 use App\Models\EggStockBatch;
@@ -11,6 +12,7 @@ use App\Models\ProductionLog;
 use App\Services\ReportingDateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class PreOrderController extends Controller
 {
@@ -67,7 +69,7 @@ class PreOrderController extends Controller
 
         $orders = $query->paginate(20)->withQueryString();
 
-        $sizes = ['small', 'medium', 'large', 'jumbo'];
+        $sizes = EggSize::saleValues();
 
         $loggedBySize = EggSizeLog::selectRaw('egg_size, SUM(count) as total')
             ->groupBy('egg_size')
@@ -122,7 +124,7 @@ class PreOrderController extends Controller
 
     public function poolData(Request $request)
     {
-        $sizes = ['small', 'medium', 'large', 'jumbo'];
+        $sizes = EggSize::saleValues();
         $pools = [];
         foreach ($sizes as $size) {
             $stocked = EggStockBatch::where('egg_size', $size)->sum('count');
@@ -137,7 +139,7 @@ class PreOrderController extends Controller
         $validator = Validator::make($request->all(), [
             'customer_name' => 'required|string|max:255',
             'customer_reference' => 'nullable|string|max:100',
-            'egg_size' => 'required|in:small,medium,large,jumbo',
+            'egg_size' => ['required', Rule::in(EggSize::saleValues())],
             'egg_count' => 'required|integer|min:1',
             'requested_date' => 'required|date',
             'fulfillment_date' => 'nullable|date|after_or_equal:requested_date',
@@ -170,7 +172,7 @@ class PreOrderController extends Controller
         $validator = Validator::make($request->all(), [
             'customer_name' => 'required|string|max:255',
             'customer_reference' => 'nullable|string|max:100',
-            'egg_size' => 'required|in:small,medium,large,jumbo',
+            'egg_size' => ['required', Rule::in(EggSize::saleValues())],
             'egg_count' => 'required|integer|min:1',
             'requested_date' => 'required|date',
             'fulfillment_date' => 'nullable|date|after_or_equal:requested_date',
@@ -218,7 +220,7 @@ class PreOrderController extends Controller
      */
     private function forecastSizes(): array
     {
-        $sizes = ['small', 'medium', 'large', 'jumbo'];
+        $sizes = EggSize::saleValues();
 
         $historical = ProductionLog::selectRaw('log_date, SUM(egg_count) as egg_count, SUM(hen_count) as hen_count')
             ->real()
@@ -255,7 +257,7 @@ class PreOrderController extends Controller
      */
     private function getSizeDistribution(): array
     {
-        $sizes = ['small', 'medium', 'large', 'jumbo'];
+        $sizes = EggSize::saleValues();
 
         $counts = EggSizeLog::selectRaw('egg_size, SUM(count) as total')
             ->whereHas('productionLog', fn ($q) => $q->real())
@@ -264,7 +266,7 @@ class PreOrderController extends Controller
         $total = array_sum(array_map('intval', $counts->all()));
 
         if ($total === 0) {
-            return array_fill_keys($sizes, 0.25);
+            return array_fill_keys($sizes, 1 / count($sizes));
         }
 
         $distribution = [];
@@ -288,7 +290,7 @@ class PreOrderController extends Controller
             if (($data['deficit'] ?? 0) > 0) {
                 $shortfall = (int) $data['deficit'];
                 $trays = (int) ceil($shortfall / 30);
-                $message = "Pre-order demand for {$size} eggs exceeds supply by {$shortfall} eggs ({$trays} trays)";
+                $message = "Pre-order demand for " . EggSize::labelFor($size) . " eggs exceeds supply by {$shortfall} eggs ({$trays} trays)";
 
                 [$dayStart, $dayEnd] = ReportingDateService::reportingDayWindow(ReportingDateService::reportingDateString());
 

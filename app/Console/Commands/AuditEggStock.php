@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\EggSize;
 use App\Models\EggSizeLog;
 use App\Models\EggStockBatch;
 use App\Models\PreOrder;
@@ -16,7 +17,7 @@ class AuditEggStock extends Command
 
     public function handle(): int
     {
-        $sizes = ['small', 'medium', 'large', 'jumbo', 'unsorted'];
+        $sizes = EggSize::stockValues();
         $showDetail = $this->option('detail');
         $exitCode = self::SUCCESS;
 

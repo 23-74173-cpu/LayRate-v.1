@@ -54,6 +54,9 @@
 
         {{-- By Size --}}
         <x-card header="Breakdown by Size">
+            @if(!empty($xlNote))
+            <p class="text-xs mb-3" style="color: #a39e98;">Size data before {{ \App\Enums\EggSize::xlGoLive() }} counts XL eggs under Large.</p>
+            @endif
             @if($bySize->isEmpty())
             <div class="rounded-xl border p-10 text-center text-sm" style="background-color: #ffffff; border-color: #e6e6e6; color: #a39e98;">
                 No size breakdowns recorded yet.
@@ -62,7 +65,7 @@
             <div class="space-y-3">
                 @foreach($bySize as $size)
                 <div class="flex items-center justify-between p-3 rounded-lg border" style="background-color: #ffffff; border-color: #e6e6e6;">
-                    <span class="text-sm font-semibold capitalize" style="color: #1f1f1f;">{{ $size['size'] }}</span>
+                    <span class="text-sm font-semibold" style="color: #1f1f1f;">{{ \App\Enums\EggSize::labelFor($size['size']) }}</span>
                     <span class="text-sm font-mono" style="color: #1f1f1f;">{{ number_format($size['total']) }} eggs</span>
                 </div>
                 @endforeach

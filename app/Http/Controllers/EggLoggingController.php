@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\EggSize;
 use App\Models\Cage;
 use App\Models\CageSlot;
 use App\Models\EggSizeLog;
@@ -14,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class EggLoggingController extends Controller
 {
@@ -195,6 +197,7 @@ class EggLoggingController extends Controller
             'size_small' => 'nullable|integer|min:0',
             'size_medium' => 'nullable|integer|min:0',
             'size_large' => 'nullable|integer|min:0',
+            'size_xl' => 'nullable|integer|min:0',
             'size_jumbo' => 'nullable|integer|min:0',
         ]);
 
@@ -210,11 +213,13 @@ class EggLoggingController extends Controller
         $sizeSum = (int) ($data['size_small'] ?? 0)
                  + (int) ($data['size_medium'] ?? 0)
                  + (int) ($data['size_large'] ?? 0)
+                 + (int) ($data['size_xl'] ?? 0)
                  + (int) ($data['size_jumbo'] ?? 0);
 
         $anySizeFilled = ($data['size_small'] ?? 0) > 0
                       || ($data['size_medium'] ?? 0) > 0
                       || ($data['size_large'] ?? 0) > 0
+                      || ($data['size_xl'] ?? 0) > 0
                       || ($data['size_jumbo'] ?? 0) > 0;
 
         if ($anySizeFilled && $sizeSum !== (int) $data['egg_count']) {
@@ -338,6 +343,7 @@ class EggLoggingController extends Controller
             'size_small' => 'nullable|integer|min:0',
             'size_medium' => 'nullable|integer|min:0',
             'size_large' => 'nullable|integer|min:0',
+            'size_xl' => 'nullable|integer|min:0',
             'size_jumbo' => 'nullable|integer|min:0',
         ]);
 
@@ -353,11 +359,13 @@ class EggLoggingController extends Controller
         $sizeSum = (int) ($data['size_small'] ?? 0)
                  + (int) ($data['size_medium'] ?? 0)
                  + (int) ($data['size_large'] ?? 0)
+                 + (int) ($data['size_xl'] ?? 0)
                  + (int) ($data['size_jumbo'] ?? 0);
 
         $anySizeFilled = ($data['size_small'] ?? 0) > 0
                       || ($data['size_medium'] ?? 0) > 0
                       || ($data['size_large'] ?? 0) > 0
+                      || ($data['size_xl'] ?? 0) > 0
                       || ($data['size_jumbo'] ?? 0) > 0;
 
         if ($anySizeFilled && $sizeSum !== (int) $data['egg_count']) {
@@ -413,7 +421,7 @@ class EggLoggingController extends Controller
 
     private function syncSizeLogs(ProductionLog $log, array $data): void
     {
-        $sizes = ['small', 'medium', 'large', 'jumbo'];
+        $sizes = EggSize::saleValues();
         $hasNonZero = false;
 
         foreach ($sizes as $size) {

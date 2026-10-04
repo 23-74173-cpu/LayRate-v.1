@@ -317,7 +317,7 @@ class PreOrderTest extends TestCase
         $response = $this->getJson(route('eggs.preorders.pool-data'));
 
         $response->assertStatus(200);
-        $response->assertJsonStructure(['pools' => ['small', 'medium', 'large', 'jumbo']]);
+        $response->assertJsonStructure(['pools' => ['small', 'medium', 'large', 'xl', 'jumbo']]);
         $this->assertEquals(100, $response->json('pools.large'));
         $this->assertEquals(50, $response->json('pools.small'));
     }

@@ -425,7 +425,7 @@
                                 Size Breakdown
                                 <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional — fill all or leave blank)</span>
                             </label>
-                            <div class="grid grid-cols-4 gap-3" id="sizeBreakdown">
+                            <div class="grid grid-cols-5 gap-3" id="sizeBreakdown">
                                 <div>
                                     <label class="block text-xs text-center mb-1" style="color: #2D7D46;">Small</label>
                                     <input type="number" name="size_small" min="0" value="0"
@@ -443,6 +443,13 @@
                                 <div>
                                     <label class="block text-xs text-center mb-1" style="color: #C2703E;">Large</label>
                                     <input type="number" name="size_large" min="0" value="0"
+                                           oninput="checkSizeSum(); validateForm()"
+                                           class="size-input w-full border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                                           style="border-color: #e6e6e6; color: #1f1f1f;">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-center mb-1" style="color: var(--color-teal-600);">XL</label>
+                                    <input type="number" name="size_xl" min="0" value="0"
                                            oninput="checkSizeSum(); validateForm()"
                                            class="size-input w-full border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                            style="border-color: #e6e6e6; color: #1f1f1f;">
@@ -533,18 +540,21 @@
     @if(isset($editLog) && $editLog)
     <x-modal-reopen modal-id="editLogModal" session-key="reopen_edit_log" guard="editLog">
         @php $sizes = $editLog->eggSizeLogs->keyBy('egg_size'); @endphp
-        openEditLog(
-            {{ $editLog->id }},
-            '{{ $editLog->log_date->format('Y-m-d') }}',
-            {{ $editLog->egg_count }},
-            {{ $editLog->hen_count }},
-            '{{ addslashes($editLog->notes ?? '') }}',
-            {{ $editLog->cage_slot_id }},
-            {{ $sizes->get('small')?->count ?? 0 }},
-            {{ $sizes->get('medium')?->count ?? 0 }},
-            {{ $sizes->get('large')?->count ?? 0 }},
-            {{ $sizes->get('jumbo')?->count ?? 0 }}
-        );
+        openEditLog({
+            id: {{ $editLog->id }},
+            date: '{{ $editLog->log_date->format('Y-m-d') }}',
+            eggCount: {{ $editLog->egg_count }},
+            henCount: {{ $editLog->hen_count }},
+            notes: '{{ addslashes($editLog->notes ?? '') }}',
+            cageSlotId: {{ $editLog->cage_slot_id }},
+            sizes: {
+                small: {{ $sizes->get('small')?->count ?? 0 }},
+                medium: {{ $sizes->get('medium')?->count ?? 0 }},
+                large: {{ $sizes->get('large')?->count ?? 0 }},
+                xl: {{ $sizes->get('xl')?->count ?? 0 }},
+                jumbo: {{ $sizes->get('jumbo')?->count ?? 0 }}
+            }
+        });
     </x-modal-reopen>
     @endif
 
@@ -1404,16 +1414,17 @@
             });
         }
 
-        function openEditLog(id, date, eggCount, henCount, notes, cageSlotId, sizeSmall, sizeMedium, sizeLarge, sizeJumbo) {
+        function openEditLog({id, date, eggCount, henCount, notes, cageSlotId, sizes}) {
             document.getElementById('editLogForm').action = '/eggs/logging/' + id;
             document.getElementById('editLogDate').value = date;
             document.getElementById('editEggCount').value = eggCount;
             document.getElementById('editHenCountDisplay').value = henCount;
             document.getElementById('editNotes').value = notes || '';
-            document.getElementById('editSizeSmall').value = sizeSmall ?? 0;
-            document.getElementById('editSizeMedium').value = sizeMedium ?? 0;
-            document.getElementById('editSizeLarge').value = sizeLarge ?? 0;
-            document.getElementById('editSizeJumbo').value = sizeJumbo ?? 0;
+            document.getElementById('editSizeSmall').value = sizes?.small ?? 0;
+            document.getElementById('editSizeMedium').value = sizes?.medium ?? 0;
+            document.getElementById('editSizeLarge').value = sizes?.large ?? 0;
+            document.getElementById('editSizeXl').value = sizes?.xl ?? 0;
+            document.getElementById('editSizeJumbo').value = sizes?.jumbo ?? 0;
             document.getElementById('editLogModal').style.display = 'flex';
             editComputeHdep();
             editCheckSizeSum();

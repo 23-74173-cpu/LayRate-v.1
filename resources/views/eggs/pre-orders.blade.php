@@ -13,14 +13,15 @@
 
     {{-- ── Supply Summary — dashboard gradient KPI design ── --}}
     <h2 class="sr-only">Pre-Orders Overview</h2>
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
         @foreach($summary as $size => $data)
         @php
-            $label = ucfirst($size);
+            $label = \App\Enums\EggSize::labelFor($size);
             $gradients = [
                 'small'  => 'linear-gradient(135deg,#16a34a,#2D7D46)',
                 'medium' => 'linear-gradient(135deg,var(--color-navy),var(--color-info))',
                 'large'  => 'linear-gradient(135deg,#d97706,#C2703E)',
+                'xl'     => 'linear-gradient(135deg,var(--color-teal-500),var(--color-teal-700))',
                 'jumbo'  => 'linear-gradient(135deg,#8B5CF6,#6B4C8A)',
             ];
             $cardGradient = $gradients[$size] ?? 'linear-gradient(135deg,#6B7280,#4B5563)';
@@ -64,6 +65,7 @@
                         <option value="small" {{ $filters['egg_size'] === 'small' ? 'selected' : '' }}>Small</option>
                         <option value="medium" {{ $filters['egg_size'] === 'medium' ? 'selected' : '' }}>Medium</option>
                         <option value="large" {{ $filters['egg_size'] === 'large' ? 'selected' : '' }}>Large</option>
+                        <option value="xl" {{ $filters['egg_size'] === 'xl' ? 'selected' : '' }}>XL</option>
                         <option value="jumbo" {{ $filters['egg_size'] === 'jumbo' ? 'selected' : '' }}>Jumbo</option>
                     </select>
                 </div>
@@ -116,6 +118,7 @@
                         <span>Small: <strong id="stockSmall" style="color: #333333;">—</strong></span>
                         <span>Medium: <strong id="stockMedium" style="color: #333333;">—</strong></span>
                         <span>Large: <strong id="stockLarge" style="color: #333333;">—</strong></span>
+                        <span>XL: <strong id="stockXl" style="color: #333333;">—</strong></span>
                         <span>Jumbo: <strong id="stockJumbo" style="color: #333333;">—</strong></span>
                     </div>
                 </div>
@@ -137,6 +140,7 @@
                         <option value="small" {{ old('egg_size') === 'small' ? 'selected' : '' }}>Small</option>
                         <option value="medium" {{ old('egg_size') === 'medium' ? 'selected' : '' }}>Medium</option>
                         <option value="large" {{ old('egg_size') === 'large' ? 'selected' : '' }}>Large</option>
+                        <option value="xl" {{ old('egg_size') === 'xl' ? 'selected' : '' }}>XL</option>
                         <option value="jumbo" {{ old('egg_size') === 'jumbo' ? 'selected' : '' }}>Jumbo</option>
                     </select>
                     <x-input-error name="egg_size" />
@@ -222,6 +226,7 @@
                         <option value="small">Small</option>
                         <option value="medium">Medium</option>
                         <option value="large">Large</option>
+                        <option value="xl">XL</option>
                         <option value="jumbo">Jumbo</option>
                     </select>
                     <x-input-error name="egg_size" />
@@ -319,7 +324,7 @@ function fetchPreorderPools(callback) {
 }
 
 function updateStockSummary(pools) {
-    var sizes = ['small', 'medium', 'large', 'jumbo'];
+    var sizes = ['small', 'medium', 'large', 'xl', 'jumbo'];
     sizes.forEach(function(s) {
         var el = document.getElementById('stock' + s.charAt(0).toUpperCase() + s.slice(1));
         if (el) el.textContent = (pools[s] !== undefined ? pools[s].toLocaleString() : '—');
@@ -345,7 +350,7 @@ function onOrderSizeChange() {
     if (avail < 1) {
         var bestSize = '';
         var bestAvail = 0;
-        ['small', 'medium', 'large', 'jumbo'].forEach(function(s) {
+        ['small', 'medium', 'large', 'xl', 'jumbo'].forEach(function(s) {
             var a = getAvailableForSize(s);
             if (a > bestAvail) { bestAvail = a; bestSize = s; }
         });

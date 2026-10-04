@@ -98,16 +98,17 @@ function recentLogsFilter() {
     if (frame) frame.setAttribute('src', '/eggs/logging/logs?' + params.toString());
 }
 
-function openEditLog(id, date, eggCount, henCount, notes, cageSlotId, sizeSmall, sizeMedium, sizeLarge, sizeJumbo) {
+function openEditLog({id, date, eggCount, henCount, notes, cageSlotId, sizes}) {
     document.getElementById('editLogForm').action = '/eggs/logging/' + id;
     document.getElementById('editLogDate').value = date;
     document.getElementById('editEggCount').value = eggCount;
     document.getElementById('editHenCountDisplay').value = henCount;
     document.getElementById('editNotes').value = notes || '';
-    document.getElementById('editSizeSmall').value = sizeSmall ?? 0;
-    document.getElementById('editSizeMedium').value = sizeMedium ?? 0;
-    document.getElementById('editSizeLarge').value = sizeLarge ?? 0;
-    document.getElementById('editSizeJumbo').value = sizeJumbo ?? 0;
+    document.getElementById('editSizeSmall').value = sizes?.small ?? 0;
+    document.getElementById('editSizeMedium').value = sizes?.medium ?? 0;
+    document.getElementById('editSizeLarge').value = sizes?.large ?? 0;
+    document.getElementById('editSizeXl').value = sizes?.xl ?? 0;
+    document.getElementById('editSizeJumbo').value = sizes?.jumbo ?? 0;
     document.getElementById('editLogModal').style.display = 'flex';
     editComputeHdep();
     editCheckSizeSum();

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\EggSize;
 use App\Models\Cage;
 use App\Models\EggSizeLog;
 use App\Models\ProductionLog;
@@ -54,19 +55,30 @@ class EggProductionHistoryController extends Controller
             ->filter(fn ($c) => $c['total_eggs'] > 0)
             ->values();
 
-        // Breakdown by size using EggSizeLog as source of truth.
+        // Breakdown by size using EggSizeLog as source of truth, in display
+        // order (small → jumbo), not alphabetical. Totals are untouched.
         $bySize = EggSizeLog::select('egg_size', DB::raw('SUM(count) as total'))
             ->whereHas('productionLog', fn ($q) => $q->real())
             ->groupBy('egg_size')
-            ->orderBy('egg_size')
             ->get()
             ->map(fn ($row) => [
                 'size' => $row->egg_size,
                 'total' => (int) $row->total,
-            ]);
+            ])
+            ->sortBy(fn ($r) => EggSize::tryFrom($r['size'])?->order() ?? 99)
+            ->values();
+
+        // Historical note only when the data actually reaches back before
+        // the XL go-live (XL eggs were logged under Large until then).
+        $earliestLog = ProductionLog::real()->min('log_date');
+        $earliestDate = $earliestLog instanceof \DateTimeInterface
+            ? $earliestLog->format('Y-m-d')
+            : substr((string) $earliestLog, 0, 10);
+        $xlNote = $earliestDate !== ''
+            && EggSize::rangeIncludesPreXl($earliestDate);
 
         return view('egg-production-history', compact(
-            'lifetimeEggs', 'timeline', 'timelineRecordsTotal', 'byCage', 'bySize', 'groupBy'
+            'lifetimeEggs', 'timeline', 'timelineRecordsTotal', 'byCage', 'bySize', 'groupBy', 'xlNote'
         ));
     }
 

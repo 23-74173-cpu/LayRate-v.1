@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exports\AllReportsExport;
+use App\Enums\EggSize;
 use App\Exports\ReportSheetExport;
 use App\Models\Cage;
 use App\Models\EggStockBatch;
@@ -67,8 +68,9 @@ class ReportController extends Controller
             }
 
             $chartsPayload = collect($sections)->pluck('chart', 'type')->all();
+            $xlNote = in_array($type, ['all', 'egg_stock'], true) && EggSize::rangeIncludesPreXl($from);
 
-            return $this->noStore(view('reports', compact('type', 'from', 'to', 'cageId', 'reason', 'withForecast', 'allCages', 'sections', 'full', 'charts', 'chartsPayload')));
+            return $this->noStore(view('reports', compact('type', 'from', 'to', 'cageId', 'reason', 'withForecast', 'allCages', 'sections', 'full', 'charts', 'chartsPayload', 'xlNote')));
         }
 
         $rows    = $this->buildReport($type, $from, $to, $cageId, $reason, $withForecast, $allCages);
@@ -82,8 +84,9 @@ class ReportController extends Controller
         }
 
         $chartsPayload = $chart ? [$type => $chart] : [];
+        $xlNote = in_array($type, ['all', 'egg_stock'], true) && EggSize::rangeIncludesPreXl($from);
 
-        return $this->noStore(view('reports', compact('type', 'from', 'to', 'cageId', 'reason', 'withForecast', 'allCages', 'rows', 'summary', 'full', 'charts', 'chart', 'chartsPayload')));
+        return $this->noStore(view('reports', compact('type', 'from', 'to', 'cageId', 'reason', 'withForecast', 'allCages', 'rows', 'summary', 'full', 'charts', 'chart', 'chartsPayload', 'xlNote')));
     }
 
     // Chrome's back-forward cache (bfcache) restores a page from an in-memory
@@ -276,7 +279,7 @@ class ReportController extends Controller
                 return [
                     'Total Stocked' => $this->countWithUnit($agg->total_stocked ?? 0, 'egg'),
                     'Batches'       => $this->countWithUnit($agg->batches ?? 0, 'batch'),
-                    'Top Size'      => $this->describeTop($sizeRows, 'egg_size', fn($size) => ucfirst((string) $size), 'egg'),
+                    'Top Size'      => $this->describeTop($sizeRows, 'egg_size', fn($size) => EggSize::labelFor((string) $size), 'egg'),
                     'Days Covered'  => $this->countWithUnit($agg->days ?? 0, 'day'),
                 ];
             })(),
@@ -566,7 +569,7 @@ class ReportController extends Controller
             ->map(fn($b) => (object) [
                 'date'      => $b->harvested_date->format('m/d/Y'),
                 'cage'      => $b->cage?->cage_code ?? '—',
-                'size'      => ucfirst($b->egg_size),
+                'size'      => EggSize::labelFor($b->egg_size),
                 'count'     => $b->count,
                 'freshness' => ucfirst($b->freshness_status),
             ]);
@@ -675,7 +678,7 @@ class ReportController extends Controller
 
         return [
             'kind'   => 'egg_stock',
-            'labels' => $rows->map(fn($r) => ucfirst($r->egg_size))->all(),
+            'labels' => $rows->map(fn($r) => EggSize::labelFor($r->egg_size))->all(),
             'counts' => $rows->map(fn($r) => (int) $r->total)->all(),
         ];
     }
@@ -706,6 +709,7 @@ class ReportController extends Controller
                 'sections'     => $sections,
                 'charts'       => $charts,
                 'cageColorMap' => Cage::getColorMap(),
+                'xlNote'       => in_array($type, ['all', 'egg_stock'], true) && EggSize::rangeIncludesPreXl($from),
             ])->render();
 
             return response()->json([
@@ -742,6 +746,7 @@ class ReportController extends Controller
             'charts'       => $charts,
             'chart'        => $chart,
             'cageColorMap' => Cage::getColorMap(),
+            'xlNote'       => in_array($type, ['all', 'egg_stock'], true) && EggSize::rangeIncludesPreXl($from),
         ])->render();
 
         return response()->json([

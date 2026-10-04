@@ -75,7 +75,7 @@
                             @php
                                 $sizes = $log->eggSizeLogs->keyBy('egg_size');
                             @endphp
-                            <button onclick="openEditLog({{ $log->id }}, '{{ $log->log_date->format('Y-m-d') }}', {{ $log->egg_count }}, {{ $log->hen_count }}, '{{ addslashes($log->notes ?? '') }}', {{ $log->cage_slot_id }}, {{ $sizes->get('small')?->count ?? 0 }}, {{ $sizes->get('medium')?->count ?? 0 }}, {{ $sizes->get('large')?->count ?? 0 }}, {{ $sizes->get('jumbo')?->count ?? 0 }})"
+                            <button onclick="openEditLog({id: {{ $log->id }}, date: '{{ $log->log_date->format('Y-m-d') }}', eggCount: {{ $log->egg_count }}, henCount: {{ $log->hen_count }}, notes: '{{ addslashes($log->notes ?? '') }}', cageSlotId: {{ $log->cage_slot_id }}, sizes: {small: {{ $sizes->get('small')?->count ?? 0 }}, medium: {{ $sizes->get('medium')?->count ?? 0 }}, large: {{ $sizes->get('large')?->count ?? 0 }}, xl: {{ $sizes->get('xl')?->count ?? 0 }}, jumbo: {{ $sizes->get('jumbo')?->count ?? 0 }}})"
                                     class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Edit log">
                                 <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                             </button>

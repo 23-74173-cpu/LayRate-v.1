@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\EggSize;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -90,7 +91,7 @@ class PreOrder extends Model
 
             if (($data['egg_count'] ?? 0) > $available) {
                 throw new \OverflowException(
-                    "Only {$available} {$data['egg_size']} egg(s) in stock (after subtracting other pending pre-orders)."
+                    "Only {$available} " . EggSize::labelFor($data['egg_size']) . " egg(s) in stock (after subtracting other pending pre-orders)."
                 );
             }
 

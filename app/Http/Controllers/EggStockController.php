@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\EggSize;
 use App\Models\Cage;
 use App\Models\EggSizeLog;
 use App\Models\EggStockBatch;
@@ -11,6 +12,7 @@ use App\Services\ReportingDateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class EggStockController extends Controller
 {
@@ -19,7 +21,7 @@ class EggStockController extends Controller
         // Totals/tray counts must reflect every batch, not just the current
         // page — computed from a separate unpaginated query.
         $allBatches = EggStockBatch::query();
-        $sizes = ['small', 'medium', 'large', 'jumbo', 'unsorted'];
+        $sizes = EggSize::stockValues();
 
         $totals = [];
         $trayTotals = [];
@@ -53,6 +55,7 @@ class EggStockController extends Controller
             'egg_weight_small'    => 'required|numeric|min:1|max:500',
             'egg_weight_medium'   => 'required|numeric|min:1|max:500',
             'egg_weight_large'    => 'required|numeric|min:1|max:500',
+            'egg_weight_xl'       => 'required|numeric|min:1|max:500',
             'egg_weight_jumbo'    => 'required|numeric|min:1|max:500',
             'egg_weight_fallback' => 'required|numeric|min:1|max:500',
         ]);
@@ -82,7 +85,7 @@ class EggStockController extends Controller
 
     public function index()
     {
-        $sizes = ['small', 'medium', 'large', 'jumbo', 'unsorted'];
+        $sizes = EggSize::stockValues();
 
         $totalsBySize = EggStockBatch::selectRaw('egg_size, SUM(count) as total')
             ->groupBy('egg_size')
@@ -142,7 +145,7 @@ class EggStockController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'egg_size' => 'required|in:small,medium,large,jumbo,unsorted',
+            'egg_size' => ['required', Rule::in(EggSize::stockValues())],
             'count' => 'required|integer|min:1',
             'harvested_date' => 'required|date',
             'cage_id' => 'nullable|exists:cages,id,is_active,1',
@@ -177,7 +180,7 @@ class EggStockController extends Controller
 
         EggStockBatch::checkLowStock();
 
-        $sizes = ['small', 'medium', 'large', 'jumbo', 'unsorted'];
+        $sizes = EggSize::stockValues();
         $allBatches = EggStockBatch::all();
         $newTotals = [];
         foreach ($sizes as $size) {
@@ -276,7 +279,7 @@ class EggStockController extends Controller
     private function storeClassified(array $data): \Illuminate\Http\JsonResponse
     {
         $classifySizes = [];
-        foreach (['small', 'medium', 'large', 'jumbo'] as $size) {
+        foreach (EggSize::saleValues() as $size) {
             $val = (int) ($data["classify_{$size}"] ?? 0);
             if ($val > 0) $classifySizes[$size] = $val;
         }
@@ -360,7 +363,7 @@ class EggStockController extends Controller
     public function update(Request $request, EggStockBatch $batch)
     {
         $validator = Validator::make($request->all(), [
-            'egg_size' => 'required|in:small,medium,large,jumbo,unsorted',
+            'egg_size' => ['required', Rule::in(EggSize::stockValues())],
             'count' => 'required|integer|min:1',
             'harvested_date' => 'required|date',
         ]);

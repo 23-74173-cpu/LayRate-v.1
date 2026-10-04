@@ -76,6 +76,7 @@ class Setting extends Model
                 'egg_weight_small',
                 'egg_weight_medium',
                 'egg_weight_large',
+                'egg_weight_xl',
                 'egg_weight_jumbo',
                 'egg_weight_fallback',
             ])->pluck('value', 'key');
@@ -84,6 +85,7 @@ class Setting extends Model
                 'small'     => (float) ($rows['egg_weight_small']     ?? 50),
                 'medium'    => (float) ($rows['egg_weight_medium']    ?? 58),
                 'large'     => (float) ($rows['egg_weight_large']     ?? 65),
+                'xl'        => (float) ($rows['egg_weight_xl']        ?? 69),
                 'jumbo'     => (float) ($rows['egg_weight_jumbo']     ?? 73),
                 'fallback'  => (float) ($rows['egg_weight_fallback']  ?? 60),
             ];

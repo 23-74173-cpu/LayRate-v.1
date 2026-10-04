@@ -25,7 +25,7 @@
         @php
             $total = $totals[$size] ?? 0;
             $trays = $trayTotals[$size] ?? 0;
-            $label = $size === 'unsorted' ? 'Unsorted' : ucfirst($size);
+            $label = \App\Enums\EggSize::labelFor($size);
             $pool = $availablePools[$size] ?? 0;
             $threshold = $eggStockThresholds[$size] ?? 0;
             $isLowStock = $threshold > 0 && $pool <= $threshold;
@@ -33,11 +33,12 @@
                 'small'    => 'linear-gradient(135deg,#16a34a,#2D7D46)',
                 'medium'   => 'linear-gradient(135deg,var(--color-navy),var(--color-info))',
                 'large'    => 'linear-gradient(135deg,#d97706,#C2703E)',
+                'xl'       => 'linear-gradient(135deg,var(--color-teal-500),var(--color-teal-700))',
                 'jumbo'    => 'linear-gradient(135deg,#8B5CF6,#6B4C8A)',
                 'unsorted' => 'linear-gradient(135deg,#6B7280,#4B5563)',
             ];
             $cardGradient = $gradients[$size];
-            $icons = ['small' => 'egg', 'medium' => 'egg', 'large' => 'egg', 'jumbo' => 'egg', 'unsorted' => 'layers'];
+            $icons = ['small' => 'egg', 'medium' => 'egg', 'large' => 'egg', 'xl' => 'egg', 'jumbo' => 'egg', 'unsorted' => 'layers'];
         @endphp
         <x-kpi-card
             label="{{ $label }}" infoKey="stocks.size-stock"
@@ -99,7 +100,7 @@
                             class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select size…</option>
-                        @foreach(['small','medium','large','jumbo','unsorted'] as $sz)
+                        @foreach(\App\Enums\EggSize::stockValues() as $sz)
                         @php $pool = $availablePools[$sz] ?? 0; $label = $sz === 'unsorted' ? 'Unsorted' : ucfirst($sz); @endphp
                         <option value="{{ $sz }}" data-available="{{ $pool }}">{{ $label }} ({{ number_format($pool) }} avail.)</option>
                         @endforeach
@@ -137,6 +138,12 @@
                         <div>
                             <label class="block text-xs text-[#C2703E] font-medium mb-1">Large</label>
                             <input type="number" name="classify_large" min="0" placeholder="0"
+                                   class="classify-input w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                                   style="border-color: #e6e6e6; color: #1f1f1f;">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium mb-1" style="color: var(--color-teal-600);">XL</label>
+                            <input type="number" name="classify_xl" min="0" placeholder="0"
                                    class="classify-input w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
@@ -208,6 +215,7 @@
                         <option value="small">Small</option>
                         <option value="medium">Medium</option>
                         <option value="large">Large</option>
+                        <option value="xl">XL</option>
                         <option value="jumbo">Jumbo</option>
                         <option value="unsorted">Unsorted</option>
                     </select>
@@ -277,6 +285,12 @@
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                 </div>
                 <div>
+                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">XL (g)</label>
+                    <input type="number" name="egg_weight_xl" step="0.1" min="1" max="500"
+                           value="{{ $eggWeights['xl'] }}"
+                           class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+                </div>
+                <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">JUMBO (g)</label>
                     <input type="number" name="egg_weight_jumbo" step="0.1" min="1" max="500"
                            value="{{ $eggWeights['jumbo'] }}"
@@ -323,7 +337,7 @@
                     <h3 class="text-xs font-medium tracking-[0.05em] uppercase mb-3" style="color: #615d59;">Low-Stock Thresholds</h3>
                     <p class="text-xs text-[#6B7280] mb-4">Minimum available pool per size before alert triggers. Set to 0 to disable.</p>
                     <div class="grid grid-cols-2 gap-4">
-                        @foreach(['small' => '#2D7D46', 'medium' => 'var(--color-info)', 'large' => '#C2703E', 'jumbo' => '#6B4C8A', 'unsorted' => '#6B7280'] as $sz => $szColor)
+                        @foreach(['small' => '#2D7D46', 'medium' => 'var(--color-info)', 'large' => '#C2703E', 'xl' => 'var(--color-teal-600)', 'jumbo' => '#6B4C8A', 'unsorted' => '#6B7280'] as $sz => $szColor)
                         @php $key = "egg_low_stock_threshold_{$sz}"; $label = $sz === 'unsorted' ? 'Unsorted' : ucfirst($sz); @endphp
                         <div>
                             <label class="block text-xs tracking-wider mb-1.5" style="color: {{ $szColor }}">{{ $label }}</label>

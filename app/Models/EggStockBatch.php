@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\EggSize;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
@@ -77,7 +78,7 @@ class EggStockBatch extends Model
 
     public static function getAvailablePools(?int $cageId = null, ?string $harvestedDate = null): array
     {
-        $sizes = ['small', 'medium', 'large', 'jumbo', 'unsorted'];
+        $sizes = EggSize::stockValues();
         $pools = [];
         foreach ($sizes as $size) {
             $pools[$size] = self::getAvailablePoolForSize($size, cageId: $cageId, harvestedDate: $harvestedDate);
@@ -97,7 +98,7 @@ class EggStockBatch extends Model
 
             if (($data['count'] ?? 0) > $available) {
                 throw new \OverflowException(
-                    "Only {$available} {$data['egg_size']} egg(s) available to stock."
+                    "Only {$available} " . EggSize::labelFor($data['egg_size']) . " egg(s) available to stock."
                 );
             }
 
@@ -171,7 +172,7 @@ class EggStockBatch extends Model
 
     public static function sizeThresholds(): array
     {
-        $sizes = ['small', 'medium', 'large', 'jumbo', 'unsorted'];
+        $sizes = EggSize::stockValues();
         $thresholds = [];
         foreach ($sizes as $size) {
             $thresholds[$size] = (int) \App\Models\Setting::get("egg_low_stock_threshold_{$size}", 0);

@@ -81,10 +81,11 @@ class FcrCalculator
             ->selectRaw(
                 'pl.id, pl.log_date, pl.egg_count, COUNT(esl.id) AS size_rows, ' .
                 'COALESCE(SUM(esl.`count` * CASE esl.egg_size ' .
-                "WHEN 'small' THEN ? WHEN 'medium' THEN ? WHEN 'large' THEN ? WHEN 'jumbo' THEN ? ELSE ? END), 0) AS sized_grams",
+                "WHEN 'small' THEN ? WHEN 'medium' THEN ? WHEN 'large' THEN ? WHEN 'xl' THEN ? WHEN 'jumbo' THEN ? ELSE ? END), 0) AS sized_grams",
                 [
                     (float) $weights['small'], (float) $weights['medium'],
-                    (float) $weights['large'], (float) $weights['jumbo'],
+                    (float) $weights['large'], (float) $weights['xl'],
+                    (float) $weights['jumbo'],
                     (float) $weights['fallback'],
                 ]
             )
@@ -167,7 +168,8 @@ class FcrCalculator
         $weights = Setting::eggWeights();
         $bindings = [
             (float) $weights['small'], (float) $weights['medium'],
-            (float) $weights['large'], (float) $weights['jumbo'],
+            (float) $weights['large'], (float) $weights['xl'],
+            (float) $weights['jumbo'],
             (float) $weights['fallback'],
         ];
 
@@ -176,7 +178,7 @@ class FcrCalculator
             ->selectRaw(
                 'pl.id, pl.egg_count, COUNT(esl.id) AS size_rows, ' .
                 'COALESCE(SUM(esl.`count` * CASE esl.egg_size ' .
-                "WHEN 'small' THEN ? WHEN 'medium' THEN ? WHEN 'large' THEN ? WHEN 'jumbo' THEN ? ELSE ? END), 0) AS sized_grams",
+                "WHEN 'small' THEN ? WHEN 'medium' THEN ? WHEN 'large' THEN ? WHEN 'xl' THEN ? WHEN 'jumbo' THEN ? ELSE ? END), 0) AS sized_grams",
                 $bindings
             )
             ->leftJoin('egg_size_logs as esl', 'esl.production_log_id', '=', 'pl.id')

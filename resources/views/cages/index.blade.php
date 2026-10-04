@@ -353,6 +353,7 @@
                 'small'    => ['bg' => '#d6f0e3', 'txt' => '#2D7D46'],
                 'medium'   => ['bg' => '#dcebfa', 'txt' => 'var(--color-info)'],
                 'large'    => ['bg' => '#fae3d0', 'txt' => '#C2703E'],
+                'xl'       => ['bg' => '#d3f0ec', 'txt' => 'var(--color-teal-600)'],
                 'jumbo'    => ['bg' => '#e9e0f5', 'txt' => '#6B4C8A'],
                 'unsorted' => ['bg' => '#f0f0f0', 'txt' => '#6B7280'],
             ];
@@ -488,12 +489,12 @@
                         {{-- Egg size tags --}}
                         @if($cageSizes->isNotEmpty())
                         <div class="flex flex-wrap items-center gap-1">
-                            @foreach(['small','medium','large','jumbo','unsorted'] as $sz)
+                            @foreach(\App\Enums\EggSize::stockValues() as $sz)
                                 @php $entry = $cageSizes->firstWhere('egg_size', $sz); @endphp
                                 @if($entry && $entry->total > 0)
                                 <span class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-tight"
                                       style="background:{{ $sizeColors[$sz]['bg'] }}; color:{{ $sizeColors[$sz]['txt'] }};">
-                                    {{ ucfirst($sz) }} {{ number_format($entry->total) }}
+                                    {{ \App\Enums\EggSize::labelFor($sz) }} {{ number_format($entry->total) }}
                                 </span>
                                 @endif
                             @endforeach

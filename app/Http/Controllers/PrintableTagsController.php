@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\EggSize;
 use App\Models\Cage;
 use App\Models\EggStockBatch;
 use App\Models\Hen;
@@ -63,7 +64,7 @@ class PrintableTagsController extends Controller
             return (object) [
                 'id'          => $batch->id,
                 'qr'          => QrSvg::dataUri(self::eggStockPayload($batch)),
-                'size'        => ucfirst($batch->egg_size),
+                'size'        => EggSize::labelFor($batch->egg_size),
                 'count'       => (int) $batch->count,
                 'trays'       => (int) ceil($batch->count / 30),
                 'harvested'   => $harvested->format('m/d/Y'),
