@@ -40,6 +40,14 @@ class PrintableTagsController extends Controller
     private const MAX_LABELS = 300;
 
     /**
+     * Max foot tags per sheet run. Strips are text-only (no QR images) so
+     * they render far cheaper than QR labels, but the run is still
+     * unbounded (every active hen), so oversized requests are refused with
+     * guidance instead of dying mid-render as a 500.
+     */
+    private const MAX_TAGS = 1000;
+
+    /**
      * Egg stock QR labels, 3 per row. Each label: the same QR payload as the
      * single-batch QR page (so the scanner reads both), plus size, count,
      * harvest date, cage, batch number and the fresh-until / old-after dates.
@@ -135,6 +143,10 @@ class PrintableTagsController extends Controller
      */
     public function henFootTags(Request $request)
     {
+        // Same slow-render budget as the QR sheets (global 30 s limit
+        // still applies everywhere else).
+        set_time_limit(120);
+
         $data = $request->validate([
             'paper'   => 'nullable|in:' . implode(',', array_keys(self::PAPERS)),
             'cage_id' => 'nullable|integer|exists:cages,id',
@@ -166,6 +178,20 @@ class PrintableTagsController extends Controller
         ]);
 
         $layout = $this->grid($paperKey, 2, 13.0);
+
+        if ($tags->count() > self::MAX_TAGS) {
+            // Same reasoning as the QR cap: the print form opens in a new
+            // tab, so answer there instead of an unseen back-redirect.
+            return response(
+                '<!DOCTYPE html><html><body style="font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:90vh;margin:0;">'
+                . '<div style="max-width:28rem;text-align:center;color:#333;">'
+                . '<h2 style="font-size:1.1rem;">Too many tags</h2>'
+                . '<p style="font-size:0.9rem;">' . e('Too many tags at once (' . number_format($tags->count())
+                    . ' hens, max ' . self::MAX_TAGS . '). Close this tab, pick one cage, and print again.') . '</p>'
+                . '</div></body></html>',
+                422
+            );
+        }
 
         return $this->pdf('printables.hen-foot-tags', [
             'pages'  => $tags->chunk($layout['per_page'])->map->values()->values(),
