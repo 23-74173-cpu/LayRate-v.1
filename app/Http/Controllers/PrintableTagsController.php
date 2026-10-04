@@ -33,12 +33,23 @@ class PrintableTagsController extends Controller
     private const FOOTER_MM = 7;
 
     /**
+     * Max labels per QR sheet. dompdf renders each QR-heavy label slowly on
+     * the Pi (1,896 labels blow PHP's 30 s limit), so oversized requests are
+     * refused with guidance instead of dying mid-render as a 500.
+     */
+    private const MAX_LABELS = 300;
+
+    /**
      * Egg stock QR labels, 3 per row. Each label: the same QR payload as the
      * single-batch QR page (so the scanner reads both), plus size, count,
      * harvest date, cage, batch number and the fresh-until / old-after dates.
      */
     public function eggStockLabels(Request $request)
     {
+        // QR-heavy sheets render slowly on the Pi; give this route alone a
+        // larger budget (the global 30 s limit still applies everywhere else).
+        set_time_limit(120);
+
         $data = $request->validate([
             'paper' => 'nullable|in:' . implode(',', array_keys(self::PAPERS)),
             'range' => 'nullable|in:all,7,30',
@@ -56,6 +67,23 @@ class PrintableTagsController extends Controller
             ->orderByDesc('harvested_date')
             ->orderByDesc('id')
             ->get();
+
+        if ($batches->count() > self::MAX_LABELS) {
+            // The form opens the PDF in a new tab, so a back-redirect with
+            // errors would land unseen — answer in the new tab instead.
+            $message = 'Too many labels at once (' . number_format($batches->count())
+                . ' batches, max ' . self::MAX_LABELS . '). Close this tab, pick '
+                . '"Harvested in the last 7/30 days" (or fewer batches), and print again.';
+
+            return response(
+                '<!DOCTYPE html><html><body style="font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:90vh;margin:0;">'
+                . '<div style="max-width:28rem;text-align:center;color:#333;">'
+                . '<h2 style="font-size:1.1rem;">Too many labels</h2>'
+                . '<p style="font-size:0.9rem;">' . e($message) . '</p>'
+                . '</div></body></html>',
+                422
+            );
+        }
 
         $thresholds = EggStockBatch::freshnessThresholds();
         $labels = $batches->map(function (EggStockBatch $batch) use ($thresholds) {
