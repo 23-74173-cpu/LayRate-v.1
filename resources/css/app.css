@@ -1007,3 +1007,137 @@ html.cage-dragging * {
   outline-offset: 2px;
   border-radius: 8px;
 }
+
+/* ── Full-screen chart viewer (public/js/chart-fullscreen.js) ─────────────
+   Button: same quiet round style as the KPI info button. Viewer: a dark
+   full-viewport layer above the dock and modals, with the chart on a white
+   surface. Phones held upright first see the "turn your phone" step. */
+.chart-fs-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  border: 1px solid #e6e6e6;
+  background: #ffffff;
+  color: #6b7280;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.chart-fs-btn:hover { background-color: #f3f4f6; color: var(--color-navy); border-color: #d1d5db; }
+.chart-fs-btn svg, .chart-fs-btn i { width: 16px; height: 16px; }
+.chart-fs-btn[hidden] { display: none; }
+.chart-fs-btn--floating { position: absolute; top: 10px; right: 10px; z-index: 2; }
+
+html.chart-fs-open, html.chart-fs-open body { overflow: hidden; }
+html.chart-fs-open .page-wrapper { overflow: hidden !important; }
+
+.chart-fs {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  background: #0f1626;
+  color: #ffffff;
+  overscroll-behavior: contain;
+  animation: chartFsIn 0.18s ease-out;
+}
+.chart-fs [hidden] { display: none !important; }
+@keyframes chartFsIn { from { opacity: 0; } to { opacity: 1; } }
+
+.chart-fs-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 10px max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  gap: 8px;
+}
+.chart-fs-bar { display: flex; align-items: center; gap: 8px; min-height: 40px; }
+.chart-fs-title { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chart-fs-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+}
+.chart-fs-tool:hover { background: rgba(255, 255, 255, 0.16); }
+.chart-fs-tool svg, .chart-fs-tool i { width: 16px; height: 16px; }
+.chart-fs-close { width: 40px; height: 40px; padding: 0; justify-content: center; }
+.chart-fs-close svg, .chart-fs-close i { width: 20px; height: 20px; }
+.chart-fs-canvas {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 10px;
+  touch-action: none;   /* pinch / pan go to the chart, not the page */
+}
+.chart-fs-canvas canvas { display: block; width: 100% !important; height: 100% !important; }
+.chart-fs-hint { text-align: center; font-size: 12px; color: rgba(255, 255, 255, 0.6); }
+@media (min-width: 1024px) {
+  .chart-fs-view { padding: 16px 24px 14px; gap: 12px; }
+  .chart-fs-title { font-size: 18px; }
+  .chart-fs-canvas { padding: 18px 22px 14px; border-radius: 16px; }
+  .chart-fs-hint { font-size: 13px; }
+}
+
+.chart-fs-rotate {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+}
+.chart-fs-phone { color: #ffffff; margin-bottom: 8px; }
+.chart-fs-device { transform-origin: 60px 61px; animation: chartFsTurn 2.4s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
+.chart-fs-arrow { opacity: 0; animation: chartFsArrow 2.4s ease-in-out infinite; }
+@keyframes chartFsTurn {
+  0%, 18% { transform: rotate(0deg); }
+  48%, 82% { transform: rotate(-90deg); }
+  100% { transform: rotate(0deg); }
+}
+@keyframes chartFsArrow {
+  0%, 10% { opacity: 0; }
+  20%, 45% { opacity: 1; }
+  60%, 100% { opacity: 0; }
+}
+.chart-fs-rotate-title { font-size: 20px; font-weight: 700; }
+.chart-fs-rotate-text { font-size: 14px; color: rgba(255, 255, 255, 0.72); max-width: 20rem; }
+.chart-fs-rotate-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 18rem; margin-top: 10px; }
+.chart-fs-primary, .chart-fs-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  border-radius: 9999px;
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.chart-fs-primary { background: #ffffff; color: var(--color-navy); }
+.chart-fs-primary svg, .chart-fs-primary i { width: 18px; height: 18px; }
+.chart-fs-secondary { background: rgba(255, 255, 255, 0.08); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.24); }
+.chart-fs-link { font-size: 13px; color: rgba(255, 255, 255, 0.7); text-decoration: underline; text-underline-offset: 4px; padding: 6px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-fs { animation: none; }
+  .chart-fs-device { animation: none; transform: rotate(-90deg); }
+  .chart-fs-arrow { animation: none; opacity: 1; }
+}

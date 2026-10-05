@@ -141,15 +141,17 @@
         </select>
     </div>
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <div class="text-xs font-semibold tracking-wider text-[#6B7280] mb-3">TEMPERATURE TREND</div>
+        <div class="relative bg-white rounded-lg border border-[#D9D9D9] p-5">
+            <x-chart-fullscreen-button chart="envTempChart" title="Temperature Trend" :floating="true" />
+            <div class="text-xs font-semibold tracking-wider text-[#6B7280] mb-3 pr-8">TEMPERATURE TREND</div>
             <div id="envTempChartWrap" class="relative w-full h-[160px]">
                 <canvas id="envTempChart" style="width: 100%; height: 100%; display: block;"></canvas>
             </div>
             <div id="envTempChartEmpty" class="hidden h-[160px] flex items-center justify-center text-sm" style="color: #a39e98;">No temperature readings in this window.</div>
         </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <div class="text-xs font-semibold tracking-wider text-[#6B7280] mb-3">HUMIDITY TREND</div>
+        <div class="relative bg-white rounded-lg border border-[#D9D9D9] p-5">
+            <x-chart-fullscreen-button chart="envHumChart" title="Humidity Trend" :floating="true" />
+            <div class="text-xs font-semibold tracking-wider text-[#6B7280] mb-3 pr-8">HUMIDITY TREND</div>
             <div id="envHumChartWrap" class="relative w-full h-[160px]">
                 <canvas id="envHumChart" style="width: 100%; height: 100%; display: block;"></canvas>
             </div>

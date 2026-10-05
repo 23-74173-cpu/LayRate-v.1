@@ -59,6 +59,8 @@
     {{-- KPI card explanation popovers for every info button (delegated,
          Turbo-aware, binds once). --}}
     <script src="/js/kpi-info.js?v={{ @filemtime(public_path('js/kpi-info.js')) }}" defer></script>
+    {{-- Full-screen chart viewer with pinch-zoom (zoom libraries load on first use). --}}
+    <script src="/js/chart-fullscreen.js?v={{ @filemtime(public_path('js/chart-fullscreen.js')) }}" defer></script>
 
     {{-- Slow-page loading screen: appears only when a page takes >600ms to
          render. Fast loads clear the timer and never flash it. Covers both
@@ -1159,6 +1161,8 @@ window.LayRateChart = {
         try {
             const instance = new Chart(canvas, renderConfig);
             this._instances[id] = instance;
+            // Keep an open full-screen copy of this chart in step (chart-fullscreen.js).
+            if (window.LayRateChartFullscreen) window.LayRateChartFullscreen.sync(id);
             // Defensive self-heal: intermittently (observed live, root cause not fully
             // pinned down despite extensive investigation — ruled out stale scale/data,
             // canvas reuse, animation timing, ResizeObserver loops, and font-loading races
@@ -1207,6 +1211,7 @@ window.LayRateChart = {
                 live.update();
                 this._instances[id] = live;
                 this._configs[id] = config;
+                if (window.LayRateChartFullscreen) window.LayRateChartFullscreen.sync(id);
                 return live;
             } catch (e) {
                 console.error('[LayRateChart] setData failed for "' + id + '", recreating:', e);

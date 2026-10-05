@@ -19,6 +19,7 @@
                     Peak: {{ $chartData['peak_label'] }} at {{ $chartData['peak_hdep'] }}%
                 </span>
                 @endif
+                <x-chart-fullscreen-button chart="henAgeLayrateChart" title="Hen Age vs Lay Rate" />
             </x-slot:actions>
         </x-card-header>
 

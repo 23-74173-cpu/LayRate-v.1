@@ -12,6 +12,7 @@
                 <button type="button" onclick="this.closest('.bg-white').querySelector('.interpretation-panel').classList.toggle('hidden')" class="interp-btn">
                     <i data-lucide="sparkles"></i> Interpretation
                 </button>
+                <x-chart-fullscreen-button chart="eggCollectionTimeChart" title="Eggs Collected by Time" />
             </x-slot:actions>
         </x-card-header>
 

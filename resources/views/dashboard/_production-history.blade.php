@@ -31,6 +31,7 @@
                         Show Forecast
                     </button>
                 </span>
+                <x-chart-fullscreen-button chart="dashProductionHistoryChart" title="Egg Production History" />
             </x-slot:actions>
         </x-card-header>
 

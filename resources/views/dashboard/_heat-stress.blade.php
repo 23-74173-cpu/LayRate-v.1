@@ -5,6 +5,7 @@
                 <button type="button" onclick="this.closest('.bg-white').querySelector('.interpretation-panel').classList.toggle('hidden')" class="interp-btn">
                     <i data-lucide="sparkles"></i> Interpretation
                 </button>
+                <x-chart-fullscreen-button chart="heatStressChart" title="Heat Stress Analytics" />
             </x-slot:actions>
         </x-card-header>
         <div class="interpretation-panel hidden mb-3 px-3 py-2.5 rounded-lg text-xs leading-relaxed" style="background-color: #dcebfa; color: var(--color-info); border: 1px solid #b8d4fe;">{{ $insight }}</div>

@@ -9,8 +9,9 @@
     @endphp
 
     {{-- ── HDEP Trend Chart ── --}}
-    <div class="bg-white rounded-lg border border-[#D9D9D9] p-5 mb-8">
-        <div class="text-xs tracking-wider text-[#6B7280] mb-4">
+    <div class="relative bg-white rounded-lg border border-[#D9D9D9] p-5 mb-8">
+        <x-chart-fullscreen-button chart="hdepChart" title="HDEP Trend" :floating="true" />
+        <div class="text-xs tracking-wider text-[#6B7280] mb-4 pr-8">
             <span id="chart-title-period">{{ $dayLabel }}</span><span id="chart-title-period-suffix" style="{{ $isFull ? 'display:none' : '' }}">-DAY</span> HDEP TREND — <span id="chart-title-label-hdep">{{ $displayLabel }}</span>
         </div>
         <div id="hdepChartWrap" class="relative w-full h-[310px]" style="display:{{ $hasLogs ? '' : 'none' }}">
@@ -21,15 +22,17 @@
 
     {{-- ── Two small charts ── --}}
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-5">
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <div class="text-xs tracking-wider text-[#6B7280] mb-4">EGGS COLLECTED PER DAY — <span id="chart-title-label-eggs">{{ $displayLabel }}</span></div>
+        <div class="relative bg-white rounded-lg border border-[#D9D9D9] p-5">
+            <x-chart-fullscreen-button chart="eggsChart" title="Eggs Collected per Day" :floating="true" />
+            <div class="text-xs tracking-wider text-[#6B7280] mb-4 pr-8">EGGS COLLECTED PER DAY — <span id="chart-title-label-eggs">{{ $displayLabel }}</span></div>
             <div id="eggsChartWrap" class="relative w-full h-[189px]" style="display:{{ $hasLogs ? '' : 'none' }}">
                 <canvas id="eggsChart" style="width: 100%; height: 100%; display: block;"></canvas>
             </div>
             <div id="eggsChartEmpty" class="h-[130px] flex items-center justify-center text-sm" style="color: #a39e98; display:{{ $hasLogs ? 'none' : '' }};">No production data for this period.</div>
         </div>
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <div class="text-xs tracking-wider text-[#6B7280] mb-4">FEED VS HDEP — <span id="chart-title-label-feed">{{ $displayLabel }}</span></div>
+        <div class="relative bg-white rounded-lg border border-[#D9D9D9] p-5">
+            <x-chart-fullscreen-button chart="feedHdepChart" title="Feed vs HDEP" :floating="true" />
+            <div class="text-xs tracking-wider text-[#6B7280] mb-4 pr-8">FEED VS HDEP — <span id="chart-title-label-feed">{{ $displayLabel }}</span></div>
             <div id="feedHdepChartWrap" class="relative w-full h-[189px]" style="display:{{ $hasFeedOverlap ? '' : 'none' }}">
                 <canvas id="feedHdepChart" style="width: 100%; height: 100%; display: block;"></canvas>
             </div>

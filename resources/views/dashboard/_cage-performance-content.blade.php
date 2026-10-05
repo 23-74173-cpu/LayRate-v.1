@@ -127,14 +127,16 @@ $hasData = $totalEggs > 0 || $performance->contains(fn ($p) => $p['hdep'] > 0);
 
         {{-- Comparison charts side-by-side: HDEP bar (left), Eggs pie (right) --}}
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div class="perf-card rounded-xl border border-[#D9D9D9] p-4 bg-white chart-fade-in">
-                <div class="text-[11px] font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-2">HDEP by Cage ({{ $targetDate->format('m/d/Y') }})</div>
+            <div class="perf-card relative rounded-xl border border-[#D9D9D9] p-4 bg-white chart-fade-in">
+                <x-chart-fullscreen-button chart="dashHdepChart" title="HDEP by Cage ({{ $targetDate->format('m/d/Y') }})" :floating="true" />
+                <div class="text-[11px] font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-2 pr-8">HDEP by Cage ({{ $targetDate->format('m/d/Y') }})</div>
                 <div class="relative w-full h-[130px]">
                     <canvas id="dashHdepChart" style="width: 100%; height: 100%; display: block;"></canvas>
                 </div>
             </div>
-            <div class="perf-card rounded-xl border border-[#D9D9D9] p-4 bg-white chart-fade-in">
-                <div class="text-[11px] font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-2">Eggs Distribution by Cage</div>
+            <div class="perf-card relative rounded-xl border border-[#D9D9D9] p-4 bg-white chart-fade-in">
+                <x-chart-fullscreen-button chart="dashEggsChart" title="Eggs Distribution by Cage" :floating="true" />
+                <div class="text-[11px] font-semibold tracking-[0.125px] uppercase text-[#6B7280] mb-2 pr-8">Eggs Distribution by Cage</div>
                 <div class="relative w-full h-[130px]">
                     <canvas id="dashEggsChart" style="width: 100%; height: 100%; display: block;"></canvas>
                 </div>
