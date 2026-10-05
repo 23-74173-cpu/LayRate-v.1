@@ -297,12 +297,18 @@
         }
 
         var p = options.plugins;
+        // Legend is the main key on a full screen: larger and darker than the
+        // card's. Point-style markers follow min(boxWidth, boxHeight, font),
+        // so all three grow together.
         if (p.legend !== false) {
-            p.legend = Object.assign({}, p.legend || {});
-            p.legend.labels = Object.assign({}, p.legend.labels || {});
-            p.legend.labels.font = atLeast(p.legend.labels.font, fs);
-            p.legend.labels.padding = Math.max(p.legend.labels.padding || 0, 16);
-            p.legend.labels.boxWidth = Math.max(p.legend.labels.boxWidth || 0, 12);
+            var lfs = fs + 3;
+            var l = p.legend = Object.assign({}, p.legend || {});
+            l.labels = Object.assign({}, l.labels || {});
+            l.labels.font = atLeast(l.labels.font, lfs, '600');
+            l.labels.boxWidth = Math.max(l.labels.boxWidth || 0, lfs);
+            l.labels.boxHeight = Math.max(l.labels.boxHeight || 0, lfs);
+            l.labels.padding = Math.max(l.labels.padding || 0, fs < 12 ? 14 : 22);
+            if (typeof l.labels.color !== 'function') l.labels.color = '#1f2937';
         }
         if (p.tooltip !== false) {
             p.tooltip = Object.assign({}, p.tooltip || {});
