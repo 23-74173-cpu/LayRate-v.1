@@ -19,6 +19,10 @@
     <link rel="stylesheet" href="/css/inter.css">
     <link href="/css/tailwind.css" rel="stylesheet">
     <script src="/js/lucide.min.js" defer></script>
+    {{-- Back/Forward while signed in goes to the dashboard (see auth-guard.js). --}}
+    <script src="/js/auth-guard.js?v={{ @filemtime(public_path('js/auth-guard.js')) }}" data-mode="guest"
+            data-status-url="{{ route('auth.status') }}" data-login-url="{{ route('login') }}"
+            data-home-url="{{ route('dashboard') }}"></script>
 
     <style>
         html { scroll-behavior: smooth; }

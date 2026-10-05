@@ -54,6 +54,10 @@ Route::middleware('guest')->group(function () {
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
+// Session check for public/js/auth-guard.js (Back/Forward, tab focus).
+// Open to guests on purpose: it only says whether this browser is signed in.
+Route::get('/auth/status', [AuthController::class, 'status'])->name('auth.status');
+
 // Admin-only opcache reset (no unauthenticated invalidation surface)
 Route::get('/_reset-opcache', function () {
     if (function_exists('opcache_reset')) {

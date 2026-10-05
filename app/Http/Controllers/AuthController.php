@@ -73,6 +73,11 @@ class AuthController extends Controller
             ->withErrors(['email' => 'Invalid email or password.']);
     }
 
+    public function status()
+    {
+        return response()->json(['authenticated' => Auth::check()]);
+    }
+
     public function logout(Request $request)
     {
         Auth::logout();

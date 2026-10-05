@@ -39,6 +39,11 @@
     {{-- Turbo Drive --}}
     <script type="module" src="/js/turbo.js"></script>
 
+    {{-- Back/Forward after sign-out goes to login, never a cached farm page. --}}
+    <script src="/js/auth-guard.js?v={{ @filemtime(public_path('js/auth-guard.js')) }}" data-mode="app"
+            data-status-url="{{ route('auth.status') }}" data-login-url="{{ route('login') }}"
+            data-home-url="{{ route('dashboard') }}" data-logout-url="{{ route('logout') }}"></script>
+
     {{-- Shared chart metric palette (CSS-var backed, hardcoded fallbacks).
          Synchronous in head so inline chart configs can use it on first paint. --}}
     <script src="/js/chart-colors.js?v={{ @filemtime(public_path('js/chart-colors.js')) }}"></script>

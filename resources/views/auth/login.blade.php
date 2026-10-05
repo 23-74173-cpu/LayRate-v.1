@@ -15,6 +15,10 @@
     <script src="/js/lucide.min.js"></script>
     {{-- Shared branded validation (same module as the app shell) --}}
     <script src="/js/form-validation.js" defer></script>
+    {{-- Back/Forward while signed in goes to the dashboard, never this page. --}}
+    <script src="/js/auth-guard.js?v={{ @filemtime(public_path('js/auth-guard.js')) }}" data-mode="guest"
+            data-status-url="{{ route('auth.status') }}" data-login-url="{{ route('login') }}"
+            data-home-url="{{ route('dashboard') }}"></script>
     <style>
         body { min-height: 100vh; background-color: var(--color-sidebar-bg); background-image: radial-gradient(60% 40% at 50% 0%, rgba(98,174,240,0.14), rgba(98,174,240,0) 70%); background-size: cover; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; overscroll-behavior: none; }
         :focus-visible { outline: 2px solid var(--color-navy); outline-offset: 2px; border-radius: 4px; }
@@ -220,11 +224,13 @@
 
                     // Server bounced us back to the login page → auth failed.
                     if (url.indexOf('/login') !== -1) {
-                        window.location.href = url;
+                        window.location.replace(url);
                         return;
                     }
 
-                    var go = function () { window.location.href = url; };
+                    // replace, not href: the login page must not stay in
+                    // history, or Back would land on it while signed in.
+                    var go = function () { window.location.replace(url); };
 
                     if (!hasRedirected || reduceMotion) { go(); return; }
 
