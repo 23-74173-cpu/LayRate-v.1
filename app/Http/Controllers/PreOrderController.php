@@ -211,26 +211,27 @@ class PreOrderController extends Controller
         }
 
         $wasPaid = $order->payment_status === 'paid';
-        $oldStatus = $order->status;
+        $notPosted = null;
 
         try {
-            DB::transaction(function () use ($order, $data, $request, $markPaid, $wasPaid, $oldStatus) {
+            DB::transaction(function () use ($order, $data, $request, $markPaid, $wasPaid, &$notPosted) {
                 $order->updateWithinPool($data);
                 $order->refresh();
 
-                if ($markPaid && ! $wasPaid && $order->status !== 'cancelled') {
-                    $order->update(['payment_status' => 'paid', 'paid_at' => ReportingDateService::now()]);
-                    $order->refresh();
-                    FinancePostingService::postOrderIncome($order, $request->user()->id);
-                } elseif ($markPaid && ! $wasPaid) {
-                    // Paid and cancelled in one save: record payment, post
-                    // nothing for a dead order.
+                // The payment is recorded even when Finance can't take it
+                // (auto-posting off, no price): refusing it used to undo the
+                // whole save.
+                if ($markPaid && ! $wasPaid) {
                     $order->update(['payment_status' => 'paid', 'paid_at' => ReportingDateService::now()]);
                     $order->refresh();
                 }
 
-                if ($wasPaid && $oldStatus !== 'cancelled' && $order->status === 'cancelled') {
-                    FinancePostingService::reverseOrderIncome($order, $request->user()->id);
+                // Paid orders keep Finance in step on every save: cancel
+                // reverses, reopen restores, a re-priced total updates.
+                $reason = FinancePostingService::syncOrderIncome($order, $request->user()->id);
+
+                if ($markPaid && ! $wasPaid && $order->status !== 'cancelled') {
+                    $notPosted = $reason;
                 }
             });
         } catch (\DomainException $e) {
@@ -245,12 +246,22 @@ class PreOrderController extends Controller
                 ->withInput();
         }
 
-        return redirect()->route('eggs.preorders')->with('success', 'Pre-order updated.');
+        $message = 'Pre-order updated.';
+        if ($notPosted !== null) {
+            $message .= " Marked paid, but not posted to Finance because {$notPosted}. Enter the income in Finance by hand.";
+        }
+
+        return redirect()->route('eggs.preorders')->with('success', $message);
     }
 
     public function destroy(PreOrder $order)
     {
-        $order->delete();
+        // A deleted paid order must not leave its income in Finance (the
+        // auto-posted row is locked from manual delete).
+        DB::transaction(function () use ($order) {
+            FinancePostingService::reverseOrderIncome($order, auth()->id());
+            $order->delete();
+        });
 
         return redirect()->route('eggs.preorders')->with('success', 'Pre-order cancelled.');
     }

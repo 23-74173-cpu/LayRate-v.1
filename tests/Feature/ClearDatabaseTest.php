@@ -6,6 +6,7 @@ use App\Models\Alert;
 use App\Models\Cage;
 use App\Models\CageSlot;
 use App\Models\EnvironmentalLog;
+use App\Models\FinanceTransaction;
 use App\Models\ForecastRun;
 use App\Models\Hen;
 use App\Models\Note;
@@ -48,6 +49,7 @@ class ClearDatabaseTest extends TestCase
         'farm_feed_entries',
         'feed_batches',
         'feed_consumption_logs',
+        'finance_transactions',
         'forecast_runs',
         'forecasts',
         'hardware_items',
@@ -128,6 +130,13 @@ class ClearDatabaseTest extends TestCase
             'dedup_key' => Alert::dedupKey($cage->id, 'temperature_high'),
         ]);
         Note::create(['body' => 'Test note', 'cage_id' => $cage->id]);
+        FinanceTransaction::create([
+            'type' => 'expense',
+            'category' => 'Feed Cost',
+            'amount' => 100,
+            'date' => $day,
+            'cage_id' => $cage->id,
+        ]);
         ForecastRun::create([
             'scope' => 'cage',
             'cage_code' => 'CAGE-CLEAR',

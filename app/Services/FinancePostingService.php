@@ -77,6 +77,90 @@ class FinancePostingService
         );
     }
 
+    /**
+     * Why a paid order can't auto-post, or null when it can. Payment is
+     * still recorded either way; only the Finance row depends on this.
+     */
+    public static function orderIneligibleReason(PreOrder $order): ?string
+    {
+        if ($order->total_amount === null) {
+            return 'it has no price';
+        }
+
+        $cutover = self::cutover();
+
+        if ($cutover === null) {
+            return 'auto-posting is off';
+        }
+
+        if (substr((string) $order->paid_at, 0, 10) < $cutover) {
+            return 'the payment is dated before auto-posting started';
+        }
+
+        return null;
+    }
+
+    /**
+     * Bring a paid order's Finance income in line with the order after any
+     * save. Returns a short reason when a new payment could not be posted
+     * (the caller tells the user to enter it by hand), otherwise null.
+     *
+     *  - cancelled: income reversed;
+     *  - reopened after a cancel: the reversal is removed, so the income
+     *    counts again;
+     *  - count/size changed while open (total re-priced): the posted amount
+     *    follows the new total, or is reversed if the order lost its price;
+     *  - no income yet: posted if eligible.
+     */
+    public static function syncOrderIncome(PreOrder $order, int $userId): ?string
+    {
+        if ($order->payment_status !== 'paid') {
+            return null;
+        }
+
+        if ($order->status === 'cancelled') {
+            self::reverseOrderIncome($order, $userId);
+
+            return null;
+        }
+
+        $original = self::findLinked('pre_order', $order->id, 'original');
+
+        if ($original === null) {
+            $reason = self::orderIneligibleReason($order);
+
+            if ($reason !== null) {
+                return $reason;
+            }
+
+            self::postOrderIncome($order, $userId);
+
+            return null;
+        }
+
+        if ($order->total_amount === null) {
+            self::reverseOrderIncome($order, $userId);
+
+            return null;
+        }
+
+        // Reopened: the cancel no longer stands. The reversal is a system
+        // row, so removing it (instead of stacking a third row) keeps the
+        // one original + one reversal shape the unique key relies on.
+        self::findLinked('pre_order', $order->id, 'reversal')?->delete();
+
+        $amount = EggPricingService::fromCents(EggPricingService::toCents($order->total_amount));
+
+        if (EggPricingService::toCents($original->amount) !== EggPricingService::toCents($order->total_amount)) {
+            $original->update([
+                'amount' => $amount,
+                'description' => "Pre-order #{$order->id} — {$order->customer_name} ({$order->egg_count} {$order->egg_size} eggs)",
+            ]);
+        }
+
+        return null;
+    }
+
     public static function reverseOrderIncome(PreOrder $order, int $userId): ?FinanceTransaction
     {
         $original = self::findLinked('pre_order', $order->id, 'original');
@@ -131,18 +215,16 @@ class FinancePostingService
     /**
      * Sync a batch's expense row after create/edit. $old is the
      * pre-update [unit_cost, total_quantity_kg, date_received] triple, or
-     * null on create. Pre-cutover-dated batches are never posted or altered.
+     * null on create. Pre-cutover batches are never posted; a batch that
+     * already has an expense keeps it in sync on every edit (even if its
+     * date is later moved before the cutover, or auto-posting is turned off).
      */
     public static function syncBatchExpense(FeedBatch $batch, ?array $old, int $userId): ?FinanceTransaction
     {
-        if (! self::batchEligible($batch)) {
-            return null;
-        }
-
         $linked = self::findLinked('feed_batch', $batch->id, 'original');
         $cents = self::batchAmountCents($batch);
 
-        if ($linked === null && $cents === null) {
+        if ($linked === null && ($cents === null || ! self::batchEligible($batch))) {
             return null;
         }
 
@@ -172,6 +254,15 @@ class FinancePostingService
             return self::reverseBatchExpense($batch, $userId);
         }
 
+        // Cost entered again after being cleared: the reversal no longer
+        // stands. Removed (not stacked) so a later clear creates a fresh
+        // reversal for the amount in effect at that time.
+        $reversal = self::findLinked('feed_batch', $batch->id, 'reversal');
+        if ($reversal !== null) {
+            $reversal->delete();
+            $oldCents = null;
+        }
+
         if ($oldCents === null
             || $cents !== $oldCents
             || ($old['date_received'] ?? null) !== $date
@@ -179,6 +270,7 @@ class FinancePostingService
             $linked->update([
                 'amount' => EggPricingService::fromCents($cents),
                 'date' => $date,
+                'description' => "Feed batch {$batch->batch_code} ({$batch->total_quantity_kg} kg)",
             ]);
         }
 

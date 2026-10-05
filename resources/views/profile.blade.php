@@ -441,7 +441,7 @@
                     <h3 class="text-sm font-medium text-[#9b1c24] mb-1">Permanently delete all farm data</h3>
                     <p class="text-xs text-[#6B7280] mb-3">
                         This deletes cages, hens, production &amp; environmental logs, feed &amp; mortality records,
-                        forecasts, alerts, hardware, and all other farm data. Your account (and other user accounts,
+                        pre-orders, finance transactions, forecasts, alerts, hardware, and all other farm data. Your account (and other user accounts,
                         plus farm settings) are preserved so you can sign in afterward.
                     </p>
                     <form method="POST" action="{{ route('settings.clear-database') }}"

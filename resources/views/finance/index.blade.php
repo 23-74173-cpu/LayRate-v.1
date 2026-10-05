@@ -193,7 +193,7 @@
                             <tr class="{{ $loop->last ? '' : 'border-b border-[#F0F0F0]' }}">
                                 <td class="py-2 pr-2 text-[#333333]">
                                     {{ $row->category }}
-                                    <span class="text-xs text-[#9CA3AF]">· {{ $row->entries }} {{ \Illuminate\Support\Str::plural('entry', $row->entries) }}</span>
+                                    <span class="text-xs text-[#9CA3AF]">· {{ (int) $row->entries }} {{ \Illuminate\Support\Str::plural('entry', (int) $row->entries) }}</span>
                                 </td>
                                 <td class="py-2 pr-2 text-right font-medium whitespace-nowrap text-[#1f1f1f]">{{ $peso($row->total) }}</td>
                                 <td class="py-2 text-right text-xs whitespace-nowrap text-[#6B7280]">{{ number_format($share, 1) }}%</td>

@@ -270,11 +270,12 @@
                     <x-input-error name="status" />
                 </div>
                 @if(auth()->user()->isAdmin())
-                <label class="flex items-start gap-2 rounded-lg px-3 py-2.5 text-sm" style="background-color: #f6f5f4;">
-                    <input type="checkbox" name="mark_paid" value="1" class="mt-0.5 shrink-0">
+                <label id="editMarkPaidRow" class="flex items-start gap-2 rounded-lg px-3 py-2.5 text-sm" style="background-color: #f6f5f4;">
+                    <input type="checkbox" name="mark_paid" id="editMarkPaid" value="1" class="mt-0.5 shrink-0">
                     <span style="color: #333333;">Mark as paid now <span style="color: #a39e98;">(full payment only — posts the order total to Finance as income)</span></span>
                 </label>
                 @endif
+                <p id="editPaidNote" class="rounded-lg px-3 py-2.5 text-sm font-medium" style="display: none; background-color: #e8f5ec; color: #1f6b3a;"></p>
                 <x-input-error name="payment_status" />
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">NOTES <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
@@ -486,7 +487,17 @@ function updateOrderTotal(size, count) {
     line.textContent = 'Total: ' + peso(trays * trayCents + looseCents) + ' (' + parts.join(' + ') + ')';
 }
 
-function openEditStatus(id, currentStatus, fulfillmentDate, customerName, eggSize, eggCount, requestedDate, notes, snapshotTotal) {
+function openEditStatus(id, currentStatus, fulfillmentDate, customerName, eggSize, eggCount, requestedDate, notes, snapshotTotal, paidOn) {
+    // Paid orders show when they were paid instead of the "mark paid" box.
+    var paidRow = document.getElementById('editMarkPaidRow');
+    var paidBox = document.getElementById('editMarkPaid');
+    var paidNote = document.getElementById('editPaidNote');
+    if (paidBox) paidBox.checked = false;
+    if (paidRow) paidRow.style.display = paidOn ? 'none' : '';
+    if (paidNote) {
+        paidNote.textContent = paidOn ? (paidOn === 'yes' ? 'Paid' : 'Paid on ' + paidOn) : '';
+        paidNote.style.display = paidOn ? '' : 'none';
+    }
     document.getElementById('editStatusForm').action = '/eggs/pre-orders/' + id;
     document.getElementById('editCustomerName').value = customerName || '';
     document.getElementById('editEggSize').value = eggSize || 'medium';
@@ -560,7 +571,8 @@ function closeEditStatusModal() {
         {{ $editOrder->egg_count }},
         '{{ $editOrder->requested_date->toDateString() }}',
         '{{ addslashes($editOrder->notes ?? '') }}',
-        '{{ $editOrder->total_amount !== null ? '₱' . number_format((float) $editOrder->total_amount, 2) : '—' }}'
+        '{{ $editOrder->total_amount !== null ? '₱' . number_format((float) $editOrder->total_amount, 2) : '—' }}',
+        '{{ $editOrder->payment_status === 'paid' ? ($editOrder->paid_at?->format('m/d/Y') ?? 'yes') : '' }}'
     );
 </x-modal-reopen>
 @endif

@@ -297,6 +297,7 @@ class AccountController extends Controller
         'farm_feed_entries',
         'feed_batches',
         'feed_consumption_logs',
+        'finance_transactions',
         'forecast_runs',
         'forecasts',
         'hardware_items',

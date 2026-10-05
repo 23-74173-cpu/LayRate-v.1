@@ -34,8 +34,10 @@ class FinanceController extends Controller
         $totalIncome  = (float) ($totals['income'] ?? 0);
         $totalExpense = (float) ($totals['expense'] ?? 0);
 
+        // A reversal cancels its original, so it subtracts from the count
+        // the same way it subtracts from the total (a cancelled order is 0).
         $breakdown = $filtered()
-            ->selectRaw('type, category, SUM(amount) as total, COUNT(*) as entries')
+            ->selectRaw("type, category, SUM(amount) as total, SUM(CASE WHEN kind = 'reversal' THEN -1 ELSE 1 END) as entries")
             ->groupBy('type', 'category')
             ->orderByDesc('total')
             ->get()

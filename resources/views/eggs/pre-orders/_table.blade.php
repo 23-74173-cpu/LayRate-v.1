@@ -43,11 +43,19 @@
                     <td class="px-5 py-3.5">
                         <x-status-badge :status="$order->status" type="general" />
                     </td>
-                    <td class="px-5 py-3.5 text-sm font-medium text-right tabular-nums" style="color: #333333;">{{ $order->total_amount !== null ? '₱' . number_format((float) $order->total_amount, 2) : '—' }}</td>
+                    <td class="px-5 py-3.5 text-sm font-medium text-right tabular-nums" style="color: #333333;">
+                        {{ $order->total_amount !== null ? '₱' . number_format((float) $order->total_amount, 2) : '—' }}
+                        @if($order->payment_status === 'paid')
+                        <span class="block mt-1">
+                            <span class="inline-block px-2 py-0.5 rounded-full text-xs font-semibold" style="background-color: #e8f5ec; color: #1f6b3a; border: 1px solid #cfe8d6;"
+                                  title="Paid {{ $order->paid_at?->format('m/d/Y') }}">Paid</span>
+                        </span>
+                        @endif
+                    </td>
                     <td class="px-5 py-3.5">
                         <div class="flex items-center gap-2">
                             <x-icon-button icon="pencil" label="Edit pre-order" color="neutral"
-                                onclick="openEditStatus({{ $order->id }}, '{{ $order->status }}', '{{ $order->fulfillment_date?->toDateString() ?? '' }}', '{{ addslashes($order->customer_name) }}', '{{ $order->egg_size }}', {{ $order->egg_count }}, '{{ $order->requested_date->toDateString() }}', '{{ addslashes($order->notes ?? '') }}', '{{ $order->total_amount !== null ? '₱' . number_format((float) $order->total_amount, 2) : '—' }}')" />
+                                onclick="openEditStatus({{ $order->id }}, '{{ $order->status }}', '{{ $order->fulfillment_date?->toDateString() ?? '' }}', '{{ addslashes($order->customer_name) }}', '{{ $order->egg_size }}', {{ $order->egg_count }}, '{{ $order->requested_date->toDateString() }}', '{{ addslashes($order->notes ?? '') }}', '{{ $order->total_amount !== null ? '₱' . number_format((float) $order->total_amount, 2) : '—' }}', '{{ $order->payment_status === 'paid' ? ($order->paid_at?->format('m/d/Y') ?? 'yes') : '' }}')" />
                             @can('admin')
                             <form action="{{ route('eggs.preorders.destroy', $order) }}" method="POST" data-turbo="false"
                                   data-confirm="Cancel this pre-order?" data-confirm-action="Cancel" data-confirm-severity="destructive">
