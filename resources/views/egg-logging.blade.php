@@ -391,6 +391,7 @@
                                 <p id="multiEggHint" class="hidden mt-1.5 text-xs" style="color: #615d59;">
                                     This egg count will be saved to all <span id="multiEggHintCount">0</span> selected slots.
                                 </p>
+                                <p id="eggHenWarn" class="hidden mt-1.5 text-xs flex items-center gap-1" style="color: #8a5a00;"></p>
                             </div>
 
                             {{-- Hen Count --}}
@@ -569,10 +570,19 @@
                 </button>
             </div>
             <div id="overridePinSection">
-                <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Override PIN</label>
-                <input type="password" id="overridePinInput" inputmode="numeric" maxlength="6" autocomplete="off"
-                       class="w-full border rounded-lg px-3 py-2.5 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
-                       style="border-color: #e6e6e6; color: #1f1f1f;">
+                <div class="rounded-xl p-4" style="background-color: #eef1f4;">
+                    <label class="block mb-3 text-[15px] font-medium" style="color: #333333;">Code Requested</label>
+                    <div id="overrideOtpBoxes" class="flex gap-2 justify-between" role="group" aria-label="Override PIN">
+                        @for ($i = 0; $i < 6; $i++)
+                        <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="one-time-code"
+                               data-otp-index="{{ $i }}" aria-label="Digit {{ $i + 1 }}"
+                               class="override-otp-box min-w-0 flex-1 h-14 bg-white rounded-md text-center text-2xl font-bold focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy transition-shadow"
+                               style="color: #1f1f1f; border: 1px solid transparent; box-shadow: 0 1px 2px rgba(0,0,0,0.04); caret-color: var(--color-navy);">
+                        @endfor
+                    </div>
+                    <input type="hidden" id="overridePinInput" autocomplete="off">
+                    <p class="mt-2.5 text-xs" style="color: #6B7280;">Enter your 4–6 digit override PIN.</p>
+                </div>
             </div>
             <div id="overridePasswordSection" class="hidden">
                 <p class="text-xs mb-2" style="color: #615d59;">No override PIN set — verify with your login password instead.</p>
@@ -1161,6 +1171,22 @@
             el.style.backgroundColor = count > hens ? '#fbe4e6' : '#f6f5f4';
             el.style.borderColor = count > hens ? '#f3cdd0' : '#e6e6e6';
             el.style.color = count > hens ? '#9b1c24' : '#1f1f1f';
+            // Blocked, like the server: counts above hen count are rejected
+            // with a 422, so the message says the entry can't be saved as
+            // entered (never that staff may still save it).
+            var warn = document.getElementById('eggHenWarn');
+            if (warn) {
+                if (count > hens) {
+                    var detail = (isMultiSelect && selectedSlotIds.size > 0)
+                        ? 'Total eggs is higher than the hens in these slots (' + count + ' > ' + hens + '). It can\'t be saved as entered.'
+                        : 'Egg count is higher than the hens in this cage (' + eggs + ' > ' + hens + '). It can\'t be saved as entered.';
+                    warn.innerHTML = '<i data-lucide="triangle-alert" class="w-3 h-3 shrink-0"></i><span>' + detail + '</span>';
+                    warn.classList.remove('hidden');
+                } else {
+                    warn.classList.add('hidden');
+                    warn.innerHTML = '';
+                }
+            }
             if (typeof lucide !== 'undefined') lucide.createIcons();
         }
 
@@ -1194,10 +1220,29 @@
 
             if (!eggVal || parseInt(eggVal) < 0 || isNaN(parseInt(eggVal))) {
                 saveBtn.disabled = true;
+                saveBtn.setAttribute('aria-disabled', 'true');
                 return;
             }
 
             const totalEggs = parseInt(eggVal);
+
+            // Match the server (422 when count exceeds hen count): while
+            // exceeded, Save stays disabled with the visible warning as the
+            // reason, and re-enables as soon as the count is valid again.
+            // Same rule in single-slot and multi-slot mode.
+            const hens = parseInt(document.getElementById('henCount').value) || 1;
+            var effective = totalEggs;
+            if (isMultiSelect && selectedSlotIds.size > 0) {
+                effective = totalEggs * selectedSlotIds.size;
+            }
+            if (effective > hens) {
+                saveBtn.disabled = true;
+                saveBtn.setAttribute('aria-disabled', 'true');
+                saveBtn.setAttribute('aria-describedby', 'eggHenWarn');
+                return;
+            }
+            saveBtn.removeAttribute('aria-describedby');
+
             const inputs = document.querySelectorAll('#sizeBreakdown .size-input');
             let sum = 0;
             let anySizeFilled = false;
@@ -1209,21 +1254,108 @@
 
             if (anySizeFilled && sum !== totalEggs) {
                 saveBtn.disabled = true;
+                saveBtn.setAttribute('aria-disabled', 'true');
                 return;
             }
 
             saveBtn.disabled = false;
+            saveBtn.removeAttribute('aria-disabled');
         }
 
         function openOverrideModal() {
             if (!currentSlotId) return;
             document.getElementById('overrideError').classList.add('hidden');
-            document.getElementById('overridePinInput').value = '';
+            var hiddenPin = document.getElementById('overridePinInput');
+            if (hiddenPin) hiddenPin.value = '';
+            document.querySelectorAll('.override-otp-box').forEach(function(box) { box.value = ''; });
             document.getElementById('overridePinSection').classList.remove('hidden');
             document.getElementById('overridePasswordSection').classList.add('hidden');
             document.getElementById('overrideModal').style.display = 'flex';
-            document.getElementById('overridePinInput').focus();
+            var firstBox = document.querySelector('.override-otp-box');
+            if (firstBox) firstBox.focus();
             lucide.createIcons();
+        }
+
+        function getOverridePin() {
+            var hiddenPin = document.getElementById('overridePinInput');
+            if (hiddenPin && hiddenPin.value) return hiddenPin.value;
+            var pin = '';
+            document.querySelectorAll('.override-otp-box').forEach(function(box) { pin += box.value; });
+            return pin;
+        }
+
+        // OTP-style PIN boxes: digits only, auto-advance, backspace nav, paste
+        // support. Delegated at document level (guarded once) so it keeps
+        // working after Turbo frame re-renders replace the modal inputs.
+        function syncOverrideHidden() {
+            var hidden = document.getElementById('overridePinInput');
+            if (!hidden) return;
+            var pin = '';
+            document.querySelectorAll('.override-otp-box').forEach(function(b) { pin += b.value; });
+            hidden.value = pin;
+        }
+
+        function overrideOtpBoxes() {
+            return Array.prototype.slice.call(document.querySelectorAll('.override-otp-box'));
+        }
+
+        if (!window.__overrideOtpDelegated) {
+            window.__overrideOtpDelegated = true;
+
+            document.addEventListener('input', function(e) {
+                var box = e.target;
+                if (!box || !box.classList || !box.classList.contains('override-otp-box')) return;
+                box.value = (box.value || '').replace(/\D/g, '').slice(-1);
+                syncOverrideHidden();
+                if (box.value) {
+                    var boxes = overrideOtpBoxes();
+                    var idx = boxes.indexOf(box);
+                    if (idx >= 0 && idx < boxes.length - 1) boxes[idx + 1].focus();
+                }
+            });
+
+            document.addEventListener('keydown', function(e) {
+                var box = e.target;
+                if (!box || !box.classList || !box.classList.contains('override-otp-box')) return;
+                var boxes = overrideOtpBoxes();
+                var idx = boxes.indexOf(box);
+                if (e.key === 'Backspace' && !box.value && idx > 0) {
+                    e.preventDefault();
+                    boxes[idx - 1].focus();
+                    boxes[idx - 1].value = '';
+                    syncOverrideHidden();
+                } else if (e.key === 'ArrowLeft' && idx > 0) {
+                    e.preventDefault();
+                    boxes[idx - 1].focus();
+                } else if (e.key === 'ArrowRight' && idx >= 0 && idx < boxes.length - 1) {
+                    e.preventDefault();
+                    boxes[idx + 1].focus();
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (typeof window.submitOverride === 'function') window.submitOverride();
+                    else if (typeof submitOverride === 'function') submitOverride();
+                }
+            });
+
+            document.addEventListener('paste', function(e) {
+                var box = e.target;
+                if (!box || !box.classList || !box.classList.contains('override-otp-box')) return;
+                var clip = e.clipboardData || window.clipboardData;
+                if (!clip) return;
+                e.preventDefault();
+                var text = (clip.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+                if (!text) return;
+                var boxes = overrideOtpBoxes();
+                boxes.forEach(function(b, i) { b.value = text[i] || ''; });
+                syncOverrideHidden();
+                boxes[Math.min(text.length, boxes.length - 1)].focus();
+            });
+
+            document.addEventListener('focusin', function(e) {
+                var box = e.target;
+                if (!box || !box.classList || !box.classList.contains('override-otp-box')) return;
+                try { box.select(); } catch (err) {}
+            });
         }
 
         function closeOverrideModal() {
@@ -1231,8 +1363,9 @@
         }
 
         function submitOverride() {
-            const pin = document.getElementById('overridePinInput').value;
-            const password = document.getElementById('overridePasswordInput').value;
+            const pin = getOverridePin();
+            const passwordEl = document.getElementById('overridePasswordInput');
+            const password = passwordEl ? passwordEl.value : '';
 
             fetch('{{ route("eggs.logging.verify-override") }}', {
                 method: 'POST',
@@ -1258,6 +1391,13 @@
                     const noPinYet = (body.error || '').includes('password');
                     document.getElementById('overridePinSection').classList.toggle('hidden', noPinYet);
                     document.getElementById('overridePasswordSection').classList.toggle('hidden', !noPinYet);
+                    if (noPinYet) {
+                        var pwInput = document.getElementById('overridePasswordInput');
+                        if (pwInput) pwInput.focus();
+                    } else {
+                        var firstBox = document.querySelector('.override-otp-box');
+                        if (firstBox) firstBox.focus();
+                    }
                 }
             })
             .catch(function() {
@@ -1790,7 +1930,7 @@
                 }
                 // Enter in the override PIN/password field submits (mobile keyboards
                 // often have no Tab/go affordance to reach the Unlock button).
-                if (e.key === 'Enter' && (e.target.id === 'overridePinInput' || e.target.id === 'overridePasswordInput')) {
+                if (e.key === 'Enter' && (e.target.id === 'overridePinInput' || e.target.id === 'overridePasswordInput' || (e.target.classList && e.target.classList.contains('override-otp-box')))) {
                     e.preventDefault();
                     if (typeof submitOverride === 'function') submitOverride();
                 }
