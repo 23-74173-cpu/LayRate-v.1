@@ -66,8 +66,32 @@
         </x-kpi-card>
     </div>
 
+    {{-- ── Stock Table Filters ── --}}
+    <x-card padding="p-4">
+        <x-filter-bar formId="stocksFilterForm" frameId="eggs-stocks-live-data"
+                      action="{{ route('eggs.stocks.live-data') }}" title="Filter stock batches" data-sync-url>
+            <x-filter-search name="q" label="Search" placeholder="Batch code or cage…"
+                             :value="request('q', request('search'))" />
+            <x-filter-select name="cage_id" label="Cage" allLabel="All Cages"
+                             :value="request('cage_id', request('cage'))"
+                             :options="$cages->pluck('cage_code', 'id')->all()" />
+            <x-filter-select name="size" label="Size" allLabel="All Sizes"
+                             :value="request('size', request('egg_size'))"
+                             :options="collect(\App\Enums\EggSize::stockValues())->mapWithKeys(fn ($s) => [$s => \App\Enums\EggSize::labelFor($s)])->all()" />
+            <x-filter-select name="freshness" label="Freshness" allLabel="All"
+                             :value="request('freshness')"
+                             :options="['fresh' => 'Fresh', 'aging' => 'Aging', 'old' => 'Old']" />
+            <x-filter-date-range fromName="from" toName="to"
+                                 :fromValue="request('from', request('date_from'))"
+                                 :toValue="request('to', request('date_to'))"
+                                 :today="\App\Services\ReportingDateService::reportingDateString()" />
+        </x-filter-bar>
+    </x-card>
+
     {{-- ── Stock Table ── --}}
-    <turbo-frame id="eggs-stocks-live-data" src="{{ route('eggs.stocks.live-data') }}" loading="lazy" class="block">
+    {{-- Frame src carries the page URL's filter params (canonical + aliases)
+         so refresh, shared links, and Back all restore the filtered view. --}}
+    <turbo-frame id="eggs-stocks-live-data" src="{{ route('eggs.stocks.live-data', request()->only(['cage_id', 'cage', 'size', 'egg_size', 'from', 'to', 'date_from', 'date_to', 'freshness', 'q', 'search', 'page'])) }}" loading="lazy" class="block">
         @include('eggs.stocks._live-data-skeleton')
     </turbo-frame>
 
@@ -396,6 +420,7 @@
             <option value="30">Harvested in the last 30 days</option>
             <option value="custom">Custom date range…</option>
             <option value="selected" id="eggLabelsSelectedOpt">Selected batches (0)</option>
+            <option value="matching" id="eggLabelsMatchingOpt">All matching batches</option>
         </select>
         <p id="eggLabelsSelectedHint" class="text-xs mt-1.5 hidden" style="color: #9b1c24;">Tick at least one batch in the stock table first.</p>
     </div>
@@ -428,6 +453,7 @@
             if (hint) hint.classList.add('hidden');
             var form = modal ? modal.querySelector('form') : null;
             if (form) form.querySelectorAll('input[name="ids[]"]').forEach(function(i) { i.remove(); });
+            if (form) form.querySelectorAll('input[data-filter-forward]').forEach(function(i) { i.remove(); });
         }
         window.onEggLabelsRangeChange = function() {
             var custom = document.getElementById('eggLabelsRange').value === 'custom';
@@ -458,7 +484,22 @@
         var labelsForm = modal ? modal.querySelector('form') : null;
         if (labelsForm) labelsForm.addEventListener('submit', function(e) {
             labelsForm.querySelectorAll('input[name="ids[]"]').forEach(function(i) { i.remove(); });
-            if (document.getElementById('eggLabelsRange').value !== 'selected') return;
+            labelsForm.querySelectorAll('input[data-filter-forward]').forEach(function(i) { i.remove(); });
+            var range = document.getElementById('eggLabelsRange').value;
+            if (range === 'matching') {
+                // "All N matching": forward the table's current filters so the
+                // server resolves the same rows (capped at 300 with a clear
+                // message when exceeded). No selection involved.
+                var fp = currentTableFilterParams();
+                Object.keys(fp).forEach(function(k) {
+                    var h = document.createElement('input');
+                    h.type = 'hidden'; h.name = 'filters[' + k + ']'; h.value = fp[k];
+                    h.setAttribute('data-filter-forward', '1');
+                    labelsForm.appendChild(h);
+                });
+                return;
+            }
+            if (range !== 'selected') return;
             var ids = window.getEggLabelsSelectedIds();
             if (!ids.length) {
                 e.preventDefault();
@@ -471,12 +512,47 @@
                 labelsForm.appendChild(h);
             });
         });
+        // "All N matching" + selection glue for the table filters (filter-ui.js).
+        // Filter changes replace the frame, so any checked rows are gone with
+        // it: reset the selected count and refresh the matching total. The
+        // frame src carries the canonical filter params — forwarded as-is.
+        var STOCK_FILTER_KEYS = ['cage_id', 'size', 'from', 'to', 'freshness', 'q'];
+        function currentTableFilterParams() {
+            var frame = document.querySelector('turbo-frame#eggs-stocks-live-data');
+            var src = frame ? frame.getAttribute('src') : '';
+            var out = {};
+            try {
+                var sp = new URL(src, window.location.origin).searchParams;
+                STOCK_FILTER_KEYS.forEach(function(k) {
+                    var v = sp.get(k);
+                    if (v !== null && v !== '') out[k] = v;
+                });
+            } catch (err) {}
+            return out;
+        }
+        function refreshMatchingOption() {
+            var opt = document.getElementById('eggLabelsMatchingOpt');
+            if (!opt) return;
+            var result = document.querySelector('turbo-frame#eggs-stocks-live-data [data-filtered-count]');
+            var n = result ? parseInt(result.getAttribute('data-filtered-count'), 10) || 0 : 0;
+            opt.textContent = 'All ' + n.toLocaleString() + ' matching batches';
+            opt.disabled = n === 0;
+        }
+        if (!window.__eggLabelsFilterGlue) {
+            window.__eggLabelsFilterGlue = true;
+            document.addEventListener('filter:frame-loaded', function(e) {
+                if (!e.detail || e.detail.frameId !== 'eggs-stocks-live-data') return;
+                refreshSelectedCount();
+                refreshMatchingOption();
+            });
+        }
+        refreshMatchingOption();
         // The modal opens/closes via inline display changes elsewhere, so
         // watch it: leaving the modal always restores the normal dropdown.
         if (modal && window.MutationObserver) {
             new MutationObserver(function() {
                 if (modal.style.display === 'none') showPresets();
-                else refreshSelectedCount();
+                else { refreshSelectedCount(); refreshMatchingOption(); }
             }).observe(modal, {attributes: true, attributeFilter: ['style']});
         }
     })();

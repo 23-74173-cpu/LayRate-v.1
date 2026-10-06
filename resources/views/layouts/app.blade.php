@@ -61,6 +61,11 @@
          delegated + Turbo-aware). --}}
     <script src="/js/tooltip.js?v={{ @filemtime(public_path('js/tooltip.js')) }}" defer></script>
 
+    {{-- One consistent filter system for every record table (x-filter-bar):
+         auto-apply, debounced search, phone bottom sheet, chips. Delegated +
+         Turbo-aware; inert on pages without a filter bar. --}}
+    <script src="/js/filter-ui.js?v={{ @filemtime(public_path('js/filter-ui.js')) }}" defer></script>
+
     {{-- KPI card explanation popovers for every info button (delegated,
          Turbo-aware, binds once). --}}
     <script src="/js/kpi-info.js?v={{ @filemtime(public_path('js/kpi-info.js')) }}" defer></script>

@@ -1,4 +1,8 @@
 <turbo-frame id="eggs-stocks-live-data">
+    {{-- Active filters + result line (server-rendered: always matches rows). --}}
+    <div class="mb-3">
+        <x-filter-chips :chips="$filterChips ?? []" :first="$batches->firstItem()" :last="$batches->lastItem()" :filtered="$batches->total()" :total="$totalBatches ?? null" note="Summary cards and available pools above show all batches, not just the filtered rows." />
+    </div>
     {{-- Batch Table --}}
     <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
         <div class="overflow-x-auto">
@@ -36,16 +40,21 @@
                         <input type="checkbox" class="batch-select shrink-0" value="{{ $batch->id }}" aria-label="Select batch #{{ $batch->id }} for printing">
                     </td>
                     <td class="px-5 py-3.5">
-                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold" style="background:{{ $sBg }};color:{{ $sTxt }};border:1px solid {{ $sBorder }}">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold" style="background:{{ $sBg }};color:{{ $sTxt }};border:1px solid {{ $sBorder }}"
+                              data-filter-link data-param="size" data-value="{{ $batch->egg_size }}" tabindex="0" role="button"
+                              title="Show only {{ \App\Enums\EggSize::labelFor($batch->egg_size) }} batches">
                             {{ \App\Enums\EggSize::labelFor($batch->egg_size) }}
                         </span>
                     </td>
                     <td class="px-5 py-3.5 text-sm font-medium text-[#333333]">{{ number_format($batch->count) }}</td>
                     <td class="px-5 py-3.5 text-sm text-[#6B7280]">{{ (int) ceil($batch->count / 30) }}</td>
                     <td class="px-5 py-3.5 text-sm font-mono text-[#333333]">{{ $batch->harvested_date->format('m/d/Y') }}</td>
-                    <td class="px-5 py-3.5 text-sm font-medium" style="color:{{ $cageColor }}">{{ $cageCode }}</td>
+                    <td class="px-5 py-3.5 text-sm font-medium" style="color:{{ $cageColor }}"
+                        @if($batch->cage_id) data-filter-link data-param="cage_id" data-value="{{ $batch->cage_id }}" tabindex="0" role="button" title="Show only {{ $cageCode }} batches" @endif>{{ $cageCode }}</td>
                     <td class="px-5 py-3.5">
-                        <x-status-badge :status="$batch->freshness_status" type="freshness" />
+                        <span data-filter-link data-param="freshness" data-value="{{ $batch->freshness_status }}" tabindex="0" role="button" title="Show only {{ $batch->freshness_status }} batches" class="inline-block">
+                            <x-status-badge :status="$batch->freshness_status" type="freshness" />
+                        </span>
                     </td>
                     <td class="px-5 py-3.5">
                         <div class="flex items-center gap-2">

@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
  */
 class PrintableTagsController extends Controller
 {
+    use Concerns\FiltersRecords;
     /**
      * Paper sizes in millimetres. "Short" and "long" bond are the sizes
      * sold in the Philippines (8.5 x 11 in and 8.5 x 13 in).
@@ -60,17 +61,35 @@ class PrintableTagsController extends Controller
 
         $data = $request->validate([
             'paper' => 'nullable|in:' . implode(',', array_keys(self::PAPERS)),
-            'range' => 'nullable|in:all,7,30,custom,selected',
+            'range' => 'nullable|in:all,7,30,custom,selected,matching',
             'from_date' => 'nullable|date|required_if:range,custom',
             'to_date' => 'nullable|date|required_if:range,custom|after_or_equal:from_date',
             'ids'   => 'nullable|array',
             'ids.*' => 'integer',
+            // Filter params forwarded by the stock table's "All N matching"
+            // option (filters[cage_id], filters[size], ...). Validated by the
+            // same allow-list as the table, so this resolves the same rows.
+            'filters' => 'nullable|array',
         ]);
         $paperKey = $data['paper'] ?? 'a4';
         $range = $data['range'] ?? 'all';
 
+        $matchingFilters = [];
+        if (($range ?? 'all') === 'matching' && empty($data['ids'])) {
+            $spec = EggStockController::stockFilterSpec();
+            // extractRecordFilters reads the top-level query string; the
+            // table forwards its filters nested under filters[...], so map
+            // them onto a synthetic request first (aliases still apply).
+            $synthetic = new \Illuminate\Http\Request($data['filters'] ?? []);
+            $matchingFilters = $this->extractRecordFilters($synthetic, $spec);
+        }
+
         $batches = EggStockBatch::with('cage')
             ->when(! empty($data['ids']), fn ($q) => $q->whereIn('id', $data['ids']))
+            ->when(
+                empty($data['ids']) && ($range ?? 'all') === 'matching',
+                fn ($q) => $this->applyRecordFilters($q, $matchingFilters, EggStockController::stockFilterSpec())
+            )
             ->when(empty($data['ids']) && ($range ?? 'all') === 'custom', fn ($q) => $q->whereBetween(
                 'harvested_date', [$data['from_date'], $data['to_date']]
             ))
@@ -95,9 +114,14 @@ class PrintableTagsController extends Controller
         if ($batches->count() > self::MAX_LABELS) {
             // The form opens the PDF in a new tab, so a back-redirect with
             // errors would land unseen — answer in the new tab instead.
-            $message = 'Too many labels at once (' . number_format($batches->count())
-                . ' batches, max ' . self::MAX_LABELS . '). Close this tab, pick '
-                . '"Harvested in the last 7/30 days" (or fewer batches), and print again.';
+            $message = ($range ?? 'all') === 'matching'
+                ? 'Your current filters match ' . number_format($batches->count())
+                    . ' batches, but a maximum of ' . self::MAX_LABELS . ' labels can be printed at once. '
+                    . 'Narrow the filters (cage, size, or harvest dates) and print again, or tick up to '
+                    . self::MAX_LABELS . ' batches in the table and use "Selected batches".'
+                : 'Too many labels at once (' . number_format($batches->count())
+                    . ' batches, max ' . self::MAX_LABELS . '). Close this tab, pick '
+                    . '"Harvested in the last 7/30 days" (or fewer batches), and print again.';
 
             return response(
                 '<!DOCTYPE html><html><body style="font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:90vh;margin:0;">'

@@ -1,6 +1,18 @@
 @import "tailwindcss";
 @source "../views/";
 
+/* ── Shared record-table filters (x-filter-bar / filter-ui.js) ───────────
+   Loading state dims the frame in place (rows stay mounted until Turbo
+   swaps them, so the layout never shifts). Clickable filter cells get a
+   pointer + visible affordance. */
+turbo-frame.is-loading { opacity: 0.55; transition: opacity 150ms ease; }
+@media (prefers-reduced-motion: reduce) {
+  turbo-frame.is-loading { transition: none; }
+}
+[data-filter-link] { cursor: pointer; }
+[data-filter-link]:hover { text-decoration: underline; text-underline-offset: 3px; }
+[data-filter-link]:focus-visible { outline: 2px solid var(--color-navy); outline-offset: 2px; border-radius: 4px; }
+
 /* ── Branded base: selection, scrollbars, native controls ────────────── */
 ::selection {
   background-color: var(--color-navy);

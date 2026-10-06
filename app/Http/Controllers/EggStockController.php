@@ -9,6 +9,7 @@ use App\Models\EggStockBatch;
 use App\Models\ProductionLog;
 use App\Models\Setting;
 use App\Services\ReportingDateService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -16,10 +17,60 @@ use Illuminate\Validation\Rule;
 
 class EggStockController extends Controller
 {
+    use Concerns\FiltersRecords;
+
+    /**
+     * Allow-listed filters for the stock batches table, shared with the QR
+     * "all matching" print path (PrintableTagsController) so both resolve
+     * the same rows. Columns only — no new logic.
+     */
+    public static function stockFilterSpec(): array
+    {
+        $sizes = [];
+        foreach (EggSize::stockValues() as $size) {
+            $sizes[$size] = EggSize::labelFor($size);
+        }
+        $cages = Cage::where('is_active', 1)->orderBy('cage_code')->pluck('cage_code', 'id')->all();
+
+        return [
+            'cage_id' => ['type' => 'id', 'column' => 'cage_id', 'label' => 'Cage', 'options' => $cages],
+            'size' => ['type' => 'enum', 'column' => 'egg_size', 'options' => $sizes, 'label' => 'Size'],
+            'from' => ['type' => 'date', 'column' => 'harvested_date', 'bound' => 'min', 'label' => 'Harvested from'],
+            'to' => ['type' => 'date', 'column' => 'harvested_date', 'bound' => 'max', 'label' => 'Harvested to'],
+            'freshness' => [
+                'type' => 'callback',
+                'label' => 'Freshness',
+                'options' => ['fresh' => 'Fresh', 'aging' => 'Aging', 'old' => 'Old'],
+                // Same day boundaries as getFreshnessStatusAttribute (PHP):
+                // harvested_date is a midnight DATE and thresholds are whole
+                // days, so calendar-date cutoffs match the accessor exactly.
+                'handler' => function ($query, $value) {
+                    $thresholds = EggStockBatch::freshnessThresholds();
+                    $today = ReportingDateService::reportingDateString();
+                    $freshCut = Carbon::parse($today)->subDays($thresholds['fresh_days'])->toDateString();
+                    $agingCut = Carbon::parse($today)->subDays($thresholds['aging_days'])->toDateString();
+                    match ($value) {
+                        'fresh' => $query->where('harvested_date', '>=', $freshCut),
+                        'aging' => $query->where('harvested_date', '<', $freshCut)
+                            ->where('harvested_date', '>=', $agingCut),
+                        default => $query->where('harvested_date', '<', $agingCut),
+                    };
+                },
+            ],
+            'q' => [
+                'type' => 'text',
+                'label' => 'Search',
+                'columns' => ['batch_code'],
+                'relation' => [['cage', 'cage_code']],
+            ],
+        ];
+    }
+
     public function liveData(Request $request)
     {
         // Totals/tray counts must reflect every batch, not just the current
-        // page — computed from a separate unpaginated query.
+        // page — and not just the current filter. They feed the summary
+        // cards and the QR modal pools, so they stay global on purpose.
         $allBatches = EggStockBatch::query();
         $sizes = EggSize::stockValues();
 
@@ -30,10 +81,17 @@ class EggStockController extends Controller
             $trayTotals[$size] = (int) ceil($totals[$size] / 30);
         }
 
-        $batches = EggStockBatch::with(['cage', 'cageSlot', 'sourceProductionLog.cageSlot.cage'])
+        $spec = self::stockFilterSpec();
+        $filters = $this->extractRecordFilters($request, $spec);
+
+        $batches = $this->applyRecordFilters(
+                EggStockBatch::with(['cage', 'cageSlot', 'sourceProductionLog.cageSlot.cage']),
+                $filters,
+                $spec
+            )
             ->orderByDesc('harvested_date')
             ->orderByDesc('created_at')
-            ->paginate((int) config('tables.per_page', 25))
+            ->paginate($this->resolveTablePerPage($request, (int) config('tables.per_page', 25)))
             ->withQueryString();
 
         $availablePools = EggStockBatch::getAvailablePools();
@@ -46,6 +104,10 @@ class EggStockController extends Controller
             'availablePools' => $availablePools,
             'eggStockThresholds' => EggStockBatch::sizeThresholds(),
             'freshnessThresholds' => EggStockBatch::freshnessThresholds(),
+            'activeFilters' => $filters,
+            'filterChips' => $this->describeRecordFilters($filters, $spec),
+            'totalBatches' => EggStockBatch::count(),
+            'stockToday' => ReportingDateService::reportingDateString(),
         ]);
     }
 
