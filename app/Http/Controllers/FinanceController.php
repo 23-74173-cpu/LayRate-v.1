@@ -21,7 +21,7 @@ class FinanceController extends Controller
             ->with(['cage', 'recorder'])
             ->orderByDesc('date')
             ->orderByDesc('id')
-            ->paginate(20)
+            ->paginate((int) config('tables.per_page', 25))
             ->withQueryString();
 
         // Totals and the category breakdown use the same filters as the

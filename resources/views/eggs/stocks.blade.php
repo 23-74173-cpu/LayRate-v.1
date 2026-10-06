@@ -2,7 +2,9 @@
 @section('title', 'Egg Management')
 
 @section('content')
-<div class="space-y-5">
+{{-- Bottom clearance: the fixed quick-dock floats over the viewport's
+     bottom-right, so trailing space keeps it off the last table row/paginator. --}}
+<div class="space-y-5 pb-24 sm:pb-16">
 
     <x-page-header title="Egg Management" subtitle="Track harvested egg inventory by size and freshness" subtitle-id="egg-header-subtitle" />
 

@@ -209,7 +209,7 @@ class EnvironmentController extends Controller
             $query->where('cage_id', $request->cage_id);
         }
 
-        $summaryLogs = $query->paginate(20);
+        $summaryLogs = $query->paginate((int) config('tables.per_page', 25));
 
         return view('environment._logs', compact('summaryLogs', 'thresholds', 'cages'));
     }

@@ -92,7 +92,7 @@ class EggLoggingController extends Controller
             ->pluck('breed');
 
         $logsQuery = $this->buildFilteredLogsQuery($request);
-        $logs = $logsQuery->paginate(20)->withQueryString();
+        $logs = $logsQuery->paginate((int) config('tables.per_page', 25))->withQueryString();
 
         return view('eggs.recent-logs', compact(
             'logs', 'cages', 'cageSlots', 'breeds', 'filters'
@@ -103,7 +103,7 @@ class EggLoggingController extends Controller
     {
         $filters = $this->logFilters($request);
         $logsQuery = $this->buildFilteredLogsQuery($request);
-        $logs = $logsQuery->paginate(5)->withQueryString();
+        $logs = $logsQuery->paginate((int) config('tables.per_page', 25))->withQueryString();
 
         // KPI cards over every record matching the filters (not just this
         // page). Same filtered query, without its eager loads and ordering.

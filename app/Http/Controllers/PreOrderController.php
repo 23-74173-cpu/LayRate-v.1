@@ -41,7 +41,7 @@ class PreOrderController extends Controller
             $query->where('requested_date', '<=', $toFilter);
         }
 
-        $orders = $query->paginate(5)->withQueryString();
+        $orders = $query->paginate((int) config('tables.per_page', 25))->withQueryString();
 
         return view('eggs.pre-orders._table', [
             'orders' => $orders,
@@ -70,7 +70,7 @@ class PreOrderController extends Controller
             $query->where('requested_date', '<=', $toFilter);
         }
 
-        $orders = $query->paginate(20)->withQueryString();
+        $orders = $query->paginate((int) config('tables.per_page', 25))->withQueryString();
 
         $sizes = EggSize::saleValues();
 

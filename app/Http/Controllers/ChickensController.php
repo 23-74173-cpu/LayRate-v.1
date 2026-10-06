@@ -182,8 +182,12 @@ class ChickensController extends Controller
             ->header('Expires', '0');
     }
 
-    private function paginateCageGroups($groups, Request $request, int $perPage = 6): LengthAwarePaginator
+    private function paginateCageGroups($groups, Request $request, ?int $perPage = null): LengthAwarePaginator
     {
+        // Null = central default for the hens inventory (config/tables.php).
+        // Kept smaller than standard tables: each "row" is a cage card with
+        // all of its per-hen rows, checkboxes and action buttons.
+        $perPage ??= (int) config('tables.per_page_chickens', 10);
         $page  = LengthAwarePaginator::resolveCurrentPage();
         $slice = $groups->slice(($page - 1) * $perPage, $perPage)->values();
 
@@ -198,7 +202,7 @@ class ChickensController extends Controller
         $mortalityLogs = MortalityLog::with(['cage', 'recorder'])
             ->orderByDesc('log_date')
             ->orderByDesc('created_at')
-            ->paginate(5)
+            ->paginate((int) config('tables.per_page', 25))
             ->withQueryString();
 
         return view('chickens._mortality-records', compact('mortalityLogs'));
@@ -465,7 +469,7 @@ class ChickensController extends Controller
         $cullingLogs = CullingLog::with(['hen.cageSlot.cage', 'recorder'])
             ->orderByDesc('cull_date')
             ->orderByDesc('created_at')
-            ->paginate(5)
+            ->paginate((int) config('tables.per_page', 25))
             ->withQueryString();
 
         return view('chickens._culling-records', compact('cullingLogs'));
@@ -476,7 +480,7 @@ class ChickensController extends Controller
         $removalLogs = Removal::with(['hen.cageSlot.cage', 'recorder'])
             ->orderByDesc('removal_date')
             ->orderByDesc('created_at')
-            ->paginate(5)
+            ->paginate((int) config('tables.per_page', 25))
             ->withQueryString();
 
         return view('chickens._removal-records', compact('removalLogs'));

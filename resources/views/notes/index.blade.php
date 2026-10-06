@@ -17,7 +17,9 @@
     $addOld = fn ($key, $default = null) => $editFailed ? $default : old($key, $default);
     $totalNotes = $categoryCounts->sum();
 @endphp
-<div class="space-y-5">
+{{-- Bottom clearance: the fixed quick-dock floats over the viewport's
+     bottom-right, so trailing space keeps it off the last table row/paginator. --}}
+<div class="space-y-5 pb-24 sm:pb-16">
 
     <x-page-header title="Notes" subtitle="Notes and reminders, sorted by section. Notes typed in Mortality, Egg Logging, Feed, and Hens are saved here too." />
 

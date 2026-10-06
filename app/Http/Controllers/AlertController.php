@@ -21,7 +21,7 @@ class AlertController extends Controller
     {
         $alertsPaginator = Alert::with('cage')
             ->orderByDesc('triggered_at')
-            ->paginate(20)
+            ->paginate((int) config('tables.per_page', 25))
             ->withQueryString();
 
         $groups = [

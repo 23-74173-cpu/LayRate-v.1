@@ -66,7 +66,9 @@
 @endpush
 
 @section('content')
-<div class="space-y-5">
+{{-- Bottom clearance: the fixed quick-dock floats over the viewport's
+     bottom-right, so trailing space keeps it off the last table row/paginator. --}}
+<div class="space-y-5 pb-24 sm:pb-16">
 
     @php $cageColorMap = \App\Models\Cage::getColorMap(); @endphp
 

@@ -113,7 +113,7 @@ class HardwareItemController extends Controller
         $items = $query->with(['cage', 'cageSlot.cage', 'device', 'latestOccupancyReading', 'additionalSlots.cage'])
             ->orderBy('status')
             ->orderBy('serial_number')
-            ->paginate(20)
+            ->paginate((int) config('tables.per_page', 25))
             ->withQueryString();
 
         // Latest REAL reading per cage for the "Last Reading" column

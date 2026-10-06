@@ -87,8 +87,10 @@ class EggProductionHistoryController extends Controller
         return view('eggs.production-history', ['activeTab' => 'production-history']);
     }
 
-    private function paginateCollection($items, Request $request, int $perPage = 5): LengthAwarePaginator
+    private function paginateCollection($items, Request $request, ?int $perPage = null): LengthAwarePaginator
     {
+        // Null = central default (config/tables.php).
+        $perPage ??= (int) config('tables.per_page', 25);
         $page  = LengthAwarePaginator::resolveCurrentPage();
         $slice = $items->slice(($page - 1) * $perPage, $perPage)->values();
 

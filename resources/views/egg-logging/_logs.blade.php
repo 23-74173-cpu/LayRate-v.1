@@ -115,4 +115,8 @@
         </table>
     </div>
     <x-paginator :paginator="$logs" />
+    {{-- Bottom clearance (the egg-logging page itself can't take the shared
+         root padding): the fixed quick-dock floats over the viewport's
+         bottom-right, so trailing space keeps it off the last row/paginator. --}}
+    <div class="h-24 sm:h-16" aria-hidden="true"></div>
 </turbo-frame>

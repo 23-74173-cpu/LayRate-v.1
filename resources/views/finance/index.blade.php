@@ -15,7 +15,9 @@
     $inputClass = 'w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy';
     $filterClass = 'w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy';
 @endphp
-<div class="space-y-5">
+{{-- Bottom clearance: the fixed quick-dock floats over the viewport's
+     bottom-right, so trailing space keeps it off the last table row/paginator. --}}
+<div class="space-y-5 pb-24 sm:pb-16">
 
     <x-page-header title="Finance" subtitle="Farm income, expenses, and net balance" />
 

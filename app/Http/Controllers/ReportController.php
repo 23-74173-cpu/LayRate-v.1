@@ -121,8 +121,11 @@ class ReportController extends Controller
         return [$type, $from, $to, $cageId, $reason, $withForecast, $allCages];
     }
 
-    private function paginateCollection($items, Request $request, int $perPage = 20): LengthAwarePaginator
+    private function paginateCollection($items, Request $request, ?int $perPage = null): LengthAwarePaginator
     {
+        // Null = central default (config/tables.php). Preview only — the
+        // printable document (?full=1) and CSV/Excel exports use every row.
+        $perPage ??= (int) config('tables.per_page', 25);
         $page  = LengthAwarePaginator::resolveCurrentPage();
         $slice = $items->slice(($page - 1) * $perPage, $perPage)->values();
 
@@ -137,8 +140,10 @@ class ReportController extends Controller
     // unlike paginateCollection() above (single-type, untouched), the path is
     // pinned to route('reports') because this is also called from data()
     // (GET /reports/data), where the current request path would be wrong.
-    private function paginateSection($rows, Request $request, string $pageName, int $perPage = 20): LengthAwarePaginator
+    private function paginateSection($rows, Request $request, string $pageName, ?int $perPage = null): LengthAwarePaginator
     {
+        // Null = central default (config/tables.php). Preview only.
+        $perPage ??= (int) config('tables.per_page', 25);
         $page  = (int) $request->get($pageName, 1);
         $total = $rows->count();
 
@@ -724,7 +729,7 @@ class ReportController extends Controller
         $summary  = $this->buildSummary($type, $from, $to, $cageId, $reason, $allCages);
         $chart    = $charts ? $this->buildChartData($type, $from, $to, $cageId, $reason, $allCages) : null;
 
-        $perPage = 20;
+        $perPage = (int) config('tables.per_page', 25);
         $total   = $rows->count();
         $paginator = new LengthAwarePaginator(
             $rows->slice(($page - 1) * $perPage, $perPage)->values(),

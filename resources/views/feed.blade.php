@@ -3,7 +3,9 @@
 
 @section('content')
 @php $feedNotes = \App\Models\Note::suggestionsFor('Feed'); @endphp
-<div class="space-y-5">
+{{-- Bottom clearance: the fixed quick-dock floats over the viewport's
+     bottom-right, so trailing space keeps it off the last table row/paginator. --}}
+<div class="space-y-5 pb-24 sm:pb-16">
 
     <x-page-header title="Feed & Nutrition" subtitle="Track feed batches, crude protein, and daily consumption" />
 

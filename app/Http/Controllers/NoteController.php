@@ -20,7 +20,7 @@ class NoteController extends Controller
             ->when($category, fn ($q) => $q->where('category', $category))
             ->orderByDesc('created_at')
             ->orderByDesc('id')
-            ->paginate(20)
+            ->paginate((int) config('tables.per_page', 25))
             ->withQueryString();
 
         $categoryCounts = Note::selectRaw('category, COUNT(*) as total')

@@ -3,7 +3,9 @@
 
 @section('content')
 @php $mortalityNotes = \App\Models\Note::suggestionsFor('Mortality'); @endphp
-<div class="space-y-5">
+{{-- Bottom clearance: the fixed quick-dock floats over the viewport's
+     bottom-right, so trailing space keeps it off the last table row/paginator. --}}
+<div class="space-y-5 pb-24 sm:pb-16">
 
     <x-page-header title="Mortality Log" subtitle="Record and track hen mortality per cage">
         <x-slot:actions>
