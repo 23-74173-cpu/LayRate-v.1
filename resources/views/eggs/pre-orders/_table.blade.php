@@ -1,4 +1,8 @@
 <turbo-frame id="eggs-preorders-table">
+    {{-- Active filters + result line (server-rendered: always matches rows). --}}
+    <div class="mb-3">
+        <x-filter-chips :chips="$filterChips ?? []" :first="$orders->firstItem()" :last="$orders->lastItem()" :filtered="$orders->total()" :total="$totalOrders ?? null" note="Availability cards above reflect all pre-orders, not just the filtered rows." />
+    </div>
     <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
         <div class="overflow-x-auto">
         <table class="w-full">
@@ -30,7 +34,9 @@
                 <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
                     <td class="px-5 py-3.5 text-sm font-medium text-[#333333]">{{ $order->customer_name }}</td>
                     <td class="px-5 py-3.5">
-                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold" style="background:{{ $szBg }};color:{{ $szTxt }};border:1px solid {{ $szBorder }}">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold" style="background:{{ $szBg }};color:{{ $szTxt }};border:1px solid {{ $szBorder }}"
+                              data-filter-link data-param="size" data-value="{{ $order->egg_size }}" tabindex="0" role="button"
+                              title="Show only {{ \App\Enums\EggSize::labelFor($order->egg_size) }} orders">
                             {{ \App\Enums\EggSize::labelFor($order->egg_size) }}
                         </span>
                     </td>
@@ -41,7 +47,9 @@
                         {{ $order->fulfillment_date ? $order->fulfillment_date->format('m/d/Y') : 'Pending' }}
                     </td>
                     <td class="px-5 py-3.5">
-                        <x-status-badge :status="$order->status" type="general" />
+                        <span data-filter-link data-param="status" data-value="{{ $order->status }}" tabindex="0" role="button" title="Show only {{ $order->status }} orders" class="inline-block">
+                            <x-status-badge :status="$order->status" type="general" />
+                        </span>
                     </td>
                     <td class="px-5 py-3.5 text-sm font-medium text-right tabular-nums" style="color: #333333;">
                         {{ $order->total_amount !== null ? '₱' . number_format((float) $order->total_amount, 2) : '—' }}
@@ -67,7 +75,18 @@
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="8" class="px-5 py-10 text-center text-sm text-[#6B7280]">No pre-orders yet.</td></tr>
+                <tr>
+                    <td colspan="8" class="px-5 py-10 text-center text-sm text-[#6B7280]">
+                        @if(!empty($hasActiveFilters))
+                        No pre-orders match these filters.
+                        <button type="button" data-filter-clear-all
+                                class="block mx-auto mt-2 text-xs font-medium underline underline-offset-2 hover:brightness-90"
+                                style="color: var(--color-navy);">Clear filters</button>
+                        @else
+                        No pre-orders yet.
+                        @endif
+                    </td>
+                </tr>
                 @endforelse
                 @if($orders->count() > 0)
                 {{-- Blank filler rows to keep the table at a consistent height (perPage rows). --}}

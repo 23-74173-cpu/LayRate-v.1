@@ -48,50 +48,27 @@
 
     {{-- ── Filters ── --}}
     <x-card padding="p-4">
-        <form id="preOrdersForm" onsubmit="return false" class="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-end sm:gap-x-4 sm:gap-y-3 gap-3">
-                <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">STATUS</label>
-                    <select name="status" onchange="preOrdersFilter()"
-                            class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
-                        <option value="all" {{ $filters['status'] === 'all' ? 'selected' : '' }}>All Statuses</option>
-                        <option value="pending" {{ $filters['status'] === 'pending' ? 'selected' : '' }}>Pending</option>
-                        <option value="fulfilled" {{ $filters['status'] === 'fulfilled' ? 'selected' : '' }}>Fulfilled</option>
-                        <option value="cancelled" {{ $filters['status'] === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">EGG SIZE</label>
-                    <select name="egg_size" onchange="preOrdersFilter()"
-                            class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
-                        <option value="all" {{ $filters['egg_size'] === 'all' ? 'selected' : '' }}>All Sizes</option>
-                        <option value="small" {{ $filters['egg_size'] === 'small' ? 'selected' : '' }}>Small</option>
-                        <option value="medium" {{ $filters['egg_size'] === 'medium' ? 'selected' : '' }}>Medium</option>
-                        <option value="large" {{ $filters['egg_size'] === 'large' ? 'selected' : '' }}>Large</option>
-                        <option value="xl" {{ $filters['egg_size'] === 'xl' ? 'selected' : '' }}>XL</option>
-                        <option value="jumbo" {{ $filters['egg_size'] === 'jumbo' ? 'selected' : '' }}>Jumbo</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">FROM</label>
-                    <input type="date" name="from" value="{{ $filters['from'] }}" onchange="preOrdersFilter()"
-                           class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
-                </div>
-                <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TO</label>
-                    <input type="date" name="to" value="{{ $filters['to'] }}" onchange="preOrdersFilter()"
-                           class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
-                </div>
-                <div class="col-span-2 sm:col-span-1 flex items-center justify-end gap-2">
-                    <a href="{{ route('eggs.preorders') }}"
-                       class="px-4 py-2 text-xs font-medium rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">
-                        Reset
-                    </a>
-                </div>
-            </form>
-        </x-card>
+        <x-filter-bar formId="preOrdersFilterForm" frameId="eggs-preorders-table"
+                      action="{{ route('eggs.preorders.table') }}" title="Filter pre-orders" data-sync-url>
+            <x-filter-search name="q" label="Search" placeholder="Customer name or reference…"
+                             :value="request('q', request('search'))" />
+            <x-filter-select name="status" label="Status" allLabel="All Statuses"
+                             :value="request('status')"
+                             :options="['pending' => 'Pending', 'fulfilled' => 'Fulfilled', 'cancelled' => 'Cancelled']" />
+            <x-filter-select name="size" label="Egg Size" allLabel="All Sizes"
+                             :value="request('size', request('egg_size'))"
+                             :options="collect(\App\Enums\EggSize::saleValues())->mapWithKeys(fn ($s) => [$s => \App\Enums\EggSize::labelFor($s)])->all()" />
+            <x-filter-date-range fromName="from" toName="to"
+                                 :fromValue="request('from', request('date_from'))"
+                                 :toValue="request('to', request('date_to'))"
+                                 :today="\App\Services\ReportingDateService::reportingDateString()" />
+        </x-filter-bar>
+    </x-card>
 
     {{-- ── Orders Table ── --}}
-    <turbo-frame id="eggs-preorders-table" src="{{ route('eggs.preorders.table', request()->query()) }}" loading="lazy">
+    {{-- Frame src carries the page URL's filter params (canonical + aliases)
+         so refresh, shared links, and Back all restore the filtered view. --}}
+    <turbo-frame id="eggs-preorders-table" src="{{ route('eggs.preorders.table', request()->only(['status', 'size', 'egg_size', 'from', 'to', 'date_from', 'date_to', 'q', 'search', 'page'])) }}" loading="lazy">
         @include('eggs.pre-orders._table-skeleton')
     </turbo-frame>
 
@@ -305,14 +282,6 @@
 </div>
 
 <script>
-function preOrdersFilter() {
-    var form = document.getElementById('preOrdersForm');
-    if (!form) return;
-    var params = new URLSearchParams(new FormData(form));
-    var frame = document.querySelector('turbo-frame#eggs-preorders-table');
-    if (frame) frame.setAttribute('src', '/eggs/pre-orders/table?' + params.toString());
-}
-
 var _preorderPools = {};
 
 function eggCountLabel(count) {

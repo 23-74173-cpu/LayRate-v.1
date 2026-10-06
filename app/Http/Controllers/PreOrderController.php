@@ -19,32 +19,53 @@ use Illuminate\Validation\Rule;
 
 class PreOrderController extends Controller
 {
+    use Concerns\FiltersRecords;
+
+    /**
+     * Allow-listed filters for the pre-orders table. Dates filter on
+     * requested_date (the column the old From/To used); fulfillment_date
+     * is display-only. Columns only — no new logic.
+     */
+    public static function orderFilterSpec(): array
+    {
+        $sizes = [];
+        foreach (EggSize::saleValues() as $size) {
+            $sizes[$size] = EggSize::labelFor($size);
+        }
+
+        return [
+            'status' => [
+                'type' => 'enum', 'column' => 'status', 'label' => 'Status',
+                'options' => ['pending' => 'Pending', 'fulfilled' => 'Fulfilled', 'cancelled' => 'Cancelled'],
+            ],
+            'size' => ['type' => 'enum', 'column' => 'egg_size', 'options' => $sizes, 'label' => 'Size'],
+            'from' => ['type' => 'date', 'column' => 'requested_date', 'bound' => 'min', 'label' => 'Requested from'],
+            'to' => ['type' => 'date', 'column' => 'requested_date', 'bound' => 'max', 'label' => 'Requested to'],
+            'q' => [
+                'type' => 'text', 'label' => 'Search',
+                'columns' => ['customer_name', 'customer_reference'],
+            ],
+        ];
+    }
+
     public function table(Request $request)
     {
-        $query = PreOrder::orderByDesc('requested_date');
+        $spec = self::orderFilterSpec();
+        $filters = $this->extractRecordFilters($request, $spec);
 
-        $statusFilter = $request->query('status');
-        $sizeFilter = $request->query('egg_size');
-        $fromFilter = $request->query('from');
-        $toFilter = $request->query('to');
-
-        if ($statusFilter && $statusFilter !== 'all') {
-            $query->where('status', $statusFilter);
-        }
-        if ($sizeFilter && $sizeFilter !== 'all') {
-            $query->where('egg_size', $sizeFilter);
-        }
-        if ($fromFilter) {
-            $query->where('requested_date', '>=', $fromFilter);
-        }
-        if ($toFilter) {
-            $query->where('requested_date', '<=', $toFilter);
-        }
-
-        $orders = $query->paginate((int) config('tables.per_page', 25))->withQueryString();
+        $orders = $this->applyRecordFilters(
+                PreOrder::orderByDesc('requested_date'),
+                $filters,
+                $spec
+            )
+            ->paginate($this->resolveTablePerPage($request, (int) config('tables.per_page', 10)))
+            ->withQueryString();
 
         return view('eggs.pre-orders._table', [
             'orders' => $orders,
+            'filterChips' => $this->describeRecordFilters($filters, $spec),
+            'totalOrders' => PreOrder::count(),
+            'hasActiveFilters' => count($filters) > 0,
         ]);
     }
 
