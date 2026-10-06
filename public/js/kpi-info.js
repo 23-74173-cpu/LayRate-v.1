@@ -3,7 +3,9 @@
  *
  * Delegated (Turbo-safe, binds once): the info button is caught in the
  * capture phase so its click never triggers card navigation, then toggles a
- * single shared popover. Esc or an outside click closes it. The popover is
+ * single shared popover. Esc or an outside click closes it, and it also
+ * auto-hides shortly after the cursor leaves both the info button and the
+ * popover. The popover is
  * clamped into the viewport and flips above the button when there is no
  * room below. Cards with a per-cage breakdown (data-kpi-breakdown) offer it
  * as an explicit action that reuses the existing openKpiModal() when the
@@ -16,8 +18,31 @@
     window.__kpiInfoBound = true;
 
     var pop = null;
+    var hideTimer = null;
+
+    function cancelHide() {
+        if (hideTimer) {
+            clearTimeout(hideTimer);
+            hideTimer = null;
+        }
+    }
+
+    function scheduleHide() {
+        if (!pop || hideTimer) return;
+        // Grace period covers the gap between button and popover and lets
+        // the cursor pass through without flicker.
+        hideTimer = setTimeout(function () {
+            hideTimer = null;
+            if (!pop) return;
+            var btn = pop._btn;
+            var overBtn = !!(btn && btn.isConnected && btn.matches && btn.matches(':hover'));
+            var overPop = !!(pop.isConnected && pop.matches && pop.matches(':hover'));
+            if (!overBtn && !overPop) close();
+        }, 250);
+    }
 
     function close() {
+        cancelHide();
         if (pop) {
             if (pop.parentNode) pop.parentNode.removeChild(pop);
             pop = null;
@@ -101,6 +126,16 @@
             toggle(btn);
         }
     }, true);
+
+    // Hover tracking: cursor over the popover or any info button keeps it
+    // alive; anywhere else starts the auto-hide grace timer.
+    document.addEventListener('mouseover', function (e) {
+        if (!pop) return;
+        var t = e.target;
+        var ui = t && t.closest ? t.closest('.kpi-popover, [data-kpi-popover]') : null;
+        if (ui) cancelHide();
+        else scheduleHide();
+    });
 
     // Bubble: breakdown action + outside-to-close.
     document.addEventListener('click', function (e) {
