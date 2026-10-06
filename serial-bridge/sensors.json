@@ -2,8 +2,8 @@
   "port": "/dev/ttyArduino",
   "baud": 9600,
   "device_key": "layrate-pi-dev-key-2026",
-  "api_url": "http://localhost/api/sensor-readings",
-  "command_api_url": "http://localhost/api/relay/command",
+  "api_url": "http://127.0.0.1/api/sensor-readings",
+  "command_api_url": "http://127.0.0.1/api/relay/command",
   "dht_serial": "DHT22-001",
   "ir_serial": "IRBBS-001",
   "relay_serial": "RELAY-001"

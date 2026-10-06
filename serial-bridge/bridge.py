@@ -194,7 +194,7 @@ def fetch_relay_command(session, url):
     this device — the bridge simply stays idle until that changes.
     """
     try:
-        resp = session.get(url, timeout=5)
+        resp = session.get(url, timeout=5, allow_redirects=False)
         if resp.status_code == 200:
             relay = resp.json().get("relay")
             if relay is None:
@@ -347,7 +347,11 @@ def run_loop(args):
                             if payload is None:
                                 continue
                             try:
-                                resp = session.post(args.api_url, json=payload, timeout=10)
+                                # Redirects disabled: a 3xx here means the URL
+                                # is hitting the portal catch-all instead of
+                                # the loopback API block — fail loudly with the
+                                # status code instead of following it into TLS.
+                                resp = session.post(args.api_url, json=payload, timeout=10, allow_redirects=False)
                                 if resp.status_code == 200:
                                     log.info("Sent %d reading(s) to %s (HTTP 200)",
                                              len(payload["readings"]), args.api_url)
