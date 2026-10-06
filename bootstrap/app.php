@@ -43,6 +43,12 @@ return Application::configure(basePath: dirname(__DIR__))
             ->everyFifteenMinutes()
             ->withoutOverlapping()
             ->appendOutputTo(storage_path('logs/hardware-health-check.log'));
+
+        $schedule->command('db:backup --retention=14')
+            ->dailyAt('02:00')
+            ->timezone('Asia/Manila')
+            ->withoutOverlapping()
+            ->appendOutputTo(storage_path('logs/db-backup.log'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
