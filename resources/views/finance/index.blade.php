@@ -19,6 +19,20 @@
 
     <x-page-header title="Finance" subtitle="Farm income, expenses, and net balance" />
 
+    @push('dock-actions')
+        {{-- Auto-post settings live behind the floating dock (admin only),
+             not as an always-present card. --}}
+        @if(auth()->user()->isAdmin())
+        <button type="button" onclick="openFinanceAutopost()"
+                class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>Auto-post</span>
+            <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
+                <i data-lucide="zap" class="w-4 h-4 text-navy"></i>
+            </div>
+        </button>
+        @endif
+    @endpush
+
     {{-- ── Summary ── --}}
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <x-kpi-card label="Total Income" infoKey="finance.income" icon="trending-up" cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)" delay="0ms"
@@ -41,21 +55,6 @@
     <p class="text-xs rounded-lg px-4 py-2.5" style="background-color: #eef4ff; color: #1d4e8f;">Auto-posting is on since {{ $autopostDate }} — paid pre-orders post Egg Sales income and new feed batches post Feed Cost automatically. Please don't enter those two by hand.</p>
     @else
     <p class="text-xs rounded-lg px-4 py-2.5" style="background-color: #f6f5f4; color: #6B7280;">Auto-posting is off — record all income and expenses manually below.</p>
-    @endif
-
-    @if(auth()->user()->isAdmin())
-    <x-card padding="p-4">
-        <form method="POST" action="{{ route('settings.finance-autopost.update') }}" class="flex flex-wrap items-end gap-3">
-            @csrf @method('PUT')
-            <div>
-                <label for="autopostDate" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">AUTO-POST FROM</label>
-                <input type="date" id="autopostDate" name="finance_autopost_start" value="{{ $autopostDate ?? '' }}" max="{{ $today }}" class="{{ $filterClass }}">
-                <x-input-error name="finance_autopost_start" />
-            </div>
-            <x-button type="submit" class="px-5 py-2">Save</x-button>
-            <p class="text-xs basis-full" style="color: #a39e98;">Empty means off. Nothing dated before the set date is ever auto-posted.</p>
-        </form>
-    </x-card>
     @endif
 
     {{-- ── Filters ── --}}
@@ -297,6 +296,35 @@
     </div>
 
     {{-- ── Edit Transaction Modal ── --}}
+    {{-- ── Auto-post Settings Modal (admin only, opened from the floating dock) ── --}}
+    @if(auth()->user()->isAdmin())
+    <div id="financeAutopostModal" data-modal data-close="closeFinanceAutopost" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" style="display: none;">
+        <div class="absolute inset-0" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeFinanceAutopost()"></div>
+        <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Auto-post Settings</h2>
+                <button type="button" onclick="closeFinanceAutopost()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                    <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
+                </button>
+            </div>
+            <p class="text-xs mb-4" style="color: #6B7280;">Paid pre-orders post Egg Sales income and new feed batches post Feed Cost automatically from this date. Empty means off — nothing dated before the set date is ever auto-posted.</p>
+            <form method="POST" action="{{ route('settings.finance-autopost.update') }}" class="space-y-4">
+                @csrf @method('PUT')
+                <div>
+                    <label for="autopostDate" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">AUTO-POST FROM</label>
+                    <input type="date" id="autopostDate" name="finance_autopost_start" value="{{ $autopostDate ?? '' }}" max="{{ $today }}" class="{{ $inputClass }}">
+                    <x-input-error name="finance_autopost_start" />
+                </div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeFinanceAutopost()"
+                            class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">Cancel</button>
+                    <x-button type="submit" class="flex-1 py-2.5">Save</x-button>
+                </div>
+            </form>
+        </div>
+    </div>
+    @endif
+
     <div id="financeEditModal" data-modal data-close="closeFinanceEdit" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" style="display: none;">
         <div class="absolute inset-0" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeFinanceEdit()"></div>
         <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
@@ -426,6 +454,22 @@ function closeFinanceEdit() {
     var modal = document.getElementById('financeEditModal');
     if (modal) modal.style.display = 'none';
 }
+
+function openFinanceAutopost() {
+    var modal = document.getElementById('financeAutopostModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    if (window.lucide) lucide.createIcons();
+}
+
+function closeFinanceAutopost() {
+    var modal = document.getElementById('financeAutopostModal');
+    if (modal) modal.style.display = 'none';
+}
+
+@if($errors->has('finance_autopost_start'))
+openFinanceAutopost();
+@endif
 
 (function () {
     document.querySelectorAll('form[data-finance-form]').forEach(function (form) {
