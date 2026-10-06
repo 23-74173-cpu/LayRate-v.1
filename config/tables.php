@@ -7,10 +7,10 @@
 // notes, report previews, mortality/culling/removal records) reads its page
 // size from here, so changing it later is one edit.
 //
-// 'per_page' is the standard size (25 rows). 'per_page_chickens' is the
-// smaller size (10 cage groups) for the hens inventory list, where each
+// 'per_page' is the standard size (10 rows). 'per_page_chickens' is a
+// separate key (10 cage groups) for the hens inventory list, where each
 // "row" is a cage card with all of its per-hen rows, checkboxes and action
-// buttons — a full 25 groups would be a very heavy page.
+// buttons — kept independent so the two sizes can diverge again later.
 //
 // Deliberately NOT covered: dashboard widgets and KPI/chart queries, modal
 // and popup lists, dropdowns, "top N" lists, CSV/Excel/print exports, the
@@ -18,7 +18,7 @@
 // anything where a small size is structural (e.g. report section pagers).
 
 return [
-    'per_page' => 25,
+    'per_page' => 10,
 
     'per_page_chickens' => 10,
 ];
