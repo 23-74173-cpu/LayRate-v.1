@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Bookmarked or stale ?page=N links would otherwise render an empty table
- * with no way back (e.g. page 380 of a table that now shows 25 rows per
+ * with no way back (e.g. page 380 of a table that now shows 10 rows per
  * page has no page 380 anymore). When a GET request renders a view whose
  * paginator sits past its last page, redirect once to that paginator's last
  * page, keeping every other query-string parameter (filters, tabs, sort).

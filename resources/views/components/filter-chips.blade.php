@@ -12,7 +12,8 @@
  *   @param int   $first    First visible row (paginator firstItem, may be null)
  *   @param int   $last     Last visible row (paginator lastItem, may be null)
  *   @param int   $filtered Filtered total (paginator total)
- *   @param int   $total    Unfiltered total for the "(N total)" suffix
+ *   @param int   $total    Unfiltered total for the "(N total)" suffix, e.g.
+ *                         result line "Showing 1–10 of 312 (1,896 total)"
  * }
 --}}
 @props(['chips' => [], 'first' => null, 'last' => null, 'filtered' => 0, 'total' => null, 'note' => null])

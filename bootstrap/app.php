@@ -21,7 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Session\Middleware\AuthenticateSession::class,
             \App\Http\Middleware\EnsureUserIsActive::class,
             \App\Http\Middleware\PreventBackHistory::class,
-            // Stale ?page=N links (page size grew 5/20 → 25) land on the
+            // Stale ?page=N links (page size grew 5/20 → 10) land on the
             // paginator's last page instead of an empty table. View-only.
             \App\Http\Middleware\RedirectTablePageOverflow::class,
         ]);
