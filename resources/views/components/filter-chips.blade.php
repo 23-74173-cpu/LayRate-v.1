@@ -16,7 +16,7 @@
  *                         result line "Showing 1–10 of 312 (1,896 total)"
  * }
 --}}
-@props(['chips' => [], 'first' => null, 'last' => null, 'filtered' => 0, 'total' => null, 'note' => null])
+@props(['chips' => [], 'first' => null, 'last' => null, 'filtered' => 0, 'total' => null, 'note' => null, 'clearLabel' => 'Clear all'])
 
 <div class="flex flex-wrap items-center gap-2" data-filter-chips>
     @if(count($chips) > 0)
@@ -30,7 +30,7 @@
         <span class="sr-only">Remove {{ $chip['label'] }} filter</span>
     </button>
     @endforeach
-    <button type="button" data-filter-clear-all class="text-xs font-medium underline underline-offset-2 hover:brightness-90" style="color: var(--color-navy);">Clear all</button>
+    <button type="button" data-filter-clear-all class="text-xs font-medium underline underline-offset-2 hover:brightness-90" style="color: var(--color-navy);">{{ $clearLabel }}</button>
     @endif
     <span class="text-xs ml-auto" style="color: #615d59;" aria-live="polite" data-filter-result data-filtered-count="{{ (int) $filtered }}">
         @if($first !== null)Showing {{ number_format($first) }}–{{ number_format($last) }} of {{ number_format($filtered) }}@else Showing 0 of {{ number_format($filtered) }}@endif@if($total !== null && $filtered !== (int) $total) ({{ number_format($total) }} total)@endif@if($note !== null)<span class="block sm:inline sm:ml-1">{{ $note }}</span>@endif

@@ -24,6 +24,18 @@
         </x-kpi-card>
     </div>
     @endisset
+    {{-- Active filters + result line (server-rendered: always matches rows). --}}
+    <div class="mb-3 flex flex-wrap items-center gap-2">
+        <x-filter-chips :chips="$filterChips ?? []" :first="$logs->firstItem()" :last="$logs->lastItem()" :filtered="$logs->total()" :total="$totalLogs ?? null" clearLabel="Reset filters" />
+        @if(!empty($defaultedRange))
+        <button type="button" data-default-chip data-clear="from,to" data-set="range=all" title="Show all records"
+                class="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 min-h-[32px] rounded-full text-xs font-medium border border-[#D9D9D9] bg-white text-[#333333] hover:bg-[#F5F6F8] transition-colors">
+            <span><strong>Range:</strong> Last 30 days</span>
+            <span class="inline-flex items-center justify-center w-5 h-5 rounded-full hover:bg-black/10" aria-hidden="true">×</span>
+            <span class="sr-only">Show all records</span>
+        </button>
+        @endif
+    </div>
     <div class="overflow-x-auto">
         <table class="w-full">
             <thead>
@@ -45,7 +57,8 @@
                 @forelse($logs as $log)
                 <tr class="border-b hover:bg-black/[0.02] transition-colors" style="border-color: #e6e6e6;">
                     <td class="px-5 py-3.5 text-sm font-mono" style="color: #1f1f1f;">{{ $log->log_date->format('m/d/Y') }}</td>
-                    <td class="px-5 py-3.5 text-sm font-semibold font-mono" style="color: {{ $log->cageSlot?->cage?->color ?? '#6B7280' }}">{{ $log->cageSlot?->cage?->cage_code ?? '—' }}</td>
+                    <td class="px-5 py-3.5 text-sm font-semibold font-mono" style="color: {{ $log->cageSlot?->cage?->color ?? '#6B7280' }}"
+                        @if($log->cageSlot?->cage_id) data-filter-link data-param="cage_id" data-value="{{ $log->cageSlot->cage_id }}" tabindex="0" role="button" title="Show only {{ $log->cageSlot?->cage?->cage_code }} logs" @endif>{{ $log->cageSlot?->cage?->cage_code ?? '—' }}</td>
                     <td class="px-5 py-3.5 text-xs font-mono" style="color: #615d59;">
                         @if($log->cageSlot){{ $log->cageSlot->row_number }}-{{ $log->cageSlot->column_number }}@else — @endif
                     </td>
@@ -55,9 +68,13 @@
                     <td class="px-5 py-3.5 text-sm" style="color: #31302e;">{{ $log->recorder?->name ?? 'Farm Operator' }}</td>
                     <td class="px-5 py-3.5">
                         @if($log->logged_via === 'sensor')
-                        <x-status-badge status="sensor" type="slot" />
+                        <span data-filter-link data-param="logged_via" data-value="sensor" tabindex="0" role="button" title="Show only sensor logs" class="inline-block">
+                            <x-status-badge status="sensor" type="slot" />
+                        </span>
                         @elseif($log->logged_via === 'manual')
-                        <x-status-badge status="manual" type="slot" />
+                        <span data-filter-link data-param="logged_via" data-value="manual" tabindex="0" role="button" title="Show only manual logs" class="inline-block">
+                            <x-status-badge status="manual" type="slot" />
+                        </span>
                         @else
                         <span class="text-xs" style="color: #a39e98;">—</span>
                         @endif
@@ -101,7 +118,23 @@
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="11" class="px-5 py-10 text-center text-sm" style="color: #a39e98;">No logs yet. Select a slot and save the first record.</td></tr>
+                <tr>
+                    <td colspan="11" class="px-5 py-10 text-center text-sm" style="color: #a39e98;">
+                        @if(!empty($defaultedRange))
+                        No logs in the last 30 days.
+                        <button type="button" data-default-chip data-clear="from,to" data-set="range=all"
+                                class="block mx-auto mt-2 text-xs font-medium underline underline-offset-2 hover:brightness-90"
+                                style="color: var(--color-navy);">Show all dates</button>
+                        @elseif(!empty($hasActiveFilters))
+                        No logs match these filters.
+                        <button type="button" data-filter-clear-all
+                                class="block mx-auto mt-2 text-xs font-medium underline underline-offset-2 hover:brightness-90"
+                                style="color: var(--color-navy);">Clear filters</button>
+                        @else
+                        No logs yet. Select a slot and save the first record.
+                        @endif
+                    </td>
+                </tr>
                 @endforelse
                 @if($logs->count() > 0)
                 {{-- Blank filler rows to keep the table at a consistent height (perPage rows). --}}

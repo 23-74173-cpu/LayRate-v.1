@@ -158,6 +158,7 @@
         // date-mdy.js overrides the native value setter, so the visible
         // mm/dd/yyyy box syncs itself from this ISO assignment. No event is
         // fired here on purpose: a synthetic 'change' would double-apply.
+        clearRangeMarker(bar); // a preset is a real date choice, not all-time
         updatePresetUI(bar);
         updateCount(bar);
         if (sheetOpen(bar)) return; // phone sheet waits for Apply
@@ -186,6 +187,14 @@
     }
 
     function updateAllPresetUI() { bars().forEach(updatePresetUI); }
+
+    // All-time marker for tables with a default range (e.g. egg history's
+    // "Last 30 days"): present as a hidden input so it rides the form into
+    // the frame src and page URL; cleared the moment real dates are chosen.
+    function clearRangeMarker(bar) {
+        var marker = bar.querySelector('input[type="hidden"][name="range"]');
+        if (marker) marker.value = '';
+    }
 
     /* ── Apply / reset ── */
 
@@ -306,6 +315,9 @@
         if (e.target.matches('select[name], input[name][type="date"], input[name][type="checkbox"]')) {
             updateCount(bar);
             updatePresetUI(bar);
+            // Choosing dates supersedes the all-time marker (used by tables
+            // with a default range): fresh dates mean "filtered by dates".
+            if (e.target.matches('input[name][type="date"]')) clearRangeMarker(bar);
             if (sheetOpen(bar)) return; // phone sheet waits for Apply
             applyBar(bar);
         }
@@ -390,6 +402,27 @@
             return;
         }
 
+        // Default-range chip (e.g. "Last 30 days"): clears the listed date
+        // params and writes the all-time marker instead, so clearing shows
+        // all records without snapping back to the default on reload/share.
+        var defChip = t && t.closest ? t.closest('[data-default-chip]') : null;
+        if (defChip) {
+            var frameD = defChip.closest('turbo-frame');
+            var barD = frameD ? document.querySelector('[data-filter-bar][data-frame="' + frameD.id + '"]') : bars()[0];
+            if (!barD) return;
+            (defChip.getAttribute('data-clear') || '').split(',').forEach(function (p) {
+                if (p) clearParam(barD, p);
+            });
+            var set = (defChip.getAttribute('data-set') || '').split('=');
+            if (set.length === 2 && set[0]) {
+                var marker = barD.querySelector('input[type="hidden"][name="' + set[0] + '"]');
+                if (marker) marker.value = set[1];
+            }
+            updateCount(barD);
+            applyBar(barD);
+            return;
+        }
+
         var link = t && t.closest ? t.closest('[data-filter-link]') : null;
         if (link) {
             e.preventDefault();
@@ -422,6 +455,17 @@
             if (!has) return false;
             sel.value = value;
             return true;
+        }
+        // Checkbox groups (e.g. logged_via): narrow to exactly the clicked value.
+        var boxes = bar.querySelectorAll('input[type="checkbox"][name="' + param + '[]"]');
+        if (boxes.length) {
+            var matched = false;
+            boxes.forEach(function (cb) {
+                var on = cb.value === value;
+                if (on) matched = true;
+                cb.checked = on;
+            });
+            return matched;
         }
         var input = bar.querySelector('input[name="' + param + '"]');
         if (input && (input.type === 'text' || input.type === 'search' || input.type === 'date')) {

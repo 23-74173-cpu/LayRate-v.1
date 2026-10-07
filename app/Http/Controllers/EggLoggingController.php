@@ -19,6 +19,39 @@ use Illuminate\Validation\Rule;
 
 class EggLoggingController extends Controller
 {
+    use Concerns\FiltersRecords;
+
+    /**
+     * Allow-listed filters for the egg production history table. Breed keeps
+     * its exact historical meaning (slots having active hens of that breed)
+     * via callback; everything else maps to columns. Dates filter log_date.
+     */
+    public static function historyFilterSpec(): array
+    {
+        $cages = Cage::where('is_active', 1)->orderBy('cage_code')->pluck('cage_code', 'id')->all();
+
+        return [
+            'cage_id' => [
+                'type' => 'callback', 'label' => 'Cage', 'options' => $cages,
+                'handler' => fn ($query, $value) => $query->whereHas(
+                    'cageSlot', fn ($q) => $q->where('cage_id', $value)
+                ),
+            ],
+            'cage_slot_id' => ['type' => 'id', 'column' => 'cage_slot_id', 'label' => 'Slot'],
+            'breed' => [
+                'type' => 'callback', 'label' => 'Breed',
+                'handler' => fn ($query, $value) => $query->whereHas(
+                    'cageSlot.hens', fn ($q) => $q->where('breed', $value)->where('is_active', 1)
+                ),
+            ],
+            'logged_via' => [
+                'type' => 'multi', 'column' => 'logged_via', 'label' => 'Logged Via',
+                'options' => ['manual' => 'Manual', 'sensor' => 'Sensor', 'unknown' => 'Unknown'],
+            ],
+            'from' => ['type' => 'date', 'column' => 'log_date', 'bound' => 'min', 'label' => 'From'],
+            'to' => ['type' => 'date', 'column' => 'log_date', 'bound' => 'max', 'label' => 'To'],
+        ];
+    }
     public function index(Request $request)
     {
         $today = ReportingDateService::reportingDateString();
@@ -92,22 +125,45 @@ class EggLoggingController extends Controller
             ->pluck('breed');
 
         $logsQuery = $this->buildFilteredLogsQuery($request);
-        $logs = $logsQuery->paginate((int) config('tables.per_page', 25))->withQueryString();
+        $logs = $logsQuery->paginate($this->resolveTablePerPage($request, (int) config('tables.per_page', 10)))->withQueryString();
 
-        return view('eggs.recent-logs', compact(
+        // Form initial values for the default range (the table itself comes
+        // from the logs() frame). Prefixed names to avoid colliding with
+        // anything else in the view.
+        $dateDefault = $this->historyDateDefaults($request);
+
+        return view('eggs.recent-logs', array_merge(compact(
             'logs', 'cages', 'cageSlots', 'breeds', 'filters'
-        ));
+        ), [
+            'defaultFrom' => $dateDefault['from'],
+            'defaultTo' => $dateDefault['to'],
+        ]));
     }
 
     public function logs(Request $request)
     {
-        $filters = $this->logFilters($request);
-        $logsQuery = $this->buildFilteredLogsQuery($request);
-        $logs = $logsQuery->paginate((int) config('tables.per_page', 25))->withQueryString();
+        $spec = self::historyFilterSpec();
+        $filters = $this->extractRecordFilters($request, $spec);
+
+        // Default view: last 30 days of the reporting calendar (Asia/Manila
+        // day boundaries, same rule as stocks) — applied ONLY when the
+        // request carries no date filter at all. Shown as a removable
+        // "Last 30 days" chip; clearing it writes range=all into the URL, so
+        // the all-time view survives reloads and shared links instead of
+        // snapping back to the default.
+        $dateDefault = $this->historyDateDefaults($request);
+        $defaulted = $dateDefault['defaulted'];
+        if ($defaulted) {
+            $filters['from'] = $dateDefault['from'];
+            $filters['to'] = $dateDefault['to'];
+        }
+
+        $logsQuery = $this->buildFilteredLogsQuery($request, $filters);
+        $logs = $logsQuery->paginate($this->resolveTablePerPage($request, (int) config('tables.per_page', 10)))->withQueryString();
 
         // KPI cards over every record matching the filters (not just this
         // page). Same filtered query, without its eager loads and ordering.
-        $kpiBase = fn () => $this->buildFilteredLogsQuery($request)->setEagerLoads([])->reorder();
+        $kpiBase = fn () => $this->buildFilteredLogsQuery($request, $filters)->setEagerLoads([])->reorder();
         $logStats = [
             'records' => $logs->total(),
             'eggs' => (int) $kpiBase()->sum('egg_count'),
@@ -115,7 +171,20 @@ class EggLoggingController extends Controller
             'overridden' => $kpiBase()->whereNotNull('overridden_by_user_id')->count(),
         ];
 
-        return view('egg-logging._logs', compact('logs', 'filters', 'logStats'));
+        // The defaulted range is one chip ("Last 30 days"), not from/to chips.
+        $chipFilters = $defaulted
+            ? collect($filters)->except(['from', 'to'])->all()
+            : $filters;
+
+        return view('egg-logging._logs', [
+            'logs' => $logs,
+            'filters' => $filters,
+            'logStats' => $logStats,
+            'filterChips' => $this->describeRecordFilters($chipFilters, $spec),
+            'totalLogs' => ProductionLog::count(),
+            'defaultedRange' => $defaulted,
+            'hasActiveFilters' => count($filters) > 0,
+        ]);
     }
 
     private function logFilters(Request $request): array
@@ -128,28 +197,63 @@ class EggLoggingController extends Controller
         ];
     }
 
-    private function buildFilteredLogsQuery(Request $request)
+    /**
+     * Default date range for the history table (last 30 reporting days).
+     * Shared by logs() (table query) and recentLogs() (form initial values)
+     * so both render the same view on a full page load.
+     *
+     * @return array{from: ?string, to: ?string, defaulted: bool}
+     */
+    private function historyDateDefaults(Request $request): array
     {
-        $filters = $this->logFilters($request);
+        $hasDateParam = collect(['from', 'to', 'date_from', 'date_to'])
+            ->contains(fn ($k) => $request->query($k) !== null && $request->query($k) !== '');
+        if ($hasDateParam || $request->query('range') === 'all') {
+            return ['from' => null, 'to' => null, 'defaulted' => false];
+        }
+
+        $today = ReportingDateService::reportingDateString();
+
+        return [
+            'from' => ReportingDateService::reportingDate()->subDays(29)->toDateString(),
+            'to' => $today,
+            'defaulted' => true,
+        ];
+    }
+
+    private function buildFilteredLogsQuery(Request $request, ?array $filters = null)
+    {
+        // Null = legacy path (recentLogs page): raw request values, no date
+        // filters, unchanged behavior. logs() passes validated canonical
+        // filters (including the defaulted range) instead.
+        $filters ??= $this->logFilters($request);
 
         $query = ProductionLog::with(['cageSlot.cage', 'overriddenBy', 'recorder', 'eggSizeLogs'])
             ->orderByDesc('log_date')
             ->orderByDesc('created_at');
 
-        if ($filters['cage_id']) {
+        if (! empty($filters['cage_id'])) {
             $query->whereHas('cageSlot', fn ($q) => $q->where('cage_id', $filters['cage_id']));
         }
 
-        if ($filters['cage_slot_id']) {
+        if (! empty($filters['cage_slot_id'])) {
             $query->where('cage_slot_id', $filters['cage_slot_id']);
         }
 
-        if ($filters['breed']) {
+        if (! empty($filters['breed'])) {
             $query->whereHas('cageSlot.hens', fn ($q) => $q->where('breed', $filters['breed'])->where('is_active', 1));
         }
 
         if (! empty($filters['logged_via'])) {
             $query->whereIn('logged_via', (array) $filters['logged_via']);
+        }
+
+        if (! empty($filters['from'])) {
+            $query->where('log_date', '>=', $filters['from']);
+        }
+
+        if (! empty($filters['to'])) {
+            $query->where('log_date', '<=', $filters['to']);
         }
 
         return $query;

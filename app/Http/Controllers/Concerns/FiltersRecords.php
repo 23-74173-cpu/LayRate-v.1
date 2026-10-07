@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
  * Rule shapes:
  *   ['type' => 'id', 'column' => 'cage_id', 'label' => 'Cage']
  *   ['type' => 'enum', 'column' => 'egg_size', 'options' => ['small' => 'Small', ...], 'label' => 'Size']
+ *   ['type' => 'multi', 'column' => 'logged_via', 'options' => [...], 'label' => 'Logged Via'] (checkbox group → whereIn)
  *   ['type' => 'date', 'column' => 'harvested_date', 'bound' => 'min'|'max', 'label' => 'From']
  *   ['type' => 'text', 'columns' => ['batch_code'], 'relation' => [['cage', 'cage_code']], 'label' => 'Search']
  *   ['type' => 'callback', 'options' => ['fresh' => 'Fresh', ...], 'label' => 'Freshness',
@@ -67,12 +68,30 @@ trait FiltersRecords
             $raw = null;
             foreach ($names as $name) {
                 $v = $request->query($name);
-                if ($v !== null && $v !== '') {
+                if ($v !== null && $v !== '' && $v !== []) {
                     $raw = $v;
                     break;
                 }
             }
-            if ($raw === null || is_array($raw)) {
+            if ($raw === null) {
+                continue;
+            }
+            // Multi-value (checkbox groups): keep only known options.
+            if (($rule['type'] ?? null) === 'multi') {
+                $keys = array_keys($rule['options'] ?? []);
+                $vals = [];
+                foreach ((array) $raw as $v) {
+                    if (is_string($v) && in_array($v, $keys, true) && ! in_array($v, $vals, true)) {
+                        $vals[] = $v;
+                    }
+                }
+                if (empty($vals)) {
+                    continue;
+                }
+                $filters[$canonical] = $vals;
+                continue;
+            }
+            if (is_array($raw)) {
                 continue;
             }
             $value = $this->validateFilterValue((string) $raw, $rule);
@@ -131,6 +150,7 @@ trait FiltersRecords
             }
             match ($rule['type']) {
                 'id', 'enum' => $query->where($rule['column'], $value),
+                'multi' => $query->whereIn($rule['column'], (array) $value),
                 'date' => $query->where(
                     $rule['column'],
                     ($rule['bound'] ?? 'min') === 'max' ? '<=' : '>=',
@@ -164,8 +184,15 @@ trait FiltersRecords
             if (! $rule) {
                 continue;
             }
-            $display = $rule['options'][$value]
-                ?? (in_array($param, ['from', 'to'], true) ? $this->displayFilterDate((string) $value) : $value);
+            if (is_array($value)) {
+                $display = implode(', ', array_map(
+                    fn ($v) => $rule['options'][$v] ?? $v,
+                    $value
+                ));
+            } else {
+                $display = $rule['options'][$value]
+                    ?? (in_array($param, ['from', 'to'], true) ? $this->displayFilterDate((string) $value) : $value);
+            }
             $chips[] = [
                 'param' => $param,
                 'label' => $rule['label'] ?? $param,
