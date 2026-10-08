@@ -10,9 +10,8 @@
         </x-card-header>
         <div class="interpretation-panel hidden mb-3 px-3 py-2.5 rounded-lg text-xs leading-relaxed" style="background-color: #dcebfa; color: var(--color-info); border: 1px solid #b8d4fe;">{{ $insight }}</div>
         @if(empty($data))
-            <div class="rounded-xl border py-8 text-center text-sm flex-1" style="background-color: #ffffff; border-color: #e6e6e6; color: #a39e98;">
-                No mortality records for the selected period.
-            </div>
+            <x-empty-state icon="skull" message="No mortality records for the selected period."
+                           :actionUrl="route('chickens.index', ['tab' => 'mortality'])" actionLabel="Go to Mortality" />
         @else
             @if($topCause)
             <div class="mb-2">
@@ -25,6 +24,12 @@
                 <canvas id="mortalityByCauseChart" style="width: 100%; height: 100%; display: block;"></canvas>
             </div>
         @endif
+        <div class="mt-3 pt-2 border-t border-[#f0f0f0] flex justify-end">
+            <a href="{{ route('chickens.index', ['tab' => 'mortality']) }}" data-turbo="true"
+               class="inline-flex items-center gap-1 text-xs font-semibold text-navy hover:underline">
+                View mortality records <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+            </a>
+        </div>
     </div>
     <script>
     (function() {
