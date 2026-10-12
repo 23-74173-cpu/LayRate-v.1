@@ -51,7 +51,7 @@ class ForecastQueueStallTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonPath('status', 'stalled');
-        $this->assertStringContainsString('queue:work', $response->json('error_message'));
+        $this->assertStringContainsString('forecast service', $response->json('error_message'));
     }
 
     /**
@@ -156,4 +156,52 @@ class ForecastQueueStallTest extends TestCase
         $response->assertJsonMissing(['status' => 'queued']);
         $response->assertJsonMissing(['status' => 'running']);
     }
+    public function test_stale_reservation_does_not_hide_a_missing_worker(): void
+    {
+        config(['queue.default' => 'database']);
+        $run = $this->makeRun(600);
+        DB::table('jobs')->insert(['queue' => 'default', 'payload' => '{}', 'attempts' => 1, 'reserved_at' => time() - 500, 'available_at' => time() - 500, 'created_at' => time() - 500]);
+        $this->actingAs($this->admin)->getJson(route('forecast.status', $run))->assertOk()->assertJsonPath('status', 'stalled');
+    }
+
+    public function test_running_job_abandoned_by_worker_becomes_failed(): void
+    {
+        $run = $this->makeRun(600);
+        $run->update(['status' => 'running', 'started_at' => now()->subSeconds(400)]);
+        $this->actingAs($this->admin)->getJson(route('forecast.status', $run))->assertOk()->assertJsonPath('status', 'failed');
+        $this->assertEquals('failed', $run->fresh()->status);
+        $this->assertNotNull($run->fresh()->completed_at);
+    }
+
+    public function test_running_job_inside_its_time_limit_remains_running(): void
+    {
+        $run = $this->makeRun(100);
+        $run->update(['status' => 'running', 'started_at' => now()->subSeconds(100)]);
+        $this->actingAs($this->admin)->getJson(route('forecast.status', $run))->assertOk()->assertJsonPath('status', 'running');
+    }
+
+    public function test_worker_failure_hook_updates_the_run_and_preserves_completed_runs(): void
+    {
+        $run = $this->makeRun(100);
+        $job = new \App\Jobs\GenerateForecastJob($run->id, 'farm', 'ALL', null, null, 7, null, []);
+        $job->failed(new \RuntimeException('Worker terminated'));
+        $this->assertEquals('failed', $run->fresh()->status);
+        $this->assertNotNull($run->fresh()->completed_at);
+        $run->update(['status' => 'completed']);
+        $job->failed(new \RuntimeException('Late failure notification'));
+        $this->assertEquals('completed', $run->fresh()->status);
+    }
+
+    public function test_duplicate_job_delivery_does_not_run_the_models_again(): void
+    {
+        $run = $this->makeRun(2);
+        $service = \Mockery::mock(\App\Services\ForecastGenerationService::class);
+        $service->shouldReceive('farmHistorical')->once()->andReturn(collect());
+        $service->shouldReceive('generateForecast')->once()->andReturn(['metrics' => [], 'recommended_model' => 'SARIMA', 'message' => 'Forecast saved.']);
+        $job = new \App\Jobs\GenerateForecastJob($run->id, 'farm', 'ALL', null, null, 7, null, []);
+        $job->handle($service);
+        $job->handle($service);
+        $this->assertEquals('completed', $run->fresh()->status);
+    }
+
 }

@@ -66,7 +66,7 @@
                 <div class="flex gap-4 mb-5">
                     @foreach([7,14,30] as $h)
                     <label class="flex items-center gap-1.5 text-sm cursor-pointer">
-                        <input type="radio" name="horizon" value="{{ $h }}" {{ $horizon == $h ? 'checked' : '' }} class="accent-navy" onchange="window.refreshForecastWorkspace && refreshForecastWorkspace()">
+                        <input type="radio" name="horizon" value="{{ $h }}" {{ $horizon == $h ? 'checked' : '' }} class="accent-navy" onchange="window.refreshForecastWorkspace && refreshForecastWorkspace(true)">
                         {{ $h }} days
                     </label>
                     @endforeach
@@ -178,10 +178,10 @@
                     <tr>
                         <td class="px-5 py-3.5 text-[#333333]">MAPE</td>
                         <td class="px-5 py-3.5 text-right font-mono {{ $mapeWinner === 'SARIMA' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
-                            {{ $sarima ? number_format($sarima['MAPE'], 2).'%' : 'N/A' }}
+                            {{ isset($sarima['MAPE']) ? number_format($sarima['MAPE'], 2).'%' : 'N/A' }}
                         </td>
                         <td class="px-5 py-3.5 text-right font-mono {{ $mapeWinner === 'XGBoost' ? 'font-semibold text-[#1F5F35] bg-[#D5E8D4]/30' : 'text-[#333333]' }}">
-                            {{ $xgboost ? number_format($xgboost['MAPE'], 2).'%' : 'N/A' }}
+                            {{ isset($xgboost['MAPE']) ? number_format($xgboost['MAPE'], 2).'%' : 'N/A' }}
                         </td>
                     </tr>
                 </tbody>
@@ -350,7 +350,7 @@
     // frame navigation — including discarding the response's trailing <script>,
     // which must not re-execute (its top-level `var`s would redeclare) — so
     // the drag wiring is re-bound explicitly via __calendarDayDragInit().
-    window.refreshProductionCalendar = function(params, token) {
+    window.refreshProductionCalendar = function(params, token, revealRange) {
         const frame = document.getElementById('production-calendar');
         if (!frame) return;
 
@@ -359,6 +359,11 @@
         url.searchParams.set('cage', params.get('cage') || '');
         url.searchParams.set('breed', params.get('breed') || '');
         url.searchParams.set('horizon', params.get('horizon') || '7');
+        const card = frame.querySelector('.forecast-calendar-card');
+        if (revealRange && card && card.dataset.forecastKind !== 'backtest') {
+            url.searchParams.set('month', card.dataset.previewMonth);
+            url.searchParams.set('year', card.dataset.previewYear);
+        }
 
         fetch(url.toString(), { headers: { 'Turbo-Frame': 'production-calendar', 'Accept': 'text/html' } })
             .then(function(res) {
@@ -373,6 +378,7 @@
                 if (!fresh) return;
 
                 frame.replaceWith(document.importNode(fresh, true));
+                if (window.syncForecastCalendarRange) window.syncForecastCalendarRange(params.get('horizon'));
                 if (window.__calendarDayDragInit) window.__calendarDayDragInit();
                 if (window.lucide) {
                     try { lucide.createIcons(); } catch (e) { /* non-fatal */ }
@@ -386,9 +392,10 @@
 
     // Fetches fresh data for the current scope/cage/breed/horizon and updates the
     // workspace in place — no Turbo frame navigation, no URL change, no history churn.
-    window.refreshForecastWorkspace = function() {
+    window.refreshForecastWorkspace = function(revealRange) {
         const formScope = document.getElementById('formScope');
         if (!formScope) return;
+        if (window.syncForecastCalendarRange) window.syncForecastCalendarRange();
 
         const scope = formScope.value || 'cage';
         const cageEl = document.getElementById('cageSelect');
@@ -415,7 +422,7 @@
                 if (token !== forecastRequestToken) return;
                 applyForecastData(data);
                 // Keep the calendar's actual-production layer in the same scope.
-                window.refreshProductionCalendar(params, token);
+                window.refreshProductionCalendar(params, token, revealRange);
             })
             .catch(function(err) {
                 if (token !== forecastRequestToken) return;

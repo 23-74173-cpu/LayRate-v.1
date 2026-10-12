@@ -41,7 +41,10 @@ class GenerateForecastJob implements ShouldQueue
 
     // A little above executePythonForecast()'s own 300s Process timeout, so
     // the job's own timeout never fires first and masks the real error.
-    public int $timeout = 330;
+    public const TIMEOUT_SECONDS = 330;
+    public int $timeout = self::TIMEOUT_SECONDS;
+    public int $tries = 1;
+    public bool $failOnTimeout = true;
 
     public function __construct(
         public int $forecastRunId,
@@ -63,7 +66,15 @@ class GenerateForecastJob implements ShouldQueue
             return;
         }
 
-        $run->update(['status' => 'running', 'started_at' => now()]);
+        if ($run->status !== 'queued') {
+            return;
+        }
+        $claimed = ForecastRun::whereKey($run->id)->where('status', 'queued')
+            ->update(['status' => 'running', 'started_at' => now()]);
+        if (! $claimed) {
+            return;
+        }
+        $run->refresh();
 
         try {
             $cage = $this->cageId ? Cage::find($this->cageId) : null;
@@ -87,7 +98,7 @@ class GenerateForecastJob implements ShouldQueue
                 $this->forecastRunId,
             );
 
-            $run->update([
+            ForecastRun::whereKey($run->id)->where('status', 'running')->update([
                 'status' => 'completed',
                 'completed_at' => now(),
                 'result_metrics' => [
@@ -97,16 +108,31 @@ class GenerateForecastJob implements ShouldQueue
                 ],
             ]);
         } catch (ProcessFailedException $e) {
-            $this->fail($run, 'Forecast process failed: '.$e->getMessage());
+            report($e);
+            $this->markRunFailed($run, 'The forecasting engine could not finish. Please try again or ask the administrator to check the server log.');
+        } catch (\Symfony\Component\Process\Exception\ProcessTimedOutException $e) {
+            $this->markRunFailed($run, 'Forecast exceeded its time limit. Please try again.');
         } catch (RuntimeException $e) {
-            $this->fail($run, $e->getMessage());
+            $this->markRunFailed($run, $e->getMessage());
         } catch (\Throwable $e) {
             report($e);
-            $this->fail($run, 'Unexpected error during forecast generation.');
+            $this->markRunFailed($run, 'Unexpected error during forecast generation.');
         }
     }
 
-    private function fail(ForecastRun $run, string $message): void
+    /** Also covers worker timeouts and failures that happen outside handle(). */
+    public function failed(?\Throwable $exception): void
+    {
+        $run = ForecastRun::find($this->forecastRunId);
+        if ($run && in_array($run->status, ['queued', 'running'], true)) {
+            $message = $exception instanceof \Illuminate\Queue\TimeoutExceededException
+                ? 'Forecast exceeded its time limit. Please try again.'
+                : 'Forecast worker stopped before completion. Please try again.';
+            $this->markRunFailed($run, $message);
+        }
+    }
+
+    private function markRunFailed(ForecastRun $run, string $message): void
     {
         Log::warning('Forecast generation failed', [
             'forecast_run_id' => $run->id,
@@ -116,7 +142,7 @@ class GenerateForecastJob implements ShouldQueue
             'error' => $message,
         ]);
 
-        $run->update([
+        ForecastRun::whereKey($run->id)->whereIn('status', ['queued', 'running'])->update([
             'status' => 'failed',
             'completed_at' => now(),
             'error_message' => $message,

@@ -571,6 +571,13 @@ class ForecastController extends Controller
      */
     public function status(ForecastRun $forecastRun)
     {
+        if ($forecastRun->status === 'running' && ($forecastRun->started_at ?? $forecastRun->updated_at)->lt(now()->subSeconds(GenerateForecastJob::TIMEOUT_SECONDS + 30))) {
+            ForecastRun::whereKey($forecastRun->id)->where('status', 'running')->update([
+                'status' => 'failed', 'completed_at' => now(),
+                'error_message' => 'Forecast worker did not finish within its time limit. Please try again.',
+            ]);
+            $forecastRun->refresh();
+        }
         $stalled = $forecastRun->status === 'queued'
             && $forecastRun->created_at->lt(now()->subSeconds(self::QUEUE_STALL_SECONDS))
             && ! $this->queueWorkerIsBusy();
@@ -578,7 +585,7 @@ class ForecastController extends Controller
         return response()->json([
             'status' => $stalled ? 'stalled' : $forecastRun->status,
             'error_message' => $stalled
-                ? 'No queue worker is running, so this forecast has not started. Start one with "php artisan queue:work" and try again.'
+                ? 'The forecast service is unavailable, so this forecast has not started. Ask the administrator to restart it and try again.'
                 : $forecastRun->error_message,
             'message' => $forecastRun->result_metrics['message'] ?? 'Forecast saved.',
             'metrics' => $forecastRun->result_metrics['metrics'] ?? null,
@@ -609,7 +616,8 @@ class ForecastController extends Controller
 
         return DB::connection($config['connection'] ?? config('database.default'))
             ->table($config['table'] ?? 'jobs')
-            ->whereNotNull('reserved_at')
+            ->where('queue', $config['queue'] ?? 'default')
+            ->where('reserved_at', '>', time() - max(360, (int) ($config['retry_after'] ?? 360)))
             ->exists();
     }
 

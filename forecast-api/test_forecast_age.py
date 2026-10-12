@@ -40,5 +40,21 @@ class ForecastAgeTest(unittest.TestCase):
         self.assertTrue(captured[0]['Flock_Age_Weeks'].is_monotonic_increasing)
 
 
+class ForecastZeroProductionTest(unittest.TestCase):
+    def test_zero_production_returns_forecasts_with_undefined_mape(self):
+        today = pd.Timestamp.today().normalize()
+        history = pd.DataFrame({'Date': pd.date_range(end=today - pd.Timedelta(days=1), periods=100), 'Total_Eggs': 0})
+
+        class ZeroSarima:
+            def forecast(self, steps):
+                return np.zeros(steps)
+
+        with patch.object(forecasting, 'fit_sarima_model', return_value=ZeroSarima()):
+            result = forecasting.automatic_forecast(history, forecast_days=7)
+        self.assertEqual(len(result['forecast']), 7)
+        self.assertIsNone(result['metrics']['sarima']['MAPE'])
+        self.assertTrue(all(row['predicted_egg_count'] == 0 for row in result['forecast']))
+
+
 if __name__ == '__main__':
     unittest.main()

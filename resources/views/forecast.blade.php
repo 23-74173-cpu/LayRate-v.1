@@ -577,41 +577,33 @@
         'Saving forecast results...',
     ];
 
+    var forecastProgressFrame = null;
+    var forecastOperation = 0;
+    var forecastPollTimer = null;
+    var forecastPollDeadlineTimer = null;
+    var forecastHttpControllers = new Set();
+    var forecastRunStatus = 'starting';
+
     window.startForecastProgress = function(expectedDuration) {
-        const progressBar = document.getElementById('forecastProgressBar');
-        const progressText = document.getElementById('forecastProgressText');
-        const statusText = document.getElementById('forecastStatusText');
-        if (!progressBar) return;
-
-        progressBar.style.width = '0%';
-        if (progressText) progressText.textContent = '0%';
-        if (statusText) statusText.textContent = STATUS_MESSAGES[0];
-
-        const startTime = Date.now();
-
-        function updateProgress() {
-            const elapsed = Date.now() - startTime;
-            const ratio = Math.min(elapsed / expectedDuration, 1);
-            const eased = 1 - Math.pow(1 - ratio, 3);
-            const progress = Math.min(95, eased * 95);
-
-            progressBar.style.width = progress + '%';
-            if (progressText) progressText.textContent = Math.round(progress) + '%';
-
-            const messageIndex = Math.min(
-                STATUS_MESSAGES.length - 1,
-                Math.floor(ratio * STATUS_MESSAGES.length)
-            );
-            if (statusText) {
-                statusText.textContent = STATUS_MESSAGES[messageIndex];
-            }
-
-            if (progress < 95) {
-                requestAnimationFrame(updateProgress);
-            }
+        if (forecastProgressFrame !== null) cancelAnimationFrame(forecastProgressFrame);
+        const bar = document.getElementById('forecastProgressBar');
+        const text = document.getElementById('forecastProgressText');
+        const status = document.getElementById('forecastStatusText');
+        if (!bar) return;
+        const start = Date.now();
+        const duration = Math.max(1000, Number(expectedDuration) || 30000);
+        forecastRunStatus = 'starting';
+        function update() {
+            const ratio = Math.min((Date.now() - start) / duration, 1);
+            const progress = Math.min(95, (1 - Math.pow(1 - ratio, 3)) * 95);
+            bar.style.width = progress + '%';
+            if (text) text.textContent = Math.round(progress) + '%';
+            if (status) status.textContent = forecastRunStatus === 'queued' ? 'Waiting for the forecast worker...'
+                : forecastRunStatus === 'running' ? 'Training models and generating predictions...'
+                : 'Starting forecast...';
+            forecastProgressFrame = progress < 95 ? requestAnimationFrame(update) : null;
         }
-
-        requestAnimationFrame(updateProgress);
+        forecastProgressFrame = requestAnimationFrame(update);
     };
 
     function recordForecastDuration() {
@@ -649,6 +641,14 @@
     var FORECAST_POLL_TIMEOUT_MS = 6 * 60 * 1000;
 
     function resetForecastSubmitUi() {
+        forecastOperation++;
+        clearTimeout(forecastPollTimer);
+        clearTimeout(forecastPollDeadlineTimer);
+        if (forecastProgressFrame !== null) cancelAnimationFrame(forecastProgressFrame);
+        forecastProgressFrame = null;
+        forecastHttpControllers.forEach(function(controller) { controller.abort(); });
+        forecastHttpControllers.clear();
+        sessionStorage.removeItem(FORECAST_STORAGE_KEYS.startTime);
         _forecastIsSubmitting = false;
         var overlay = document.getElementById('forecastLoadingOverlay');
         var btn = document.getElementById('generateForecastBtn');
@@ -658,158 +658,140 @@
         if (btnText) btnText.textContent = 'Generate Forecast';
     }
 
-    function pollForecastStatus(pollUrl) {
-        var deadline = Date.now() + FORECAST_POLL_TIMEOUT_MS;
+    // Bound both the fetch and JSON body read, even if the connection hangs.
+    function forecastJson(url, options, timeoutMs) {
+        const controller = new AbortController();
+        forecastHttpControllers.add(controller);
+        let timer;
+        const timeout = new Promise(function(resolve, reject) {
+            timer = setTimeout(function() {
+                controller.abort();
+                reject(new Error('Forecast request timed out. Check your connection and try again.'));
+            }, timeoutMs);
+        });
+        const request = fetch(url, { ...options, signal: controller.signal }).then(function(response) {
+            if (response.redirected) {
+                throw Object.assign(new Error('Your session may have expired. Refresh the page and sign in again.'), { terminal: true });
+            }
+            if (!response.ok) {
+                return response.json().catch(function() { return {}; }).then(function(body) {
+                    const error = new Error(body.message || ('Forecast request failed (' + response.status + ').'));
+                    error.terminal = [401, 403, 404].includes(response.status);
+                    throw error;
+                });
+            }
+            return response.json();
+        });
+        return Promise.race([request, timeout]).finally(function() {
+            clearTimeout(timer);
+            forecastHttpControllers.delete(controller);
+        });
+    }
 
+    function finishForecast(data, operation) {
+        if (operation !== forecastOperation) return;
+        clearTimeout(forecastPollDeadlineTimer);
+        if (forecastProgressFrame !== null) cancelAnimationFrame(forecastProgressFrame);
+        forecastProgressFrame = null;
+        const bar = document.getElementById('forecastProgressBar');
+        const text = document.getElementById('forecastProgressText');
+        const status = document.getElementById('forecastStatusText');
+        if (bar) bar.style.width = '100%';
+        if (text) text.textContent = '100%';
+        if (status) status.textContent = 'Forecast saved.';
+        recordForecastDuration();
+        setTimeout(function() {
+            if (operation !== forecastOperation) return;
+            resetForecastSubmitUi();
+            if (window.showNotification) window.showNotification(data.message || 'Forecast saved.', 'success');
+            if (data.redirect_url) {
+                try {
+                    if (window.Turbo) window.Turbo.visit(data.redirect_url);
+                    else window.location.href = data.redirect_url;
+                } catch (error) { window.location.href = data.redirect_url; }
+            } else if (window.refreshForecastWorkspace) window.refreshForecastWorkspace();
+        }, 250);
+    }
+
+    function pollForecastStatus(pollUrl, operation) {
+        forecastPollDeadlineTimer = setTimeout(function() {
+            if (operation !== forecastOperation) return;
+            resetForecastSubmitUi();
+            if (window.showNotification) window.showNotification('Could not confirm forecast completion within the time limit. Check the calendar before generating again.', 'warning');
+        }, FORECAST_POLL_TIMEOUT_MS);
         function tick() {
-            fetch(pollUrl, { headers: { 'Accept': 'application/json' } })
-                .then(function(r) {
-                    if (!r.ok) {
-                        // A non-2xx means this run is no longer being tracked.
-                        // Polling on would spin silently: Laravel answers a 404
-                        // for an unknown run id with a JSON body carrying no
-                        // `status` field, so every branch below falls through
-                        // and the loop just re-schedules itself until the client
-                        // deadline. Treat it as terminal instead.
-                        throw { terminal: true, statusCode: r.status };
-                    }
-                    return r.json();
-                })
+            if (operation !== forecastOperation) return;
+            forecastJson(pollUrl, { headers: { 'Accept': 'application/json' } }, 15000)
                 .then(function(data) {
-                    // Defensive: a 2xx that still has no recognisable status
-                    // would otherwise loop forever for the same reason.
-                    if (!data || !data.status) {
-                        resetForecastSubmitUi();
-                        if (window.showNotification) {
-                            window.showNotification('Lost track of this forecast run. Please try again.', 'error');
-                        }
+                    if (operation !== forecastOperation) return;
+                    if (!data || !['queued', 'running', 'completed', 'failed', 'stalled'].includes(data.status)) {
+                        throw Object.assign(new Error('Could not read forecast status. Please refresh and try again.'), { terminal: true });
+                    }
+                    forecastRunStatus = data.status;
+                    const status = document.getElementById('forecastStatusText');
+                    if (status) status.textContent = data.status === 'queued' ? 'Waiting for the forecast worker...' : 'Training models and generating predictions...';
+                    if (data.status === 'completed') {
+                        finishForecast(data, operation);
                         return;
                     }
-                    if (data.status === 'completed' && data.redirect_url) {
-                        // Clear the overlay *before* navigating. This branch
-                        // returns without resetting otherwise, so if
-                        // Turbo.visit() does not actually land — it can reject
-                        // its fetch (seen in the console as "Failed to fetch"),
-                        // or be a no-op on a same-URL visit — the bar stays
-                        // pinned at 95% forever while polling has already
-                        // stopped. Resetting first makes completion safe
-                        // regardless of whether navigation succeeds.
+                    if (data.status === 'failed' || data.status === 'stalled') {
                         resetForecastSubmitUi();
-                        if (window.showNotification) window.showNotification(data.message || 'Forecast saved.', 'success');
-                        // recordForecastDuration() is not called here — it
-                        // already runs via initForecastLoading() on the
-                        // turbo:load this visit triggers, same as it did
-                        // after the old synchronous redirect.
-                        try {
-                            if (window.Turbo) {
-                                window.Turbo.visit(data.redirect_url);
-                            } else {
-                                window.location.href = data.redirect_url;
-                            }
-                        } catch (navErr) {
-                            // The overlay is already cleared and the run is
-                            // finished, so a failed navigation is not an
-                            // error the user needs to act on. Swallowing it
-                            // also keeps it out of the outer .catch, which
-                            // would otherwise post a bogus "failed" toast.
-                        }
+                        if (window.showNotification) window.showNotification(data.error_message || 'Forecast could not finish. Please try again.', 'error');
                         return;
                     }
-                    if (data.status === 'failed') {
-                        resetForecastSubmitUi();
-                        if (window.showNotification) {
-                            window.showNotification(data.error_message || 'Forecast generation failed.', 'error');
-                        }
-                        return;
-                    }
-                    // 'stalled' is not a slow run: the job was never claimed
-                    // because no queue worker is running. Stop polling so the
-                    // spinner clears immediately, and surface the fix — the
-                    // generic timeout message below would wrongly promise the
-                    // run "will finish in the background", which it never will.
-                    if (data.status === 'stalled') {
-                        resetForecastSubmitUi();
-                        if (window.showNotification) {
-                            window.showNotification(
-                                data.error_message || 'Forecast has not started — no queue worker is running.',
-                                'error'
-                            );
-                        }
-                        return;
-                    }
-                    if (Date.now() > deadline) {
-                        resetForecastSubmitUi();
-                        if (window.showNotification) {
-                            window.showNotification('Forecast is taking longer than expected. It will finish in the background — check back shortly.', 'warning');
-                        }
-                        return;
-                    }
-                    setTimeout(tick, FORECAST_POLL_INTERVAL_MS);
+                    forecastPollTimer = setTimeout(tick, FORECAST_POLL_INTERVAL_MS);
                 })
-                .catch(function(err) {
-                    // A dead run id is terminal: retrying cannot bring it back
-                    // and silently burning the remaining deadline tells the
-                    // user nothing.
-                    if (err && err.terminal) {
+                .catch(function(error) {
+                    if (operation !== forecastOperation) return;
+                    if (error.terminal) {
                         resetForecastSubmitUi();
-                        if (window.showNotification) {
-                            window.showNotification(
-                                'This forecast is no longer available (it may have been cleared or replaced). Generate it again.',
-                                'error'
-                            );
-                        }
+                        if (window.showNotification) window.showNotification(error.message, 'error');
                         return;
                     }
-                    // Transient network hiccup - keep polling instead of giving
-                    // up on the first failed request.
-                    if (Date.now() > deadline) {
-                        resetForecastSubmitUi();
-                        if (window.showNotification) {
-                            window.showNotification('Lost connection while waiting for the forecast. Please try again.', 'warning');
-                        }
-                        return;
-                    }
-                    setTimeout(tick, FORECAST_POLL_INTERVAL_MS);
+                    const status = document.getElementById('forecastStatusText');
+                    if (status) status.textContent = 'Reconnecting to check forecast status...';
+                    forecastPollTimer = setTimeout(tick, FORECAST_POLL_INTERVAL_MS);
                 });
         }
-
         tick();
     }
 
     window.submitForecastFormAsync = function(form) {
-        fetch(form.action, {
+        const operation = ++forecastOperation;
+        forecastJson(form.action, {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                 'Accept': 'application/json'
             },
             body: new FormData(form)
-        })
-        .then(function(response) {
-            if (!response.ok) {
-                return response.json().catch(function() { return {}; }).then(function(body) {
-                    throw new Error(body.message || ('Failed to start forecast generation (' + response.status + ').'));
-                });
-            }
-            return response.json();
-        })
+        }, 60000)
         .then(function(data) {
+            if (operation !== forecastOperation) return;
             if (data.already_saved) {
-                resetForecastSubmitUi();
-                if (window.showNotification) window.showNotification(data.message, 'success');
-                if (window.Turbo) window.Turbo.visit(data.redirect_url);
-                else window.location.href = data.redirect_url;
+                finishForecast(data, operation);
                 return;
             }
-            pollForecastStatus(data.poll_url);
+            if (!data.poll_url) throw new Error('Forecast did not return a tracking link. Please refresh and try again.');
+            pollForecastStatus(data.poll_url, operation);
         })
-        .catch(function(err) {
+        .catch(function(error) {
+            if (operation !== forecastOperation) return;
             resetForecastSubmitUi();
-            if (window.showNotification) {
-                window.showNotification(err.message || 'Failed to start forecast generation.', 'error');
-            }
+            if (window.showNotification) window.showNotification(error.message || 'Failed to start forecast generation.', 'error');
         });
     };
+
+    window.cancelForecastSubmission = resetForecastSubmitUi;
+    if (!window.__forecastLifecycleCleanupBound) {
+        window.__forecastLifecycleCleanupBound = true;
+        ['turbo:before-visit', 'turbo:before-cache', 'pagehide'].forEach(function(eventName) {
+            const target = eventName === 'pagehide' ? window : document;
+            target.addEventListener(eventName, function() {
+                if (window.cancelForecastSubmission) window.cancelForecastSubmission();
+            });
+        });
+    }
 
     // Use document-level delegation for the forecast form submit so it survives
     // Turbo Frame content replacement (standalone submit handler on the form

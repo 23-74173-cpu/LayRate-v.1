@@ -16,7 +16,7 @@ WorkingDirectory=/var/www/layrate
 # 'failed' (see GenerateForecastJob) and be re-triggered by the user from
 # the UI, not silently auto-retried by the queue and run the 5-minute
 # Python subprocess again unattended.
-ExecStart=/usr/bin/php /var/www/layrate/artisan queue:work --sleep=3 --tries=1 --max-time=3600
+ExecStart=/usr/bin/php /var/www/layrate/artisan queue:work --sleep=3 --tries=1 --timeout=330 --max-time=3600
 Restart=always
 RestartSec=5
 

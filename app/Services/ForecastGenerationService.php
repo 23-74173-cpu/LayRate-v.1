@@ -403,6 +403,10 @@ class ForecastGenerationService
             ], $result['forecast'] ?? []), 0, 5),
         ]);
 
+        if ($forecastRunId !== null && \App\Models\ForecastRun::whereKey($forecastRunId)->where('status', 'running')->doesntExist()) {
+            throw new RuntimeException('Forecast run is no longer active. Results were not saved.');
+        }
+
         $forecasts = $save
             ? $this->persistForecasts($result, $cage, $breed, $forecastRunId)
             : $this->buildForecastCollection($result, $cage, $breed, $forecastRunId);
@@ -455,6 +459,10 @@ class ForecastGenerationService
         if (! $process->isSuccessful()) {
             $errorOutput = trim($process->getErrorOutput());
             $stdOutput = trim($process->getOutput());
+            $failure = json_decode($stdOutput, true);
+            if (is_array($failure) && ($failure['success'] ?? null) === false && isset($failure['error'])) {
+                throw new RuntimeException('Forecast could not be generated: '.$failure['error']);
+            }
             $pythonError = $errorOutput ?: $stdOutput;
 
             if (str_contains($pythonError, 'No module named')) {

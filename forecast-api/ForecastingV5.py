@@ -620,7 +620,7 @@ def evaluate_models(df):
     recommended = recommend_model(sarima_metrics, xgb_avg_metrics)
 
     comparison = [
-        {"Model": "SARIMA", "MAE": round(sarima_mae, 2), "RMSE": round(sarima_rmse, 2), "MAPE": round(sarima_mape, 2)},
+        {"Model": "SARIMA", "MAE": round(sarima_mae, 2), "RMSE": round(sarima_rmse, 2), "MAPE": (round(sarima_mape, 2) if sarima_mape is not None else None)},
         {"Model": "XGBoost Avg", "MAE": round(xgb_avg_mae, 2), "RMSE": round(xgb_avg_rmse, 2), "MAPE": round(xgb_avg_mape, 2)},
     ]
 
@@ -632,7 +632,7 @@ def evaluate_models(df):
         "sarima_metrics": {
             "MAE": round(sarima_mae, 2),
             "RMSE": round(sarima_rmse, 2),
-            "MAPE": round(sarima_mape, 2),
+            "MAPE": (round(sarima_mape, 2) if sarima_mape is not None else None),
         },
         "xgboost_metrics": {
             "MAE": round(xgb_avg_mae, 2),
@@ -814,12 +814,12 @@ def automatic_forecast(df, forecast_days: int = 7, start_date: Optional[str] = N
 
     xgboost_metrics = None
     if feed_available:
-        xgboost_metrics = {"MAE": round(xgb_mae, 2), "RMSE": round(xgb_rmse, 2), "MAPE": round(xgb_mape, 2)}
+        xgboost_metrics = {"MAE": round(xgb_mae, 2), "RMSE": round(xgb_rmse, 2), "MAPE": (round(xgb_mape, 2) if xgb_mape is not None else None)}
 
     return {
         "recommended_model": recommended,
         "metrics": {
-            "sarima": {"MAE": round(sarima_mae, 2), "RMSE": round(sarima_rmse, 2), "MAPE": round(sarima_mape, 2)},
+            "sarima": {"MAE": round(sarima_mae, 2), "RMSE": round(sarima_rmse, 2), "MAPE": (round(sarima_mape, 2) if sarima_mape is not None else None)},
             "xgboost": xgboost_metrics,
         },
         "forecast": forecast_list,
@@ -899,7 +899,7 @@ def manual_forecast(
     return {
         "recommended_model": "XGBoost",
         "metrics": {
-            "xgboost": {"MAE": round(eval_mae, 2), "RMSE": round(eval_rmse, 2), "MAPE": round(eval_mape, 2)},
+            "xgboost": {"MAE": round(eval_mae, 2), "RMSE": round(eval_rmse, 2), "MAPE": (round(eval_mape, 2) if eval_mape is not None else None)},
         },
         "forecast": forecast_list,
     }

@@ -1,6 +1,9 @@
 @php
     $compareProduction = request()->boolean('compare_production');
-    $calendarToday = now();
+    $calendarToday = \App\Services\ReportingDateService::reportingDate();
+    $previewHorizon = (int) ($horizon ?? request('horizon', 7));
+    $previewStart = $calendarToday->copy()->addDay();
+    $previewEnd = $previewStart->copy()->addDays(max(1, $previewHorizon) - 1);
     $calendarMonth = $calendarDate->copy();
     $monthStart = $calendarMonth->copy()->startOfMonth();
     $monthEnd = $calendarMonth->copy()->endOfMonth();
@@ -70,7 +73,7 @@
 @endphp
 
 <turbo-frame id="production-calendar">
-<div class="forecast-calendar-card {{ $compareProduction ? 'calendar-comparing' : '' }} bg-white rounded-2xl border border-[#e6e6e6] p-4 sm:p-5" data-forecast-kind="{{ $isBacktestView ? 'backtest' : 'forward' }}" data-min-date="{{ $minSelectableDate }}" data-max-date="{{ $maxSelectableDate }}">
+<div class="forecast-calendar-card {{ $compareProduction ? 'calendar-comparing' : '' }} bg-white rounded-2xl border border-[#e6e6e6] p-4 sm:p-5" data-today="{{ $calendarToday->toDateString() }}" data-horizon="{{ $previewHorizon }}" data-preview-month="{{ $previewStart->month }}" data-preview-year="{{ $previewStart->year }}" data-forecast-kind="{{ $isBacktestView ? 'backtest' : 'forward' }}" data-min-date="{{ $minSelectableDate }}" data-max-date="{{ $maxSelectableDate }}">
     {{-- Month / Year header with navigation --}}
     <div class="mb-4">
         <x-card-header title="Production Calendar" subtitle="Recorded and predicted output · {{ $scopeLabel }}" icon="calendar-days">
@@ -100,6 +103,11 @@
                 Forecast
             </span>
             <span class="text-[#6B7280] font-normal sm:ml-auto">Eggs per day</span>
+        </div>
+
+        <div id="calendarForecastRange" class="{{ !$isBacktestView && in_array($previewHorizon, [7, 14, 30], true) ? '' : 'hidden' }} flex flex-wrap items-center gap-2 mb-3 text-xs text-[#6B7280]" aria-live="polite">
+            <span class="w-2.5 h-2.5 rounded-sm border" style="background: #f3f7fc; border-color: var(--color-info-border);" aria-hidden="true"></span>
+            <span>Forecast range: <strong class="text-navy" data-range-label>{{ $previewStart->format('M j') }} to {{ $previewEnd->format('M j, Y') }} ({{ $previewHorizon }} days)</strong></span>
         </div>
 
         {{-- Month/Year filter pills + Today + Clear Forecast, with Prev/Next
@@ -195,6 +203,9 @@
         .production-calendar th, .production-calendar td { width: 14.285%; }
         .production-calendar th { padding: 8px 0; color: var(--color-neutral-text); font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
         .production-calendar .calendar-day { height: 92px; padding: 3px; border-radius: 10px; gap: 4px; }
+        .production-calendar .calendar-range-day { background: #f3f7fc; border-color: var(--color-info-border); }
+        .production-calendar .calendar-today { box-shadow: 0 0 0 1px var(--color-sidebar-bg); }
+        .production-calendar .calendar-today .calendar-day-number { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; border-radius: 50%; background: var(--color-sidebar-bg); color: white; font-weight: 700; }
         .production-calendar .calendar-day[data-selectable="true"]:hover { box-shadow: 0 2px 8px rgba(26,35,66,.08); }
         .production-calendar .calendar-day .forecast-badge,
         .production-calendar .calendar-day .production-badge { max-width: 100%; font-size: 10px; line-height: 1.3; font-weight: 600; font-variant-numeric: tabular-nums; padding: 2px 3px; border-radius: 4px; }
@@ -241,7 +252,7 @@
                             'day' => $day,
                             'currentMonth' => false,
                             'dateString' => $dateString,
-                            'isToday' => false,
+                            'isToday' => $dateString === $calendarToday->toDateString(),
                             'forecast' => null,
                             'production' => $productionByDate[$dateString] ?? null,
                         ]);
@@ -268,7 +279,7 @@
                             'day' => $day,
                             'currentMonth' => false,
                             'dateString' => $dateString,
-                            'isToday' => false,
+                            'isToday' => $dateString === $calendarToday->toDateString(),
                             'forecast' => null,
                             'production' => $productionByDate[$dateString] ?? null,
                         ]);
@@ -294,7 +305,13 @@
                             $baseClasses = 'calendar-day rounded-lg border relative flex flex-col items-start justify-start transition-colors';
                             $hasRecord = $hasForecast || $hasProduction;
                             $dayClasses = $baseClasses . ($hasRecord ? '' : ' border-[#F0F0F0]');
-                            if (!$cell['currentMonth']) {
+                            if ($cell['isToday']) {
+                                $dayClasses .= ' calendar-today';
+                            }
+                            if (!$isBacktestView && in_array($previewHorizon, [7, 14, 30], true) && $cell['dateString'] >= $previewStart->toDateString() && $cell['dateString'] <= $previewEnd->toDateString()) {
+                                $dayClasses .= ' calendar-range-day';
+                            }
+                            if (!$cell['currentMonth'] && !$cell['isToday']) {
                                 $dayClasses .= ' opacity-60';
                             }
                             $dayClasses .= $isSelectable ? ' cursor-pointer' : ' cursor-not-allowed';
@@ -318,11 +335,12 @@
                              aria-label="Forecast {{ $cell['dateString'] }}{{ $hasProduction ? ', production ' . number_format($production['egg_count']) . ' eggs' : '' }}{{ $hasForecast ? ', forecast ' . number_format($cell['forecast']->predicted_egg_count, 0) . ' eggs' : '' }}"
                              onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.click(); }"
                              @endif
+                             @if($cell['isToday']) aria-current="date" @endif
                              data-date="{{ $cell['dateString'] }}"
                              data-selectable="{{ $isSelectable ? 'true' : 'false' }}"
                              onclick="window.handleForecastDayClick('{{ $cell['dateString'] }}', {{ $isSelectable ? 'true' : 'false' }})">
                             <div class="flex items-center gap-1">
-                                <span class="{{ $dayNumberClasses }}">{{ $cell['day'] }}</span>
+                                <span class="calendar-day-number {{ $dayNumberClasses }}" @if($cell['isToday']) title="Today" @endif>{{ $cell['day'] }}</span>
                             </div>
                             {{-- Recorded production appears above the forecast badge. --}}
                             @if($hasProduction)
@@ -432,6 +450,34 @@
 <script>
     if (window.lucide) lucide.createIcons();
 
+    window.syncForecastCalendarRange = function(horizon) {
+        const card = document.querySelector('.forecast-calendar-card');
+        if (!card) return;
+        const radio = document.querySelector('#forecastForm input[name="horizon"]:checked');
+        const days = Number(horizon || (radio && radio.value) || card.dataset.horizon);
+        const enabled = card.dataset.forecastKind !== 'backtest' && [7, 14, 30].includes(days);
+        const start = new Date(card.dataset.today + 'T00:00:00Z');
+        start.setUTCDate(start.getUTCDate() + 1);
+        const end = new Date(start);
+        end.setUTCDate(end.getUTCDate() + Math.max(1, days) - 1);
+        const from = start.toISOString().slice(0, 10);
+        const to = end.toISOString().slice(0, 10);
+        card.dataset.horizon = String(days);
+        card.querySelectorAll('.calendar-day').forEach(function(cell) {
+            cell.classList.toggle('calendar-range-day', enabled && cell.dataset.date >= from && cell.dataset.date <= to);
+        });
+        const summary = document.getElementById('calendarForecastRange');
+        if (summary) {
+            summary.classList.toggle('hidden', !enabled);
+            const label = summary.querySelector('[data-range-label]');
+            if (label && enabled) {
+                const options = { month: 'short', day: 'numeric', timeZone: 'UTC' };
+                label.textContent = start.toLocaleDateString('en-US', options) + ' to ' + end.toLocaleDateString('en-US', { ...options, year: 'numeric' }) + ' (' + days + ' days)';
+            }
+        }
+    };
+    window.syncForecastCalendarRange();
+
     function parseLocalDate(dateString) {
         const [y, m, d] = dateString.split('-').map(Number);
         return new Date(y, m - 1, d);
@@ -517,6 +563,7 @@
             if (el) el.className = dayDragOriginalClasses[date];
         });
         dayDragOriginalClasses = {};
+        if (window.syncForecastCalendarRange) window.syncForecastCalendarRange();
     }
 
     function dayDateToMs(dateString) {
@@ -717,6 +764,7 @@
         document.addEventListener('turbo:frame-load', function(e) {
             if (e.target && e.target.id === 'production-calendar' && window.__calendarDayDragInit) {
                 window.__calendarDayDragInit();
+                if (window.syncForecastCalendarRange) window.syncForecastCalendarRange();
             }
         });
     }

@@ -166,6 +166,24 @@ Saved forecasts cannot be cleared or replaced through the normal interface.
 from saved advance forecasts. Flock age increases as future forecast days advance
 in both automatic and manual forecasting modes.
 
+## Forecast worker and progress
+
+Forecast generation needs a running queue worker when `QUEUE_CONNECTION=database`.
+On Windows, the restart loop can be launched from the project root:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/queue-worker-local.ps1
+```
+
+On the Pi, use the supervised `infra/layrate-queue-worker.service` service.
+After deploying changes, run `php artisan queue:restart` so workers reload code.
+The Python process has a 300-second limit, the job a 330-second limit, and queue
+reservation expiry is at least 360 seconds to avoid concurrent retries.
+
+The progress bar is an estimate until results are saved. Completion reaches 100%;
+failed/stalled jobs and network deadlines release the UI and show an error.
+Missing production data and invalid input should be corrected before retrying.
+
 ## Data requirements
 
 `ForecastingV5.py` requires at least **90 historical records** for the selected scope (whole farm, cage, or breed) before it can train and evaluate models.
