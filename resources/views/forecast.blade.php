@@ -758,14 +758,21 @@
 
     window.submitForecastFormAsync = function(form) {
         const operation = ++forecastOperation;
-        forecastJson(form.action, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                'Accept': 'application/json'
-            },
-            body: new FormData(form)
-        }, 60000)
+        return Promise.resolve().then(function() {
+            if (!(form instanceof HTMLFormElement)) throw new Error('Forecast form is unavailable. Refresh the page and try again.');
+            const body = new FormData(form);
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            const token = body.get('_token') || (meta && meta.getAttribute('content'));
+            if (!token) throw new Error('Your session token is unavailable. Refresh the page and try again.');
+            return forecastJson(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': token,
+                    'Accept': 'application/json'
+                },
+                body: body
+            }, 60000);
+        })
         .then(function(data) {
             if (operation !== forecastOperation) return;
             if (data.already_saved) {

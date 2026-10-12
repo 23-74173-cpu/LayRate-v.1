@@ -12,7 +12,7 @@
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
 
         {{-- ── Inputs Panel ── --}}
-        <x-card padding="p-4">
+        <x-card padding="p-4 h-full flex flex-col" class="h-full">
             <x-card-header title="Forecast Inputs" subtitle="Scope and horizon" icon="sliders-horizontal" />
             <form method="POST" action="{{ route('forecast.generate') }}" id="forecastForm" data-turbo="false">
                 @csrf
@@ -78,6 +78,38 @@
                 </button>
                 @endcan
             </form>
+
+            <aside aria-labelledby="forecast-guide-title" class="mt-5 flex flex-col md:flex-1 rounded-lg border border-[#D9D9D9] bg-[#F5F6F8] p-4">
+                <div class="flex items-center gap-2 text-navy">
+                    <i data-lucide="book-open" class="w-4 h-4 shrink-0" aria-hidden="true"></i>
+                    <h3 id="forecast-guide-title" class="text-sm font-semibold">Forecasting guide</h3>
+                    <button type="button" aria-expanded="false" aria-controls="forecast-guide-content"
+                            class="ml-auto shrink-0 rounded-md border border-[#D9D9D9] bg-white px-2.5 py-1.5 text-xs font-medium md:hidden focus-visible:outline-2 focus-visible:outline-navy focus-visible:outline-offset-2"
+                            onclick="const expanded = this.getAttribute('aria-expanded') !== 'true'; this.setAttribute('aria-expanded', String(expanded)); this.textContent = expanded ? 'Hide guide' : 'Show guide'; const content = document.getElementById('forecast-guide-content'); content.classList.toggle('hidden', !expanded); content.classList.toggle('flex', expanded);">
+                        Show guide
+                    </button>
+                </div>
+                <div id="forecast-guide-content" class="hidden flex-col justify-between gap-4 mt-4 md:flex md:flex-1">
+                <p class="text-xs leading-relaxed text-[#6B7280]">Forecasts estimate future egg production from past records. Dates closer to today are generally more predictable; uncertainty increases farther into the future.</p>
+
+                <dl class="space-y-4 text-xs">
+                    <div class="flex items-start gap-3">
+                        <dt class="shrink-0 w-14 rounded-md border border-[#D9D9D9] bg-white px-2 py-1 text-center font-semibold text-navy">7 days</dt>
+                        <dd class="leading-relaxed text-[#6B7280]"><span class="font-medium text-[#333333]">Daily planning.</span> A shorter outlook with generally less uncertainty.</dd>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <dt class="shrink-0 w-14 rounded-md border border-[#D9D9D9] bg-white px-2 py-1 text-center font-semibold text-navy">14 days</dt>
+                        <dd class="leading-relaxed text-[#6B7280]"><span class="font-medium text-[#333333]">Upcoming needs.</span> More time to plan, with greater uncertainty.</dd>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <dt class="shrink-0 w-14 rounded-md border border-[#D9D9D9] bg-white px-2 py-1 text-center font-semibold text-navy">30 days</dt>
+                        <dd class="leading-relaxed text-[#6B7280]"><span class="font-medium text-[#333333]">Monthly outlook.</span> Use as a broad estimate; later dates may differ more from actual production.</dd>
+                    </div>
+                </dl>
+
+                <p class="border-t border-[#D9D9D9] pt-3 text-xs leading-relaxed text-[#6B7280]">Keep production records up to date and use <span class="font-medium text-[#333333]">Compare Production</span> to check saved forecasts against actual results. These are general guidelines, not measured confidence levels.</p>
+                </div>
+            </aside>
         </x-card>
 
         {{-- ── Production Calendar ── --}}

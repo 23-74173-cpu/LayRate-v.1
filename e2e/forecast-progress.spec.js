@@ -11,9 +11,10 @@ const lifecycle = source.slice(source.indexOf('    var forecastProgressFrame'), 
   .replace('}, 15000)', '}, 100)').replace('}, 60000)', '}, 250)');
 
 async function start(page, scenario) {
+  const historical = scenario === 'historical_no_meta';
   await page.route('http://forecast-progress.test/**', route => route.fulfill({ contentType: 'text/html', body: `
-    <meta name="csrf-token" content="test">
-    <form id="forecastForm" action="http://forecast-progress.test/generate"><input name="scope" value="farm"></form>
+    ${historical || scenario === 'missing_csrf' ? '' : '<meta name="csrf-token" content="test">'}
+    <form id="${historical ? 'forecastDayForm' : 'forecastForm'}" action="http://forecast-progress.test/generate"><input name="scope" value="farm">${historical ? '<input name="_token" value="form-token"><input name="forecast_kind" value="backtest"><input name="start_date" value="2026-09-01"><input name="end_date" value="2026-09-07">' : ''}</form>
     <button id="generateForecastBtn" disabled><span id="btnText">Generating...</span></button>
     <div id="forecastLoadingOverlay"><div id="forecastProgressBar"></div><span id="forecastProgressText"></span><span id="forecastStatusText"></span></div>` }));
   await page.goto('http://forecast-progress.test/');
@@ -27,6 +28,8 @@ async function start(page, scenario) {
     const response = (body, status = 200) => ({ ok: status === 200, status, json: async () => body });
     window.fetch = async (url, options) => {
       if (options.method === 'POST') {
+        window.submittedToken = options.headers['X-CSRF-TOKEN'];
+        window.submittedFields = Object.fromEntries(options.body.entries());
         if (scenario === 'submit_hang') return new Promise(() => {});
         if (scenario === 'body_hang') return { ok: true, json: () => new Promise(() => {}) };
         if (scenario === 'saved') return response({ already_saved: true, redirect_url: '/forecast', message: 'Saved dates kept unchanged.' });
@@ -52,7 +55,7 @@ async function start(page, scenario) {
   await page.evaluate(() => {
     sessionStorage.setItem('start', Date.now());
     window.startForecastProgress(1000);
-    window.submitForecastFormAsync(document.getElementById('forecastForm'));
+    window.submitForecastFormAsync(document.querySelector('form'));
   });
 }
 
@@ -67,7 +70,7 @@ for (const scenario of ['success', 'saved', 'retry', 'no_redirect']) {
     else expect(await page.evaluate(() => window.resultsUrl)).toBe('/forecast');
   });
 }
-for (const scenario of ['failed', 'stalled', 'missing', 'expired', 'bad_status', 'submit_hang', 'body_hang', 'poll_hang', 'running_forever']) {
+for (const scenario of ['failed', 'stalled', 'missing', 'expired', 'bad_status', 'submit_hang', 'body_hang', 'poll_hang', 'running_forever', 'missing_csrf']) {
   test(`forecast ${scenario} clears the overlay instead of hanging at 95%`, async ({ page }) => {
     await start(page, scenario);
     await expect(page.locator('#forecastLoadingOverlay')).toBeHidden();
@@ -76,6 +79,19 @@ for (const scenario of ['failed', 'stalled', 'missing', 'expired', 'bad_status',
     await expect(page.locator('#forecastProgressText')).not.toHaveText('100%');
   });
 }
+
+test('historical forecast uses the form token when the page meta token is absent', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await start(page, 'historical_no_meta');
+  await expect(page.locator('#forecastProgressText')).toHaveText('100%');
+  await expect(page.locator('#forecastLoadingOverlay')).toBeHidden();
+  expect(await page.evaluate(() => window.submittedToken)).toBe('form-token');
+  expect(await page.evaluate(() => window.submittedFields)).toMatchObject({
+    _token: 'form-token', forecast_kind: 'backtest', start_date: '2026-09-01', end_date: '2026-09-07'
+  });
+  expect(errors).toEqual([]);
+});
 
 // Leaving the page cancels its poller; the queued job may continue in the background.
 test('navigation releases a pending forecast UI without a late error', async ({ page }) => {
