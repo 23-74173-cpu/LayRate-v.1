@@ -113,7 +113,7 @@
                 </div>
             </x-slot:headerSlot>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div id="eggLoggingCageOverview" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 @foreach($cages as $cage)
                 @php
                     $slotCount = $cage->rows * $cage->slots_per_row;
@@ -1118,6 +1118,7 @@
 
             document.querySelectorAll('.cage-overview-card').forEach(function(card) {
                 var isSelected = card.dataset.cageId == cageId;
+                card.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
                 if (isSelected) {
                     card.style.borderColor = 'var(--color-navy)';
                     card.style.borderWidth = '2px';
@@ -1318,6 +1319,7 @@
                 pendingSaveBtn = null;
 
                 if (resp.ok && resp.body.success) {
+                    if (sessionStorage.getItem('wt3_active') === '1') window.__wt3Saved = true;
                     if (typeof showNotification === 'function') {
                         showNotification(resp.body.message || 'Production log saved.', 'success');
                     }
@@ -1651,6 +1653,7 @@
                         if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = origText; }
 
                         if (resp.ok && resp.body.success) {
+                            if (sessionStorage.getItem('wt3_active') === '1') window.__wt3Saved = true;
                             if (typeof showNotification === 'function') {
                                 showNotification(resp.body.message || 'Production log saved.', 'success');
                             }
@@ -1895,13 +1898,54 @@
 
     // ── Steps ── manual:true = informational (Next button); else auto-advance.
     // interactive:true keeps the target clickable (4-bar dim with a hole).
+    function hasSelectedSlots() {
+        var cage = document.querySelector('#eggLoggingCageOverview .cage-overview-card[aria-pressed="true"]');
+        var grid = document.querySelector('.cage-grid:not(.hidden)');
+        if (!cage || !grid || grid.dataset.cageId !== cage.dataset.cageId) return false;
+        var single = document.getElementById('cageSlotId');
+        var multi = document.getElementById('cageSlotIdsInput');
+        // A single click sets cageSlotId without adding the multi-select ring.
+        // Accept that one slot as well as any number of drag-selected slots.
+        var ids = multi && multi.value ? multi.value.split(',') : single && single.value ? [single.value] : [];
+        ids = ids.map(function(id) { return id.trim(); }).filter(Boolean);
+        return ids.length > 0 && ids.every(function(id) {
+            return Array.from(grid.querySelectorAll('.slot-card')).some(function(card) { return card.dataset.slotId === id; });
+        });
+    }
+
+    function validLogDetails() {
+        var form = document.getElementById('eggForm');
+        var date = form && form.querySelector('[name="log_date"]');
+        var hens = document.getElementById('henCount');
+        var notes = form && form.querySelector('[name="notes"]');
+        return !!(hasSelectedSlots() && date && date.value && date.checkValidity()
+            && hens && Number(hens.value) > 0 && hens.checkValidity()
+            && (!notes || notes.checkValidity()));
+    }
+
+    function validEggCount() {
+        var eggs = document.getElementById('eggCount');
+        var override = document.getElementById('overrideModal');
+        var sizes = Array.from(document.querySelectorAll('#sizeBreakdown .size-input'));
+        var sum = sizes.reduce(function(total, input) { return total + Number(input.value || 0); }, 0);
+        return !!(validLogDetails() && eggs && eggs.value.trim() !== ''
+            && eggs.checkValidity() && Number.isInteger(Number(eggs.value)) && Number(eggs.value) >= 0
+            && sizes.every(function(input) { return input.checkValidity(); })
+            && (sum === 0 || sum === Number(eggs.value))
+            && (document.getElementById('cageSlotIdsInput').value || Number(eggs.value) <= Number(document.getElementById('henCount').value))
+            && (!override || override.style.display !== 'flex'));
+    }
+
     var steps = [
         {
-            text: '<strong>Choose a cage.</strong><br>Click a <em>cage card</em> above (e.g. a cage with hens) to open its slot grid.',
-            target: function() { return document.querySelector('.cage-overview-card'); },
-            done: function() {
-                return document.querySelector('.cage-grid:not(.hidden)') !== null;
+            text: '<strong>Choose a cage.</strong><br>Choose any <em>cage card</em> in the highlighted area, then tap <em>Next</em> to open Manual Log and select slots.',
+            target: function() { return document.getElementById('eggLoggingCageOverview'); },
+            done: function() { return false; },
+            manual: true,
+            canProceed: function() {
+                return document.querySelector('#eggLoggingCageOverview .cage-overview-card[aria-pressed="true"]') !== null;
             },
+            onNext: function() { window.switchLogTab('manual'); },
             interactive: true
         },
         {
@@ -1913,8 +1957,7 @@
             },
             done: function() { return false; },
             canProceed: function() {
-                // At least one slot selected (selected cards get .ring-2).
-                return document.querySelectorAll('.slot-card.ring-2').length > 0;
+                return hasSelectedSlots();
             },
             manual: true,
             interactive: true
@@ -1926,24 +1969,26 @@
                 + '<em>Hen Count</em> — hens present in the slot (read from the slot).<br>'
                 + '<strong>HDEP</strong> — Hen-Day Egg Production = (eggs ÷ hens) × 100%, a measure of how many eggs each hen laid that day.<br>'
                 + '<em>Notes</em> — optional comments (e.g. broken eggs).<br>'
-                + '<em>Size Breakdown</em> (optional) — split the eggs by Small / Medium / Large / Jumbo; leave blank to skip.<br><br>Tap <em>Next</em> to continue.',
+                + '<em>Size Breakdown</em> (optional) — split the eggs by Small / Medium / Large / XL / Jumbo; leave blank to skip.<br><br>Tap <em>Next</em> to continue.',
             target: function() {
                 // Highlight only the field area (Date through Size Breakdown),
                 // excluding the Save Record / Cancel buttons below.
                 return document.getElementById('logEntryFields') || document.getElementById('eggCount');
             },
             done: function() { return false; },
+            canProceed: validLogDetails,
             manual: true,
             interactive: true
         },
         {
-            text: '<strong>Enter the egg count.</strong><br>Type the number of eggs laid for today.',
-            target: function() { return document.getElementById('eggCount'); },
-            done: function() {
-                var e = document.getElementById('eggCount');
-                var v = e ? parseInt(e.value, 10) : 0;
-                return v > 0;
+            text: '<strong>Review the egg count.</strong><br>Enter the eggs laid for the selected date; <em>0</em> is valid. For sensor slots, review the reading or use <em>Sensor reading - click to override</em> and verify your PIN or password to edit it. For multiple slots, this count applies to each slot. Tap <em>Next</em> when ready.',
+            target: function() {
+                var modal = document.getElementById('overrideModal');
+                return modal && modal.style.display === 'flex' ? modal.querySelector('.relative') : document.getElementById('logEntryFields');
             },
+            done: function() { return false; },
+            canProceed: validEggCount,
+            manual: true,
             interactive: true
         },
         {
@@ -1961,21 +2006,20 @@
             text: '<strong>Confirm the save.</strong><br>Review the totals and click <em>Confirm Save</em> to record the eggs for the selected slot(s).',
             target: function() {
                 var m = document.getElementById('confirmMultiModal');
-                if (!m || m.style.display !== 'flex') return null;
+                if (!m || m.style.display !== 'flex') return document.getElementById('saveBtn');
                 return m.querySelector('.relative') || m;
             },
             skipIf: function() {
-                // Only relevant when a confirmation modal appears (multi-slot);
-                // skip when saving a single slot (no popup).
-                var m = document.getElementById('confirmMultiModal');
-                return !(m && m.style.display === 'flex');
+                // A confirmed server response completes either save path.
+                return window.__wt3Saved === true;
             },
             done: function() {
-                return window.__wt3Confirmed === true;
+                return window.__wt3Saved === true;
             }
         }
     ];
 
+    window.__wt3Saved = false;
     var idx = Math.min(startAt, steps.length - 1);
     var pollTimer = null;
 
@@ -2049,6 +2093,9 @@
     }
 
     function advance() {
+        var step = steps[idx];
+        if (step && step.manual && step.canProceed && !step.canProceed()) return;
+        if (step && step.onNext) step.onNext();
         idx++;
         if (idx >= steps.length) {
             outro();
@@ -2090,6 +2137,8 @@
             var el = s.target();
             if (!el) { positionOverlay(); return; }
             positionOverlay();
+            s = steps[idx];
+            if (!s) return;
             if (!s.manual && s.done()) advance();
         }, 600);
     }
@@ -2100,6 +2149,12 @@
 
     skipBtn.addEventListener('click', function() { finish(); });
     nextBtn.addEventListener('click', function() { advance(); });
+    ['input', 'change', 'click', 'mouseup', 'touchend'].forEach(function(eventName) {
+        document.addEventListener(eventName, function() {
+            if (sessionStorage.getItem('wt3_active') !== '1') return;
+            setTimeout(positionOverlay, 0);
+        });
+    });
     doneBtn.addEventListener('click', function() { finish(); });
     window.addEventListener('resize', positionOverlay);
     window.addEventListener('scroll', positionOverlay, true);
@@ -2107,34 +2162,25 @@
     // Forward wheel scrolling so the user can scroll during the tutorial.
     document.addEventListener('wheel', function(e) {
         if (sessionStorage.getItem('wt3_active') !== '1') return;
-        var sc = document.querySelector('.page-wrapper') || document.scrollingElement || document.documentElement;
+        var target = steps[idx] && steps[idx].target();
+        var dialog = target && target.closest('[role="dialog"]');
+        var sc = e.target.closest('.overflow-y-auto, .overflow-auto')
+            || (dialog && dialog.querySelector('.overflow-y-auto, .overflow-auto'))
+            || document.querySelector('.page-wrapper') || document.scrollingElement || document.documentElement;
         if (!sc) return;
         sc.scrollTop = Math.max(0, Math.min(sc.scrollHeight, sc.scrollTop + e.deltaY));
         e.preventDefault();
     }, { passive: false });
 
-    // Detect save attempt. For a single slot this is the direct save; for a
-    // multi-slot selection this fires when the confirmation popup is shown.
-    // The tutorial session is cleared only at completion (outro/finish).
-    var eggForm = document.getElementById('eggForm');
-    if (eggForm && !eggForm.__wt3Bound) {
-        eggForm.__wt3Bound = true;
-        eggForm.addEventListener('submit', function() {
-            window.__wt3Saved = true;
-        });
-    }
-
-    // Multi-slot confirms via #confirmMultiModal → #confirmMultiSaveBtn →
-    // executeMultiSave(). Hook that to mark the tutorial complete.
-    var confirmMultiSave = document.getElementById('confirmMultiSaveBtn');
-    if (confirmMultiSave && !confirmMultiSave.__wt3Bound) {
-        confirmMultiSave.__wt3Bound = true;
-        confirmMultiSave.addEventListener('click', function() {
-            window.__wt3Confirmed = true;
-            sessionStorage.removeItem('wt3_active');
-            sessionStorage.removeItem('wt3_step');
-        });
-    }
+    // If confirmation closes without a successful save, allow a retry.
+    var confirmModal = document.getElementById('confirmMultiModal');
+    confirmModal.addEventListener('click', function(e) {
+        if (e.target.closest('[onclick="closeConfirmMultiModal()"]') && idx === 5) {
+            idx = 4;
+            sessionStorage.setItem('wt3_step', String(idx));
+            positionOverlay();
+        }
+    });
 
     var start = function() { show(); };
     if (document.readyState === 'loading') {

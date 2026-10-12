@@ -12,7 +12,7 @@
             </span>
         </button>
         <div class="flex items-center gap-2 shrink-0">
-            <a href="{{ route('cages.bulk-add', ['hen_ids' => $unplacedHens->pluck('id')->join(',')]) }}"
+            <a data-wt-place href="{{ route('cages.bulk-add', ['hen_ids' => $unplacedHens->pluck('id')->join(',')]) }}"
                class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg text-white bg-navy hover:bg-navy transition-colors">
                 <i data-lucide="arrow-right" class="w-3 h-3"></i> Place into cage
             </a>

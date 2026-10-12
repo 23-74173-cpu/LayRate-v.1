@@ -657,9 +657,8 @@
                 var m = document.getElementById('confirm-modal');
                 return !!(m && (m.classList.contains('flex') || !m.classList.contains('hidden')));
             },
-            // Manual so the user reviews before advancing; Next then lights the
-            // confirmation step. The lit hole keeps the button clickable.
-            manual: true,
+            // Advance only after Place Hens opens the confirmation dialog.
+            manual: false,
             interactive: true
         },
         {
@@ -796,6 +795,8 @@
             var el = s.target();
             if (!el) { positionOverlay(); return; }
             positionOverlay();
+            s = steps[idx];
+            if (!s) return;
             if (!s.manual && s.done() && !window.__wt2bPlaced) advance();
         }, 600);
     }
@@ -814,7 +815,11 @@
     // scroll container to let the user scroll while the walkthrough is open.
     document.addEventListener('wheel', function(e) {
         if (sessionStorage.getItem('wt2_active') !== '1') return;
-        var sc = document.querySelector('.page-wrapper') || document.scrollingElement || document.documentElement;
+        var target = steps[idx] && steps[idx].target();
+        var dialog = target && target.closest('[role="dialog"]');
+        var sc = e.target.closest('.overflow-y-auto, .overflow-auto')
+            || (dialog && dialog.querySelector('.overflow-y-auto, .overflow-auto'))
+            || document.querySelector('.page-wrapper') || document.scrollingElement || document.documentElement;
         if (!sc) return;
         sc.scrollTop = Math.max(0, Math.min(sc.scrollHeight, sc.scrollTop + e.deltaY));
         e.preventDefault();

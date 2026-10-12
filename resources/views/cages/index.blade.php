@@ -1779,7 +1779,13 @@ function closeCageInfoPopup() {
 
 function flipCageInfoPopup() {
     var flipper = document.getElementById('cageInfoFlipper');
-    if (flipper) flipper.classList.toggle('flipped');
+    if (flipper) {
+        flipper.classList.toggle('flipped');
+        // Notify the walkthrough from the actual flip action, never hover.
+        document.dispatchEvent(new CustomEvent('cage-details-flip', {
+            detail: { flipper: flipper, flipped: flipper.classList.contains('flipped') }
+        }));
+    }
     repositionCageInfoPopup();
     var popup = document.getElementById('cageInfoPopup');
     if (window.lucide && typeof window.lucide.createIcons === 'function' && popup) {
@@ -2944,17 +2950,17 @@ bindStagingInfoButtons();
     // auto-advance and shows Next.
     var steps = [
         {
-            text: '<strong>Open the FAB menu.</strong><br>Click the <em>+</em> floating button (bottom-right) to show the cage actions.',
-            target: function() { return document.querySelector('.fab-toggle'); },
+            text: '<strong>Open Quick Actions.</strong><br>Click the <em>+</em> button in the Quick Actions dock (bottom-right) to show the cage actions.',
+            target: function() { return document.querySelector('#quickDock .fab-toggle'); },
             done: function() {
-                var menu = document.querySelector('.fab .fab-menu');
-                return !!(menu && !menu.classList.contains('invisible'));
+                var menu = document.getElementById('dockFabMenu');
+                return !!(menu && !menu.classList.contains('hidden'));
             }
         },
         {
-            text: '<strong>Add a cage.</strong><br>Click the <em>Add Cage</em> button in the menu.',
+            text: '<strong>Add a cage.</strong><br>Click the <em>Add Cage</em> button in Quick Actions.',
             target: function() {
-                var m = document.querySelector('.fab .fab-menu button[onclick="openAddModal()"]');
+                var m = document.querySelector('#dockFabMenu button[onclick="openAddModal()"]');
                 return m || document.querySelector('button[onclick="openAddModal()"]');
             },
             done: function() {
@@ -2976,19 +2982,18 @@ bindStagingInfoButtons();
             }
         },
         {
-            text: '<strong>Drag the cage onto the Farm Layout.</strong><br>Grab the new cage from <em>Unplaced Cages</em> and drag it into the highlighted Farm Layout grid to place it.',
+            text: '<strong>Drag the cage onto the Farm Layout.</strong><br>On touchscreens, enable <em>Drag cages</em> first. Grab the new cage from <em>Unplaced Cages</em> and drag it into the highlighted Farm Layout grid to place it.',
             target: function() {
                 return document.getElementById('farmLayoutSection') || document.getElementById('farmCanvas');
             },
             done: function() {
-                return document.querySelector('.cage-overlay') !== null;
+                return !!(tutorialCageId && document.querySelector('.cage-overlay[data-cage-id="' + tutorialCageId + '"]'));
             }
         },
         {
             text: '<strong>Open the cage details.</strong><br>Click the <em>info</em> icon on the placed cage (bottom-right) to see its details.',
             target: function() {
-                return document.querySelector('.cage-overlay .cage-info-btn')
-                    || document.querySelector('.cage-info-btn');
+                return document.querySelector('.cage-overlay[data-cage-id="' + tutorialCageId + '"] .cage-info-btn');
             },
             done: function() {
                 var p = document.getElementById('cageInfoPopup');
@@ -3004,53 +3009,136 @@ bindStagingInfoButtons();
         var hasDone = typeof done === 'function';
         return {
             text: text,
-            target: function() { return document.querySelector(sel); },
+            // Some cage actions depend on permissions. Keep the coach mark
+            // visible on the details card when an action is unavailable.
+            target: function() {
+                return document.querySelector(sel) || (!hasDone ? document.getElementById('cageInfoCard') : null);
+            },
             done: hasDone ? done : function() { return false; },
             manual: !hasDone
         };
     }
     steps = steps.concat([
         iconStep('#cageInfoPopup .front-face [title="Add hens"]',
-            '<strong>Add hens.</strong><br>Click the <em>plus-circle</em> to bulk-add hens to this cage.'),
+            '<strong>Add hens.</strong><br>The <em>Add hens</em> action opens Bulk Add Hens for this cage. Tap <em>Next</em> to continue the tour.'),
         iconStep('#cageInfoPopup .front-face [title="Details & settings"]',
-            '<strong>Flip the card.</strong><br>Click the <em>info</em> icon to flip the card over and reveal this cage\'s settings and actions.',
+            '<strong>Flip the card.</strong><br>Click <em>Details</em> to flip the card over and reveal this cage\'s settings and actions.',
             function() {
                 var f = document.getElementById('cageInfoFlipper');
-                return !!(f && f.classList.contains('flipped'));
+                return !!(detailsClicked && detailsFlipComplete && f && f === detailsFlipper
+                    && f.classList.contains('flipped'));
             }),
         iconStep('#cageInfoPopup .back-face [title="Edit cage"]',
-            '<strong>Edit the cage.</strong><br>The <em>pencil</em> opens the cage editor to change rows, slots, and sensors.'),
+            '<strong>Edit the cage.</strong><br>The <em>Edit</em> action opens the cage editor to change rows, slots, and sensors.'),
         iconStep('#cageInfoPopup .back-face [title="Renumber slots"]',
-            '<strong>Renumber slots.</strong><br>The <em>list</em> lets you drag slots to change their numbering.'),
+            '<strong>Renumber slots.</strong><br>The <em>Renumber</em> action lets you drag slots to change their numbering.'),
         iconStep('#cageInfoPopup .back-face [title="Print label"]',
-            '<strong>Print the label.</strong><br>The <em>printer</em> opens a printable cage label.'),
+            '<strong>Print the label.</strong><br>The <em>Print</em> action opens a printable cage label.'),
         iconStep('#cageInfoPopup .back-face [title="Delete cage"]',
-            '<strong>Delete the cage.</strong><br>The <em>trash</em> deletes this cage and its configuration.')
+            '<strong>Delete the cage.</strong><br>The <em>Delete</em> action deletes this cage and its configuration.')
     ]);
+
+    steps.push({
+        text: '<strong>Return to the Farm Layout.</strong><br>Tap <em>Next</em> to close cage details and save your layout.',
+        target: function() { return document.getElementById('cageInfoCard'); },
+        done: function() { return false; },
+        manual: true,
+        onNext: function() { closeCageInfoPopup(); }
+    });
 
     // Final step: save the farm layout back to the server.
     steps.push({
-        text: '<strong>Save the layout.</strong><br>Close the details card, then click <em>Save Layout</em> to persist your farm layout.',
+        text: '<strong>Save the layout.</strong><br>Click <em>Save Layout</em> to persist your farm layout.',
         target: function() { return document.getElementById('saveLayoutBtn'); },
         done: function() {
-            return window.__wtLayoutSaved === true || !hasPendingChanges();
+            return window.__wtLayoutSaved === true;
         }
     });
 
+    var tutorialCageId = sessionStorage.getItem('wt_cage_id');
+    if (startAt >= 3 && !tutorialCageId) {
+        var existingIds = JSON.parse(sessionStorage.getItem('wt_existing_ids') || '[]');
+        var tile = Array.from(document.querySelectorAll('#stagingArea .staging-tile')).filter(function(tile) { return existingIds.indexOf(tile.dataset.cageId) === -1; }).sort(function(a, b) { return Number(b.dataset.cageId) - Number(a.dataset.cageId); })[0];
+        if (tile) {
+            tutorialCageId = tile.dataset.cageId;
+            sessionStorage.setItem('wt_cage_id', tutorialCageId);
+        }
+    }
+    window.__wtLayoutSaved = false;
     var idx = Math.min(startAt, steps.length - 1);
     var pollTimer = null;
+    var lastTarget = null;
+    var detailsClicked = false;
+    var detailsFlipper = null;
+    var detailsHighlightRect = null;
+    var detailsFlipComplete = false;
+
+    // The real flip handler emits this event only after changing the card.
+    // Use its transform transition, with a timed fallback for reduced motion
+    // and browsers that do not deliver transitionend reliably.
+    document.addEventListener('cage-details-flip', function(e) {
+        if (sessionStorage.getItem('wt_active') !== '1' || idx !== 6 || !e.detail.flipped) return;
+        var flipper = e.detail.flipper;
+        detailsClicked = true;
+        detailsFlipper = flipper;
+        detailsFlipComplete = false;
+        function completeFlip() {
+            if (idx !== 6 || detailsFlipper !== flipper || !flipper.classList.contains('flipped')) return;
+            detailsFlipComplete = true;
+            advance();
+        }
+        function onTransitionEnd(event) {
+            if (event.target !== flipper || event.propertyName !== 'transform') return;
+            flipper.removeEventListener('transitionend', onTransitionEnd);
+            completeFlip();
+        }
+        flipper.addEventListener('transitionend', onTransitionEnd);
+        var style = window.getComputedStyle(flipper);
+        var durations = style.transitionDuration.split(',');
+        var delays = style.transitionDelay.split(',');
+        function milliseconds(value) {
+            return parseFloat(value) * (value.trim().endsWith('ms') ? 1 : 1000);
+        }
+        var wait = Math.max.apply(null, durations.map(function(duration, i) {
+            return milliseconds(duration) + milliseconds(delays[i % delays.length]);
+        }));
+        setTimeout(function() {
+            flipper.removeEventListener('transitionend', onTransitionEnd);
+            completeFlip();
+        }, wait + 50);
+    });
+
+    function prepareDetailsStep() {
+        if (idx !== 6) return;
+        detailsClicked = false;
+        detailsFlipComplete = false;
+        detailsFlipper = null;
+        detailsHighlightRect = null;
+        var flipper = document.getElementById('cageInfoFlipper');
+        if (flipper) flipper.classList.remove('flipped');
+    }
 
     function positionOverlay() {
         var s = steps[idx];
         if (!s) return;
         var el = s.target();
-        if (!el) {
-            tooltip.style.display = 'none';
-            spotlight.style.display = 'none';
-            dims.forEach(function(d) { d.style.display = 'none'; });
-            return;
+        // Details stays on its button. Never fall back to highlighting the
+        // card or page, and keep its geometry fixed while the card flips.
+        if (idx === 6 && !el && !detailsHighlightRect) return;
+        // Keep the tutorial visible while popup content changes during a flip.
+        if (!el && idx !== 6) el = document.getElementById('cageInfoCard') || document.getElementById('farmLayoutSection');
+        if (!el && !detailsHighlightRect) return;
+        if (el && lastTarget !== el) {
+            el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+            lastTarget = el;
         }
-        var r = el.getBoundingClientRect();
+        var r;
+        if (idx === 6) {
+            if (!detailsHighlightRect) detailsHighlightRect = el.getBoundingClientRect();
+            r = detailsHighlightRect;
+        } else {
+            r = el.getBoundingClientRect();
+        }
         var pad = 6;
         var left = r.left - pad, top = r.top - pad;
         var right = r.right + pad, bottom = r.bottom + pad;
@@ -3112,11 +3200,13 @@ bindStagingInfoButtons();
     }
 
     function advance() {
+        if (steps[idx] && steps[idx].onNext) steps[idx].onNext();
         idx++;
         if (idx >= steps.length) {
             outro();
         } else {
             sessionStorage.setItem('wt_step', String(idx));
+            prepareDetailsStep();
             positionOverlay();
         }
     }
@@ -3140,6 +3230,8 @@ bindStagingInfoButtons();
         doneOverlay.style.display = 'none';
         sessionStorage.removeItem('wt_active');
         sessionStorage.removeItem('wt_step');
+        sessionStorage.removeItem('wt_cage_id');
+        sessionStorage.removeItem('wt_existing_ids');
         try {
             history.replaceState({}, '', window.location.pathname);
             if (window.showToast) showToast('Walkthrough complete', true);
@@ -3151,9 +3243,11 @@ bindStagingInfoButtons();
         pollTimer = setInterval(function() {
             var s = steps[idx];
             if (!s) return;
-            var el = s.target();
-            if (!el) { positionOverlay(); return; }
+            // Check completion even when the old face's target disappears.
+            // Details can replace/hide that target before the next poll.
             positionOverlay();
+            s = steps[idx];
+            if (!s) return;
             // On cage submission the page is about to reload; don't let the
             // poller advance past the drag step before the redirect fires.
             if (!s.manual && s.done() && !window.__wtCageSubmitted) advance();
@@ -3167,14 +3261,22 @@ bindStagingInfoButtons();
     skipBtn.addEventListener('click', function() { finish(); });
     nextBtn.addEventListener('click', function() { advance(); });
     doneBtn.addEventListener('click', function() { finish(); });
-    window.addEventListener('resize', positionOverlay);
-    window.addEventListener('scroll', positionOverlay, true);
+    function repositionAfterViewportChange() {
+        if (idx === 6 && !detailsClicked) detailsHighlightRect = null;
+        positionOverlay();
+    }
+    window.addEventListener('resize', repositionAfterViewportChange);
+    window.addEventListener('scroll', repositionAfterViewportChange, true);
 
     // The dim/blocking bars intercept wheel events, so forward them to the page
     // scroll container to let the user scroll while the walkthrough is open.
     document.addEventListener('wheel', function(e) {
         if (sessionStorage.getItem('wt_active') !== '1') return;
-        var sc = document.querySelector('.page-wrapper') || document.scrollingElement || document.documentElement;
+        var target = steps[idx] && steps[idx].target();
+        var dialog = target && target.closest('[role="dialog"]');
+        var sc = e.target.closest('.overflow-y-auto, .overflow-auto')
+            || (dialog && dialog.querySelector('.overflow-y-auto, .overflow-auto'))
+            || document.querySelector('.page-wrapper') || document.scrollingElement || document.documentElement;
         if (!sc) return;
         sc.scrollTop = Math.max(0, Math.min(sc.scrollHeight, sc.scrollTop + e.deltaY));
         e.preventDefault();
@@ -3186,12 +3288,22 @@ bindStagingInfoButtons();
     if (form && !form.__wtBound) {
         form.__wtBound = true;
         form.addEventListener('submit', function() {
+            sessionStorage.setItem('wt_existing_ids', JSON.stringify(Object.keys(cageMeta)));
             window.__wtCageSubmitted = true;
             sessionStorage.setItem('wt_step', '3'); // index of the drag step (Step 4)
         });
     }
 
-    var start = function() { show(); };
+    var start = function() {
+        var modal = document.getElementById('addCageModal');
+        if (idx >= 3 && modal && modal.querySelector('[data-lucide="alert-circle"], .lucide-alert-circle')) {
+            idx = 2;
+            sessionStorage.setItem('wt_step', String(idx));
+            openAddModal();
+        }
+        prepareDetailsStep();
+        show();
+    };
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', start);
     } else {

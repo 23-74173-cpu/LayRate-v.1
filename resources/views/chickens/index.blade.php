@@ -1082,17 +1082,17 @@ document.addEventListener('keydown', function(e) {
     // ── Steps ── manual:true = informational (Next button); else auto-advance.
     var steps = [
         {
-            text: '<strong>Open the FAB menu.</strong><br>Click the <em>+</em> floating button (bottom-right) to show the hen actions.',
-            target: function() { return document.querySelector('.fab-toggle'); },
+            text: '<strong>Open Quick Actions.</strong><br>Click the <em>+</em> button in the Quick Actions dock (bottom-right) to show the hen actions.',
+            target: function() { return document.querySelector('#quickDock .fab-toggle'); },
             done: function() {
-                var menu = document.querySelector('.fab .fab-menu');
-                return !!(menu && !menu.classList.contains('invisible'));
+                var menu = document.getElementById('dockFabMenu');
+                return !!(menu && !menu.classList.contains('hidden'));
             }
         },
         {
-            text: '<strong>Register new hens.</strong><br>Click the <em>Register New Hens</em> button in the menu.',
+            text: '<strong>Register new hens.</strong><br>Click the <em>Register New Hens</em> button in Quick Actions.',
             target: function() {
-                var m = document.querySelector('.fab .fab-menu button[onclick="openRegisterModal()"]');
+                var m = document.querySelector('#dockFabMenu button[onclick="openRegisterModal()"]');
                 return m || document.querySelector('button[onclick="openRegisterModal()"]');
             },
             done: function() {
@@ -1100,7 +1100,7 @@ document.addEventListener('keydown', function(e) {
             }
         },
         {
-            text: '<strong>Register the hens.</strong><br>Set the <em>Quantity</em>, <em>Breed</em>, and details, then click <em>Register Hens</em> to create them.',
+            text: '<strong>Register the hens.</strong><br>Set <em>Quantity</em>, <em>Breed</em>, <em>Date Acquired</em>, and <em>Age at Acquisition (weeks)</em>, then click <em>Register Hens</em> to create them.',
             target: function() {
                 var m = document.getElementById('registerModal');
                 if (!m) return null;
@@ -1114,8 +1114,7 @@ document.addEventListener('keydown', function(e) {
         {
             text: '<strong>View the new hens.</strong><br>Click the <em>Unplaced</em> toggle to expand the table of unplaced hens.',
             target: function() {
-                return document.getElementById('unplacedCard')
-                    || document.querySelector('button[onclick="toggleUnplaced()"]')
+                return document.querySelector('#unplacedCard button[onclick="toggleUnplaced()"]')
                     || document.getElementById('unplacedList');
             },
             done: function() {
@@ -1135,16 +1134,16 @@ document.addEventListener('keydown', function(e) {
         },
         {
             text: '<strong>Review the list.</strong><br>Use <em>Next</em> and <em>Prev</em> to page through the unplaced hens and confirm your registered flock.',
-            target: function() {
-                return document.querySelector('#unplacedPagination') || document.getElementById('unplacedList');
-            },
+            target: function() { return document.getElementById('unplacedPagination'); },
+            skipIf: function() { return !document.getElementById('unplacedPagination'); },
             done: function() { return false; },
-            manual: true
+            manual: true,
+            interactive: true
         },
         {
             text: '<strong>Place into cage.</strong><br>Click <em>Place into cage</em> to open the placement page and assign these hens to a cage.',
             target: function() {
-                return document.querySelector('a[data-wt-place]') || document.querySelector('a[href*="bulk-add"]');
+                return document.querySelector('#unplacedCard a[data-wt-place]');
             },
             done: function() {
                 // Clicking the link navigates to the bulk-add page; the poller
@@ -1157,15 +1156,21 @@ document.addEventListener('keydown', function(e) {
 
     var idx = Math.min(startAt, steps.length - 1);
     var pollTimer = null;
+    var lastTarget = null;
 
     function positionOverlay() {
         var s = steps[idx];
         if (!s) return;
+        if (s.skipIf && s.skipIf()) { advance(); return; }
         var el = s.target();
         if (!el) {
             tooltip.style.display = 'none'; spotlight.style.display = 'none';
             dims.forEach(function(d) { d.style.display = 'none'; });
             return;
+        }
+        if (lastTarget !== el) {
+            el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+            lastTarget = el;
         }
         var r = el.getBoundingClientRect();
         var pad = 6;
@@ -1177,7 +1182,7 @@ document.addEventListener('keydown', function(e) {
         spotlight.style.width = (r.width + pad * 2) + 'px';
         spotlight.style.height = (r.height + pad * 2) + 'px';
 
-        if (s.manual) {
+        if (s.manual && !s.interactive) {
             dimT.style.display = 'block';
             dimT.style.left = '0px'; dimT.style.right = '0px'; dimT.style.top = '0px';
             dimT.style.height = window.innerHeight + 'px';
@@ -1238,6 +1243,7 @@ document.addEventListener('keydown', function(e) {
         doneOverlay.style.display = 'none';
         sessionStorage.removeItem('wt2_active');
         sessionStorage.removeItem('wt2_step');
+        sessionStorage.removeItem('wt2_phase');
         try {
             history.replaceState({}, '', window.location.pathname);
             if (window.showToast) showToast('Walkthrough complete', true);
@@ -1252,7 +1258,9 @@ document.addEventListener('keydown', function(e) {
             var el = s.target();
             if (!el) { positionOverlay(); return; }
             positionOverlay();
-            if (!s.manual && s.done()) advance();
+            s = steps[idx];
+            if (!s) return;
+            if (!s.manual && s.done() && !window.__wt2Registered) advance();
         }, 600);
     }
 
@@ -1270,7 +1278,11 @@ document.addEventListener('keydown', function(e) {
     // scroll container to let the user scroll while the walkthrough is open.
     document.addEventListener('wheel', function(e) {
         if (sessionStorage.getItem('wt2_active') !== '1') return;
-        var sc = document.querySelector('.page-wrapper') || document.scrollingElement || document.documentElement;
+        var target = steps[idx] && steps[idx].target();
+        var dialog = target && target.closest('[role="dialog"]');
+        var sc = e.target.closest('.overflow-y-auto, .overflow-auto')
+            || (dialog && dialog.querySelector('.overflow-y-auto, .overflow-auto'))
+            || document.querySelector('.page-wrapper') || document.scrollingElement || document.documentElement;
         if (!sc) return;
         sc.scrollTop = Math.max(0, Math.min(sc.scrollHeight, sc.scrollTop + e.deltaY));
         e.preventDefault();
@@ -1283,7 +1295,7 @@ document.addEventListener('keydown', function(e) {
     // tutorial so normal bulk-add navigation is unaffected.
     document.addEventListener('click', function(e) {
         if (sessionStorage.getItem('wt2_active') !== '1') return;
-        var a = e.target.closest('a[href*="bulk-add"]');
+        var a = e.target.closest('#unplacedCard a[data-wt-place]');
         if (!a) return;
         window.__wt2Placing = true;
         sessionStorage.setItem('wt2_step', '0');
@@ -1303,7 +1315,15 @@ document.addEventListener('keydown', function(e) {
         });
     }
 
-    var start = function() { show(); };
+    var start = function() {
+        var modal = document.getElementById('registerModal');
+        if (idx >= 3 && modal && modal.querySelector('[data-lucide="alert-circle"], .lucide-alert-circle')) {
+            idx = 2;
+            sessionStorage.setItem('wt2_step', String(idx));
+            openRegisterModal();
+        }
+        show();
+    };
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', start);
     } else {

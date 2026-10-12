@@ -484,12 +484,12 @@
             </div>
 
             <p class="text-xs text-[#6B7280] mb-4">
-                This tutorial takes you through opening the action menu, adding a cage, configuring it, dragging it onto the Farm Layout, viewing its details,
-                exploring the cage icons (add hens, flip the card, edit, renumber, print, delete), and saving the layout.
+                This tutorial takes you through opening Quick Actions, adding a cage, configuring it, dragging it onto the Farm Layout, viewing its details,
+                reviewing the cage actions (Add hens, Details, Edit, Renumber, Print, Delete), and saving the layout.
                 You'll be taken to the Cages page and a popup will guide you, one action at a time.
             </p>
 
-            <button type="button" onclick="window.location.href='{{ route('cages.index', ['walkthrough' => '1']) }}'"
+            <button type="button" onclick="sessionStorage.removeItem('wt_active'); sessionStorage.removeItem('wt_step'); sessionStorage.removeItem('wt_cage_id'); sessionStorage.removeItem('wt_existing_ids'); window.location.href='{{ route('cages.index', ['walkthrough' => '1']) }}'"
                     class="inline-flex items-center gap-2 text-sm font-medium text-white px-4 py-2.5 rounded-lg hover:brightness-95 transition-colors"
                     style="background-color:var(--color-navy);">
                 <i data-lucide="play" class="w-4 h-4"></i> Start Walkthrough
@@ -507,11 +507,11 @@
             </div>
 
             <p class="text-xs text-[#6B7280] mb-4">
-                This tutorial walks you through opening the action menu, registering new hens, then placing them into cages.
+                This tutorial walks you through opening Quick Actions, registering new hens, then placing them into cages.
                 You'll be taken to the Hens page and a popup will guide you, one action at a time.
             </p>
 
-            <button type="button" onclick="window.location.href='{{ route('chickens.index', ['walkthrough2' => '1']) }}'"
+            <button type="button" onclick="sessionStorage.removeItem('wt2_active'); sessionStorage.removeItem('wt2_step'); sessionStorage.removeItem('wt2_phase'); window.location.href='{{ route('chickens.index', ['walkthrough2' => '1']) }}'"
                     class="inline-flex items-center gap-2 text-sm font-medium text-white px-4 py-2.5 rounded-lg hover:brightness-95 transition-colors"
                     style="background-color:var(--color-navy);">
                 <i data-lucide="play" class="w-4 h-4"></i> Start Walkthrough
@@ -529,11 +529,11 @@
             </div>
 
             <p class="text-xs text-[#6B7280] mb-4">
-                This tutorial walks you through choosing a cage, selecting a slot, entering today's egg count, and saving the record.
+                This tutorial walks you through choosing a cage, selecting a slot, reviewing the date and entering the egg count, and saving the record.
                 You'll be taken to the Egg Logging page and a popup will guide you, one action at a time.
             </p>
 
-            <button type="button" onclick="window.location.href='{{ route('eggs.logging', ['walkthrough3' => '1']) }}'"
+            <button type="button" onclick="sessionStorage.removeItem('wt3_active'); sessionStorage.removeItem('wt3_step'); window.location.href='{{ route('eggs.logging', ['walkthrough3' => '1']) }}'"
                     class="inline-flex items-center gap-2 text-sm font-medium text-white px-4 py-2.5 rounded-lg hover:brightness-95 transition-colors"
                     style="background-color:var(--color-navy);">
                 <i data-lucide="play" class="w-4 h-4"></i> Start Walkthrough
