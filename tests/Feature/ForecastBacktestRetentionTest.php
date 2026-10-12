@@ -97,6 +97,7 @@ class ForecastBacktestRetentionTest extends TestCase
         [$month, $year] = $this->monthYearFor($target);
 
         $response = $this->actingAs($this->admin)->get(route('forecast', [
+            'forecast_view' => 'backtest',
             'scope' => 'cage',
             'cage' => $cage->cage_code,
             'month' => $month,
@@ -104,8 +105,8 @@ class ForecastBacktestRetentionTest extends TestCase
         ]), ['Turbo-Frame' => 'production-calendar']);
 
         $response->assertOk();
-        $response->assertSee('backtest-forecast-badge');
-        $response->assertSeeInOrder(['forecast-badge', 'BT', '480']);
+        $response->assertSee('Backtest');
+        $response->assertSeeInOrder(['forecast-badge', 'chart-no-axes-combined', '480']);
     }
 
     /**
@@ -150,6 +151,7 @@ class ForecastBacktestRetentionTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin)->get(route('forecast', [
+            'forecast_view' => 'backtest',
             'scope' => 'cage',
             'cage' => $cage->cage_code,
             'month' => (int) $monthStart->format('n'),
@@ -158,12 +160,11 @@ class ForecastBacktestRetentionTest extends TestCase
 
         $response->assertOk();
         // The backtests are all there...
-        $response->assertSee('backtest-forecast-badge');
+        $response->assertSee('Backtest');
         $response->assertSee('611');
         $response->assertSee('617');
-        // ...and the forward forecast was not starved out by them.
-        $response->assertSee('888');
-        $response->assertSee('bg-[#D5E8D4]', false);
+        // Backtests are shown separately from advance predictions.
+        $response->assertDontSee('888');
     }
 
     /**
@@ -201,7 +202,8 @@ class ForecastBacktestRetentionTest extends TestCase
             'cage' => $fwdCage->cage_code,
         ])->assertRedirect();
 
-        $this->assertSame(0, Forecast::where('cage_id', $fwdCage->id)->count(), 'forward forecast should be cleared');
+        $this->assertSame(1, Forecast::where('cage_id', $fwdCage->id)->count(), 'forecast history is retained');
+        $this->assertNotNull(Forecast::where('cage_id', $fwdCage->id)->first()->superseded_at);
         $this->assertSame(1, Forecast::where('cage_id', $btCage->id)->count(), 'backtest must survive a clear');
     }
 
@@ -236,6 +238,7 @@ class ForecastBacktestRetentionTest extends TestCase
         [$month, $year] = $this->monthYearFor($target);
 
         $response = $this->actingAs($this->admin)->get(route('forecast', [
+            'forecast_view' => 'backtest',
             'scope' => 'cage',
             'cage' => $cage->cage_code,
             'month' => $month,

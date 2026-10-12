@@ -369,7 +369,7 @@ class DashboardControllerTest extends TestCase
 
         Forecast::create([
             'cage_id' => $this->cageA->id,
-            'forecast_date' => now()->subDay()->toDateString(),
+            'forecast_date' => now()->subDays(2)->toDateString(),
             'target_date' => $yesterday,
             'predicted_egg_count' => 10,
         ]);
@@ -397,7 +397,7 @@ class DashboardControllerTest extends TestCase
         Forecast::create([
             'cage_id' => null,
             'breed' => null,
-            'forecast_date' => now()->subDay()->toDateString(),
+            'forecast_date' => now()->subDays(2)->toDateString(),
             'target_date' => $yesterday,
             'predicted_egg_count' => 20,
         ]);

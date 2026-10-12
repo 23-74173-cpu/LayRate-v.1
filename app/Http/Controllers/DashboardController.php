@@ -605,19 +605,45 @@ class DashboardController extends Controller
             ->groupBy('log_date')
             ->pluck('total', 'log_date');
 
-        // Forecasts for the same range / scope — latest per target_date if multiple runs exist
+        $request->validate([
+            'forecast_version' => 'nullable|in:original,latest',
+            'forecast_run_id' => 'nullable|integer|min:1',
+        ]);
+        $version = $request->input('forecast_version', 'original');
+        $selectedRunId = $request->integer('forecast_run_id') ?: null;
         $cage = $cageCode ? Cage::where('cage_code', $cageCode)->first() : null;
-        $forecastQuery = Forecast::query()
+        $forecastQuery = Forecast::issuedInAdvance()
             ->whereBetween('target_date', [$startDate, $endDate]);
-        if ($cage) {
-            $forecastQuery->where('cage_id', $cage->id);
+        if ($cageCode) {
+            $forecastQuery->where('cage_id', $cage?->id ?? -1)->whereNull('breed');
         } else {
-            // Whole-farm forecasts have null cage_id + null breed (per ForecastController)
             $forecastQuery->whereNull('cage_id')->whereNull('breed');
         }
-        $forecastByDate = $forecastQuery->orderByDesc('forecast_date')->orderByDesc('id')->get()
-            ->groupBy(fn ($f) => $f->target_date instanceof Carbon ? $f->target_date->format('Y-m-d') : (string) $f->target_date)
-            ->map(fn ($g) => (int) $g->first()->predicted_egg_count);
+        // Include superseded rows: the original prediction is immutable history.
+        $rows = $forecastQuery->with('forecastRun')->orderBy('forecast_date')->orderBy('id')->get();
+        $availableRuns = $rows->whereNotNull('forecast_run_id')->unique('forecast_run_id')
+            ->map(fn ($forecast) => [
+                'id' => $forecast->forecast_run_id,
+                'generated_at' => $forecast->forecastRun?->created_at?->toIso8601String(),
+                'forecast_date' => $forecast->forecast_date->toDateString(),
+                'horizon' => $forecast->forecastRun?->horizon,
+            ])->values();
+        if ($selectedRunId !== null) {
+            abort_unless($availableRuns->contains('id', $selectedRunId), 404);
+            $rows = $rows->where('forecast_run_id', $selectedRunId);
+        } elseif ($version === 'latest') {
+            $rows = $rows->reverse();
+        }
+        $selectedForecasts = $rows->unique(fn ($f) => $f->target_date->toDateString())
+            ->keyBy(fn ($f) => $f->target_date->toDateString());
+        $forecastByDate = $selectedForecasts->map(fn ($f) => (int) $f->predicted_egg_count);
+        $predictionDetails = $selectedForecasts->map(fn ($f) => [
+            'forecast_run_id' => $f->forecast_run_id,
+            'forecast_date' => $f->forecast_date->toDateString(),
+            'lead_days' => (int) $f->forecast_date->diffInDays($f->target_date),
+        ]);
+        $comparisonLabel = $selectedRunId ? "Saved Run #{$selectedRunId}"
+            : ($version === 'latest' ? 'Latest Forecast' : 'Original Forecast');
 
         $actual = [];
         $forecast = [];
@@ -627,19 +653,17 @@ class DashboardController extends Controller
         $overlapCount = 0;
 
         foreach ($dateKeys as $date) {
-            $a = (int) ($actualByDate->get($date, 0));
+            $a = $date < ReportingDateService::reportingDateString() && $actualByDate->has($date)
+                ? (int) $actualByDate->get($date) : null;
             $f = $forecastByDate->has($date) ? (int) $forecastByDate->get($date) : null;
             $actual[] = $a;
             $forecast[] = $f;
 
-            if ($f !== null && $f > 0) {
-                $pct = round(($a - $f) / $f * 100, 1);
-                $variance[$date] = $pct;
-                if ($a > 0 || $f > 0) {
-                    $totalActual += $a;
-                    $totalForecast += $f;
-                    $overlapCount++;
-                }
+            if ($a !== null && $f !== null) {
+                $variance[$date] = $f > 0 ? round(($a - $f) / $f * 100, 1) : null;
+                $totalActual += $a;
+                $totalForecast += $f;
+                $overlapCount++;
             } else {
                 $variance[$date] = null;
             }
@@ -649,16 +673,16 @@ class DashboardController extends Controller
         if ($totalForecast > 0 && $overlapCount > 0) {
             $overall = round(($totalActual - $totalForecast) / $totalForecast * 100, 1);
             if (abs($overall) < 3) {
-                $summary = "Forecast was accurate over this period ({$overall}%).";
+                $summary = "{$comparisonLabel} was within 3% of production over this period ({$overall}%).";
             } elseif ($overall > 0) {
-                $summary = "Actual was {$overall}% above forecast over this period.";
+                $summary = "Production was {$overall}% above {$comparisonLabel} over this period.";
             } else {
-                $summary = "Forecast was " . abs($overall) . "% high over this period.";
+                $summary = "{$comparisonLabel} was " . abs($overall) . "% high over this period.";
             }
-        } elseif ($forecastByDate->isEmpty()) {
-            $summary = null;
-        } else {
-            $summary = null;
+        } elseif ($overlapCount > 0) {
+            $summary = "{$comparisonLabel} predicted 0 eggs; production recorded {$totalActual} eggs over the matched days.";
+        } elseif ($forecastByDate->isNotEmpty()) {
+            $summary = 'Awaiting completed production records for comparison.';
         }
 
         // Also shape a chart-compatible dataset for the frontend overlay.
@@ -676,7 +700,7 @@ class DashboardController extends Controller
             'fill' => false,
         ];
         $forecastDataset = [
-            'label' => $cageCode ? $cageCode . ' Forecast' : 'Farm Forecast',
+            'label' => $comparisonLabel,
             'data' => $forecast,
             'borderColor' => '#0075de',
             'backgroundColor' => 'rgba(0, 117, 222, 0.08)',
@@ -690,6 +714,11 @@ class DashboardController extends Controller
 
         if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
             return response()->json([
+                'comparisonLabel' => $comparisonLabel,
+                'forecastVersion' => $version,
+                'selectedRunId' => $selectedRunId,
+                'availableRuns' => $availableRuns,
+                'predictionDetails' => $predictionDetails,
                 'days' => $days,
                 'cageCode' => $cageCode,
                 'labels' => $labels,

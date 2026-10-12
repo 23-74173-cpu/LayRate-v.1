@@ -38,6 +38,13 @@ class Forecast extends Model
         return $query->whereNull('superseded_at');
     }
 
+    /** Only predictions issued before their target day qualify for comparison. */
+    public function scopeIssuedInAdvance($query)
+    {
+        return $query->where('is_backtest', false)
+            ->whereColumn('forecast_date', '<', 'target_date');
+    }
+
     public function cage(): BelongsTo
     {
         return $this->belongsTo(Cage::class);

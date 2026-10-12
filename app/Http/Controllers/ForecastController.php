@@ -34,58 +34,34 @@ class ForecastController extends Controller
      */
     private const QUEUE_STALL_SECONDS = 45;
 
-    /**
-     * Predictions the calendar is allowed to display.
-     *
-     * Forward predictions are scoped to the current reporting date, because
-     * tomorrow's forecast really is a different thing from today's and
-     * yesterday's is stale. Backtests must not be scoped that way: they are
-     * fixed claims about days that have already happened, so filtering them by
-     * the day they happened to be generated made a whole scored month vanish
-     * from the calendar overnight even though every row was still in the
-     * table. A backtest therefore stays visible no matter when it was run.
-     */
+    /** Saved predictions remain visible after the day they were generated. */
     private function visibleForecastsQuery()
     {
-        return Forecast::live()->where(function ($query) {
-            $query->where('forecast_date', ReportingDateService::reportingDateString())
-                ->orWhere('is_backtest', true);
-        });
+        return Forecast::live();
     }
 
-    /**
-     * The predictions a calendar month should render: today's forward forecast
-     * plus every backtest whose target date falls inside the month on screen.
-     *
-     * The two halves are gathered separately on purpose. A single query with a
-     * row limit cannot serve both, because ordering by target_date puts the
-     * historical backtest rows first — the limit would be spent entirely on
-     * them and the forward forecast would disappear from the calendar the
-     * moment a backtested month was in range. Forward behaviour is therefore
-     * left exactly as it was, and backtests are added around it.
-     *
-     * @param  callable(\Illuminate\Database\Eloquent\Builder): void  $applyScope  narrows to farm / breed / cage
-     */
+    /** Latest is for planning; Original is the first advance prediction per day. */
     private function forecastsForCalendar(callable $applyScope, Carbon $calendarDate, int $horizon): Collection
     {
-        $forward = Forecast::live()
-            ->where('forecast_date', ReportingDateService::reportingDateString())
-            ->where('is_backtest', false)
-            ->whereNotNull('target_date');
-        $applyScope($forward);
-        $forward = $forward->orderBy('target_date')->limit($horizon)->get();
+        $view = request('forecast_view', 'latest');
+        $query = Forecast::query()->whereBetween('target_date', [
+            $calendarDate->copy()->startOfMonth()->toDateString(),
+            $calendarDate->copy()->endOfMonth()->toDateString(),
+        ]);
+        $applyScope($query);
+        if ($view === 'backtest') {
+            $query->live()->where('is_backtest', true);
+        } else {
+            $query->issuedInAdvance();
+            if ($view !== 'original') {
+                $query->live();
+            }
+        }
+        $direction = $view === 'original' ? 'asc' : 'desc';
 
-        $backtest = Forecast::live()
-            ->where('is_backtest', true)
-            ->whereNotNull('target_date')
-            ->whereBetween('target_date', [
-                $calendarDate->copy()->startOfMonth()->toDateString(),
-                $calendarDate->copy()->endOfMonth()->toDateString(),
-            ]);
-        $applyScope($backtest);
-        $backtest = $backtest->orderBy('target_date')->get();
-
-        return $forward->concat($backtest)->values();
+        return $query->orderBy('forecast_date', $direction)->orderBy('id', $direction)->get()
+            ->unique(fn ($forecast) => $forecast->target_date->toDateString())
+            ->sortBy('target_date')->values();
     }
 
     private function forecastService(): ForecastGenerationService
@@ -348,6 +324,11 @@ class ForecastController extends Controller
 
     public function generate(Request $request)
     {
+        $request->validate([
+            'forecast_kind' => 'nullable|in:forward,backtest',
+            'start_date' => 'nullable|date_format:Y-m-d',
+        ]);
+        $isBacktestRequest = $request->input('forecast_kind', 'forward') === 'backtest';
         $scope = $request->get('scope', 'cage');
         $horizon = (int) $request->get('horizon', 7);
         $breed = $request->get('breed');
@@ -387,6 +368,13 @@ class ForecastController extends Controller
             try {
                 $parsed = Carbon::parse($startDate);
 
+                if (! $isBacktestRequest && $parsed->lte(ReportingDateService::reportingDate())) {
+                    return $this->rejectGenerate($request, 'Choose a future day for a forecast. Use Backtest for completed historical days.');
+                }
+                if ($isBacktestRequest && $parsed->copy()->addDays($horizon - 1)->gte(ReportingDateService::reportingDate())) {
+                    return $this->rejectGenerate($request, 'Backtests must contain completed historical days only.');
+                }
+
                 $minDate = ForecastRules::minStartDate($this->earliestProductionDate());
 
                 if ($parsed->lt($minDate)) {
@@ -398,18 +386,17 @@ class ForecastController extends Controller
 
                 $rangeEnd = $parsed->copy()->addDays($horizon - 1)->endOfDay();
 
-                // A range may legitimately straddle the reporting date: the
-                // past part gets backtested against actuals and the future
-                // part is a forward prediction. Because the horizon is already
-                // capped at 30 days, an anchor in the past can never push the
-                // end past the +30 day ceiling, so one flat check covers both
-                // directions.
+                // Forward runs and historical backtests have separate date bounds.
                 if ($rangeEnd->gt(ForecastRules::maxStartDate())) {
                     return $this->rejectGenerate($request, 'Forecast range cannot extend beyond 30 days from today.');
                 }
             } catch (\Exception $e) {
                 return $this->rejectGenerate($request, 'Invalid forecast date.');
             }
+        }
+
+        if ($isBacktestRequest && ! $startDate) {
+            return $this->rejectGenerate($request, 'Select historical dates in the calendar to run a backtest.');
         }
 
         // A backtest is trained on production strictly before its target day, so
@@ -446,6 +433,7 @@ class ForecastController extends Controller
                 ? ['scope' => 'farm', 'horizon' => $horizon, 'start_date' => $startDate, 'month' => Carbon::parse($startDate)->month, 'year' => Carbon::parse($startDate)->year]
                 : ['scope' => 'farm', 'horizon' => $horizon];
 
+            $redirectParams['forecast_view'] = $isBacktestRequest ? 'backtest' : 'latest';
             $forecastRun = ForecastRun::create([
                 'user_id' => $request->user()?->id,
                 'scope' => 'farm',
@@ -471,6 +459,7 @@ class ForecastController extends Controller
                 ? ['scope' => 'breed', 'breed' => $breed, 'horizon' => $horizon, 'start_date' => $startDate, 'month' => Carbon::parse($startDate)->month, 'year' => Carbon::parse($startDate)->year]
                 : ['scope' => 'breed', 'breed' => $breed, 'horizon' => $horizon];
 
+            $redirectParams['forecast_view'] = $isBacktestRequest ? 'backtest' : 'latest';
             $forecastRun = ForecastRun::create([
                 'user_id' => $request->user()?->id,
                 'scope' => 'breed',
@@ -492,6 +481,7 @@ class ForecastController extends Controller
             ? ['scope' => 'cage', 'cage' => $cageCode, 'horizon' => $horizon, 'start_date' => $startDate, 'month' => Carbon::parse($startDate)->month, 'year' => Carbon::parse($startDate)->year]
             : ['scope' => 'cage', 'cage' => $cageCode, 'horizon' => $horizon];
 
+        $redirectParams['forecast_view'] = $isBacktestRequest ? 'backtest' : 'latest';
         $forecastRun = ForecastRun::create([
             'user_id' => $request->user()?->id,
             'scope' => 'cage',
@@ -939,15 +929,7 @@ class ForecastController extends Controller
         return $this->forecastService()->dataSufficiency($scope, $cageCode, $breed, $beforeDate);
     }
 
-    /**
-     * Clear the current forward forecast from the calendar.
-     *
-     * Backtest rows are deliberately left untouched. They are scored history —
-     * the entire point of generating them is to compare each prediction against
-     * the actual later — so this used to hard-delete a whole backtested month
-     * outright, with no supersede and no way back. "Clear forecast" means
-     * "drop today's forward predictions", not "erase my record".
-     */
+    /** Hide today's latest predictions while retaining originals and saved runs. */
     public function clear(Request $request)
     {
         $scope = $request->get('scope', 'cage');
@@ -971,8 +953,8 @@ class ForecastController extends Controller
             }
         }
 
-        $deleted = $query->delete();
-        $successMessage = $deleted > 0 ? 'Forecast cleared from the calendar.' : 'No forecast to clear for the current selection.';
+        $hidden = $query->update(['superseded_at' => now()]);
+        $successMessage = $hidden > 0 ? 'Latest forecast hidden. Original forecasts and run history are retained.' : 'No forecast to clear for the current selection.';
 
         if ($this->wantsTurboStream($request)) {
             $viewData = $this->buildForecastViewData($request);
@@ -1369,7 +1351,7 @@ class ForecastController extends Controller
     private function noForecastToExport()
     {
         return response()->json([
-            'message' => 'No forecast has been generated yet for today and this scope/cage/breed — click "Generate Forecast" first, then export.',
+            'message' => 'No saved forecast is available for this selection — click "Generate Forecast" first, then export.',
         ], 422);
     }
 
@@ -1412,6 +1394,24 @@ class ForecastController extends Controller
                 ->whereNull('breed')
                 ->whereNotNull('target_date')
                 ->orderBy('target_date')->get();
+        }
+
+        // Calendar exports use the selected saved version, including original rows.
+        if ($request->has('forecast_view')) {
+            $request->validate(['forecast_view' => 'in:original,latest,backtest']);
+            $calendarDate = ReportingDateService::now()->copy()->setDate(
+                (int) $request->input('year', ReportingDateService::now()->year),
+                max(1, min(12, (int) $request->input('month', ReportingDateService::now()->month))), 1,
+            );
+            $forecasts = $this->forecastsForCalendar(function ($query) use ($scope, $cageCode, $breed) {
+                if ($scope === 'farm') {
+                    $query->whereNull('cage_id')->whereNull('breed');
+                } elseif ($scope === 'breed' && $breed) {
+                    $query->whereNull('cage_id')->where('breed', $breed);
+                } else {
+                    $query->where('cage_id', Cage::where('cage_code', $cageCode)->value('id') ?? -1)->whereNull('breed');
+                }
+            }, $calendarDate, $horizon);
         }
 
         if ($forecasts->isEmpty()) {

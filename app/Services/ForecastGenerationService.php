@@ -552,7 +552,7 @@ class ForecastGenerationService
      *
      * Supersession is keyed on target_date, not on forecast_date. That matters
      * now that backtests are allowed: a backtest of a past date supersedes
-     * only that past date's prediction and leaves unrelated forward forecasts
+     * only previous backtests for that date and leaves unrelated forward forecasts
      * for other dates untouched.
      *
      * Public so callers holding runner output can persist it against a run
@@ -584,8 +584,9 @@ class ForecastGenerationService
      */
     private function supersedeExistingFor(Forecast $forecast): void
     {
-        Forecast::query()
+        $query = Forecast::query()
             ->whereNull('superseded_at')
+            ->where('is_backtest', $forecast->is_backtest)
             ->whereDate('target_date', $forecast->target_date)
             ->where(function ($query) use ($forecast) {
                 $forecast->cage_id === null
@@ -595,8 +596,13 @@ class ForecastGenerationService
                 $forecast->breed === null
                     ? $query->whereNull('breed')
                     : $query->where('breed', $forecast->breed);
-            })
-            ->update(['superseded_at' => now()]);
+            });
+
+        // A same-day estimate cannot replace an advance prediction.
+        if (! $forecast->is_backtest) {
+            $query->whereColumn('forecast_date', $forecast->forecast_date->lt($forecast->target_date) ? '<' : '>=', 'target_date');
+        }
+        $query->update(['superseded_at' => now()]);
     }
 
     /**

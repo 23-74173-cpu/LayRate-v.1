@@ -260,7 +260,7 @@ class ForecastProductionCalendarTest extends TestCase
      * itself is solid black so it reads as a third, distinct series against
      * the blue actual and the green forward forecast.
      */
-    public function test_backtest_forecast_badge_is_black_and_labelled_bt(): void
+    public function test_backtest_forecast_is_visible_in_separate_backtest_view(): void
     {
         $date = $this->completedDate(3);
         $cage = $this->seedSingleLogCage('CAGE-BT-STYLE', $date, 512, 100);
@@ -279,6 +279,7 @@ class ForecastProductionCalendarTest extends TestCase
         [$month, $year] = $this->monthYearFor($date);
 
         $response = $this->actingAs($this->admin)->get(route('forecast', [
+            'forecast_view' => 'backtest',
             'scope' => 'cage',
             'cage' => $cage->cage_code,
             'month' => $month,
@@ -290,10 +291,10 @@ class ForecastProductionCalendarTest extends TestCase
         // A semantic class on the badge is what distinguishes the cell's
         // backtest treatment from the black swatch in the legend, which
         // shares the same colour.
-        $response->assertSee('backtest-forecast-badge');
+        $response->assertSee('Backtest: 498');
         $response->assertDontSee('EDE9FE', false);
         // "BT" is rendered inside the badge, immediately before the figure.
-        $response->assertSeeInOrder(['forecast-badge', 'BT', '498']);
+        $response->assertSeeInOrder(['forecast-badge', 'chart-no-axes-combined', '498']);
         // The removed chip must not linger on the day number.
         $response->assertDontSee('backtest-mark');
     }
@@ -302,7 +303,7 @@ class ForecastProductionCalendarTest extends TestCase
      * A forward forecast keeps its green badge and carries no "BT" label, so
      * the black treatment cannot leak onto ordinary predictions.
      */
-    public function test_forward_forecast_badge_is_unlabelled_and_not_black(): void
+    public function test_forward_forecast_badge_uses_forecast_color_and_icon(): void
     {
         // A future day, so the calendar treats it as a forward prediction
         // rather than a backtest. Kept in the same month as the reporting
@@ -330,7 +331,7 @@ class ForecastProductionCalendarTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('530');
-        $response->assertSee('bg-[#D5E8D4]', false);
+        $response->assertSee('var(--color-info-bg)', false);
         // The backtest treatment must not leak onto a forward prediction.
         $response->assertDontSee('backtest-forecast-badge');
         // No "BT" label between the badge and its figure. (A bare
@@ -340,7 +341,7 @@ class ForecastProductionCalendarTest extends TestCase
     }
 
     /** The actual figure is labelled "AD" directly beside its number. */
-    public function test_actual_badge_is_labelled_ad_beside_the_figure(): void
+    public function test_production_badge_has_an_egg_icon_beside_the_figure(): void
     {
         $date = $this->completedDate();
         $cage = $this->seedSingleLogCage('CAGE-AD-LABEL', $date, 777, 100);
@@ -356,7 +357,7 @@ class ForecastProductionCalendarTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('production-badge');
-        $response->assertSeeInOrder(['production-badge', 'AD', '777']);
+        $response->assertSeeInOrder(['production-badge', 'egg', '777']);
     }
 
     /**
@@ -443,6 +444,7 @@ class ForecastProductionCalendarTest extends TestCase
         [$month, $year] = $this->monthYearFor($date);
 
         $response = $this->actingAs($this->admin)->get(route('forecast', [
+            'forecast_view' => 'backtest',
             'scope' => 'cage',
             'cage' => $cage->cage_code,
             'month' => $month,
@@ -500,6 +502,7 @@ class ForecastProductionCalendarTest extends TestCase
         $this->seedSufficientHistory(Carbon::parse($target)->subDays(91), 91);
 
         $this->actingAs($this->admin)->post(route('forecast.generate'), [
+            'forecast_kind' => 'backtest',
             'scope' => 'cage',
             'cage' => 'CAGE-HIST',
             'horizon' => 1,

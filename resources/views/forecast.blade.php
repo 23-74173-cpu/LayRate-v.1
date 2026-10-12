@@ -1431,7 +1431,10 @@
                     scope: scope,
                     cage: cage,
                     breed: breed,
-                    horizon: horizon
+                    horizon: horizon,
+                    forecast_view: document.querySelector('[name="forecast_view"]')?.value || 'latest',
+                    month: document.querySelector('#production-calendar [name="month"]')?.value,
+                    year: document.querySelector('#production-calendar [name="year"]')?.value
                 })
             })
             .then(function(response) {

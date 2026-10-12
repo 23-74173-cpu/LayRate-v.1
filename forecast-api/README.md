@@ -6,7 +6,7 @@ This directory contains the Python forecasting pipeline for the LayRate poultry 
 
 | File | Purpose |
 |------|---------|
-| `ForecastingV5.py` | Main forecasting model (SARIMA + XGBoost ensemble). |
+| `ForecastingV5.py` | SARIMA/XGBoost model selection, with a three-model XGBoost ensemble. |
 | `forecast_runner.py` | CLI entry point executed by Laravel. Outputs JSON. |
 | `generate_forecast_sheet.py` | Creates a protected Excel template for operators to fill in. |
 | `import_forecast_input.py` | Imports a filled Excel sheet into the app's native production tables. |
@@ -148,6 +148,23 @@ php artisan schedule:list
 > The old `forecast:sync-input-records` command and its scheduled syncs were
 > removed — the forecasting pipeline now aggregates production data on demand,
 > so no denormalized `forecast_input_records` copy is maintained.
+
+## Saved forecasts and comparison
+
+Normal forecasts target future days. The calendar's **Backtest** view allows
+historical date selection; these estimates are kept separate from advance
+forecasts. The 7/14/30-day controls and custom day/range selection remain available.
+
+Every run is retained. **Latest Forecast** shows active planning updates;
+**Original Forecast** shows the first prediction issued before each target day,
+even after another run supersedes it. Hiding latest forecasts retains originals
+and run history. Calendar exports follow the selected version and month.
+
+The dashboard production comparison defaults to Original Forecast and can select
+Latest Forecast or a specific saved run. Only predictions issued before their
+target day qualify. Missing or unfinished production remains pending; a recorded
+zero is included in comparisons. Prediction tooltips show the issue date and lead
+time. Flock age increases as future forecast days advance in both forecasting modes.
 
 ## Data requirements
 

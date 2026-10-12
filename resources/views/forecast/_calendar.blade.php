@@ -1,4 +1,5 @@
 @php
+    $compareProduction = request()->boolean('compare_production');
     $calendarToday = now();
     $calendarMonth = $calendarDate->copy();
     $monthStart = $calendarMonth->copy()->startOfMonth();
@@ -27,7 +28,13 @@
     // day that has already happened can be forecast and then scored against
     // the actual recorded for it. Falls back to a 5-year lookback when there
     // is no production history yet.
-    $minSelectableDate = $forecastMinDate ?? \App\Forecast\ForecastRules::minStartDate()->format('Y-m-d');
+    $isBacktestView = request('forecast_view') === 'backtest';
+    $minSelectableDate = $isBacktestView
+        ? ($forecastMinDate ?? \App\Forecast\ForecastRules::minStartDate()->format('Y-m-d'))
+        : \App\Services\ReportingDateService::reportingDate()->addDay()->format('Y-m-d');
+    if ($isBacktestView) {
+        $maxSelectableDate = \App\Services\ReportingDateService::reportingDate()->subDay()->format('Y-m-d');
+    }
     $reportingDate = \App\Services\ReportingDateService::reportingDate()->format('Y-m-d');
 
     // Calendar navigation now spans past AND future months. Past months hold the
@@ -63,11 +70,25 @@
 @endphp
 
 <turbo-frame id="production-calendar">
-<div class="forecast-calendar-card bg-white rounded-2xl border border-[#e6e6e6] p-4 sm:p-5">
+<div class="forecast-calendar-card {{ $compareProduction ? 'calendar-comparing' : '' }} bg-white rounded-2xl border border-[#e6e6e6] p-4 sm:p-5" data-forecast-kind="{{ $isBacktestView ? 'backtest' : 'forward' }}" data-min-date="{{ $minSelectableDate }}" data-max-date="{{ $maxSelectableDate }}">
     {{-- Month / Year header with navigation --}}
     <div class="mb-4">
-        <x-card-header title="Production Calendar" subtitle="Recorded and predicted output · {{ $scopeLabel }}" icon="calendar-days" />
+        <x-card-header title="Production Calendar" subtitle="Recorded and predicted output · {{ $scopeLabel }}" icon="calendar-days">
+            <x-slot:actions>
+                <a href="{{ request()->fullUrlWithQuery(['compare_production' => $compareProduction ? '0' : '1', 'forecast_view' => $compareProduction ? 'latest' : 'original']) }}"
+                   data-turbo-frame="production-calendar" data-turbo-action="advance"
+                   aria-label="Compare production and forecast" role="button" aria-pressed="{{ $compareProduction ? 'true' : 'false' }}"
+                   class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors {{ $compareProduction ? 'bg-navy border-navy text-white' : 'bg-white border-[#D9D9D9] text-[#6B7280] hover:border-navy hover:text-navy' }}">
+                    <i data-lucide="git-compare-arrows" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                    Compare<span class="hidden sm:inline"> Production</span>
+                </a>
+            </x-slot:actions>
+        </x-card-header>
 
+        <p class="text-xs text-[#6B7280] mb-3">Original keeps the first forecast issued before each day. Latest shows planning updates. Backtests are separate historical estimates.</p>
+        @if($compareProduction)
+        <p class="text-xs text-[#6B7280] mb-3">Compare the green production count with the blue forecast count on each day. Days without completed production are awaiting records.</p>
+        @endif
         {{-- Indicators use the same status colors as the rest of the app. --}}
         <div class="calendar-legend flex flex-wrap items-center gap-2 mb-4 text-xs font-semibold">
             <span class="calendar-production-indicator inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5">
@@ -86,7 +107,7 @@
         <div class="calendar-toolbar flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e6e6e6] p-3">
             <div class="flex flex-wrap items-center gap-2 min-w-0">
                 <form method="GET" action="{{ route('forecast') }}" class="flex flex-wrap items-center gap-2 min-w-0" data-turbo-frame="production-calendar" data-turbo-action="advance">
-                @foreach(request()->except(['month','year']) as $key => $value)
+                @foreach(request()->except(['month','year','forecast_view']) as $key => $value)
                     @if(is_array($value))
                         @foreach($value as $v)
                         <input type="hidden" name="{{ $key }}[]" value="{{ $v }}">
@@ -111,6 +132,12 @@
                         @endforeach
                     </select>
                 </div>
+                <select name="forecast_view" onchange="this.form.submit()" aria-label="Forecast version"
+                        class="calendar-control rounded-lg border border-[#D9D9D9] bg-white px-3 text-sm text-[#333333]">
+                    @foreach(['latest' => 'Latest Forecast', 'original' => 'Original Forecast', 'backtest' => 'Backtest'] as $value => $label)
+                    <option value="{{ $value }}" {{ request('forecast_view', 'latest') === $value ? 'selected' : '' }}>{{ $label }}</option>
+                    @endforeach
+                </select>
                 </form>
 
                 <a href="{{ $todayUrl }}" data-turbo-frame="production-calendar" data-turbo-action="advance" class="calendar-control inline-flex items-center justify-center text-xs font-semibold min-w-16 text-center px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
@@ -128,7 +155,7 @@
                 </button>
 
                 @can('admin')
-                <form method="POST" action="{{ route('forecast.clear') }}" class="inline" data-confirm="Clear all forecast badges from the calendar for the current selection?" data-confirm-action="Clear" data-confirm-severity="neutral">
+                <form method="POST" action="{{ route('forecast.clear') }}" class="inline" data-confirm="Hide the latest forecast for the current selection? Original forecasts and saved runs will be retained." data-confirm-action="Clear" data-confirm-severity="neutral">
                     @csrf
                     <input type="hidden" name="scope" value="{{ $scope }}">
                     @if($scope === 'cage')
@@ -138,7 +165,7 @@
                     @endif
                     <button type="submit" class="calendar-control text-xs px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors flex items-center gap-1.5">
                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                        Clear Forecast
+                        Hide Latest
                     </button>
                 </form>
                 @endcan
@@ -163,6 +190,9 @@
 
     {{-- Scoped styles keep Turbo calendar refreshes self-contained. --}}
     <style>
+        .forecast-calendar-card:not(.calendar-comparing) .production-badge,
+        .forecast-calendar-card:not(.calendar-comparing) .calendar-production-indicator { display: none; }
+        .production-calendar .comparison-pending { font-size: 9px; line-height: 1.2; color: var(--color-neutral-text); }
         .forecast-calendar-card .calendar-control { min-height: 40px; }
         .forecast-calendar-card .calendar-production-indicator,
         .forecast-calendar-card .production-badge { background: var(--color-success-bg); color: var(--color-success); }
@@ -312,9 +342,12 @@
                                 <span>{{ number_format($production['egg_count']) }}</span>
                             </span>
                             @endif
+                            @if($compareProduction && $hasForecast && !$hasProduction)
+                            <span class="comparison-pending" title="Production will appear once the target day is complete and recorded.">Awaiting production</span>
+                            @endif
                             @if($cell['forecast'])
                             <span class="forecast-badge inline-flex items-center gap-1 rounded font-bold whitespace-nowrap"
-                                  title="Forecast: {{ number_format($cell['forecast']->predicted_egg_count, 0) }} eggs">
+                                  title="{{ request('forecast_view', 'latest') === 'original' ? 'Original Forecast' : (request('forecast_view') === 'backtest' ? 'Backtest' : 'Latest Forecast') }}: {{ number_format($cell['forecast']->predicted_egg_count, 0) }} eggs ? Generated {{ $cell['forecast']->forecast_date->format('M j, Y') }}">
                                 <i data-lucide="chart-no-axes-combined" class="calendar-count-icon" aria-hidden="true"></i>
                                 <span>{{ number_format($cell['forecast']->predicted_egg_count, 0) }}</span>
                             </span>
@@ -338,7 +371,7 @@
                 <div class="w-8 h-8 rounded-lg bg-navy/10 flex items-center justify-center">
                     <i data-lucide="calendar-plus" class="w-4 h-4 text-navy"></i>
                 </div>
-                <h3 id="forecastDayModalTitle" class="text-base font-semibold text-[#333333]">Forecast this day</h3>
+                <h3 id="forecastDayModalTitle" class="text-base font-semibold text-[#333333]">{{ $isBacktestView ? 'Backtest this day' : 'Forecast this day' }}</h3>
             </div>
             <button type="button" id="closeForecastDayModal" class="text-[#6B7280] hover:text-[#333333] transition-colors">
                 <i data-lucide="x" class="w-5 h-5"></i>
@@ -388,12 +421,13 @@
                 @csrf
                 <input type="hidden" name="scope" id="dayScopeInput" value="{{ $scope }}">
                 <input type="hidden" name="horizon" id="forecastDayHorizon" value="1">
+                <input type="hidden" name="forecast_kind" value="{{ $isBacktestView ? 'backtest' : 'forward' }}">
                 <input type="hidden" name="start_date" id="forecastDayModalStartDate" value="">
                 <input type="hidden" name="cage" id="dayCageInput" value="{{ $scope === 'cage' ? $cageCode : 'ALL' }}">
                 <input type="hidden" name="breed" id="dayBreedInput" value="{{ $scope === 'breed' ? ($breed ?? '') : '' }}">
                 <button type="submit" class="w-full bg-navy text-white py-3 rounded-lg text-sm font-medium hover:bg-navy transition-colors flex items-center justify-center gap-2">
                     <i data-lucide="sparkles" class="w-4 h-4"></i>
-                    <span>Generate Forecast</span>
+                    <span>{{ $isBacktestView ? 'Run Backtest' : 'Generate Forecast' }}</span>
                 </button>
             </form>
             @endcan
@@ -436,23 +470,22 @@
             return;
         }
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const maxDate = new Date(today);
-        maxDate.setDate(today.getDate() + 30);
-        const minDate = parseLocalDate(@json($minSelectableDate));
+        const calendar = document.querySelector('.forecast-calendar-card');
+        const isBacktest = calendar && calendar.dataset.forecastKind === 'backtest';
+        const minDate = parseLocalDate(calendar.dataset.minDate);
+        const maxDate = parseLocalDate(calendar.dataset.maxDate);
 
         const clicked = parseLocalDate(dateString);
         let message = '';
 
         if (clicked < minDate) {
-            message = 'This date is before the earliest day with recorded production (' +
+            message = isBacktest ? 'This date is before the earliest day with recorded production (' +
                       minDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) +
-                      '), so there is nothing to forecast it against.';
+                      '), so there is nothing to forecast it against.' : 'Select a future date, or switch to Backtest for historical dates.';
         } else if (clicked > maxDate) {
-            message = 'Custom forecasts can only be generated up to 30 days from today (' +
+            message = (isBacktest ? 'Backtests require completed days, through ' : 'Custom forecasts can only be generated through ') +
                       maxDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) +
-                      '). Please select a date within this range.';
+                      '. Please select a date within this range.';
         } else {
             message = 'This date cannot be forecast. Please select a date between ' +
                       minDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) +
@@ -728,7 +761,9 @@
         startInput.value = first;
         if (horizonInput) horizonInput.value = dates.length;
         dateDisplay.textContent = isRange ? formatAlertRange(first, last) : formatAlertDate(first);
-        if (title) title.textContent = isRange ? 'Forecast this range' : 'Forecast this day';
+        const calendar = document.querySelector('.forecast-calendar-card');
+        const action = calendar && calendar.dataset.forecastKind === 'backtest' ? 'Backtest' : 'Forecast';
+        if (title) title.textContent = action + (isRange ? ' this range' : ' this day');
         if (hint) {
             hint.textContent = isRange
                 ? 'Generate a ' + dates.length + '-day egg production forecast for'
