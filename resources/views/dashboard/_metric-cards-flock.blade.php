@@ -49,7 +49,7 @@
     </div>
     <script>
     window.KPI_DATA = Object.assign(window.KPI_DATA || {}, {
-        mortality: { title: 'Mortality by Cage{{ ($mortalityDays ?? 1) > 1 ? " (Last {$mortalityDays} Days)" : "" }}', rows: {!! $cages->map(function ($cage) use ($mortalityToday) { $count = $mortalityToday[$cage->cage_code] ?? 0; return ['label' => $cage->cage_code, 'color' => $cage->color, 'bgColor' => $cage->colorSoft, 'value' => $count . ' ' . Str::plural('hen', $count)]; })->values()->toJson() !!} },
+        mortality: { title: 'Mortality by Cage', rows: {!! $cages->map(function ($cage) use ($mortalityToday) { $count = $mortalityToday[$cage->cage_code] ?? 0; return ['label' => $cage->cage_code, 'color' => $cage->color, 'bgColor' => $cage->colorSoft, 'value' => $count . ' ' . Str::plural('hen', $count)]; })->values()->toJson() !!} },
     });
     if (typeof bindKpiCards === 'function') bindKpiCards(document.getElementById('dashboard-stats-flock'));
     (function(){ var root=document.getElementById('dashboard-stats-flock'); if(!root) return; root.querySelectorAll('.kpi-count').forEach(function(el){ var target=parseFloat(el.dataset.target||'0'); var decimals=parseInt(el.dataset.decimals||'0',10); if(isNaN(target)||target<=0){ el.textContent=decimals>0?'0.0':'0'; return; } var duration=900,start=null; function fmt(v){ return decimals>0? v.toFixed(decimals) : Math.round(v).toLocaleString(); } function step(ts){ if(!start) start=ts; var p=Math.min((ts-start)/duration,1); var eased=1-Math.pow(1-p,3); el.textContent=fmt(target*eased); if(p<1) requestAnimationFrame(step); } requestAnimationFrame(step); }); })();

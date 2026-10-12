@@ -272,7 +272,6 @@
     };
 
     window.loadForecastOverlay = function() {
-        var days = (typeof window.__dashboardGlobalDays !== 'undefined') ? window.__dashboardGlobalDays : {{ $days }};
         var cage = (typeof window.__dashboardCage !== 'undefined' && window.__dashboardCage !== 'all') ? window.__dashboardCage : '{{ $cageCode ?? '' }}';
         var isCompare = (typeof window.__dashboardHistoryCompare !== 'undefined') ? window.__dashboardHistoryCompare : {{ $compare ? 'true' : 'false' }};
         if (isCompare) {
@@ -280,7 +279,11 @@
             // current scope would be ambiguous. Keep the forecast as an extra line anyway
             // for Phase 3 — the variance summary is still per-date and remains useful.
         }
-        var url = '{{ route('dashboard.forecast-overlay') }}' + '?days=' + encodeURIComponent(days) + (cage ? '&cage=' + encodeURIComponent(cage) : '');
+        var bounds = new URLSearchParams();
+        if (cage) bounds.set('cage', cage);
+        if (window.__dashboardFromDate) bounds.set('from_date', window.__dashboardFromDate);
+        if (window.__dashboardToDate) bounds.set('to_date', window.__dashboardToDate);
+        var url = '{{ route('dashboard.forecast-overlay') }}' + '?' + bounds.toString();
         fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function(r) { return r.json(); })
             .then(function(data) {

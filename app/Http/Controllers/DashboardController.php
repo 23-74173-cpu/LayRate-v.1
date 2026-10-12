@@ -47,7 +47,6 @@ class DashboardController extends Controller
             'today'                   => $snapshotDate->toDateString(),
             'needsOnboarding'         => $this->needsOnboarding(),
             'dayComplete'             => true,
-            'mortalityDays'           => 1,
             'eggsYesterday'           => $eggsYesterday,
             'yesterdayHdep'           => $yesterdayHdep,
             'yesterdayMortalityTotal' => $this->mortalityTotalForDay(null, $yesterday),
@@ -171,14 +170,14 @@ class DashboardController extends Controller
      */
     private function snapshotDate(?string $fromDate, ?string $toDate): Carbon
     {
-        $snapshotDate = ReportingDateService::reportingDate();
+        $reportingDate = ReportingDateService::reportingDate();
+        $snapshotDate = $reportingDate->copy();
         foreach ([$fromDate, $toDate] as $bound) {
-            if ($bound && preg_match('/^\d{4}-\d{2}-\d{2}$/', $bound)) {
-                $candidate = Carbon::parse($bound);
-                if ($candidate->greaterThan($snapshotDate)) {
-                    $candidate = $snapshotDate->copy();
-                }
-                $snapshotDate = $candidate;
+            if ($date = $this->validRangeDate($bound)) {
+                $candidate = Carbon::parse($date);
+                $snapshotDate = $candidate->greaterThan($reportingDate)
+                    ? $reportingDate->copy()
+                    : $candidate;
             }
         }
 
@@ -193,35 +192,35 @@ class DashboardController extends Controller
 
     public function stats()
     {
-        $data = $this->buildDashboardData(request('cage'), (int) request('mortality_days', 1), request('from_date'), request('to_date'));
+        $data = $this->buildDashboardData(request('cage'), request('from_date'), request('to_date'));
 
         return view('dashboard._metric-cards', $data);
     }
 
     public function statsProduction()
     {
-        $data = $this->buildDashboardData(request('cage'), (int) request('mortality_days', 1), request('from_date'), request('to_date'));
+        $data = $this->buildDashboardData(request('cage'), request('from_date'), request('to_date'));
 
         return view('dashboard._metric-cards-production', $data);
     }
 
     public function statsEnvironment()
     {
-        $data = $this->buildDashboardData(request('cage'), (int) request('mortality_days', 1), request('from_date'), request('to_date'));
+        $data = $this->buildDashboardData(request('cage'), request('from_date'), request('to_date'));
 
         return view('dashboard._metric-cards-environment', $data);
     }
 
     public function statsFeed()
     {
-        $data = $this->buildDashboardData(request('cage'), (int) request('mortality_days', 1), request('from_date'), request('to_date'));
+        $data = $this->buildDashboardData(request('cage'), request('from_date'), request('to_date'));
 
         return view('dashboard._metric-cards-feed', $data);
     }
 
     public function statsFlock()
     {
-        $data = $this->buildDashboardData(request('cage'), (int) request('mortality_days', 1), request('from_date'), request('to_date'));
+        $data = $this->buildDashboardData(request('cage'), request('from_date'), request('to_date'));
 
         return view('dashboard._metric-cards-flock', $data);
     }
@@ -1392,7 +1391,7 @@ class DashboardController extends Controller
         return view('dashboard._heat-stress', compact('summary', 'highEvents', 'highAvgHdep', 'peakTemp', 'tempMax', 'days', 'insight'));
     }
 
-    public function buildDashboardData(?string $cageCode = null, int $mortalityDays = 1, ?string $fromDate = null, ?string $toDate = null): array
+    public function buildDashboardData(?string $cageCode = null, ?string $fromDate = null, ?string $toDate = null): array
     {
         $snapshotDate = $this->snapshotDate($fromDate, $toDate);
         $today = $snapshotDate->toDateString();
@@ -1574,10 +1573,11 @@ class DashboardController extends Controller
                 return $row;
             });
 
-        // Mortality (today or period)
-        $mortalityStartDate = $mortalityDays === 1
-            ? $today
-            : $snapshotDate->copy()->subDays($mortalityDays - 1)->toDateString();
+        // Mortality follows the explicit date range, or the snapshot day.
+        $mortalityStartDate = $this->validRangeDate($fromDate) ?? $today;
+        if ($mortalityStartDate > $today) {
+            $mortalityStartDate = $today;
+        }
         $mortalityToday = MortalityLog::with('cage')
             ->where('log_date', '>=', $mortalityStartDate)
             ->where('log_date', '<=', $today)
@@ -1659,7 +1659,7 @@ class DashboardController extends Controller
         return compact(
             'cages', 'totalHens', 'todayHdep', 'hdepDelta',
             'eggsToday', 'eggsDelta', 'lifetimeEggs', 'avgTemp', 'avgHum', 'feedToday',
-            'mortalityToday', 'mortalityTodayTotal', 'mortalityDays',
+            'mortalityToday', 'mortalityTodayTotal',
             'totalFeedConsumed', 'avgCp', 'avgFeedPerCage',             'totalFeedWeek', 'totalFeedCostMonth', 'feedTodayKg', 'feedCostToday',
             'feedWeekByCage', 'feedCostByCage', 'allBatches', 'feedAsOf',
             'yesterdayHdep', 'eggsYesterday', 'yesterdayMortalityTotal', 'yesterdayFeedTotal',

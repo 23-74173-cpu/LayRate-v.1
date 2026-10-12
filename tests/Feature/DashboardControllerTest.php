@@ -98,9 +98,12 @@ class DashboardControllerTest extends TestCase
         $response = $this->actingAs($this->admin)->get(route('dashboard'));
         $response->assertOk();
 
-        // The single global period filter drives every analytics card.
-        $response->assertSee('data-global-days');
-        $response->assertSee('setGlobalDays');
+        // Date bounds are the only dashboard time controls.
+        $response->assertSee('dashboardFromDate');
+        $response->assertSee('dashboardToDate');
+        $response->assertDontSee('data-global-days');
+        $response->assertDontSee('setGlobalDays');
+        $response->assertDontSee('setMortalityDays');
     }
 
     public function test_cage_scoped_stats_matches_hand_computed_values(): void
@@ -287,8 +290,7 @@ class DashboardControllerTest extends TestCase
         // excludes. Cage A: 4 (today) + 2 (yesterday) + 1 (30d ago) = 7.
         $chartData = $response->viewData('chartData');
         $this->assertEquals(7, array_sum($chartData['datasets'][0]['data']));
-        // The Week/Month/Full pills live on the dashboard page's global filter,
-        // not on this frame, so only the data window is asserted here.
+        // The endpoint still accepts a historical window for existing callers.
     }
 
     public function test_cage_performance_full_days_accumulates_all_time_eggs(): void
@@ -507,6 +509,32 @@ class DashboardControllerTest extends TestCase
         // Yesterday's eggs: cage A 2 + cage B 1 = 3 (not today's 5).
         $this->assertEquals(3, $response->viewData('eggsToday'));
         $this->assertNotNull($response->viewData('kpiAsOf'));
+    }
+
+    public function test_mortality_kpi_uses_date_bounds_and_ignores_removed_period(): void
+    {
+        foreach ([10 => 4, 3 => 2, 1 => 1, 0 => 8] as $daysAgo => $count) {
+            \App\Models\MortalityLog::create([
+                'cage_id' => $this->cageA->id,
+                'log_date' => now()->subDays($daysAgo)->toDateString(),
+                'count' => $count,
+            ]);
+        }
+
+        $response = $this->actingAs($this->admin)->get(route('dashboard.stats.flock', [
+            'cage' => $this->cageA->cage_code,
+            'from_date' => now()->subDays(3)->toDateString(),
+            'to_date' => now()->subDay()->toDateString(),
+            'mortality_days' => 30,
+        ]));
+        $response->assertOk();
+        $this->assertEquals(3, $response->viewData('mortalityTodayTotal'));
+
+        $snapshot = $this->actingAs($this->admin)->get(route('dashboard.stats.flock', [
+            'to_date' => now()->subDay()->toDateString(), 'mortality_days' => 30,
+        ]));
+        $snapshot->assertOk();
+        $this->assertEquals(1, $snapshot->viewData('mortalityTodayTotal'));
     }
 
     public function test_invalid_to_date_is_ignored(): void

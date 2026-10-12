@@ -38,7 +38,7 @@
     </div>
     @endif
 
-    {{-- Global Filters: Cage + Period --}}
+    {{-- Global Filters: Cage + Date Range --}}
     <div class="dash-rise" style="animation-delay: 0ms;">
         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center flex-wrap gap-3 sm:gap-x-5 sm:gap-y-3">
             <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 sm:flex-auto">
@@ -57,27 +57,13 @@
 
             <div class="hidden sm:block w-px self-stretch" style="background-color: #E5E7EB;"></div>
 
-            <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 sm:shrink-0">
-                <label class="flex items-center gap-1.5 shrink-0 text-xs font-bold uppercase tracking-[0.125px] text-[#6B7280]">
-                    <i data-lucide="calendar-range" class="w-4 h-4"></i>
-                    <span>Period</span>
-                </label>
-                <div class="inline-flex items-center gap-1 rounded-lg p-1 w-full sm:w-auto shrink-0" style="background-color: #f3f4f6;" id="dashboardGlobalPeriod">
-                    <button type="button" data-global-days="7" onclick="setGlobalDays(7)" class="global-days-btn flex-1 sm:flex-none text-center px-3 py-2 sm:py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb]">Week</button>
-                    <button type="button" data-global-days="30" onclick="setGlobalDays(30)" class="global-days-btn flex-1 sm:flex-none text-center px-3 py-2 sm:py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb]" style="background-color: var(--color-navy); color: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">Month</button>
-                    <button type="button" data-global-days="0" onclick="setGlobalDays(0)" class="global-days-btn flex-1 sm:flex-none text-center px-3 py-2 sm:py-1.5 text-xs font-semibold rounded-md transition-all text-[#6B7280] hover:bg-[#e5e7eb]">Full</button>
-                </div>
-            </div>
-
-            <div class="hidden sm:block w-px self-stretch" style="background-color: #E5E7EB;"></div>
-
             <div class="flex flex-col gap-1.5 sm:gap-2 sm:shrink-0">
             <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 sm:shrink-0">
                 <label for="dashboardFromDate" class="flex items-center gap-1.5 shrink-0 text-xs font-bold uppercase tracking-[0.125px] text-[#6B7280]">
                     <i data-lucide="calendar-days" class="w-4 h-4"></i>
                     <span>From</span>
                 </label>
-                <input type="date" id="dashboardFromDate" value="{{ request('from_date', today()->toDateString()) }}"
+                <input type="date" id="dashboardFromDate" value="{{ request('from_date', '') }}"
                        max="{{ now()->toDateString() }}"
                        onchange="setDashboardFromDate(this.value)"
                        title="Show analytics from this date"
@@ -122,7 +108,7 @@
             // ── Dashboard state persistence ──
             // Survives sidebar navigation within this browser session (sessionStorage),
             // so returning to the dashboard stays on the same analytics tab with the
-            // same cage / period / date filters instead of resetting to Production.
+            // same cage / date filters instead of resetting to Production.
             window.__dashboardStateKey = 'layrate.dashboard.v1';
             window.__dashboardReadState = function() {
                 try {
@@ -136,9 +122,7 @@
                         section: window.__dashboardSection || 'production',
                         cage: window.__dashboardCage || 'all',
                         from_date: window.__dashboardFromDate || '',
-                        to_date: window.__dashboardToDate || '',
-                        days: (typeof window.__dashboardGlobalDays === 'number') ? window.__dashboardGlobalDays : 30,
-                        mortalityDays: (typeof window.__dashboardMortalityDays === 'number') ? window.__dashboardMortalityDays : 1
+                        to_date: window.__dashboardToDate || ''
                     }));
                 } catch (e) {}
             };
@@ -182,10 +166,8 @@
             window.__dashboardRestored = !!__dashSaved;
             if (__dashSaved) {
                 if (__dashSaved.cage) window.__dashboardCage = __dashSaved.cage;
-                if (__dashSaved.from_date) window.__dashboardFromDate = __dashSaved.from_date;
-                if (__dashSaved.to_date) window.__dashboardToDate = __dashSaved.to_date;
-                if (typeof __dashSaved.days === 'number') window.__dashboardGlobalDays = __dashSaved.days;
-                if (typeof __dashSaved.mortalityDays === 'number') window.__dashboardMortalityDays = __dashSaved.mortalityDays;
+                window.__dashboardFromDate = __dashSaved.from_date || '';
+                window.__dashboardToDate = __dashSaved.to_date || '';
             }
             // Deferred: this script parses BEFORE the .analytics-section panels
             // below it, so an immediate restore updated only the tab buttons and
@@ -509,32 +491,6 @@
             container.appendChild(sub);
         }
 
-        if (key === 'mortality') {
-            var filterWrap = document.createElement('div');
-            filterWrap.className = 'inline-flex items-center gap-1 rounded-lg p-1 mb-3';
-            filterWrap.style.backgroundColor = '#f3f4f6';
-            [1, 7, 14, 30].forEach(function(d) {
-                var btn = document.createElement('button');
-                btn.type = 'button';
-                btn.dataset.mortDays = d;
-                btn.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all';
-                var isActive = (window.__dashboardMortalityDays || 1) === d;
-                if (isActive) {
-                    btn.style.backgroundColor = '#C2405C';
-                    btn.style.color = '#ffffff';
-                    btn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.1)';
-                } else {
-                    btn.classList.add('text-[#6B7280]');
-                    btn.onmouseover = function() { this.style.backgroundColor = '#e5e7eb'; };
-                    btn.onmouseout = function() { this.style.backgroundColor = ''; };
-                }
-                btn.textContent = d === 1 ? 'Today' : d + 'D';
-                btn.onclick = function() { setMortalityDays(d); };
-                filterWrap.appendChild(btn);
-            });
-            container.appendChild(filterWrap);
-        }
-
         if (data.rows.length === 0) {
             var empty = document.createElement('p');
             empty.className = 'text-sm';
@@ -699,21 +655,17 @@
         };
     })();
 
-    // ── Track the active cage and period filters so sub-filter buttons can rebuild URLs ──
+    // ── Track the active cage and date filters so sub-filter buttons can rebuild URLs ──
     // Values restored from sessionStorage (block 2) take priority; otherwise derive
     // from the URL query as before.
     if (!window.__dashboardRestored) {
         window.__dashboardCage = new URLSearchParams(window.location.search).get('cage') || 'all';
-        window.__dashboardGlobalDays = 30;
         window.__dashboardFromDate = '{{ request('from_date', '') }}';
         window.__dashboardToDate = '{{ request('to_date', '') }}';
-        window.__dashboardMortalityDays = {{ $mortalityDays ?? 1 }};
     } else {
         if (typeof window.__dashboardCage !== 'string') window.__dashboardCage = 'all';
-        if (typeof window.__dashboardGlobalDays !== 'number') window.__dashboardGlobalDays = 30;
         if (typeof window.__dashboardFromDate !== 'string') window.__dashboardFromDate = '';
         if (typeof window.__dashboardToDate !== 'string') window.__dashboardToDate = '';
-        if (typeof window.__dashboardMortalityDays !== 'number') window.__dashboardMortalityDays = 1;
     }
     window.__dashboardHistoryCompare = false;
     // Marks this document as the dashboard so Back/Forward snapshot restores know
@@ -725,12 +677,9 @@
         var sel = document.getElementById('dashboardCageSelect');
         if (sel) sel.value = window.__dashboardCage;
         var dateInput = document.getElementById('dashboardFromDate');
-        if (dateInput && window.__dashboardFromDate) dateInput.value = window.__dashboardFromDate;
+        if (dateInput) dateInput.value = window.__dashboardFromDate;
         var toInput = document.getElementById('dashboardToDate');
-        if (toInput && window.__dashboardToDate) toInput.value = window.__dashboardToDate;
-        document.querySelectorAll('#dashboardGlobalPeriod .global-days-btn').forEach(function(btn) {
-            setButtonActive(btn, !window.__dashboardFromDate && !window.__dashboardToDate && parseInt(btn.dataset.globalDays, 10) === window.__dashboardGlobalDays);
-        });
+        if (toInput) toInput.value = window.__dashboardToDate;
     })();
 
     function buildFrameUrl(base, params) {
@@ -742,15 +691,19 @@
         return query ? base + '?' + query : base;
     }
 
-    // Re-applies the active cage / period / date filters onto a frame's URL
+    // Re-applies the active cage / date filters onto a frame's URL
     // (used when activating frames that were server-rendered without those params).
     window.__dashboardFrameUrl = function(dataSrc) {
         if (!dataSrc) return dataSrc;
         var u = new URL(dataSrc, window.location.href);
+        u.searchParams.delete('days');
+        u.searchParams.delete('mortality_days');
+        u.searchParams.delete('from_date');
+        u.searchParams.delete('to_date');
+        u.searchParams.delete('cage');
         var p = {};
         if (window.__dashboardFromDate) p.from_date = window.__dashboardFromDate;
         if (window.__dashboardToDate) p.to_date = window.__dashboardToDate;
-        if (!window.__dashboardFromDate && !window.__dashboardToDate && window.__dashboardGlobalDays !== 30) p.days = window.__dashboardGlobalDays;
         if (window.__dashboardCage && window.__dashboardCage !== 'all') p.cage = window.__dashboardCage;
         Object.keys(p).forEach(function(k) { u.searchParams.set(k, p[k]); });
         return u.href;
@@ -840,38 +793,14 @@
         }
     }
 
-    // Global Period filter — reloads every analytics card with the chosen day range.
-    // The default is 30 (Month); when days === 30, the param is omitted so the server
-    // default is used.  Production History additionally passes Compare if toggled on.
-    window.setGlobalDays = function(days) {
-        window.__dashboardGlobalDays = days;
-        window.__dashboardFromDate = '';
-        window.__dashboardToDate = '';
-        var dateInput = document.getElementById('dashboardFromDate');
-        if (dateInput) dateInput.value = '';
-        var toInput = document.getElementById('dashboardToDate');
-        if (toInput) toInput.value = '';
-
-        // Restyle the global pill bar
-        document.querySelectorAll('#dashboardGlobalPeriod .global-days-btn').forEach(function(btn) {
-            setButtonActive(btn, parseInt(btn.dataset.globalDays, 10) === days);
-        });
-
-        reloadCharts();
-        if (window.__dashboardWriteState) window.__dashboardWriteState();
-    };
-
-    // Reload every analytics chart frame with the active Cage / Period / date filters.
+    // Reload charts and KPI cards with the active cage and date bounds.
     function reloadCharts() {
-        var dayParam = window.__dashboardGlobalDays === 30 ? null : window.__dashboardGlobalDays;
         var cageParam = (window.__dashboardCage && window.__dashboardCage !== 'all') ? window.__dashboardCage : null;
-        var hasDate = !!(window.__dashboardFromDate || window.__dashboardToDate);
 
         function base(route, extra) {
             var p = {};
             if (window.__dashboardFromDate) p.from_date = window.__dashboardFromDate;
             if (window.__dashboardToDate) p.to_date = window.__dashboardToDate;
-            if (!hasDate) p.days = dayParam;
             if (extra) { for (var k in extra) p[k] = extra[k]; }
             return buildFrameUrl(route, p);
         }
@@ -882,10 +811,9 @@
         }
 
         // KPI cards reflect the as-of snapshot when a date bound is set (otherwise
-        // today's live numbers) and stay cage-filtered + mortality-window aware.
+        // today's live numbers) and stay cage-filtered.
         function statsFrame(route) {
-            var p = { cage: cageParam, mortality_days: window.__dashboardMortalityDays === 1 ? null : window.__dashboardMortalityDays };
-            return base(route, p);
+            return base(route, { cage: cageParam });
         }
 
         reloadFramePreservingScroll('dashboard-stats', statsFrame('{{ route('dashboard.stats') }}'));
@@ -913,20 +841,12 @@
         reloadFramePreservingScroll('dashboard-mortality-trend', caged('{{ route('dashboard.mortality-trend') }}'));
     }
 
-    // Date filters — show analytics between the selected days (each end open
-    // when blank; the range is capped at today). Either bound overrides the
-    // Period pill bar until a pill is clicked again.
-    function syncPeriodPills() {
-        document.querySelectorAll('#dashboardGlobalPeriod .global-days-btn').forEach(function(btn) {
-            setButtonActive(btn, !window.__dashboardFromDate && !window.__dashboardToDate && parseInt(btn.dataset.globalDays, 10) === window.__dashboardGlobalDays);
-        });
-    }
+    // Date filters apply to analytics and KPI snapshots.
     window.setDashboardFromDate = function(value) {
         window.__dashboardFromDate = value || '';
         var input = document.getElementById('dashboardFromDate');
         if (input && input.value !== window.__dashboardFromDate) input.value = window.__dashboardFromDate;
 
-        syncPeriodPills();
 
         reloadCharts();
         if (window.__dashboardWriteState) window.__dashboardWriteState();
@@ -936,7 +856,6 @@
         var input = document.getElementById('dashboardToDate');
         if (input && input.value !== window.__dashboardToDate) input.value = window.__dashboardToDate;
 
-        syncPeriodPills();
 
         reloadCharts();
         if (window.__dashboardWriteState) window.__dashboardWriteState();
@@ -960,33 +879,9 @@
         if (window.__dashboardToDate) {
             p.to_date = window.__dashboardToDate;
         }
-        if (!window.__dashboardFromDate && !window.__dashboardToDate) {
-            p.days = window.__dashboardGlobalDays === 30 ? null : window.__dashboardGlobalDays;
-        }
         var url = buildFrameUrl('{{ route('dashboard.production-history') }}', p);
 
         reloadFramePreservingScroll('dashboard-production-history', url);
-    };
-
-    window.setMortalityDays = function(days) {
-        window.__dashboardMortalityDays = days;
-
-        var url = buildFrameUrl('{{ route('dashboard.stats') }}', {
-            cage: window.__dashboardCage === 'all' ? null : window.__dashboardCage,
-            mortality_days: days === 1 ? null : days,
-            from_date: window.__dashboardFromDate || null,
-            to_date: window.__dashboardToDate || null
-        });
-
-        var frame = document.getElementById('dashboard-stats');
-        if (frame) {
-            frame.addEventListener('turbo:frame-load', function handler() {
-                frame.removeEventListener('turbo:frame-load', handler);
-                setTimeout(function() { openKpiModal('mortality'); }, 50);
-            }, { once: true });
-        }
-
-        reloadFramePreservingScroll('dashboard-stats', url);
     };
 
     // ── Production charts equalizer ──
@@ -1153,7 +1048,7 @@ var cageParam = code === 'all' ? null : code;
             // which keeps the loaded-once behavior — no reload on re-visits.
             var inHiddenSection = f.closest && f.closest('.analytics-section:not(.active-section)');
             if (f.dataset.src && !f.getAttribute('src') && !inHiddenSection) {
-                // Apply the active cage / period / date filters (restored from
+                // Apply the active cage / date filters (restored from
                 // sessionStorage when returning) so every frame agrees with the
                 // filter bar. Raw data-src carries no params, which used to
                 // make Cage Performance render "today" while the bar showed a

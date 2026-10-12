@@ -187,7 +187,7 @@
             rows: {!! $liveReadings->map(fn($r) => ['label' => $r->cage, 'color' => $r->color, 'bgColor' => $r->colorSoft, 'value' => $r->temp . ' · ' . $r->hum . ' · ' . $r->status])->values()->toJson() !!}
         },
         mortality: {
-            title: 'Mortality by Cage{{ ($mortalityDays ?? 1) > 1 ? " (Last {$mortalityDays} Days)" : "" }}',
+            title: 'Mortality by Cage',
             rows: {!! $cages->map(function ($cage) use ($mortalityToday) {
                 $count = $mortalityToday[$cage->cage_code] ?? 0;
                 return ['label' => $cage->cage_code, 'color' => $cage->color, 'bgColor' => $cage->colorSoft, 'value' => $count . ' ' . Str::plural('hen', $count)];
