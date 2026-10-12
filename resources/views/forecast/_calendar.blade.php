@@ -63,35 +63,27 @@
 @endphp
 
 <turbo-frame id="production-calendar">
-<div class="bg-white rounded-lg border border-[#D9D9D9] p-4">
+<div class="forecast-calendar-card bg-white rounded-2xl border border-[#e6e6e6] p-4 sm:p-5">
     {{-- Month / Year header with navigation --}}
-    <div class="mb-5">
+    <div class="mb-4">
         <x-card-header title="Production Calendar" subtitle="Recorded and predicted output · {{ $scopeLabel }}" icon="calendar-days" />
 
-        {{-- Legend: the grid now carries two independent data types, and the
-             colour families (blue = recorded, green = predicted) are only
-             decodable with a key. --}}
-        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-3 text-xs text-[#6B7280]">
-            <span class="inline-flex items-center gap-1.5">
-                <span class="w-2.5 h-2.5 rounded-sm bg-[#DBEAFE] border border-[#BFDBFE]"></span>
-                <span class="font-semibold uppercase text-[10px] tracking-wide">AD</span>
-                Actual production
-                <span class="text-[#9CA3AF]">({{ $scopeLabel }})</span>
+        {{-- Indicators use the same status colors as the rest of the app. --}}
+        <div class="calendar-legend flex flex-wrap items-center gap-2 mb-4 text-xs font-semibold">
+            <span class="calendar-production-indicator inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5">
+                <i data-lucide="egg" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                Production
             </span>
-            <span class="inline-flex items-center gap-1.5">
-                <span class="w-2.5 h-2.5 rounded-sm bg-[#D5E8D4] border border-[#A8D5A2]"></span>
+            <span class="calendar-forecast-indicator inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5">
+                <i data-lucide="chart-no-axes-combined" class="w-3.5 h-3.5" aria-hidden="true"></i>
                 Forecast
             </span>
-            <span class="inline-flex items-center gap-1.5" title="A prediction for a day that has already happened. The model is trained only on data recorded before that day, so it can be scored fairly against the actual.">
-                <span class="w-2.5 h-2.5 rounded-sm bg-[#111827] border border-[#111827]"></span>
-                <span class="font-semibold uppercase text-[10px] tracking-wide">BT</span>
-                Backtest forecast
-            </span>
+            <span class="text-[#6B7280] font-normal sm:ml-auto">Eggs per day</span>
         </div>
 
         {{-- Month/Year filter pills + Today + Clear Forecast, with Prev/Next
              right-aligned — all on one row. --}}
-        <div class="grid sm:flex sm:flex-wrap sm:items-center sm:justify-between items-center gap-3" style="grid-template-columns: 1fr auto;">
+        <div class="calendar-toolbar flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e6e6e6] p-3">
             <div class="flex flex-wrap items-center gap-2 min-w-0">
                 <form method="GET" action="{{ route('forecast') }}" class="flex flex-wrap items-center gap-2 min-w-0" data-turbo-frame="production-calendar" data-turbo-action="advance">
                 @foreach(request()->except(['month','year']) as $key => $value)
@@ -105,7 +97,7 @@
                 @endforeach
                 <div class="relative">
                     <select name="month" onchange="this.form.submit()" aria-label="Select month"
-                            class="appearance-none cursor-pointer rounded-lg border border-[#D9D9D9] bg-white py-1.5 px-4 text-center text-sm font-semibold text-[#333333] shadow-sm transition-colors hover:border-navy/40 hover:bg-[#F5F6F8] focus:outline-none focus:ring-2 focus:ring-navy/30">
+                            class="calendar-control cursor-pointer rounded-lg border border-[#D9D9D9] bg-white px-3 text-sm font-semibold text-[#333333] transition-colors hover:border-navy/40 focus:outline-none focus:ring-2 focus:ring-navy/30">
                         @foreach($monthOptions as $m)
                         <option value="{{ $m }}" {{ $calendarMonth->month == $m ? 'selected' : '' }}>{{ $months[$m - 1] }}</option>
                         @endforeach
@@ -113,7 +105,7 @@
                 </div>
                 <div class="relative">
                     <select name="year" onchange="this.form.submit()" aria-label="Select year"
-                            class="appearance-none cursor-pointer rounded-lg border border-[#D9D9D9] bg-white py-1.5 px-4 min-w-24 text-center text-sm font-semibold text-[#333333] shadow-sm transition-colors hover:border-navy/40 hover:bg-[#F5F6F8] focus:outline-none focus:ring-2 focus:ring-navy/30">
+                            class="calendar-control cursor-pointer rounded-lg border border-[#D9D9D9] bg-white px-3 min-w-24 text-sm font-semibold text-[#333333] transition-colors hover:border-navy/40 focus:outline-none focus:ring-2 focus:ring-navy/30">
                         @foreach($yearOptions as $y)
                         <option value="{{ $y }}" {{ $calendarMonth->year == $y ? 'selected' : '' }}>{{ $y }}</option>
                         @endforeach
@@ -121,7 +113,7 @@
                 </div>
                 </form>
 
-                <a href="{{ $todayUrl }}" data-turbo-frame="production-calendar" data-turbo-action="advance" class="text-xs min-w-16 text-center px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
+                <a href="{{ $todayUrl }}" data-turbo-frame="production-calendar" data-turbo-action="advance" class="calendar-control inline-flex items-center justify-center text-xs font-semibold min-w-16 text-center px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
                     Today
                 </a>
 
@@ -129,7 +121,7 @@
                         onclick="window.dayDragSelectToggle()"
                         aria-pressed="false"
                         title="Toggle hold-and-drag to select a date range on touch screens"
-                        class="lg:hidden text-xs px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors flex items-center gap-1.5">
+                        class="calendar-control lg:hidden text-xs px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors flex items-center gap-1.5">
                     <i data-lucide="hand" class="w-3.5 h-3.5"></i>
                     <span class="hidden sm:inline">Drag select</span>
                     <span class="sm:hidden">Drag</span>
@@ -144,7 +136,7 @@
                     @elseif($scope === 'breed')
                     <input type="hidden" name="breed" value="{{ $breed }}">
                     @endif
-                    <button type="submit" class="text-xs px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors flex items-center gap-1.5">
+                    <button type="submit" class="calendar-control text-xs px-3 py-1.5 rounded-lg border border-[#D9D9D9] text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors flex items-center gap-1.5">
                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                         Clear Forecast
                     </button>
@@ -154,46 +146,62 @@
 
             <div class="flex items-center gap-2">
                 @if($isAtFirstSelectableMonth)
-                <span class="w-8 h-8 flex items-center justify-center rounded-lg border border-[#F0F0F0] bg-[#F9F9F7] text-[#D9D9D9] cursor-not-allowed transition-colors" title="Earliest month with production data">
+                <span class="calendar-nav w-10 h-10 flex items-center justify-center rounded-lg border border-[#F0F0F0] bg-[#F9F9F7] text-[#D9D9D9] cursor-not-allowed transition-colors" title="Earliest month with production data">
                     <i data-lucide="chevron-left" class="w-4 h-4"></i>
                 </span>
                 @else
-                <a href="{{ $prevUrl }}" data-turbo-frame="production-calendar" data-turbo-action="advance" class="w-8 h-8 flex items-center justify-center rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
+                <a aria-label="Previous month" href="{{ $prevUrl }}" data-turbo-frame="production-calendar" data-turbo-action="advance" class="calendar-nav w-10 h-10 flex items-center justify-center rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
                     <i data-lucide="chevron-left" class="w-4 h-4"></i>
                 </a>
                 @endif
-                <a href="{{ $nextUrl }}" data-turbo-frame="production-calendar" data-turbo-action="advance" class="w-8 h-8 flex items-center justify-center rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
+                <a aria-label="Next month" href="{{ $nextUrl }}" data-turbo-frame="production-calendar" data-turbo-action="advance" class="calendar-nav w-10 h-10 flex items-center justify-center rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
                     <i data-lucide="chevron-right" class="w-4 h-4"></i>
                 </a>
             </div>
         </div>
     </div>
 
-    {{-- Mobile-friendly calendar styles --}}
+    {{-- Scoped styles keep Turbo calendar refreshes self-contained. --}}
     <style>
-        .production-calendar { table-layout: fixed; border-collapse: separate; border-spacing: 4px; width: 100%; min-width: 320px; }
-        .production-calendar th,
-        .production-calendar td { width: 14.285%; }
-        .production-calendar .calendar-day { height: 64px; padding: 6px; }
-        .production-calendar .calendar-day .forecast-badge { font-size: 9px; padding: 2px 4px; }
-        .production-calendar .calendar-day .production-badge { font-size: 9px; padding: 2px 4px; }
+        .forecast-calendar-card .calendar-control { min-height: 40px; }
+        .forecast-calendar-card .calendar-production-indicator,
+        .forecast-calendar-card .production-badge { background: var(--color-success-bg); color: var(--color-success); }
+        .forecast-calendar-card .calendar-forecast-indicator,
+        .forecast-calendar-card .forecast-badge { background: var(--color-info-bg); color: var(--color-info); }
+        .forecast-calendar-card .calendar-toolbar { background: #fafafa; }
+        .forecast-calendar-card .calendar-nav:focus-visible,
+        .production-calendar .calendar-day:focus-visible { outline: 2px solid var(--color-navy); outline-offset: 2px; }
+        .production-calendar { table-layout: fixed; border-collapse: separate; border-spacing: 2px 6px; width: 100%; }
+        .production-calendar th, .production-calendar td { width: 14.285%; }
+        .production-calendar th { padding: 8px 0; color: var(--color-neutral-text); font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+        .production-calendar .calendar-day { height: 92px; padding: 3px; border-radius: 10px; gap: 4px; }
+        .production-calendar .calendar-day[data-selectable="true"]:hover { box-shadow: 0 2px 8px rgba(26,35,66,.08); }
+        .production-calendar .calendar-day .forecast-badge,
+        .production-calendar .calendar-day .production-badge { max-width: 100%; font-size: 10px; line-height: 1.3; font-weight: 600; font-variant-numeric: tabular-nums; padding: 2px 3px; border-radius: 4px; }
         .production-calendar .calendar-day .forecast-badge { margin-top: auto; }
-        .production-calendar .calendar-day .production-badge + .forecast-badge { margin-top: 2px; }
+        .production-calendar .calendar-day .production-badge + .forecast-badge { margin-top: 0; }
+        .production-calendar .calendar-count-icon { width: 10px; height: 10px; flex-shrink: 0; }
+        @media (max-width: 639px) {
+            .production-calendar .calendar-day .production-badge,
+            .production-calendar .calendar-day .forecast-badge { flex-direction: column; gap: 1px; }
+            .production-calendar .calendar-count-icon { width: 8px; height: 8px; }
+        }
         @media (min-width: 640px) {
             .production-calendar { border-spacing: 8px; min-width: 100%; }
-            .production-calendar .calendar-day { height: 96px; padding: 8px; }
-            .production-calendar .calendar-day .forecast-badge { font-size: 11px; padding: 2px 6px; }
-            .production-calendar .calendar-day .production-badge { font-size: 11px; padding: 2px 6px; }
+            .production-calendar th { font-size: 11px; }
+            .production-calendar .calendar-day { height: 112px; padding: 8px; border-radius: 12px; gap: 6px; }
+            .production-calendar .calendar-day .forecast-badge,
+            .production-calendar .calendar-day .production-badge { font-size: 13px; padding: 2px 5px; }
         }
     </style>
 
     {{-- Calendar table: thead = weekdays (Mon–Sun), tbody = week rows, td = day columns --}}
     <div class="overflow-x-auto -mx-1 px-1">
-        <table class="production-calendar">
+        <table class="production-calendar" aria-label="Daily production and forecast egg counts for {{ $calendarMonth->format('F Y') }}">
             <thead>
                 <tr>
                     @foreach($weekdays as $dayLabel)
-                    <th class="text-center text-xs sm:text-xs font-semibold text-[#6B7280] uppercase tracking-wider py-2 px-1 bg-[#F9F9F7] rounded">
+                    <th scope="col" class="text-center">
                         <span class="hidden sm:inline">{{ $dayLabel }}</span>
                         <span class="sm:hidden">{{ substr($dayLabel, 0, 1) }}</span>
                     </th>
@@ -262,26 +270,21 @@
                             $isBacktestCell = $isSelectable && $cell['dateString'] < $reportingDate;
                             $hasForecast = !empty($cell['forecast']);
                             $production = $cell['production'] ?? null;
-                            $hasProduction = is_array($production) && ($production['egg_count'] ?? 0) > 0;
+                            $hasProduction = is_array($production);
                             $baseClasses = 'calendar-day rounded-lg border relative flex flex-col items-start justify-start transition-colors';
+                            $hasRecord = $hasForecast || $hasProduction;
+                            $dayClasses = $baseClasses . ($hasRecord ? '' : ' border-[#F0F0F0]');
                             if (!$cell['currentMonth']) {
-                                $dayClasses = $baseClasses . ' border-[#F0F0F0] bg-[#F9F9F7] opacity-60';
-                            } elseif ($hasForecast) {
-                                $dayClasses = $baseClasses . ' border-[#A8D5A2] bg-[#EBF5E9] ' . ($isSelectable ? 'hover:bg-[#D5E8D4]/60 cursor-pointer' : 'cursor-not-allowed');
-                            } elseif ($hasProduction) {
-                                $dayClasses = $baseClasses . ' border-[#BFDBFE] bg-[#EFF6FF] ' . ($isSelectable ? 'hover:border-navy cursor-pointer' : 'cursor-not-allowed');
-                            } elseif ($cell['isToday']) {
-                                $dayClasses = $baseClasses . ' border-navy bg-navy/5 cursor-not-allowed';
-                            } else {
-                                $dayClasses = $baseClasses . ' border-[#F0F0F0] bg-white ' . ($isSelectable ? 'hover:border-navy cursor-pointer' : 'hover:border-[#D9D9D9] cursor-not-allowed');
+                                $dayClasses .= ' opacity-60';
                             }
+                            $dayClasses .= $isSelectable ? ' cursor-pointer' : ' cursor-not-allowed';
                             $dayNumberClasses = 'text-xs sm:text-sm ';
                             if ($cell['isToday']) {
                                 $dayNumberClasses .= 'font-bold text-navy';
                             } elseif ($hasForecast) {
-                                $dayNumberClasses .= 'font-semibold text-[#1F5F35]';
+                                $dayNumberClasses .= 'font-semibold text-[#333333]';
                             } elseif ($hasProduction) {
-                                $dayNumberClasses .= 'font-semibold text-[#1E40AF]';
+                                $dayNumberClasses .= 'font-semibold text-[#333333]';
                             } elseif ($cell['currentMonth']) {
                                 $dayNumberClasses .= 'text-[#333333]';
                             } else {
@@ -289,40 +292,30 @@
                             }
                         @endphp
                         <div class="{{ $dayClasses }}"
+                             @if($hasRecord) style="border-color: var(--color-sidebar-bg);" @endif
+                             @if($isSelectable)
+                             role="button" tabindex="0"
+                             aria-label="Forecast {{ $cell['dateString'] }}{{ $hasProduction ? ', production ' . number_format($production['egg_count']) . ' eggs' : '' }}{{ $hasForecast ? ', forecast ' . number_format($cell['forecast']->predicted_egg_count, 0) . ' eggs' : '' }}"
+                             onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.click(); }"
+                             @endif
                              data-date="{{ $cell['dateString'] }}"
                              data-selectable="{{ $isSelectable ? 'true' : 'false' }}"
                              onclick="window.handleForecastDayClick('{{ $cell['dateString'] }}', {{ $isSelectable ? 'true' : 'false' }})">
-                            {{-- No separate "Today" badge here — the cell's own border,
-                                 background tint, and bold day-number already mark today
-                                 unambiguously; a fourth label repeated the same signal. --}}
                             <div class="flex items-center gap-1">
                                 <span class="{{ $dayNumberClasses }}">{{ $cell['day'] }}</span>
                             </div>
-                            {{-- Actual recorded production. Rendered above the forecast
-                                 badge so a day carrying both (possible where a forecast
-                                 was generated for a date that has since been logged)
-                                 reads actual-first. "AD" sits beside the figure so the
-                                 number is self-identifying without a legend lookup. --}}
+                            {{-- Recorded production appears above the forecast badge. --}}
                             @if($hasProduction)
-                            <span class="production-badge inline-flex items-center gap-1 rounded bg-[#DBEAFE] text-[#1E40AF] font-medium whitespace-nowrap"
-                                  title="Actual: {{ number_format($production['egg_count']) }} eggs from {{ number_format($production['hen_count']) }} hens (HDEP {{ number_format($production['hdep'], 1) }}%)">
-                                <span class="text-[9px] font-bold uppercase leading-none tracking-wide opacity-80">AD</span>
+                            <span class="production-badge inline-flex items-center gap-1 rounded font-bold whitespace-nowrap"
+                                  title="Production: {{ number_format($production['egg_count']) }} eggs from {{ number_format($production['hen_count']) }} hens (HDEP {{ number_format($production['hdep'], 1) }}%)">
+                                <i data-lucide="egg" class="calendar-count-icon" aria-hidden="true"></i>
                                 <span>{{ number_format($production['egg_count']) }}</span>
                             </span>
                             @endif
                             @if($cell['forecast'])
-                            <i data-lucide="egg" class="absolute top-1 right-1 w-3.5 h-3.5 sm:w-4 sm:h-4 {{ $isBacktestCell ? 'text-[#111827]' : 'text-[#2D7D46]' }}" title="Forecast: {{ number_format($cell['forecast']->predicted_egg_count, 0) }} eggs{{ $isBacktestCell ? ' (backtest — generated from data preceding this day)' : '' }}"></i>
-                            {{-- Backtest is solid black so it cannot be mistaken for
-                                 either the blue actual or the green forward
-                                 forecast at a glance, including in dense weeks
-                                 where a purple tint read as "highlighted". "BT"
-                                 repeats on the badge itself rather than as a
-                                 separate chip on the day number. --}}
-                            <span class="forecast-badge inline-flex items-center gap-1 rounded {{ $isBacktestCell ? 'backtest-forecast-badge bg-[#111827] text-white' : 'bg-[#D5E8D4] text-[#1F5F35]' }} font-medium whitespace-nowrap"
-                                  title="{{ $isBacktestCell ? 'Backtest prediction for a day that has already happened.' : 'Forward prediction.' }}">
-                                @if($isBacktestCell)
-                                <span class="text-[9px] font-bold uppercase leading-none tracking-wide opacity-70">BT</span>
-                                @endif
+                            <span class="forecast-badge inline-flex items-center gap-1 rounded font-bold whitespace-nowrap"
+                                  title="Forecast: {{ number_format($cell['forecast']->predicted_egg_count, 0) }} eggs">
+                                <i data-lucide="chart-no-axes-combined" class="calendar-count-icon" aria-hidden="true"></i>
                                 <span>{{ number_format($cell['forecast']->predicted_egg_count, 0) }}</span>
                             </span>
                             @endif
@@ -526,9 +519,9 @@
         const el = document.querySelector('.calendar-day[data-date="' + date + '"]');
         if (!el) return;
         if (selected) {
-            el.classList.add('ring-2', 'ring-navy', 'ring-offset-1', 'bg-navy/10');
+            el.classList.add('ring-2', 'ring-navy', 'ring-offset-1');
         } else {
-            el.classList.remove('ring-2', 'ring-navy', 'ring-offset-1', 'bg-navy/10');
+            el.classList.remove('ring-2', 'ring-navy', 'ring-offset-1');
         }
     }
 
