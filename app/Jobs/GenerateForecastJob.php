@@ -74,15 +74,7 @@ class GenerateForecastJob implements ShouldQueue
                 default => $service->cageHistorical($this->cageCode),
             };
 
-            // The previous implementation deleted every forecast row for the
-            // current reporting date right before persisting, so re-running a
-            // forecast destroyed the prior prediction and left nothing to
-            // compare against. Persistence now appends and soft-supersedes
-            // per target_date instead (see
-            // ForecastGenerationService::persistForecasts), which keeps the
-            // old forecast visible in the UI until the exact moment it is
-            // replaced — the same UX the deferred delete gave, without the
-            // data loss.
+            // Persistence keeps the first advance prediction and fills only gaps.
             $result = $service->generateForecast(
                 $cage,
                 $this->cageCode,
@@ -100,6 +92,7 @@ class GenerateForecastJob implements ShouldQueue
                 'completed_at' => now(),
                 'result_metrics' => [
                     'metrics' => $result['metrics'],
+                    'message' => $result['message'] ?? 'Forecast saved.',
                     'recommended_model' => $result['recommended_model'],
                 ],
             ]);

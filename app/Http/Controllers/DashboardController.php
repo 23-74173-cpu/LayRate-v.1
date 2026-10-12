@@ -605,12 +605,6 @@ class DashboardController extends Controller
             ->groupBy('log_date')
             ->pluck('total', 'log_date');
 
-        $request->validate([
-            'forecast_version' => 'nullable|in:original,latest',
-            'forecast_run_id' => 'nullable|integer|min:1',
-        ]);
-        $version = $request->input('forecast_version', 'original');
-        $selectedRunId = $request->integer('forecast_run_id') ?: null;
         $cage = $cageCode ? Cage::where('cage_code', $cageCode)->first() : null;
         $forecastQuery = Forecast::issuedInAdvance()
             ->whereBetween('target_date', [$startDate, $endDate]);
@@ -619,21 +613,8 @@ class DashboardController extends Controller
         } else {
             $forecastQuery->whereNull('cage_id')->whereNull('breed');
         }
-        // Include superseded rows: the original prediction is immutable history.
-        $rows = $forecastQuery->with('forecastRun')->orderBy('forecast_date')->orderBy('id')->get();
-        $availableRuns = $rows->whereNotNull('forecast_run_id')->unique('forecast_run_id')
-            ->map(fn ($forecast) => [
-                'id' => $forecast->forecast_run_id,
-                'generated_at' => $forecast->forecastRun?->created_at?->toIso8601String(),
-                'forecast_date' => $forecast->forecast_date->toDateString(),
-                'horizon' => $forecast->forecastRun?->horizon,
-            ])->values();
-        if ($selectedRunId !== null) {
-            abort_unless($availableRuns->contains('id', $selectedRunId), 404);
-            $rows = $rows->where('forecast_run_id', $selectedRunId);
-        } elseif ($version === 'latest') {
-            $rows = $rows->reverse();
-        }
+        // Preserve the earliest advance prediction, including migrated history.
+        $rows = $forecastQuery->orderBy('forecast_date')->orderBy('id')->get();
         $selectedForecasts = $rows->unique(fn ($f) => $f->target_date->toDateString())
             ->keyBy(fn ($f) => $f->target_date->toDateString());
         $forecastByDate = $selectedForecasts->map(fn ($f) => (int) $f->predicted_egg_count);
@@ -642,8 +623,7 @@ class DashboardController extends Controller
             'forecast_date' => $f->forecast_date->toDateString(),
             'lead_days' => (int) $f->forecast_date->diffInDays($f->target_date),
         ]);
-        $comparisonLabel = $selectedRunId ? "Saved Run #{$selectedRunId}"
-            : ($version === 'latest' ? 'Latest Forecast' : 'Original Forecast');
+        $comparisonLabel = 'Forecast';
 
         $actual = [];
         $forecast = [];
@@ -715,9 +695,6 @@ class DashboardController extends Controller
         if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
             return response()->json([
                 'comparisonLabel' => $comparisonLabel,
-                'forecastVersion' => $version,
-                'selectedRunId' => $selectedRunId,
-                'availableRuns' => $availableRuns,
                 'predictionDetails' => $predictionDetails,
                 'days' => $days,
                 'cageCode' => $cageCode,

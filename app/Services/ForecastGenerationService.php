@@ -378,6 +378,20 @@ class ForecastGenerationService
      */
     public function generateForecast(?Cage $cage, string $cageCode, ?string $breed, Collection $historical, int $horizon, bool $save = false, ?string $startDate = null, array $manualParams = [], ?int $forecastRunId = null): array
     {
+        $start = $startDate ? \Carbon\Carbon::parse($startDate)->toDateString()
+            : ReportingDateService::reportingDate()->addDay()->toDateString();
+        if ($save && $start > ReportingDateService::reportingDateString()) {
+            $existing = $this->savedForecasts($cage, $breed, $start, $horizon);
+            if ($existing->count() === $horizon) {
+                return [
+                    'forecasts' => $existing,
+                    'metrics' => $existing->first()->forecastRun?->result_metrics['metrics'] ?? [],
+                    'recommended_model' => $existing->first()->forecastRun?->result_metrics['recommended_model'] ?? 'Saved Forecast',
+                    'message' => 'These dates already have saved forecasts. They were kept unchanged.',
+                ];
+            }
+        }
+
         $result = $this->executePythonForecast($cageCode, $breed, $horizon, $manualParams, $startDate);
 
         Log::info('Forecast generation result', [
@@ -397,6 +411,7 @@ class ForecastGenerationService
             'forecasts' => $forecasts,
             'metrics' => $result['metrics'] ?? [],
             'recommended_model' => $result['recommended_model'] ?? 'Unknown',
+            'message' => 'Forecast saved. Dates with existing forecasts were kept unchanged.',
         ];
     }
 
@@ -541,47 +556,49 @@ class ForecastGenerationService
         return $env;
     }
 
-    /**
-     * Persist forecast rows returned by the Python runner.
-     *
-     * Every run is retained: the rows are appended and tagged with the
-     * ForecastRun that produced them, and any earlier prediction for the same
-     * (cage, breed, target_date) is soft-superseded rather than deleted. That
-     * keeps a full audit trail so a prediction can later be compared against
-     * the actual production recorded for its target date.
-     *
-     * Supersession is keyed on target_date, not on forecast_date. That matters
-     * now that backtests are allowed: a backtest of a past date supersedes
-     * only previous backtests for that date and leaves unrelated forward forecasts
-     * for other dates untouched.
-     *
-     * Public so callers holding runner output can persist it against a run
-     * without routing through generateForecast()'s Python subprocess.
-     */
+    /** First advance prediction wins; overlapping runs fill only missing dates. */
     public function persistForecasts(array $result, ?Cage $cage, ?string $breed, ?int $forecastRunId = null): Collection
     {
-        $collection = $this->buildForecastCollection($result, $cage, $breed, $forecastRunId);
-
-        DB::transaction(function () use ($collection) {
-            foreach ($collection as $forecast) {
-                $this->supersedeExistingFor($forecast);
-                $forecast->save();
+        $saved = collect();
+        foreach ($this->buildForecastCollection($result, $cage, $breed, $forecastRunId) as $forecast) {
+            if ($forecast->is_backtest) {
+                DB::transaction(function () use ($forecast) {
+                    $this->supersedeExistingFor($forecast);
+                    $forecast->save();
+                });
+                $saved->push($forecast);
+                continue;
             }
-        });
-
-        return $collection;
+            if (! $forecast->forecast_date->lt($forecast->target_date)) {
+                throw new RuntimeException('Saved forecasts must target a future day.');
+            }
+            $existing = Forecast::issuedInAdvance()
+                ->where('cage_id', $forecast->cage_id)->where('breed', $forecast->breed)
+                ->whereDate('target_date', $forecast->target_date)
+                ->orderBy('forecast_date')->orderBy('id')->first();
+            if ($existing) {
+                $saved->push($existing);
+                continue;
+            }
+            // firstOrCreate recovers a concurrent insert via the unique key.
+            $saved->push(Forecast::firstOrCreate([
+                'forecast_key' => Forecast::fixedKey($forecast->cage_id, $forecast->breed, $forecast->target_date->toDateString()),
+            ], $forecast->getAttributes()));
+        }
+        return $saved;
     }
 
-    /**
-     * Mark the current live prediction for a target date as superseded, so the
-     * row about to be written becomes the new live one. Runs inside a
-     * transaction with the insert so the calendar never renders a date with
-     * zero live predictions.
-     *
-     * Scope identity is the (cage_id, breed) pair: farm is (null, null),
-     * breed is (null, <breed>), cage is (<cage_id>, null). The comparisons are
-     * built from the incoming row so each shape matches only its own twin.
-     */
+    public function savedForecasts(?Cage $cage, ?string $breed, string $start, int $horizon): Collection
+    {
+        $end = \Carbon\Carbon::parse($start)->addDays($horizon - 1)->toDateString();
+        return Forecast::issuedInAdvance()->where('cage_id', $cage?->id)->where('breed', $breed)
+            ->whereBetween('target_date', [$start, $end])
+            ->orderBy('forecast_date')->orderBy('id')->get()
+            ->unique(fn ($forecast) => $forecast->target_date->toDateString())
+            ->sortBy('target_date')->values();
+    }
+
+    /** Historical tests may be refreshed without touching fixed advance forecasts. */
     private function supersedeExistingFor(Forecast $forecast): void
     {
         $query = Forecast::query()
@@ -598,10 +615,6 @@ class ForecastGenerationService
                     : $query->where('breed', $forecast->breed);
             });
 
-        // A same-day estimate cannot replace an advance prediction.
-        if (! $forecast->is_backtest) {
-            $query->whereColumn('forecast_date', $forecast->forecast_date->lt($forecast->target_date) ? '<' : '>=', 'target_date');
-        }
         $query->update(['superseded_at' => now()]);
     }
 

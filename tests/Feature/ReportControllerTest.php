@@ -704,7 +704,7 @@ class ReportControllerTest extends TestCase
         $this->createProductionLog($this->slotA1, 4, $date);
         Forecast::create([
             'cage_id' => $this->cageA->id,
-            'forecast_date' => $date,
+            'forecast_date' => \Carbon\Carbon::parse($date)->subDay()->toDateString(),
             'target_date' => $date,
             'predicted_egg_count' => 9,
         ]);

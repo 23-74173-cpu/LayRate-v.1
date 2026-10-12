@@ -11,20 +11,7 @@ use App\Services\ReportingDateService;
 use Database\Seeders\DatabaseSeeder;
 use Tests\TestCase;
 
-/**
- * Forecast history retention.
- *
- * Persistence used to delete every forecast row for the current reporting date
- * before writing the new result, so re-running a forecast destroyed the
- * previous prediction and there was never more than one run of record to
- * compare against actual production. Persistence now appends, tags each row
- * with the run that produced it, and soft-supersedes the previous prediction
- * for the same target date.
- *
- * These tests pin that behaviour: nothing is destroyed, exactly one live
- * prediction exists per (scope, target_date), and superseded rows remain
- * readable for comparison.
- */
+/** Fixed advance forecasts retain their first value; historical tests are separate. */
 class ForecastRunHistoryTest extends TestCase
 {
     private User $admin;
@@ -36,41 +23,23 @@ class ForecastRunHistoryTest extends TestCase
         $this->admin = User::where('email', 'admin@layrate.local')->firstOrFail();
     }
 
-    public function test_a_second_run_supersedes_rather_than_deletes_the_first(): void
+    public function test_a_second_run_keeps_the_first_prediction_unchanged(): void
     {
         $target = ReportingDateService::now()->copy()->addDays(3)->toDateString();
-
         $first = $this->persistPrediction('CAGE-RET', $target, 100.0);
         $second = $this->persistPrediction('CAGE-RET', $target, 175.0);
-
-        // Both rows survive: the earlier prediction is history, not garbage.
-        $this->assertDatabaseHas('forecasts', [
-            'id' => $first->id,
-            'predicted_egg_count' => 100,
-            'forecast_run_id' => $first->forecast_run_id,
-        ]);
-        $this->assertDatabaseHas('forecasts', [
-            'id' => $second->id,
-            'predicted_egg_count' => 175,
-            'forecast_run_id' => $second->forecast_run_id,
-        ]);
-
-        // Exactly one is live, and it is the newer one.
-        $this->assertNotNull($first->fresh()->superseded_at);
-        $this->assertNull($second->fresh()->superseded_at);
-
-        $this->assertSame(1, Forecast::live()->whereDate('target_date', $target)->count());
-        $this->assertSame(
-            (float) $second->predicted_egg_count,
-            (float) Forecast::live()->whereDate('target_date', $target)->value('predicted_egg_count')
-        );
+        $this->assertSame($first->id, $second->id);
+        $this->assertEquals(100, $second->predicted_egg_count);
+        $this->assertNull($first->fresh()->superseded_at);
+        $this->assertDatabaseCount('forecasts', 1);
+        $this->assertDatabaseCount('forecast_runs', 2);
     }
 
     /**
      * Supersession is keyed on target_date, so re-running one day must not
      * evict a live prediction for a different day.
      */
-    public function test_supersession_does_not_evict_other_target_dates(): void
+    public function test_repeated_forecast_keeps_all_saved_target_dates(): void
     {
         $base = ReportingDateService::now();
 
@@ -79,7 +48,8 @@ class ForecastRunHistoryTest extends TestCase
 
         $this->persistPrediction('CAGE-RET', $day1->target_date->toDateString(), 999.0);
 
-        $this->assertNotNull($day1->fresh()->superseded_at);
+        $this->assertNull($day1->fresh()->superseded_at);
+        $this->assertEquals(100, $day1->fresh()->predicted_egg_count);
         $this->assertNull($day2->fresh()->superseded_at, 'A different target date must stay live.');
     }
 
@@ -107,7 +77,7 @@ class ForecastRunHistoryTest extends TestCase
      * Supersession is scoped per (cage_id, breed) pair, so one cage's rerun
      * must not touch another cage's prediction for the same day.
      */
-    public function test_supersession_is_scoped_to_the_cage(): void
+    public function test_fixed_forecasts_are_scoped_to_the_cage(): void
     {
         $target = ReportingDateService::now()->copy()->addDays(3)->toDateString();
 
@@ -116,7 +86,8 @@ class ForecastRunHistoryTest extends TestCase
 
         $this->persistPrediction('CAGE-RET', $target, 150.0);
 
-        $this->assertNotNull($cageA->fresh()->superseded_at);
+        $this->assertNull($cageA->fresh()->superseded_at);
+        $this->assertEquals(100, $cageA->fresh()->predicted_egg_count);
         $this->assertNull($cageB->fresh()->superseded_at, 'A different cage must stay live.');
     }
 

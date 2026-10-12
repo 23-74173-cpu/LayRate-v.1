@@ -17,6 +17,7 @@ class Forecast extends Model
         'target_date',
         'predicted_egg_count',
         'forecast_run_id',
+        'forecast_key',
         'is_backtest',
         'superseded_at',
     ];
@@ -43,6 +44,11 @@ class Forecast extends Model
     {
         return $query->where('is_backtest', false)
             ->whereColumn('forecast_date', '<', 'target_date');
+    }
+
+    public static function fixedKey(?int $cageId, ?string $breed, string $date): string
+    {
+        return hash('sha256', json_encode([$cageId, $breed, substr($date, 0, 10)]));
     }
 
     public function cage(): BelongsTo

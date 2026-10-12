@@ -291,7 +291,7 @@ class ForecastProductionCalendarTest extends TestCase
         // A semantic class on the badge is what distinguishes the cell's
         // backtest treatment from the black swatch in the legend, which
         // shares the same colour.
-        $response->assertSee('Backtest: 498');
+        $response->assertSee('Historical Test: 498');
         $response->assertDontSee('EDE9FE', false);
         // "BT" is rendered inside the badge, immediately before the figure.
         $response->assertSeeInOrder(['forecast-badge', 'chart-no-axes-combined', '498']);

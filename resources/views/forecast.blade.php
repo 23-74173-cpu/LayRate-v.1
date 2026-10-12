@@ -695,6 +695,7 @@
                         // stopped. Resetting first makes completion safe
                         // regardless of whether navigation succeeds.
                         resetForecastSubmitUi();
+                        if (window.showNotification) window.showNotification(data.message || 'Forecast saved.', 'success');
                         // recordForecastDuration() is not called here — it
                         // already runs via initForecastLoading() on the
                         // turbo:load this visit triggers, same as it did
@@ -793,6 +794,13 @@
             return response.json();
         })
         .then(function(data) {
+            if (data.already_saved) {
+                resetForecastSubmitUi();
+                if (window.showNotification) window.showNotification(data.message, 'success');
+                if (window.Turbo) window.Turbo.visit(data.redirect_url);
+                else window.location.href = data.redirect_url;
+                return;
+            }
             pollForecastStatus(data.poll_url);
         })
         .catch(function(err) {
@@ -1432,7 +1440,7 @@
                     cage: cage,
                     breed: breed,
                     horizon: horizon,
-                    forecast_view: document.querySelector('[name="forecast_view"]')?.value || 'latest',
+                    forecast_view: document.querySelector('[name="forecast_view"]')?.value || 'saved',
                     month: document.querySelector('#production-calendar [name="month"]')?.value,
                     year: document.querySelector('#production-calendar [name="year"]')?.value
                 })

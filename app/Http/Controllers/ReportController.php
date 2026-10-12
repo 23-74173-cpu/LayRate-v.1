@@ -446,12 +446,12 @@ class ReportController extends Controller
 
         $forecastMap = collect();
         if ($withForecast) {
-            $forecastQuery = Forecast::query()
+            $forecastQuery = Forecast::issuedInAdvance()
                 ->whereNull('breed')
                 ->whereIn('cage_id', $cageIds)
                 ->when($hasRange, fn ($q) => $q->whereBetween('target_date', [$from, $to]))
-                ->orderByDesc('forecast_date')
-                ->orderByDesc('id');
+                ->orderBy('forecast_date')
+                ->orderBy('id');
 
             $forecastMap = $forecastQuery->get()
                 ->groupBy(fn ($f) => $f->target_date->format('Y-m-d') . '-' . $f->cage_id)

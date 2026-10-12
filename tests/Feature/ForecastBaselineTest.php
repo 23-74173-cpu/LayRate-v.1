@@ -40,7 +40,7 @@ class ForecastBaselineTest extends TestCase
         return $this->actingAs($this->admin)->getJson(route('dashboard.forecast-overlay', array_merge(['cage' => $this->cage->cage_code, 'from_date' => $this->target, 'to_date' => $this->target], $extra)));
     }
 
-    public function test_original_remains_baseline_and_latest_or_saved_run_can_be_selected(): void
+    public function test_saved_forecast_is_the_only_comparison_even_for_legacy_runs(): void
     {
         $first = $this->prediction(100, 7);
         $first->update(['superseded_at' => now()]);
@@ -49,11 +49,11 @@ class ForecastBaselineTest extends TestCase
         $this->prediction(888, 0);
         ProductionLog::create(['cage_slot_id' => $this->slot->id, 'log_date' => $this->target, 'egg_count' => 110, 'hen_count' => 120, 'hdep' => 91.7, 'is_demo' => false]);
 
-        $this->overlay()->assertOk()->assertJsonPath('forecast.0', 100)->assertJsonPath('actual.0', 110)->assertJsonPath('comparisonLabel', 'Original Forecast')->assertJsonPath('predictionDetails.'.$this->target.'.lead_days', 7);
-        $this->overlay(['forecast_version' => 'latest'])->assertOk()->assertJsonPath('forecast.0', 120);
+        $this->overlay()->assertOk()->assertJsonPath('forecast.0', 100)->assertJsonPath('actual.0', 110)->assertJsonPath('comparisonLabel', 'Forecast')->assertJsonPath('predictionDetails.'.$this->target.'.lead_days', 7);
+        $this->overlay(['forecast_version' => 'latest'])->assertOk()->assertJsonPath('forecast.0', 100);
         $this->overlay(['forecast_run_id' => $first->forecast_run_id])->assertOk()->assertJsonPath('forecast.0', 100);
-        $this->overlay(['forecast_run_id' => $latest->forecast_run_id])->assertOk()->assertJsonPath('forecast.0', 120);
-        $this->overlay(['forecast_run_id' => 999999])->assertNotFound();
+        $this->overlay(['forecast_run_id' => $latest->forecast_run_id])->assertOk()->assertJsonPath('forecast.0', 100);
+        $this->overlay(['forecast_run_id' => 999999])->assertOk()->assertJsonPath('forecast.0', 100);
     }
 
     public function test_missing_production_is_pending_but_recorded_zero_is_compared(): void
@@ -72,13 +72,13 @@ class ForecastBaselineTest extends TestCase
         $this->overlay()->assertOk()->assertJsonPath('forecast.0', 100);
     }
 
-    public function test_calendar_keeps_prior_days_runs_and_separates_original_latest_and_backtest(): void
+    public function test_calendar_uses_fixed_forecasts_and_separates_historical_tests(): void
     {
         $first = $this->prediction(101, 7);
         $first->update(['superseded_at' => now()]);
         $this->prediction(202, 1);
         $this->prediction(303, -1, true);
-        foreach (['original' => 101, 'latest' => 202, 'backtest' => 303] as $view => $expected) {
+        foreach (['saved' => 101, 'original' => 101, 'latest' => 101, 'backtest' => 303] as $view => $expected) {
             $date = \Carbon\Carbon::parse($this->target);
             $response = $this->actingAs($this->admin)->get(route('forecast', ['scope' => 'cage', 'cage' => $this->cage->cage_code, 'month' => $date->month, 'year' => $date->year, 'forecast_view' => $view]), ['Turbo-Frame' => 'production-calendar']);
             $response->assertOk();
@@ -88,12 +88,12 @@ class ForecastBaselineTest extends TestCase
         }
     }
 
-    public function test_hide_latest_preserves_original_and_saved_history(): void
+    public function test_clear_cannot_remove_saved_forecasts(): void
     {
         $target = ReportingDateService::reportingDate()->addDays(2)->toDateString();
         $forecast = Forecast::create(['cage_id' => $this->cage->id, 'forecast_date' => ReportingDateService::reportingDateString(), 'target_date' => $target, 'predicted_egg_count' => 100]);
         $this->actingAs($this->admin)->post(route('forecast.clear'), ['scope' => 'cage', 'cage' => $this->cage->cage_code])->assertRedirect();
-        $this->assertNotNull($forecast->fresh()->superseded_at);
+        $this->assertNull($forecast->fresh()->superseded_at);
         $this->assertDatabaseHas('forecasts', ['id' => $forecast->id, 'predicted_egg_count' => 100]);
         $date = \Carbon\Carbon::parse($target);
         $response = $this->actingAs($this->admin)->get(route('forecast', ['scope' => 'cage', 'cage' => $this->cage->cage_code, 'month' => $date->month, 'year' => $date->year, 'forecast_view' => 'original']), ['Turbo-Frame' => 'production-calendar']);
@@ -101,7 +101,7 @@ class ForecastBaselineTest extends TestCase
         $this->assertEquals(100, $response->viewData('forecasts')->first()->predicted_egg_count);
     }
 
-    public function test_original_calendar_export_uses_saved_baseline_from_prior_day(): void
+    public function test_calendar_export_uses_fixed_forecast_from_prior_day(): void
     {
         $first = $this->prediction(101, 7);
         $first->update(['superseded_at' => now()]);
@@ -113,6 +113,43 @@ class ForecastBaselineTest extends TestCase
         $rows = array_map('str_getcsv', explode("\n", trim($csv)));
         $this->assertCount(2, $rows);
         $this->assertEquals(101, (float) $rows[1][1]);
+    }
+
+    public function test_overlapping_range_saves_only_missing_days(): void
+    {
+        $service = app(ForecastGenerationService::class);
+        $start = ReportingDateService::reportingDate()->addDay();
+        $first = $service->persistForecasts(['forecast' => [['date' => $start->toDateString(), 'predicted_egg_count' => 100]]], $this->cage, null)->first();
+        $result = $service->persistForecasts(['forecast' => [
+            ['date' => $start->toDateString(), 'predicted_egg_count' => 999],
+            ['date' => $start->copy()->addDay()->toDateString(), 'predicted_egg_count' => 120],
+        ]], $this->cage, null);
+        $this->assertEquals([100, 120], $result->pluck('predicted_egg_count')->map(fn ($value) => (int) $value)->all());
+        $this->assertEquals($first->id, $result->first()->id);
+        $this->assertDatabaseCount('forecasts', 2);
+        $this->assertNotNull($first->forecast_key);
+    }
+
+    public function test_already_saved_request_skips_queue_and_model_execution(): void
+    {
+        \Illuminate\Support\Facades\Queue::fake();
+        $target = ReportingDateService::reportingDate()->addDays(2)->toDateString();
+        app(ForecastGenerationService::class)->persistForecasts(['forecast' => [['date' => $target, 'predicted_egg_count' => 100]]], $this->cage, null);
+        $this->actingAs($this->admin)->postJson(route('forecast.generate'), ['scope' => 'cage', 'cage' => $this->cage->cage_code, 'horizon' => 1, 'start_date' => $target])
+            ->assertOk()->assertJsonPath('already_saved', true);
+        \Illuminate\Support\Facades\Queue::assertNothingPushed();
+        $this->assertDatabaseCount('forecast_runs', 0);
+        $result = app(ForecastGenerationService::class)->generateForecast($this->cage, $this->cage->cage_code, null, collect(), 1, true, $target);
+        $this->assertEquals(100, $result['forecasts']->first()->predicted_egg_count);
+        $this->assertDatabaseCount('forecasts', 1);
+    }
+
+    public function test_database_rejects_two_fixed_predictions_for_the_same_key(): void
+    {
+        $target = ReportingDateService::reportingDate()->addDays(2)->toDateString();
+        $forecast = app(ForecastGenerationService::class)->persistForecasts(['forecast' => [['date' => $target, 'predicted_egg_count' => 100]]], $this->cage, null)->first();
+        $this->expectException(\Illuminate\Database\UniqueConstraintViolationException::class);
+        Forecast::create(['cage_id' => $this->cage->id, 'forecast_date' => ReportingDateService::reportingDateString(), 'target_date' => $target, 'predicted_egg_count' => 999, 'forecast_key' => $forecast->forecast_key]);
     }
 
     public function test_historical_forecast_requires_explicit_backtest_mode(): void

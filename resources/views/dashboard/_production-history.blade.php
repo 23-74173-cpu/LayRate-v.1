@@ -35,14 +35,6 @@
             </x-slot:actions>
         </x-card-header>
 
-        <div id="forecastComparisonControls" class="hidden flex flex-wrap items-center gap-2 mb-3">
-            <label for="forecastComparisonSource" class="text-xs font-semibold text-[#6B7280]">Compare production with</label>
-            <select id="forecastComparisonSource" onchange="loadForecastOverlay()" class="border border-[#D9D9D9] rounded-lg px-3 py-2 text-xs bg-white">
-                <option value="original">Original Forecast</option>
-                <option value="latest">Latest Forecast</option>
-            </select>
-            <span class="text-xs text-[#6B7280]">Only forecasts issued before the target day.</span>
-        </div>
         <div class="interpretation-panel hidden mb-3 px-3 py-2.5 rounded-lg text-xs leading-relaxed" style="background-color: #dcebfa; color: var(--color-info); border: 1px solid #b8d4fe;">{{ $insight }}</div>
         <div id="forecastVariancePanel" class="hidden mb-3 px-3 py-2.5 rounded-lg text-xs leading-relaxed flex items-center gap-2" style="background-color:#fdf3e0; color:#8a5a00; border:1px solid #f3e3bf;"><i data-lucide="trending-up" class="w-3 h-3"></i><span id="forecastVarianceText"></span></div>
 
@@ -259,8 +251,6 @@
                 btn.classList.add('text-[#6B7280]', 'hover:bg-[#e5e7eb]');
             }
         }
-        var controls = document.getElementById('forecastComparisonControls');
-        if (controls) controls.classList.toggle('hidden', !window.__forecastOverlayEnabled);
         if (window.__forecastOverlayEnabled) {
             loadForecastOverlay();
         } else {
@@ -293,27 +283,12 @@
         if (cage) bounds.set('cage', cage);
         if (window.__dashboardFromDate) bounds.set('from_date', window.__dashboardFromDate);
         if (window.__dashboardToDate) bounds.set('to_date', window.__dashboardToDate);
-        var sourceSelect = document.getElementById('forecastComparisonSource');
-        var source = sourceSelect ? sourceSelect.value : 'original';
-        if (source.indexOf('run:') === 0) bounds.set('forecast_run_id', source.slice(4));
-        else bounds.set('forecast_version', source);
         var requestId = window.__forecastComparisonRequest = (window.__forecastComparisonRequest || 0) + 1;
         var url = '{{ route('dashboard.forecast-overlay') }}' + '?' + bounds.toString();
         fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if (!window.__forecastOverlayEnabled || requestId !== window.__forecastComparisonRequest) return;
-                if (sourceSelect) {
-                    sourceSelect.querySelectorAll('option[data-saved-run]').forEach(function(option) { option.remove(); });
-                    (data.availableRuns || []).forEach(function(run) {
-                        var option = document.createElement('option');
-                        option.value = 'run:' + run.id;
-                        option.dataset.savedRun = '1';
-                        option.textContent = 'Run #' + run.id + ' ? ' + run.forecast_date + (run.horizon ? ' ? ' + run.horizon + ' days' : '');
-                        sourceSelect.appendChild(option);
-                    });
-                    sourceSelect.value = source;
-                }
                 if (!data.hasForecast || !data.forecast || data.forecast.every(function(v){ return v===null; })) {
                     hideForecastOverlay();
                     var p = document.getElementById('forecastVariancePanel');
@@ -328,7 +303,7 @@
                 // Build overlay dataset — dashed eggs-blue, distinct from the
                 // solid actual line via dash + legend (same metric, same hue).
                 var forecastDataset = {
-                    label: data.comparisonLabel || 'Original Forecast',
+                    label: data.comparisonLabel || 'Forecast',
                     data: data.forecast,
                     borderColor: LayRateChartColors.eggs,
                     backgroundColor: LayRateChartColors.alpha(LayRateChartColors.eggs, 0.08),

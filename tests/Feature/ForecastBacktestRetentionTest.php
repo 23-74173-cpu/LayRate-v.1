@@ -105,7 +105,7 @@ class ForecastBacktestRetentionTest extends TestCase
         ]), ['Turbo-Frame' => 'production-calendar']);
 
         $response->assertOk();
-        $response->assertSee('Backtest');
+        $response->assertSee('Historical Test');
         $response->assertSeeInOrder(['forecast-badge', 'chart-no-axes-combined', '480']);
     }
 
@@ -160,7 +160,7 @@ class ForecastBacktestRetentionTest extends TestCase
 
         $response->assertOk();
         // The backtests are all there...
-        $response->assertSee('Backtest');
+        $response->assertSee('Historical Test');
         $response->assertSee('611');
         $response->assertSee('617');
         // Backtests are shown separately from advance predictions.
@@ -203,7 +203,7 @@ class ForecastBacktestRetentionTest extends TestCase
         ])->assertRedirect();
 
         $this->assertSame(1, Forecast::where('cage_id', $fwdCage->id)->count(), 'forecast history is retained');
-        $this->assertNotNull(Forecast::where('cage_id', $fwdCage->id)->first()->superseded_at);
+        $this->assertNull(Forecast::where('cage_id', $fwdCage->id)->first()->superseded_at);
         $this->assertSame(1, Forecast::where('cage_id', $btCage->id)->count(), 'backtest must survive a clear');
     }
 

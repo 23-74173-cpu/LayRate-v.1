@@ -151,20 +151,20 @@ php artisan schedule:list
 
 ## Saved forecasts and comparison
 
-Normal forecasts target future days. The calendar's **Backtest** view allows
-historical date selection; these estimates are kept separate from advance
-forecasts. The 7/14/30-day controls and custom day/range selection remain available.
+Each scope (farm, cage, or breed) has one fixed forecast per target day.
+Generating an overlapping range keeps saved values and fills only missing dates.
+A fully saved range returns immediately without retraining. The 7/14/30-day
+controls and custom day/range selection remain available.
 
-Every run is retained. **Latest Forecast** shows active planning updates;
-**Original Forecast** shows the first prediction issued before each target day,
-even after another run supersedes it. Hiding latest forecasts retains originals
-and run history. Calendar exports follow the selected version and month.
+**Compare Production** shows the saved forecast next to completed production.
+Missing or unfinished production remains pending; a recorded zero is compared.
+The dashboard also uses the same fixed predictions. Existing run history is
+retained, and the earliest advance prediction is used for older duplicate runs.
+Saved forecasts cannot be cleared or replaced through the normal interface.
 
-The dashboard production comparison defaults to Original Forecast and can select
-Latest Forecast or a specific saved run. Only predictions issued before their
-target day qualify. Missing or unfinished production remains pending; a recorded
-zero is included in comparisons. Prediction tooltips show the issue date and lead
-time. Flock age increases as future forecast days advance in both forecasting modes.
+**Advanced ? Historical Test** is for retrospective testing and stays separate
+from saved advance forecasts. Flock age increases as future forecast days advance
+in both automatic and manual forecasting modes.
 
 ## Data requirements
 
