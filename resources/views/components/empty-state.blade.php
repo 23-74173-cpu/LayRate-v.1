@@ -40,7 +40,7 @@
         <div class="mt-4 flex items-center justify-center gap-3">{{ $actions }}</div>
     @elseif($actionUrl && $actionLabel)
         <div class="mt-4">
-            <x-button href="{{ $actionUrl }}" size="sm">{{ $actionLabel }}</x-button>
+            <x-button href="{{ $actionUrl }}" size="sm" data-turbo-frame="_top">{{ $actionLabel }}</x-button>
         </div>
     @endif
 </div>
