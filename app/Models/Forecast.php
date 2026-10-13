@@ -20,6 +20,7 @@ class Forecast extends Model
         'forecast_key',
         'is_backtest',
         'superseded_at',
+        'invalidated_at',
     ];
 
     protected $casts = [
@@ -28,6 +29,7 @@ class Forecast extends Model
         'created_at'    => 'datetime',
         'is_backtest'   => 'boolean',
         'superseded_at' => 'datetime',
+        'invalidated_at' => 'datetime',
     ];
 
     /**
@@ -42,7 +44,7 @@ class Forecast extends Model
     /** Only predictions issued before their target day qualify for comparison. */
     public function scopeIssuedInAdvance($query)
     {
-        return $query->where('is_backtest', false)
+        return $query->whereNull('invalidated_at')->where('is_backtest', false)
             ->whereColumn('forecast_date', '<', 'target_date');
     }
 

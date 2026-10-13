@@ -110,7 +110,7 @@ class HardwareItemController extends Controller
         $activeCount = (clone $query)->where('status', 'active')->count();
         $faultyCount = (clone $query)->where('health_state', 'faulty')->count();
 
-        $items = $query->with(['cage', 'cageSlot.cage', 'device', 'latestOccupancyReading', 'additionalSlots.cage'])
+        $items = $query->when($request->query('walkthrough6') === '1' && $request->filled('wt6_item'), fn ($q) => $q->whereKey((int) $request->query('wt6_item')))->with(['cage', 'cageSlot.cage', 'device', 'latestOccupancyReading', 'additionalSlots.cage'])
             ->orderBy('status')
             ->orderBy('serial_number')
             ->paginate((int) config('tables.per_page', 25))
@@ -136,7 +136,7 @@ class HardwareItemController extends Controller
         $validator = $this->hardwareValidator($request);
 
         if ($validator->fails()) {
-            return redirect()->route('hardware.index')
+            return redirect()->route('hardware.index', $request->input('walkthrough6') === '1' ? ['walkthrough6' => '1'] : [])
                 ->with('reopen_add_hardware', true)
                 ->withErrors($validator)
                 ->withInput();
@@ -153,9 +153,10 @@ class HardwareItemController extends Controller
             $data['cage_slot_id'] = null;
         }
 
-        HardwareItem::create($data)->additionalSlots()->sync($extraSlotIds);
+        $item = HardwareItem::create($data);
+        $item->additionalSlots()->sync($extraSlotIds);
 
-        return redirect()->route('hardware.index')->with('success', 'Hardware item added.');
+        return redirect()->route('hardware.index', $request->input('walkthrough6') === '1' ? ['walkthrough6' => '1'] : [])->with('success', 'Hardware item added.')->with('new_hardware_id', $item->id);
     }
 
     public function update(Request $request, HardwareItem $hardwareItem)

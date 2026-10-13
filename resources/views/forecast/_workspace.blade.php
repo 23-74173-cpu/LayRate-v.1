@@ -7,7 +7,8 @@
     $showForecast = session('forecast_generated', false);
 @endphp
 
-<turbo-frame id="forecast-workspace">
+<turbo-frame id="forecast-workspace" data-saved-forecast-count="{{ count($forecasts) }}">
+<span hidden id="forecastSavedState" data-count="{{ count($forecasts) }}"></span>
 <div class="space-y-5">
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
 
@@ -63,7 +64,7 @@
                 </div>
 
                 <label class="block text-sm text-[#333333] mb-2">Forecast horizon</label>
-                <div class="flex gap-4 mb-5">
+                <div id="forecastHorizonChoices" class="flex gap-4 mb-5">
                     @foreach([7,14,30] as $h)
                     <label class="flex items-center gap-1.5 text-sm cursor-pointer">
                         <input type="radio" name="horizon" value="{{ $h }}" {{ $horizon == $h ? 'checked' : '' }} class="accent-navy" onchange="window.refreshForecastWorkspace && refreshForecastWorkspace(true)">
@@ -76,6 +77,7 @@
                 <button type="submit" id="generateForecastBtn" class="w-full bg-navy text-white py-2.5 rounded-lg text-sm hover:bg-navy transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                     <span id="btnText">Generate Forecast</span>
                 </button>
+                <button type="button" data-reset-forecast data-reset-url="{{ route('forecast.clear') }}" class="w-full mt-2 py-2.5 rounded-lg text-sm border border-[#D9D9D9] text-[#333333]">Reset and regenerate</button>
                 @endcan
             </form>
 
@@ -339,6 +341,8 @@
     }
 
     function applyForecastData(data) {
+        var savedState = document.getElementById('forecastSavedState');
+        if (savedState) savedState.dataset.count = String((data.forecasts || []).length);
         const formScope = document.getElementById('formScope');
         const formCage  = document.getElementById('formCage');
         const formBreed = document.getElementById('formBreed');

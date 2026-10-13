@@ -1495,6 +1495,8 @@ if (typeof window.__applyChartDefaults === 'function') window.__applyChartDefaul
 })();
 </script>
 
+<script src="/js/walkthrough-notes.js?v={{ @filemtime(public_path('js/walkthrough-notes.js')) }}"></script>
+<script src="/js/production-day-actions.js?v={{ @filemtime(public_path('js/production-day-actions.js')) }}"></script>
 @stack('scripts')
 </body>
 </html>

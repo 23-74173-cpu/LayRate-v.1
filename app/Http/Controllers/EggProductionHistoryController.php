@@ -87,6 +87,40 @@ class EggProductionHistoryController extends Controller
         return view('eggs.production-history', ['activeTab' => 'production-history']);
     }
 
+    public function dayDetails(string $date)
+    {
+        validator(['date' => $date], ['date' => 'required|date_format:Y-m-d'])->validate();
+        $logs = ProductionLog::real()->whereDate('log_date', $date)
+            ->with(['cageSlot.cage', 'eggSizeLogs'])->get();
+        $byCage = $logs->groupBy(fn ($log) => $log->cageSlot?->cage?->id ?? 'unassigned')
+            ->map(fn ($group) => [
+                'cage' => $group->first()->cageSlot?->cage?->cage_code ?? 'Unassigned / deleted cage',
+                'records' => $group->count(),
+                'eggs' => (int) $group->sum('egg_count'),
+                'hens' => (int) $group->sum('hen_count'),
+            ])->values();
+        return response()->json([
+            'date' => $date,
+            'records' => $logs->count(),
+            'eggs' => (int) $logs->sum('egg_count'),
+            'by_cage' => $byCage,
+            'by_size' => $logs->flatMap->eggSizeLogs->groupBy('egg_size')
+                ->map(fn ($group, $size) => ['size' => EggSize::labelFor($size), 'eggs' => (int) $group->sum('count')])->values(),
+            'can_delete' => auth()->user()->isAdmin(),
+        ]);
+    }
+
+    public function deleteDay(string $date)
+    {
+        validator(['date' => $date], ['date' => 'required|date_format:Y-m-d'])->validate();
+        $count = DB::transaction(function () use ($date) {
+            $ids = ProductionLog::real()->whereDate('log_date', $date)->lockForUpdate()->pluck('id');
+            EggSizeLog::whereIn('production_log_id', $ids)->delete();
+            return ProductionLog::whereIn('id', $ids)->delete();
+        });
+        return response()->json(['success' => true, 'deleted' => $count, 'date' => $date]);
+    }
+
     private function paginateCollection($items, Request $request, ?int $perPage = null): LengthAwarePaginator
     {
         // Null = central default (config/tables.php).

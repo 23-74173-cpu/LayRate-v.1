@@ -946,10 +946,46 @@ class ForecastController extends Controller
         return $this->forecastService()->dataSufficiency($scope, $cageCode, $breed, $beforeDate);
     }
 
-    /** Saved predictions are fixed; clearing them would erase comparisons. */
+    /** Archive a selected future range so cleaned production can be used to regenerate it. */
     public function clear(Request $request)
     {
-        return $this->rejectGenerate($request, 'Saved forecasts are fixed and retained for comparison.');
+        $data = $request->validate([
+            'scope' => 'required|in:farm,cage,breed',
+            'cage' => 'required_if:scope,cage|nullable|exists:cages,cage_code',
+            'breed' => 'required_if:scope,breed|nullable|string',
+            'horizon' => 'required|integer|min:1|max:30',
+            'start_date' => 'nullable|date_format:Y-m-d',
+        ]);
+        $start = Carbon::parse($data['start_date'] ?? ReportingDateService::reportingDate()->addDay()->toDateString());
+        $end = $start->copy()->addDays($data['horizon'] - 1);
+        if ($start->lte(ReportingDateService::reportingDate()) || $end->gt(ForecastRules::maxStartDate())) {
+            return $this->rejectGenerate($request, 'Reset only future forecast dates within the next 30 days.');
+        }
+        $scope = $data['scope'];
+        $cage = $scope === 'cage' ? Cage::where('cage_code', $data['cage'])->firstOrFail() : null;
+        $breed = $scope === 'breed' ? $data['breed'] : null;
+        $sufficient = $this->checkForecastDataSufficiency($scope, $cage?->cage_code, $breed);
+        if (! $sufficient['has_enough']) {
+            return $this->rejectGenerate($request, 'The cleaned production history needs at least 90 days before resetting and regenerating this forecast.');
+        }
+        // Do not let a job trained on the old history refill the cleared range.
+        if (ForecastRun::whereIn('status', ['queued', 'running'])->exists()) {
+            return $this->rejectGenerate($request, 'Wait for active forecast runs to finish before resetting saved forecasts.');
+        }
+        $count = DB::transaction(function () use ($cage, $breed, $start, $end) {
+            $ids = Forecast::issuedInAdvance()->where('cage_id', $cage?->id)->where('breed', $breed)
+                ->whereBetween('target_date', [$start->toDateString(), $end->toDateString()])->lockForUpdate()->pluck('id');
+            // Older archives may still hold the unique key from before resets
+            // were supported. Release those keys too, without erasing history.
+            Forecast::whereNotNull('superseded_at')->where('cage_id', $cage?->id)->where('breed', $breed)
+                ->whereBetween('target_date', [$start->toDateString(), $end->toDateString()])->update(['forecast_key' => null]);
+            return Forecast::whereIn('id', $ids)->update(['superseded_at' => now(), 'invalidated_at' => now(), 'forecast_key' => null]);
+        });
+        Log::notice('Forecast range reset after production correction', [
+            'user_id' => $request->user()->id, 'scope' => $scope, 'cage' => $cage?->cage_code,
+            'breed' => $breed, 'start' => $start->toDateString(), 'end' => $end->toDateString(), 'archived' => $count,
+        ]);
+        return response()->json(['success' => true, 'archived' => $count, 'message' => 'Saved forecasts archived. The selected range can now be regenerated.']);
     }
 
     private function wantsTurboStream(Request $request): bool

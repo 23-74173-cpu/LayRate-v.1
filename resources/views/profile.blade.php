@@ -560,6 +560,54 @@
             </button>
         </div>
 
+        {{-- STEP 5: Configure environment and log readings --}}
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-8 h-8 rounded-full bg-navy text-white flex items-center justify-center text-sm font-bold shrink-0">5</div>
+                <div>
+                    <h2 class="text-base font-medium text-[#333333]">Configure environment and log readings</h2>
+                    <p class="text-xs text-[#6B7280]">Start the guided walkthrough below.</p>
+                </div>
+            </div>
+            <p class="text-xs text-[#6B7280] mb-4">Set temperature and humidity alert thresholds, create a manual reading for one cage or all cages, then review the saved daily averages in Log History.</p>
+            <button type="button" onclick="sessionStorage.removeItem('wt5_state'); window.location.href='{{ route('environment', ['walkthrough5' => '1']) }}'"
+                    class="inline-flex items-center gap-2 text-sm font-medium text-white px-4 py-2.5 rounded-lg hover:brightness-95 transition-colors"
+                    style="background-color:var(--color-navy);">
+                <i data-lucide="play" class="w-4 h-4"></i> Start Walkthrough
+            </button>
+        </div>
+
+        {{-- STEP 6: Register hardware --}}
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-8 h-8 rounded-full bg-navy text-white flex items-center justify-center text-sm font-bold shrink-0">6</div>
+                <div>
+                    <h2 class="text-base font-medium text-[#333333]">Register and assign hardware</h2>
+                    <p class="text-xs text-[#6B7280]">Start the guided walkthrough below.</p>
+                </div>
+            </div>
+            <p class="text-xs text-[#6B7280] mb-4">Add a sensor or relay, learn its assignment and status fields, confirm registration, then review the new device and its readings.</p>
+            @if(auth()->user()->isAdmin())
+            <button type="button" onclick="sessionStorage.removeItem('wt6_state'); window.location.href='{{ route('hardware.index', ['walkthrough6' => '1']) }}'"
+                    class="inline-flex items-center gap-2 text-sm font-medium text-white px-4 py-2.5 rounded-lg hover:brightness-95 transition-colors"
+                    style="background-color:var(--color-navy);">
+                <i data-lucide="play" class="w-4 h-4"></i> Start Walkthrough
+            </button>
+            @else
+            <p class="text-xs text-[#6B7280]">Hardware registration requires an administrator account.</p>
+            @endif
+        </div>
+
+        {{-- STEP 7: Forecast egg production --}}
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-8 h-8 rounded-full bg-navy text-white flex items-center justify-center text-sm font-bold shrink-0">7</div>
+                <div><h2 class="text-base font-medium text-[#333333]">Forecast egg production</h2><p class="text-xs text-[#6B7280]">Start the guided walkthrough below.</p></div>
+            </div>
+            <p class="text-xs text-[#6B7280] mb-4">Review data readiness, choose a scope and horizon, generate a forecast when available, and review predictions in the production calendar.</p>
+            <button type="button" onclick="sessionStorage.removeItem('wt7_state'); window.location.href='{{ route('forecast', ['walkthrough7' => '1']) }}'" class="inline-flex items-center gap-2 text-sm font-medium text-white px-4 py-2.5 rounded-lg hover:brightness-95 transition-colors" style="background-color:var(--color-navy);"><i data-lucide="play" class="w-4 h-4"></i> Start Walkthrough</button>
+        </div>
+
     </div>
 
     </div>

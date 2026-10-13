@@ -81,7 +81,7 @@
                         };
                         $isStale = $lastReadingAt && $lastReadingAt->lt(now()->subMinutes(30));
                     @endphp
-                    <tr class="border-b hover:bg-black/[0.02] transition-colors" style="border-color: #e6e6e6;">
+                    <tr data-hardware-id="{{ $item->id }}" class="border-b hover:bg-black/[0.02] transition-colors" style="border-color: #e6e6e6;">
                         <td class="px-5 py-3.5">
                             <span class="text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap" style="background:{{ $tSoft }};color:{{ $tColor }};border:1px solid {{ $tColor }}40;">
                                 {{ str_replace('_', ' ', $item->device_type) }}

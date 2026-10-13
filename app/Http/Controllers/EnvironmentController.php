@@ -292,7 +292,7 @@ class EnvironmentController extends Controller
         }
 
         if ($request->wantsJson()) {
-            return response()->json(['success' => true]);
+            return response()->json(['success' => true, 'cage_ids' => $cageIds, 'log_date' => $noon->toDateString()]);
         }
 
         return redirect()->route('environment')->with('success', 'Manual reading saved.');

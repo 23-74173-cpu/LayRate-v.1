@@ -1,7 +1,12 @@
 @extends('layouts.app')
 @section('title', 'Hardware Inventory')
 
+@push('head')
+<style>.wt6-record-highlight { outline: 2px solid var(--color-navy); outline-offset: -2px; background-color: #eef4ff; }</style>
+@endpush
+
 @section('content')
+<span hidden id="hardware-walkthrough-state" data-created-id="{{ session('new_hardware_id') }}" data-reopen="{{ session('reopen_add_hardware') ? '1' : '0' }}" data-admin="{{ auth()->user()->isAdmin() ? '1' : '0' }}"></span>
 {{-- Bottom clearance: the fixed quick-dock floats over the viewport's
      bottom-right, so trailing space keeps it off the last table row/paginator. --}}
 <div class="space-y-5 pb-24 sm:pb-16">
@@ -11,7 +16,7 @@
     @push('dock-actions')
         {{-- Hardware create is admin-only server-side; hide the entry for operators so they never hit a dead button. --}}
         @if(auth()->user()->isAdmin())
-        <button type="button" onclick="openAddModal()"
+        <button type="button" data-hardware-action="add" onclick="openAddModal()"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Add Device</span>
             <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
@@ -37,7 +42,7 @@
     </div>
     @endif
 
-    <turbo-frame id="hardware-live-data" src="{{ route('hardware.live-data') }}" loading="lazy">
+    <turbo-frame id="hardware-live-data" src="{{ route('hardware.live-data', request('walkthrough6') === '1' && session('new_hardware_id') ? ['walkthrough6' => '1', 'wt6_item' => session('new_hardware_id')] : []) }}" loading="lazy">
         @include('hardware._live-data-skeleton')
     </turbo-frame>
 
@@ -54,7 +59,7 @@
             </button>
         </div>
 
-        <form method="POST" action="{{ route('hardware.store') }}"
+        <form id="hardwareAddForm" method="POST" action="{{ route('hardware.store') }}"
               data-confirm="Add this hardware item?" data-confirm-action="Add Item" data-confirm-severity="neutral"
               onsubmit="loadingButton(this.querySelector('button[type=submit]'), 'Adding\u2026')">
             @csrf
@@ -476,4 +481,8 @@ function closeEditModal() {
     });
 })();
 </script>
+@endpush
+
+@push('scripts')
+<script src="/js/hardware-walkthrough.js?v={{ @filemtime(public_path('js/hardware-walkthrough.js')) }}"></script>
 @endpush

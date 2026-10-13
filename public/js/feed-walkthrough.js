@@ -136,6 +136,7 @@
             targets[0].scrollIntoView({ block: 'nearest', inline: 'nearest' });
             lastTarget = targets[0];
         }
+        if (window.LayRateWalkthroughNotes) LayRateWalkthroughNotes.prepare(tip, targets[0]);
         var rects = targets.filter(Boolean).map(function (el) { return el.getBoundingClientRect(); });
         var left = rects.length ? Math.min.apply(null, rects.map(function (r) { return r.left; })) - 6 : 12;
         var top = rects.length ? Math.min.apply(null, rects.map(function (r) { return r.top; })) - 6 : 60;
@@ -155,6 +156,9 @@
         next.style.opacity = next.disabled ? '.5' : '1';
         next.style.cursor = next.disabled ? 'not-allowed' : 'pointer';
         next.textContent = state.step === 'records' ? 'Done' : 'Next';
+        if (window.LayRateWalkthroughNotes) {
+            LayRateWalkthroughNotes.place(tip, targets[0], { left: left, top: top, bottom: bottom });
+        } else {
         tip.style.left = Math.max(12, Math.min(left, innerWidth - tip.offsetWidth - 12)) + 'px';
         var tipTop = bottom + 14;
         if (tipTop + tip.offsetHeight > innerHeight - 12) tipTop = top - tip.offsetHeight - 14;
@@ -164,6 +168,7 @@
         // clicks reach its inputs; Next remains clickable in the tooltip.
         var overlaps = tipTop < bottom && tipTop + tip.offsetHeight > top;
         tip.style.pointerEvents = overlaps && step && (!step.manual || step.interactive) ? 'none' : 'auto';
+        }
         highlightedRows.forEach(function (row) { row.classList.remove('wt4-record-highlight'); });
         highlightedRows = state.step === 'records' ? savedRows() : [];
         highlightedRows.forEach(function (row) { row.classList.add('wt4-record-highlight'); });
@@ -201,6 +206,7 @@
         setStep(step.to);
     });
     function cleanup() {
+        if (window.LayRateWalkthroughNotes) LayRateWalkthroughNotes.release();
         active = false;
         clearInterval(timer);
         listeners.forEach(function (remove) { remove(); });

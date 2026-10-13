@@ -3132,6 +3132,7 @@ bindStagingInfoButtons();
             el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
             lastTarget = el;
         }
+        if (window.LayRateWalkthroughNotes) LayRateWalkthroughNotes.prepare(tooltip, el);
         var r;
         if (idx === 6) {
             if (!detailsHighlightRect) detailsHighlightRect = el.getBoundingClientRect();
@@ -3183,6 +3184,9 @@ bindStagingInfoButtons();
         stepLabel.textContent = 'Step ' + (idx + 1) + ' of ' + steps.length;
         stepText.innerHTML = s.text;
         nextBtn.style.display = s.manual ? 'inline-block' : 'none';
+        if (window.LayRateWalkthroughNotes) {
+            LayRateWalkthroughNotes.place(tooltip, el, { left: left, top: top, bottom: bottom });
+        } else {
         var ttH = tooltip.offsetHeight;
         var ttTop = bottom + 14;
         if (ttTop + ttH > window.innerHeight - 20) {
@@ -3190,6 +3194,7 @@ bindStagingInfoButtons();
         }
         tooltip.style.left = Math.max(12, Math.min(left, window.innerWidth - tooltip.offsetWidth - 12)) + 'px';
         tooltip.style.top = ttTop + 'px';
+        }
     }
 
     function show() {
@@ -3212,6 +3217,7 @@ bindStagingInfoButtons();
     }
 
     function outro() {
+        if (window.LayRateWalkthroughNotes) LayRateWalkthroughNotes.release();
         stopPolling();
         // Hide the walkthrough chrome; show the completion screen.
         overlay.querySelectorAll('#wtSpotlight, #wtTooltip, #wtSkip').forEach(function(n) { n.style.display = 'none'; });
@@ -3224,6 +3230,7 @@ bindStagingInfoButtons();
     }
 
     function finish() {
+        if (window.LayRateWalkthroughNotes) LayRateWalkthroughNotes.release();
         stopPolling();
         overlay.style.display = 'none';
         skipBtn.style.display = 'none';
@@ -3272,6 +3279,7 @@ bindStagingInfoButtons();
     // scroll container to let the user scroll while the walkthrough is open.
     document.addEventListener('wheel', function(e) {
         if (sessionStorage.getItem('wt_active') !== '1') return;
+        if (tooltip.contains(e.target)) return;
         var target = steps[idx] && steps[idx].target();
         var dialog = target && target.closest('[role="dialog"]');
         var sc = e.target.closest('.overflow-y-auto, .overflow-auto')

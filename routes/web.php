@@ -148,6 +148,8 @@ Route::middleware(['auth', 'system-time-set'])->group(function () {
     Route::get('/eggs/recent-logs',                    [EggLoggingController::class, 'recentLogs'])->name('eggs.recent-logs');
     Route::get('/egg-production-history',              [EggProductionHistoryController::class, 'index'])->name('egg-production-history');
     Route::get('/eggs/production-history',             [EggProductionHistoryController::class, 'productionHistory'])->name('eggs.production-history');
+    Route::get('/eggs/production-history/day/{date}', [EggProductionHistoryController::class, 'dayDetails'])->name('eggs.production-history.day');
+    Route::delete('/eggs/production-history/day/{date}', [EggProductionHistoryController::class, 'deleteDay'])->name('eggs.production-history.day.delete')->middleware('admin');
     Route::post('/eggs/logging',                       [EggLoggingController::class, 'store'])->name('eggs.logging.store');
     Route::post('/eggs/logging/verify-override',       [EggLoggingController::class, 'verifyOverride'])->name('eggs.logging.verify-override')->middleware('throttle:6,1');
     Route::put('/eggs/logging/{productionLog}',        [EggLoggingController::class, 'update'])->name('eggs.logging.update');

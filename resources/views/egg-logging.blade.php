@@ -2039,6 +2039,7 @@
             dims.forEach(function(d) { d.style.display = 'none'; });
             return;
         }
+        if (window.LayRateWalkthroughNotes) LayRateWalkthroughNotes.prepare(tooltip, el);
         var r = el.getBoundingClientRect();
         var pad = 6;
         var left = r.left - pad, top = r.top - pad;
@@ -2078,11 +2079,15 @@
             nextBtn.style.opacity = '1';
             nextBtn.style.cursor = 'pointer';
         }
+        if (window.LayRateWalkthroughNotes) {
+            LayRateWalkthroughNotes.place(tooltip, el, { left: left, top: top, bottom: bottom });
+        } else {
         var ttH = tooltip.offsetHeight;
         var ttTop = bottom + 14;
         if (ttTop + ttH > window.innerHeight - 20) { ttTop = Math.max(12, top - ttH - 14); }
         tooltip.style.left = Math.max(12, Math.min(left, window.innerWidth - tooltip.offsetWidth - 12)) + 'px';
         tooltip.style.top = ttTop + 'px';
+        }
     }
 
     function show() {
@@ -2106,6 +2111,7 @@
     }
 
     function outro() {
+        if (window.LayRateWalkthroughNotes) LayRateWalkthroughNotes.release();
         stopPolling();
         overlay.querySelectorAll('#wt3Spotlight, #wt3Tooltip, #wt3Skip').forEach(function(n) { n.style.display = 'none'; });
         try { window.lucide.createIcons(); } catch (e) {}
@@ -2117,6 +2123,7 @@
     }
 
     function finish() {
+        if (window.LayRateWalkthroughNotes) LayRateWalkthroughNotes.release();
         stopPolling();
         overlay.style.display = 'none';
         skipBtn.style.display = 'none';
@@ -2162,6 +2169,7 @@
     // Forward wheel scrolling so the user can scroll during the tutorial.
     document.addEventListener('wheel', function(e) {
         if (sessionStorage.getItem('wt3_active') !== '1') return;
+        if (tooltip.contains(e.target)) return;
         var target = steps[idx] && steps[idx].target();
         var dialog = target && target.closest('[role="dialog"]');
         var sc = e.target.closest('.overflow-y-auto, .overflow-auto')

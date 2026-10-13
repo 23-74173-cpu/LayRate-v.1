@@ -1172,6 +1172,7 @@ document.addEventListener('keydown', function(e) {
             el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
             lastTarget = el;
         }
+        if (window.LayRateWalkthroughNotes) LayRateWalkthroughNotes.prepare(tooltip, el);
         var r = el.getBoundingClientRect();
         var pad = 6;
         var left = r.left - pad, top = r.top - pad;
@@ -1203,6 +1204,9 @@ document.addEventListener('keydown', function(e) {
         stepLabel.textContent = 'Step ' + (idx + 1) + ' of ' + steps.length;
         stepText.innerHTML = s.text;
         nextBtn.style.display = s.manual ? 'inline-block' : 'none';
+        if (window.LayRateWalkthroughNotes) {
+            LayRateWalkthroughNotes.place(tooltip, el, { left: left, top: top, bottom: bottom });
+        } else {
         var ttH = tooltip.offsetHeight;
         var ttTop = bottom + 14;
         if (ttTop + ttH > window.innerHeight - 20) {
@@ -1210,6 +1214,7 @@ document.addEventListener('keydown', function(e) {
         }
         tooltip.style.left = Math.max(12, Math.min(left, window.innerWidth - tooltip.offsetWidth - 12)) + 'px';
         tooltip.style.top = ttTop + 'px';
+        }
     }
 
     function show() {
@@ -1230,6 +1235,7 @@ document.addEventListener('keydown', function(e) {
     }
 
     function outro() {
+        if (window.LayRateWalkthroughNotes) LayRateWalkthroughNotes.release();
         stopPolling();
         overlay.querySelectorAll('#wt2Spotlight, #wt2Tooltip, #wt2Skip').forEach(function(n) { n.style.display = 'none'; });
         try { window.lucide.createIcons(); } catch (e) {}
@@ -1237,6 +1243,7 @@ document.addEventListener('keydown', function(e) {
     }
 
     function finish() {
+        if (window.LayRateWalkthroughNotes) LayRateWalkthroughNotes.release();
         stopPolling();
         overlay.style.display = 'none';
         skipBtn.style.display = 'none';
@@ -1278,6 +1285,7 @@ document.addEventListener('keydown', function(e) {
     // scroll container to let the user scroll while the walkthrough is open.
     document.addEventListener('wheel', function(e) {
         if (sessionStorage.getItem('wt2_active') !== '1') return;
+        if (tooltip.contains(e.target)) return;
         var target = steps[idx] && steps[idx].target();
         var dialog = target && target.closest('[role="dialog"]');
         var sc = e.target.closest('.overflow-y-auto, .overflow-auto')

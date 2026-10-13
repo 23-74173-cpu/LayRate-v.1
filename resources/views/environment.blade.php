@@ -1,6 +1,10 @@
 @extends('layouts.app')
 @section('title', 'Environment')
 
+@push('head')
+<style>.wt5-record-highlight { outline: 2px solid var(--color-navy); outline-offset: -2px; background-color: #eef4ff; }</style>
+@endpush
+
 @section('content')
 {{-- Bottom clearance: the fixed quick-dock floats over the viewport's
      bottom-right, so trailing space keeps it off the last table row/paginator. --}}
@@ -19,14 +23,14 @@
             </div>
         </button>
         @endif
-        <button type="button" onclick="openEnvManualModal()"
+        <button type="button" data-env-action="manual" onclick="openEnvManualModal()"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Manual Entry</span>
             <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
                 <i data-lucide="pen-line" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
-        <button type="button" onclick="openEnvThresholdsModal()"
+        <button type="button" data-env-action="thresholds" onclick="openEnvThresholdsModal()"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Configure Thresholds</span>
             <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
@@ -81,28 +85,28 @@
             <div class="space-y-4">
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TEMP MIN (°C)</label>
-                    <input type="number" name="temp_min" data-optimal-kind="temp" step="0.5"
+                    <input type="number" name="temp_min" required min="0" max="50" data-optimal-kind="temp" step="0.5"
                            value="{{ $thresholds['temp_min'] }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                     <p class="text-xs mt-1 truncate" data-optimal-hint aria-live="polite"></p>
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TEMP MAX (°C)</label>
-                    <input type="number" name="temp_max" data-optimal-kind="temp" step="0.5"
+                    <input type="number" name="temp_max" required min="0" max="50" data-optimal-kind="temp" step="0.5"
                            value="{{ $thresholds['temp_max'] }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                     <p class="text-xs mt-1 truncate" data-optimal-hint aria-live="polite"></p>
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">HUMIDITY MIN (%)</label>
-                    <input type="number" name="hum_min" data-optimal-kind="hum" step="1"
+                    <input type="number" name="hum_min" required min="0" max="100" data-optimal-kind="hum" step="1"
                            value="{{ $thresholds['hum_min'] }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                     <p class="text-xs mt-1 truncate" data-optimal-hint aria-live="polite"></p>
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">HUMIDITY MAX (%)</label>
-                    <input type="number" name="hum_max" data-optimal-kind="hum" step="1"
+                    <input type="number" name="hum_max" required min="0" max="100" data-optimal-kind="hum" step="1"
                            value="{{ $thresholds['hum_max'] }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                     <p class="text-xs mt-1 truncate" data-optimal-hint aria-live="polite"></p>
@@ -405,6 +409,7 @@ function envRefreshNow() {
                     msg.style.color = '#1f6b3a';
                     msg.classList.remove('hidden');
                 }
+                document.dispatchEvent(new CustomEvent('environment:reading-saved', { detail: res.data }));
                 form.reset();
                 form.querySelector('select[name="cage_id"]').value = '';
                 envRefreshNow();
@@ -728,7 +733,8 @@ if (!window.__envThresholdsEscapeBound) {
             headers: { 'Accept': 'application/json' },
         })
         .then(function(r) {
-            if (r.ok || r.redirected) {
+            if (r.ok && !r.redirected) {
+                document.dispatchEvent(new CustomEvent('environment:thresholds-saved'));
                 envRefreshNow();
                 if (typeof showNotification === 'function') {
                     showNotification('Thresholds saved successfully.', 'success');
@@ -810,4 +816,8 @@ if (!window.__envThresholdsEscapeBound) {
     updateAll();
 })();
 </script>
+@endpush
+
+@push('scripts')
+<script src="/js/environment-walkthrough.js?v={{ @filemtime(public_path('js/environment-walkthrough.js')) }}"></script>
 @endpush
