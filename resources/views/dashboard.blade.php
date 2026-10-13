@@ -57,8 +57,8 @@
 
             <div class="hidden sm:block w-px self-stretch" style="background-color: #E5E7EB;"></div>
 
-            <div class="flex flex-col gap-1.5 sm:gap-2 sm:shrink-0">
-            <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 sm:shrink-0">
+            <div class="grid grid-cols-2 min-w-0 gap-3 sm:flex sm:items-center sm:gap-5 sm:shrink-0">
+            <div class="min-w-0 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 sm:shrink-0">
                 <label for="dashboardFromDate" class="flex items-center gap-1.5 shrink-0 text-xs font-bold uppercase tracking-[0.125px] text-[#6B7280]">
                     <i data-lucide="calendar-days" class="w-4 h-4"></i>
                     <span>From</span>
@@ -67,10 +67,10 @@
                        max="{{ now()->toDateString() }}"
                        onchange="setDashboardFromDate(this.value)"
                        title="Show analytics from this date"
-                       class="w-full sm:w-44 shrink-0 border border-[#D9D9D9] rounded-lg px-2.5 py-2.5 sm:py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy">
+                       class="w-full min-w-0 sm:w-44 sm:shrink-0 border border-[#D9D9D9] rounded-lg px-2.5 py-2.5 sm:py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy">
             </div>
 
-            <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 sm:shrink-0">
+            <div class="min-w-0 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 sm:shrink-0">
                 <label for="dashboardToDate" class="flex items-center gap-1.5 shrink-0 text-xs font-bold uppercase tracking-[0.125px] text-[#6B7280]">
                     <i data-lucide="calendar-days" class="w-4 h-4"></i>
                     <span>To</span>
@@ -79,7 +79,7 @@
                        max="{{ now()->toDateString() }}"
                        onchange="setDashboardToDate(this.value)"
                        title="Show analytics up to this date"
-                       class="w-full sm:w-44 shrink-0 border border-[#D9D9D9] rounded-lg px-2.5 py-2.5 sm:py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy">
+                       class="w-full min-w-0 sm:w-44 sm:shrink-0 border border-[#D9D9D9] rounded-lg px-2.5 py-2.5 sm:py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy">
             </div>
             </div>
         </div>
