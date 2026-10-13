@@ -37,12 +37,12 @@
                 />
 
                 <x-kpi-card
-                    label="Yesterday's Mortality" infoKey="flock.mortality-yesterday"
+                    label="Total Mortality" info="Total recorded hen deaths across all dates for the selected cage, or the whole farm when no cage is selected."
                     icon="calendar-x"
                     cardGradient="linear-gradient(135deg,#d97706,#C2703E)"
                     delay="120ms"
                     :href="route('chickens.index', ['tab' => 'mortality'])"
-                    :value="number_format($yesterdayMortalityTotal)"
+                    :value="number_format($totalMortality)"
                 />
             </div>
         </div>

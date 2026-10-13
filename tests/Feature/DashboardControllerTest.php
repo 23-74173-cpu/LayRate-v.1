@@ -161,6 +161,8 @@ class DashboardControllerTest extends TestCase
 
     public function test_flock_stats_partial_renders_mortality_livability_metrics(): void
     {
+        \App\Models\MortalityLog::create(['cage_id' => $this->cageA->id, 'log_date' => now()->subDays(30)->toDateString(), 'count' => 4, 'reason' => 'Other']);
+        \App\Models\MortalityLog::create(['cage_id' => $this->cageB->id, 'log_date' => now()->subDays(20)->toDateString(), 'count' => 3, 'reason' => 'Other']);
         $response = $this->actingAs($this->admin)->get(route('dashboard.stats.flock'));
         $response->assertOk();
 
@@ -170,7 +172,11 @@ class DashboardControllerTest extends TestCase
 
         $response->assertSee('Mortality Today')
             ->assertSee('Livability')
-            ->assertSee("Yesterday's Mortality");
+            ->assertSee('Total Mortality');
+        $this->assertEquals(\App\Models\MortalityLog::sum('count'), $response->viewData('totalMortality'));
+        $filtered = $this->actingAs($this->admin)->get(route('dashboard.stats.flock', ['cage' => $this->cageA->cage_code, 'days' => 7]));
+        $filtered->assertOk();
+        $this->assertEquals(4, $filtered->viewData('totalMortality'));
     }
 
     public function test_cage_performance_endpoint_returns_view_with_rankings(): void

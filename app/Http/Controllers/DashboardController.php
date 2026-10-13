@@ -1609,6 +1609,9 @@ class DashboardController extends Controller
 
         // Yesterday's mortality
         $yesterdayMortalityTotal = $this->mortalityTotalForDay($cageCode, $yesterday);
+        $totalMortality = MortalityLog::query()
+            ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
+            ->sum('count');
 
         // Yesterday's feed consumed
         $yesterdayFeedTotal = $this->feedTotalForDay($cageCode, $yesterday);
@@ -1682,7 +1685,7 @@ class DashboardController extends Controller
             'mortalityToday', 'mortalityTodayTotal',
             'totalFeedConsumed', 'avgCp', 'avgFeedPerCage',             'totalFeedWeek', 'totalFeedCostMonth', 'feedTodayKg', 'feedCostToday',
             'feedWeekByCage', 'feedCostByCage', 'allBatches', 'feedAsOf',
-            'yesterdayHdep', 'eggsYesterday', 'yesterdayMortalityTotal', 'yesterdayFeedTotal',
+            'yesterdayHdep', 'eggsYesterday', 'yesterdayMortalityTotal', 'yesterdayFeedTotal', 'totalMortality',
             'liveReadings', 'today', 'dataCompleteness', 'kpiAsOf',
             'needsOnboarding', 'dayComplete'
         );
