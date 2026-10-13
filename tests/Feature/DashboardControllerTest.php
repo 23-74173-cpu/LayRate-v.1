@@ -362,6 +362,37 @@ class DashboardControllerTest extends TestCase
         $this->assertTrue(collect($variance)->every(fn ($v) => $v === null));
     }
 
+    public function test_forecast_overlay_includes_upcoming_saved_dates_and_keeps_missing_actual_null(): void
+    {
+        $target = now()->addDays(3)->toDateString();
+        Forecast::create(['forecast_date' => now()->toDateString(), 'target_date' => $target, 'predicted_egg_count' => 25]);
+        $response = $this->actingAs($this->admin)->getJson(route('dashboard.forecast-overlay', ['days' => 30]));
+        $response->assertOk()->assertJsonPath('hasForecast', true);
+        $data = $response->json();
+        $index = array_search($target, $data['dateKeys']);
+        $this->assertNotFalse($index);
+        $this->assertCount(33, $data['dateKeys']);
+        $this->assertSame(25, $data['forecast'][$index]);
+        $this->assertNull($data['actual'][$index]);
+        $this->assertSame('Awaiting completed production records for comparison.', $data['summary']);
+        $bounded = $this->actingAs($this->admin)->getJson(route('dashboard.forecast-overlay', ['days' => 30, 'to_date' => now()->toDateString()]));
+        $bounded->assertOk()->assertJsonPath('hasForecast', false);
+        $this->assertNotContains($target, $bounded->json('dateKeys'));
+    }
+
+    public function test_forecast_overlay_all_time_includes_dates_without_production_and_excludes_backtests(): void
+    {
+        $target = now()->addDay()->toDateString();
+        Forecast::create(['forecast_date' => now()->toDateString(), 'target_date' => $target, 'predicted_egg_count' => 25]);
+        Forecast::create(['forecast_date' => now()->toDateString(), 'target_date' => now()->addDays(90)->toDateString(), 'predicted_egg_count' => 100, 'is_backtest' => true]);
+        $response = $this->actingAs($this->admin)->getJson(route('dashboard.forecast-overlay', ['days' => 0, 'cage' => 'all']));
+        $response->assertOk()->assertJsonPath('hasForecast', true);
+        $this->assertContains($target, $response->json('dateKeys'));
+        $this->assertNotContains(now()->addDays(90)->toDateString(), $response->json('dateKeys'));
+        $cage = $this->actingAs($this->admin)->getJson(route('dashboard.forecast-overlay', ['days' => 7, 'cage' => $this->cageA->cage_code]));
+        $cage->assertOk()->assertJsonPath('hasForecast', false);
+    }
+
     public function test_forecast_overlay_with_partial_coverage_computes_variance(): void
     {
         $yesterday = now()->subDay()->toDateString();

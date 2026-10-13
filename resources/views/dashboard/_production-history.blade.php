@@ -259,6 +259,7 @@
     };
 
     window.hideForecastOverlay = function() {
+        window.__forecastComparisonRequest = (window.__forecastComparisonRequest || 0) + 1;
         var panel = document.getElementById('forecastVariancePanel');
         if (panel) panel.classList.add('hidden');
         // Restore original single-dataset chart
@@ -272,7 +273,7 @@
     };
 
     window.loadForecastOverlay = function() {
-        var cage = (typeof window.__dashboardCage !== 'undefined' && window.__dashboardCage !== 'all') ? window.__dashboardCage : '{{ $cageCode ?? '' }}';
+        var cage = typeof window.__dashboardCage !== 'undefined' ? (window.__dashboardCage === 'all' ? '' : window.__dashboardCage) : '{{ $cageCode ?? '' }}';
         var isCompare = (typeof window.__dashboardHistoryCompare !== 'undefined') ? window.__dashboardHistoryCompare : {{ $compare ? 'true' : 'false' }};
         if (isCompare) {
             // Compare shows multiple cage lines; overlay a single dashed forecast for the
@@ -280,13 +281,14 @@
             // for Phase 3 — the variance summary is still per-date and remains useful.
         }
         var bounds = new URLSearchParams();
+        bounds.set('days', '{{ $days }}');
         if (cage) bounds.set('cage', cage);
         if (window.__dashboardFromDate) bounds.set('from_date', window.__dashboardFromDate);
         if (window.__dashboardToDate) bounds.set('to_date', window.__dashboardToDate);
         var requestId = window.__forecastComparisonRequest = (window.__forecastComparisonRequest || 0) + 1;
         var url = '{{ route('dashboard.forecast-overlay') }}' + '?' + bounds.toString();
         fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
-            .then(function(r) { return r.json(); })
+            .then(function(r) { if (!r.ok || r.redirected) throw new Error('Could not load saved forecasts.'); return r.json(); })
             .then(function(data) {
                 if (!window.__forecastOverlayEnabled || requestId !== window.__forecastComparisonRequest) return;
                 if (!data.hasForecast || !data.forecast || data.forecast.every(function(v){ return v===null; })) {
@@ -310,16 +312,33 @@
                     borderDash: [6, 4],
                     tension: 0.3,
                     borderWidth: 2,
-                    pointRadius: 0,
+                    pointRadius: 3,
                     pointHoverRadius: 5,
                     fill: false,
                     spanGaps: true
                 };
                 var mergedData = JSON.parse(JSON.stringify(window.__originalProductionChartData));
+                var originalKeys = mergedData.dateKeys || [];
+                mergedData.labels = data.labels;
+                mergedData.dateKeys = data.dateKeys;
                 if (!isCompare && mergedData.datasets[0]) mergedData.datasets[0].data = data.actual;
+                else mergedData.datasets.forEach(function(dataset) {
+                    var values = new Map(originalKeys.map(function(date, index) { return [date, dataset.data[index]]; }));
+                    dataset.data = data.dateKeys.map(function(date) { return values.has(date) ? values.get(date) : null; });
+                });
                 // Keep cage comparison lines when enabled; append the saved prediction.
                 mergedData.datasets = mergedData.datasets.concat([forecastDataset]);
-                var mergedConfig = JSON.parse(JSON.stringify(window.__originalProductionChartConfig));
+                // Preserve tooltip callbacks and chart plugins when copying options.
+                function copyConfig(value) {
+                    if (Array.isArray(value)) return value.map(copyConfig);
+                    if (value && typeof value === 'object') {
+                        var copy = {};
+                        Object.keys(value).forEach(function(key) { copy[key] = copyConfig(value[key]); });
+                        return copy;
+                    }
+                    return value;
+                }
+                var mergedConfig = copyConfig(window.__originalProductionChartConfig);
                 mergedConfig.data = mergedData;
                 mergedConfig.options.plugins.legend.display = true;
                 mergedConfig.options.plugins.tooltip = mergedConfig.options.plugins.tooltip || {};
@@ -346,6 +365,7 @@
                 }
             })
             .catch(function(err) {
+                if (!window.__forecastOverlayEnabled || requestId !== window.__forecastComparisonRequest) return;
                 console.error('Forecast overlay failed', err);
                 var p3 = document.getElementById('forecastVariancePanel');
                 var t3 = document.getElementById('forecastVarianceText');

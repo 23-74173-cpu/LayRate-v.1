@@ -536,6 +536,7 @@ class DashboardController extends Controller
 
         $chartData = [
             'labels' => $labels,
+            'dateKeys' => $dateKeys->values()->toArray(),
             'datasets' => $datasets,
         ];
 
@@ -583,6 +584,7 @@ class DashboardController extends Controller
     public function forecastOverlay(Request $request)
     {
         $cageCode = $request->get('cage');
+        if ($cageCode === 'all') $cageCode = null;
         $days = $this->normalizeDays((int) $request->get('days', 7));
 
         $fromDate = request('from_date');
@@ -591,8 +593,6 @@ class DashboardController extends Controller
         if ($this->validRangeDate($fromDate) || $this->validRangeDate($toDate)) {
             $days = max(1, (int) abs(Carbon::parse($endDate)->copy()->startOfDay()->diffInDays(Carbon::parse($startDate)->copy()->startOfDay())) + 1);
         }
-
-        [$labels, $dateKeys] = $this->buildHistoryDateKeys($cageCode, $days, $startDate, $endDate, $reportingDate);
 
         // Actual production per date (same source as productionHistory)
         $scope = fn ($q) => $q->when($cageCode, fn ($cq) => $cq->whereHas('cageSlot.cage', fn ($c) => $c->where('cage_code', $cageCode)));
@@ -606,12 +606,26 @@ class DashboardController extends Controller
             ->pluck('total', 'log_date');
 
         $cage = $cageCode ? Cage::where('cage_code', $cageCode)->first() : null;
-        $forecastQuery = Forecast::issuedInAdvance()
-            ->whereBetween('target_date', [$startDate, $endDate]);
+        $forecastQuery = Forecast::issuedInAdvance();
         if ($cageCode) {
             $forecastQuery->where('cage_id', $cage?->id ?? -1)->whereNull('breed');
         } else {
             $forecastQuery->whereNull('cage_id')->whereNull('breed');
+        }
+        // Without a To filter, include the saved outlook as well as history.
+        // Keep an explicit date range bounded exactly as requested.
+        if (! $this->validRangeDate($toDate)) {
+            $lastForecastDate = (clone $forecastQuery)->where('target_date', '>=', $startDate)->max('target_date');
+            if ($lastForecastDate && $lastForecastDate > $endDate) $endDate = $lastForecastDate;
+        }
+        $forecastQuery->whereBetween('target_date', [$startDate, $endDate]);
+        if ($days > 0) {
+            $rangeDays = max(1, (int) Carbon::parse($startDate)->diffInDays(Carbon::parse($endDate)) + 1);
+            [$labels, $dateKeys] = $this->buildHistoryDateKeys($cageCode, $rangeDays, $startDate, $endDate, $reportingDate);
+        } else {
+            [$labels, $dateKeys] = $this->buildHistoryDateKeys($cageCode, $days, $startDate, $endDate, $reportingDate);
+            $dateKeys = $dateKeys->merge((clone $forecastQuery)->pluck('target_date')->map(fn ($date) => Carbon::parse($date)->toDateString()))->unique()->sort()->values();
+            $labels = $dateKeys->map(fn ($date) => Carbon::parse($date)->format('M j'))->all();
         }
         // Preserve the earliest advance prediction, including migrated history.
         $rows = $forecastQuery->orderBy('forecast_date')->orderBy('id')->get();

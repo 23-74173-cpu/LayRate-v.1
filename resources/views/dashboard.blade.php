@@ -827,6 +827,7 @@
         // compares all cages against each other regardless of the active cage filter.
         reloadFramePreservingScroll('dashboard-cage-performance', base('{{ route('dashboard.cage-performance') }}'));
         reloadFramePreservingScroll('dashboard-production-history', base('{{ route('dashboard.production-history') }}', {
+            cage: cageParam,
             compare: window.__dashboardHistoryCompare ? 1 : null
         }));
         reloadFramePreservingScroll('dashboard-heat-stress', caged('{{ route('dashboard.heat-stress') }}'));
