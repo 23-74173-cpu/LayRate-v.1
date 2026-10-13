@@ -56,11 +56,14 @@ class FeedController extends Controller
         $avgCp = FeedBatch::avg('crude_protein');
 
         $batches = FeedBatch::withSum('consumptionLogs as consumed_sum', 'feed_consumed_kg')
+            ->when(request('walkthrough4') === '1' && request('wt4_batch'), fn ($q) => $q->whereKey((int) request('wt4_batch')))
             ->orderByDesc('date_received')->paginate((int) config('tables.per_page', 25))->withQueryString();
 
         $preselectedCageId = (int) request('cage_id') ?: null;
 
         $consumptionLogs = FeedConsumptionLog::with(['cage', 'feedBatch', 'farmFeedEntry'])
+            ->when(request('walkthrough4') === '1' && request('wt4_log'), fn ($q) => $q->whereKey((int) request('wt4_log')))
+            ->when(request('walkthrough4') === '1' && request('wt4_farm'), fn ($q) => $q->where('farm_feed_entry_id', (int) request('wt4_farm')))
             ->when($preselectedCageId, fn ($q) => $q->where('cage_id', $preselectedCageId))
             ->orderByDesc('log_date')
             ->orderByDesc('log_time')
@@ -281,7 +284,7 @@ class FeedController extends Controller
         Note::saveFromSection($data['notes'] ?? null, 'Feed');
 
         if ($request->expectsJson()) {
-            return response()->json(['success' => true, 'batch_code' => $batch->batch_code]);
+            return response()->json(['success' => true, 'batch_code' => $batch->batch_code, 'batch_id' => $batch->id]);
         }
 
         return redirect()->back()
@@ -375,7 +378,7 @@ class FeedController extends Controller
         $this->checkLowStock($data['feed_batch_id']);
 
         if ($request->expectsJson()) {
-            return response()->json(['success' => true]);
+            return response()->json(['success' => true, 'log_id' => $log->id]);
         }
 
         return redirect()->back()
@@ -478,7 +481,7 @@ class FeedController extends Controller
         $this->checkLowStock($entry->feed_batch_id);
 
         if ($request->expectsJson()) {
-            return response()->json(['success' => true]);
+            return response()->json(['success' => true, 'farm_entry_id' => $entry->id]);
         }
 
         return redirect()->back()

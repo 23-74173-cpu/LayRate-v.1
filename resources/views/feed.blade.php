@@ -1,6 +1,12 @@
 @extends('layouts.app')
 @section('title', 'Feed & Nutrition')
 
+@push('head')
+<style>
+.wt4-record-highlight { outline: 2px solid var(--color-navy); outline-offset: -2px; background-color: #eef4ff; }
+</style>
+@endpush
+
 @section('content')
 @php $feedNotes = \App\Models\Note::suggestionsFor('Feed'); @endphp
 {{-- Bottom clearance: the fixed quick-dock floats over the viewport's
@@ -11,7 +17,7 @@
 
     @push('dock-actions')
         <button type="button"
-                onclick="openConsumptionModal()"
+                data-feed-action="consumption" onclick="openConsumptionModal()"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Add Consumption</span>
             <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
@@ -19,7 +25,7 @@
             </div>
         </button>
         <button type="button"
-                onclick="openFarmEntryModal()"
+                data-feed-action="farm" onclick="openFarmEntryModal()"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Log Whole-Farm Feeding</span>
             <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
@@ -27,7 +33,7 @@
             </div>
         </button>
         <button type="button"
-                onclick="document.getElementById('addBatchModal').classList.remove('hidden'); document.getElementById('addBatchModal').classList.add('flex');"
+                data-feed-action="batch" onclick="document.getElementById('addBatchModal').classList.remove('hidden'); document.getElementById('addBatchModal').classList.add('flex');"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Add Feed Batch</span>
             <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
@@ -37,7 +43,7 @@
     @endpush
 
     {{-- Live Data (lazy): metrics, tabs, batches, consumption --}}
-    <turbo-frame id="feed-live-data" src="{{ route('feed.live-data', request()->only('cage_id')) }}" loading="lazy">
+    <turbo-frame id="feed-live-data" src="{{ route('feed.live-data', request()->only('cage_id', 'walkthrough4', 'wt4_batch', 'wt4_log', 'wt4_farm')) }}" loading="lazy">
         @include('feed._live-data-skeleton')
     </turbo-frame>
 </div>
@@ -52,7 +58,7 @@
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
         </div>
-        <form method="POST" action="{{ route('feed.batch.store') }}"
+        <form id="addFeedBatchForm" method="POST" action="{{ route('feed.batch.store') }}"
               data-turbo="false" data-feed-ajax="tab-batches-frame">
             @csrf
             <p class="text-xs text-[#6B7280] mb-4">Batch code is auto-generated (e.g. F-2026-001).</p>
@@ -389,6 +395,7 @@ function feedAjaxSubmit(form) {
         if (res.body.success) {
             if (window.LayRateNotes) LayRateNotes.rememberFromForm(form);
             closeAllFeedModals();
+            document.dispatchEvent(new CustomEvent('feed:saved', { detail: { formId: form.id, data: res.body } }));
             feedReloadLiveData();
             showNotification('Saved successfully.', 'success');
             reEnable();
@@ -429,7 +436,11 @@ function feedReloadLiveData() {
     var url = new URL(frame.src, window.location.origin);
     var cur = new URL(window.location);
     cur.searchParams.forEach(function(v, k) { url.searchParams.set(k, v); });
-    frame.src = url.toString();
+    if (frame.src === url.toString()) {
+        frame.reload();
+    } else {
+        frame.src = url.toString();
+    }
 }
 
 function openEditBatch(id, brand, cp, qty, cost, threshold, notes) {
@@ -621,4 +632,8 @@ function deleteFarmEntry(id) {
     .catch(function() { showNotification('Delete failed.', 'error'); });
 }
 </script>
+@endpush
+
+@push('scripts')
+<script src="/js/feed-walkthrough.js?v={{ @filemtime(public_path('js/feed-walkthrough.js')) }}"></script>
 @endpush

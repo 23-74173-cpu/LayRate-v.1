@@ -1,5 +1,6 @@
 @php use App\Models\Alert; @endphp
 <turbo-frame id="feed-live-data">
+    <span hidden data-feed-batch-count="{{ $allBatches->count() }}"></span>
     {{-- ── Metric Cards — dashboard gradient KPI design (cardGradient) ── --}}
     @if($feedAsOf ?? null)
     <p class="text-xs font-medium mb-3" style="color:#9ca3af;">Showing last logged week · as of {{ $feedAsOf }}</p>
@@ -202,9 +203,9 @@
                         <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Brand</th>
                         <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Received</th>
                         <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">CP%</th>
-                        <th class="text-right text-xs text-[#6B7280] px-5 py-3 font-medium">Qty (kg)</th>
+                        <th class="text-right text-xs text-[#6B7280] px-5 py-3 font-medium">Received Qty (kg)</th>
                         <th class="text-right text-xs text-[#6B7280] px-5 py-3 font-medium">Total Cost</th>
-                        <th class="text-right text-xs text-[#6B7280] px-5 py-3 font-medium">Remaining</th>
+                        <th class="text-right text-xs text-[#6B7280] px-5 py-3 font-medium">Remaining Stock (kg)</th>
                         <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Notes</th>
                         <th class="px-5 py-3"></th>
                     </tr>
@@ -214,7 +215,7 @@
                     @php
                         $isLow = $batch->is_low_stock;
                     @endphp
-                    <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
+                    <tr data-feed-batch-id="{{ $batch->id }}" class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
                         <td class="px-5 py-3.5 text-sm font-medium text-[#333333]">{{ $batch->batch_code }}</td>
                         <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $batch->brand ?? '—' }}</td>
                         <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $batch->date_received->format('m/d/Y') }}</td>
@@ -290,7 +291,7 @@
                         $cColor = $log->cage?->color ?? '#6B7280';
                         $isDistributed = $log->source === 'distributed';
                     @endphp
-                    <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
+                    <tr data-feed-log-id="{{ $log->id }}" data-feed-farm-id="{{ $log->farm_feed_entry_id }}" class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
                         <td class="px-5 py-3.5 text-sm font-mono text-[#333333]">{{ $log->log_date->format('m/d/Y') }}</td>
                         <td class="px-5 py-3.5 text-sm text-[#6B7280]">{{ $log->log_time?->format('H:i') ?? '—' }}</td>
                         <td class="px-5 py-3.5 text-sm font-medium" style="color:{{ $cColor }}">{{ $log->cage?->cage_code ?? '—' }}</td>

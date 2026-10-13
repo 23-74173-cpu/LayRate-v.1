@@ -540,6 +540,26 @@
             </button>
         </div>
 
+        {{-- STEP 4: Create feed stock and log feeding --}}
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-8 h-8 rounded-full bg-navy text-white flex items-center justify-center text-sm font-bold shrink-0">4</div>
+                <div>
+                    <h2 class="text-base font-medium text-[#333333]">Create feed stock and log daily feeding</h2>
+                    <p class="text-xs text-[#6B7280]">Start the guided walkthrough below.</p>
+                </div>
+            </div>
+            <p class="text-xs text-[#6B7280] mb-4">
+                Create a feed batch if you have no stock, learn what each field means, then log feeding for one cage or the whole farm.
+                Finish by reviewing your new records in Daily Consumption.
+            </p>
+            <button type="button" onclick="sessionStorage.removeItem('wt4_state'); window.location.href='{{ route('feed', ['walkthrough4' => '1']) }}'"
+                    class="inline-flex items-center gap-2 text-sm font-medium text-white px-4 py-2.5 rounded-lg hover:brightness-95 transition-colors"
+                    style="background-color:var(--color-navy);">
+                <i data-lucide="play" class="w-4 h-4"></i> Start Walkthrough
+            </button>
+        </div>
+
     </div>
 
     </div>

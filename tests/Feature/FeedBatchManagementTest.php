@@ -420,12 +420,13 @@ class FeedBatchManagementTest extends TestCase
 
     public function test_store_consumption_creates_log(): void
     {
-        $batch = FeedBatch::create(['crude_protein' => 17.0, 'date_received' => today()]);
+        $batch = FeedBatch::create(['crude_protein' => 17.0, 'date_received' => today(), 'total_quantity_kg' => 100]);
 
         $response = $this->actingAs($this->user)->post('/feed/consumption', [
             'cage_id' => $this->testCage->id,
             'feed_batch_id' => $batch->id,
             'log_date' => today()->toDateString(),
+            'log_time' => '08:00',
             'feed_consumed_kg' => 12.5,
         ]);
 
@@ -438,6 +439,12 @@ class FeedBatchManagementTest extends TestCase
             'feed_consumed_kg' => 12.5,
             'recorded_by' => $this->user->id,
         ]);
+        $this->assertEqualsWithDelta(87.5, $batch->fresh()->remaining_kg, 0.01);
+        $this->assertEqualsWithDelta(100, $batch->fresh()->total_quantity_kg, 0.01);
+        $liveData = $this->actingAs($this->user)->get('/feed/live-data');
+        $liveData->assertOk();
+        $displayBatch = $liveData->viewData('batches')->firstWhere('id', $batch->id);
+        $this->assertEqualsWithDelta(87.5, $displayBatch->remaining_kg, 0.01);
     }
 
     public function test_multiple_consumption_entries_per_cage_per_day_persist(): void
