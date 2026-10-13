@@ -14,7 +14,7 @@
                 <button type="button" onclick="this.closest('.bg-white').querySelector('.interpretation-panel').classList.toggle('hidden')" class="interp-btn">
                     <i data-lucide="sparkles"></i> Interpretation
                 </button>
-                <span class="inline-flex flex-wrap items-center gap-1 rounded-lg p-1" style="background-color: #f3f4f6;">
+                <span hidden data-production-history-fullscreen-controls>
                     <button type="button"
                        data-history-compare
                        onclick="toggleProductionHistoryCompare()"

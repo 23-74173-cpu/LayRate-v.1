@@ -175,6 +175,18 @@
     }
 
     // ── open / show / close ──────────────────────────────────────────────
+    function updateProductionControls() {
+        if (!state || state.id !== 'dashProductionHistoryChart') return;
+        var compare = state.root.querySelector('[data-fs-history-compare]');
+        var forecast = state.root.querySelector('[data-fs-history-forecast]');
+        [[compare, !!window.__dashboardHistoryCompare], [forecast, !!window.__forecastOverlayEnabled]].forEach(function(pair) {
+            if (!pair[0]) return;
+            pair[0].setAttribute('aria-pressed', String(pair[1]));
+            pair[0].style.backgroundColor = pair[1] ? 'rgba(255,255,255,.22)' : '';
+        });
+        if (forecast) forecast.textContent = window.__forecastOverlayEnabled ? 'Hide Forecast' : 'Show Forecast';
+    }
+
     function open(id, title, trigger) {
         var lc = window.LayRateChart;
         var config = lc && lc._configs ? lc._configs[id] : null;
@@ -186,6 +198,17 @@
         document.body.appendChild(root);
         document.documentElement.classList.add('chart-fs-open');
         state = { id: id, root: root, trigger: trigger, chart: null, mql: null, onOrient: null, enteredFs: false };
+        if (id === 'dashProductionHistoryChart') {
+            var controls = document.createElement('div');
+            controls.className = 'chart-fs-production-controls';
+            controls.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;';
+            controls.innerHTML = '<button type="button" class="chart-fs-tool" data-fs-history-compare aria-pressed="false">Compare</button>'
+                + '<button type="button" class="chart-fs-tool" data-fs-history-forecast aria-pressed="false">Show Forecast</button>';
+            var bar = root.querySelector('.chart-fs-bar');
+            bar.style.flexWrap = 'wrap';
+            bar.insertBefore(controls, bar.querySelector('[data-fs-reset]'));
+            updateProductionControls();
+        }
         icons(root);
         loadZoom();   // start fetching while the user turns the phone
 
@@ -393,6 +416,7 @@
 
     // Live update from LayRateChart (same canvas id re-rendered or morphed).
     function sync(id) {
+        updateProductionControls();
         if (!state || state.id !== id || !state.chart) return;
         var source = window.LayRateChart && window.LayRateChart._configs[id];
         if (!source) return;
@@ -451,6 +475,18 @@
             return;
         }
         if (!state || !state.root.contains(t)) return;
+        if (t.closest('[data-fs-history-compare]')) {
+            e.preventDefault();
+            if (window.toggleProductionHistoryCompare) window.toggleProductionHistoryCompare();
+            updateProductionControls();
+            return;
+        }
+        if (t.closest('[data-fs-history-forecast]')) {
+            e.preventDefault();
+            if (window.toggleForecastOverlay) window.toggleForecastOverlay();
+            updateProductionControls();
+            return;
+        }
         if (t.closest('[data-fs-close]')) { e.preventDefault(); close(); return; }
         if (t.closest('[data-fs-upright]')) { e.preventDefault(); showChart(); return; }
         if (t.closest('[data-fs-rotate]')) { e.preventDefault(); rotateForUser(); return; }
