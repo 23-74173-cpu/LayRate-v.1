@@ -47,7 +47,7 @@
             <div class="brand-sub">Farm Monitor System</div>
         </td>
         <td style="text-align:right;">
-            <div class="doc-title">Forecast Report</div>
+            <div class="doc-title">{{ ($forecastView ?? 'saved') === 'backtest' ? 'Historical Test Report' : 'Forecast Report' }}</div>
             <div class="doc-range">{{ $_rangeLabel }}</div>
         </td>
     </tr>
@@ -59,8 +59,8 @@
         <td><span class="label">Scope:</span> {{ ucfirst($scope) }}</td>
         @if ($cageCode)<td><span class="label">Cage:</span> {{ $cageCode }}</td>@endif
         @if ($breed)<td><span class="label">Breed:</span> {{ $breed }}</td>@endif
-        <td><span class="label">Horizon:</span> {{ $horizon }} days</td>
-        <td><span class="label">Generated:</span> {{ now()->format('F j, Y  H:i') }}</td>
+        <td><span class="label">Saved dates:</span> {{ $horizon }}</td>
+        <td><span class="label">Exported:</span> {{ \App\Services\ReportingDateService::now()->format('F j, Y  H:i') }}</td>
         <td><span class="label">Prepared by:</span> {{ auth()->user()->name }}</td>
     </tr>
 </table>
@@ -76,12 +76,13 @@
 
 <div class="section">
     <div class="section-title">Forecast Data</div>
+    <p>Forecast uncertainty generally increases with time. Predictions for dates farther ahead may differ more from actual production.</p>
     <table class="data">
         <thead>
             <tr>
                 <th>Target Date</th>
                 <th>Predicted Egg Count</th>
-                <th>Confidence</th>
+                <th>Issued Date</th>
             </tr>
         </thead>
         <tbody>
@@ -89,7 +90,7 @@
             <tr class="{{ $i % 2 === 0 ? 'even' : '' }}">
                 <td>{{ \Illuminate\Support\Carbon::parse($f->target_date)->format('Y-m-d') }}</td>
                 <td>{{ number_format($f->predicted_egg_count ?? 0) }}</td>
-                <td>{{ $f->confidence }}%</td>
+                <td>{{ $f->forecast_date->toDateString() }}</td>
             </tr>
             @empty
             <tr><td colspan="3" class="no-data">No forecast data available.</td></tr>

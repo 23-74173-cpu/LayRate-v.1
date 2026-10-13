@@ -469,7 +469,7 @@
             </button>
         </div>
         <div class="p-5 space-y-3">
-            <p class="text-sm text-[#6B7280] mb-2">Choose a format to export the forecast data and chart.</p>
+            <p class="text-sm text-[#6B7280] mb-2">Export saved forecasts for the scope and month currently shown in the production calendar. Historical Test exports its test results separately.</p>
             <button type="button" data-export-format="pdf"
                 class="export-forecast-btn w-full flex items-center gap-3 bg-white border border-[#D9D9D9] rounded-lg px-4 py-3 hover:bg-[#F5F6F8] transition-colors text-left">
                 <div class="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
@@ -477,7 +477,7 @@
                 </div>
                 <div>
                     <div class="text-sm font-medium text-[#333333]">PDF</div>
-                    <div class="text-xs text-[#6B7280]">Printable document with calendar + chart</div>
+                    <div class="text-xs text-[#6B7280]">Printable report with saved dates and predictions</div>
                 </div>
             </button>
             <button type="button" data-export-format="excel"
@@ -487,7 +487,7 @@
                 </div>
                 <div>
                     <div class="text-sm font-medium text-[#333333]">Excel</div>
-                    <div class="text-xs text-[#6B7280]">Spreadsheet with forecast data rows + chart</div>
+                    <div class="text-xs text-[#6B7280]">Spreadsheet with saved dates and predictions</div>
                 </div>
             </button>
             <button type="button" data-export-format="csv"
@@ -1403,40 +1403,42 @@
         function exportForecast(format) {
             closeExportModalFn();
             showExportLoading();
-
+            const controller = new AbortController();
+            const timer = setTimeout(function() { controller.abort(); }, 60000);
+            return Promise.resolve().then(function() {
+            if (!['csv', 'excel', 'pdf'].includes(format)) throw new Error('Choose a valid export format.');
             var form = document.getElementById('forecastForm');
+            if (!form) throw new Error('Forecast inputs are unavailable. Refresh the page and try again.');
             var scope = form ? (form.querySelector('[name="scope"]') ? form.querySelector('[name="scope"]').value : 'cage') : 'cage';
             var cage = form ? (form.querySelector('[name="cage"]') ? form.querySelector('[name="cage"]').value : '') : '';
             var breed = form ? (form.querySelector('[name="breed"]') ? form.querySelector('[name="breed"]').value : '') : '';
-            var horizon = form ? (form.querySelector('[name="horizon"]') ? form.querySelector('[name="horizon"]').value : '7') : '7';
+            var horizon = form.querySelector('[name="horizon"]:checked')?.value || '7';
+            var token = new FormData(form).get('_token') || document.querySelector('meta[name="csrf-token"]')?.content;
+            if (!token) throw new Error('Your session token is unavailable. Refresh the page and try again.');
 
             var extMap = { csv: 'csv', excel: 'xlsx', pdf: 'pdf' };
             var extension = extMap[format] || format;
 
-            var params = new URLSearchParams();
-            params.set('scope', scope);
-            params.set('horizon', horizon);
-            if (cage) params.set('cage', cage);
-            if (breed) params.set('breed', breed);
-
-            fetch('/forecast/' + format, {
+            return fetch('/forecast/' + format, {
                 method: 'POST',
+                signal: controller.signal,
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'Accept': 'application/octet-stream'
+                    'X-CSRF-TOKEN': token,
+                    'Accept': 'application/json'
                 },
                 body: JSON.stringify({
                     scope: scope,
                     cage: cage,
                     breed: breed,
                     horizon: horizon,
-                    forecast_view: document.querySelector('[name="forecast_view"]')?.value || 'saved',
+                    forecast_view: document.querySelector('#production-calendar [name="forecast_view"]')?.value || 'saved',
                     month: document.querySelector('#production-calendar [name="month"]')?.value,
                     year: document.querySelector('#production-calendar [name="year"]')?.value
                 })
             })
             .then(function(response) {
+                if (response.redirected) throw new Error('Your session may have expired. Refresh the page and sign in again.');
                 if (!response.ok) {
                     // The server returns a JSON error (e.g. "no forecast generated
                     // yet") for a non-2xx here — surface that instead of a blob
@@ -1448,23 +1450,31 @@
                             throw new Error(body.message || 'Export failed (' + response.status + ').');
                         });
                 }
-                return response.blob();
+                var contentType = response.headers.get('Content-Type') || '';
+                var expectedType = { csv: 'text/csv', excel: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', pdf: 'application/pdf' }[format];
+                if (!contentType.includes(expectedType)) throw new Error('The server did not return a valid export file. Refresh the page and try again.');
+                var disposition = response.headers.get('Content-Disposition') || '';
+                var filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] || 'forecast-' + scope + '.' + extension;
+                return response.blob().then(function(blob) { return { blob: blob, filename: filename }; });
             })
-            .then(function(blob) {
-                var url = window.URL.createObjectURL(blob);
+            .then(function(file) {
+                if (!file.blob.size) throw new Error('The export file was empty. Please try again.');
+                var url = window.URL.createObjectURL(file.blob);
                 var a = document.createElement('a');
                 a.href = url;
-                a.download = 'forecast-export-' + format + '-' + new Date().toISOString().slice(0,10) + '.' + extension;
+                a.download = file.filename;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
+                setTimeout(function() { window.URL.revokeObjectURL(url); }, 1000);
+            })
             })
             .catch(function(err) {
                 console.error('Forecast export error:', err);
-                if (window.showNotification) window.showNotification(err.message || 'Export failed. Please try again.', 'error');
+                if (window.showNotification) window.showNotification(err.name === 'AbortError' ? 'Export timed out. Check your connection and try again.' : (err.message || 'Export failed. Please try again.'), 'error');
             })
             .finally(function() {
+                clearTimeout(timer);
                 hideExportLoading();
             });
         }

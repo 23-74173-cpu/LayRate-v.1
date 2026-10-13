@@ -1193,24 +1193,26 @@ class ForecastController extends Controller
             return $this->noForecastToExport();
         }
 
-        ['scope' => $scope, 'cageCode' => $cageCode, 'breed' => $breed, 'horizon' => $horizon, 'forecasts' => $forecasts] = $data;
+        ['scope' => $scope, 'cageCode' => $cageCode, 'breed' => $breed, 'horizon' => $horizon, 'forecasts' => $forecasts, 'forecastView' => $forecastView, 'calendarDate' => $calendarDate] = $data;
 
-        $filename = 'forecast-'.$scope.'-'.ReportingDateService::reportingDateString().'.csv';
+        $filename = 'forecast-'.$forecastView.'-'.$scope.'-'.$calendarDate->format('Y-m').'.csv';
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ];
 
-        $callback = function () use ($forecasts, $scope, $cageCode, $breed) {
+        $callback = function () use ($forecasts, $scope, $cageCode, $breed, $forecastView) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['target_date', 'predicted_egg_count', 'scope', 'cage_code', 'breed']);
+            fputcsv($handle, ['target_date', 'predicted_egg_count', 'scope', 'cage_code', 'breed', 'issued_date', 'forecast_type']);
             foreach ($forecasts as $f) {
                 fputcsv($handle, [
-                    $f->target_date,
+                    $f->target_date->toDateString(),
                     $f->predicted_egg_count ?? 0,
                     $scope,
                     $cageCode ?? '',
                     $breed ?? '',
+                    $f->forecast_date->toDateString(),
+                    $forecastView === 'backtest' ? 'Historical Test' : 'Forecast',
                 ]);
             }
             fclose($handle);
@@ -1230,7 +1232,7 @@ class ForecastController extends Controller
             return $this->noForecastToExport();
         }
 
-        ['forecasts' => $forecasts, 'scope' => $scope, 'cageCode' => $cageCode, 'breed' => $breed, 'horizon' => $horizon] = $data;
+        ['forecasts' => $forecasts, 'scope' => $scope, 'cageCode' => $cageCode, 'breed' => $breed, 'horizon' => $horizon, 'forecastView' => $forecastView, 'calendarDate' => $calendarDate] = $data;
 
         $imagePath = null;
         $payload = $request->isMethod('POST') ? $request->json()->all() : $request->all();
@@ -1250,8 +1252,8 @@ class ForecastController extends Controller
         }
 
         return Excel::download(
-            new ForecastExport($forecasts, $scope, $cageCode, $breed, $imagePath),
-            'forecast-'.$scope.'-'.ReportingDateService::reportingDateString().'.xlsx'
+            new ForecastExport($forecasts, $scope, $cageCode, $breed, $imagePath, $forecastView),
+            'forecast-'.$forecastView.'-'.$scope.'-'.$calendarDate->format('Y-m').'.xlsx'
         );
     }
 
@@ -1266,7 +1268,7 @@ class ForecastController extends Controller
             return $this->noForecastToExport();
         }
 
-        ['forecasts' => $forecasts, 'scope' => $scope, 'cageCode' => $cageCode, 'breed' => $breed, 'horizon' => $horizon] = $data;
+        ['forecasts' => $forecasts, 'scope' => $scope, 'cageCode' => $cageCode, 'breed' => $breed, 'horizon' => $horizon, 'forecastView' => $forecastView, 'calendarDate' => $calendarDate] = $data;
 
         $chartImage = null;
         $payload = $request->isMethod('POST') ? $request->json()->all() : $request->all();
@@ -1277,15 +1279,15 @@ class ForecastController extends Controller
         }
 
         try {
-            $pdf = Pdf::loadView('forecast.pdf', compact('forecasts', 'scope', 'cageCode', 'breed', 'horizon', 'chartImage'));
+            $pdf = Pdf::loadView('forecast.pdf', compact('forecasts', 'scope', 'cageCode', 'breed', 'horizon', 'chartImage', 'forecastView', 'calendarDate'));
 
-            return $pdf->download('forecast-'.$scope.'-'.ReportingDateService::reportingDateString().'.pdf');
+            return $pdf->download('forecast-'.$forecastView.'-'.$scope.'-'.$calendarDate->format('Y-m').'.pdf');
         } catch (\Exception $e) {
             Log::warning('PDF export failed with chart image, retrying without: '.$e->getMessage());
             try {
-                $pdf = Pdf::loadView('forecast.pdf', compact('forecasts', 'scope', 'cageCode', 'breed', 'horizon') + ['chartImage' => null]);
+                $pdf = Pdf::loadView('forecast.pdf', compact('forecasts', 'scope', 'cageCode', 'breed', 'horizon', 'forecastView', 'calendarDate') + ['chartImage' => null]);
 
-                return $pdf->download('forecast-'.$scope.'-'.ReportingDateService::reportingDateString().'.pdf');
+                return $pdf->download('forecast-'.$forecastView.'-'.$scope.'-'.$calendarDate->format('Y-m').'.pdf');
             } catch (\Exception $e2) {
                 Log::error('PDF export failed even without chart image: '.$e2->getMessage());
 
@@ -1369,24 +1371,26 @@ class ForecastController extends Controller
     private function noForecastToExport()
     {
         return response()->json([
-            'message' => 'No saved forecast is available for this selection — click "Generate Forecast" first, then export.',
+            'message' => 'No saved forecasts were found for the displayed scope and month. Select a month with saved forecasts, or generate a forecast first.',
         ], 422);
     }
 
     private function resolveExportData(Request $request): ?array
     {
+        $request->validate([
+            'scope' => 'nullable|in:farm,cage,breed',
+            'month' => 'nullable|integer|between:1,12',
+            'year' => 'nullable|integer|between:1900,2100',
+            'forecast_view' => 'nullable|in:saved,original,latest,backtest',
+        ]);
         $scope = $request->input('scope', 'cage');
         $horizon = (int) $request->input('horizon', 7);
         $cageCode = $request->input('cage');
         $breed = $request->input('breed');
 
-        // Export the same fixed predictions displayed in the selected month.
-        $historical = match ($scope) {
-            'farm' => $this->forecastService()->farmHistorical(),
-            'breed' => $this->forecastService()->breedHistorical($breed ?? ''),
-            default => $this->forecastService()->cageHistorical($cageCode ?? ''),
-        };
-        $request->validate(['forecast_view' => 'nullable|in:saved,original,latest,backtest']);
+        $cageCode = $scope === 'cage' ? $cageCode : null;
+        $breed = $scope === 'breed' ? $breed : null;
+        $forecastView = $request->input('forecast_view') === 'backtest' ? 'backtest' : 'saved';
         $calendarDate = ReportingDateService::now()->copy()->setDate(
             (int) $request->input('year', ReportingDateService::now()->year),
             max(1, min(12, (int) $request->input('month', ReportingDateService::now()->month))), 1,
@@ -1410,6 +1414,6 @@ class ForecastController extends Controller
         // horizon value.
         $horizon = $forecasts->count();
 
-        return compact('scope', 'cageCode', 'breed', 'horizon', 'historical', 'forecasts');
+        return compact('scope', 'cageCode', 'breed', 'horizon', 'forecastView', 'calendarDate', 'forecasts');
     }
 }

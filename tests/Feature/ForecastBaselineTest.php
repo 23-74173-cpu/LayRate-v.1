@@ -115,6 +115,54 @@ class ForecastBaselineTest extends TestCase
         $this->assertEquals(101, (float) $rows[1][1]);
     }
 
+    public function test_current_calendar_exports_download_valid_csv_excel_and_pdf(): void
+    {
+        $this->prediction(101, 7);
+        $this->prediction(202, 1);
+        $date = \Carbon\Carbon::parse($this->target);
+        $params = ['scope' => 'cage', 'cage' => $this->cage->cage_code, 'month' => $date->month, 'year' => $date->year, 'forecast_view' => 'saved'];
+        $csv = $this->actingAs($this->admin)->postJson(route('forecast.csv'), $params);
+        $csv->assertOk()->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
+        $rows = array_map('str_getcsv', explode("\n", trim($csv->streamedContent())));
+        $this->assertSame($this->target, $rows[1][0]);
+        $this->assertEquals(101, $rows[1][1]);
+        $this->assertSame('Forecast', $rows[1][6]);
+        $this->assertSame(\Carbon\Carbon::parse($this->target)->subDays(7)->toDateString(), $rows[1][5]);
+        $excel = $this->actingAs($this->admin)->postJson(route('forecast.excel'), $params);
+        $excel->assertOk();
+        $workbook = \PhpOffice\PhpSpreadsheet\IOFactory::load($excel->baseResponse->getFile()->getPathname());
+        $sheet = $workbook->getActiveSheet();
+        $this->assertSame('Issued Date', $sheet->getCell('C3')->getValue());
+        $this->assertSame($this->target, $sheet->getCell('A7')->getValue());
+        $this->assertEquals(101, $sheet->getCell('B7')->getValue());
+        $this->assertSame('C', $sheet->getHighestDataColumn());
+        $pdf = $this->actingAs($this->admin)->postJson(route('forecast.pdf'), $params);
+        $pdf->assertOk()->assertHeader('Content-Type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF', $pdf->getContent());
+        $this->assertStringContainsString('forecast-saved-cage-'.$date->format('Y-m'), $pdf->headers->get('Content-Disposition'));
+    }
+
+    public function test_export_keeps_historical_test_separate_and_returns_json_for_empty_month(): void
+    {
+        $this->prediction(101, 7);
+        $this->prediction(303, -1, true);
+        $date = \Carbon\Carbon::parse($this->target);
+        $params = ['scope' => 'cage', 'cage' => $this->cage->cage_code, 'month' => $date->month, 'year' => $date->year, 'forecast_view' => 'backtest'];
+        $response = $this->actingAs($this->admin)->postJson(route('forecast.csv'), $params);
+        $response->assertOk();
+        $rows = array_map('str_getcsv', explode("\n", trim($response->streamedContent())));
+        $this->assertEquals(303, $rows[1][1]);
+        $this->assertSame('Historical Test', $rows[1][6]);
+        $emptyMonth = $date->copy()->addMonthsNoOverflow(3);
+        $params['month'] = $emptyMonth->month;
+        $params['year'] = $emptyMonth->year;
+        foreach (['csv', 'excel', 'pdf'] as $format) {
+            $empty = $this->actingAs($this->admin)->postJson(route('forecast.'.$format), $params);
+            $empty->assertStatus(422);
+            $this->assertStringContainsString('displayed scope and month', $empty->json('message'));
+        }
+    }
+
     public function test_overlapping_range_saves_only_missing_days(): void
     {
         $service = app(ForecastGenerationService::class);

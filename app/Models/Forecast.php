@@ -68,17 +68,4 @@ class Forecast extends Model
         return $this->belongsTo(ForecastRun::class, 'forecast_run_id');
     }
 
-    public function getConfidenceAttribute(): int
-    {
-        $diff = $this->forecast_date->diffInDays($this->target_date);
-        return max(60, 97 - ($diff * 3));
-    }
-
-    public function getConfidenceColorAttribute(): string
-    {
-        $c = $this->confidence;
-        if ($c >= 85) return '#D5E8D4';
-        if ($c >= 75) return '#FFF3CD';
-        return '#F8D7DA';
-    }
 }
