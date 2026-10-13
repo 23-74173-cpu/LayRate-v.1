@@ -278,7 +278,7 @@
                 <i data-lucide="download" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
-        <a href="{{ route('forecast.input-records.download') }}" data-turbo="false"
+        <a id="fabProductionDataBtn" href="{{ route('forecast.input-records.download') }}" data-turbo="false"
            class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Download Production Data</span>
             <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
@@ -321,7 +321,7 @@
         </div>
         <div class="p-5">
             <p class="text-sm text-[#6B7280] mb-4">
-                Import a filled <strong>.xlsx</strong> forecast input sheet. The sheet must include <strong>Date</strong> and <strong>Cage_Code</strong>; other columns (Breed, Hen_Count, Egg_Count, etc.) are recommended but not required.
+                First use <strong>Download input sheet</strong>, choose the dates, and fill in the editable production fields in the downloaded Excel file. Then import that filled <strong>.xlsx</strong> sheet here. The sheet must include <strong>Date</strong> and <strong>Cage_Code</strong>; other columns (Breed, Hen_Count, Egg_Count, etc.) are recommended but not required.
             </p>
             <p class="text-xs text-[#6B7280] mt-2 flex items-start gap-1.5">
                 <i data-lucide="info" class="w-3.5 h-3.5 shrink-0 mt-0.5"></i>

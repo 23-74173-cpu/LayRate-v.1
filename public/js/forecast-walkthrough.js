@@ -14,6 +14,7 @@
     if (!pageState) return;
     var active = true;
     var lastTarget = null;
+    var menuOriginalStyle = null;
     var listeners = [];
     var highlightedRows = [];
     var timer;
@@ -76,14 +77,47 @@
             manual: true, interactive: true, valid: function() { return hasSavedForecast() || !canGenerate(); }, to: 'calendar'
         },
         calendar: {
-            text: '<strong>Production calendar.</strong><br>Review historical production and the forecast dates for your chosen scope. Forecasts estimate future production; they are not guaranteed egg counts. For a <strong>custom forecast date range</strong>, click and hold an available calendar cell, then drag across the cells through your end date and release. This selects the continuous range from your start date to your end date. On touch screens, enable <em>Drag select</em> first, then hold and drag. Review the selected dates before generating the range.<br><br>Try selecting a range, or tap <em>Done</em> to finish.',
-            target: function() { return document.getElementById('production-calendar'); }, manual: true, interactive: true, to: 'done'
+            text: '<strong>Production calendar.</strong><br>Review historical production and the forecast dates for your chosen scope. Forecasts estimate future production; they are not guaranteed egg counts. For a <strong>custom forecast date range</strong>, click and hold an available calendar cell, then drag across the cells through your end date and release. This selects the continuous range from your start date to your end date. On touch screens, enable <em>Drag select</em> first, then hold and drag. Review the selected dates before generating the range.<br><br>Try selecting a range, then tap <em>Next</em> to learn the Quick Actions menu.',
+            target: function() { return document.getElementById('production-calendar'); }, manual: true, interactive: true, to: 'downloadSheet'
+        },
+        downloadSheet: {
+            text: '<strong>Download input sheet.</strong><br>Downloads an Excel template for your chosen dates. Its cage and other pre-filled columns are protected; fill in the editable egg production, environment, feed, and mortality fields.<br>This is the sheet to fill in before importing production data. Tap <em>Next</em> for the next action.',
+            target: function() { return query('#dockFabMenu #fabDownloadBtn'); }, manual: true, explainAction: true, to: 'downloadData'
+        },
+        downloadData: {
+            text: '<strong>Download Production Data.</strong><br>Downloads the production data already stored in the app for review or keeping a copy. Use <em>Download input sheet</em> when you need a template to fill in for an import.',
+            target: function() { return query('#dockFabMenu #fabProductionDataBtn'); }, manual: true, explainAction: true, to: 'inputStatus'
+        },
+        inputStatus: {
+            text: '<strong>View input records status.</strong><br>Shows the available input records so you can review your production history and data coverage before forecasting.',
+            target: function() { return query('#dockFabMenu #fabInputRecordsBtn'); }, manual: true, explainAction: true, to: 'importData'
+        },
+        importData: {
+            text: '<strong>Import production data.</strong><br>Uploads a completed forecast input sheet into the app.<br><br><strong>Download the input sheet first</strong>, fill in its editable fields with your production data, and save the file as <em>.xlsx</em>. Then use this action to upload that completed file and review the import preview before confirming.',
+            target: function() { return query('#dockFabMenu #fabImportBtn'); }, manual: true, explainAction: true, to: 'exportReport'
+        },
+        exportReport: {
+            text: '<strong>Export Forecast Report.</strong><br>Downloads your forecast report in PDF, Excel, or CSV format for sharing or keeping a copy. Tap <em>Done</em> to finish the walkthrough.',
+            target: function() { return query('#dockFabMenu #fabExportBtn'); }, manual: true, explainAction: true, to: 'done'
         }
     };
     function render() {
         if (!active) return;
         steps.generate.manual = hasSavedForecast() || !canGenerate();
         var step = steps[state.step];
+        if (step && step.explainAction) {
+            var menu = document.getElementById('dockFabMenu');
+            if (menu) {
+                if (!menuOriginalStyle) menuOriginalStyle = { maxHeight: menu.style.maxHeight, overflowY: menu.style.overflowY };
+                menu.classList.remove('hidden');
+                if (innerWidth < 700) { menu.style.maxHeight = '45vh'; menu.style.overflowY = 'auto'; }
+                else { menu.style.maxHeight = menuOriginalStyle.maxHeight; menu.style.overflowY = menuOriginalStyle.overflowY; }
+            }
+            var dock = document.getElementById('quickDock');
+            if (dock) dock.setAttribute('data-active', 'true');
+            var toggle = query('#quickDock .fab-toggle');
+            if (toggle) toggle.setAttribute('aria-expanded', 'true');
+        }
         var target = step && step.target();
         var targets = Array.isArray(target) ? target : target ? [target] : [];
         targets = targets.filter(function (el) { return el && el.getClientRects().length; });
@@ -102,7 +136,7 @@
         var bottom = rects.length ? Math.max.apply(null, rects.map(function (r) { return r.bottom; })) + 6 : top;
         spot.style.display = hasTarget ? 'block' : 'none';
         Object.assign(spot.style, { left: left + 'px', top: top + 'px', width: (right - left) + 'px', height: (bottom - top) + 'px' });
-        var blocked = !hasTarget || (step && step.manual && !step.interactive);
+        var blocked = !hasTarget || (step && step.manual && !step.interactive && !step.explainAction);
         var bars = blocked ? [[0, 0, innerWidth, innerHeight], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
             : [[0, 0, innerWidth, Math.max(0, top)], [0, bottom, innerWidth, Math.max(0, innerHeight - bottom)], [0, top, Math.max(0, left), Math.max(0, bottom - top)], [right, top, Math.max(0, innerWidth - right), Math.max(0, bottom - top)]];
         bars.forEach(function (bar, i) { Object.assign(dims[i].style, { left: bar[0] + 'px', top: bar[1] + 'px', width: bar[2] + 'px', height: bar[3] + 'px' }); });
@@ -113,7 +147,7 @@
         next.disabled = !hasTarget || !!(step && step.valid && !step.valid());
         next.style.opacity = next.disabled ? '.5' : '1';
         next.style.cursor = next.disabled ? 'not-allowed' : 'pointer';
-        next.textContent = state.step === 'calendar' ? 'Done' : 'Next';
+        next.textContent = state.step === 'exportReport' ? 'Done' : 'Next';
         if (window.LayRateWalkthroughNotes) {
             LayRateWalkthroughNotes.place(tip, targets[0], { left: left, top: top, bottom: bottom });
         } else {
@@ -135,6 +169,12 @@
         target.addEventListener(event, handler, options);
         listeners.push(function () { target.removeEventListener(event, handler, options); });
     }
+    // Explanation steps highlight actions without running their handlers.
+    listen(document, 'click', function(e) {
+        if (steps[state.step] && steps[state.step].explainAction && e.target.closest('#dockFabMenu button, #dockFabMenu a')) {
+            e.preventDefault(); e.stopImmediatePropagation();
+        }
+    }, true);
     listen(next, 'click', function () {
         var step = steps[state.step];
         if (!step || !step.manual || next.disabled || (step.valid && !step.valid())) return;
@@ -143,6 +183,13 @@
         setStep(step.to);
     });
     function cleanup() {
+        var menu = document.getElementById('dockFabMenu');
+        if (menu && menuOriginalStyle) { menu.style.maxHeight = menuOriginalStyle.maxHeight; menu.style.overflowY = menuOriginalStyle.overflowY; }
+        var dock = document.getElementById('quickDock');
+        if (dock && steps[state.step] && steps[state.step].explainAction) dock.removeAttribute('data-active');
+        if (menu && steps[state.step] && steps[state.step].explainAction) menu.classList.add('hidden');
+        var toggle = query('#quickDock .fab-toggle');
+        if (toggle) toggle.setAttribute('aria-expanded', 'false');
         if (window.LayRateWalkthroughNotes) LayRateWalkthroughNotes.release();
         active = false;
         clearInterval(timer);

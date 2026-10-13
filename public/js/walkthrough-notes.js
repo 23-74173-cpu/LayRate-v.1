@@ -45,6 +45,22 @@
         pair.card.style.overflowY = 'auto';
     }
     function place(tip, target, bounds) {
+        var menu = target && target.closest('#dockFabMenu');
+        if (menu) {
+            var menuRect = menu.getBoundingClientRect();
+            var room = menuRect.left - 24;
+            if (room >= 220) {
+                tip.style.width = Math.min(340, room) + 'px';
+                tip.style.left = (menuRect.left - tip.offsetWidth - 12) + 'px';
+                tip.style.top = Math.max(12, Math.min(menuRect.top, innerHeight - tip.offsetHeight - 12)) + 'px';
+            } else {
+                // On phones, keep all notes above the entire actions menu.
+                tip.style.maxHeight = Math.max(40, menuRect.top - 24) + 'px';
+                tip.style.left = Math.max(12, (innerWidth - tip.offsetWidth) / 2) + 'px';
+                tip.style.top = Math.max(12, menuRect.top - tip.offsetHeight - 12) + 'px';
+            }
+            return;
+        }
         var pair = cardFor(target);
         if (pair) {
             var rect = pair.card.getBoundingClientRect();
