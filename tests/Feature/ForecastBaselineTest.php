@@ -101,6 +101,27 @@ class ForecastBaselineTest extends TestCase
         $this->assertEquals(100, $response->viewData('forecasts')->first()->predicted_egg_count);
     }
 
+    public function test_calendar_compare_shows_signed_egg_gap_only_for_recorded_days(): void
+    {
+        $date = ReportingDateService::reportingDate()->subMonthNoOverflow()->startOfMonth()->addDays(9);
+        foreach ([110, 90, 100, 0, null] as $offset => $actual) {
+            $this->target = $date->copy()->addDays($offset)->toDateString();
+            $this->prediction(100, 7);
+            if ($actual !== null) {
+                ProductionLog::create(['cage_slot_id' => $this->slot->id, 'log_date' => $this->target, 'egg_count' => $actual, 'hen_count' => 120, 'hdep' => round($actual / 120 * 100, 2), 'is_demo' => false]);
+            }
+        }
+        $params = ['scope' => 'cage', 'cage' => $this->cage->cage_code, 'month' => $date->month, 'year' => $date->year];
+        $headers = ['Turbo-Frame' => 'production-calendar'];
+        $plain = $this->actingAs($this->admin)->get(route('forecast', $params), $headers);
+        $plain->assertOk()->assertDontSee('data-gap=', false);
+        $compare = $this->actingAs($this->admin)->get(route('forecast', $params + ['compare_production' => 1]), $headers);
+        $compare->assertOk();
+        foreach ([10, -10, 0, -100] as $gap) $compare->assertSee('data-gap="'.$gap.'"', false);
+        $this->assertSame(4, substr_count($compare->getContent(), 'data-gap='));
+        $compare->assertSee('Awaiting production')->assertSee('Production matched the forecast.');
+    }
+
     public function test_calendar_export_uses_fixed_forecast_from_prior_day(): void
     {
         $first = $this->prediction(101, 7);

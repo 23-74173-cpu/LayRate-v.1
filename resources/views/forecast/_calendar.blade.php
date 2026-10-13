@@ -76,7 +76,7 @@
 <div class="forecast-calendar-card {{ $compareProduction ? 'calendar-comparing' : '' }} bg-white rounded-2xl border border-[#e6e6e6] p-4 sm:p-5" data-today="{{ $calendarToday->toDateString() }}" data-horizon="{{ $previewHorizon }}" data-preview-month="{{ $previewStart->month }}" data-preview-year="{{ $previewStart->year }}" data-forecast-kind="{{ $isBacktestView ? 'backtest' : 'forward' }}" data-min-date="{{ $minSelectableDate }}" data-max-date="{{ $maxSelectableDate }}">
     {{-- Month / Year header with navigation --}}
     <div class="mb-4">
-        <x-card-header title="Production Calendar" subtitle="Recorded and predicted output · {{ $scopeLabel }}" icon="calendar-days">
+        <x-card-header title="Production Calendar" icon="calendar-days">
             <x-slot:actions>
                 <a href="{{ request()->fullUrlWithQuery(['compare_production' => $compareProduction ? '0' : '1', 'forecast_view' => $isBacktestView ? 'backtest' : 'saved']) }}"
                    data-turbo-frame="production-calendar" data-turbo-action="advance"
@@ -88,10 +88,6 @@
             </x-slot:actions>
         </x-card-header>
 
-        <p class="text-xs text-[#6B7280] mb-3">Each day has one saved forecast. Generating again keeps existing values and fills only missing dates.</p>
-        @if($compareProduction)
-        <p class="text-xs text-[#6B7280] mb-3">Compare the green production count with the blue forecast count on each day. Days without completed production are awaiting records.</p>
-        @endif
         {{-- Indicators use the same status colors as the rest of the app. --}}
         <div class="calendar-legend flex flex-wrap items-center gap-2 mb-4 text-xs font-semibold">
             <span class="calendar-production-indicator inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5">
@@ -191,6 +187,11 @@
         .forecast-calendar-card:not(.calendar-comparing) .production-badge,
         .forecast-calendar-card:not(.calendar-comparing) .calendar-production-indicator { display: none; }
         .production-calendar .comparison-pending { font-size: 9px; line-height: 1.2; color: var(--color-neutral-text); }
+        .forecast-calendar-card.calendar-comparing .calendar-day { height: 142px; }
+        .production-calendar .comparison-gap { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; max-width: 100%; border-radius: 4px; padding: 2px 3px; font-size: 9px; line-height: 1.3; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+        .production-calendar .comparison-gap-above { background: var(--color-success-bg); color: var(--color-success); }
+        .production-calendar .comparison-gap-below { background: #FFF3CD; color: #856404; }
+        .production-calendar .comparison-gap-matched { background: #F5F6F8; color: #6B7280; }
         .forecast-calendar-card .calendar-control { min-height: 40px; }
         .forecast-calendar-card .calendar-production-indicator,
         .forecast-calendar-card .production-badge { background: var(--color-success-bg); color: var(--color-success); }
@@ -358,6 +359,17 @@
                                   title="{{ $isBacktestView ? 'Historical Test' : 'Forecast' }}: {{ number_format($cell['forecast']->predicted_egg_count, 0) }} eggs ? Saved {{ $cell['forecast']->forecast_date->format('M j, Y') }}">
                                 <i data-lucide="chart-no-axes-combined" class="calendar-count-icon" aria-hidden="true"></i>
                                 <span>{{ number_format($cell['forecast']->predicted_egg_count, 0) }}</span>
+                            </span>
+                            @endif
+                            @if($compareProduction && $hasForecast && $hasProduction)
+                                @php
+                                    $eggGap = (int) $production['egg_count'] - (int) round($cell['forecast']->predicted_egg_count);
+                                    $gapText = ($eggGap > 0 ? '+' : '') . number_format($eggGap);
+                                    $gapStatus = $eggGap > 0 ? 'above' : ($eggGap < 0 ? 'below' : 'matched');
+                                    $gapDescription = $eggGap === 0 ? 'Production matched the forecast.' : 'Production was ' . number_format(abs($eggGap)) . ' eggs ' . $gapStatus . ' forecast.';
+                                @endphp
+                            <span class="comparison-gap comparison-gap-{{ $gapStatus }}" data-gap="{{ $eggGap }}" title="{{ $gapDescription }}" aria-label="{{ $gapDescription }}">
+                                <span>Gap</span><span>{{ $gapText }}</span>
                             </span>
                             @endif
                         </div>
