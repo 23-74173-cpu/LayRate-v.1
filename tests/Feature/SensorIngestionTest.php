@@ -16,6 +16,7 @@ use App\Models\Setting;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class SensorIngestionTest extends TestCase
@@ -391,6 +392,35 @@ class SensorIngestionTest extends TestCase
         $this->assertSame(3, EggCountEvent::where('cage_slot_id', $this->slot->id)
             ->where('event_type', 'sensor_trigger')->count());
         $this->assertSame(3, (int) ProductionLog::where('cage_slot_id', $this->slot->id)->value('egg_count'));
+    }
+
+    public function test_sensor_count_update_increments_live_count_stream_version(): void
+    {
+        $this->createHens(4);
+        $this->breakbeamItem();
+        $key = $this->deviceKey();
+        Cache::forever('egg_count_sse_version', 17);
+
+        $this->postReadings([
+            'readings' => [['serial_number' => 'IRBBS-TEST-001', 'count' => 1]],
+            'recorded_at' => now()->toDateTimeString(),
+        ], $key)->assertOk();
+
+        $this->assertSame(18, (int) Cache::get('egg_count_sse_version'));
+    }
+
+    public function test_sensor_count_update_invalidates_live_recent_logs_stream(): void
+    {
+        $this->createHens(4);
+        $this->breakbeamItem();
+        Cache::forever('egg_logs_sse_version', 8);
+
+        $this->postReadings([
+            'readings' => [['serial_number' => 'IRBBS-TEST-001', 'count' => 1]],
+            'recorded_at' => now()->toDateTimeString(),
+        ], $this->deviceKey())->assertOk();
+
+        $this->assertSame(9, (int) Cache::get('egg_logs_sse_version'));
     }
 
     public function test_duplicate_sensor_payload_is_idempotent_but_distinct_trigger_is_not_dropped_by_time_window(): void

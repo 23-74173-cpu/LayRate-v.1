@@ -356,6 +356,13 @@ class SensorIngestionController extends Controller
                             ]);
                         }
 
+                        if ($logDate === ReportingDateService::reportingDateString()) {
+                            \Illuminate\Support\Facades\Cache::add('egg_count_sse_version', 0, now()->addYears(10));
+                            \Illuminate\Support\Facades\Cache::increment('egg_count_sse_version');
+                            \Illuminate\Support\Facades\Cache::add('egg_logs_sse_version', 0, now()->addYears(10));
+                            \Illuminate\Support\Facades\Cache::increment('egg_logs_sse_version');
+                        }
+
                     }
 
                     if ($reportedCount !== $actualOccupancy) {
