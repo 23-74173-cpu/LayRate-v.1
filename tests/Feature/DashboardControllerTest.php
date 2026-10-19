@@ -106,6 +106,38 @@ class DashboardControllerTest extends TestCase
         $response->assertDontSee('setMortalityDays');
     }
 
+    public function test_dashboard_does_not_show_day_complete_popup_before_reporting_day_ends(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('dashboard'));
+
+        $response->assertOk();
+        $response->assertViewHas('dayComplete', false);
+    }
+
+    public function test_dashboard_does_not_show_day_complete_popup_on_current_reporting_day(): void
+    {
+        \Carbon\Carbon::setTestNow(\Carbon\Carbon::parse('2026-10-21 00:00:01', 'Asia/Manila'));
+        try {
+            $response = $this->actingAs($this->admin)->get(route('dashboard'));
+            $response->assertOk();
+            $response->assertViewHas('dayComplete', false);
+        } finally {
+            \Carbon\Carbon::setTestNow();
+        }
+    }
+
+    public function test_dashboard_marks_a_past_reporting_date_complete(): void
+    {
+        \Carbon\Carbon::setTestNow(\Carbon\Carbon::parse('2026-10-21 00:00:01', 'Asia/Manila'));
+        try {
+            $response = $this->actingAs($this->admin)->get(route('dashboard', ['to_date' => '2026-10-20']));
+            $response->assertOk();
+            $response->assertViewHas('dayComplete', true);
+        } finally {
+            \Carbon\Carbon::setTestNow();
+        }
+    }
+
     public function test_cage_scoped_stats_matches_hand_computed_values(): void
     {
         $response = $this->actingAs($this->admin)->get(route('dashboard.stats', ['cage' => 'CAGE-DASH-A']));

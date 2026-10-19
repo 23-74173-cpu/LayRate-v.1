@@ -46,7 +46,7 @@ class DashboardController extends Controller
             'cages'                   => Cage::all(),
             'today'                   => $snapshotDate->toDateString(),
             'needsOnboarding'         => $this->needsOnboarding(),
-            'dayComplete'             => true,
+            'dayComplete'             => $snapshotDate->toDateString() < ReportingDateService::reportingDate()->toDateString(),
             'eggsYesterday'           => $eggsYesterday,
             'yesterdayHdep'           => $yesterdayHdep,
             'yesterdayMortalityTotal' => $this->mortalityTotalForDay(null, $yesterday),
@@ -1673,7 +1673,7 @@ class DashboardController extends Controller
             'feed'        => ['logged' => $cagesWithFeed, 'total' => $totalActiveCages, 'complete' => $cagesWithFeed >= $totalActiveCages && $totalActiveCages > 0],
         ];
 
-        $dayComplete = true;
+        $dayComplete = $today < ReportingDateService::reportingDate()->toDateString();
 
         $kpiAsOf = ($this->validRangeDate($fromDate) || $this->validRangeDate($toDate))
             ? Carbon::parse($today)->format('m/d/Y')
