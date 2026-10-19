@@ -480,6 +480,69 @@ class SensorIngestionTest extends TestCase
             ->where('event_type', 'sensor_trigger')->count());
     }
 
+    public function test_bridge_queue_replay_retry_with_same_sensor_timestamp_does_not_duplicate_event(): void
+    {
+        $this->createHens(4);
+        $this->breakbeamItem();
+        $key = $this->deviceKey();
+        $stamp = now()->toDateTimeString();
+        $payload = [
+            'readings' => [['serial_number' => 'IRBBS-TEST-001', 'count' => 1,
+                'trigger_count' => 1, 'new_trigger_count' => 1]],
+            'recorded_at' => $stamp,
+        ];
+
+        $this->postReadings($payload, $key)->assertOk();
+        $this->postReadings($payload, $key)->assertJsonPath('processed.0.duplicate', true);
+
+        $item = HardwareItem::where('serial_number', 'IRBBS-TEST-001')->firstOrFail();
+        $this->assertSame(1, EggCountEvent::where('hardware_item_id', $item->id)
+            ->where('event_type', 'sensor_trigger')->count());
+        $this->assertSame(1, ProductionLog::where('cage_slot_id', $this->slot->id)->value('egg_count'));
+    }
+
+    public function test_health_probe_acknowledges_app_without_touching_sensor_or_egg_state(): void
+    {
+        $this->createHens(4);
+        $item = $this->breakbeamItem();
+        $item->update(['last_valid_reading_at' => now()->subMinutes(4), 'health_state' => 'stale']);
+        $key = $this->deviceKey();
+        $healthBefore = $item->fresh()->last_valid_reading_at;
+
+        $response = $this->postJson('/api/sensor-readings', [
+            'health_probe' => true,
+            'probe_id' => 'probe-test-1',
+            'recorded_at' => now()->toIso8601String(),
+            'readings' => [[
+                'serial_number' => 'IRBBS-TEST-001',
+                'health_probe' => true,
+            ]],
+        ], [
+            'X-Device-Key' => $key,
+            'X-LayRate-Health-Probe' => '1',
+        ]);
+
+        $response->assertOk()->assertJsonPath('processed.0.type', 'health_probe');
+        $this->assertSame($healthBefore->toDateTimeString(), $item->fresh()->last_valid_reading_at->toDateTimeString());
+        $this->assertSame(0, ProductionLog::where('cage_slot_id', $this->slot->id)->count());
+        $this->assertSame(0, SensorOccupancyReading::where('hardware_item_id', $item->id)->count());
+        $this->assertSame(0, EggCountEvent::where('hardware_item_id', $item->id)->count());
+    }
+
+    public function test_health_probe_requires_explicit_marker_header(): void
+    {
+        $this->breakbeamItem();
+
+        $this->postJson('/api/sensor-readings', [
+            'health_probe' => true,
+            'probe_id' => 'probe-test-no-header',
+            'recorded_at' => now()->toIso8601String(),
+            'readings' => [['serial_number' => 'IRBBS-TEST-001', 'health_probe' => true]],
+        ], ['X-Device-Key' => $this->deviceKey()])
+            ->assertStatus(422)
+            ->assertJsonPath('accepted', 0);
+    }
+
     public function test_editing_sensor_log_marks_manual_so_sensor_cannot_revert_it(): void
     {
         $this->createHens(2);

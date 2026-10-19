@@ -116,7 +116,7 @@ class TableIXF8(unittest.TestCase):
     def post_readings(self, readings, recorded_at):
         """Mirror bridge.py run_loop's send-and-log branching exactly."""
         payload = {"readings": readings, "recorded_at": recorded_at}
-        resp = self.session.post(API_URL, json=payload, timeout=10)
+        resp = self.session.post(API_URL, json=payload, timeout=10, allow_redirects=False)
         if resp.status_code == 200:
             log.info("Sent %d reading(s) to %s (HTTP 200)", len(readings), API_URL)
         elif resp.status_code == 207:

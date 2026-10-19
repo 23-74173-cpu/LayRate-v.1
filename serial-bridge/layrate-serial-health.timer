@@ -1,0 +1,11 @@
+[Unit]
+Description=Periodic LayRate serial bridge health check
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+AccuracySec=10s
+Unit=layrate-serial-health.service
+
+[Install]
+WantedBy=timers.target

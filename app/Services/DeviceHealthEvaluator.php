@@ -212,9 +212,9 @@ class DeviceHealthEvaluator
     {
         return match ($type) {
             'IR_breakbeam' => [
-                $this->threshold('health_ir_online_min', 15),
-                $this->threshold('health_ir_stale_min', 1440),
-                $this->threshold('health_ir_disconnected_min', 1440),
+                $this->threshold('health_ir_online_min', 1),
+                $this->threshold('health_ir_stale_min', 2),
+                $this->threshold('health_ir_disconnected_min', 5),
             ],
             'relay' => [
                 $this->threshold('health_relay_online_min', 2),
@@ -299,19 +299,13 @@ class DeviceHealthEvaluator
 
     public function runStalenessBackstop(): void
     {
-        $maxDisconnected = [
-            'DHT22'        => $this->threshold('health_dht_disconnected_min', 60),
-            'IR_breakbeam' => $this->threshold('health_ir_disconnected_min', 1440),
-            'relay'        => $this->threshold('health_relay_disconnected_min', 10),
-        ];
-
         // Single-cause bridge-offline propagation.
-        Device::where('is_active', true)->each(function (Device $device) use ($maxDisconnected) {
+        Device::where('is_active', true)->each(function (Device $device) {
             $seen = $device->last_seen_at;
             if (! $seen) {
                 return;
             }
-            $bridgeOffline = max(0.0, (float) $seen->diffInMinutes(now())) > ($maxDisconnected['DHT22'] ?? 60);
+            $bridgeOffline = max(0.0, (float) $seen->diffInMinutes(now())) > 2;
             if (! $bridgeOffline) {
                 return;
             }

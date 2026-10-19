@@ -175,7 +175,7 @@ jobs:
             sudo cp "$SRC" "$DST"
             sudo udevadm control --reload-rules
             sudo udevadm trigger
-            echo "Done — Arduino will always appear at /dev/ttyArduino."
+          echo "Done — Arduino will always appear at /dev/ttyArduino."
           else
             echo "udev rule is already up to date."
           fi
@@ -187,6 +187,20 @@ jobs:
           python3 -m venv ${{ env.SERIAL_BRIDGE_VENV }}
           ${{ env.SERIAL_BRIDGE_VENV }}/bin/pip install --upgrade pip
           ${{ env.SERIAL_BRIDGE_VENV }}/bin/pip install -r ${{ env.LARAVEL_DIR }}/serial-bridge/requirements.txt
+
+      - name: Install serial bridge health timer
+        if: steps.check-serial-bridge.outputs.changed == 'true'
+        run: |
+          sudo install -m 0644 "${{ env.LARAVEL_DIR }}/serial-bridge/layrate-serial-health.service" /etc/systemd/system/layrate-serial-health.service
+          sudo install -m 0644 "${{ env.LARAVEL_DIR }}/serial-bridge/layrate-serial-health.timer" /etc/systemd/system/layrate-serial-health.timer
+          sudo install -m 0755 "${{ env.LARAVEL_DIR }}/serial-bridge/health-check.sh" /usr/local/bin/layrate-serial-health-check
+          sudo sed -i 's#ExecStart=/var/www/layrate/serial-bridge/health-check.sh#ExecStart=/usr/local/bin/layrate-serial-health-check#' /etc/systemd/system/layrate-serial-health.service
+          if ! sudo test -f /etc/layrate/serial-bridge.env; then
+            echo "ERROR: create /etc/layrate/serial-bridge.env with LAYrate_DEVICE_KEY and LAYRATE_HEALTH_PROBE_SERIAL before enabling the health timer."
+            exit 1
+          fi
+          sudo systemctl daemon-reload
+          sudo systemctl enable --now layrate-serial-health.timer
 
       - name: Install / update serial-bridge systemd unit
         if: steps.check-serial-bridge.outputs.changed == 'true'
@@ -208,6 +222,26 @@ jobs:
           if [ "$CHANGED" = "1" ]; then
             sudo systemctl daemon-reload
           fi
+
+          # Reapply the reviewed explicit IPv4 URL policy to Pi-local overrides.
+          # The bridge reads LAYRATE_API_BASE_URL and derives both endpoints from it.
+          DROPIN="/etc/systemd/system/layrate-serial.service.d/override.conf"
+          sudo mkdir -p /etc/systemd/system/layrate-serial.service.d
+          if [ ! -f "$DROPIN" ]; then
+            sudo touch "$DROPIN"
+            sudo chmod 0644 "$DROPIN"
+            echo '[Service]' | sudo tee "$DROPIN" >/dev/null
+          fi
+          if ! grep -q '^Environment=LAYRATE_API_BASE_URL=' "$DROPIN"; then
+            echo 'Environment=LAYRATE_API_BASE_URL=http://127.0.0.1' | sudo tee -a "$DROPIN" >/dev/null
+          fi
+          if grep -q 'LAYrate_API_URL=https://LayRatePI.local\|LAYrate_COMMAND_API_URL=https://LayRatePI.local' "$DROPIN"; then
+            BACKUP="$HOME/layrate-local-backups/serial-override.$(date +%Y%m%d%H%M%S).conf"
+            mkdir -p "$HOME/layrate-local-backups"
+            sudo cp "$DROPIN" "$BACKUP"
+            echo "Preserved legacy Pi URL override at $BACKUP; tracked bridge now ignores endpoint-specific URL flags."
+          fi
+          sudo systemctl daemon-reload
 
       - name: Enable and restart serial-bridge service
         if: steps.check-serial-bridge.outputs.changed == 'true'

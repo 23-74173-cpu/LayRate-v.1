@@ -6,6 +6,7 @@ use App\Models\Cage;
 use App\Models\CageSlot;
 use App\Models\Device;
 use App\Models\HardwareItem;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -115,6 +116,28 @@ class HardwareItemController extends Controller
             ->orderBy('serial_number')
             ->paginate((int) config('tables.per_page', 25))
             ->withQueryString();
+
+        $items->getCollection()->each(function (HardwareItem $item): void {
+            if ($item->status !== 'active' || ! $item->last_valid_reading_at) {
+                return;
+            }
+
+            $offlineAfter = match ($item->device_type) {
+                'IR_breakbeam' => (int) Setting::get('health_ir_disconnected_min', 5),
+                'relay' => (int) Setting::get('health_relay_disconnected_min', 10),
+                default => (int) Setting::get('health_dht_disconnected_min', 60),
+            };
+            $staleAfter = match ($item->device_type) {
+                'IR_breakbeam' => (int) Setting::get('health_ir_stale_min', 2),
+                'relay' => (int) Setting::get('health_relay_stale_min', 10),
+                default => (int) Setting::get('health_dht_stale_min', 60),
+            };
+
+            $ageMinutes = max(0, (float) $item->last_valid_reading_at->diffInMinutes(now()));
+            $item->runtime_health_state = $ageMinutes > $offlineAfter
+                ? 'disconnected'
+                : ($ageMinutes > $staleAfter ? 'stale' : ($item->health_state ?: 'unknown'));
+        });
 
         // Latest REAL reading per cage for the "Last Reading" column
         // (demo-quarantined; see EnvironmentalLog::latestRealPerCage).

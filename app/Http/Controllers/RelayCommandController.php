@@ -32,6 +32,9 @@ class RelayCommandController extends Controller
     {
         /** @var \App\Models\Device $device */
         $device = $request->attributes->get('device');
+        if (! $request->boolean('health_probe')) {
+            $device->update(['last_seen_at' => now()]);
+        }
 
         $relay = HardwareItem::where('device_type', 'relay')
             ->where('device_id', $device->id)

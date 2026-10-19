@@ -9,6 +9,39 @@
 
 ## Development
 
+## Deployment and troubleshooting (egg sensor bridge)
+
+The serial bridge sends readings to the local Laravel API. Use one configured base URL (`LAYRATE_API_BASE_URL`) for both sensor ingestion and relay polling. The safe Pi default is `http://127.0.0.1`; do not use `localhost` because it may resolve to `::1`. The current Pi Nginx loopback API vhost is IPv4-only. If adding IPv6 support, add and test a dedicated `[::1]` loopback API vhost before changing the bridge URL. The captive-portal catch-all must not be used as an API path.
+
+The bridge refuses redirects and non-JSON/unexpected API acknowledgements, retries with backoff, and persists pending batches in `/var/lib/layrate-serial/queue.jsonl`. Successful posts are HTTP 200 JSON acknowledgements; failures include the URL, status, sequence ID, and response snippet in `journalctl`. A periodic heartbeat reports `sent`, `failed`, `queued`, `serial_connected`, serial activity time, and last successful delivery. A local read-only health endpoint is available at `http://127.0.0.1:8765/health`.
+
+Run the bridge unit tests from `serial-bridge/`:
+
+```bash
+python3 -m unittest test_bridge test_delivery -v
+```
+
+The database/API smoke test sends a marked health probe that does not change production readings or egg counts. Set `LAYRATE_HEALTH_PROBE_SERIAL`, `LAYrate_DEVICE_KEY`, and the DB connection variables, then run:
+
+```bash
+python3 serial-bridge/smoke-test.py --base-url http://127.0.0.1
+```
+
+Optionally provide `--ipv6-url http://[::1] --expect-ipv6 refused` if IPv6 loopback is intentionally not served, or set `--expect-ipv6 success` after configuring a dedicated IPv6 API listener. The test verifies a genuine app JSON acknowledgement and verifies the active hardware item still exists while its health timestamp remains unchanged. The systemd health timer runs `serial-bridge/health-check.sh` every minute and records failures in its unit journal. It requires `LAYRATE_HEALTH_PROBE_SERIAL` to identify an active sensor and posts a `health_probe` marker acknowledged without changing sensor readings, health timestamps, production logs, or counts.
+
+Incident checklist when readings stop:
+
+```bash
+curl -v http://localhost/api/relay/command
+curl -v http://127.0.0.1/api/relay/command
+ss -ltnp
+journalctl -u layrate-serial -n 100 --no-pager
+curl -v http://127.0.0.1:8765/health
+systemctl status layrate-serial-health.timer
+```
+
+If the `localhost` request shows a `302` to the portal while `127.0.0.1` reaches Laravel, check IPv6/name resolution and the Nginx loopback listeners. Distinguish `serial_activity_at` (Arduino output reached the bridge) from `delivery_at` and queued count (bridge-to-app delivery). Never use an egg-bearing production serial number for a smoke test.
+
 After editing Blade views or CSS, rebuild Tailwind and clear view cache before verifying visually:
 
 ```bash

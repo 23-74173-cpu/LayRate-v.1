@@ -65,6 +65,25 @@ class HardwareHealthStateMachineTest extends TestCase
         $this->assertNotNull(Alert::where('alert_type', 'health_disconnected')->first());
     }
 
+    public function test_ir_breakbeam_stales_quickly_when_ingestion_stops(): void
+    {
+        $item = $this->item('IR_breakbeam', $this->cage('H-IR-STALE')->id);
+        $item->update(['health_state' => 'online', 'last_valid_reading_at' => now()->subMinutes(1.5)]);
+
+        for ($i = 0; $i < 3; $i++) {
+            $this->evaluator()->evaluate($item->fresh());
+        }
+
+        $this->assertSame('stale', $item->fresh()->health_state);
+        $this->assertDatabaseHas('alerts', ['alert_type' => 'health_stale']);
+
+        $item->update(['last_valid_reading_at' => now()->subMinutes(5)]);
+        for ($i = 0; $i < 3; $i++) {
+            $this->evaluator()->evaluate($item->fresh());
+        }
+        $this->assertSame('disconnected', $item->fresh()->health_state);
+    }
+
     public function test_faulty_via_implausible_value(): void
     {
         $item = $this->item('DHT22', $this->cage('H3')->id);

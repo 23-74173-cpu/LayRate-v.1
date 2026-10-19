@@ -13,6 +13,30 @@ class HardwareCageAssignmentTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_hardware_live_data_calculates_ir_freshness_from_actual_timestamp(): void
+    {
+        $user = User::factory()->create(['role' => 'admin']);
+        $cage = Cage::create([
+            'cage_code' => 'CAGE-FRESHNESS', 'location' => 'Test', 'rows' => 1,
+            'slots_per_row' => 1, 'max_chickens_per_slot' => 4, 'total_capacity' => 4,
+            'is_active' => 1,
+        ]);
+        $slot = CageSlot::create([
+            'cage_id' => $cage->id, 'slot_number' => 1, 'row_number' => 1,
+            'column_number' => 1, 'current_occupancy' => 0,
+        ]);
+        HardwareItem::create([
+            'device_type' => 'IR_breakbeam', 'serial_number' => 'IR-FRESHNESS-TEST',
+            'cage_slot_id' => $slot->id, 'status' => 'active', 'health_state' => 'online',
+            'last_valid_reading_at' => now()->subMinutes(6),
+        ]);
+
+        $response = $this->actingAs($user)->get('/hardware/live-data');
+
+        $response->assertOk();
+        $response->assertSee('Disconnected');
+    }
+
     /** @test */
     public function dht22_spare_can_be_assigned_to_cage_via_edit()
     {
@@ -200,5 +224,3 @@ class HardwareCageAssignmentTest extends TestCase
         $this->assertEquals('active', $hardware->status);
     }
 }
-
-

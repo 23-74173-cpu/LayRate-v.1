@@ -70,16 +70,14 @@
                             $assignedTo = '—';
                         }
 
-                        // "Last Reading" — DHT22 reads through its assigned cage's latest
-                        // environmental log; IR break-beam reads through its own latest
-                        // occupancy reading. Stale (>30 min old) is flagged so a quiet
-                        // sensor doesn't look identical to a fresh one.
+                        // "Last Reading" — environmental log for DHT22 and the sensor's
+                        // own occupancy reading for IR. Health uses last_valid_reading_at.
                         $lastReadingAt = match ($item->device_type) {
                             'DHT22' => $item->cage?->latestEnvironmentLog?->recorded_at,
-                            'IR_breakbeam' => $item->latestOccupancyReading?->recorded_at,
+                            'IR_breakbeam' => $item->last_valid_reading_at,
                             default => null,
                         };
-                        $isStale = $lastReadingAt && $lastReadingAt->lt(now()->subMinutes(30));
+                        $isStale = $lastReadingAt && $lastReadingAt->lt(now()->subMinutes(2));
                     @endphp
                     <tr data-hardware-id="{{ $item->id }}" class="border-b hover:bg-black/[0.02] transition-colors" style="border-color: #e6e6e6;">
                         <td class="px-5 py-3.5">
@@ -105,7 +103,7 @@
                         </td>
                         <td class="px-5 py-3.5">
                             @php
-                                $h = $item->health_state ?: 'unknown';
+                                $h = $item->runtime_health_state ?? ($item->health_state ?: 'unknown');
                                 $hMeta = [
                                     'online'       => ['#1f6b3a', '#e8f5ec'],
                                     'stale'        => ['#8a5a00', '#fdf3e0'],

@@ -1,0 +1,8 @@
+[Unit]
+Description=Verify LayRate serial bridge heartbeat and API path
+After=layrate-serial.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/layrate/serial-bridge.env
+ExecStart=/usr/local/bin/layrate-serial-health-check

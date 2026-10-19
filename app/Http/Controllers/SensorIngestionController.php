@@ -47,6 +47,8 @@ class SensorIngestionController extends Controller
 
         $data = $request->validate([
             'readings' => ['required', 'array', 'min:1'],
+            'health_probe' => ['nullable', 'boolean'],
+            'probe_id' => ['nullable', 'string', 'max:100'],
             'readings.*.serial_number' => ['required', 'string', 'max:100'],
             'readings.*.temperature_c' => ['nullable', 'numeric'],
             'readings.*.humidity_pct' => ['nullable', 'numeric'],
@@ -55,6 +57,7 @@ class SensorIngestionController extends Controller
             'readings.*.new_trigger_count' => ['nullable', 'integer', 'min:0'],
             'readings.*.relay_status' => ['nullable', 'string', Rule::in(['on', 'off'])],
             'readings.*.relay_safety' => ['nullable', 'boolean'],
+            'readings.*.health_probe' => ['nullable', 'boolean'],
             'recorded_at' => ['required', 'date'],
         ]);
 
@@ -77,6 +80,16 @@ class SensorIngestionController extends Controller
 
                 if (! $hardwareItem) {
                     $errors[] = "Reading {$index}: serial number {$serial} is not registered to this device or is not active.";
+                    continue;
+                }
+
+                if (($reading['health_probe'] ?? false) === true) {
+                    if (! $request->boolean('health_probe') || ! $request->filled('probe_id')
+                        || $request->header('X-LayRate-Health-Probe') !== '1') {
+                        $errors[] = "Reading {$index}: invalid health-probe marker.";
+                        continue;
+                    }
+                    $processed[] = ['serial_number' => $serial, 'type' => 'health_probe'];
                     continue;
                 }
 
@@ -130,7 +143,7 @@ class SensorIngestionController extends Controller
                         'type' => 'environment',
                         'cage_id' => $hardwareItem->cage_id,
                     ];
-                } else            if ($hardwareItem->device_type === 'IR_breakbeam') {
+                } elseif ($hardwareItem->device_type === 'IR_breakbeam') {
                     if (! isset($reading['count'])) {
                         $errors[] = "Reading {$index}: IR breakbeam reading requires count.";
                         continue;
@@ -161,11 +174,20 @@ class SensorIngestionController extends Controller
                     $sameTimestampReading = SensorOccupancyReading::where('hardware_item_id', $hardwareItem->id)
                         ->where('recorded_at', $recordedAt)
                         ->first();
-                    if ($sameTimestampReading && (int) $sameTimestampReading->reported_count === $reportedCount) {
+                    $sameTimestampEvent = $newTriggerCount > 0 && EggCountEvent::where('hardware_item_id', $hardwareItem->id)
+                        ->where('event_type', 'sensor_trigger')
+                        ->where('source', $serial)
+                        ->whereBetween('occurred_at', [
+                            \Illuminate\Support\Carbon::parse($recordedAt)->addMicroseconds(1),
+                            \Illuminate\Support\Carbon::parse($recordedAt)->addMicroseconds($newTriggerCount),
+                        ])
+                        ->exists();
+                    if (($sameTimestampReading && (int) $sameTimestampReading->reported_count === $reportedCount)
+                        || $sameTimestampEvent) {
                         $processed[] = [
                             'serial_number' => $serial,
                             'type' => 'occupancy',
-                            'cage_slot_id' => $sameTimestampReading->cage_slot_id,
+                            'cage_slot_id' => $sameTimestampReading?->cage_slot_id ?? $slot->id,
                             'mismatch' => false,
                             'duplicate' => true,
                             'trigger_events' => 0,
