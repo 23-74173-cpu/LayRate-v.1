@@ -30,6 +30,25 @@ jobs:
           # workflow.  Discard any local modifications so `git pull` never fails.
           git checkout -- public/css/tailwind.css 2>/dev/null || true
 
+          # Back up Pi-local bridge edits before restoring the deployed file.
+          if ! git diff --quiet HEAD -- serial-bridge/bridge.py; then
+            BACKUP="$HOME/layrate-local-backups/bridge.py.$(date +%Y%m%d%H%M%S).local"
+            mkdir -p "$HOME/layrate-local-backups"
+            cp serial-bridge/bridge.py "$BACKUP"
+            echo "Preserved Pi-local bridge.py edit at $BACKUP"
+            git checkout -- serial-bridge/bridge.py
+          fi
+
+          # Do not let other accidental tracked working-tree edits block deploy.
+          # Only serial-bridge/bridge.py receives a backup because its local
+          # customization has previously been required by the Pi.
+          git diff --name-only HEAD | while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            [ "$file" = "serial-bridge/bridge.py" ] && continue
+            echo "Restoring tracked local modification: $file"
+            git checkout -- "$file"
+          done
+
       - name: Pull latest code
         run: |
           cd ${{ env.LARAVEL_DIR }}
