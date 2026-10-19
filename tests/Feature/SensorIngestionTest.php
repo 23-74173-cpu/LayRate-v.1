@@ -7,6 +7,7 @@ use App\Models\Cage;
 use App\Models\CageSlot;
 use App\Models\Device;
 use App\Models\EnvironmentalLog;
+use App\Models\EggCountEvent;
 use App\Models\HardwareItem;
 use App\Models\Hen;
 use App\Models\ProductionLog;
@@ -139,7 +140,7 @@ class SensorIngestionTest extends TestCase
                     'humidity_pct' => 65.0,
                 ],
             ],
-            'recorded_at' => now()->toDateTimeString(),
+            'recorded_at' => now()->addSecond()->toDateTimeString(),
         ], $key);
 
         $response->assertOk();
@@ -362,6 +363,91 @@ class SensorIngestionTest extends TestCase
             'egg_count' => 2,
             'hen_count' => 2,
         ]);
+
+        $this->assertDatabaseHas('egg_count_events', [
+            'cage_slot_id' => $this->slot->id,
+            'hardware_item_id' => HardwareItem::where('serial_number', 'IRBBS-TEST-001')->value('id'),
+            'event_type' => 'sensor_trigger',
+            'new_value' => 2,
+            'source' => 'IRBBS-TEST-001',
+        ]);
+    }
+
+    public function test_rapid_monotonic_sensor_counts_each_append_one_event(): void
+    {
+        $this->createHens(4);
+        $this->breakbeamItem();
+        $key = $this->deviceKey();
+        $base = now()->startOfSecond();
+        $index = 0;
+
+        foreach ([1, 2, 3] as $count) {
+            $this->postReadings([
+                'readings' => [['serial_number' => 'IRBBS-TEST-001', 'count' => $count]],
+                'recorded_at' => $base->copy()->addSeconds(++$index)->toDateTimeString(),
+            ], $key)->assertOk();
+        }
+
+        $this->assertSame(3, EggCountEvent::where('cage_slot_id', $this->slot->id)
+            ->where('event_type', 'sensor_trigger')->count());
+        $this->assertSame(3, (int) ProductionLog::where('cage_slot_id', $this->slot->id)->value('egg_count'));
+    }
+
+    public function test_duplicate_sensor_payload_is_idempotent_but_distinct_trigger_is_not_dropped_by_time_window(): void
+    {
+        $this->createHens(4);
+        $this->breakbeamItem();
+        $key = $this->deviceKey();
+        $stamp = now()->toDateTimeString();
+        $payload = [
+            'readings' => [['serial_number' => 'IRBBS-TEST-001', 'count' => 1]],
+            'recorded_at' => $stamp,
+        ];
+
+        $this->postReadings($payload, $key)->assertOk();
+        $this->postReadings($payload, $key)->assertJsonPath('processed.0.duplicate', true);
+        $this->postReadings([
+            'readings' => [['serial_number' => 'IRBBS-TEST-001', 'count' => 2]],
+            'recorded_at' => now()->addSecond()->toDateTimeString(),
+        ], $key)->assertOk();
+
+        $this->assertSame(2, EggCountEvent::where('cage_slot_id', $this->slot->id)
+            ->where('event_type', 'sensor_trigger')->count());
+    }
+
+    public function test_sensor_trigger_count_records_rapid_events_when_cumulative_counter_changes_later(): void
+    {
+        $this->createHens(4);
+        $this->breakbeamItem();
+        $key = $this->deviceKey();
+        $base = now();
+
+        $this->postReadings([
+            'readings' => [['serial_number' => 'IRBBS-TEST-001', 'count' => 1, 'trigger_count' => 1, 'new_trigger_count' => 1]],
+            'recorded_at' => $base->toDateTimeString(),
+        ], $key)->assertOk();
+
+        $this->postReadings([
+            'readings' => [['serial_number' => 'IRBBS-TEST-001', 'count' => 1, 'trigger_count' => 2, 'new_trigger_count' => 1]],
+            'recorded_at' => $base->copy()->addSecond()->toDateTimeString(),
+        ], $key)->assertOk();
+
+        $this->assertSame(2, EggCountEvent::where('cage_slot_id', $this->slot->id)
+            ->where('event_type', 'sensor_trigger')->count());
+        $this->assertSame(1, (int) ProductionLog::where('cage_slot_id', $this->slot->id)->value('egg_count'));
+        $this->postReadings([
+            'readings' => [['serial_number' => 'IRBBS-TEST-001', 'count' => 1, 'trigger_count' => 2, 'new_trigger_count' => 0]],
+            'recorded_at' => $base->copy()->addSeconds(2)->toDateTimeString(),
+        ], $key)->assertOk();
+        $this->assertSame(2, EggCountEvent::where('cage_slot_id', $this->slot->id)
+            ->where('event_type', 'sensor_trigger')->count());
+
+        $this->postReadings([
+            'readings' => [['serial_number' => 'IRBBS-TEST-001', 'count' => 1, 'trigger_count' => 3, 'new_trigger_count' => 1]],
+            'recorded_at' => $base->copy()->addSeconds(3)->toDateTimeString(),
+        ], $key)->assertOk();
+        $this->assertSame(3, EggCountEvent::where('cage_slot_id', $this->slot->id)
+            ->where('event_type', 'sensor_trigger')->count());
     }
 
     public function test_editing_sensor_log_marks_manual_so_sensor_cannot_revert_it(): void
@@ -395,10 +481,15 @@ class SensorIngestionTest extends TestCase
             'egg_count' => 1,
             'logged_via' => 'manual',
         ]);
+        $this->assertSame(1, EggCountEvent::where('production_log_id', $log->id)
+            ->where('event_type', 'manual_override')
+            ->where('old_value', 2)
+            ->where('new_value', 1)
+            ->count());
 
         // Sensor re-posts 2 (e.g. next temperature-triggered bridge POST
-        // carries the same monotonic count). Must NOT revert the correction.
-        // Single-reading batch with everything skipped => 422 by convention.
+        // carries the same monotonic count). It is acknowledged, but must NOT
+        // revert the correction or create a sensor trigger event.
         $response = $this->postReadings([
             'readings' => [
                 ['serial_number' => 'IRBBS-TEST-001', 'count' => 2],
@@ -406,15 +497,18 @@ class SensorIngestionTest extends TestCase
             'recorded_at' => now()->toDateTimeString(),
         ], $key);
 
-        $response->assertStatus(422);
-        $response->assertJsonPath('accepted', 0);
-        $response->assertJsonPath('errors.0', fn ($msg) => str_contains($msg, 'manual override'));
+        $response->assertOk();
+        $response->assertJsonPath('accepted', 1);
 
         $this->assertDatabaseHas('production_logs', [
             'id' => $log->id,
             'egg_count' => 1,
             'logged_via' => 'manual',
         ]);
+        $this->assertSame(1, EggCountEvent::where('production_log_id', $log->id)
+            ->where('event_type', 'manual_override')->count());
+        $this->assertSame(0, EggCountEvent::where('production_log_id', $log->id)
+            ->where('event_type', 'sensor_trigger')->count());
     }
 
     public function test_serial_number_not_linked_to_device_is_rejected(): void

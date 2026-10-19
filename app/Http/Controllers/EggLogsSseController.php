@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\ProductionLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class EggLogsSseController extends Controller
 {
     public function stream(Request $request)
     {
         $lastKnownId = (int) $request->query('since', 0);
+        $lastVersion = (int) $request->query('version', -1);
+        $version = (int) Cache::get('egg_logs_sse_version', 0);
 
         header('Content-Type: text/event-stream');
         header('Cache-Control: no-cache');
@@ -25,9 +28,9 @@ class EggLogsSseController extends Controller
 
         $latestId = (int) ProductionLog::max('id');
 
-        if ($latestId > $lastKnownId) {
+        if ($latestId > $lastKnownId || $version !== $lastVersion) {
             echo "event: log_update\n";
-            echo "data: " . json_encode(['latest_id' => $latestId]) . "\n\n";
+            echo "data: " . json_encode(['latest_id' => $latestId, 'version' => $version]) . "\n\n";
         }
 
         if (ob_get_level() > 0) {

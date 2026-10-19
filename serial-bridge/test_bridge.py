@@ -7,7 +7,7 @@ Deps: pyserial and requests (the package requirements).
 
 import unittest
 
-from bridge import apply_commands, fetch_relay_command, threshold_command
+from bridge import BlockParser, apply_commands, build_payload, fetch_relay_command, threshold_command
 
 
 class RecordingSerial:
@@ -114,7 +114,7 @@ class FetchRelayCommandTest(unittest.TestCase):
         def __init__(self, resp):
             self._resp = resp
 
-        def get(self, url, timeout=None):
+        def get(self, url, timeout=None, allow_redirects=True):
             return self._resp
 
     def test_parses_thresholds_from_payload(self):
@@ -138,6 +138,28 @@ class FetchRelayCommandTest(unittest.TestCase):
     def test_null_relay_returns_none(self):
         session = self._Session(self._Resp(200, {"relay": None}))
         self.assertIsNone(fetch_relay_command(session, "http://x/api/relay/command"))
+
+
+class SensorEventPayloadTest(unittest.TestCase):
+    def test_breaking_edge_produces_one_trigger_delta_and_repeats_are_zero(self):
+        parser = BlockParser()
+        text = lambda count, beam: (
+            f"Count: {count}\nBeam: {beam}\nTemp: 25.0 C\nHumidity: 60.0 %\n"
+        )
+        parser.feed(text(0, "UNBROKEN"))
+        first = parser.feed(text(1, "BROKEN"))[0]
+        repeat = parser.feed(text(1, "BROKEN"))[0]
+        self.assertEqual(first["new_trigger_count"], 1)
+        self.assertEqual(repeat["new_trigger_count"], 0)
+        self.assertEqual(first["trigger_count"], 1)
+
+    def test_multiple_count_increases_are_all_in_payload(self):
+        parser = BlockParser()
+        parser.feed("Count: 0\nBeam: UNBROKEN\nTemp: 25 C\nHumidity: 60 %\n")
+        block = parser.feed("Count: 3\nBeam: BROKEN\nTemp: 25 C\nHumidity: 60 %\n")[0]
+        payload = build_payload(block, "DHT", "IR", "RELAY")
+        ir = next(r for r in payload["readings"] if r["serial_number"] == "IR")
+        self.assertEqual(ir["new_trigger_count"], 3)
 
 
 if __name__ == "__main__":

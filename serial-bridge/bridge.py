@@ -78,6 +78,10 @@ class BlockParser:
     def __init__(self):
         self._buf = ""
         self.last_count = None
+        self.last_beam = None
+        self.trigger_count = 0
+        self.last_event_count = 0
+        self.pending_trigger_count = 0
 
     def feed(self, data):
         self._buf += data
@@ -155,6 +159,17 @@ class BlockParser:
                 val = val.split("(")[0].strip().upper()
                 if val in ("ON", "OFF"):
                     result["relay"] = val.lower()
+        previous_count = self.last_count
+        beam = result.get("beam")
+        if beam == "BROKEN" and self.last_beam != "BROKEN":
+            self.trigger_count += 1
+            self.pending_trigger_count += 1
+        result["trigger_count"] = self.trigger_count
+        count_delta = max(0, (result.get("count") or 0) - (previous_count or 0))
+        result["new_trigger_count"] = max(count_delta, self.pending_trigger_count)
+        self.pending_trigger_count = max(0, self.pending_trigger_count - count_delta)
+        self.last_count = result.get("count")
+        self.last_beam = beam
         return result
 
 
@@ -170,6 +185,8 @@ def build_payload(parsed, dht_serial, ir_serial, relay_serial):
         readings.append({
             "serial_number": ir_serial,
             "count": parsed["count"],
+            "trigger_count": parsed.get("trigger_count", parsed["count"]),
+            "new_trigger_count": parsed.get("new_trigger_count", 0),
         })
     if parsed["relay"] is not None:
         readings.append({
@@ -355,6 +372,8 @@ def run_loop(args):
                                 if resp.status_code == 200:
                                     log.info("Sent %d reading(s) to %s (HTTP 200)",
                                              len(payload["readings"]), args.api_url)
+                                    if parsed.get("count") is not None:
+                                        parser.last_event_count = parsed["count"]
                                 elif resp.status_code == 207:
                                     # Partial success — the server accepted some readings and
                                     # rejected others (bad serial, missing fields, sensor-reset
@@ -367,6 +386,9 @@ def run_loop(args):
                                         body = {}
                                     log.warning("Partial failure sending to %s (HTTP 207): %s",
                                                 args.api_url, body.get("errors", body))
+                                    accepted = body.get("processed", [])
+                                    if any(item.get("type") == "occupancy" for item in accepted):
+                                        parser.last_event_count = parsed.get("count") or 0
                                 else:
                                     log.warning("API HTTP %d: %s", resp.status_code, resp.text[:200])
                             except requests.RequestException as e:

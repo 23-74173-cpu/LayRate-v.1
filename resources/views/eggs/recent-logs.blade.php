@@ -167,16 +167,18 @@ if (!window.__recentLogsNavGuard) {
 
     window.__logsSource = null;
     var lastKnownId = 0;
+    var lastKnownVersion = -1;
 
     function connectLogsSSE() {
         if (!document.querySelector('turbo-frame#egg-logs-list')) return;
 
         if (window.__logsSource) window.__logsSource.close();
-        window.__logsSource = new EventSource('/eggs/logging/live-logs?since=' + lastKnownId);
+        window.__logsSource = new EventSource('/eggs/logging/live-logs?since=' + lastKnownId + '&version=' + lastKnownVersion);
 
         window.__logsSource.addEventListener('log_update', function(e) {
             try {
                 var data = JSON.parse(e.data);
+                if (typeof data.version === 'number') lastKnownVersion = data.version;
                 if (data.latest_id > lastKnownId) {
                     lastKnownId = data.latest_id;
                     var frame = document.querySelector('turbo-frame#egg-logs-list');

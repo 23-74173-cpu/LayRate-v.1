@@ -5,11 +5,14 @@ namespace Tests\Feature;
 use App\Models\Cage;
 use App\Models\CageSlot;
 use App\Models\EggSizeLog;
+use App\Models\EggCountEvent;
+use App\Models\HardwareItem;
 use App\Models\Hen;
 use App\Models\ProductionLog;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class EggReportingAndHistoryTest extends TestCase
@@ -373,7 +376,7 @@ class EggReportingAndHistoryTest extends TestCase
         $response->assertOk();
 
         $response->assertSee('4 hens');
-        $response->assertSee('Cage Empty');
+        $response->assertSee('empty cage', false);
     }
 
     /** @test */
@@ -402,5 +405,152 @@ class EggReportingAndHistoryTest extends TestCase
         $response->assertRedirect();
         $this->assertEquals(1, ProductionLog::count());
         $this->assertEquals('manual', ProductionLog::first()->logged_via);
+    }
+
+    public function test_sensor_override_to_zero_is_persisted_as_audit_event_and_live_count_is_zero(): void
+    {
+        Cache::forever('egg_count_sse_version', 9);
+        $log = $this->createLog($this->slotA1, 3, now()->toDateString(), 'Sensor reading', 'sensor');
+
+        $this->actingAs($this->user)->put(route('eggs.logging.update', $log), [
+            'log_date' => now()->toDateString(),
+            'egg_count' => 0,
+        ])->assertRedirect(route('eggs.logging'));
+
+        $this->assertSame(0, (int) $log->fresh()->egg_count);
+        $this->assertDatabaseMissing('egg_size_logs', [
+            'production_log_id' => $log->id,
+        ]);
+        $event = EggCountEvent::where('production_log_id', $log->id)->firstOrFail();
+        $this->assertSame('manual_override', $event->event_type);
+        $this->assertSame(3, $event->old_value);
+        $this->assertSame(0, $event->new_value);
+        $this->assertSame($this->user->id, $event->user_id);
+        $this->assertSame(10, (int) Cache::get('egg_count_sse_version'));
+        $this->actingAs($this->user)->get(route('eggs.logging.logs', ['cage_slot_id' => $this->slotA1->id]))
+            ->assertOk()->assertSee('0', false);
+        $this->get(route('eggs.logging'))->assertOk()->assertSee('data-today-eggs="0"', false);
+    }
+
+    public function test_live_count_sse_includes_cage_with_zero_total(): void
+    {
+        $this->actingAs($this->user);
+        $this->createLog($this->slotA1, 0, now()->toDateString(), 'Manual entry', 'manual');
+
+        $response = $this->get(route('eggs.logging.live-count', ['cage_code' => 'CAGE-A']));
+
+        $response->assertOk();
+        $response->assertHeader('content-type', 'text/html; charset=utf-8');
+    }
+
+    public function test_override_then_sensor_events_count_up_from_override_without_audit_inflation(): void
+    {
+        $log = $this->createLog($this->slotA1, 2, now()->toDateString(), 'Sensor reading', 'sensor');
+        $this->actingAs($this->user)->put(route('eggs.logging.update', $log), [
+            'log_date' => now()->toDateString(),
+            'egg_count' => 1,
+        ])->assertRedirect(route('eggs.logging'));
+
+        $this->assertSame(1, (int) $log->fresh()->egg_count);
+        $this->assertSame(1, EggCountEvent::where('production_log_id', $log->id)
+            ->where('event_type', 'manual_override')->count());
+        $this->get(route('eggs.logging'))->assertOk()->assertSee('data-today-eggs="1"', false);
+
+        $device = \App\Models\Device::create([
+            'name' => 'Override test Pi',
+            'api_key_hash' => \Illuminate\Support\Facades\Hash::make('override-test-key'),
+            'is_active' => true,
+        ]);
+        $item = \App\Models\HardwareItem::create([
+            'device_type' => 'IR_breakbeam',
+            'serial_number' => 'IRBBS-OVERRIDE-001',
+            'cage_slot_id' => $this->slotB1->id,
+            'device_id' => $device->id,
+            'status' => 'active',
+        ]);
+        $sensorLog = $this->createLog($this->slotB1, 0, now()->toDateString(), 'Sensor reading', 'sensor');
+        $this->postJson('/api/sensor-readings', [
+            'readings' => [['serial_number' => 'IRBBS-OVERRIDE-001', 'count' => 2]],
+            'recorded_at' => now()->addSecond()->toDateTimeString(),
+        ], ['X-Device-Key' => 'override-test-key'])->assertOk();
+
+        $this->assertSame(2, (int) $sensorLog->fresh()->egg_count);
+        $this->assertSame(2, EggCountEvent::where('hardware_item_id', $item->id)
+            ->where('event_type', 'sensor_trigger')->count());
+
+        $this->postJson('/api/sensor-readings', [
+            'readings' => [['serial_number' => 'IRBBS-OVERRIDE-001', 'count' => 3]],
+            'recorded_at' => now()->addSeconds(2)->toDateTimeString(),
+        ], ['X-Device-Key' => 'override-test-key'])->assertOk();
+
+        $this->assertSame(3, (int) $sensorLog->fresh()->egg_count);
+        $this->assertSame(3, EggCountEvent::where('hardware_item_id', $item->id)
+            ->where('event_type', 'sensor_trigger')->count());
+    }
+
+    public function test_override_to_zero_then_sensor_event_counts_up_from_zero(): void
+    {
+        $log = $this->createLog($this->slotA1, 2, now()->toDateString(), 'Sensor reading', 'sensor');
+        $this->actingAs($this->user)->put(route('eggs.logging.update', $log), [
+            'log_date' => now()->toDateString(),
+            'egg_count' => 0,
+        ])->assertRedirect(route('eggs.logging'));
+
+        $device = \App\Models\Device::create([
+            'name' => 'Zero override Pi',
+            'api_key_hash' => \Illuminate\Support\Facades\Hash::make('zero-override-key'),
+            'is_active' => true,
+        ]);
+        $item = \App\Models\HardwareItem::create([
+            'device_type' => 'IR_breakbeam',
+            'serial_number' => 'IRBBS-ZERO-001',
+            'cage_slot_id' => $this->slotB1->id,
+            'device_id' => $device->id,
+            'status' => 'active',
+        ]);
+        $nextLog = $this->createLog($this->slotB1, 0, now()->toDateString(), 'Sensor reading', 'sensor');
+
+        $this->postJson('/api/sensor-readings', [
+            'readings' => [['serial_number' => 'IRBBS-ZERO-001', 'count' => 1]],
+            'recorded_at' => now()->addSecond()->toDateTimeString(),
+        ], ['X-Device-Key' => 'zero-override-key'])->assertOk();
+
+        $this->assertSame(1, (int) $nextLog->fresh()->egg_count);
+        $this->assertDatabaseHas('egg_count_events', [
+            'hardware_item_id' => $item->id,
+            'event_type' => 'sensor_trigger',
+            'old_value' => 0,
+            'new_value' => 1,
+        ]);
+    }
+
+    public function test_sensor_event_migration_path_creates_persisted_event_and_production_log(): void
+    {
+        $device = \App\Models\Device::create([
+            'name' => 'Persist test Pi',
+            'api_key_hash' => \Illuminate\Support\Facades\Hash::make('persist-test-key'),
+            'is_active' => true,
+        ]);
+        $item = HardwareItem::create([
+            'device_type' => 'IR_breakbeam',
+            'serial_number' => 'IRBBS-PERSIST-001',
+            'cage_slot_id' => $this->slotA1->id,
+            'device_id' => $device->id,
+            'status' => 'active',
+        ]);
+
+        $this->postJson('/api/sensor-readings', [
+            'readings' => [['serial_number' => $item->serial_number, 'count' => 1]],
+            'recorded_at' => now()->toDateTimeString(),
+        ], ['X-Device-Key' => 'persist-test-key'])->assertOk();
+
+        $this->assertSame(1, EggCountEvent::where('cage_slot_id', $this->slotA1->id)
+            ->where('hardware_item_id', $item->id)
+            ->where('event_type', 'sensor_trigger')->count());
+        $this->assertDatabaseHas('production_logs', [
+            'cage_slot_id' => $this->slotA1->id,
+            'egg_count' => 1,
+            'logged_via' => 'sensor',
+        ]);
     }
 }

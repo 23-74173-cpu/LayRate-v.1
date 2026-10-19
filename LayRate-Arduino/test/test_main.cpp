@@ -21,12 +21,21 @@ HardwareSerial Serial; // mock global used by main.cpp on native builds
 
 // -- host stubs for the Arduino API used inside main.cpp -------------------
 static unsigned long _mock_millis = 0;
+static int _mock_ir_state = LOW;
 unsigned long millis() { return _mock_millis; }
 void pinMode(uint8_t, uint8_t) {}
 void digitalWrite(uint8_t, uint8_t) {}
-int digitalRead(uint8_t) { return LOW; }
+int digitalRead(uint8_t) { return _mock_ir_state; }
 
-void setUp(void) { Serial.reset(); }
+void setUp(void) {
+    Serial.reset();
+    _mock_millis = 0;
+    _mock_ir_state = LOW;
+    objectCount = 0;
+    lastIRCooldown = 0;
+    lastBeamState = false;
+    beamArmed = true;
+}
 void tearDown(void) {}
 
 static void test_boot_defaults_match_historical_thresholds(void) {
@@ -106,6 +115,21 @@ static void test_relay_commands_still_work_alongside_thresh(void) {
     TEST_ASSERT_EQUAL(RELAY_AUTO, relayMode);
 }
 
+static void test_beam_must_rearm_between_triggers_without_one_second_cooldown(void) {
+    _mock_millis = 100;
+    _mock_ir_state = HIGH;
+    loop();
+    TEST_ASSERT_EQUAL_UINT(1, objectCount);
+
+    _mock_millis = 120;
+    _mock_ir_state = LOW;
+    loop();
+    _mock_millis = 150;
+    _mock_ir_state = HIGH;
+    loop();
+    TEST_ASSERT_EQUAL_UINT(2, objectCount);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_boot_defaults_match_historical_thresholds);
@@ -114,5 +138,6 @@ int main(void) {
     RUN_TEST(test_malformed_thresh_is_rejected);
     RUN_TEST(test_hysteresis_uses_runtime_thresholds);
     RUN_TEST(test_relay_commands_still_work_alongside_thresh);
+    RUN_TEST(test_beam_must_rearm_between_triggers_without_one_second_cooldown);
     return UNITY_END();
 }

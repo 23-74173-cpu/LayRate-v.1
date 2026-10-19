@@ -1468,17 +1468,48 @@
         function updateSlotEggCount(slotId, count) {
             var card = document.querySelector('.slot-card[data-slot-id="' + slotId + '"]');
             if (!card) return;
+            count = parseInt(count, 10) || 0;
             var prev = parseInt(card.dataset.todayEggs) || 0;
             if (count !== prev) {
                 card.dataset.todayEggs = count;
                 card.style.backgroundColor = count > 0 ? '#eaf6ee' : '#ffffff';
+                card.style.borderColor = count > 0 ? '#b8dfc6' : '#e6e6e6';
 
-                if (count > 0 && prev === 0) {
+                var existingCheck = card.querySelector('.logged-check');
+                if (count > 0 && !existingCheck) {
                     var check = document.createElement('span');
                     check.className = 'logged-check absolute top-0.5 left-0.5 w-3 h-3 rounded-full flex items-center justify-center';
                     check.style.backgroundColor = '#1f6b3a';
                     check.innerHTML = '<svg class="w-2 h-2 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><polyline points="20 6 9 17 4 12"></polyline></svg>';
                     card.appendChild(check);
+                } else if (count === 0 && existingCheck) {
+                    existingCheck.remove();
+                }
+
+                var cageId = card.dataset.cageId;
+                var loggedCount = document.querySelectorAll('.slot-card[data-cage-id="' + cageId + '"] .logged-check').length;
+                var overviewCard = document.querySelector('.cage-overview-card[data-cage-id="' + cageId + '"]');
+                if (overviewCard) {
+                    var totalSlots = parseInt(overviewCard.dataset.totalSlots) || 0;
+                    var loggedEl = document.getElementById('cage-logged-' + cageId);
+                    var completeEl = document.getElementById('cage-complete-' + cageId);
+                    if (loggedEl) {
+                        loggedEl.textContent = loggedCount + '/' + totalSlots;
+                        loggedEl.style.color = loggedCount >= totalSlots ? '#1f6b3a' : '#1f1f1f';
+                    }
+                    if (completeEl) completeEl.style.display = loggedCount >= totalSlots ? 'inline' : 'none';
+                }
+
+                var eggDelta = count - prev;
+                var cageEggs = document.getElementById('cage-eggs-' + cageId);
+                if (cageEggs) {
+                    var currentCageEggs = parseInt(cageEggs.textContent.replace(/[^0-9]/g, '')) || 0;
+                    cageEggs.textContent = Math.max(0, currentCageEggs + eggDelta).toLocaleString() + ' eggs';
+                }
+                var totalEggs = document.getElementById('todayTotalEggs');
+                if (totalEggs) {
+                    var currentTotalEggs = parseInt(totalEggs.textContent.replace(/[^0-9]/g, '')) || 0;
+                    totalEggs.textContent = Math.max(0, currentTotalEggs + eggDelta).toLocaleString();
                 }
 
                 if (currentSlotId && card.dataset.slotId == currentSlotId) {
@@ -1494,6 +1525,7 @@
         }
 
         window.__eggCountSource = null;
+        window.__eggCountVersion = -1;
 
         function connectEggCountSSE() {
             if (!document.getElementById('todayTotalEggs')) return;
@@ -1513,12 +1545,14 @@
                 window.__eggCountSource.close();
             }
 
-            var url = '{{ route("eggs.logging.live-count") }}?cage_code=' + encodeURIComponent(cageCode);
+            var url = '{{ route("eggs.logging.live-count") }}?cage_code=' + encodeURIComponent(cageCode)
+                + '&version=' + encodeURIComponent(window.__eggCountVersion);
             window.__eggCountSource = new EventSource(url);
 
             window.__eggCountSource.addEventListener('count', function(e) {
                 try {
                     var data = JSON.parse(e.data);
+                    if (typeof data.version === 'number') window.__eggCountVersion = data.version;
                     if (data.counts) {
                         for (var slotId in data.counts) {
                             if (data.counts.hasOwnProperty(slotId)) {

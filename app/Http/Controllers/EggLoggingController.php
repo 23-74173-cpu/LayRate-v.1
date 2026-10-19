@@ -6,6 +6,7 @@ use App\Enums\EggSize;
 use App\Models\Cage;
 use App\Models\CageSlot;
 use App\Models\EggSizeLog;
+use App\Models\EggCountEvent;
 use App\Models\Hen;
 use App\Models\MortalityLog;
 use App\Models\Note;
@@ -379,6 +380,10 @@ class EggLoggingController extends Controller
         // ($data['hen_count'] is absent when the field is omitted entirely).
         $henCount = ($data['hen_count'] ?? null) !== null ? (int) $data['hen_count'] : $productionLog->hen_count;
 
+        if ($henCount === 0 && (int) $data['egg_count'] === 0) {
+            $henCount = (int) $productionLog->hen_count;
+        }
+
         if ($henCount === 0) {
             return redirect()->route('eggs.logging')
                 ->with('reopen_edit_log', $productionLog->id)
@@ -394,21 +399,57 @@ class EggLoggingController extends Controller
         }
 
         $oldNotes = trim((string) $productionLog->notes);
+        $oldLogDate = $productionLog->log_date->toDateString();
 
-        $productionLog->update([
-            'log_date' => $data['log_date'],
-            'egg_count' => $data['egg_count'],
-            'hen_count' => $henCount,
-            'hdep' => round(($data['egg_count'] / $henCount) * 100, 2),
-            'notes' => $data['notes'] ?? null,
-            // An explicit user edit is a manual override — without this a
-            // sensor-created log stays logged_via='sensor' and the next
-            // sensor POST silently reverts the correction (ingestion only
-            // protects logged_via='manual' rows).
-            'logged_via' => 'manual',
-        ]);
+        $oldEggCount = (int) $productionLog->egg_count;
+        DB::transaction(function () use ($productionLog, $data, $henCount, $oldEggCount, $oldLogDate) {
+            $productionLog->update([
+                'log_date' => $data['log_date'],
+                'egg_count' => $data['egg_count'],
+                'hen_count' => $henCount,
+                'hdep' => round(($data['egg_count'] / $henCount) * 100, 2),
+                'notes' => $data['notes'] ?? null,
+                // An explicit user edit is a manual override — without this a
+                // sensor-created log stays logged_via='sensor' and the next
+                // sensor POST silently reverts the correction (ingestion only
+                // protects logged_via='manual' rows).
+                'logged_via' => 'manual',
+            ]);
 
-        $this->syncSizeLogs($productionLog, $data);
+            $this->syncSizeLogs($productionLog, $data);
+
+            if ((int) $data['egg_count'] === 0) {
+                $productionLog->eggSizeLogs()->delete();
+            }
+
+            if ($oldEggCount !== (int) $data['egg_count']) {
+                EggCountEvent::create([
+                    'cage_slot_id' => $productionLog->cage_slot_id,
+                    'production_log_id' => $productionLog->id,
+                    'user_id' => auth()->id(),
+                    'event_type' => 'manual_override',
+                    'old_value' => $oldEggCount,
+                    'new_value' => (int) $data['egg_count'],
+                    'source' => 'egg_logging.update',
+                    'occurred_at' => now(),
+                ]);
+                logger()->info('Egg count manually overridden', [
+                    'production_log_id' => $productionLog->id,
+                    'cage_slot_id' => $productionLog->cage_slot_id,
+                    'old_value' => $oldEggCount,
+                    'new_value' => (int) $data['egg_count'],
+                    'user_id' => auth()->id(),
+                ]);
+            }
+
+            if ($data['log_date'] === ReportingDateService::reportingDateString()
+                || $oldLogDate === ReportingDateService::reportingDateString()) {
+                \Illuminate\Support\Facades\Cache::add('egg_count_sse_version', 0, now()->addYears(10));
+                \Illuminate\Support\Facades\Cache::increment('egg_count_sse_version');
+            }
+            \Illuminate\Support\Facades\Cache::add('egg_logs_sse_version', 0, now()->addYears(10));
+            \Illuminate\Support\Facades\Cache::increment('egg_logs_sse_version');
+        });
 
         // Only a changed note is copied to the Notes list (the edit box comes
         // pre-filled with the log's current notes).
@@ -453,15 +494,36 @@ class EggLoggingController extends Controller
 
     public function resetCount(ProductionLog $productionLog)
     {
-        $productionLog->update([
-            'egg_count' => 0,
-            'hdep' => 0,
-            'notes' => $productionLog->notes
-                ? $productionLog->notes . ' | Reset to 0'
-                : 'Reset to 0',
-        ]);
+        $oldEggCount = (int) $productionLog->egg_count;
+        DB::transaction(function () use ($productionLog, $oldEggCount) {
+            $productionLog->update([
+                'egg_count' => 0,
+                'hdep' => 0,
+                'logged_via' => 'manual',
+                'notes' => $productionLog->notes
+                    ? $productionLog->notes . ' | Reset to 0'
+                    : 'Reset to 0',
+            ]);
+            $productionLog->eggSizeLogs()->delete();
 
-        $productionLog->eggSizeLogs()->delete();
+            EggCountEvent::create([
+                'cage_slot_id' => $productionLog->cage_slot_id,
+                'production_log_id' => $productionLog->id,
+                'user_id' => auth()->id(),
+                'event_type' => 'manual_override',
+                'old_value' => $oldEggCount,
+                'new_value' => 0,
+                'source' => 'egg_logging.reset',
+                'occurred_at' => now(),
+            ]);
+
+            if ($productionLog->log_date->toDateString() === ReportingDateService::reportingDateString()) {
+                \Illuminate\Support\Facades\Cache::add('egg_count_sse_version', 0, now()->addYears(10));
+                \Illuminate\Support\Facades\Cache::increment('egg_count_sse_version');
+            }
+            \Illuminate\Support\Facades\Cache::add('egg_logs_sse_version', 0, now()->addYears(10));
+            \Illuminate\Support\Facades\Cache::increment('egg_logs_sse_version');
+        });
 
         if (request()->wantsJson()) {
             return response()->json(['success' => true]);

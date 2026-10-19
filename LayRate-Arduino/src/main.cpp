@@ -42,9 +42,10 @@ DHT dht(DHT_PIN, DHT_TYPE);
 // -- IR beam state (cooldown-based counting) --
 bool beamBroken     = false;
 bool lastBeamState  = false;
+bool beamArmed      = true;
 unsigned int objectCount = 0;
 unsigned long lastIRCooldown = 0;
-const unsigned long IR_COOLDOWN_MS = 1000; // lockout after a count to prevent noise re-trigger
+const unsigned long IR_COOLDOWN_MS = 40; // short hardware-noise debounce; preserve rapid valid crossings
 
 // -- DHT data --
 unsigned long lastDHTRead = 0;
@@ -313,9 +314,10 @@ void loop() {
   // ----------------------------------------------------
   beamBroken = (digitalRead(IR_PIN) == HIGH);
 
-  if (beamBroken && !lastBeamState && (now - lastIRCooldown) > IR_COOLDOWN_MS) {
+  if (beamBroken && !lastBeamState && beamArmed && (now - lastIRCooldown) > IR_COOLDOWN_MS) {
     lastBeamState = true;
     lastIRCooldown = now;
+    beamArmed = false;
     objectCount++;
     digitalWrite(LED_PIN, HIGH);
     printBlock();
@@ -324,6 +326,7 @@ void loop() {
 
   if (!beamBroken && lastBeamState) {
     lastBeamState = false;
+    beamArmed = true;
     digitalWrite(LED_PIN, LOW);
     printBlock();
     syncPrintedValues();

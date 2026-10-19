@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Alert;
 use App\Models\Device;
 use App\Models\EnvironmentalLog;
+use App\Models\EggCountEvent;
 use App\Models\HardwareItem;
 use App\Models\ProductionLog;
 use App\Models\SensorOccupancyReading;
@@ -50,6 +51,8 @@ class SensorIngestionController extends Controller
             'readings.*.temperature_c' => ['nullable', 'numeric'],
             'readings.*.humidity_pct' => ['nullable', 'numeric'],
             'readings.*.count' => ['nullable', 'integer', 'min:0'],
+            'readings.*.trigger_count' => ['nullable', 'integer', 'min:0'],
+            'readings.*.new_trigger_count' => ['nullable', 'integer', 'min:0'],
             'readings.*.relay_status' => ['nullable', 'string', Rule::in(['on', 'off'])],
             'readings.*.relay_safety' => ['nullable', 'boolean'],
             'recorded_at' => ['required', 'date'],
@@ -140,26 +143,62 @@ class SensorIngestionController extends Controller
 
                     $slot = $hardwareItem->cageSlot;
                     $reportedCount = (int) $reading['count'];
+                    $reportedTriggerCount = (int) ($reading['trigger_count'] ?? $reportedCount);
+                    $newTriggerCount = (int) ($reading['new_trigger_count'] ?? 0);
                     $actualOccupancy = $slot->current_occupancy;
+                    $logDate = now()->parse($recordedAt)->toDateString();
+                    $existingLog = ProductionLog::where('cage_slot_id', $slot->id)
+                        ->where('log_date', $logDate)
+                        ->first();
 
-                    /*
-                     * DEBOUNCE — skip if the same count was already recorded
-                     * within the last 5 seconds. The Arduino firmware already
-                     * has a 1-second IR_COOLDOWN_MS, so 5 seconds on the
-                     * server side catches any duplicate blocks sent by the
-                     * Python bridge (e.g. due to curl retry or TCP re-send).
-                     *
-                     * This replaces the old rate-limit design which used a
-                     * formula of 22 / max_chickens_per_slot hours (min 1h)
-                     * — far too aggressive for live updates.
-                     */
+                    // Drop only an identical retry (same timestamp and value).
+                    // Cumulative values can legitimately be unchanged in
+                    // heartbeat blocks, and new counts may arrive rapidly.
                     $lastReading = SensorOccupancyReading::where('hardware_item_id', $hardwareItem->id)
                         ->latest('recorded_at')
                         ->first();
 
-                    if ($lastReading
-                        && (int) $lastReading->reported_count === $reportedCount
-                        && $lastReading->recorded_at->gt(now()->subSeconds(5))) {
+                    $sameTimestampReading = SensorOccupancyReading::where('hardware_item_id', $hardwareItem->id)
+                        ->where('recorded_at', $recordedAt)
+                        ->first();
+                    if ($sameTimestampReading && (int) $sameTimestampReading->reported_count === $reportedCount) {
+                        $processed[] = [
+                            'serial_number' => $serial,
+                            'type' => 'occupancy',
+                            'cage_slot_id' => $sameTimestampReading->cage_slot_id,
+                            'mismatch' => false,
+                            'duplicate' => true,
+                            'trigger_events' => 0,
+                        ];
+                        continue;
+                    }
+
+                    $sameTriggerEvent = EggCountEvent::where('hardware_item_id', $hardwareItem->id)
+                        ->where('trigger_count', $reportedTriggerCount)
+                        ->where('event_type', 'sensor_trigger')
+                        ->whereBetween('occurred_at', ReportingDateService::reportingDayWindow($logDate))
+                        ->exists();
+                    if ($sameTriggerEvent) {
+                        $processed[] = [
+                            'serial_number' => $serial,
+                            'type' => 'occupancy',
+                            'cage_slot_id' => $slot->id,
+                            'mismatch' => $reportedCount !== $actualOccupancy,
+                            'duplicate' => true,
+                            'trigger_events' => 0,
+                        ];
+                        continue;
+                    }
+
+                    if ($existingLog && $existingLog->logged_via === 'manual') {
+                        $processed[] = [
+                            'serial_number' => $serial,
+                            'type' => 'occupancy',
+                            'cage_slot_id' => $slot->id,
+                            'mismatch' => $reportedCount !== $actualOccupancy,
+                            'manual_override' => true,
+                            'trigger_events' => 0,
+                        ];
                         continue;
                     }
 
@@ -167,16 +206,33 @@ class SensorIngestionController extends Controller
                     // the previous reading as its baseline (raw only).
                     app(DeviceHealthEvaluator::class)->registerIrReading($hardwareItem, $reportedCount, $slot);
 
-                    SensorOccupancyReading::updateOrCreate(
-                        [
-                            'hardware_item_id' => $hardwareItem->id,
-                            'recorded_at' => $recordedAt,
-                        ],
-                        [
+                    try {
+                        SensorOccupancyReading::updateOrCreate(
+                            [
+                                'hardware_item_id' => $hardwareItem->id,
+                                'recorded_at' => $recordedAt,
+                            ],
+                            [
+                                'cage_slot_id' => $slot->id,
+                                'reported_count' => $reportedCount,
+                            ]
+                        );
+                    } catch (\Throwable $e) {
+                        logger()->error('Failed to persist breakbeam reading', [
+                            'serial_number' => $serial,
                             'cage_slot_id' => $slot->id,
                             'reported_count' => $reportedCount,
-                        ]
-                    );
+                            'recorded_at' => $recordedAt,
+                            'exception' => $e->getMessage(),
+                        ]);
+                        throw $e;
+                    }
+                    logger()->debug('Breakbeam reading persisted', [
+                        'serial_number' => $serial,
+                        'cage_slot_id' => $slot->id,
+                        'reported_count' => $reportedCount,
+                        'recorded_at' => $recordedAt,
+                    ]);
 
                     /*
                      * Auto-create/update a ProductionLog for today from the
@@ -188,17 +244,7 @@ class SensorIngestionController extends Controller
                      * logs are touched.
                      */
                     if ($slot->active_hen_count > 0) {
-                        $logDate = now()->parse($recordedAt)->toDateString();
-                        $existingLog = ProductionLog::where('cage_slot_id', $slot->id)
-                            ->where('log_date', $logDate)
-                            ->first();
-
                         // Never overwrite a manual entry — the user explicitly overrode the sensor
-                        if ($existingLog && $existingLog->logged_via === 'manual') {
-                            $errors[] = "Reading {$index}: slot {$slot->id} has a manual override for {$logDate}. Sensor reading skipped.";
-                            continue;
-                        }
-
                         /*
                          * INVARIANT GUARD — IR break-beam counts are
                          * physically monotonic within a day.  If an
@@ -247,6 +293,47 @@ class SensorIngestionController extends Controller
                             continue;
                         }
 
+                        $previousCount = (int) ($lastReading?->reported_count ?? 0);
+                        if ($existingLog && $existingLog->logged_via !== 'manual') {
+                            $previousCount = (int) $existingLog->egg_count;
+                        }
+                        $sensorBaseline = $previousCount;
+                        $eventDelta = $newTriggerCount > 0
+                            ? $newTriggerCount
+                            : max(0, $reportedTriggerCount - $previousCount);
+
+                        $sensorTotalDelta = max(0, $reportedCount - $previousCount);
+                        for ($eventOffset = 1; $eventOffset <= $eventDelta; $eventOffset++) {
+                            $eventAt = \Illuminate\Support\Carbon::parse($recordedAt)->addMicroseconds($eventOffset);
+                            EggCountEvent::firstOrCreate(
+                                ['event_key' => "sensor:{$hardwareItem->id}:{$sensorBaseline}:{$reportedTriggerCount}:{$eventOffset}"],
+                                [
+                                    'cage_slot_id' => $slot->id,
+                                    'hardware_item_id' => $hardwareItem->id,
+                                    'device_id' => $device->id,
+                                    'event_type' => 'sensor_trigger',
+                                    'old_value' => $sensorTotalDelta > 0 && $eventOffset <= $sensorTotalDelta
+                                        ? $previousCount + $eventOffset - 1
+                                        : $reportedCount,
+                                    'new_value' => $sensorTotalDelta > 0 && $eventOffset <= $sensorTotalDelta
+                                        ? $previousCount + $eventOffset
+                                        : $reportedCount,
+                                    'trigger_count' => $reportedTriggerCount,
+                                    'source' => $serial,
+                                    'occurred_at' => $eventAt,
+                                ]
+                            );
+                        }
+                        if ($eventDelta > 0) {
+                            logger()->info('Persisted breakbeam trigger events', [
+                                'serial_number' => $serial,
+                                'cage_slot_id' => $slot->id,
+                                'event_count' => $eventDelta,
+                                'from_count' => $previousCount,
+                                'to_count' => $reportedCount,
+                            ]);
+                        }
+
                         $productionAttrs = [
                             'egg_count' => $reportedCount,
                             'hen_count' => $henCount,
@@ -268,6 +355,7 @@ class SensorIngestionController extends Controller
                                 'log_date' => $logDate,
                             ]);
                         }
+
                     }
 
                     if ($reportedCount !== $actualOccupancy) {
@@ -279,6 +367,7 @@ class SensorIngestionController extends Controller
                         'type' => 'occupancy',
                         'cage_slot_id' => $slot->id,
                         'mismatch' => $reportedCount !== $actualOccupancy,
+                        'trigger_events' => $eventDelta,
                     ];
                 } elseif ($hardwareItem->device_type === 'relay') {
                     if (! isset($reading['relay_status'])) {
