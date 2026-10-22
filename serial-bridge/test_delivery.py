@@ -191,6 +191,60 @@ class DeliveryClientTest(unittest.TestCase):
         self.assertEqual(self.spool.count(), 2)
         self.assertEqual(len(session.calls), 1)
 
+    def test_permanent_4xx_is_dead_lettered_and_newer_payload_is_delivered(self):
+        self.spool.append(payload(1))
+        self.spool.append(payload(2))
+        success = FakeResponse(200, {
+            "message": "Readings accepted.", "accepted": 1,
+            "processed": [{"serial_number": "IR-TEST", "type": "occupancy"}],
+        })
+        success2 = FakeResponse(200, {
+            "message": "Readings accepted.", "accepted": 1,
+            "processed": [{"serial_number": "IR-TEST", "type": "occupancy"}],
+        })
+        client = DeliveryClient(
+            FakeSession([FakeResponse(422, {"message": "invalid"}), success, success2]),
+            self.url,
+            self.spool,
+            max_attempts=3,
+            base_backoff=0,
+        )
+
+        self.assertEqual(client.replay_spool(), 1)
+        self.assertEqual(self.spool.count(), 0)
+        self.assertTrue((Path(self.temp.name) / "dead-letter" / "test-1.json").is_file())
+
+    def test_flagged_http_200_rejection_is_dead_lettered(self):
+        response = FakeResponse(200, {
+            "message": "Readings accepted.", "accepted": 1,
+            "errors": ["event exceeds hen cap"],
+            "processed": [{
+                "serial_number": "IR-TEST", "type": "occupancy",
+                "flagged": True, "trigger_events": 0,
+            }],
+        })
+        client = DeliveryClient(FakeSession([response]), self.url, self.spool,
+                                max_attempts=3, base_backoff=0)
+
+        self.assertFalse(client.deliver(payload(5)))
+        self.assertEqual(self.spool.count(), 0)
+        self.assertEqual(len(list((Path(self.temp.name) / "dead-letter").glob("*.json"))), 1)
+
+    def test_5xx_is_retried_but_4xx_is_not(self):
+        server_error = FakeResponse(503, {"message": "unavailable"})
+        accepted = FakeResponse(200, {
+            "message": "Readings accepted.", "accepted": 1,
+            "processed": [{"serial_number": "IR-TEST", "type": "occupancy"}],
+        })
+        client = DeliveryClient(FakeSession([server_error, accepted]), self.url, self.spool,
+                                max_attempts=2, base_backoff=0)
+        self.assertTrue(client.deliver(payload(3)))
+
+        session = FakeSession([FakeResponse(404, {"message": "missing"})])
+        client = DeliveryClient(session, self.url, self.spool, max_attempts=3, base_backoff=0)
+        self.assertFalse(client.deliver(payload(4)))
+        self.assertEqual(len(session.calls), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

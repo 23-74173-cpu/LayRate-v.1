@@ -292,7 +292,7 @@ class SensorIngestionTest extends TestCase
         $this->assertEquals(4, $this->slot->hens()->where('is_active', 1)->count());
     }
 
-    public function test_breakbeam_count_exceeding_hen_count_is_rejected(): void
+    public function test_breakbeam_count_exceeding_hen_count_is_flagged_and_acknowledged_without_egg_increment(): void
     {
         $this->createHens(1);
         $this->breakbeamItem();
@@ -313,19 +313,28 @@ class SensorIngestionTest extends TestCase
                 ],
                 [
                     'serial_number' => 'IRBBS-TEST-001',
+                    'count' => 1,
+                    'trigger_count' => 0,
+                    'new_trigger_count' => 0,
+                ],
+                [
+                    'serial_number' => 'IRBBS-TEST-001',
                     'count' => 2,
+                    'trigger_count' => 1,
+                    'new_trigger_count' => 1,
                 ],
             ],
             'recorded_at' => now()->toDateTimeString(),
         ], $key);
 
-        // Partial success: relay accepted, over-count egg log rejected.
-        $response->assertStatus(207);
-        $response->assertJsonPath('accepted', 1);
-        $response->assertJsonPath('errors.0', fn ($msg) => str_contains($msg, 'exceeds hen count'));
+        // All readings are acknowledged; the over-cap event is flagged.
+        $response->assertOk();
+        $response->assertJsonPath('accepted', 3);
+        $response->assertJsonPath('processed.2.flagged', true);
 
-        // No egg log may be created from an impossible sensor count.
-        $this->assertEquals(0, ProductionLog::where('cage_slot_id', $this->slot->id)->count());
+        // The baseline creates no production log; the subsequent event is
+        // rejected at the hen cap.
+        $this->assertSame(0, ProductionLog::where('cage_slot_id', $this->slot->id)->count());
 
         // Raw occupancy datum is still preserved for diagnostics.
         $this->assertDatabaseHas('sensor_occupancy_readings', [
@@ -339,6 +348,61 @@ class SensorIngestionTest extends TestCase
             'alert_type' => 'egg_over_hen',
             'is_read' => 0,
         ]);
+        $this->assertDatabaseHas('egg_count_events', [
+            'cage_slot_id' => $this->slot->id,
+            'event_type' => 'sensor_trigger_rejected',
+        ]);
+    }
+
+    public function test_arduino_cumulative_count_above_hen_count_is_only_a_baseline_without_events(): void
+    {
+        $this->createHens(3);
+        $this->breakbeamItem();
+
+        $response = $this->postReadings([
+            'readings' => [[
+                'serial_number' => 'IRBBS-TEST-001',
+                'count' => 15,
+                'trigger_count' => 0,
+                'new_trigger_count' => 0,
+            ]],
+            'recorded_at' => now()->toDateTimeString(),
+        ], $this->deviceKey());
+
+        $response->assertOk()->assertJsonPath('accepted', 1);
+        $this->assertSame(0, EggCountEvent::where('cage_slot_id', $this->slot->id)->count());
+        $this->assertSame(0, ProductionLog::where('cage_slot_id', $this->slot->id)->count());
+        $this->assertDatabaseHas('sensor_occupancy_readings', [
+            'cage_slot_id' => $this->slot->id,
+            'reported_count' => 15,
+        ]);
+    }
+
+    public function test_arduino_first_baseline_is_not_compared_to_existing_app_egg_count(): void
+    {
+        $this->createHens(3);
+        $this->breakbeamItem();
+        ProductionLog::create([
+            'cage_slot_id' => $this->slot->id,
+            'log_date' => now()->toDateString(),
+            'egg_count' => 1,
+            'hen_count' => 3,
+            'hdep' => 33.33,
+            'logged_via' => 'manual',
+        ]);
+
+        $this->postReadings([
+            'readings' => [[
+                'serial_number' => 'IRBBS-TEST-001',
+                'count' => 15,
+                'trigger_count' => 0,
+                'new_trigger_count' => 0,
+            ]],
+            'recorded_at' => now()->toDateTimeString(),
+        ], $this->deviceKey())->assertOk();
+
+        $this->assertSame(0, EggCountEvent::where('cage_slot_id', $this->slot->id)->count());
+        $this->assertSame(1, (int) ProductionLog::where('cage_slot_id', $this->slot->id)->value('egg_count'));
     }
 
     public function test_breakbeam_count_equal_to_hen_count_is_accepted(): void
@@ -352,6 +416,8 @@ class SensorIngestionTest extends TestCase
                 [
                     'serial_number' => 'IRBBS-TEST-001',
                     'count' => 2,
+                    'trigger_count' => 2,
+                    'new_trigger_count' => 2,
                 ],
             ],
             'recorded_at' => now()->toDateTimeString(),
@@ -402,7 +468,7 @@ class SensorIngestionTest extends TestCase
         Cache::forever('egg_count_sse_version', 17);
 
         $this->postReadings([
-            'readings' => [['serial_number' => 'IRBBS-TEST-001', 'count' => 1]],
+            'readings' => [['serial_number' => 'IRBBS-TEST-001', 'count' => 1, 'trigger_count' => 1, 'new_trigger_count' => 1]],
             'recorded_at' => now()->toDateTimeString(),
         ], $key)->assertOk();
 
@@ -416,7 +482,7 @@ class SensorIngestionTest extends TestCase
         Cache::forever('egg_logs_sse_version', 8);
 
         $this->postReadings([
-            'readings' => [['serial_number' => 'IRBBS-TEST-001', 'count' => 1]],
+            'readings' => [['serial_number' => 'IRBBS-TEST-001', 'count' => 1, 'trigger_count' => 1, 'new_trigger_count' => 1]],
             'recorded_at' => now()->toDateTimeString(),
         ], $this->deviceKey())->assertOk();
 
@@ -657,6 +723,52 @@ class SensorIngestionTest extends TestCase
         $this->assertSame(1, (int) $log->fresh()->egg_count);
         $this->assertSame(4, EggCountEvent::where('hardware_item_id', $item->id)
             ->where('event_type', 'sensor_trigger')->count());
+    }
+
+    public function test_cap_exceeded_sensor_event_is_flagged_without_changing_daily_count(): void
+    {
+        $this->createHens(3);
+        $item = $this->breakbeamItem();
+        $key = $this->deviceKey();
+        $stamp = now()->subSeconds(2)->toDateTimeString();
+        $this->postReadings([
+            'readings' => [[
+                'serial_number' => $item->serial_number,
+                'count' => 3,
+                'trigger_count' => 0,
+                'new_trigger_count' => 0,
+            ]],
+            'recorded_at' => $stamp,
+        ], $key)->assertOk();
+        $this->postReadings([
+            'readings' => [[
+                'serial_number' => $item->serial_number,
+                'count' => 3,
+                'trigger_count' => 0,
+                'new_trigger_count' => 0,
+            ]],
+            'recorded_at' => now()->subSecond()->toDateTimeString(),
+        ], $key)->assertOk();
+        $log = ProductionLog::where('cage_slot_id', $this->slot->id)->firstOrFail();
+
+        $response = $this->postReadings([
+            'readings' => [[
+                'serial_number' => $item->serial_number,
+                'count' => 4,
+                'trigger_count' => 2,
+                'new_trigger_count' => 1,
+            ]],
+            'recorded_at' => now()->toDateTimeString(),
+        ], $key);
+
+        $response->assertOk()->assertJsonPath('processed.0.flagged', true);
+        $this->assertSame(3, (int) $log->fresh()->egg_count);
+        $this->assertDatabaseHas('egg_count_events', [
+            'cage_slot_id' => $this->slot->id,
+            'event_type' => 'sensor_trigger_rejected',
+            'old_value' => 3,
+            'new_value' => 3,
+        ]);
     }
 
     public function test_serial_number_not_linked_to_device_is_rejected(): void

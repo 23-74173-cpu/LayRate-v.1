@@ -141,6 +141,33 @@ class FetchRelayCommandTest(unittest.TestCase):
 
 
 class SensorEventPayloadTest(unittest.TestCase):
+    def test_first_reading_is_baseline_even_when_count_is_above_hen_count(self):
+        parser = BlockParser()
+        first = parser.feed(
+            "Count: 15\nBeam: BROKEN\nTemp: 25 C\nHumidity: 60 %\n"
+        )[0]
+
+        self.assertEqual(first["new_trigger_count"], 0)
+        self.assertEqual(first["count"], 15)
+        self.assertTrue(first["baseline_only"])
+
+    def test_first_reading_after_parser_reconnect_is_baseline(self):
+        parser = BlockParser()
+        block = "Count: 8\nBeam: BROKEN\nTemp: 25 C\nHumidity: 60 %\n"
+        parser.feed(block)
+        parser._first_count_after_connection = True
+        first_after_reconnect = parser.feed(block)[0]
+        self.assertTrue(first_after_reconnect["baseline_only"])
+        self.assertEqual(first_after_reconnect["new_trigger_count"], 0)
+
+    def test_first_baseline_does_not_turn_a_broken_beam_into_an_egg_event(self):
+        parsed = BlockParser().feed(
+            "Count: 15\nBeam: BROKEN\nTemp: 25 C\nHumidity: 60 %\n"
+        )[0]
+        payload = build_payload(parsed, "DHT", "IR", "RELAY")
+        ir = next(r for r in payload["readings"] if r["serial_number"] == "IR")
+        self.assertEqual(ir["new_trigger_count"], 0)
+
     def test_breaking_edge_produces_one_trigger_delta_and_repeats_are_zero(self):
         parser = BlockParser()
         text = lambda count, beam: (

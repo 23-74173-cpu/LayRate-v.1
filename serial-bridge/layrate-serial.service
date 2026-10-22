@@ -3,6 +3,8 @@ Description=LayRate Serial Bridge - Arduino sensor ingestion
 Documentation=https://github.com/anomalyco/LayRate-Main
 After=network-online.target mariadb.service
 Wants=network-online.target
+StartLimitIntervalSec=0
+StartLimitBurst=5
 
 [Service]
 Type=simple
@@ -13,10 +15,10 @@ StateDirectory=layrate-serial
 RuntimeDirectory=layrate-serial
 Environment=LAYRATE_API_BASE_URL=http://127.0.0.1
 Environment=LAYRATE_DELIVERY_SPOOL=/var/lib/layrate-serial/queue.jsonl
+Environment=LAYRATE_DEAD_LETTER_DIR=/var/lib/layrate-serial/dead-letter
 ExecStart=/var/www/layrate/serial-bridge/.venv/bin/python bridge.py --config /var/www/layrate/serial-bridge/sensors.json --heartbeat-state /run/layrate-serial/heartbeat.json
 Restart=on-failure
 RestartSec=5
-StartLimitIntervalSec=0
 UMask=0027
 
 [Install]

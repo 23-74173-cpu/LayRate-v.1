@@ -174,14 +174,21 @@ class RetryableDeliveryError(Exception):
     pass
 
 
+class PermanentDeliveryError(Exception):
+    def __init__(self, status_code, message):
+        super().__init__(message)
+        self.status_code = int(status_code)
+
+
 class DeliveryClient:
     """Strict HTTP delivery with bounded retry and ordered durable replay."""
 
     def __init__(self, session, url, spool, max_attempts=DELIVERY_MAX_ATTEMPTS,
-                 base_backoff=DELIVERY_BACKOFF_SECONDS):
+                 base_backoff=DELIVERY_BACKOFF_SECONDS, dead_letter_dir=None):
         self.session = session
         self.url = url
         self.spool = spool
+        self.dead_letter_dir = Path(dead_letter_dir) if dead_letter_dir else self.spool.path.parent / "dead-letter"
         self.max_attempts = max(1, int(max_attempts))
         self.base_backoff = max(0.0, float(base_backoff))
         self.sent = 0
@@ -222,15 +229,62 @@ class DeliveryClient:
         data.pop("sequence_id", None)
         return data
 
+    @staticmethod
+    def _is_baseline(payload):
+        egg_readings = [reading for reading in payload.get("readings", []) if "count" in reading]
+        return bool(egg_readings) and all(
+            reading.get("new_trigger_count", 0) == 0
+            and reading.get("trigger_count", 0) == 0
+            for reading in egg_readings
+        )
+
+    @staticmethod
+    def _permanent_rejection_reason(body):
+        for item in body.get("processed", []):
+            if not isinstance(item, dict) or item.get("flagged") is not True:
+                continue
+            if item.get("baseline") is True:
+                continue
+            if (item.get("type") == "occupancy" and item.get("trigger_events", 0) == 0
+                    and item.get("duplicate") is not True and item.get("accepted") is not True):
+                return item.get("reason") or "sensor event was rejected by the application"
+        return None
+
+    @staticmethod
+    def _is_accepted_baseline(payload, body):
+        baseline_serials = {
+            item.get("serial_number")
+            for item in payload.get("readings", [])
+            if "count" in item and item.get("new_trigger_count", 0) == 0
+        }
+        accepted_baseline_serials = {
+            item.get("serial_number")
+            for item in body.get("processed", [])
+            if item.get("baseline") is True
+        }
+        expected = {item.get("serial_number") for item in payload.get("readings", [])}
+        accepted = {item.get("serial_number") for item in body.get("processed", [])}
+        return bool(baseline_serials) and baseline_serials.issubset(accepted_baseline_serials) and expected.issubset(accepted | baseline_serials)
+
     def _post(self, payload):
         response = self.session.post(
             self.url, json=self._post_body(payload), timeout=10, allow_redirects=False,
         )
         sequence_id = delivery_sequence_id(payload)
         content_type = response.headers.get("Content-Type", "").lower()
-        if response.status_code != 200:
+        if 400 <= response.status_code < 500:
+            raise PermanentDeliveryError(
+                response.status_code,
+                f"HTTP {response.status_code}; response={response.text[:240]!r}",
+            )
+        if response.status_code >= 500:
             raise RetryableDeliveryError(
                 f"HTTP {response.status_code}; response={response.text[:240]!r}"
+            )
+        if response.status_code != 200:
+            raise PermanentDeliveryError(
+                response.status_code,
+                f"Unexpected HTTP {response.status_code}; response={response.text[:240]!r}",
             )
         if "application/json" not in content_type:
             raise RetryableDeliveryError(
@@ -246,10 +300,21 @@ class DeliveryClient:
             raise RetryableDeliveryError(
                 f"HTTP 200 with unexpected acknowledgement; response={response.text[:240]!r}"
             )
-        if (body.get("errors") or not self._expected_processed(payload, body)):
+        rejection_reason = self._permanent_rejection_reason(body)
+        if rejection_reason is not None:
+            raise PermanentDeliveryError(
+                422,
+                f"Application rejected sensor event ({rejection_reason}); response={response.text[:240]!r}",
+            )
+        if body.get("errors") and not self._is_accepted_baseline(payload, body):
             raise RetryableDeliveryError(
                 f"HTTP 200 partial/unaccepted payload; response={response.text[:240]!r}"
             )
+        if not self._expected_processed(payload, body):
+            if not self._is_accepted_baseline(payload, body):
+                raise RetryableDeliveryError(
+                    f"HTTP 200 partial/unaccepted payload; response={response.text[:240]!r}"
+                )
         return sequence_id
 
     def _deliver(self, payload):
@@ -258,6 +323,8 @@ class DeliveryClient:
             try:
                 self._post(payload)
                 return sequence_id
+            except PermanentDeliveryError:
+                raise
             except (requests.RequestException, RetryableDeliveryError, OSError, ValueError) as exc:
                 response = getattr(exc, "response", None)
                 snippet = getattr(response, "text", "")
@@ -272,6 +339,47 @@ class DeliveryClient:
                 if attempt < self.max_attempts:
                     time.sleep(self.base_backoff * (2 ** (attempt - 1)))
         return None
+
+    def _dead_letter_head(self, sequence_id, status_code, message):
+        payload = self.spool.peek()
+        if payload is None or delivery_sequence_id(payload) != sequence_id:
+            return False
+        self.dead_letter_dir.mkdir(parents=True, exist_ok=True)
+        record = dict(payload)
+        record["dead_letter"] = {
+            "status_code": int(status_code),
+            "reason": str(message)[:500],
+            "failed_at": datetime.now(timezone.utc).isoformat(),
+        }
+        target = self.dead_letter_dir / f"{sequence_id}.json"
+        temp_file = None
+        fd, tmp_name = tempfile.mkstemp(prefix=f"{sequence_id}.", dir=self.dead_letter_dir)
+        try:
+            temp_file = os.fdopen(fd, "w", encoding="utf-8")
+            with temp_file as handle:
+                json.dump(record, handle, separators=(",", ":"))
+                handle.write("\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            while True:
+                if target.exists():
+                    target = self.dead_letter_dir / f"{sequence_id}.{uuid.uuid4().hex}.json"
+                    continue
+                try:
+                    os.link(tmp_name, target)
+                    break
+                except FileExistsError:
+                    target = self.dead_letter_dir / f"{sequence_id}.{uuid.uuid4().hex}.json"
+        finally:
+            if temp_file is None:
+                os.close(fd)
+            if os.path.exists(tmp_name):
+                os.unlink(tmp_name)
+        if not self.spool.acknowledge_head(sequence_id):
+            raise RuntimeError(f"spool head changed while dead-lettering {sequence_id}")
+        log.error("Moved permanently rejected payload sequence_id=%s status=%d dead_letter=%s",
+                  sequence_id, status_code, target)
+        return True
 
     def deliver(self, payload):
         with self._lock:
@@ -330,6 +438,16 @@ class DeliveryClient:
             sequence_id = delivery_sequence_id(payload)
             try:
                 acknowledged = self._deliver(payload)
+            except PermanentDeliveryError as exc:
+                self._mark_failed()
+                try:
+                    if not self._dead_letter_head(sequence_id, exc.status_code, exc):
+                        break
+                except OSError:
+                    log.exception("Could not dead-letter permanent rejection sequence_id=%s; preserving spool head",
+                                  sequence_id)
+                    break
+                continue
             except Exception as exc:  # keep the durable head; never skip order
                 log.exception("Spool replay failed url=%s sequence_id=%s: %s", self.url, sequence_id, exc)
                 break
@@ -494,6 +612,7 @@ class BlockParser:
         self.trigger_count = 0
         self.last_event_count = 0
         self.pending_trigger_count = 0
+        self._first_count_after_connection = True
 
     def feed(self, data):
         self._buf += data
@@ -575,6 +694,13 @@ class BlockParser:
         beam = result.get("beam")
         count_decreased = False
         current_count = result.get("count") or 0
+        first_count = self._first_count_after_connection or previous_count is None
+        if first_count:
+            self.trigger_count = 0
+            self.last_event_count = 0
+            self.pending_trigger_count = 0
+            self.last_beam = beam
+            self._first_count_after_connection = False
         # The Arduino reports a cumulative counter, but a decrease is an
         # explicit resync (e.g. user override/reset), not a negative delta.
         # Reset the event baseline so the next increment is forwarded.
@@ -584,15 +710,18 @@ class BlockParser:
             self.last_event_count = 0
             self.pending_trigger_count = 0
             self.last_beam = None
-        if not count_decreased and beam == "BROKEN" and self.last_beam != "BROKEN":
+        if not first_count and not count_decreased and beam == "BROKEN" and self.last_beam != "BROKEN":
             self.trigger_count += 1
             self.pending_trigger_count += 1
         result["trigger_count"] = self.trigger_count
-        count_delta = max(0, current_count - (previous_count or 0))
+        count_delta = 0 if first_count else max(0, current_count - (previous_count or 0))
         result["new_trigger_count"] = max(count_delta, self.pending_trigger_count)
+        if count_decreased:
+            result["new_trigger_count"] = 0
         self.pending_trigger_count = max(0, self.pending_trigger_count - count_delta)
         self.last_count = result.get("count")
         self.last_beam = beam
+        result["baseline_only"] = first_count
         return result
 
 
@@ -738,6 +867,15 @@ def run_loop(args, config=None):
     except OSError as exc:
         heartbeat_server.shutdown()
         raise RuntimeError(f"delivery spool directory is not writable: {spool.path.parent}: {exc}") from exc
+    dead_letter_dir = Path(args.dead_letter_dir or (spool.path.parent / "dead-letter"))
+    try:
+        dead_letter_dir.mkdir(parents=True, exist_ok=True)
+        fd, probe_path = tempfile.mkstemp(dir=dead_letter_dir)
+        os.close(fd)
+        os.unlink(probe_path)
+    except OSError as exc:
+        heartbeat_server.shutdown()
+        raise RuntimeError(f"dead-letter directory is not writable: {dead_letter_dir}: {exc}") from exc
     try:
         probe = session.get(command_url, timeout=5, allow_redirects=False)
         if probe.status_code != 200 or "application/json" not in probe.headers.get("Content-Type", "").lower():
@@ -750,7 +888,7 @@ def run_loop(args, config=None):
         heartbeat_server.shutdown()
         raise
 
-    delivery = DeliveryClient(session, api_url, spool)
+    delivery = DeliveryClient(session, api_url, spool, dead_letter_dir=dead_letter_dir)
     parser = BlockParser()
     serial_activity_at = None
     delivery_at = None
@@ -780,6 +918,7 @@ def run_loop(args, config=None):
         try:
             with serial.Serial(port, args.baud, timeout=1) as ser:
                 ser.reset_input_buffer()
+                parser = BlockParser()
                 log.info("Serial connection opened on %s", port)
                 if serial_activity_at is None:
                     serial_activity_at = delivery_at
@@ -842,6 +981,10 @@ def run_loop(args, config=None):
                             log.debug("Parsed: count=%s  temp=%s  hum=%s  relay=%s  safety=%s",
                                       parsed["count"], parsed["temp"], parsed["humidity"],
                                       parsed["relay"], parsed["relay_safety"])
+                            if parsed.get("baseline_only") and parsed.get("count") is not None:
+                                parsed = dict(parsed)
+                                parsed["new_trigger_count"] = 0
+                                parsed["trigger_count"] = 0
                             payload = build_payload(parsed, args.dht_serial, args.ir_serial, args.relay_serial)
                             if payload is None:
                                 continue
@@ -897,6 +1040,8 @@ def merge_config(args):
             if hasattr(args, key) and getattr(args, key) is None and val is not None:
                 setattr(args, key, val)
         log.info("Loaded config from %s", config_path)
+    if getattr(args, "dead_letter_dir", None) is None:
+        args.dead_letter_dir = os.getenv("LAYRATE_DEAD_LETTER_DIR")
     return args
 
 
@@ -917,6 +1062,7 @@ def main():
                         help="Seconds of Arduino output to discard after serial open (DTR reset compensation)")
     parser.add_argument("--auto-port", action="store_true", help="Auto-detect Arduino port")
     parser.add_argument("--spool-path", default=None, help=argparse.SUPPRESS)
+    parser.add_argument("--dead-letter-dir", default=None, help=argparse.SUPPRESS)
     parser.add_argument("--heartbeat-host", default="127.0.0.1", help=argparse.SUPPRESS)
     parser.add_argument("--heartbeat-port", type=int, default=8765, help=argparse.SUPPRESS)
     parser.add_argument("--heartbeat-state", default="/run/layrate-serial/heartbeat.json", help=argparse.SUPPRESS)

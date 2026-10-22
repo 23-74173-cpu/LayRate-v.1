@@ -432,6 +432,22 @@ class EggReportingAndHistoryTest extends TestCase
         $this->get(route('eggs.logging'))->assertOk()->assertSee('data-today-eggs="0"', false);
     }
 
+    public function test_zero_override_changes_only_todays_slot_log_and_preserves_october_19_log(): void
+    {
+        $today = now()->toDateString();
+        $older = $this->createLog($this->slotA1, 2, '2026-10-19', 'Older sensor record', 'sensor');
+        $current = $this->createLog($this->slotA1, 3, $today, 'Today sensor record', 'sensor');
+
+        $this->actingAs($this->user)->put(route('eggs.logging.update', $current), [
+            'log_date' => $today,
+            'egg_count' => 0,
+        ])->assertRedirect(route('eggs.logging'));
+
+        $this->assertSame(0, (int) $current->fresh()->egg_count);
+        $this->assertSame('2026-10-19', $older->fresh()->log_date->toDateString());
+        $this->assertSame(2, (int) $older->fresh()->egg_count);
+    }
+
     public function test_live_count_sse_includes_cage_with_zero_total(): void
     {
         $this->actingAs($this->user);

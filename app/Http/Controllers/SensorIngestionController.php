@@ -282,52 +282,73 @@ class SensorIngestionController extends Controller
                         $henCount = $slot->active_hen_count;
 
                         /*
-                         * HEN-COUNT INVARIANT — a slot cannot lay more eggs
-                         * in a day than the hens present (active + died
-                         * today, mirroring EggLoggingController::store).
-                         * A higher sensor count is a miscount (double-break,
-                         * stuck beam re-trigger) and must never become a
-                         * ProductionLog — it would corrupt HDEP and the
-                         * forecast inputs. Reject loudly (207) and alert so
-                         * the farmer checks the sensor. The raw occupancy
-                         * reading above is still preserved.
+                         * The daily app count remains capped by hens. The
+                         * Arduino cumulative count is never compared to the
+                         * cap; only the app count after applying event deltas is.
                          */
                         if (! array_key_exists($slot->cage_id, $diedTodayByCage)) {
                             $diedTodayByCage[$slot->cage_id] = self::diedTodayCount($slot->cage_id, $logDate);
                         }
                         $henCount += $diedTodayByCage[$slot->cage_id];
 
-                        if ($reportedCount > $henCount && $existingLog?->logged_via !== 'manual' && $newTriggerCount === 0) {
-                            self::createEggOverHenAlert($slot, $reportedCount, $henCount);
+                        $firstSensorReading = $lastReading === null
+                            && $existingLog === null;
+                        $eventDelta = 0;
+                        $overrideIsActive = false;
 
-                            $errors[] = "Reading {$index}: count {$reportedCount} exceeds hen count ({$henCount}) for slot {$slot->id} on {$logDate}. Sensor over-count suspected.";
+                        if ($firstSensorReading) {
+                            // First cumulative value is a baseline only; the
+                            // counter may include readings from before ingestion.
+                            $processed[] = [
+                                'serial_number' => $serial,
+                                'type' => 'occupancy',
+                                'cage_slot_id' => $slot->id,
+                                'mismatch' => $reportedCount !== $actualOccupancy,
+                                'baseline' => true,
+                                'trigger_events' => 0,
+                            ];
                             continue;
                         }
 
-                        $previousCount = (int) ($existingLog?->egg_count ?? $lastReading?->reported_count ?? 0);
-                        $sensorCounterBaseline = (int) ($lastReading?->reported_count ?? 0);
-                        $sensorBaseline = $previousCount;
+                        $previousCount = (int) ($existingLog?->egg_count ?? 0);
+                        $sensorBaseline = (int) ($lastReading?->reported_count ?? 0);
                         $overrideIsActive = $existingLog?->logged_via === 'manual'
                             || EggCountEvent::where('cage_slot_id', $slot->id)
                                 ->where('event_type', 'manual_override')
                                 ->whereBetween('occurred_at', ReportingDateService::reportingDayWindow($logDate))
                                 ->exists();
-                        $eventDelta = $newTriggerCount > 0
-                            ? $newTriggerCount
-                            : max(0, $reportedTriggerCount - $sensorCounterBaseline);
+                        $eventDelta = $newTriggerCount;
+                        if ($overrideIsActive && $existingLog === null) {
+                            $processed[] = [
+                                'serial_number' => $serial,
+                                'type' => 'occupancy',
+                                'cage_slot_id' => $slot->id,
+                                'mismatch' => $reportedCount !== $actualOccupancy,
+                                'flagged' => true,
+                                'reason' => 'manual_override_without_production_log',
+                                'trigger_events' => 0,
+                            ];
+                            continue;
+                        }
 
                         // The corrected log is the authoritative baseline after
                         // a manual override; the absolute Arduino counter may
                         // still be ahead until the next sensor trigger arrives.
-                        $nextCount = $eventDelta > 0
-                            ? $previousCount + $eventDelta
-                            : max($previousCount, $reportedCount);
+                        $nextCount = $eventDelta > 0 ? $previousCount + $eventDelta : $previousCount;
                         if ($overrideIsActive && $eventDelta === 0) {
                             $nextCount = $previousCount;
                         }
                         if ($nextCount > $henCount && ! $overrideIsActive) {
                             self::createEggOverHenAlert($slot, $nextCount, $henCount);
-                            $errors[] = "Reading {$index}: count {$nextCount} exceeds hen count ({$henCount}) for slot {$slot->id} on {$logDate}. Sensor over-count suspected.";
+                            $processed[] = [
+                                'serial_number' => $serial,
+                                'type' => 'occupancy',
+                                'cage_slot_id' => $slot->id,
+                                'mismatch' => $reportedCount !== $actualOccupancy,
+                                'flagged' => true,
+                                'reason' => 'egg_count_would_exceed_hen_count',
+                                'trigger_events' => 0,
+                            ];
                             continue;
                         }
                         $sensorTotalDelta = max(0, $nextCount - $previousCount);
@@ -395,6 +416,10 @@ class SensorIngestionController extends Controller
 
                     if ($reportedCount !== $actualOccupancy) {
                         self::createOccupancyMismatchAlert($slot, $reportedCount, $actualOccupancy);
+                    }
+
+                    if ($firstSensorReading) {
+                        continue;
                     }
 
                     $processed[] = [
