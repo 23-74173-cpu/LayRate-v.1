@@ -1,7 +1,7 @@
 [Unit]
 Description=LayRate Serial Bridge - Arduino sensor ingestion
 Documentation=https://github.com/anomalyco/LayRate-Main
-After=network-online.target nginx.service php8.2-fpm.service php8.3-fpm.service mariadb.service
+After=network-online.target mariadb.service
 Wants=network-online.target
 
 [Service]

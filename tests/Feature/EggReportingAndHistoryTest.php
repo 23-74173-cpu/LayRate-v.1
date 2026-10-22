@@ -456,6 +456,29 @@ class EggReportingAndHistoryTest extends TestCase
             ->where('event_type', 'manual_override')->count());
         $this->get(route('eggs.logging'))->assertOk()->assertSee('data-today-eggs="1"', false);
 
+        $overrideItem = HardwareItem::create([
+            'device_type' => 'IR_breakbeam',
+            'serial_number' => 'IRBBS-OVERRIDE-CURRENT-001',
+            'cage_slot_id' => $this->slotA1->id,
+            'device_id' => \App\Models\Device::create([
+                'name' => 'Override current Pi',
+                'api_key_hash' => \Illuminate\Support\Facades\Hash::make('override-current-key'),
+                'is_active' => true,
+            ])->id,
+            'status' => 'active',
+        ]);
+        $this->postJson('/api/sensor-readings', [
+            'readings' => [['serial_number' => $overrideItem->serial_number, 'count' => 2, 'trigger_count' => 3, 'new_trigger_count' => 1]],
+            'recorded_at' => now()->addSecond()->toDateTimeString(),
+        ], ['X-Device-Key' => 'override-current-key'])->assertOk();
+        $this->assertSame(2, (int) $log->fresh()->egg_count);
+        $this->assertDatabaseHas('egg_count_events', [
+            'hardware_item_id' => $overrideItem->id,
+            'event_type' => 'sensor_trigger',
+            'old_value' => 1,
+            'new_value' => 2,
+        ]);
+
         $device = \App\Models\Device::create([
             'name' => 'Override test Pi',
             'api_key_hash' => \Illuminate\Support\Facades\Hash::make('override-test-key'),

@@ -573,11 +573,22 @@ class BlockParser:
                     result["relay"] = val.lower()
         previous_count = self.last_count
         beam = result.get("beam")
-        if beam == "BROKEN" and self.last_beam != "BROKEN":
+        count_decreased = False
+        current_count = result.get("count") or 0
+        # The Arduino reports a cumulative counter, but a decrease is an
+        # explicit resync (e.g. user override/reset), not a negative delta.
+        # Reset the event baseline so the next increment is forwarded.
+        if previous_count is not None and current_count < previous_count:
+            count_decreased = True
+            self.trigger_count = 0
+            self.last_event_count = 0
+            self.pending_trigger_count = 0
+            self.last_beam = None
+        if not count_decreased and beam == "BROKEN" and self.last_beam != "BROKEN":
             self.trigger_count += 1
             self.pending_trigger_count += 1
         result["trigger_count"] = self.trigger_count
-        count_delta = max(0, (result.get("count") or 0) - (previous_count or 0))
+        count_delta = max(0, current_count - (previous_count or 0))
         result["new_trigger_count"] = max(count_delta, self.pending_trigger_count)
         self.pending_trigger_count = max(0, self.pending_trigger_count - count_delta)
         self.last_count = result.get("count")

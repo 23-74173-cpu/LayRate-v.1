@@ -464,7 +464,7 @@ class SensorIngestionTest extends TestCase
 
         $this->assertSame(2, EggCountEvent::where('cage_slot_id', $this->slot->id)
             ->where('event_type', 'sensor_trigger')->count());
-        $this->assertSame(1, (int) ProductionLog::where('cage_slot_id', $this->slot->id)->value('egg_count'));
+        $this->assertSame(2, (int) ProductionLog::where('cage_slot_id', $this->slot->id)->value('egg_count'));
         $this->postReadings([
             'readings' => [['serial_number' => 'IRBBS-TEST-001', 'count' => 1, 'trigger_count' => 2, 'new_trigger_count' => 0]],
             'recorded_at' => $base->copy()->addSeconds(2)->toDateTimeString(),
@@ -543,7 +543,7 @@ class SensorIngestionTest extends TestCase
             ->assertJsonPath('accepted', 0);
     }
 
-    public function test_editing_sensor_log_marks_manual_so_sensor_cannot_revert_it(): void
+    public function test_editing_sensor_log_keeps_override_authoritative_until_next_sensor_trigger(): void
     {
         $this->createHens(2);
         $this->breakbeamItem();
@@ -580,9 +580,8 @@ class SensorIngestionTest extends TestCase
             ->where('new_value', 1)
             ->count());
 
-        // Sensor re-posts 2 (e.g. next temperature-triggered bridge POST
-        // carries the same monotonic count). It is acknowledged, but must NOT
-        // revert the correction or create a sensor trigger event.
+        // An ordinary refresh with the unchanged Arduino count is acknowledged
+        // without reverting the correction or creating an event.
         $response = $this->postReadings([
             'readings' => [
                 ['serial_number' => 'IRBBS-TEST-001', 'count' => 2],
@@ -601,6 +600,62 @@ class SensorIngestionTest extends TestCase
         $this->assertSame(1, EggCountEvent::where('production_log_id', $log->id)
             ->where('event_type', 'manual_override')->count());
         $this->assertSame(0, EggCountEvent::where('production_log_id', $log->id)
+            ->where('event_type', 'sensor_trigger')->count());
+    }
+
+    public function test_sensor_can_increment_after_manual_override_even_when_arduino_counter_was_not_reset(): void
+    {
+        $this->createHens(4);
+        $item = $this->breakbeamItem();
+        $key = $this->deviceKey();
+
+        $this->postReadings([
+            'readings' => [['serial_number' => $item->serial_number, 'count' => 3, 'trigger_count' => 3, 'new_trigger_count' => 3]],
+            'recorded_at' => now()->toDateTimeString(),
+        ], $key)->assertOk();
+        $log = ProductionLog::where('cage_slot_id', $this->slot->id)->firstOrFail();
+
+        $this->actingAs($this->admin)->put(route('eggs.logging.update', $log), [
+            'log_date' => \App\Services\ReportingDateService::reportingDateString(),
+            'egg_count' => 1,
+        ])->assertRedirect(route('eggs.logging'));
+
+        // The Arduino's unchanged count can be accompanied by a beam edge: that
+        // trigger delta must increment the corrected log, not its absolute count.
+        $this->postReadings([
+            'readings' => [['serial_number' => $item->serial_number, 'count' => 3, 'trigger_count' => 4, 'new_trigger_count' => 1]],
+            'recorded_at' => now()->addSeconds(2)->toDateTimeString(),
+        ], $key)->assertOk()->assertJsonPath('accepted', 1);
+
+        $this->assertSame(2, (int) $log->fresh()->egg_count);
+        $this->assertSame(4, EggCountEvent::where('hardware_item_id', $item->id)
+            ->where('event_type', 'sensor_trigger')->count());
+    }
+
+    public function test_sensor_trigger_after_zero_override_is_not_rejected_by_stale_cumulative_counter(): void
+    {
+        $this->createHens(4);
+        $item = $this->breakbeamItem();
+        $key = $this->deviceKey();
+
+        $this->postReadings([
+            'readings' => [['serial_number' => $item->serial_number, 'count' => 3, 'trigger_count' => 3, 'new_trigger_count' => 3]],
+            'recorded_at' => now()->toDateTimeString(),
+        ], $key)->assertOk();
+        $log = ProductionLog::where('cage_slot_id', $this->slot->id)->firstOrFail();
+
+        $this->actingAs($this->admin)->put(route('eggs.logging.update', $log), [
+            'log_date' => \App\Services\ReportingDateService::reportingDateString(),
+            'egg_count' => 0,
+        ])->assertRedirect(route('eggs.logging'));
+
+        $this->postReadings([
+            'readings' => [['serial_number' => $item->serial_number, 'count' => 3, 'trigger_count' => 4, 'new_trigger_count' => 1]],
+            'recorded_at' => now()->addSeconds(2)->toDateTimeString(),
+        ], $key)->assertOk()->assertJsonPath('accepted', 1);
+
+        $this->assertSame(1, (int) $log->fresh()->egg_count);
+        $this->assertSame(4, EggCountEvent::where('hardware_item_id', $item->id)
             ->where('event_type', 'sensor_trigger')->count());
     }
 

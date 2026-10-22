@@ -212,18 +212,6 @@ class SensorIngestionController extends Controller
                         continue;
                     }
 
-                    if ($existingLog && $existingLog->logged_via === 'manual') {
-                        $processed[] = [
-                            'serial_number' => $serial,
-                            'type' => 'occupancy',
-                            'cage_slot_id' => $slot->id,
-                            'mismatch' => $reportedCount !== $actualOccupancy,
-                            'manual_override' => true,
-                            'trigger_events' => 0,
-                        ];
-                        continue;
-                    }
-
                     // Health heartbeat BEFORE the write so the jump check sees
                     // the previous reading as its baseline (raw only).
                     app(DeviceHealthEvaluator::class)->registerIrReading($hardwareItem, $reportedCount, $slot);
@@ -274,7 +262,8 @@ class SensorIngestionController extends Controller
                          * a HIGHER egg_count, the sensor likely reset
                          * (e.g. Arduino rebooted).  Do NOT overwrite.
                          */
-                        if ($existingLog && $reportedCount < $existingLog->egg_count) {
+                    if ($existingLog && $existingLog->logged_via !== 'manual'
+                        && $reportedCount < $existingLog->egg_count && $newTriggerCount === 0) {
                             logger()->warning('Sensor count regression detected', [
                                 'cage_slot_id' => $slot->id,
                                 'log_date' => $logDate,
@@ -308,23 +297,40 @@ class SensorIngestionController extends Controller
                         }
                         $henCount += $diedTodayByCage[$slot->cage_id];
 
-                        if ($reportedCount > $henCount) {
+                        if ($reportedCount > $henCount && $existingLog?->logged_via !== 'manual' && $newTriggerCount === 0) {
                             self::createEggOverHenAlert($slot, $reportedCount, $henCount);
 
                             $errors[] = "Reading {$index}: count {$reportedCount} exceeds hen count ({$henCount}) for slot {$slot->id} on {$logDate}. Sensor over-count suspected.";
                             continue;
                         }
 
-                        $previousCount = (int) ($lastReading?->reported_count ?? 0);
-                        if ($existingLog && $existingLog->logged_via !== 'manual') {
-                            $previousCount = (int) $existingLog->egg_count;
-                        }
+                        $previousCount = (int) ($existingLog?->egg_count ?? $lastReading?->reported_count ?? 0);
+                        $sensorCounterBaseline = (int) ($lastReading?->reported_count ?? 0);
                         $sensorBaseline = $previousCount;
+                        $overrideIsActive = $existingLog?->logged_via === 'manual'
+                            || EggCountEvent::where('cage_slot_id', $slot->id)
+                                ->where('event_type', 'manual_override')
+                                ->whereBetween('occurred_at', ReportingDateService::reportingDayWindow($logDate))
+                                ->exists();
                         $eventDelta = $newTriggerCount > 0
                             ? $newTriggerCount
-                            : max(0, $reportedTriggerCount - $previousCount);
+                            : max(0, $reportedTriggerCount - $sensorCounterBaseline);
 
-                        $sensorTotalDelta = max(0, $reportedCount - $previousCount);
+                        // The corrected log is the authoritative baseline after
+                        // a manual override; the absolute Arduino counter may
+                        // still be ahead until the next sensor trigger arrives.
+                        $nextCount = $eventDelta > 0
+                            ? $previousCount + $eventDelta
+                            : max($previousCount, $reportedCount);
+                        if ($overrideIsActive && $eventDelta === 0) {
+                            $nextCount = $previousCount;
+                        }
+                        if ($nextCount > $henCount && ! $overrideIsActive) {
+                            self::createEggOverHenAlert($slot, $nextCount, $henCount);
+                            $errors[] = "Reading {$index}: count {$nextCount} exceeds hen count ({$henCount}) for slot {$slot->id} on {$logDate}. Sensor over-count suspected.";
+                            continue;
+                        }
+                        $sensorTotalDelta = max(0, $nextCount - $previousCount);
                         for ($eventOffset = 1; $eventOffset <= $eventDelta; $eventOffset++) {
                             $eventAt = \Illuminate\Support\Carbon::parse($recordedAt)->addMicroseconds($eventOffset);
                             EggCountEvent::firstOrCreate(
@@ -336,10 +342,10 @@ class SensorIngestionController extends Controller
                                     'event_type' => 'sensor_trigger',
                                     'old_value' => $sensorTotalDelta > 0 && $eventOffset <= $sensorTotalDelta
                                         ? $previousCount + $eventOffset - 1
-                                        : $reportedCount,
+                                        : $nextCount,
                                     'new_value' => $sensorTotalDelta > 0 && $eventOffset <= $sensorTotalDelta
                                         ? $previousCount + $eventOffset
-                                        : $reportedCount,
+                                        : $nextCount,
                                     'trigger_count' => $reportedTriggerCount,
                                     'source' => $serial,
                                     'occurred_at' => $eventAt,
@@ -357,10 +363,10 @@ class SensorIngestionController extends Controller
                         }
 
                         $productionAttrs = [
-                            'egg_count' => $reportedCount,
+                            'egg_count' => $nextCount,
                             'hen_count' => $henCount,
-                            'hdep' => $henCount > 0 ? round(($reportedCount / $henCount) * 100, 2) : 0,
-                            'logged_via' => 'sensor',
+                            'hdep' => $henCount > 0 ? round(($nextCount / $henCount) * 100, 2) : 0,
+                            'logged_via' => $overrideIsActive ? 'manual' : 'sensor',
                             'notes' => 'Sensor reading',
                         ];
 

@@ -161,6 +161,43 @@ class SensorEventPayloadTest(unittest.TestCase):
         ir = next(r for r in payload["readings"] if r["serial_number"] == "IR")
         self.assertEqual(ir["new_trigger_count"], 3)
 
+    def test_counter_decrease_resyncs_baseline_and_next_edge_is_forwarded(self):
+        parser = BlockParser()
+        def block(count, beam):
+            return f"Count: {count}\nBeam: {beam}\nTemp: 25 C\nHumidity: 60 %\n"
+
+        parser.feed(block(5, "UNBROKEN"))
+        decreased = parser.feed(block(0, "UNBROKEN"))[0]
+        self.assertEqual(decreased["new_trigger_count"], 0)
+        next_egg = parser.feed(block(1, "BROKEN"))[0]
+        self.assertEqual(next_egg["new_trigger_count"], 1)
+        self.assertEqual(next_egg["trigger_count"], 1)
+
+    def test_count_decrease_while_beam_broken_counts_edge_as_new_event(self):
+        parser = BlockParser()
+        block = lambda count, beam: (
+            f"Count: {count}\nBeam: {beam}\nTemp: 25 C\nHumidity: 60 %\n"
+        )
+
+        parser.feed(block(5, "UNBROKEN"))
+        parser.feed(block(5, "BROKEN"))
+        reset = parser.feed(block(0, "BROKEN"))[0]
+        self.assertEqual(reset["new_trigger_count"], 0)
+        next_egg = parser.feed(block(1, "BROKEN"))[0]
+        self.assertEqual(next_egg["new_trigger_count"], 1)
+
+    def test_unbroken_reset_baseline_and_next_counter_increment(self):
+        parser = BlockParser()
+        block = lambda count: (
+            f"Count: {count}\nBeam: UNBROKEN\nTemp: 25 C\nHumidity: 60 %\n"
+        )
+
+        parser.feed(block(5))
+        reset = parser.feed(block(0))[0]
+        self.assertEqual(reset["new_trigger_count"], 0)
+        next_egg = parser.feed(block(1))[0]
+        self.assertEqual(next_egg["new_trigger_count"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()
