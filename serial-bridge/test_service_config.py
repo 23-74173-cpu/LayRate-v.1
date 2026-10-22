@@ -28,10 +28,26 @@ class SerialBridgeServiceConfigTest(unittest.TestCase):
         self.assertIn('sudo find "$DROPIN_DIR" -mindepth 1 -print -quit', text)
         self.assertNotIn("sudo systemctl restart layrate-serial", text)
         self.assertNotIn("python3 -m unittest", text)
+        self.assertIn("SPOOL=/var/lib/layrate-serial/queue.jsonl", text)
+        self.assertIn('sudo test -e "$SPOOL"', text)
         self.assertIn('if sudo test -s "$SPOOL"; then', text)
         self.assertIn('if [ -n "$(git status --porcelain)" ]; then', text)
         self.assertIn("sudo systemctl stop layrate-serial", text)
         self.assertIn("php artisan optimize:clear", text)
+        ordered = [
+            'sudo systemctl stop layrate-serial',
+            'git pull origin main',
+            'sudo cp "$SRC" "$DST"',
+            'sudo rmdir "$DROPIN_DIR"',
+            'php artisan migrate --force',
+            'php artisan optimize:clear',
+            'sudo systemctl restart layrate-api php8.2-fpm layrate-queue-worker',
+            'sudo systemctl start layrate-serial',
+        ]
+        positions = [text.index(part) for part in ordered]
+        self.assertEqual(positions, sorted(positions))
+        self.assertLess(text.index('git pull origin main'), text.index('sudo systemctl daemon-reload'))
+        self.assertLess(text.index('ACTUAL=$(git rev-parse HEAD)'), text.index('sudo cmp -s "${{ env.LARAVEL_DIR }}/serial-bridge/layrate-serial.service" /etc/systemd/system/layrate-serial.service'))
         self.assertIn('EXPECTED="${GITHUB_SHA}"', text)
         self.assertIn('sudo cmp -s "$TRACKED_UNIT" "$INSTALLED_UNIT"', text)
         self.assertIn("sudo systemctl show layrate-serial -p DropInPaths --value", text)

@@ -20,6 +20,7 @@ jobs:
 
     steps:
       - name: Pull latest code
+        id: pull
         run: |
           cd ${{ env.LARAVEL_DIR }}
           sudo systemctl stop layrate-serial
@@ -38,14 +39,23 @@ jobs:
             git status --short
             exit 1
           fi
+          PREVIOUS=$(git rev-parse HEAD)
           git pull origin main
+          echo "previous=$PREVIOUS" >> "$GITHUB_OUTPUT"
+          git status --short --branch
+          test -z "$(git status --porcelain)" || {
+            echo "ERROR: pull left local or untracked checkout changes; stopping before deployment mutations."
+            git status --short
+            exit 1
+          }
 
       - name: Check for serial-bridge changes
         id: check-serial-bridge
         run: |
           cd ${{ env.LARAVEL_DIR }}
-          if git rev-parse --verify ORIG_HEAD >/dev/null 2>&1; then
-            CHANGED_FILES=$(git diff --name-only ORIG_HEAD HEAD -- serial-bridge/ 2>/dev/null || true)
+          PREVIOUS="${{ steps.pull.outputs.previous }}"
+          if [ -n "$PREVIOUS" ]; then
+            CHANGED_FILES=$(git diff --name-only "$PREVIOUS" HEAD -- serial-bridge/ 2>/dev/null || true)
             if [ -n "$CHANGED_FILES" ]; then
               echo "Serial-bridge files changed:"
               echo "$CHANGED_FILES"
@@ -59,23 +69,15 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Install PHP dependencies
-        run: |
-          cd ${{ env.LARAVEL_DIR }}
-          composer install --no-dev --optimize-autoloader --ignore-platform-reqs
-
-      - name: Run database migrations
-        run: |
-          cd ${{ env.LARAVEL_DIR }}
-          php artisan migrate --force
-
       # ── Laravel ────────────────────────────────────────────────────────────
       - name: Create storage symlink
+        if: steps.check-serial-bridge.outputs.changed != 'true'
         run: |
           cd ${{ env.LARAVEL_DIR }}
           php artisan storage:link
 
       - name: Install and build frontend assets
+        if: steps.check-serial-bridge.outputs.changed != 'true'
         run: |
           cd ${{ env.LARAVEL_DIR }}
           if command -v node &>/dev/null && command -v npm &>/dev/null; then
@@ -92,12 +94,14 @@ jobs:
 
       # ── Python services ────────────────────────────────────────────────────
       - name: Install mobile-api dependencies
+        if: steps.check-serial-bridge.outputs.changed != 'true'
         run: |
           python3 -m venv ${{ env.MOBILE_API_VENV }}
           ${{ env.MOBILE_API_VENV }}/bin/pip install --upgrade pip
           ${{ env.MOBILE_API_VENV }}/bin/pip install -r ${{ env.LARAVEL_DIR }}/mobile-api/requirements.txt
 
       - name: Install forecast-api dependencies
+        if: steps.check-serial-bridge.outputs.changed != 'true'
         run: |
           python3 -m venv ${{ env.FORECAST_API_VENV }}
           ${{ env.FORECAST_API_VENV }}/bin/pip install --upgrade pip
@@ -105,6 +109,7 @@ jobs:
 
       # ── systemd: mobile-api ────────────────────────────────────────────────
       - name: Install / update mobile-api systemd unit
+        if: steps.check-serial-bridge.outputs.changed != 'true'
         run: |
           SRC="${{ env.LARAVEL_DIR }}/mobile-api/layrate-api.service"
           DST="/etc/systemd/system/layrate-api.service"
@@ -116,12 +121,14 @@ jobs:
           if [ "$CHANGED" = "1" ]; then sudo systemctl daemon-reload; fi
 
       - name: Enable and restart mobile-api service
+        if: steps.check-serial-bridge.outputs.changed != 'true'
         run: |
           sudo systemctl enable layrate-api
           sudo systemctl restart layrate-api
           sudo systemctl enable --now php8.2-fpm layrate-queue-worker
 
       - name: Health-check mobile-api service
+        if: steps.check-serial-bridge.outputs.changed != 'true'
         run: |
           sleep 3
           if ! systemctl is-active --quiet layrate-api; then
@@ -176,7 +183,7 @@ jobs:
           sudo systemctl daemon-reload
           sudo systemctl enable --now layrate-serial-health.timer
 
-      - name: Install / update serial-bridge systemd unit
+      - name: Install serial-bridge systemd unit and remove stale drop-ins
         id: install-serial-unit
         if: steps.check-serial-bridge.outputs.changed == 'true'
         run: |
@@ -191,8 +198,9 @@ jobs:
           if [ "$CHANGED" = "1" ]; then sudo systemctl daemon-reload; fi
           DROPIN_DIR="/etc/systemd/system/layrate-serial.service.d"
           if sudo test -d "$DROPIN_DIR"; then
+            sudo find "$DROPIN_DIR" -mindepth 1 -maxdepth 1 -type f -print -delete
             if sudo find "$DROPIN_DIR" -mindepth 1 -print -quit | grep -q .; then
-              echo "ERROR: serial service drop-in directory is not empty; refusing recursive removal."
+              echo "ERROR: nested or non-file drop-in content remains; refusing removal."
               sudo find "$DROPIN_DIR" -mindepth 1 -maxdepth 3 -print
               exit 1
             fi
@@ -200,35 +208,55 @@ jobs:
           fi
           sudo systemctl daemon-reload
 
-      - name: Prepare serial-bridge service (leave stopped)
+      - name: Install PHP dependencies
+        run: |
+          cd "${{ env.LARAVEL_DIR }}"
+          composer install --no-dev --optimize-autoloader --ignore-platform-reqs
+
+      - name: Migrate and clear Laravel caches
+        run: |
+          cd "${{ env.LARAVEL_DIR }}"
+          php artisan migrate --force
+          php artisan optimize:clear
+
+      - name: Prepare serial-bridge service
         if: steps.check-serial-bridge.outputs.changed == 'true'
         run: |
           cd "${{ env.LARAVEL_DIR }}/serial-bridge"
           sudo systemctl enable layrate-serial
           sudo install -d -o layratepi -g www-data -m 0750 /var/lib/layrate-serial/dead-letter
           SPOOL=/var/lib/layrate-serial/queue.jsonl
-          if ! sudo test -e "$SPOOL"; then
-            sudo install -o layratepi -g www-data -m 0640 /dev/null "$SPOOL"
-          fi
+          sudo test -e "$SPOOL"
           sudo systemd-analyze verify /etc/systemd/system/layrate-serial.service
+          sudo systemctl stop layrate-serial
+          if sudo systemctl is-active --quiet layrate-serial; then
+            echo "ERROR: bridge is active before API restart."
+            exit 1
+          fi
           if sudo systemctl cat layrate-serial | grep -Eq -- '--api-url|--command-api-url'; then
             echo "ERROR: unsupported bridge options remain in effective systemd config."
             sudo systemctl cat layrate-serial
             exit 1
           fi
-          sudo systemctl stop layrate-serial
-          if sudo systemctl is-active --quiet layrate-serial; then
-            echo "ERROR: bridge must remain stopped during deploy."
-            exit 1
-          fi
           sudo test -d /var/lib/layrate-serial
           sudo test -d /run/layrate-serial
 
-      - name: Clear Laravel caches and restart API components
+      - name: Restart API services
         run: |
           cd "${{ env.LARAVEL_DIR }}"
-          php artisan optimize:clear
           sudo systemctl restart layrate-api php8.2-fpm layrate-queue-worker
+
+      - name: Health-check mobile-api service
+        run: |
+          sleep 3
+          sudo systemctl is-active --quiet layrate-api
+          curl --fail --max-time 5 http://127.0.0.1:5000/api/health
+
+      - name: Start serial-bridge after API services
+        if: steps.check-serial-bridge.outputs.changed == 'true'
+        run: |
+          sudo systemctl start layrate-serial
+          sudo systemctl is-active --quiet layrate-serial
 
       - name: Verify deployed commit and API services
         run: |
@@ -246,9 +274,24 @@ jobs:
               exit 1
             }
           done
-          INSTALLED_UNIT="/etc/systemd/system/layrate-serial.service"
-          TRACKED_UNIT="${{ env.LARAVEL_DIR }}/serial-bridge/layrate-serial.service"
-          if ! sudo cmp -s "$TRACKED_UNIT" "$INSTALLED_UNIT"; then
+          if [ "${{ steps.check-serial-bridge.outputs.changed }}" = "true" ]; then
+            EXPECTED_UNIT="$(mktemp)"
+            trap 'rm -f "$EXPECTED_UNIT"' EXIT
+            git show "$EXPECTED:serial-bridge/layrate-serial.service" > "$EXPECTED_UNIT"
+            if ! sudo cmp -s "$EXPECTED_UNIT" /etc/systemd/system/layrate-serial.service; then
+              echo "ERROR: installed serial unit differs from unit in pushed commit."
+              exit 1
+            fi
+          fi
+          if [ "${{ steps.check-serial-bridge.outputs.changed }}" = "true" ]; then
+            if ! sudo systemctl is-active --quiet layrate-serial; then
+              echo "ERROR: layrate-serial is not active after deployment."
+              exit 1
+            fi
+          else
+            echo "Serial bridge unchanged; leaving its prior service state untouched."
+          fi
+          if ! sudo cmp -s "${{ env.LARAVEL_DIR }}/serial-bridge/layrate-serial.service" /etc/systemd/system/layrate-serial.service; then
             echo "ERROR: installed serial unit differs from tracked unit."
             exit 1
           fi
@@ -257,11 +300,7 @@ jobs:
             sudo systemctl show layrate-serial -p DropInPaths
             exit 1
           fi
-          if sudo systemctl is-active --quiet layrate-serial; then
-            echo "ERROR: layrate-serial must remain stopped pending operator resync."
-            exit 1
-          fi
-          echo "Verified deployment commit $ACTUAL; bridge remains stopped."
+          echo "Verified deployment commit $ACTUAL and installed serial unit."
 
       - name: Skip serial-bridge update (no changes detected)
         if: steps.check-serial-bridge.outputs.changed != 'true'
@@ -315,9 +354,11 @@ jobs:
       - name: Clear and rebuild Laravel caches
         run: |
           cd ${{ env.LARAVEL_DIR }}
-          php artisan config:cache
-          php artisan route:cache
-          php artisan view:cache
+          if [ "${{ steps.check-serial-bridge.outputs.changed }}" != "true" ]; then
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+          fi
 
       # ── Permissions ────────────────────────────────────────────────────────
       - name: Fix permissions
