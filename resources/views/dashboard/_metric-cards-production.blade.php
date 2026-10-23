@@ -4,7 +4,7 @@
             <x-section-label title="Production" icon="factory">
                 @if($kpiAsOf ?? null)<x-slot:meta>· as of {{ $kpiAsOf }}</x-slot:meta> @endif
             </x-section-label>
-            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 kpi-rhythm">
                 <x-kpi-card
                     label="Total Hens" infoKey="hens.total"
                     icon="bird"
@@ -34,6 +34,7 @@
                     :trendDecimals="1"
                     trendSuffix="%"
                     trendCompare="vs yesterday"
+                    :info-detail="($hdepDelta > 0 ? '▲ ' : ($hdepDelta < 0 ? '▼ ' : '')) . number_format(abs($hdepDelta), 1) . '% vs yesterday'"
                 />
 
                 <x-kpi-card
@@ -50,6 +51,7 @@
                     :trend="$eggsDelta"
                     :trendDecimals="0"
                     trendCompare="vs yesterday"
+                    :info-detail="($eggsDelta > 0 ? '▲ ' : ($eggsDelta < 0 ? '▼ ' : '')) . number_format(abs($eggsDelta), 0) . ' vs yesterday'"
                 />
 
                 <x-kpi-card
@@ -64,6 +66,7 @@
                     :target="$lifetimeEggs"
                     :decimals="0"
                     :todayCount="$eggsToday"
+                    :info-detail="($eggsToday > 0 ? '+' : '') . number_format($eggsToday) . ' today'"
                 />
             </div>
         </div>

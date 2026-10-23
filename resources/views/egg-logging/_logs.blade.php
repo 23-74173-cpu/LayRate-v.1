@@ -5,7 +5,7 @@
     @php
         $sensorPct = $logStats['records'] > 0 ? round($logStats['sensor'] / $logStats['records'] * 100) : 0;
     @endphp
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4 recent-logs-kpis">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4 kpi-rhythm">
         <x-kpi-card label="Records" infoKey="recent-logs.records" icon="clipboard-list" delay="0ms"
                     :value="number_format($logStats['records'])"
                     :info-detail="number_format($logStats['records']) . ' matching the filters'">

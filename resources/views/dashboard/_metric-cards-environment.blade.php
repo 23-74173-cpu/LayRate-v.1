@@ -2,9 +2,9 @@
     <div class="space-y-2">
         <div>
             <x-section-label title="Environment & Health" icon="heart-pulse" />
-            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 gap-3 kpi-rhythm">
                 <x-kpi-card
-                    label="Average Coop Temperature" infoKey="environment.avg-temp"
+                    label="Average Coop Temperature" mobileLabel="Avg Coop Temp" infoKey="environment.avg-temp"
                     icon="thermometer"
                     cardGradient="linear-gradient(135deg,#f59e0b,#C2703E)"
                     delay="120ms"
@@ -18,7 +18,7 @@
                 />
 
                 <x-kpi-card
-                    label="Average Humidity" infoKey="environment.avg-humidity"
+                    label="Average Humidity" mobileLabel="Avg Humidity" infoKey="environment.avg-humidity"
                     icon="droplets"
                     cardGradient="linear-gradient(135deg,#0d9488,#2C7C91)"
                     delay="160ms"

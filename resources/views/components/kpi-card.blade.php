@@ -74,6 +74,7 @@
 
 @props([
     'label' => '',
+    'mobileLabel' => null,
     'value' => null,
     'icon' => null,
     'iconBg' => '#F3F4F6',
@@ -166,7 +167,13 @@
     @endif
     <div class="relative min-w-0 flex-1 pr-10 max-sm:pr-12">
         <div class="flex items-start justify-between gap-2">
-            <span class="kpi-label min-w-0 flex-1">{{ $label }}</span>
+            <span class="kpi-label min-w-0 flex-1">
+                @if($mobileLabel !== null && trim((string) $mobileLabel) !== '')
+                    <span class="max-sm:hidden">{{ $label }}</span><span class="sm:hidden">{{ $mobileLabel }}</span>
+                @else
+                    {{ $label }}
+                @endif
+            </span>
             @if($missingInfo)
                 <span class="kpi-info-missing" title="Missing kpi info text: add info= or infoKey= to this card">!</span>
             @endif

@@ -113,6 +113,7 @@ Give me:
 - 5. DONE — the quick dock has one checklist control and one page-actions control; page actions open a phone bottom sheet with backdrop, Escape/Back handling, focus trapping, and focus return. Desktop dock behavior is unchanged.
 - 6. DONE — the duplicate in-page Egg Stocks scanner button was removed on phones; the dock/menu scanner is the single entry point on phone and desktop.
 - 7. DONE (addendum) — Recent Logs KPI rhythm, filter grid/chips, grouped log list, and compact centered pagination.
+- 8. DONE (Dashboard KPI fix) — production and environmental dashboard cards now use the same phone rhythm as Recent Logs; phone-only pills are hidden with their text kept in the info popover; desktop is unchanged.
 
 ### Branch and commit
 - Branch: `mobile-ui`.
@@ -158,6 +159,18 @@ Give me:
 - Files for this addendum: `resources/views/eggs/recent-logs.blade.php`, `resources/views/egg-logging/_logs.blade.php`, `resources/views/components/kpi-card.blade.php`, `resources/views/components/paginator.blade.php`, `resources/css/app.css`.
 - Verification: viewport screenshots at 360, 390, and 414 (top, rows, pagination, expanded row) plus 768 and 1280 for unchanged tablet/desktop; no horizontal scroll; chips toggle and reload; row expansion and actions work; info popover includes the hidden subtitle; no console errors.
 - Left alone: desktop table markup/layout, the 640–767 band, and all unrelated user changes.
+
+### Dashboard KPI fix
+- Markup found: Dashboard > Production Performance and Environmental Analytics are Turbo-frame partials, `resources/views/dashboard/_metric-cards-production.blade.php` and `resources/views/dashboard/_metric-cards-environment.blade.php`. Both use the shared `x-kpi-card` component as Recent Logs; `dashboard.blade.php` only hosts the frames. No separate dashboard KPI component exists.
+- Scope: phone only, `max-sm` below 640px. The 640–767px band and `md` and up keep the existing layout, including the full desktop labels, trend/today pills, subtitles, 72px icon tiles, and 32px info buttons.
+- Shared rhythm: renamed the Recent Logs-only `recent-logs-kpis` modifier to `.kpi-rhythm` and applied it to the Recent Logs, production, and environmental grids. On phones this gives a 36px icon tile at the top left, a 44px info button at the top right, a 14px no-wrap uppercase label, a `clamp()` value, 12px padding, no flex gap, and the existing 2-column grid. Each card is content-height only; hidden secondary lines no longer reserve space.
+- Hidden phone content: `.kpi-rhythm .kpi-card .kpi-secondary` is `display:none` below 640px, hiding the “vs yesterday” and “+N today” pills/subtitles. Their meanings are appended to the existing info popover via `infoDetail` for Today’s HDEP, Eggs Today, and Lifetime Eggs (including a zero-value formulation), so no information is lost.
+- Long environmental labels: “Average Coop Temperature” cannot fit on one line at 14px in a 2-column 360px card. Added an optional `mobileLabel` prop to `x-kpi-card`; phones show “Avg Coop Temp” and “Avg Humidity”, while the full labels remain on desktop and in the card aria-label and info-popover title.
+- Files changed for this fix: `resources/views/components/kpi-card.blade.php`, `resources/css/app.css`, `resources/views/dashboard/_metric-cards-production.blade.php`, `resources/views/dashboard/_metric-cards-environment.blade.php`, and `resources/views/egg-logging/_logs.blade.php` (shared modifier rename). `dashboard.blade.php` was not edited; its unrelated user hunks remain unstaged.
+- Verification: `npm run build` succeeded and Blade views cached. Playwright viewport screenshots at 360x800, 390x844, and 414x896 for both dashboard tabs, plus 768x1024 and 1280x900. No horizontal page scroll; phone labels measured no overflow at 14px; info buttons measured 44x44; cards measured equal height per row. The info popover text includes the phone-hidden change for HDEP, Eggs, and Lifetime. Desktop screenshots match the previous layout.
+- Dashboard screenshots: `mobile-ui-screenshots/dashboard-kpi-production-{360,390,414}-cards.png`, `dashboard-kpi-production-{390,768,1280}-top.png`, `dashboard-kpi-environmental-{360,390,414}-cards.png`, `dashboard-kpi-environmental-{390,768,1280}-top.png`, plus `dashboard-kpi-production-390-info-{hdep,eggs,lifetime}.png`. Phone “top” images show the page without the KPI row; “cards” images show the fixed cards.
+- Not checked / left alone: no test suites were run. Current environmental readings are null, so both environmental values render as an em dash; the card layout and dimensions were still verified. The 640–767px band and all desktop/tablet styling were left unchanged. Unrelated working-tree changes were not staged.
+- Commit: this fix is committed on `mobile-ui` after `2fdaee0`; see the final report for the hash.
 
 ### Final diff check
 - Staged by explicit UI/spec path only; pre-existing unrelated files remain unstaged. `git diff --cached --stat` was inspected before committing.

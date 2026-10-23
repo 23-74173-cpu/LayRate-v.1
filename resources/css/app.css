@@ -251,45 +251,48 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
     padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
   }
 
-  /* Recent Logs: one KPI rhythm — icon + info on the top row, then label and
-     value. The subtitle is desktop-only; its text is appended to the info
-     popover by the card component so no meaning is lost. */
-  .recent-logs-kpis .kpi-card {
+  /* Compact KPI rhythm (Recent Logs + dashboard): icon + info on the top row,
+     then label and value. Secondary lines are desktop-only; their meaning is
+     appended to the info popover by the card component. */
+  .kpi-rhythm .kpi-card {
     align-items: stretch;
     gap: 0;
     padding: 12px;
   }
-  .recent-logs-kpis .kpi-card > .kpi-icon-tile {
+  .kpi-rhythm .kpi-card > .kpi-icon-tile {
     width: 36px;
     height: 36px;
     border-radius: 10px;
     align-self: flex-start;
     margin-bottom: 8px;
   }
-  .recent-logs-kpis .kpi-card > .kpi-icon-tile svg,
-  .recent-logs-kpis .kpi-card > .kpi-icon-tile i {
+  .kpi-rhythm .kpi-card > .kpi-icon-tile svg,
+  .kpi-rhythm .kpi-card > .kpi-icon-tile i {
     width: 20px;
     height: 20px;
   }
-  .recent-logs-kpis .kpi-card > .min-w-0 {
+  .kpi-rhythm .kpi-card > .min-w-0 {
     width: 100%;
     align-self: stretch;
     padding-right: 0;
   }
-  .recent-logs-kpis .kpi-card .kpi-label {
+  .kpi-rhythm .kpi-card .kpi-secondary {
+    display: none;
+  }
+  .kpi-rhythm .kpi-card .kpi-label {
     font-size: 14px;
     line-height: 1.2;
     letter-spacing: 0;
     white-space: nowrap;
   }
-  .recent-logs-kpis .kpi-card .kpi-number,
-  .recent-logs-kpis .kpi-card .kpi-value {
+  .kpi-rhythm .kpi-card .kpi-number,
+  .kpi-rhythm .kpi-card .kpi-value {
     font-size: clamp(1.125rem, 5.5vw, 1.5rem);
     line-height: 1.1;
     letter-spacing: -0.4px;
     white-space: nowrap;
   }
-  .recent-logs-kpis .kpi-info-btn {
+  .kpi-rhythm .kpi-info-btn {
     top: 6px;
     right: 6px;
     width: 44px;
