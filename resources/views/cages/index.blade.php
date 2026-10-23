@@ -25,7 +25,7 @@
 @endpush
 @section('content')
 @php $isAdmin = auth()->user()->isAdmin(); @endphp
-<div class="space-y-5">
+<div class="space-y-5 max-sm:pb-40">
 
     <x-page-header title="Cages" subtitle="Manage battery cage configurations, slots, and sensor placement" />
 

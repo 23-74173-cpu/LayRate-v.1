@@ -1,5 +1,5 @@
-<div class="border-b border-[#D9D9D9]">
-    <nav class="-mb-px flex gap-6 overflow-x-auto overflow-y-hidden scrollbar-thin">
+<div class="border-b border-[#D9D9D9] mobile-tab-rail" data-underline-tabs data-egg-tab-rail>
+    <nav class="-mb-px flex gap-6 overflow-x-auto overflow-y-hidden" role="tablist" aria-label="Egg management sections">
         @foreach([
             'production-history' => ['label' => 'Production History', 'icon' => 'calendar-days', 'route' => 'eggs.production-history', 'subtitle' => 'Daily egg logs calendar'],
             'logging'     => ['label' => 'Egg Logging', 'icon' => 'egg',         'route' => 'eggs.logging',            'subtitle' => 'Log daily egg production per cage slot'],
@@ -10,11 +10,11 @@
         ] as $key => $tab)
             @php
                 $isActive = $key === $activeTab;
-                $classes = 'pb-2 text-sm font-medium border-b-2 transition-colors shrink-0 whitespace-nowrap ' .
+                $classes = 'max-sm:min-h-[44px] inline-flex items-center pb-2 text-sm font-medium border-b-2 transition-colors shrink-0 whitespace-nowrap ' .
                     ($isActive ? 'border-navy text-navy' : 'border-transparent text-[#6B7280] hover:text-[#333]');
             @endphp
-            <a href="{{ route($tab['route']) }}" class="{{ $classes }}"
-               data-turbo-frame="egg-content"
+            <a href="{{ route($tab['route']) }}" class="{{ $classes }}" role="tab" aria-selected="{{ $isActive ? 'true' : 'false' }}" @if($isActive) aria-current="page" @endif
+                data-turbo-frame="egg-content"
                data-turbo-prefetch
                data-tab-key="{{ $key }}" data-subtitle="{{ $tab['subtitle'] }}">
                 <i data-lucide="{{ $tab['icon'] }}" class="w-4 h-4 inline mr-1"></i>
@@ -31,36 +31,25 @@
         (#dockFabMenu, rendered once in the global dock).
     --}}
     <template id="egg-fab-actions-stocks">
-        {{-- Phones only, like the button on the Egg Stocks tab. --}}
         <button type="button" onclick="openEggQrScanner()"
-                class="md:hidden flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
-            <span>Scan Egg QR</span>
-            <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
-                <i data-lucide="scan-qr-code" class="w-4 h-4 text-navy"></i>
-            </div>
+                class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+            <span>Scan Egg QR for Freshness</span><div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center"><i data-lucide="scan-qr-code" class="w-4 h-4 text-navy"></i></div>
         </button>
-        <button type="button" onclick="document.getElementById('eggLabelsModal').style.display = 'flex'"
+        <button type="button" data-dock-action-item onclick="document.getElementById('eggLabelsModal').style.display = 'flex'"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Print All QR Labels</span>
             <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
                 <i data-lucide="printer" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
-        <button type="button" onclick="openEggWeightsModal()"
-                class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
-            <span>Egg Weights</span>
-            <div class="w-8 h-8 rounded-full bg-[#6B4C8A]/10 flex items-center justify-center">
-                <i data-lucide="weight" class="w-4 h-4 text-navy"></i>
-            </div>
+        <h3 class="dock-settings-heading" data-dock-section="settings">Settings</h3>
+        <button type="button" class="egg-sheet-setting flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm" onclick="openEggWeightsModal()">
+            <span>Egg Weights</span><div class="w-8 h-8 rounded-full bg-[#6B4C8A]/10 flex items-center justify-center"><i data-lucide="weight" class="w-4 h-4 text-navy"></i></div>
         </button>
-        <button type="button" onclick="openThresholdsModal()"
-                class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
-            <span>Thresholds</span>
-            <div class="w-8 h-8 rounded-full bg-[#C2703E]/10 flex items-center justify-center">
-                <i data-lucide="sliders" class="w-4 h-4 text-navy"></i>
-            </div>
+        <button type="button" class="egg-sheet-setting flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm" onclick="openThresholdsModal()">
+            <span>Thresholds</span><div class="w-8 h-8 rounded-full bg-[#C2703E]/10 flex items-center justify-center"><i data-lucide="sliders" class="w-4 h-4 text-navy"></i></div>
         </button>
-        <button type="button" onclick="document.getElementById('addStockModal').style.display = 'flex'"
+        <button type="button" data-dock-action-item onclick="document.getElementById('addStockModal').style.display = 'flex'"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Add Stock</span>
             <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
@@ -68,17 +57,14 @@
             </div>
         </button>
         @if(auth()->user()->isAdmin())
-        <button type="button" onclick="openEggPricesModal()"
-                class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+        <button type="button" class="egg-sheet-setting flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm" onclick="openEggPricesModal()">
             <span>Egg Prices</span>
-            <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
-                <i data-lucide="tag" class="w-4 h-4 text-navy"></i>
-            </div>
+            <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center"><i data-lucide="tag" class="w-4 h-4 text-navy"></i></div>
         </button>
         @endif
     </template>
     <template id="egg-fab-actions-preorders">
-        <button type="button" onclick="document.getElementById('addOrderModal').style.display = 'flex'"
+        <button type="button" data-dock-action-item onclick="document.getElementById('addOrderModal').style.display = 'flex'"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Add Pre-Order</span>
             <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
@@ -86,8 +72,7 @@
             </div>
         </button>
         @if(auth()->user()->isAdmin())
-        <button type="button" onclick="openEggPricesModal()"
-                class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
+        <button type="button" class="egg-sheet-setting flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm" onclick="openEggPricesModal()">
             <span>Egg Prices</span>
             <div class="w-8 h-8 rounded-full bg-info-bg flex items-center justify-center">
                 <i data-lucide="tag" class="w-4 h-4 text-navy"></i>
@@ -103,7 +88,7 @@
         <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
             <div class="flex items-center justify-between mb-1">
                 <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Egg Prices</h2>
-                <button type="button" onclick="closeEggPricesModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                <button type="button" onclick="closeEggPricesModal()" class="p-1.5 max-sm:min-w-11 max-sm:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                     <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
                 </button>
             </div>
@@ -143,6 +128,20 @@
             });
             activeLink.classList.remove('border-transparent', 'text-[#6B7280]', 'hover:text-[#333]');
             activeLink.classList.add('border-navy', 'text-navy');
+            activeLink.setAttribute('aria-selected', 'true');
+            activeLink.setAttribute('aria-current', 'page');
+            links.forEach(function(a) {
+                if (a !== activeLink) {
+                    a.setAttribute('aria-selected', 'false');
+                    a.removeAttribute('aria-current');
+                }
+            });
+            var tabNav = activeLink.closest('nav');
+            if (tabNav) {
+                var navRect = tabNav.getBoundingClientRect();
+                var activeRect = activeLink.getBoundingClientRect();
+                if (activeRect.left < navRect.left || activeRect.right > navRect.right) tabNav.scrollLeft += activeRect.left - navRect.left;
+            }
 
             var subtitleEl = document.getElementById('egg-header-subtitle');
             if (subtitleEl) subtitleEl.textContent = activeLink.dataset.subtitle;
@@ -163,9 +162,21 @@
                 if (fab) fab.style.display = 'none';
                 return;
             }
-            if (fab) fab.style.display = '';
             menu.innerHTML = '';
-            menu.appendChild(tpl.content.cloneNode(true));
+            var sheetHeader = document.createElement('div');
+            sheetHeader.className = 'dock-fab-sheet-header';
+            sheetHeader.setAttribute('data-dock-sheet-header', '');
+            sheetHeader.innerHTML = '<h2 id="dockFabTitle">Quick actions</h2><button type="button" data-dock-close-fab aria-label="Close quick actions" class="sm:hidden max-sm:min-w-11 max-sm:min-h-11"><i data-lucide="x" aria-hidden="true"></i></button>';
+            var actionList = document.createElement('div');
+            actionList.setAttribute('data-dock-action-list', '');
+            actionList.className = 'dock-actions-grid egg-actions-grid';
+            actionList.appendChild(tpl.content.cloneNode(true));
+            var content = document.createElement('div');
+            content.className = 'dock-fab-content';
+            content.appendChild(sheetHeader);
+            content.appendChild(actionList);
+            menu.appendChild(content);
+            if (fab) fab.style.display = '';
             if (typeof lucide !== 'undefined') lucide.createIcons({ els: menu.querySelectorAll('[data-lucide]') });
         }
 
@@ -184,20 +195,41 @@
                 });
                 this.classList.remove('border-transparent', 'text-[#6B7280]', 'hover:text-[#333]');
                 this.classList.add('border-navy', 'text-navy');
+                this.setAttribute('aria-selected', 'true');
+                this.setAttribute('aria-current', 'page');
+                links.forEach(function(a) {
+                    if (a !== this) {
+                        a.setAttribute('aria-selected', 'false');
+                        a.removeAttribute('aria-current');
+                    }
+                }, this);
+                var tabNav = this.closest('nav');
+                var tabNavRect = tabNav && tabNav.getBoundingClientRect();
+                var clickedRect = this.getBoundingClientRect();
+                if (tabNavRect && (clickedRect.left < tabNavRect.left || clickedRect.right > tabNavRect.right)) {
+                    tabNav.scrollLeft += clickedRect.left - tabNavRect.left;
+                }
 
                 history.replaceState({}, '', this.getAttribute('href'));
             });
         });
 
-        // Populate the FAB menu for the initially-rendered tab (the server-side
+        // Populate the dock menu for the initially-rendered tab (the server-side
         // frame content doesn't fire turbo:frame-load on the first paint).
+        window.__eggSyncDock = syncActive;
         syncActive();
 
         if (!window.__eggHeaderSyncBound) {
             window.__eggHeaderSyncBound = true;
             document.addEventListener('turbo:frame-load', function(e) {
                 if (!e.target || e.target.id !== 'egg-content') return;
-                syncActive();
+                if (window.__eggSyncDock) window.__eggSyncDock();
+            });
+            // The dock is data-turbo-permanent and quick-dock.js replaces its
+            // menu from the incoming page on every visit. Egg pages don't push
+            // server-side actions, so re-fill it after the visit/restoration.
+            document.addEventListener('turbo:load', function() {
+                if (window.__eggSyncDock) window.__eggSyncDock();
             });
         }
     })();

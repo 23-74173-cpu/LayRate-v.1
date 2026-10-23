@@ -4,12 +4,12 @@
 @section('content')
 {{-- Bottom clearance: the fixed quick-dock floats over the viewport's
      bottom-right, so trailing space keeps it off the last table row/paginator. --}}
-<div class="space-y-5 pb-24 sm:pb-16">
+<div class="space-y-5 pb-24 max-sm:pb-40 sm:pb-16">
 
     <x-page-header title="Notifications" subtitle="All system alerts and warnings" />
 
     @push('dock-actions')
-        <form method="POST" action="{{ route('alerts.read-all') }}" data-turbo="false" class="contents">
+        <form method="POST" action="{{ route('alerts.read-all') }}" data-turbo="false" data-dock-action-item class="contents">
             @csrf
             <button type="submit"
                     class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">

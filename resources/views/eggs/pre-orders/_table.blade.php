@@ -1,10 +1,10 @@
 <turbo-frame id="eggs-preorders-table">
     <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
-        <div class="overflow-x-auto">
-        <table class="w-full">
+        <div class="mobile-wide-table overflow-x-auto">
+        <table class="w-full max-sm:min-w-[900px] mobile-sticky-first">
             <thead>
                 <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
-                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">CUSTOMER</th>
+                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium" data-sticky-label>CUSTOMER</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">SIZE</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">EGGS</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">QTY</th>
@@ -28,52 +28,52 @@
                     [$szBg, $szTxt, $szBorder] = $sizeColors[$order->egg_size];
                 @endphp
                 <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
-                    <td class="px-5 py-3.5 text-sm font-medium text-[#333333]">{{ $order->customer_name }}</td>
+                    <td class="px-5 py-3.5 text-sm font-medium text-[#333333] max-sm:whitespace-nowrap" data-sticky-label>{{ $order->customer_name }}</td>
                     <td class="px-5 py-3.5">
-                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold" style="background:{{ $szBg }};color:{{ $szTxt }};border:1px solid {{ $szBorder }}">
+                        <span class="max-sm:min-h-11 inline-flex items-center px-2.5 rounded-full text-xs max-sm:text-sm font-semibold max-sm:whitespace-nowrap" style="background:{{ $szBg }};color:{{ $szTxt }};border:1px solid {{ $szBorder }}">
                             {{ \App\Enums\EggSize::labelFor($order->egg_size) }}
                         </span>
                     </td>
                     <td class="px-5 py-3.5 text-sm font-medium text-[#333333]">{{ number_format($order->egg_count) }}</td>
-                    <td class="px-5 py-3.5 text-sm text-[#6B7280]">{{ $order->egg_label }}</td>
-                    <td class="px-5 py-3.5 text-sm font-mono text-[#333333]">{{ $order->requested_date->format('m/d/Y') }}</td>
-                    <td class="px-5 py-3.5 text-sm font-mono text-[#6B7280]">
+                    <td class="px-5 py-3.5 text-sm text-[#6B7280] max-sm:whitespace-nowrap">{{ $order->egg_label }}</td>
+                    <td class="px-5 py-3.5 text-sm font-mono text-[#333333] max-sm:whitespace-nowrap">{{ $order->requested_date->format('m/d/Y') }}</td>
+                    <td class="px-5 py-3.5 text-sm font-mono text-[#6B7280] max-sm:whitespace-nowrap">
                         {{ $order->fulfillment_date ? $order->fulfillment_date->format('m/d/Y') : 'Pending' }}
                     </td>
                     <td class="px-5 py-3.5">
                         <x-status-badge :status="$order->status" type="general" />
                     </td>
-                    <td class="px-5 py-3.5 text-sm font-medium text-right tabular-nums" style="color: #333333;">
+                    <td class="px-5 py-3.5 text-sm font-medium text-right tabular-nums max-sm:whitespace-nowrap" style="color: #333333;">
                         {{ $order->total_amount !== null ? '₱' . number_format((float) $order->total_amount, 2) : '—' }}
                         @if($order->payment_status === 'paid')
                         <span class="block mt-1">
-                            <span class="inline-block px-2 py-0.5 rounded-full text-xs font-semibold" style="background-color: #e8f5ec; color: #1f6b3a; border: 1px solid #cfe8d6;"
+                            <span class="mobile-body-text inline-block px-2 py-0.5 rounded-full text-xs font-semibold" style="background-color: #e8f5ec; color: #1f6b3a; border: 1px solid #cfe8d6;"
                                   title="Paid {{ $order->paid_at?->format('m/d/Y') }}">Paid</span>
                         </span>
                         @endif
                     </td>
                     <td class="px-5 py-3.5">
                         <div class="flex items-center gap-2">
-                            <x-icon-button icon="pencil" label="Edit pre-order" color="neutral"
+                            <x-icon-button class="mobile-icon-button" icon="pencil" label="Edit pre-order" color="neutral"
                                 onclick="openEditStatus({{ $order->id }}, '{{ $order->status }}', '{{ $order->fulfillment_date?->toDateString() ?? '' }}', '{{ addslashes($order->customer_name) }}', '{{ $order->egg_size }}', {{ $order->egg_count }}, '{{ $order->requested_date->toDateString() }}', '{{ addslashes($order->notes ?? '') }}', '{{ $order->total_amount !== null ? '₱' . number_format((float) $order->total_amount, 2) : '—' }}', '{{ $order->payment_status === 'paid' ? ($order->paid_at?->format('m/d/Y') ?? 'yes') : '' }}')" />
                             @can('admin')
                             <form action="{{ route('eggs.preorders.destroy', $order) }}" method="POST" data-turbo="false"
                                   data-confirm="Cancel this pre-order?" data-confirm-action="Cancel" data-confirm-severity="destructive">
                                 @csrf @method('DELETE')
-                                <x-icon-button type="submit" icon="trash-2" label="Cancel pre-order" color="red" />
+                                <x-icon-button class="mobile-icon-button" type="submit" icon="trash-2" label="Cancel pre-order" color="red" />
                             </form>
                             @endcan
                         </div>
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="8" class="px-5 py-10 text-center text-sm text-[#6B7280]">No pre-orders yet.</td></tr>
+                <tr><td colspan="9" class="px-5 py-10 text-center text-sm text-[#6B7280]">No pre-orders yet.</td></tr>
                 @endforelse
                 @if($orders->count() > 0)
                 {{-- Blank filler rows to keep the table at a consistent height (perPage rows). --}}
                 @for($i = 0; $i < $orders->perPage() - $orders->count(); $i++)
                 <tr class="empty-filler-row" aria-hidden="true">
-                    <td colspan="8" class="px-5 py-3.5">&nbsp;</td>
+                    <td colspan="9" class="px-5 py-3.5">&nbsp;</td>
                 </tr>
                 @endfor
                 @endif

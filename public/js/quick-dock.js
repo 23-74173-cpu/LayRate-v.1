@@ -41,6 +41,7 @@
         var active = isPanelOpen() || isMenuOpen() || d.hasAttribute('data-touch');
         if (active) d.setAttribute('data-active', 'true');
         else d.removeAttribute('data-active');
+        if (active) d.removeAttribute('data-scroll-hidden');
     }
 
     function togglePanel(show) {
@@ -50,11 +51,14 @@
         var willShow = typeof show === 'boolean' ? show : p.classList.contains('hidden');
         if (willShow) closeFabMenu();
         p.classList.toggle('hidden', !willShow);
+        p.setAttribute('aria-hidden', willShow ? 'false' : 'true');
+        var backdrop = document.getElementById('dockFabBackdrop');
+        if (backdrop) backdrop.classList.toggle('hidden', !willShow || !window.matchMedia('(max-width: 639.98px)').matches);
         if (btn) btn.setAttribute('aria-expanded', willShow ? 'true' : 'false');
         if (willShow) {
             if (window.lucide) lucide.createIcons();
             // Focus into the panel; return focus to the button on close.
-            var first = p.querySelector('a, button');
+            var first = p.querySelector('a, button') || p;
             if (first) first.focus({ preventScroll: true });
         } else if (btn && p.contains(document.activeElement)) {
             btn.focus({ preventScroll: true });
@@ -73,10 +77,16 @@
         var m = fabMenu();
         if (!m || m.classList.contains('hidden')) return;
         m.classList.add('hidden');
+        m.setAttribute('aria-hidden', 'true');
+        var backdrop = document.getElementById('dockFabBackdrop');
+        if (backdrop) backdrop.classList.add('hidden');
         var toggle = document.querySelector('#quickDock .fab-toggle');
         if (toggle) {
             toggle.setAttribute('aria-expanded', 'false');
             toggle.setAttribute('aria-label', 'Quick actions');
+            var restoreFocus = toggle.dataset.mobileSheetOpen === 'true';
+            toggle.dataset.mobileSheetOpen = '';
+            if (restoreFocus) toggle.focus({ preventScroll: true });
         }
         var icon = document.querySelector('#quickDock .fab-icon');
         if (icon) icon.style.transform = 'rotate(0deg)';
@@ -88,7 +98,7 @@
         var m = fabMenu();
         if (!m) return;
         var fab = m.closest('.fab');
-        var hasItems = m.children.length > 0;
+        var hasItems = !!m.querySelector('[data-dock-action-list] > button:not([data-dock-duplicate]), [data-dock-action-list] > a, [data-dock-action-list] > form button');
         if (fab) fab.style.display = hasItems ? '' : 'none';
     }
 
@@ -117,11 +127,15 @@
             lMenu.innerHTML = fMenu.innerHTML;
             // Fresh pages start with the menu closed.
             lMenu.classList.add('hidden');
+            lMenu.setAttribute('aria-hidden', 'true');
             var lt = live.querySelector('#quickDock .fab-toggle');
             if (lt) {
                 lt.setAttribute('aria-expanded', 'false');
                 lt.setAttribute('aria-label', 'Quick actions');
+                lt.dataset.mobileSheetOpen = '';
             }
+            var backdrop = live.querySelector('#dockFabBackdrop');
+            if (backdrop) backdrop.classList.add('hidden');
             var li = live.querySelector('#quickDock .fab-icon');
             if (li) li.style.transform = 'rotate(0deg)';
             syncFabVisibility();
@@ -215,11 +229,27 @@
     document.addEventListener('scroll', function () {
         var d = dock();
         if (!d) return;
+        var isPhone = window.matchMedia('(max-width: 639.98px)').matches;
+        var scroller = document.querySelector('main.page-wrapper');
+        var currentY = scroller ? scroller.scrollTop : (window.scrollY || document.documentElement.scrollTop || 0);
+        var previousY = Number(d.dataset.scrollY || currentY);
+        var scrollingDown = currentY > previousY + 2;
+        d.dataset.scrollY = String(currentY);
+        if (isPhone) {
+            if (scrollingDown && currentY > 48 && !d.hasAttribute('data-active')) d.setAttribute('data-scroll-hidden', 'true');
+            else if (!scrollingDown) d.removeAttribute('data-scroll-hidden');
+            if (d.hasAttribute('data-scroll-hidden')) {
+                closePanel();
+                closeFabMenu();
+            }
+        }
         d.setAttribute('data-scrolling', 'true');
         if (scrollTimer) clearTimeout(scrollTimer);
         scrollTimer = setTimeout(function () {
             var dd = dock();
-            if (dd) dd.removeAttribute('data-scrolling');
+            if (dd) {
+                dd.removeAttribute('data-scrolling');
+            }
         }, SCROLL_MS);
     }, { passive: true, capture: true });
 

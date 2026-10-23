@@ -69,8 +69,8 @@ $hasData = $totalEggs > 0 || $performance->contains(fn ($p) => $p['hdep'] > 0);
                          :actionUrl="route('eggs.logging')" actionLabel="Log Eggs" />
     @else
         {{-- Ranking table (top of section) --}}
-        <div class="rounded-xl border border-[#D9D9D9] overflow-x-auto mb-4">
-            <table class="w-full min-w-[280px] text-left border-collapse">
+        <div class="rounded-xl border border-[#D9D9D9] overflow-hidden mb-4">
+            <table class="perf-ranking-table w-full text-left border-collapse">
                 <thead>
                     <tr class="text-left text-[10px] font-semibold uppercase tracking-[0.125px] text-[#6B7280]" style="background-color:#F7F7F5;">
                         <th class="px-3 py-2.5 text-left w-12">Rank</th>
@@ -94,15 +94,16 @@ $hasData = $totalEggs > 0 || $performance->contains(fn ($p) => $p['hdep'] > 0);
                             <span class="text-xs text-[#333333] font-medium">{{ $p['rank'] }}</span>
                             @endif
                         </td>
-                        <td class="px-3 py-2 whitespace-nowrap">
+                        <td class="perf-cage-cell px-3 py-2 whitespace-nowrap">
                             <span class="inline-flex items-center gap-1.5 text-xs font-medium text-[#1f1f1f]">
                                 <span class="inline-block w-2 h-2 rounded-full" style="background-color: {{ $p['color'] }}"></span>{{ $p['cage_code'] }}
                             </span>
+                            <span class="perf-mobile-hdep">{{ number_format($p['hdep'], 1) }}% HDEP</span>
                         </td>
-                        <td class="px-3 py-2 text-xs text-[#333333] text-right">{{ $p['hen_count'] }}</td>
+                        <td class="perf-hens-cell px-3 py-2 text-xs text-[#333333] text-right"><span class="perf-hens-label">Hens: </span>{{ $p['hen_count'] }}</td>
                         <td class="px-3 py-2 text-right">
                             <div class="flex items-center justify-end gap-1.5">
-                                <span class="text-xs text-[#333333] whitespace-nowrap">{{ number_format($p['hdep'], 1) }}%</span>
+                                <span class="perf-desktop-hdep text-xs text-[#333333] whitespace-nowrap">{{ number_format($p['hdep'], 1) }}%</span>
                                 <div class="w-8 h-1.5 rounded-full overflow-hidden" style="background-color: #f0f0f0;">
                                     <div class="perf-progress h-full rounded-full" style="width: {{ min(100, $p['hdep']) }}%; background-color: {{ $p['color_soft'] }}; border: 1px solid {{ $p['color'] }};"></div>
                                 </div>
@@ -159,6 +160,14 @@ if (window.lucide && typeof window.lucide.createIcons === 'function') {
 if (!window.__dashPerfToggleBound) {
     window.__dashPerfToggleBound = true;
     document.addEventListener('click', function (e) {
+        if (window.matchMedia('(max-width: 639.98px)').matches) {
+            var mobileRow = e.target.closest('.perf-table-row');
+            if (mobileRow && !e.target.closest('button, a')) {
+                var expanded = mobileRow.classList.toggle('is-expanded');
+                mobileRow.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+                return;
+            }
+        }
         var btn = e.target.closest('[data-perf-toggle]');
         if (!btn) return;
         e.preventDefault();
@@ -190,6 +199,32 @@ if (!window.__dashPerfToggleBound) {
             try { window.lucide.createIcons(); } catch (e2) {}
         }
     });
+    document.addEventListener('keydown', function (e) {
+        if (!window.matchMedia('(max-width: 639.98px)').matches) return;
+        var row = e.target.closest('.perf-table-row');
+        if (!row || (e.key !== 'Enter' && e.key !== ' ')) return;
+        if (e.target.closest('button, a')) return;
+        e.preventDefault();
+        var expanded = row.classList.toggle('is-expanded');
+        row.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    });
+    function decoratePerfRows() {
+        var phone = window.matchMedia('(max-width: 639.98px)').matches;
+        document.querySelectorAll('.perf-table-row').forEach(function (row) {
+            if (phone) {
+                row.setAttribute('tabindex', '0');
+                row.setAttribute('aria-expanded', row.classList.contains('is-expanded') ? 'true' : 'false');
+            } else {
+                row.removeAttribute('tabindex');
+                row.removeAttribute('aria-expanded');
+                row.classList.remove('is-expanded');
+            }
+        });
+    }
+    decoratePerfRows();
+    document.addEventListener('turbo:load', decoratePerfRows);
+    document.addEventListener('turbo:frame-load', decoratePerfRows);
+    window.addEventListener('resize', decoratePerfRows);
 }
 
 // ── Comparison bar charts (today's HDEP & eggs) with value-on-top labels ──

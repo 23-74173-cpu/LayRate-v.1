@@ -4,7 +4,7 @@
 @section('content')
 {{-- Bottom clearance: the fixed quick-dock floats over the viewport's
      bottom-right, so trailing space keeps it off the last table row/paginator. --}}
-<div class="space-y-5 pb-24 sm:pb-16">
+<div class="space-y-5 recent-logs-page sm:pb-16">
 
     <x-page-header title="Egg Management" subtitle="Review and manage egg production records" subtitle-id="egg-header-subtitle" />
 
@@ -12,14 +12,14 @@
 
     <turbo-frame id="egg-content">
 
-    <x-card header="Production Logs">
+        <x-card header="Production Logs">
         <form id="recentLogsForm" onsubmit="return false" class="mb-4">
-            <div class="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-end sm:gap-x-4 sm:gap-y-3 gap-3">
+            <div class="grid grid-cols-2 gap-3 max-sm:grid-cols-12 max-sm:items-end sm:flex sm:flex-wrap sm:items-end sm:gap-x-4 sm:gap-y-3">
                 {{-- Cage filter --}}
-                <div>
-                    <label class="block text-xs mb-1" style="color: #615d59;">Cage</label>
+                <div class="max-sm:col-span-6 max-sm:col-start-1 max-sm:row-start-1">
+                    <label class="block text-xs max-sm:text-sm mb-1" style="color: #615d59;">Cage</label>
                     <select name="cage_id" onchange="recentLogsFilter()"
-                            class="w-full min-w-0 sm:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                            class="w-full min-w-0 max-sm:min-h-11 sm:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">All Cages</option>
                         @foreach($cages as $c)
@@ -31,10 +31,10 @@
                 </div>
 
                 {{-- Slot filter --}}
-                <div>
-                    <label class="block text-xs mb-1" style="color: #615d59;">Slot</label>
+                <div class="max-sm:col-span-6 max-sm:col-start-7 max-sm:row-start-1">
+                    <label class="block text-xs max-sm:text-sm mb-1" style="color: #615d59;">Slot</label>
                     <select name="cage_slot_id" onchange="recentLogsFilter()"
-                            class="w-full min-w-0 sm:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                            class="w-full min-w-0 max-sm:min-h-11 sm:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">All Slots</option>
                         @foreach($cageSlots as $slot)
@@ -46,10 +46,10 @@
                 </div>
 
                 {{-- Breed filter --}}
-                <div>
-                    <label class="block text-xs mb-1" style="color: #615d59;">Breed</label>
+                <div class="max-sm:col-span-9 max-sm:col-start-1 max-sm:row-start-2">
+                    <label class="block text-xs max-sm:text-sm mb-1" style="color: #615d59;">Breed</label>
                     <select name="breed" onchange="recentLogsFilter()"
-                            class="w-full min-w-0 sm:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                            class="w-full min-w-0 max-sm:min-h-11 sm:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">All Breeds</option>
                         @foreach($breeds as $b)
@@ -61,23 +61,23 @@
                 </div>
 
                 {{-- Manual vs Sensor filter (checkbox chips) --}}
-                <div class="col-span-2 sm:col-span-1">
-                    <label class="block text-xs mb-1" style="color: #615d59;">Logged Via</label>
-                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <div class="max-sm:col-span-12 max-sm:col-start-1 max-sm:row-start-3 sm:col-span-1">
+                    <label class="block text-xs max-sm:text-sm mb-1" style="color: #615d59;">Logged Via</label>
+                    <div class="flex flex-wrap items-center gap-2">
                         @foreach(['manual' => 'Manual', 'sensor' => 'Sensor', 'unknown' => 'Unknown'] as $value => $label)
-                        <label class="inline-flex items-center gap-1.5 text-sm cursor-pointer" style="color: #31302e;">
+                        <label class="recent-via-chip inline-flex max-sm:min-h-11 items-center gap-1.5 text-sm cursor-pointer" style="color: #31302e;">
                             <input type="checkbox" name="logged_via[]" value="{{ $value }}" onchange="recentLogsFilter()"
                                    {{ in_array($value, (array) $filters['logged_via']) ? 'checked' : '' }}
-                                   class="rounded border-gray-300 text-navy focus:ring-navy">
+                                   class="recent-via-input rounded border-gray-300 text-navy focus:ring-navy">
                             {{ $label }}
                         </label>
                         @endforeach
                     </div>
                 </div>
 
-                <div class="col-span-2 sm:col-span-1 flex items-center justify-end gap-2">
+                <div class="max-sm:col-span-3 max-sm:col-start-10 max-sm:row-start-2 max-sm:justify-self-end sm:col-span-1 flex items-center justify-end gap-2">
                     <a href="{{ route('eggs.recent-logs') }}"
-                       class="px-3 py-1.5 text-xs font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">
+                       class="max-sm:inline-flex max-sm:items-center max-sm:justify-center max-sm:min-h-11 px-3 py-1.5 text-xs max-sm:text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">
                         Reset
                     </a>
                 </div>
@@ -87,11 +87,54 @@
         <turbo-frame id="egg-logs-list" src="{{ route('eggs.logging.logs', request()->only(['cage_id', 'cage_slot_id', 'breed', 'logged_via'])) }}" loading="lazy">
             @include('egg-logging._logs-skeleton')
         </turbo-frame>
-    </x-card>
+        </x-card>
 
-    @include('egg-logging._edit-modal')
+        @include('egg-logging._edit-modal')
 
 <script>
+(function () {
+    if (window.__mobileLogRowsBound) return;
+    window.__mobileLogRowsBound = true;
+    function decorateRows() {
+        var phone = window.matchMedia('(max-width: 639.98px)').matches;
+        document.querySelectorAll('.mobile-log-row').forEach(function (row) {
+            if (phone) {
+                row.setAttribute('tabindex', '0');
+                row.setAttribute('role', 'button');
+                row.setAttribute('aria-expanded', row.classList.contains('is-expanded') ? 'true' : 'false');
+            } else {
+                row.removeAttribute('tabindex');
+                row.removeAttribute('role');
+                row.removeAttribute('aria-expanded');
+                row.classList.remove('is-expanded');
+            }
+        });
+    }
+    function toggleRow(row) {
+        if (!row || !row.classList.contains('mobile-log-row')) return;
+        if (window.matchMedia('(min-width: 640px)').matches) return;
+        var expanded = row.classList.toggle('is-expanded');
+        row.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    }
+    decorateRows();
+    document.addEventListener('turbo:frame-load', decorateRows);
+    document.addEventListener('turbo:load', decorateRows);
+    window.addEventListener('resize', decorateRows);
+    document.addEventListener('click', function (event) {
+        var row = event.target.closest && event.target.closest('.mobile-log-row');
+        if (!row || event.target.closest('button, a, form, input, select, textarea')) return;
+        if (window.matchMedia('(min-width: 640px)').matches) return;
+        toggleRow(row);
+    });
+    document.addEventListener('keydown', function (event) {
+        var row = event.target.closest && event.target.closest('.mobile-log-row');
+        if (!row || (event.key !== 'Enter' && event.key !== ' ')) return;
+        if (event.target.closest('button, a, form, input, select, textarea')) return;
+        event.preventDefault();
+        toggleRow(row);
+    });
+})();
+
 function recentLogsFilter() {
     var form = document.getElementById('recentLogsForm');
     if (!form) return;

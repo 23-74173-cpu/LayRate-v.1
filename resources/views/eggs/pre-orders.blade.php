@@ -4,7 +4,7 @@
 @section('content')
 {{-- Bottom clearance: the fixed quick-dock floats over the viewport's
      bottom-right, so trailing space keeps it off the last table row/paginator. --}}
-<div class="space-y-5 pb-24 sm:pb-16">
+<div class="space-y-5 max-sm:pb-40 sm:pb-16">
 
     <x-page-header title="Egg Management" subtitle="Customer orders and fulfillment tracking" subtitle-id="egg-header-subtitle" />
 
@@ -36,11 +36,11 @@
             delay="{{ $loop->index * 60 }}ms"
             :value="number_format($data['available'])"
         >
-            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">{{ number_format($data['logged']) }} produced · {{ number_format($data['committed']) }} committed</div>
+            <div class="mobile-kpi-secondary text-xs mt-1.5 font-medium" style="color: #615d59;">{{ number_format($data['logged']) }} produced · {{ number_format($data['committed']) }} committed</div>
             @if($isDeficit)
-            <div class="text-xs mt-1 font-semibold" style="color: #9b1c24;">Shortfall: {{ number_format($data['deficit']) }} eggs</div>
+            <div class="mobile-kpi-secondary text-xs mt-1 font-semibold" style="color: #9b1c24;">Shortfall: {{ number_format($data['deficit']) }} eggs</div>
             @else
-            <div class="text-xs mt-1 font-medium" style="color: #615d59;">+{{ number_format($data['forecasted']) }} forecasted</div>
+            <div class="mobile-kpi-secondary text-xs mt-1 font-medium" style="color: #615d59;">+{{ number_format($data['forecasted']) }} forecasted</div>
             @endif
         </x-kpi-card>
         @endforeach
@@ -52,7 +52,7 @@
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">STATUS</label>
                     <select name="status" onchange="preOrdersFilter()"
-                            class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+                            class="w-full min-w-0 max-sm:min-h-11 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         <option value="all" {{ $filters['status'] === 'all' ? 'selected' : '' }}>All Statuses</option>
                         <option value="pending" {{ $filters['status'] === 'pending' ? 'selected' : '' }}>Pending</option>
                         <option value="fulfilled" {{ $filters['status'] === 'fulfilled' ? 'selected' : '' }}>Fulfilled</option>
@@ -62,7 +62,7 @@
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">EGG SIZE</label>
                     <select name="egg_size" onchange="preOrdersFilter()"
-                            class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+                            class="w-full min-w-0 max-sm:min-h-11 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         <option value="all" {{ $filters['egg_size'] === 'all' ? 'selected' : '' }}>All Sizes</option>
                         <option value="small" {{ $filters['egg_size'] === 'small' ? 'selected' : '' }}>Small</option>
                         <option value="medium" {{ $filters['egg_size'] === 'medium' ? 'selected' : '' }}>Medium</option>
@@ -74,16 +74,16 @@
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">FROM</label>
                     <input type="date" name="from" value="{{ $filters['from'] }}" onchange="preOrdersFilter()"
-                           class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+                           class="w-full min-w-0 max-sm:min-h-11 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TO</label>
                     <input type="date" name="to" value="{{ $filters['to'] }}" onchange="preOrdersFilter()"
-                           class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+                           class="w-full min-w-0 max-sm:min-h-11 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                 </div>
                 <div class="col-span-2 sm:col-span-1 flex items-center justify-end gap-2">
                     <a href="{{ route('eggs.preorders') }}"
-                       class="px-4 py-2 text-xs font-medium rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">
+                       class="max-sm:min-h-11 px-4 py-2 text-xs max-sm:text-sm font-medium rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">
                         Reset
                     </a>
                 </div>
@@ -103,7 +103,7 @@
     <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
             <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Add Pre-Order</h2>
-            <button onclick="closeAddOrderModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+            <button onclick="closeAddOrderModal()" class="p-1.5 max-sm:min-w-11 max-sm:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
         </div>
@@ -128,7 +128,7 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">CUSTOMER NAME</label>
                     <input type="text" name="customer_name" value="{{ old('customer_name') }}" required
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                           class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                     <x-input-error name="customer_name" />
                 </div>
@@ -136,7 +136,7 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG SIZE</label>
                     <select name="egg_size" id="orderEggSize" required onchange="onOrderSizeChange()"
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                            class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select size…</option>
                         <option value="small" {{ old('egg_size') === 'small' ? 'selected' : '' }}>Small</option>
@@ -152,7 +152,7 @@
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG COUNT</label>
                     <input type="number" name="egg_count" id="orderEggCount" min="1" value="{{ old('egg_count') }}" required
                            oninput="onOrderCountChange()"
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                           class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                     <x-input-error name="egg_count" />
                     <div id="orderTrayLabel" class="mt-1 text-xs" style="color: #6B7280;"></div>
@@ -163,14 +163,14 @@
                     <div>
                         <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">REQUESTED DATE</label>
                         <input type="date" name="requested_date" value="{{ old('requested_date', now()->toDateString()) }}" required
-                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                               class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                style="border-color: #e6e6e6; color: #1f1f1f;">
                         <x-input-error name="requested_date" />
                     </div>
                     <div>
                         <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">FULFILLMENT DATE <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
                         <input type="date" name="fulfillment_date" value="{{ old('fulfillment_date') }}"
-                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                               class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                style="border-color: #e6e6e6; color: #1f1f1f;">
                         <x-input-error name="fulfillment_date" />
                     </div>
@@ -178,16 +178,16 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">NOTES <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
                     <textarea name="notes" rows="2"
-                              class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1 resize-y"
+                              class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1 resize-y"
                               style="border-color: #e6e6e6; color: #1f1f1f;">{{ old('notes') }}</textarea>
                 </div>
             </div>
 
             <div class="flex gap-3 mt-5">
                 <button type="button" onclick="closeAddOrderModal()"
-                        class="flex-1 border border-[#D9D9D9] text-[#6B7280] py-2.5 rounded-lg text-sm">Cancel</button>
+                        class="flex-1 max-sm:min-h-11 border border-[#D9D9D9] text-[#6B7280] py-2.5 rounded-lg text-sm">Cancel</button>
                 <button type="submit" id="addOrderSubmitBtn"
-                        class="flex-1 bg-navy text-white py-2.5 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed">Add Pre-Order</button>
+                        class="flex-1 max-sm:min-h-11 bg-navy text-white py-2.5 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed">Add Pre-Order</button>
             </div>
             @if(!empty($autopostOn))
             <p class="text-xs mt-3" style="color: #a39e98;">Auto-posting is on — marking this order paid later posts its total to Finance. Full payments only.</p>
@@ -209,7 +209,7 @@
     <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
             <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Edit Pre-Order</h2>
-            <button onclick="closeEditStatusModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+            <button onclick="closeEditStatusModal()" class="p-1.5 max-sm:min-w-11 max-sm:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
         </div>
@@ -220,14 +220,14 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">CUSTOMER NAME</label>
                     <input type="text" name="customer_name" id="editCustomerName" required
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                           class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                     <x-input-error name="customer_name" />
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG SIZE</label>
                     <select name="egg_size" id="editEggSize" required
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                            class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="small">Small</option>
                         <option value="medium">Medium</option>
@@ -240,7 +240,7 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG COUNT</label>
                     <input type="number" name="egg_count" id="editEggCount" min="1" required
-                           class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                           class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                     <x-input-error name="egg_count" />
                 </div>
@@ -248,14 +248,14 @@
                     <div>
                         <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">REQUESTED DATE</label>
                         <input type="date" name="requested_date" id="editRequestedDate" required
-                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                               class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                style="border-color: #e6e6e6; color: #1f1f1f;">
                         <x-input-error name="requested_date" />
                     </div>
                     <div>
                         <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">FULFILLMENT DATE <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
                         <input type="date" name="fulfillment_date" id="editFulfillmentDate"
-                               class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                               class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                style="border-color: #e6e6e6; color: #1f1f1f;">
                         <x-input-error name="fulfillment_date" />
                     </div>
@@ -263,7 +263,7 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">STATUS</label>
                     <select name="status" id="editStatusSelect" required
-                            class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                            class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="pending">Pending</option>
                         <option value="fulfilled">Fulfilled</option>
@@ -272,7 +272,7 @@
                     <x-input-error name="status" />
                 </div>
                 @if(auth()->user()->isAdmin())
-                <label id="editMarkPaidRow" class="flex items-start gap-2 rounded-lg px-3 py-2.5 text-sm" style="background-color: #f6f5f4;">
+                <label id="editMarkPaidRow" class="max-sm:min-h-11 flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm" style="background-color: #f6f5f4;">
                     <input type="checkbox" name="mark_paid" id="editMarkPaid" value="1" class="mt-0.5 shrink-0">
                     <span style="color: #333333;">Mark as paid now <span style="color: #a39e98;">(full payment only — posts the order total to Finance as income)</span></span>
                 </label>
@@ -282,7 +282,7 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">NOTES <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
                     <textarea name="notes" id="editNotes" rows="2"
-                              class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1 resize-y"
+                              class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1 resize-y"
                               style="border-color: #e6e6e6; color: #1f1f1f;"></textarea>
                 </div>
                 <div class="rounded-lg px-3 py-2.5 text-sm flex items-center justify-between" style="background-color: #f6f5f4;">
@@ -296,9 +296,9 @@
 
             <div class="flex gap-3 mt-5">
                 <button type="button" onclick="closeEditStatusModal()"
-                        class="flex-1 border border-[#D9D9D9] text-[#6B7280] py-2.5 rounded-lg text-sm">Cancel</button>
+                        class="flex-1 max-sm:min-h-11 border border-[#D9D9D9] text-[#6B7280] py-2.5 rounded-lg text-sm">Cancel</button>
                 <button type="submit"
-                        class="flex-1 bg-navy text-white py-2.5 rounded-lg text-sm">Save Changes</button>
+                        class="flex-1 max-sm:min-h-11 bg-navy text-white py-2.5 rounded-lg text-sm">Save Changes</button>
             </div>
         </form>
     </div>

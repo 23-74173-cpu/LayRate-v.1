@@ -9,7 +9,7 @@
 <span hidden id="hardware-walkthrough-state" data-created-id="{{ session('new_hardware_id') }}" data-reopen="{{ session('reopen_add_hardware') ? '1' : '0' }}" data-admin="{{ auth()->user()->isAdmin() ? '1' : '0' }}"></span>
 {{-- Bottom clearance: the fixed quick-dock floats over the viewport's
      bottom-right, so trailing space keeps it off the last table row/paginator. --}}
-<div class="space-y-5 pb-24 sm:pb-16">
+<div class="space-y-5 pb-24 max-sm:pb-40 sm:pb-16">
 
     <x-page-header title="Hardware Inventory" subtitle="Manage sensors, relays, and other hardware devices" />
 

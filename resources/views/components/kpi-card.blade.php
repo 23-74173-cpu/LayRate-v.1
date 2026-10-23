@@ -89,6 +89,7 @@
     'infoLabel' => null,
     'info' => null,
     'infoKey' => null,
+    'infoDetail' => null,
     'variant' => 'default',
     'target' => null,
     'decimals' => 0,
@@ -123,6 +124,11 @@
     if ($infoText === null && $infoKey !== null && \Illuminate\Support\Facades\Lang::has('kpi-info.' . $infoKey)) {
         $infoText = \Illuminate\Support\Facades\Lang::get('kpi-info.' . $infoKey);
     }
+    // Optional dynamic context (e.g. the phone-hidden subtitle) appended to
+    // the explanation popover so no information is lost when it is hidden.
+    if ($infoDetail !== null && trim((string) $infoDetail) !== '') {
+        $infoText = trim(($infoText ?? '') . ' ' . trim((string) $infoDetail));
+    }
     $missingInfo = ($infoText === null || trim((string) $infoText) === '') && config('app.debug');
     $plainLabel = trim(strip_tags((string) $label));
     // Pill visibility (single rule for every card): only a real, nonzero
@@ -145,7 +151,7 @@
          card. Click is caught in the capture phase by kpi-info.js, which also
          stops card navigation. The per-cage breakdown (data-kpi) moved inside
          the popover as an explicit action. --}}
-    <button type="button" class="kpi-info-btn"
+    <button type="button" class="kpi-info-btn max-sm:w-11 max-sm:h-11"
             data-kpi-popover
             data-info-title="{{ $plainLabel }}"
             data-info-text="{{ $infoText ?? '' }}"
@@ -158,7 +164,7 @@
             <i data-lucide="{{ $icon }}"></i>
         </span>
     @endif
-    <div class="relative min-w-0 flex-1 pr-10">
+    <div class="relative min-w-0 flex-1 pr-10 max-sm:pr-12">
         <div class="flex items-start justify-between gap-2">
             <span class="kpi-label min-w-0 flex-1">{{ $label }}</span>
             @if($missingInfo)

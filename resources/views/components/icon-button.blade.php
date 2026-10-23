@@ -11,7 +11,7 @@
       - iconSize (string, default 'w-3.5 h-3.5')
       - type (string, default 'button')
 --}}
-@props(['icon', 'label', 'color' => 'neutral', 'iconSize' => 'w-3.5 h-3.5', 'type' => 'button'])
+@props(['icon', 'label', 'color' => 'neutral', 'iconSize' => 'w-3.5 h-3.5', 'type' => 'button', 'class' => ''])
 
 @php
     $palette = [
@@ -24,8 +24,7 @@
         'red'     => ['c' => '#9b1c24', 'b' => '#f3cdd0', 'hb' => '#fbe4e6', 'hbc' => '#e8a3a9'],
     ];
     $p = $palette[$color] ?? $palette['neutral'];
-    // No cursor-pointer: the global rule (app.css) covers button:not(:disabled).
-    $classes = 'inline-flex items-center justify-center p-1.5 rounded-full border transition-all shrink-0';
+    $classes = 'inline-flex items-center justify-center p-1.5 rounded-full border transition-all shrink-0 max-sm:min-w-11 max-sm:min-h-11 ' . $class;
 @endphp
 
 <button type="{{ $type }}"

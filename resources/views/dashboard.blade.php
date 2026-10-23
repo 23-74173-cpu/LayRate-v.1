@@ -85,7 +85,7 @@
         </div>
     </div>
 
-    <div class="space-y-6">
+    <div class="space-y-6 max-sm:pb-24">
         {{-- Checklist lives in the global dock now (layouts/app) — kept out
              of the page so it never renders twice. --}}
 
@@ -137,7 +137,7 @@
             // (page load / tab restore) instead of all at once (tab clicks).
             function filterAnalytics(section, staggerLoad) {
                 window.__dashboardSection = section;
-                document.querySelectorAll('button[onclick^="filterAnalytics("]').forEach(function(btn) {
+                document.querySelectorAll('[data-underline-tabs] button[onclick^="filterAnalytics("]').forEach(function(btn) {
                     var isActive = btn.getAttribute('onclick') === "filterAnalytics('" + section + "')";
                     btn.classList.toggle('border-navy', isActive);
                     btn.classList.toggle('text-navy', isActive);
@@ -147,7 +147,17 @@
                     btn.classList.toggle('border-navy', isActive);
                     btn.classList.toggle('text-navy', isActive);
                     btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                    if (isActive) btn.dataset.tabKey = section;
+                    if (isActive) btn.setAttribute('aria-current', 'page');
+                    else btn.removeAttribute('aria-current');
                 });
+                var activeTab = document.querySelector('[data-underline-tabs] button[aria-selected="true"]');
+                if (activeTab) {
+                    var nav = activeTab.closest('nav');
+                    var navRect = nav && nav.getBoundingClientRect();
+                    var tabRect = activeTab.getBoundingClientRect();
+                    if (navRect && (tabRect.left < navRect.left || tabRect.right > navRect.right)) nav.scrollLeft += tabRect.left - navRect.left;
+                }
                 document.querySelectorAll('.analytics-section').forEach(function(el) {
                     el.classList.toggle('active-section', el.dataset.analyticsSection === section);
                 });

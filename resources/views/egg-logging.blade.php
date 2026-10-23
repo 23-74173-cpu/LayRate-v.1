@@ -6,10 +6,10 @@
     .cage-slot-grid {
         --slot-size: 65px;
     }
-    @media (max-width: 639px) {
+    @media (max-width: 639.98px) {
         .slot-card {
             min-height: 48px;
-            font-size: 10px;
+            font-size: 14px;
         }
         .cage-slot-grid {
             --slot-size: 44px;
@@ -17,6 +17,8 @@
         }
         .cage-scroll-btn {
             display: flex !important;
+            width: 44px;
+            height: 44px;
         }
     }
     .cage-scroll-ctrl {
@@ -51,7 +53,7 @@
 @endpush
 
 @section('content')
-<div class="space-y-5">
+<div class="space-y-5 pb-32 sm:pb-16">
 
     <x-page-header title="Egg Management" subtitle="Log daily egg production per cage slot" subtitle-id="egg-header-subtitle" />
 
@@ -138,7 +140,7 @@
                         <span class="min-w-0 flex-1 flex items-center gap-2">
                             <x-cage-color :cage="$cage" class="min-w-0 flex-1" :truncate="true" />
                             @if($henCapacity > 0)
-                                <span class="text-xs whitespace-nowrap shrink-0" style="font-variant-numeric: tabular-nums;"
+                                <span class="mobile-body-text text-xs max-sm:inline-flex max-sm:items-center whitespace-nowrap shrink-0" style="font-variant-numeric: tabular-nums;"
                                       title="{{ $henCount }} of {{ $henCapacity }} hens in {{ $cage->cage_code }}{{ $overCapacity ? ' — over capacity' : '' }}{{ $henCount === 0 ? ' — empty cage' : '' }}"
                                       aria-label="{{ $henCount }} of {{ $henCapacity }} hens{{ $overCapacity ? ', over capacity' : ($henCount === 0 ? ', empty cage' : '') }}">
                                     @if($overCapacity)
@@ -147,13 +149,13 @@
                                     <strong class="font-semibold" style="color: {{ $overCapacity ? '#9b1c24' : ($henCount === 0 ? '#6b7280' : $cage->color) }};">{{ number_format($henCount) }}</strong><span style="color: #6b7280;">/{{ number_format($henCapacity) }}</span>
                                 </span>
                             @else
-                                <span class="text-xs font-medium whitespace-nowrap shrink-0" style="color: {{ $cage->color }}; font-variant-numeric: tabular-nums;"
+                                <span class="mobile-body-text text-xs max-sm:inline-flex max-sm:items-center font-medium whitespace-nowrap shrink-0" style="color: {{ $cage->color }}; font-variant-numeric: tabular-nums;"
                                       title="{{ $henCount }} {{ Str::plural('hen', $henCount) }} in {{ $cage->cage_code }}">
                                     {{ number_format($henCount) }} {{ Str::plural('hen', $henCount) }}
                                 </span>
                             @endif
                         </span>
-                        <span class="text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shrink-0"
+                        <span class="mobile-body-text text-xs max-sm:inline-flex max-sm:items-center px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shrink-0"
                               style="background-color: {{ $cage->colorSoft }}; color: {{ $cage->color }};">
                             {{ $slotCount }} slot{{ $slotCount !== 1 ? 's' : '' }}
                         </span>
@@ -164,7 +166,7 @@
                               style="color: {{ $allLogged ? '#1f6b3a' : '#1f1f1f' }};">
                             {{ $loggedCount }}/{{ $slotCount }}
                         </span>
-                        <span class="text-xs font-medium whitespace-nowrap cage-complete-badge" id="cage-complete-{{ $cage->id }}"
+                        <span class="mobile-body-text text-xs font-medium whitespace-nowrap cage-complete-badge" id="cage-complete-{{ $cage->id }}"
                               style="color: #1f6b3a; display: {{ $allLogged ? 'inline' : 'none' }};">Complete</span>
                         <span class="ml-auto font-semibold whitespace-nowrap cage-egg-count" id="cage-eggs-{{ $cage->id }}"
                               style="color: #1f1f1f;">
@@ -223,12 +225,12 @@
                 <h3 class="text-lg font-semibold" style="color: #1f1f1f;">Log Entry</h3>
                 <div id="logTabs" class="hidden flex items-center gap-1 bg-gray-100 rounded-lg p-1">
                     <button type="button" onclick="switchLogTab('total')" id="logTabTotal"
-                            class="log-tab-btn active px-4 py-1.5 text-sm font-medium rounded-md transition-all"
+                            class="log-tab-btn active max-sm:min-h-[44px] px-4 py-1.5 text-sm font-medium rounded-md transition-all"
                             style="background: #fff; color: #1f1f1f; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                         Total Egg Log
                     </button>
                     <button type="button" onclick="switchLogTab('manual')" id="logTabManual"
-                            class="log-tab-btn px-4 py-1.5 text-sm font-medium rounded-md transition-all"
+                            class="log-tab-btn max-sm:min-h-[44px] px-4 py-1.5 text-sm font-medium rounded-md transition-all"
                             style="background: transparent; color: #6b7280;">
                         Manual Log
                     </button>
@@ -369,7 +371,7 @@
                             <div>
                                 <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Date</label>
                                 <input type="date" name="log_date" value="{{ \App\Services\ReportingDateService::reportingDateString() }}" required
-                                       class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                                       class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                        style="border-color: #e6e6e6; color: #1f1f1f;">
                             </div>
 
@@ -379,13 +381,13 @@
                                 <x-number-input name="egg_count" id="eggCount" min="0" value="{{ old('egg_count', '') }}" required
                                        oninput="computeHdep(); checkSizeSum(); validateForm()"
                                        data-error-message="Enter the egg count for this slot."
-                                       class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                                       class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                        style="border-color: #e6e6e6; color: #1f1f1f;" />
                                 @error('egg_count')
                                 <p class="text-xs mt-1" style="color: #9b1c24;">{{ $message }}</p>
                                 @enderror
                                 <button type="button" id="overrideLabel" onclick="event.preventDefault(); openOverrideModal()"
-                                        class="hidden mt-1.5 text-xs flex items-center gap-1" style="color: #8a5a00;">
+                                        class="hidden max-sm:min-h-11 mt-1.5 text-xs max-sm:text-sm flex items-center gap-1" style="color: #8a5a00;">
                                     <i data-lucide="lock" class="w-3 h-3"></i> Sensor reading — click to override
                                 </button>
                                 <p id="multiEggHint" class="hidden mt-1.5 text-xs" style="color: #615d59;">
@@ -397,7 +399,7 @@
                             <div>
                                 <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Hen Count</label>
                                 <input type="number" name="hen_count" id="henCount" min="1" value="1" required readonly
-                                       class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white cursor-not-allowed focus:outline-none"
+                                       class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white cursor-not-allowed focus:outline-none"
                                        style="border-color: #e6e6e6; color: #615d59; background-color: #f6f5f4;">
                                 <div id="hdepDisplay" class="hint-icon mt-2 inline-block border rounded-lg px-3 py-1.5 text-sm font-mono"
                                      title="Hen-Day Egg Production = (eggs ÷ hens) × 100% — measures how many eggs were laid per hen present"
@@ -414,7 +416,7 @@
                                 <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Notes <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
                                 <x-saved-note-picker category="Production" target="textarea[name='notes']" />
                                 <textarea name="notes" rows="2" placeholder="e.g. 2 broken eggs"
-                                          class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1 resize-y"
+                                          class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1 resize-y"
                                           style="border-color: #e6e6e6; color: #1f1f1f;"></textarea>
                             </div>
                         </div>
@@ -430,35 +432,35 @@
                                     <label class="block text-xs text-center mb-1" style="color: #2D7D46;">Small</label>
                                     <input type="number" name="size_small" min="0" value="0"
                                            oninput="checkSizeSum(); validateForm()"
-                                           class="size-input w-full border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                                           class="size-input w-full max-sm:min-h-11 border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                            style="border-color: #e6e6e6; color: #1f1f1f;">
                                 </div>
                                 <div>
                                     <label class="block text-xs text-center mb-1" style="color: var(--color-info);">Medium</label>
                                     <input type="number" name="size_medium" min="0" value="0"
                                            oninput="checkSizeSum(); validateForm()"
-                                           class="size-input w-full border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                                           class="size-input w-full max-sm:min-h-11 border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                            style="border-color: #e6e6e6; color: #1f1f1f;">
                                 </div>
                                 <div>
                                     <label class="block text-xs text-center mb-1" style="color: #C2703E;">Large</label>
                                     <input type="number" name="size_large" min="0" value="0"
                                            oninput="checkSizeSum(); validateForm()"
-                                           class="size-input w-full border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                                           class="size-input w-full max-sm:min-h-11 border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                            style="border-color: #e6e6e6; color: #1f1f1f;">
                                 </div>
                                 <div>
                                     <label class="block text-xs text-center mb-1" style="color: var(--color-teal-600);">XL</label>
                                     <input type="number" name="size_xl" min="0" value="0"
                                            oninput="checkSizeSum(); validateForm()"
-                                           class="size-input w-full border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                                           class="size-input w-full max-sm:min-h-11 border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                            style="border-color: #e6e6e6; color: #1f1f1f;">
                                 </div>
                                 <div>
                                     <label class="block text-xs text-center mb-1" style="color: #6B4C8A;">Jumbo</label>
                                     <input type="number" name="size_jumbo" min="0" value="0"
                                            oninput="checkSizeSum(); validateForm()"
-                                           class="size-input w-full border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                                           class="size-input w-full max-sm:min-h-11 border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                            style="border-color: #e6e6e6; color: #1f1f1f;">
                                 </div>
                             </div>
@@ -468,7 +470,7 @@
 
                         <div class="flex items-center gap-3 mt-4">
                             <button type="button" onclick="clearSlotSelection()"
-                                    class="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+                                    class="max-sm:min-h-11 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
                                     style="color: #1f1f1f; border: 1px solid #e6e6e6;"
                                     onmouseover="this.style.backgroundColor='#f6f5f4'"
                                     onmouseout="this.style.backgroundColor='transparent'">
@@ -520,7 +522,7 @@
 
                     <div class="flex items-center gap-3 mt-4">
                         <button type="button" onclick="clearTotalCageLog()"
-                                class="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+                                class="max-sm:min-h-11 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
                                 style="color: #1f1f1f; border: 1px solid #e6e6e6;"
                                 onmouseover="this.style.backgroundColor='#f6f5f4'"
                                 onmouseout="this.style.backgroundColor='transparent'">
@@ -564,7 +566,7 @@
         <div class="relative w-full max-w-sm rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Override Sensor Reading</h2>
-                <button onclick="closeOverrideModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors">
+                <button onclick="closeOverrideModal()" class="p-1.5 max-sm:min-w-11 max-sm:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close override dialog">
                     <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
                 </button>
             </div>
@@ -593,7 +595,7 @@
         <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Confirm Multi-Slot Logging</h2>
-                <button onclick="closeConfirmMultiModal()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors">
+                <button onclick="closeConfirmMultiModal()" class="p-1.5 max-sm:min-w-11 max-sm:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close confirmation dialog">
                     <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
                 </button>
             </div>
@@ -620,7 +622,7 @@
             </div>
             <div class="flex items-center gap-3 mt-4">
                 <button type="button" onclick="closeConfirmMultiModal()"
-                        class="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors text-center"
+                        class="flex-1 max-sm:min-h-11 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors text-center"
                         style="color: #1f1f1f; border: 1px solid #e6e6e6;"
                         onmouseover="this.style.backgroundColor='#f6f5f4'"
                         onmouseout="this.style.backgroundColor='transparent'">

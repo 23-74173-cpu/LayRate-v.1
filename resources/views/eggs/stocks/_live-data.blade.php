@@ -5,12 +5,12 @@
     </div>
     {{-- Batch Table --}}
     <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
-        <div class="overflow-x-auto">
-        <table class="w-full">
+        <div class="mobile-wide-table overflow-x-auto">
+        <table class="w-full max-sm:min-w-[720px] mobile-sticky-first">
             <thead>
                 <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
                     <th class="px-3 py-3 w-8" aria-label="Select batch"></th>
-                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">SIZE</th>
+                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium" data-sticky-label>SIZE</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">COUNT</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">TRAYS</th>
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">HARVESTED</th>
@@ -36,20 +36,20 @@
                     [$sBg, $sTxt, $sBorder] = $sizeColors[$batch->egg_size];
                 @endphp
                 <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]" data-batch-id="{{ $batch->id }}">
-                    <td class="pl-3 py-3.5">
-                        <input type="checkbox" class="batch-select shrink-0" value="{{ $batch->id }}" aria-label="Select batch #{{ $batch->id }} for printing">
+                    <td class="pl-3 py-3.5" data-sticky-checkbox>
+                        <input type="checkbox" class="batch-select max-sm:h-11 max-sm:w-11 shrink-0" value="{{ $batch->id }}" aria-label="Select batch #{{ $batch->id }} for printing">
                     </td>
-                    <td class="px-5 py-3.5">
-                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold" style="background:{{ $sBg }};color:{{ $sTxt }};border:1px solid {{ $sBorder }}"
+                    <td class="px-5 py-3.5" data-sticky-label>
+                        <span class="max-sm:min-h-11 inline-flex items-center px-2.5 rounded-full text-xs max-sm:text-sm font-semibold" style="background:{{ $sBg }};color:{{ $sTxt }};border:1px solid {{ $sBorder }}"
                               data-filter-link data-param="size" data-value="{{ $batch->egg_size }}" tabindex="0" role="button"
                               title="Show only {{ \App\Enums\EggSize::labelFor($batch->egg_size) }} batches">
                             {{ \App\Enums\EggSize::labelFor($batch->egg_size) }}
                         </span>
                     </td>
-                    <td class="px-5 py-3.5 text-sm font-medium text-[#333333]">{{ number_format($batch->count) }}</td>
-                    <td class="px-5 py-3.5 text-sm text-[#6B7280]">{{ (int) ceil($batch->count / 30) }}</td>
-                    <td class="px-5 py-3.5 text-sm font-mono text-[#333333]">{{ $batch->harvested_date->format('m/d/Y') }}</td>
-                    <td class="px-5 py-3.5 text-sm font-medium" style="color:{{ $cageColor }}"
+                    <td class="px-5 py-3.5 text-sm font-medium text-[#333333] tabular-nums max-sm:whitespace-nowrap">{{ number_format($batch->count) }}</td>
+                    <td class="px-5 py-3.5 text-sm text-[#6B7280] tabular-nums max-sm:whitespace-nowrap">{{ (int) ceil($batch->count / 30) }}</td>
+                    <td class="px-5 py-3.5 text-sm font-mono text-[#333333] max-sm:whitespace-nowrap">{{ $batch->harvested_date->format('m/d/Y') }}</td>
+                    <td class="px-5 py-3.5 text-sm font-medium max-sm:whitespace-nowrap" style="color:{{ $cageColor }}"
                         @if($batch->cage_id) data-filter-link data-param="cage_id" data-value="{{ $batch->cage_id }}" tabindex="0" role="button" title="Show only {{ $cageCode }} batches" @endif>{{ $cageCode }}</td>
                     <td class="px-5 py-3.5">
                         <span data-filter-link data-param="freshness" data-value="{{ $batch->freshness_status }}" tabindex="0" role="button" title="Show only {{ $batch->freshness_status }} batches" class="inline-block">
@@ -61,7 +61,7 @@
                             <x-icon-button icon="pencil" label="Edit stock" color="neutral"
                                 onclick="openEditStock({{ $batch->id }}, '{{ $batch->egg_size }}', {{ $batch->count }}, '{{ $batch->harvested_date->format('Y-m-d') }}')" />
                             <a href="{{ route('eggs.stocks.qr', $batch) }}" target="_blank"
-                               class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="View QR code">
+                               class="p-1.5 max-sm:min-w-11 max-sm:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="View QR code">
                                 <i data-lucide="qr-code" class="w-3.5 h-3.5"></i>
                             </a>
                             <form method="POST" action="{{ route('eggs.stocks.destroy', $batch) }}"

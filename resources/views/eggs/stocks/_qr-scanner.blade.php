@@ -31,7 +31,7 @@
                     <p class="text-xs leading-tight" style="color: rgba(255,255,255,0.65);">Check the freshness of a stock batch</p>
                 </div>
             </div>
-            <button type="button" onclick="closeEggQrScanner()" class="p-2 rounded-full hover:bg-white/10 transition-colors" aria-label="Close scanner">
+            <button type="button" onclick="closeEggQrScanner()" class="p-2 max-sm:min-w-11 max-sm:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-white/10 transition-colors" aria-label="Close scanner">
                 <i data-lucide="x" class="w-6 h-6"></i>
             </button>
         </div>

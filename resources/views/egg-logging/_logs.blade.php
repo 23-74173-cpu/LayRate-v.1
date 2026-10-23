@@ -5,27 +5,31 @@
     @php
         $sensorPct = $logStats['records'] > 0 ? round($logStats['sensor'] / $logStats['records'] * 100) : 0;
     @endphp
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4 recent-logs-kpis">
         <x-kpi-card label="Records" infoKey="recent-logs.records" icon="clipboard-list" delay="0ms"
-                    :value="number_format($logStats['records'])">
-            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">matching the filters</div>
+                    :value="number_format($logStats['records'])"
+                    :info-detail="number_format($logStats['records']) . ' matching the filters'">
+            <div class="mobile-kpi-secondary hidden sm:block text-xs mt-1.5 font-medium" style="color: #615d59;">matching the filters</div>
         </x-kpi-card>
         <x-kpi-card label="Eggs Logged" infoKey="recent-logs.eggs" icon="egg" delay="60ms"
-                    :value="number_format($logStats['eggs'])">
-            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">across these records</div>
+                    :value="number_format($logStats['eggs'])"
+                    :info-detail="number_format($logStats['eggs']) . ' eggs across these records'">
+            <div class="mobile-kpi-secondary hidden sm:block text-xs mt-1.5 font-medium" style="color: #615d59;">across these records</div>
         </x-kpi-card>
         <x-kpi-card label="Logged by IR" infoKey="recent-logs.sensor-share" icon="radio" delay="120ms"
-                    :value="$sensorPct . '%'">
-            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">{{ number_format($logStats['sensor']) }} sensor · {{ number_format($logStats['records'] - $logStats['sensor']) }} other</div>
+                    :value="$sensorPct . '%'"
+                    :info-detail="number_format($logStats['sensor']) . ' sensor · ' . number_format($logStats['records'] - $logStats['sensor']) . ' other'">
+            <div class="mobile-kpi-secondary mobile-kpi-wrap hidden sm:block text-xs mt-1.5 font-medium" style="color: #615d59;">{{ number_format($logStats['sensor']) }} sensor · {{ number_format($logStats['records'] - $logStats['sensor']) }} other</div>
         </x-kpi-card>
         <x-kpi-card label="Overridden" infoKey="recent-logs.overridden" icon="shield-check" delay="180ms"
-                    :value="number_format($logStats['overridden'])">
-            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">sensor counts corrected</div>
+                    :value="number_format($logStats['overridden'])"
+                    :info-detail="number_format($logStats['overridden']) . ' sensor counts corrected'">
+            <div class="mobile-kpi-secondary hidden sm:block text-xs mt-1.5 font-medium" style="color: #615d59;">sensor counts corrected</div>
         </x-kpi-card>
     </div>
     @endisset
-    <div class="overflow-x-auto">
-        <table class="w-full">
+    <div class="overflow-x-auto mobile-log-list">
+        <table class="w-full mobile-log-table">
             <thead>
                 <tr class="border-b" style="background-color: #f6f5f4; border-color: #e6e6e6;">
                     <th class="text-left text-xs font-semibold tracking-[0.125px] uppercase px-5 py-3" style="color: #615d59;">Date</th>
@@ -42,18 +46,25 @@
                 </tr>
             </thead>
             <tbody>
+                @php $previousLogDate = null; @endphp
                 @forelse($logs as $log)
-                <tr class="border-b hover:bg-black/[0.02] transition-colors" style="border-color: #e6e6e6;">
-                    <td class="px-5 py-3.5 text-sm font-mono" style="color: #1f1f1f;">{{ $log->log_date->format('m/d/Y') }}</td>
-                    <td class="px-5 py-3.5 text-sm font-semibold font-mono" style="color: {{ $log->cageSlot?->cage?->color ?? '#6B7280' }}">{{ $log->cageSlot?->cage?->cage_code ?? '—' }}</td>
-                    <td class="px-5 py-3.5 text-xs font-mono" style="color: #615d59;">
+                @if($previousLogDate !== $log->log_date->toDateString())
+                <tr class="mobile-log-date-header sm:hidden">
+                    <td colspan="11">{{ $log->log_date->format('m/d/Y') }}</td>
+                </tr>
+                @php $previousLogDate = $log->log_date->toDateString(); @endphp
+                @endif
+                <tr class="mobile-log-row border-b hover:bg-black/[0.02] transition-colors" data-mobile-log-row aria-label="Show more details for {{ $log->cageSlot?->cage?->cage_code ?? 'unknown cage' }} log on {{ $log->log_date->format('m/d/Y') }}" style="border-color: #e6e6e6;">
+                    <td data-label="Date" class="mobile-log-date px-5 py-3.5 text-sm font-mono" style="color: #1f1f1f;">{{ $log->log_date->format('m/d/Y') }}</td>
+                    <td data-label="Cage" class="mobile-log-cage px-5 py-3.5 text-sm font-semibold font-mono max-sm:whitespace-nowrap" style="color: {{ $log->cageSlot?->cage?->color ?? '#6B7280' }}">{{ $log->cageSlot?->cage?->cage_code ?? '—' }}</td>
+                    <td data-label="Slot" class="mobile-log-slot px-5 py-3.5 text-xs max-sm:text-sm font-mono" style="color: #615d59;">
                         @if($log->cageSlot){{ $log->cageSlot->row_number }}-{{ $log->cageSlot->column_number }}@else — @endif
                     </td>
-                    <td class="px-5 py-3.5 text-sm font-mono" style="color: #1f1f1f;">{{ $log->egg_count }}</td>
-                    <td class="px-5 py-3.5 text-sm font-mono" style="color: #1f1f1f;">{{ $log->hen_count }}</td>
-                    <td class="px-5 py-3.5 text-sm font-mono" style="color: #1f1f1f;">{{ number_format($log->hdep,1) }}%</td>
-                    <td class="px-5 py-3.5 text-sm" style="color: #31302e;">{{ $log->recorder?->name ?? 'Farm Operator' }}</td>
-                    <td class="px-5 py-3.5">
+                    <td data-label="Eggs" class="mobile-log-eggs px-5 py-3.5 text-sm font-mono" style="color: #1f1f1f;"><span class="mobile-log-eggs-count">{{ $log->egg_count }}</span><span class="mobile-log-eggs-label">eggs</span></td>
+                    <td data-label="Hens" class="mobile-log-detail px-5 py-3.5 text-sm font-mono" style="color: #1f1f1f;">{{ $log->hen_count }}</td>
+                    <td data-label="HDEP" class="mobile-log-detail px-5 py-3.5 text-sm font-mono" style="color: #1f1f1f;">{{ number_format($log->hdep,1) }}%</td>
+                    <td data-label="Logged By" class="mobile-log-detail px-5 py-3.5 text-sm" style="color: #31302e;">{{ $log->recorder?->name ?? 'Farm Operator' }}</td>
+                    <td data-label="Source" class="mobile-log-detail px-5 py-3.5">
                         @if($log->logged_via === 'sensor')
                         <x-status-badge status="sensor" type="slot" />
                         @elseif($log->logged_via === 'manual')
@@ -62,29 +73,29 @@
                         <span class="text-xs" style="color: #a39e98;">—</span>
                         @endif
                     </td>
-                    <td class="px-5 py-3.5 text-sm max-w-[200px] truncate" style="color: #615d59;">{{ $log->notes ?? '—' }}</td>
-                    <td class="px-5 py-3.5">
+                    <td data-label="Notes" class="mobile-log-detail px-5 py-3.5 text-sm max-w-[200px] truncate" style="color: #615d59;">{{ $log->notes ?? '—' }}</td>
+                    <td data-label="Override" class="mobile-log-detail px-5 py-3.5">
                         @if($log->overriddenBy)
                         <x-status-badge status="Watch" type="general" />
                         @else
                         <span class="text-xs" style="color: #a39e98;">—</span>
                         @endif
                     </td>
-                    <td class="px-5 py-3.5">
-                        <div class="flex items-center gap-1">
+                    <td data-label="Actions" class="mobile-log-actions px-2 py-2">
+                        <div class="flex items-center justify-end gap-1">
                             @php
                                 $sizes = $log->eggSizeLogs->keyBy('egg_size');
                             @endphp
                             <button onclick="openEditLog({id: {{ $log->id }}, date: '{{ $log->log_date->format('Y-m-d') }}', eggCount: {{ $log->egg_count }}, henCount: {{ $log->hen_count }}, notes: '{{ addslashes($log->notes ?? '') }}', cageSlotId: {{ $log->cage_slot_id }}, sizes: {small: {{ $sizes->get('small')?->count ?? 0 }}, medium: {{ $sizes->get('medium')?->count ?? 0 }}, large: {{ $sizes->get('large')?->count ?? 0 }}, xl: {{ $sizes->get('xl')?->count ?? 0 }}, jumbo: {{ $sizes->get('jumbo')?->count ?? 0 }}})"
-                                    class="p-1.5 rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Edit log">
-                                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                     class="p-1.5 max-sm:min-w-11 max-sm:min-h-11 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Edit log">
+                                <i data-lucide="pencil" class="w-3.5 h-3.5 max-sm:w-4 max-sm:h-4"></i>
                             </button>
                             <form method="POST" action="{{ route('eggs.logging.reset', $log) }}"
                                   data-confirm="Reset egg count for this log to 0? This action preserves the log entry but clears the count and size breakdown."
                                   data-confirm-action="Reset" data-confirm-severity="destructive">
                                 @csrf @method('PUT')
-                                <button type="submit" class="p-1.5 rounded-full hover:bg-amber-50 transition-colors" style="color: #a39e98;" aria-label="Reset count">
-                                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                                <button type="submit" class="p-1.5 max-sm:min-w-11 max-sm:min-h-11 flex items-center justify-center rounded-full hover:bg-amber-50 transition-colors" style="color: #a39e98;" aria-label="Reset count">
+                                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 max-sm:w-4 max-sm:h-4"></i>
                                 </button>
                             </form>
                             @if(auth()->user()->role === 'admin')
@@ -92,8 +103,8 @@
                                   data-confirm="Delete this production log permanently? Data loss includes egg count, size breakdown, and stock batch references will be unlinked."
                                   data-confirm-action="Delete" data-confirm-severity="destructive">
                                 @csrf @method('DELETE')
-                                <button type="submit" class="p-1.5 rounded-full hover:bg-red-50 transition-colors" style="color: #a39e98;" aria-label="Delete log">
-                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                <button type="submit" class="p-1.5 max-sm:min-w-11 max-sm:min-h-11 flex items-center justify-center rounded-full hover:bg-red-50 transition-colors" style="color: #a39e98;" aria-label="Delete log">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5 max-sm:w-4 max-sm:h-4"></i>
                                 </button>
                             </form>
                             @endif
@@ -114,9 +125,7 @@
             </tbody>
         </table>
     </div>
-    <x-paginator :paginator="$logs" />
-    {{-- Bottom clearance (the egg-logging page itself can't take the shared
-         root padding): the fixed quick-dock floats over the viewport's
-         bottom-right, so trailing space keeps it off the last row/paginator. --}}
-    <div class="h-24 sm:h-16" aria-hidden="true"></div>
+    <x-paginator :paginator="$logs" class="recent-logs-paginator" />
+    {{-- Desktop/tablet clearance. Phones use the page bottom padding. --}}
+    <div class="hidden sm:block h-16" aria-hidden="true"></div>
 </turbo-frame>

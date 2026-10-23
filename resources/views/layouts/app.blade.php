@@ -476,7 +476,7 @@
                 @hasSection('header-clock')
                 <span class="text-xs text-ink-muted whitespace-nowrap hidden sm:inline">@yield('header-clock')</span>
                 @endif
-                <a href="{{ route('notifications.index') }}" class="relative rounded-full p-1.5 text-ink hover:bg-black/5 transition-colors" aria-label="Notifications">
+                <a href="{{ route('notifications.index') }}" class="relative max-sm:min-w-11 max-sm:min-h-11 inline-flex items-center justify-center rounded-full p-1.5 text-ink hover:bg-black/5 transition-colors" aria-label="Notifications">
                     <i data-lucide="bell" class="w-5 h-5 block"></i>
                     @if($globalAlertCount > 0)
                     <span class="absolute -top-0.5 -right-0.5 min-w-3.5 h-3.5 px-0.5 bg-alert-text text-white text-[10px] leading-3.5 rounded-full flex items-center justify-center font-bold">{{ $globalAlertCount }}</span>
@@ -484,7 +484,7 @@
                 </a>
                 <div class="relative pl-2 border-l border-hairline">
                     <button id="profileMenuBtn" type="button"
-                            class="flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-black/5 transition-colors"
+                            class="max-sm:min-h-11 flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-black/5 transition-colors"
                             aria-haspopup="true" aria-expanded="false" aria-label="Account menu">
                         @php
                             $initials = collect(preg_split('/\s+/', trim(auth()->user()->name ?? '')))->filter()->map(fn($p) => mb_strtoupper(mb_substr($p, 0, 1)))->take(2)->implode('');
@@ -497,10 +497,10 @@
                         <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-ink-muted"></i>
                     </button>
                     <div id="profileMenu" class="hidden absolute right-0 top-full mt-2 w-44 rounded-lg border border-hairline bg-surface shadow-soft py-1 z-50">
-                        <a href="{{ route('profile') }}" class="flex items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/5 transition-colors">
+                        <a href="{{ route('profile') }}" class="max-sm:min-h-11 flex items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/5 transition-colors">
                             <i data-lucide="user" class="w-4 h-4"></i> Profile
                         </a>
-                        <a href="{{ route('profile', ['tab' => 'settings']) }}" class="flex items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/5 transition-colors">
+                        <a href="{{ route('profile', ['tab' => 'settings']) }}" class="max-sm:min-h-11 flex items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/5 transition-colors">
                             <i data-lucide="settings" class="w-4 h-4"></i> Settings
                         </a>
                         <div class="my-1 border-t border-hairline"></div>
@@ -617,16 +617,128 @@
             var isOpen = menu && !menu.classList.contains('hidden');
             if (isOpen) {
                 menu.classList.add('hidden');
+                menu.setAttribute('aria-hidden', 'true');
                 toggle.setAttribute('aria-expanded', 'false');
                 toggle.setAttribute('aria-label', 'Open menu');
+                var backdrop = document.getElementById('dockFabBackdrop');
+                if (backdrop) backdrop.classList.add('hidden');
+                var checklistPanel = document.getElementById('dataChecklistPanel');
+                if (checklistPanel && !checklistPanel.classList.contains('hidden')) {
+                    checklistPanel.classList.add('hidden');
+                    checklistPanel.setAttribute('aria-hidden', 'true');
+                    var checklistButton = document.querySelector('#quickDock [data-dock-action="checklist"]');
+                    if (checklistButton) checklistButton.setAttribute('aria-expanded', 'false');
+                }
                 if (icon) icon.style.transform = 'rotate(0deg)';
+                if (toggle.dataset.mobileSheetOpen === 'true') {
+                    toggle.dataset.mobileSheetOpen = '';
+                    toggle.focus({ preventScroll: true });
+                }
             } else {
+                var dockChecklist = document.getElementById('dataChecklistPanel');
+                if (dockChecklist && !dockChecklist.classList.contains('hidden')) {
+                    dockChecklist.classList.add('hidden');
+                    dockChecklist.setAttribute('aria-hidden', 'true');
+                    var checklistToggle = document.querySelector('#quickDock [data-dock-action="checklist"]');
+                    if (checklistToggle) checklistToggle.setAttribute('aria-expanded', 'false');
+                }
                 menu.classList.remove('hidden');
+                menu.removeAttribute('aria-hidden');
                 toggle.setAttribute('aria-expanded', 'true');
                 toggle.setAttribute('aria-label', 'Close menu');
                 if (icon) icon.style.transform = 'rotate(45deg)';
+                var backdrop = document.getElementById('dockFabBackdrop');
+                var isPhoneSheet = window.matchMedia('(max-width: 639.98px)').matches;
+                if (backdrop && isPhoneSheet) backdrop.classList.remove('hidden');
+                if (isPhoneSheet) {
+                    toggle.dataset.mobileSheetOpen = 'true';
+                    var firstAction = menu.querySelector('[data-dock-close-fab]') || menu.querySelector('[data-dock-action-item], .egg-sheet-setting, [data-dock-action-list] > button:not([data-dock-desktop-only]), [data-dock-action-list] > a, [data-dock-action-list] > form button');
+                    if (firstAction) firstAction.focus({ preventScroll: true });
+                }
             }
             return;
+        }
+        var checklistClose = e.target.closest('[data-dock-close-panel]');
+        if (checklistClose) {
+            var checklist = document.getElementById('dataChecklistPanel');
+            var checklistToggle = document.querySelector('#quickDock [data-dock-action="checklist"]');
+            if (checklist) { checklist.classList.add('hidden'); checklist.setAttribute('aria-hidden', 'true'); }
+            if (checklistToggle) {
+                checklistToggle.setAttribute('aria-expanded', 'false');
+                checklistToggle.focus({ preventScroll: true });
+            }
+            return;
+        }
+        var checklistButton = e.target.closest('#quickDock [data-dock-action="checklist"]');
+        if (checklistButton) {
+            var checklistPanel = document.getElementById('dataChecklistPanel');
+            var checklistOpen = checklistPanel && checklistPanel.classList.contains('hidden');
+            if (checklistOpen) {
+                var pageMenu = document.getElementById('dockFabMenu');
+                var pageToggle = document.querySelector('#quickDock .fab-toggle');
+                if (pageMenu) { pageMenu.classList.add('hidden'); pageMenu.setAttribute('aria-hidden', 'true'); }
+                if (pageToggle) {
+                    pageToggle.setAttribute('aria-expanded', 'false');
+                    pageToggle.setAttribute('aria-label', 'Open menu');
+                    pageToggle.dataset.mobileSheetOpen = '';
+                }
+                var pageIcon = document.querySelector('#quickDock .fab-icon');
+                if (pageIcon) pageIcon.style.transform = 'rotate(0deg)';
+                var dockBackdrop = document.getElementById('dockFabBackdrop');
+                if (dockBackdrop) dockBackdrop.classList.add('hidden');
+            }
+            return;
+        }
+        var closeSheet = e.target.closest('[data-dock-close-fab]');
+        var sheetBackdrop = e.target.closest('[data-dock-fab-backdrop]');
+        if (sheetBackdrop && window.matchMedia('(max-width: 639.98px)').matches) {
+            var checklistPanel = document.getElementById('dataChecklistPanel');
+            var checklistButton = document.querySelector('#quickDock [data-dock-action="checklist"]');
+            if (checklistPanel && !checklistPanel.classList.contains('hidden')) {
+                checklistPanel.classList.add('hidden');
+                checklistPanel.setAttribute('aria-hidden', 'true');
+                if (checklistButton) {
+                    checklistButton.setAttribute('aria-expanded', 'false');
+                    checklistButton.focus({ preventScroll: true });
+                }
+                return;
+            }
+        }
+        if (closeSheet || sheetBackdrop) {
+            var openMenu = document.getElementById('dockFabMenu');
+            var openFab = openMenu && openMenu.closest('.fab');
+            var openToggle = openFab && openFab.querySelector('.fab-toggle');
+            if (openMenu && openToggle) {
+                openMenu.classList.add('hidden');
+                openMenu.setAttribute('aria-hidden', 'true');
+                openToggle.setAttribute('aria-expanded', 'false');
+                openToggle.setAttribute('aria-label', 'Open menu');
+                var openIcon = openFab.querySelector('.fab-icon');
+                if (openIcon) openIcon.style.transform = 'rotate(0deg)';
+                var back = document.getElementById('dockFabBackdrop');
+                if (back) back.classList.add('hidden');
+                if (openToggle.dataset.mobileSheetOpen === 'true') {
+                    openToggle.dataset.mobileSheetOpen = '';
+                    openToggle.focus({ preventScroll: true });
+                }
+            }
+            return;
+        }
+        var pageAction = e.target.closest('#dockFabMenu [data-dock-action-list] button:not([data-dock-close-fab]):not(.dock-settings-heading), #dockFabMenu [data-dock-action-list] a, #dockFabMenu [data-dock-action-list] input, #dockFabMenu [data-dock-action-list] select');
+        if (pageAction && window.matchMedia('(max-width: 639.98px)').matches) {
+            var actionMenu = document.getElementById('dockFabMenu');
+            var actionFab = actionMenu && actionMenu.closest('.fab');
+            var actionToggle = actionFab && actionFab.querySelector('.fab-toggle');
+            if (actionMenu) { actionMenu.classList.add('hidden'); actionMenu.setAttribute('aria-hidden', 'true'); }
+            if (actionToggle) {
+                actionToggle.setAttribute('aria-expanded', 'false');
+                actionToggle.setAttribute('aria-label', 'Open menu');
+                var shouldRestoreFocus = actionToggle.dataset.mobileSheetOpen === 'true';
+                actionToggle.dataset.mobileSheetOpen = '';
+                if (shouldRestoreFocus && pageAction.tagName !== 'A') actionToggle.focus({ preventScroll: true });
+            }
+            var actionBackdrop = document.getElementById('dockFabBackdrop');
+            if (actionBackdrop) actionBackdrop.classList.add('hidden');
         }
         // Outside click closes any open FAB menu
         document.querySelectorAll('.fab .fab-menu:not(.hidden)').forEach(function(menu) {
@@ -634,13 +746,142 @@
             var fabToggle = fab ? fab.querySelector('.fab-toggle') : null;
             var icon = fab ? fab.querySelector('.fab-icon') : null;
             menu.classList.add('hidden');
+            menu.setAttribute('aria-hidden', 'true');
             if (fabToggle) {
                 fabToggle.setAttribute('aria-expanded', 'false');
                 fabToggle.setAttribute('aria-label', 'Open menu');
+                var shouldRestoreFocus = fabToggle.dataset.mobileSheetOpen === 'true';
+                fabToggle.dataset.mobileSheetOpen = '';
+                if (shouldRestoreFocus) fabToggle.focus({ preventScroll: true });
             }
+            var backdrop = document.getElementById('dockFabBackdrop');
+            if (backdrop) backdrop.classList.add('hidden');
             if (icon) icon.style.transform = 'rotate(0deg)';
         });
     });
+
+    if (!window.__mobileDockSheetBound) {
+        window.__mobileDockSheetBound = true;
+        var dockHistoryState = { mobileDockSheet: true };
+        var dockHistoryOpen = false;
+        function addDockHistoryEntry() {
+            if (!dockHistoryOpen) {
+                window.history.pushState(dockHistoryState, '', window.location.href);
+                dockHistoryOpen = true;
+            }
+        }
+        function removeDockHistoryEntry() {
+            if (dockHistoryOpen) {
+                dockHistoryOpen = false;
+                window.history.back();
+            }
+        }
+        document.addEventListener('click', function (e) {
+            if (window.matchMedia('(max-width: 639.98px)').matches && e.target.closest('#quickDock .fab-toggle, #quickDock [data-dock-action="checklist"]')) {
+                var menu = document.getElementById('dockFabMenu');
+                var panel = document.getElementById('dataChecklistPanel');
+                var willOpen = e.target.closest('.fab-toggle')
+                    ? menu && menu.classList.contains('hidden')
+                    : panel && panel.classList.contains('hidden');
+                if (willOpen) addDockHistoryEntry();
+                else removeDockHistoryEntry();
+            }
+            if (e.target.closest('[data-dock-close-fab], [data-dock-close-panel], [data-dock-fab-backdrop]') || e.target.closest('#dockFabMenu [data-dock-action-list] button, #dockFabMenu [data-dock-action-list] a, #dockFabMenu [data-dock-action-list] input, #dockFabMenu [data-dock-action-list] select, #dockFabMenu [data-dock-action-list] textarea, #dataChecklistPanel a')) removeDockHistoryEntry();
+        }, true);
+        document.addEventListener('keydown', function(e) {
+            var menu = document.getElementById('dockFabMenu');
+            var checklist = document.getElementById('dataChecklistPanel');
+            if (e.key === 'Tab' && menu && !menu.classList.contains('hidden') && window.matchMedia('(max-width: 639.98px)').matches) {
+                var focusable = Array.prototype.filter.call(menu.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'), function (el) {
+                    return el.offsetParent !== null;
+                });
+                if (focusable.length) {
+                    var first = focusable[0];
+                    var last = focusable[focusable.length - 1];
+                    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+                    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+                }
+            }
+            if (checklist && !checklist.classList.contains('hidden') && (e.key === 'Escape' || e.key === 'Backspace' && !e.target.matches('input, textarea, [contenteditable="true"]'))) {
+                e.preventDefault();
+                checklist.classList.add('hidden');
+                checklist.setAttribute('aria-hidden', 'true');
+                var checklistToggle = document.querySelector('#quickDock [data-dock-action="checklist"]');
+                if (checklistToggle) {
+                    checklistToggle.setAttribute('aria-expanded', 'false');
+                    checklistToggle.focus({ preventScroll: true });
+                }
+                var checklistBackdrop = document.getElementById('dockFabBackdrop');
+                if (checklistBackdrop) checklistBackdrop.classList.add('hidden');
+                return;
+            }
+            if (!menu || menu.classList.contains('hidden')) return;
+            if (e.key === 'Escape' || e.key === 'Backspace' && !e.target.matches('input, textarea, [contenteditable="true"]')) {
+                e.preventDefault();
+                var toggle = menu.closest('.fab')?.querySelector('.fab-toggle');
+                menu.classList.add('hidden');
+                menu.setAttribute('aria-hidden', 'true');
+                if (toggle) {
+                    toggle.setAttribute('aria-expanded', 'false');
+                    toggle.setAttribute('aria-label', 'Open menu');
+                    if (toggle.dataset.mobileSheetOpen === 'true') {
+                        toggle.dataset.mobileSheetOpen = '';
+                        toggle.focus({ preventScroll: true });
+                    }
+                }
+                var icon = document.querySelector('#quickDock .fab-icon');
+                if (icon) icon.style.transform = 'rotate(0deg)';
+                var backdrop = document.getElementById('dockFabBackdrop');
+                if (backdrop) backdrop.classList.add('hidden');
+            }
+        });
+        window.addEventListener('popstate', function() {
+            dockHistoryOpen = false;
+            var menu = document.getElementById('dockFabMenu');
+            var checklist = document.getElementById('dataChecklistPanel');
+            if (checklist && !checklist.classList.contains('hidden')) {
+                checklist.classList.add('hidden');
+                checklist.setAttribute('aria-hidden', 'true');
+                var checklistToggle = document.querySelector('#quickDock [data-dock-action="checklist"]');
+                if (checklistToggle) {
+                    checklistToggle.setAttribute('aria-expanded', 'false');
+                    checklistToggle.focus({ preventScroll: true });
+                }
+                var checklistBackdrop = document.getElementById('dockFabBackdrop');
+                if (checklistBackdrop) checklistBackdrop.classList.add('hidden');
+                return;
+            }
+            if (!menu || menu.classList.contains('hidden')) return;
+            menu.classList.add('hidden');
+            menu.setAttribute('aria-hidden', 'true');
+            var toggle = document.querySelector('#quickDock .fab-toggle');
+            if (toggle) {
+                toggle.setAttribute('aria-expanded', 'false');
+                toggle.setAttribute('aria-label', 'Open menu');
+                if (toggle.dataset.mobileSheetOpen === 'true') {
+                    toggle.dataset.mobileSheetOpen = '';
+                    toggle.focus({ preventScroll: true });
+                }
+            }
+            var icon = document.querySelector('#quickDock .fab-icon');
+            if (icon) icon.style.transform = 'rotate(0deg)';
+            var backdrop = document.getElementById('dockFabBackdrop');
+            if (backdrop) backdrop.classList.add('hidden');
+        });
+        document.addEventListener('turbo:before-visit', function () {
+            dockHistoryOpen = false;
+            var menu = document.getElementById('dockFabMenu');
+            if (menu) { menu.classList.add('hidden'); menu.setAttribute('aria-hidden', 'true'); }
+            var panel = document.getElementById('dataChecklistPanel');
+            if (panel) { panel.classList.add('hidden'); panel.setAttribute('aria-hidden', 'true'); }
+            var backdrop = document.getElementById('dockFabBackdrop');
+            if (backdrop) backdrop.classList.add('hidden');
+            var toggle = document.querySelector('#quickDock .fab-toggle');
+            if (toggle) { toggle.setAttribute('aria-expanded', 'false'); toggle.dataset.mobileSheetOpen = ''; }
+            var checklistToggle = document.querySelector('#quickDock [data-dock-action="checklist"]');
+            if (checklistToggle) checklistToggle.setAttribute('aria-expanded', 'false');
+        });
+    }
 
     // Some pages (e.g. Egg History) have no inline script of their own to call
     // lucide.createIcons() after a Turbo visit, so ensure the FAB's plus icon is

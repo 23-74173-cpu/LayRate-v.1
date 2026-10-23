@@ -11,12 +11,12 @@
 @php $feedNotes = \App\Models\Note::suggestionsFor('Feed'); @endphp
 {{-- Bottom clearance: the fixed quick-dock floats over the viewport's
      bottom-right, so trailing space keeps it off the last table row/paginator. --}}
-<div class="space-y-5 pb-24 sm:pb-16">
+<div class="space-y-5 pb-24 max-sm:pb-40 sm:pb-16">
 
     <x-page-header title="Feed & Nutrition" subtitle="Track feed batches, crude protein, and daily consumption" />
 
     @push('dock-actions')
-        <button type="button"
+        <button type="button" data-dock-action-item
                 data-feed-action="consumption" onclick="openConsumptionModal()"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Add Consumption</span>
@@ -24,7 +24,7 @@
                 <i data-lucide="wheat" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
-        <button type="button"
+        <button type="button" data-dock-action-item
                 data-feed-action="farm" onclick="openFarmEntryModal()"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Log Whole-Farm Feeding</span>
@@ -32,7 +32,7 @@
                 <i data-lucide="shopping-basket" class="w-4 h-4 text-navy"></i>
             </div>
         </button>
-        <button type="button"
+        <button type="button" data-dock-action-item
                 data-feed-action="batch" onclick="document.getElementById('addBatchModal').classList.remove('hidden'); document.getElementById('addBatchModal').classList.add('flex');"
                 class="flex items-center gap-3 bg-white border border-[#D9D9D9] text-[#333333] px-4 py-2.5 rounded-full shadow-lg hover:bg-[#F5F6F8] transition-colors text-sm">
             <span>Add Feed Batch</span>

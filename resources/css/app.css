@@ -188,29 +188,316 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
    the text instead; the icon stays horizontally centered while the text
    column stretches full width and stays left-aligned. The info button stays
    in the top-right corner, level with the icon. */
+/* Mobile-only ranking detail; hidden at the desktop/tablet breakpoint. */
+.perf-mobile-hdep,
+.perf-hens-label { display: none; }
+
 @media (max-width: 639.98px) {
+  .mobile-body-text { font-size: 14px !important; line-height: 1.35; }
+  .mobile-icon-button { min-width: 44px; min-height: 44px; }
   .kpi-card {
     flex-direction: column;
     align-items: center;
     gap: 10px;
-    padding: 14px;
+    padding: 12px;
+    min-height: 0;
   }
   .kpi-card > .kpi-icon-tile {
-    width: 64px;
-    height: 64px;
-    border-radius: 14px;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    align-self: center;
   }
   .kpi-card > .kpi-icon-tile svg,
   .kpi-card > .kpi-icon-tile i {
-    width: 36px;
-    height: 36px;
+    width: 18px;
+    height: 18px;
   }
   .kpi-card > .min-w-0 {
     width: 100%;
     align-self: stretch;
-    /* Keep the text clear of the absolute info button, as on desktop. */
-    padding-right: 2.5rem;
+    padding-right: 1.75rem;
   }
+  .kpi-card .kpi-number,
+  .kpi-card .kpi-value {
+    font-size: clamp(1rem, 5vw, 1.375rem);
+    line-height: 1.1;
+    letter-spacing: -0.35px;
+    white-space: nowrap;
+  }
+  .kpi-card .kpi-label {
+    font-size: 14px;
+    line-height: 1.2;
+  }
+  .kpi-card .kpi-secondary {
+    margin-top: 4px;
+    font-size: 14px;
+    line-height: 1.25;
+    white-space: normal;
+  }
+  .kpi-card .mobile-kpi-wrap { overflow-wrap: anywhere; }
+  .kpi-card .mobile-kpi-secondary { font-size: 14px; line-height: 1.25; }
+  .kpi-card .trend-pill-up,
+  .kpi-card .trend-pill-down {
+    gap: 3px;
+    padding: 2px 5px;
+    font-size: 14px;
+    line-height: 1.25;
+    white-space: nowrap;
+    max-width: none;
+  }
+
+  .recent-logs-page {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  }
+
+  /* Recent Logs: one KPI rhythm — icon + info on the top row, then label and
+     value. The subtitle is desktop-only; its text is appended to the info
+     popover by the card component so no meaning is lost. */
+  .recent-logs-kpis .kpi-card {
+    align-items: stretch;
+    gap: 0;
+    padding: 12px;
+  }
+  .recent-logs-kpis .kpi-card > .kpi-icon-tile {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    align-self: flex-start;
+    margin-bottom: 8px;
+  }
+  .recent-logs-kpis .kpi-card > .kpi-icon-tile svg,
+  .recent-logs-kpis .kpi-card > .kpi-icon-tile i {
+    width: 20px;
+    height: 20px;
+  }
+  .recent-logs-kpis .kpi-card > .min-w-0 {
+    width: 100%;
+    align-self: stretch;
+    padding-right: 0;
+  }
+  .recent-logs-kpis .kpi-card .kpi-label {
+    font-size: 14px;
+    line-height: 1.2;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+  .recent-logs-kpis .kpi-card .kpi-number,
+  .recent-logs-kpis .kpi-card .kpi-value {
+    font-size: clamp(1.125rem, 5.5vw, 1.5rem);
+    line-height: 1.1;
+    letter-spacing: -0.4px;
+    white-space: nowrap;
+  }
+  .recent-logs-kpis .kpi-info-btn {
+    top: 6px;
+    right: 6px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+  }
+
+  /* Recent Logs filters: Equal chips using the real checkbox inputs. */
+  .recent-via-chip {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 88px;
+    min-height: 44px;
+    justify-content: center;
+    padding: 0 10px;
+    border: 1px solid #e6e6e6;
+    border-radius: 10px;
+    background: #ffffff;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  .recent-via-chip .recent-via-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+    opacity: 0;
+  }
+  .recent-via-chip:has(.recent-via-input:checked) {
+    background: var(--color-navy);
+    border-color: var(--color-navy);
+    color: #ffffff !important;
+  }
+  .recent-via-chip:has(.recent-via-input:focus-visible) {
+    outline: 2px solid var(--color-primary-active);
+    outline-offset: 2px;
+  }
+
+  /* Recent Logs pagination: one centered line: previous, current, last, next. */
+  .recent-logs-paginator .paginator-adjacent:not(.paginator-last),
+  .recent-logs-paginator .paginator-ellipsis,
+  .recent-logs-paginator .paginator-first:not(.paginator-current) {
+    display: none;
+  }
+}
+
+/* Unit hint under the mobile egg count; the desktop header already says Eggs. */
+.mobile-log-eggs-label { display: none; }
+
+@media (max-width: 639.98px) {
+  .mobile-log-list {
+    border: 1px solid #e6e6e6;
+    border-radius: 12px;
+    background: #ffffff;
+    overflow: hidden;
+  }
+  .mobile-log-table {
+    min-width: 0 !important;
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+  }
+  .mobile-log-table thead { display: none; }
+  .mobile-log-table tbody { display: block; }
+  .mobile-log-table .mobile-log-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 8px;
+    min-height: 56px;
+    padding: 8px 12px;
+    border: 0;
+    border-top: 1px solid #efefef;
+    border-radius: 0;
+    background: transparent;
+  }
+  .mobile-log-table .mobile-log-date-header + .mobile-log-row,
+  .mobile-log-table tbody > .mobile-log-row:first-child { border-top: 0; }
+  .mobile-log-table .mobile-log-row > td { min-width: 0; padding: 0; }
+  .mobile-log-table .mobile-log-row > .mobile-log-detail { display: none; }
+  .mobile-log-table .mobile-log-cage {
+    grid-column: 1;
+    grid-row: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-self: start;
+    padding: 2px 8px;
+    border: 1px solid #e6e6e6;
+    border-radius: 9999px;
+    background: #f6f5f4;
+    font-size: 14px;
+    line-height: 1.2;
+  }
+  .mobile-log-table .mobile-log-slot {
+    grid-column: 2;
+    grid-row: 1;
+    padding: 0;
+    white-space: nowrap;
+    font-size: 14px;
+    color: #615d59;
+    align-self: center;
+  }
+  .mobile-log-table .mobile-log-eggs {
+    grid-column: 3;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    text-align: right;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.05;
+  }
+  .mobile-log-table .mobile-log-eggs-label {
+    display: block;
+    margin-top: 1px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.1;
+    color: #9ca3af;
+  }
+  .mobile-log-table .mobile-log-date,
+  .mobile-log-table .mobile-log-actions { display: none; }
+  .mobile-log-table .mobile-log-date-header { display: block; }
+  .mobile-log-table .mobile-log-date-header td {
+    display: block;
+    padding: 12px;
+    border-top: 1px solid #e6e6e6;
+    background: #f9f9f7;
+    color: #615d59;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .mobile-log-table tbody > .mobile-log-date-header:first-child td { border-top: 0; }
+  .mobile-log-table .empty-filler-row { display: none; }
+  .mobile-log-table .mobile-log-row:focus-visible { outline: 2px solid var(--color-navy); outline-offset: -2px; }
+  .mobile-log-table .mobile-log-row.is-expanded > .mobile-log-actions { display: block; grid-column: 1 / -1; grid-row: auto; }
+  .mobile-log-table .mobile-log-row.is-expanded .mobile-log-actions > div { justify-content: flex-end; gap: 8px; }
+  .mobile-log-table .mobile-log-row.is-expanded > .mobile-log-detail { display: block; }
+  .mobile-log-table .mobile-log-row.is-expanded .mobile-log-detail {
+    display: block;
+    grid-column: 1 / -1;
+    padding: 8px 0 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    font-size: 14px;
+  }
+  .mobile-log-table .mobile-log-detail::before {
+    content: attr(data-label) ": ";
+    color: #615d59;
+    font-weight: 600;
+  }
+  .mobile-wide-table::after {
+    content: "Swipe to see more columns";
+    display: block;
+    position: sticky;
+    left: 0;
+    width: max-content;
+    padding: 6px 10px 0;
+    color: #6b7280;
+    font-size: 14px;
+    pointer-events: none;
+  }
+  .mobile-wide-table {
+    position: relative;
+    /* Inset cue stays at the viewport edge while the table scrolls. */
+    box-shadow: inset -18px 0 16px -18px rgba(20, 30, 60, 0.45);
+  }
+  .mobile-wide-table > table.mobile-sticky-first th:first-child,
+  .mobile-wide-table > table.mobile-sticky-first td:first-child,
+  .mobile-wide-table > table.mobile-sticky-first td[data-sticky-checkbox],
+  .mobile-wide-table > table.mobile-sticky-first th[data-sticky-label],
+  .mobile-wide-table > table.mobile-sticky-first td[data-sticky-label] { position: sticky; left: 0; z-index: 2; background-color: #fff; box-shadow: 3px 0 6px -5px rgba(0,0,0,.45); }
+  .mobile-wide-table > table.mobile-sticky-first thead th:first-child,
+  .mobile-wide-table > table.mobile-sticky-first thead th[data-sticky-label] { z-index: 3; background-color: #f9f9f7; }
+  .perf-ranking-table,
+  .perf-ranking-table tbody { display: block; }
+  .perf-ranking-table thead { display: none; }
+  .perf-ranking-table .perf-table-row {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) 72px;
+    align-items: center;
+  }
+  .perf-ranking-table th,
+  .perf-ranking-table td { padding: 8px 6px; font-size: 14px; }
+  .perf-ranking-table td:nth-child(1) span,
+  .perf-ranking-table td:nth-child(2) .inline-flex { font-size: 14px; }
+  .perf-ranking-table td:nth-child(3),
+  .perf-ranking-table td:nth-child(4) { display: none; }
+  .perf-ranking-table td:nth-child(5) { text-align: right; }
+  .perf-ranking-table .perf-cage-cell { white-space: normal; }
+  .perf-ranking-table .perf-cage-cell > span:first-child { white-space: nowrap; font-size: 14px; }
+  .perf-ranking-table .perf-mobile-hdep { display: block; padding-left: 14px; margin-top: 2px; color: #615d59; font-size: 14px; }
+  .perf-ranking-table .perf-desktop-hdep { display: none; }
+  .perf-table-row.is-expanded .perf-hens-cell {
+    display: block;
+    grid-column: 1 / -1;
+    padding: 5px 6px 0;
+    white-space: normal;
+  }
+  .perf-table-row.is-expanded .perf-hens-label { display: inline; }
+  .perf-table-row.is-expanded .perf-hens-cell { font-size: 14px; }
+  [data-perf-toggle] { min-height: 44px; font-size: 14px; }
 }
 
 /* Tablets and laptops: narrow cards (Egg Stocks shows six per row; most
@@ -403,6 +690,37 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   display: block;
 }
 
+/* Phone-only tab rail affordance; the fade hints at more tabs without
+   clipping full labels or changing the tablet/desktop presentation. */
+@media (max-width: 639.98px) {
+  .mobile-tab-rail {
+    position: relative;
+    scroll-padding-inline: 12px;
+  }
+  .mobile-tab-rail::after {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    right: 0;
+    bottom: 1px;
+    width: 22px;
+    pointer-events: none;
+    background: linear-gradient(to right, transparent, var(--color-surface, #fff));
+  }
+  .mobile-tab-rail nav {
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 12px;
+    overscroll-behavior-x: contain;
+  }
+  .mobile-tab-rail nav::-webkit-scrollbar { display: none; }
+  .mobile-tab-rail nav { scrollbar-width: none; }
+  .mobile-tab-rail [role="tab"] {
+    scroll-snap-align: start;
+  }
+  .mobile-tab-rail [role="tab"]:focus-visible { scroll-margin-inline: 12px; }
+}
+
 /* (Retired: gradient-clipped KPI numbers were removed with the white-card
    redesign. .kpi-value is now styled with .kpi-number above as solid slate.) */
 
@@ -568,19 +886,176 @@ div[data-modal] > div.relative {
 #dockFabMenu:not(.hidden) > *:nth-child(2) { animation-delay: 45ms; }
 #dockFabMenu:not(.hidden) > *:nth-child(3) { animation-delay: 90ms; }
 #dockFabMenu:not(.hidden) > *:nth-child(n+4) { animation-delay: 135ms; }
-/* Mobile: checklist becomes a full-width bottom sheet that pins to the
-   viewport bottom (fixed, so the transformed ancestors cannot move it). */
-@media (max-width: 639px) {
+/* Tablet/desktop keep the original stacked pills: the new wrapper is
+   layout-neutral, and the sheet header/settings heading are phone-only. */
+.dock-fab-sheet-header,
+.dock-settings-heading { display: none; }
+.dock-actions-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+/* Tablet/desktop: keep the per-action stagger the dock had before the
+   grid wrapper was introduced. */
+@media (min-width: 640px) {
+  #dockFabMenu:not(.hidden) > .dock-actions-grid { animation: none; }
+  #dockFabMenu:not(.hidden) .dock-actions-grid > * { animation: dockMenuItemIn 240ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+  #dockFabMenu:not(.hidden) .dock-actions-grid > *:nth-child(2) { animation-delay: 45ms; }
+  #dockFabMenu:not(.hidden) .dock-actions-grid > *:nth-child(3) { animation-delay: 90ms; }
+  #dockFabMenu:not(.hidden) .dock-actions-grid > *:nth-child(n+4) { animation-delay: 135ms; }
+}
+/* Mobile: checklist and "+" actions become full-width bottom sheets that
+   pin to the viewport bottom (fixed, so transformed ancestors cannot move
+   them). */
+@media (max-width: 639.98px) {
   #dataChecklistPanel {
     position: fixed !important;
-    left: 1rem !important;
-    right: 1rem !important;
-    bottom: calc(1rem + env(safe-area-inset-bottom)) !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
     top: auto !important;
-    width: auto !important;
+    width: 100vw !important;
     max-width: none !important;
-    max-height: 70vh !important;
+    max-height: min(70dvh, 560px) !important;
     margin: 0 !important;
+    z-index: 51;
+    border-radius: 20px 20px 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  #quickDock {
+    right: max(12px, env(safe-area-inset-right));
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    z-index: 40;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    gap: 12px;
+    transition: transform 180ms ease, opacity 180ms ease;
+  }
+  #quickDock[data-scroll-hidden="true"] {
+    transform: translateY(calc(100% + 1rem));
+    opacity: 0;
+    pointer-events: none !important;
+  }
+  #quickDock .mobile-dock-button {
+    width: 56px !important;
+    height: 56px !important;
+    min-width: 56px;
+    min-height: 56px;
+  }
+  #quickDock [data-dock-action="checklist"] { order: 1; }
+  #quickDock .fab { order: 2; }
+  #quickDock .fab-menu {
+    position: fixed !important;
+    z-index: 51;
+    inset: auto 0 0 !important;
+    width: 100vw !important;
+    max-width: none !important;
+    max-height: min(82dvh, 680px);
+    overflow-y: auto;
+    padding: 12px max(16px, env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    border-radius: 20px 20px 0 0;
+    background: #fff;
+    box-shadow: 0 -12px 36px rgba(10, 22, 46, 0.2);
+    pointer-events: auto;
+  }
+  #quickDock .fab-menu.hidden { display: none !important; }
+  #dockFabMenu:not(.hidden) {
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  #dockFabMenu > .dock-fab-content { display: flex; flex-direction: column; gap: 12px; }
+  #dockFabMenu .dock-fab-sheet-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 48px;
+    padding: 0 2px 8px;
+    border-bottom: 1px solid #e6e6e6;
+  }
+  .dock-fab-sheet-header h2 { font-size: 16px; font-weight: 700; color: #1f1f1f; }
+  .dock-fab-sheet-header button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 9999px;
+    color: #31302e;
+  }
+  #dockFabMenu .dock-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    gap: 10px;
+  }
+  #dockFabMenu .dock-actions-grid > [data-dock-desktop-only],
+  #dockFabMenu .dock-actions-grid > [data-dock-duplicate] { display: none !important; }
+  #dockFabMenu .dock-actions-grid > form {
+    display: block;
+    grid-column: auto;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+  #dockFabMenu .dock-actions-grid > button,
+  #dockFabMenu .dock-actions-grid > form > button,
+  #dockFabMenu .dock-actions-grid > a {
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 0;
+    min-height: 72px;
+    padding: 10px;
+    border: 1px solid #e6e6e6;
+    border-radius: 14px;
+    background: #fff;
+    color: #1f1f1f;
+    text-align: center;
+    font-size: 14px;
+    line-height: 1.25;
+    white-space: normal;
+  }
+  #dockFabMenu .dock-actions-grid > form > button { width: 100%; }
+  #dockFabMenu .dock-actions-grid > button > div,
+  #dockFabMenu .dock-actions-grid > form > button > div,
+  #dockFabMenu .dock-actions-grid > a > div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    height: auto;
+    border-radius: 0;
+    background: transparent;
+  }
+  #dockFabMenu .dock-actions-grid > button i,
+  #dockFabMenu .dock-actions-grid > form > button i,
+  #dockFabMenu .dock-actions-grid > a i { width: 24px; height: 24px; }
+  #dockFabMenu .dock-actions-grid [data-dock-section],
+  #dockFabMenu .dock-actions-grid .dock-settings-heading {
+    display: block;
+    grid-column: 1 / -1;
+    order: 1;
+    margin: 8px 0 0;
+    padding: 4px 2px;
+    color: #615d59;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  #dockFabMenu .dock-actions-grid > .egg-sheet-setting { order: 2; }
+  #dockFabBackdrop:not(.hidden) {
+    display: block;
+    position: fixed;
+    z-index: 39;
+    inset: 0;
+    background: rgba(15, 22, 38, 0.48);
+    pointer-events: auto;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -588,9 +1063,8 @@ div[data-modal] > div.relative {
   #dataChecklistPanel:not(.hidden) { animation: none; }
   #dockFabMenu:not(.hidden) > * { animation: none; }
   #quickDock .fab-icon { transition: none !important; }
-}
-@media (prefers-reduced-motion: reduce) {
-  #quickDock [data-dock-fade] { transition: none; }
+  #quickDock { transition: none !important; }
+  .mobile-tab-rail nav { scroll-behavior: auto !important; }
 }
 
 /* Modern pill tabs */
@@ -1152,4 +1626,10 @@ html.chart-fs-open .page-wrapper { overflow: hidden !important; }
   .chart-fs { animation: none; }
   .chart-fs-device { animation: none; transform: rotate(-90deg); }
   .chart-fs-arrow { animation: none; opacity: 1; }
+}
+
+/* Phones: icon-only chart controls get the 44px touch target even where the
+   shared .chart-fs-btn base is a 32px circle. */
+@media (max-width: 639.98px) {
+  .chart-fs-btn { min-width: 44px; min-height: 44px; }
 }
