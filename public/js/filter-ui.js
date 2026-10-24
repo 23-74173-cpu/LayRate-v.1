@@ -193,7 +193,8 @@
         var params = new URLSearchParams(new FormData(bar));
         // Drop empties and any stale page: every filter change resets to 1.
         Array.prototype.slice.call(params.keys()).forEach(function (k) {
-            if (k === 'page' || params.get(k) === '') params.delete(k);
+            if (k === 'page') params.delete(k);
+            else if (params.get(k) === '') params.delete(k);
         });
         return params;
     }
