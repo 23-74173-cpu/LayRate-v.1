@@ -80,7 +80,7 @@
             $kpiHdep = $kpiHens > 0 ? round($kpiEggs / $kpiHens * 100, 1) : 0;
             // Card values (numbers only, rendered as HTML by x-kpi-card); the
             // ids let the live refresh below update them in place.
-            $kpiOf = fn ($n) => '<span class="text-base font-semibold" style="color:#6B7280"> / ' . number_format($n) . '</span>';
+            $kpiOf = fn ($n) => '<span class="kpi-value-suffix text-base font-semibold" style="color:#6B7280"> / ' . number_format($n) . '</span>';
             $kpiEggsHtml = '<span id="elKpiEggs">' . number_format($kpiEggs) . '</span>';
             $kpiHdepHtml = '<span id="elKpiHdep">' . number_format($kpiHdep, 1) . '</span>%';
             $kpiSlotsHtml = '<span id="elKpiSlots">' . number_format($kpiSlotsLogged) . '</span>' . $kpiOf($kpiSlots);

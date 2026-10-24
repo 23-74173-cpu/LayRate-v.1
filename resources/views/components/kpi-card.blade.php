@@ -143,7 +143,7 @@
     $pillSuppressed = ($trend !== null || $todayCount !== null) && ! $trendShown && ! $todayShown;
 @endphp
 
-<div {{ $attributes->merge(['class' => 'kpi-card dash-rise relative overflow-hidden rounded-2xl border border-[#E6E6E6] bg-white dark:bg-surface p-4 flex items-center gap-4']) }}
+<div {{ $attributes->merge(['class' => 'kpi-card dash-rise relative rounded-2xl border border-[#E6E6E6] bg-white dark:bg-surface p-4 flex items-center gap-4']) }}
      style="animation-delay: {{ $delay }};"
      @if($isClickable) role="link" tabindex="0" aria-label="{{ $outerAriaLabel }}" data-nav="{{ $href }}" @endif
      @if($kpi) data-kpi="{{ $kpi }}" @endif
@@ -152,7 +152,7 @@
          card. Click is caught in the capture phase by kpi-info.js, which also
          stops card navigation. The per-cage breakdown (data-kpi) moved inside
          the popover as an explicit action. --}}
-    <button type="button" class="kpi-info-btn hidden md:inline-flex"
+    <button type="button" class="kpi-info-btn max-md:w-11 max-md:h-11"
             data-kpi-popover
             data-info-title="{{ $plainLabel }}"
             data-info-text="{{ $infoText ?? '' }}"
@@ -161,7 +161,7 @@
         <i data-lucide="info"></i>
     </button>
     @if($icon)
-        <span class="kpi-icon-tile hidden shrink-0 md:flex" aria-hidden="true">
+        <span class="kpi-icon-tile shrink-0 max-md:hidden" aria-hidden="true">
             <i data-lucide="{{ $icon }}"></i>
         </span>
     @endif
