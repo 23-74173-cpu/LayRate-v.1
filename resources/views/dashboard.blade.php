@@ -85,7 +85,7 @@
         </div>
     </div>
 
-    <div class="dashboard-page-content space-y-6 max-md:pb-24">
+    <div class="dashboard-page-content space-y-6 max-md:pb-28">
         {{-- Checklist lives in the global dock now (layouts/app) — kept out
              of the page so it never renders twice. --}}
 

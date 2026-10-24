@@ -4,7 +4,7 @@
 @section('content')
 {{-- Bottom clearance: the fixed quick-dock floats over the viewport's
      bottom-right, so trailing space keeps it off the last table row/paginator. --}}
-<div class="space-y-5 recent-logs-page md:pb-16">
+<div class="space-y-5 recent-logs-page max-md:pb-28 md:pb-16">
 
     <x-page-header title="Egg Management" subtitle="Review and manage egg production records" subtitle-id="egg-header-subtitle" />
 

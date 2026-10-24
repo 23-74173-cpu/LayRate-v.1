@@ -4,7 +4,7 @@
 @section('content')
 {{-- Bottom clearance: the fixed quick-dock floats over the viewport's
      bottom-right, so trailing space keeps it off the last table row/paginator. --}}
-<div class="space-y-5 max-md:pb-40 md:pb-16">
+<div class="space-y-5 max-md:pb-28 md:pb-16">
 
     <x-page-header title="Egg Management" subtitle="Track harvested egg inventory by size and freshness" subtitle-id="egg-header-subtitle" />
 
@@ -14,7 +14,7 @@
     <div class="space-y-5">
 
     {{-- ── Summary Cards — dashboard gradient KPI design ── --}}
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3" id="summaryCards">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 kpi-rhythm" id="summaryCards">
         @foreach($sizes as $size)
         @php
             $total = $totals[$size] ?? 0;
@@ -42,7 +42,7 @@
             :value="number_format($total)"
             data-size="{{ $size }}"
         >
-            <div class="mobile-kpi-secondary text-xs mt-1.5 font-medium" style="color: #615d59;">{{ $trays }} {{ $trays === 1 ? 'tray' : 'trays' }} · {{ number_format($pool) }} available</div>
+            <div class="mobile-kpi-secondary kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">{{ $trays }} {{ $trays === 1 ? 'tray' : 'trays' }} · {{ number_format($pool) }} available</div>
         </x-kpi-card>
         @endforeach
         {{-- Sold vs available — sold is driven by fulfilled pre-orders, not a flag --}}
@@ -54,7 +54,7 @@
             :value="number_format($soldTotal ?? 0)"
             data-size="sold"
         >
-            <div class="mobile-kpi-secondary text-xs mt-1.5 font-medium" style="color: #615d59;">{{ $soldTrays ?? 0 }} {{ ($soldTrays ?? 0) === 1 ? 'tray' : 'trays' }} · {{ number_format($availableTotal ?? 0) }} available</div>
+            <div class="mobile-kpi-secondary kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">{{ $soldTrays ?? 0 }} {{ ($soldTrays ?? 0) === 1 ? 'tray' : 'trays' }} · {{ number_format($availableTotal ?? 0) }} available</div>
         </x-kpi-card>
     </div>
 

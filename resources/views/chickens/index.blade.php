@@ -9,7 +9,7 @@
 </style>
 {{-- Bottom clearance: the fixed quick-dock floats over the viewport's
      bottom-right, so trailing space keeps it off the last table row/paginator. --}}
-<div class="space-y-5 pb-24 max-md:pb-40 md:pb-16">
+<div class="space-y-5 pb-24 max-md:pb-28 md:pb-16">
 
     <x-page-header title="Hens" subtitle="Manage hen inventory, movements, and mortality records" />
 
@@ -160,7 +160,7 @@
     <div id="panelMortality" class="{{ $tab !== 'mortality' ? 'hidden' : '' }}">
 
         {{-- Summary Cards — 3-card layout: Deaths Today / Livability / Total --}}
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5" id="mortality-summary">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5 kpi-rhythm" id="mortality-summary">
             <x-kpi-card
                 label="Deaths Today" infoKey="hens-page.deaths-today"
                 icon="skull"

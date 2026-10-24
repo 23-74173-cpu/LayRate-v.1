@@ -11,7 +11,7 @@
             delay="0ms"
             :value="($avgTemp ? number_format($avgTemp,1) : '—') . '°C'"
         >
-            <div class="mobile-body-text text-xs mt-1.5 font-medium" style="color: #615d59;">Spread {{ $tempValues->count() > 1 ? number_format(max(0, $tempValues->max() - $tempValues->min()), 1) . '°C across cages' : 'across cages' }}</div>
+            <div class="kpi-secondary-detail mobile-body-text text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">Spread {{ $tempValues->count() > 1 ? number_format(max(0, $tempValues->max() - $tempValues->min()), 1) . '°C across cages' : 'across cages' }}</div>
         </x-kpi-card>
         <x-kpi-card
             label="Coop Avg Humidity" infoKey="environment.avg-humidity"
@@ -20,7 +20,7 @@
             delay="60ms"
             :value="($avgHum ? number_format($avgHum,1) : '—') . '%'"
         >
-            <div class="mobile-body-text text-xs mt-1.5 font-medium" style="color: #615d59;">Spread {{ $humValues->count() > 1 ? number_format(max(0, $humValues->max() - $humValues->min()), 1) . '% across cages' : 'across cages' }}</div>
+            <div class="kpi-secondary-detail mobile-body-text text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">Spread {{ $humValues->count() > 1 ? number_format(max(0, $humValues->max() - $humValues->min()), 1) . '% across cages' : 'across cages' }}</div>
         </x-kpi-card>
         <x-kpi-card
             class="col-span-2 md:col-span-1"
@@ -30,7 +30,7 @@
             delay="120ms"
             :value="$activeSensors . ' sensors'"
         >
-            <div class="mobile-body-text text-xs mt-1.5 font-medium" style="color: #615d59;">{{ $activeSensors > 0 ? 'One node mapped per cage' : 'All entries are manual logs' }}</div>
+            <div class="kpi-secondary-detail mobile-body-text text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">{{ $activeSensors > 0 ? 'One node mapped per cage' : 'All entries are manual logs' }}</div>
         </x-kpi-card>
     </div>
 

@@ -19,7 +19,7 @@
         delay="0ms"
         :value="$fcrCurrent !== null ? number_format($fcrCurrent, 2) : 'N/A'"
     >
-        <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">lower is better · {{ $summaryLabel }}</div>
+        <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">lower is better · {{ $summaryLabel }}</div>
     </x-kpi-card>
     <x-kpi-card
         label="Feed Consumed" infoKey="feed.fcr-consumed"
@@ -28,7 +28,7 @@
         delay="60ms"
         :value="number_format($fcrTotalFeedKg, 1) . ' kg'"
     >
-        <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">shown periods</div>
+        <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">shown periods</div>
     </x-kpi-card>
     <x-kpi-card
         class="col-span-2 md:col-span-1"
@@ -38,7 +38,7 @@
         delay="120ms"
         :value="number_format($fcrTotalEggMassKg, 2) . ' kg'"
     >
-        <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">egg counts + weights</div>
+        <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">egg counts + weights</div>
     </x-kpi-card>
 </div>
 @if($fcrTimeline->isEmpty())

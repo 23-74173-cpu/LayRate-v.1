@@ -4,7 +4,7 @@
 @section('content')
 {{-- Bottom clearance: the fixed quick-dock floats over the viewport's
      bottom-right, so trailing space keeps it off the last table row/paginator. --}}
-<div class="space-y-5 pb-24 sm:pb-16">
+<div class="space-y-5 pb-24 max-md:pb-28 sm:pb-16">
 
     <x-page-header title="Egg Management" subtitle="Full timeline of eggs logged since day 1" subtitle-id="egg-header-subtitle" />
 
@@ -14,21 +14,21 @@
     <div class="space-y-5">
 
     {{-- Summary cards — dashboard gradient KPI design --}}
-    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 kpi-rhythm">
         <x-kpi-card label="Lifetime Total" infoKey="eggs.lifetime-total" icon="egg" cardGradient="linear-gradient(135deg,#d97706,#C2703E)" delay="0ms" :value="number_format($lifetimeEggs)">
-            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">eggs logged since day 1</div>
+            <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">eggs logged since day 1</div>
         </x-kpi-card>
 
         <x-kpi-card label="Timeline Records" infoKey="eggs.timeline-records" icon="layers" cardGradient="linear-gradient(135deg,#8B5CF6,#6B4C8A)" delay="60ms" :value="number_format($timelineRecordsTotal)">
-            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">{{ ucfirst($groupBy) }} aggregates</div>
+            <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">{{ ucfirst($groupBy) }} aggregates</div>
         </x-kpi-card>
 
         <x-kpi-card label="Active Cages" infoKey="eggs.active-cages" icon="warehouse" cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))" delay="120ms" :value="$byCage->count()">
-            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">with production records</div>
+            <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">with production records</div>
         </x-kpi-card>
 
         <x-kpi-card label="Size Records" infoKey="eggs.size-records" icon="package" cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)" delay="180ms" :value="number_format($bySize->sum('total'))">
-            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">eggs with size breakdown</div>
+            <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">eggs with size breakdown</div>
         </x-kpi-card>
     </div>
 

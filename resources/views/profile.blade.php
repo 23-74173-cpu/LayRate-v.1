@@ -39,7 +39,7 @@
             <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
                 <h2 class="text-base font-medium text-[#333333] mb-1">Your Activity</h2>
                 <p class="text-xs text-[#6B7280] mb-4">Records logged with this account since day 1.</p>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center kpi-rhythm">
                     <x-kpi-card label="Egg Log Entries" icon="clipboard-list" infoKey="profile.egg-logs" delay="0ms" :value="number_format($activity->egg_logs)" />
                     <x-kpi-card label="Eggs Recorded" icon="egg" infoKey="profile.eggs-total" delay="60ms" :value="number_format($activity->eggs_total)" />
                     <x-kpi-card label="Feed Entries" icon="wheat" infoKey="profile.feed-logs" delay="120ms" :value="number_format($activity->feed_logs)" />

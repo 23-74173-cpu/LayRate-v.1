@@ -40,7 +40,7 @@
     {{-- ── Summary KPI Cards (dashboard gradient KPI design; inner span IDs preserved for AJAX updates) ── --}}
     @if(!$isPerformance)
     @php $kpiColor = $isAll ? '#333333' : $cage->color; @endphp
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 kpi-rhythm">
         <x-kpi-card label="Cage" infoKey="analytics.scope-cage" icon="warehouse" cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))" delay="0ms" :value="'<span id=\'kpi-cage\'>' . ($isAll ? 'All Cages' : $cageCode) . '</span>'" />
         <x-kpi-card label="Breed" infoKey="analytics.scope-breed" icon="bird" cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)" delay="60ms" :value="'<span id=\'kpi-breed\'>' . ($isAll ? 'Mixed' : ($cage->hens->first()?->breed ?? '—')) . '</span>'" />
         <x-kpi-card label="Avg HDEP" infoKey="analytics.avg-hdep" icon="gauge" cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))" delay="120ms" :value="'<span id=\'kpi-avg-hdep\'>' . ($avgHdep === '-' ? '-' : $avgHdep . '%') . '</span>'" />

@@ -17,24 +17,24 @@
 @endphp
 {{-- Bottom clearance: the fixed quick-dock floats over the viewport's
      bottom-right, so trailing space keeps it off the last table row/paginator. --}}
-<div class="space-y-5 pb-24 sm:pb-16">
+<div class="space-y-5 pb-24 max-md:pb-28 sm:pb-16">
 
     <x-page-header title="Finance" subtitle="Farm income, expenses, and net balance" />
 
     {{-- ── Summary ── --}}
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 kpi-rhythm">
         <x-kpi-card label="Total Income" infoKey="finance.income" icon="trending-up" cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)" delay="0ms"
                     :value="$moneyValue($totalIncome)">
-            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">{{ $hasFilters ? 'For the selected filters' : 'All recorded income' }}</div>
+            <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">{{ $hasFilters ? 'For the selected filters' : 'All recorded income' }}</div>
         </x-kpi-card>
         <x-kpi-card label="Total Expenses" infoKey="finance.expenses" icon="trending-down" cardGradient="linear-gradient(135deg,#dc2626,#9b1c24)" delay="60ms"
                     :value="$moneyValue($totalExpense)">
-            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">{{ $hasFilters ? 'For the selected filters' : 'All recorded expenses' }}</div>
+            <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">{{ $hasFilters ? 'For the selected filters' : 'All recorded expenses' }}</div>
         </x-kpi-card>
         <x-kpi-card label="Net Balance" infoKey="finance.net" icon="wallet"
                     cardGradient="{{ $net >= 0 ? 'linear-gradient(135deg,var(--color-navy),var(--color-info))' : 'linear-gradient(135deg,#dc2626,#9b1c24)' }}" delay="120ms"
                     :value="$moneyValue($net, $net < 0)">
-            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">{{ $net >= 0 ? 'Income minus expenses' : 'Expenses are higher than income' }}</div>
+            <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">{{ $net >= 0 ? 'Income minus expenses' : 'Expenses are higher than income' }}</div>
         </x-kpi-card>
     </div>
 

@@ -161,7 +161,7 @@
         <i data-lucide="info"></i>
     </button>
     @if($icon)
-        <span class="kpi-icon-tile shrink-0" aria-hidden="true">
+        <span class="kpi-icon-tile shrink-0 max-md:hidden" aria-hidden="true">
             <i data-lucide="{{ $icon }}"></i>
         </span>
     @endif
@@ -196,16 +196,16 @@
         @if($trendShown)
             {{-- Delta pill: arrow follows the sign, color follows the existing
                  up = green / down = red token logic. --}}
-            <div class="kpi-secondary"><div class="{{ $trendValue >= 0 ? 'trend-pill-up' : 'trend-pill-down' }}">{{ $trendValue >= 0 ? '▲' : '▼' }} {{ number_format(abs($trendValue), (int) $trendDecimals, '.', '') }}{{ $trendSuffix }} {{ $trendCompare }}</div></div>
+            <div class="kpi-secondary kpi-secondary-trend"><div class="{{ $trendValue >= 0 ? 'trend-pill-up' : 'trend-pill-down' }}">{{ $trendValue >= 0 ? '▲' : '▼' }} {{ number_format(abs($trendValue), (int) $trendDecimals, '.', '') }}{{ $trendSuffix }} {{ $trendCompare }}</div></div>
         @elseif($todayShown)
             {{-- "+N today" pill: always an up/green count pill when meaningful. --}}
-            <div class="kpi-secondary"><div class="trend-pill-up">▲ +{{ $todayPrefix }}{{ number_format(round($todayValue, (int) $todayDecimals), (int) $todayDecimals) }}{{ $todaySuffix }} {{ $todayLabel }}</div></div>
+            <div class="kpi-secondary kpi-secondary-trend"><div class="trend-pill-up">▲ +{{ $todayPrefix }}{{ number_format(round($todayValue, (int) $todayDecimals), (int) $todayDecimals) }}{{ $todaySuffix }} {{ $todayLabel }}</div></div>
         @elseif($hasSecondary)
-            <div class="kpi-secondary">{{ $secondaryContent }}</div>
+            <div class="kpi-secondary kpi-secondary-detail max-md:hidden">{{ $secondaryContent }}</div>
         @elseif($pillSuppressed)
             {{-- Zero / no-data pill: invisible placeholder keeps this card's
                  row height aligned with cards that do show a pill. --}}
-            <div class="kpi-secondary" aria-hidden="true"><div class="trend-pill-up" style="visibility:hidden">▲ +0</div></div>
+            <div class="kpi-secondary kpi-secondary-placeholder" aria-hidden="true"><div class="trend-pill-up" style="visibility:hidden">▲ +0</div></div>
         @endif
     </div>
 </div>

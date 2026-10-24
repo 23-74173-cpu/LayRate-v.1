@@ -19,7 +19,7 @@
 @endphp
 {{-- Bottom clearance: the fixed quick-dock floats over the viewport's
      bottom-right, so trailing space keeps it off the last table row/paginator. --}}
-<div class="space-y-5 pb-24 sm:pb-16">
+<div class="space-y-5 pb-24 max-md:pb-28 sm:pb-16">
 
     <x-page-header title="Notes" subtitle="Notes and reminders, sorted by section. Notes typed in Mortality, Egg Logging, Feed, and Hens are saved here too." />
 
@@ -28,22 +28,22 @@
         $topSection = $categoryCounts->sortDesc()->keys()->first();
         $topSectionCount = $topSection ? (int) $categoryCounts[$topSection] : 0;
     @endphp
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 kpi-rhythm">
         <x-kpi-card label="Total Notes" infoKey="notes.total" icon="notebook-pen" delay="0ms"
                     :value="number_format($totalNotes)">
-            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">across {{ $categoryCounts->filter()->count() }} {{ Str::plural('section', $categoryCounts->filter()->count()) }}</div>
+            <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">across {{ $categoryCounts->filter()->count() }} {{ Str::plural('section', $categoryCounts->filter()->count()) }}</div>
         </x-kpi-card>
         <x-kpi-card label="This Week" infoKey="notes.this-week" icon="calendar-plus" delay="60ms"
                     :value="number_format($noteStats['this_week'])">
-            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">added in the last 7 days</div>
+            <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">added in the last 7 days</div>
         </x-kpi-card>
         <x-kpi-card label="Top Section" infoKey="notes.top-section" icon="tags" delay="120ms"
                     :value="$topSection ? e($topSection) : null">
-            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">{{ $topSection ? number_format($topSectionCount) . ' ' . Str::plural('note', $topSectionCount) : 'No notes yet' }}</div>
+            <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">{{ $topSection ? number_format($topSectionCount) . ' ' . Str::plural('note', $topSectionCount) : 'No notes yet' }}</div>
         </x-kpi-card>
         <x-kpi-card label="Linked to a Cage" infoKey="notes.cage-linked" icon="warehouse" delay="180ms"
                     :value="number_format($noteStats['cage_linked'])">
-            <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">of {{ number_format($totalNotes) }} notes</div>
+            <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">of {{ number_format($totalNotes) }} notes</div>
         </x-kpi-card>
     </div>
 

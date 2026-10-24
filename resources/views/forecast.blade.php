@@ -3,7 +3,7 @@
 
 @section('content')
 <span hidden id="forecast-walkthrough-state" data-admin="{{ auth()->user()->isAdmin() ? '1' : '0' }}"></span>
-<div class="space-y-5 max-md:pb-40">
+<div class="space-y-5 max-md:pb-28">
 
     <x-page-header title="Forecast" subtitle="Project egg production based on historical egg count trends" />
 
@@ -20,7 +20,7 @@
     @endphp
 
     {{-- ── Forecast KPI Cards — dashboard gradient KPI design ── --}}
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 kpi-rhythm">
         <x-kpi-card label="Weeks in month" infoKey="forecast.weeks-in-month" icon="calendar-range" cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))" delay="0ms" :value="$weeksInMonth" />
         <x-kpi-card label="Days in month" infoKey="forecast.days-in-month" icon="calendar-days" cardGradient="linear-gradient(135deg,#8B5CF6,#6B4C8A)" delay="60ms" :value="$daysInMonth" />
         <x-kpi-card label="Forecast days" infoKey="forecast.forecast-days" icon="trending-up" cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)" delay="120ms" :value="count($forecastMap)" />

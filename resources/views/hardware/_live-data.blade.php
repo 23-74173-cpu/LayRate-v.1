@@ -1,6 +1,6 @@
 <turbo-frame id="hardware-live-data">
     {{-- Summary Cards — dashboard gradient KPI design (cardGradient) ── --}}
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8 kpi-rhythm">
         <x-kpi-card
             label="All Active" infoKey="hardware.active"
             icon="cpu"

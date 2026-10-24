@@ -57,7 +57,7 @@
 @endpush
 
 @section('content')
-<div class="space-y-5 pb-32 sm:max-md:pb-40 md:pb-16">
+<div class="space-y-5 pb-32 max-md:pb-28 md:pb-16">
 
     <x-page-header title="Egg Management" subtitle="Log daily egg production per cage slot" subtitle-id="egg-header-subtitle" />
 
@@ -86,22 +86,22 @@
             $kpiSlotsHtml = '<span id="elKpiSlots">' . number_format($kpiSlotsLogged) . '</span>' . $kpiOf($kpiSlots);
             $kpiCagesHtml = '<span id="elKpiCages">' . $kpiCagesComplete . '</span>' . $kpiOf($cages->count());
         @endphp
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3" id="eggLoggingKpis" data-hens="{{ $kpiHens }}">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 kpi-rhythm" id="eggLoggingKpis" data-hens="{{ $kpiHens }}">
             <x-kpi-card label="Eggs Today" infoKey="egg-logging.eggs-today" icon="egg" delay="0ms"
                         :value="$kpiEggsHtml">
-                <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">across {{ $cages->count() }} active {{ Str::plural('cage', $cages->count()) }}</div>
+                <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">across {{ $cages->count() }} active {{ Str::plural('cage', $cages->count()) }}</div>
             </x-kpi-card>
             <x-kpi-card label="Today's HDEP" infoKey="egg-logging.hdep-today" icon="gauge" delay="60ms"
                         :value="$kpiHdepHtml">
-                <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">{{ number_format($kpiHens) }} {{ Str::plural('hen', $kpiHens) }} placed</div>
+                <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">{{ number_format($kpiHens) }} {{ Str::plural('hen', $kpiHens) }} placed</div>
             </x-kpi-card>
             <x-kpi-card label="Slots Logged" infoKey="egg-logging.slots-logged" icon="grid-3x3" delay="120ms"
                         :value="$kpiSlotsHtml">
-                <div class="text-xs mt-1.5 font-medium" style="color: #615d59;"><span id="elKpiSlotsLeft">{{ number_format(max(0, $kpiSlots - $kpiSlotsLogged)) }}</span> left to log</div>
+                <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;"><span id="elKpiSlotsLeft">{{ number_format(max(0, $kpiSlots - $kpiSlotsLogged)) }}</span> left to log</div>
             </x-kpi-card>
             <x-kpi-card label="Cages Complete" infoKey="egg-logging.cages-complete" icon="circle-check" delay="180ms"
                         :value="$kpiCagesHtml">
-                <div class="text-xs mt-1.5 font-medium" style="color: #615d59;">every slot logged today</div>
+                <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">every slot logged today</div>
             </x-kpi-card>
         </div>
 

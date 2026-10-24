@@ -5,7 +5,7 @@
             <x-section-label title="Production" icon="factory">
                 @if($kpiAsOf ?? null)<x-slot:meta>· as of {{ $kpiAsOf }}</x-slot:meta> @endif
             </x-section-label>
-            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 kpi-rhythm">
                 <x-kpi-card
                     label="Total Hens" infoKey="hens.total"
                     icon="bird"
@@ -69,7 +69,7 @@
         {{-- Environment & Health --}}
         <div>
             <x-section-label title="Environment & Health" icon="heart-pulse" />
-            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 gap-3 kpi-rhythm">
                 <x-kpi-card
                     label="Average Coop Temperature" infoKey="environment.avg-temp"
                     icon="thermometer"
@@ -103,7 +103,7 @@
         {{-- Feed --}}
         <div>
             <x-section-label title="Feed & Nutrition" icon="wheat" />
-            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 kpi-rhythm">
                 <x-kpi-card
                     label="Avg CP% This Week" infoKey="feed.avg-cp"
                     icon="flask-conical"

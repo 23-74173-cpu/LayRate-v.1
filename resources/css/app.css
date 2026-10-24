@@ -263,11 +263,8 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   width: 40px;
   height: 40px;
 }
-/* Phones: two cards per row leave little room beside a 72px icon, so values
-   broke mid-number ("106" / ".3%", "Fee" / "d"). Stack a smaller icon above
-   the text instead; the icon stays horizontally centered while the text
-   column stretches full width and stays left-aligned. The info button stays
-   in the top-right corner, level with the icon. */
+/* Phones: KPI cards use a compact text-first layout with room for the info
+   control in the top-right corner. */
 /* Mobile-only ranking detail; hidden at the desktop/tablet breakpoint. */
 .perf-mobile-hdep,
 .perf-hens-label { display: none; }
@@ -276,27 +273,16 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   .mobile-body-text { font-size: 14px !important; line-height: 1.35; }
   .mobile-icon-button { min-width: 44px; min-height: 44px; }
   .kpi-card {
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 0;
     padding: 12px;
     min-height: 0;
   }
-  .kpi-card > .kpi-icon-tile {
-    width: 30px;
-    height: 30px;
-    border-radius: 9px;
-    align-self: center;
-  }
-  .kpi-card > .kpi-icon-tile svg,
-  .kpi-card > .kpi-icon-tile i {
-    width: 18px;
-    height: 18px;
-  }
   .kpi-card > .min-w-0 {
     width: 100%;
+    min-width: 0;
     align-self: stretch;
-    padding-right: 1.75rem;
   }
   .kpi-card .kpi-number,
   .kpi-card .kpi-value {
@@ -306,14 +292,23 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
     white-space: nowrap;
   }
   .kpi-card .kpi-label {
-    font-size: 14px;
+    font-size: 12px;
     line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .kpi-card .kpi-secondary {
-    margin-top: 4px;
-    font-size: 14px;
-    line-height: 1.25;
-    white-space: normal;
+  .kpi-card .kpi-secondary,
+  .kpi-card .kpi-secondary-detail,
+  .kpi-card .kpi-secondary-placeholder,
+  .kpi-card .kpi-secondary-trend,
+  .kpi-card .mobile-kpi-secondary { display: none !important; }
+  .kpi-card .kpi-info-btn {
+    top: 6px;
+    right: 6px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
   }
   .kpi-card .mobile-kpi-wrap { overflow-wrap: anywhere; }
   .kpi-card .mobile-kpi-secondary { font-size: 14px; line-height: 1.25; }
@@ -327,40 +322,18 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
     max-width: none;
   }
 
-  .recent-logs-page {
-    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
-  }
-
-  /* Compact KPI rhythm (Recent Logs + dashboard): icon + info on the top row,
-     then label and value. Secondary lines are desktop-only; their meaning is
-     appended to the info popover by the card component. */
+  /* Keep consistent compact spacing on cards in rhythm grids. */
   .kpi-rhythm .kpi-card {
-    align-items: stretch;
     gap: 0;
     padding: 12px;
   }
-  .kpi-rhythm .kpi-card > .kpi-icon-tile {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    align-self: flex-start;
-    margin-bottom: 8px;
-  }
-  .kpi-rhythm .kpi-card > .kpi-icon-tile svg,
-  .kpi-rhythm .kpi-card > .kpi-icon-tile i {
-    width: 20px;
-    height: 20px;
-  }
   .kpi-rhythm .kpi-card > .min-w-0 {
     width: 100%;
+    min-width: 0;
     align-self: stretch;
-    padding-right: 0;
-  }
-  .kpi-rhythm .kpi-card .kpi-secondary {
-    display: none;
   }
   .kpi-rhythm .kpi-card .kpi-label {
-    font-size: 14px;
+    font-size: 12px;
     line-height: 1.2;
     letter-spacing: 0;
     white-space: nowrap;
@@ -372,14 +345,6 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
     letter-spacing: -0.4px;
     white-space: nowrap;
   }
-  .kpi-rhythm .kpi-info-btn {
-    top: 6px;
-    right: 6px;
-    width: 44px;
-    height: 44px;
-    padding: 0;
-  }
-
   /* Recent Logs filters: Equal chips using the real checkbox inputs. */
   .recent-via-chip {
     position: relative;
@@ -1011,11 +976,11 @@ div[data-modal] > div.relative {
     padding-bottom: env(safe-area-inset-bottom);
   }
   #quickDock {
-    right: max(12px, env(safe-area-inset-right));
-    bottom: calc(12px + env(safe-area-inset-bottom));
+    right: calc(16px + env(safe-area-inset-right));
+    bottom: calc(16px + env(safe-area-inset-bottom));
     z-index: 40;
     display: flex;
-    flex-direction: column-reverse;
+    flex-direction: row;
     align-items: center;
     gap: 12px;
     transition: transform 180ms ease, opacity 180ms ease;
@@ -1030,9 +995,10 @@ div[data-modal] > div.relative {
     height: 56px !important;
     min-width: 56px;
     min-height: 56px;
+    overflow: visible;
   }
-  #quickDock [data-dock-action="checklist"] { order: 1; }
-  #quickDock .fab { order: 2; }
+  #quickDock [data-dock-action="checklist"] { order: 0; }
+  #quickDock .fab { order: 1; }
   #quickDock .fab-menu {
     position: fixed !important;
     z-index: 51;
@@ -1727,10 +1693,9 @@ html.chart-fs-open .page-wrapper { overflow: hidden !important; }
    compact row plus HDEP, and the dock sheets cap and center. `md` (768px)
    is still the exact desktop/tablet breakpoint. */
 @media (width >= 40rem) and (width < 48rem) {
-  /* The dock stacks two 56px buttons, so keep 10rem of page clearance (the
-     phone rules use less because that layout is approved as-is). */
+  /* Reserve clearance for the horizontal 124px dock and keep it off content. */
   .dashboard-page-content,
-  .recent-logs-page { padding-bottom: 10rem; }
+  .recent-logs-page { padding-bottom: calc(6rem + env(safe-area-inset-bottom)); }
 
   /* Shared filter-bar quick chips were 40px; keep every band tap target
      at least 44px without touching the approved phone/desktop sizes. */

@@ -4,7 +4,7 @@
 @section('content')
 {{-- Bottom clearance: the fixed quick-dock floats over the viewport's
      bottom-right, so trailing space keeps it off the last table row/paginator. --}}
-<div class="space-y-5 max-md:pb-40 md:pb-16">
+<div class="space-y-5 max-md:pb-28 md:pb-16">
 
     <x-page-header title="Egg Management" subtitle="Customer orders and fulfillment tracking" subtitle-id="egg-header-subtitle" />
 
@@ -15,7 +15,7 @@
 
     {{-- ── Supply Summary — dashboard gradient KPI design ── --}}
     <h2 class="sr-only">Pre-Orders Overview</h2>
-    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 kpi-rhythm">
         @foreach($summary as $size => $data)
         @php
             $label = \App\Enums\EggSize::labelFor($size);
@@ -36,11 +36,11 @@
             delay="{{ $loop->index * 60 }}ms"
             :value="number_format($data['available'])"
         >
-            <div class="mobile-kpi-secondary text-xs mt-1.5 font-medium" style="color: #615d59;">{{ number_format($data['logged']) }} produced · {{ number_format($data['committed']) }} committed</div>
+            <div class="mobile-kpi-secondary kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">{{ number_format($data['logged']) }} produced · {{ number_format($data['committed']) }} committed</div>
             @if($isDeficit)
-            <div class="mobile-kpi-secondary text-xs mt-1 font-semibold" style="color: #9b1c24;">Shortfall: {{ number_format($data['deficit']) }} eggs</div>
+            <div class="mobile-kpi-secondary kpi-secondary-detail text-xs mt-1 font-semibold max-md:hidden" style="color: #9b1c24;">Shortfall: {{ number_format($data['deficit']) }} eggs</div>
             @else
-            <div class="mobile-kpi-secondary text-xs mt-1 font-medium" style="color: #615d59;">+{{ number_format($data['forecasted']) }} forecasted</div>
+            <div class="mobile-kpi-secondary kpi-secondary-detail text-xs mt-1 font-medium max-md:hidden" style="color: #615d59;">+{{ number_format($data['forecasted']) }} forecasted</div>
             @endif
         </x-kpi-card>
         @endforeach
