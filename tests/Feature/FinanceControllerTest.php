@@ -199,10 +199,13 @@ class FinanceControllerTest extends TestCase
         $this->post(route('finance.store'), [])->assertRedirect(route('login'));
     }
 
-    public function test_finance_link_is_in_sidebar(): void
+    public function test_finance_is_hidden_from_the_sidebar(): void
     {
         $this->actingAs($this->operator)
-            ->get(route('finance.index'))
-            ->assertSee('href="' . route('finance.index') . '"', false);
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertDontSee('href="' . route('finance.index') . '"', false)
+            ->assertDontSee('>Finance</span>', false)
+            ->assertDontSee('finance: \'Finance\'', false);
     }
 }

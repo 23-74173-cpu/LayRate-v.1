@@ -145,6 +145,82 @@ class ReportControllerTest extends TestCase
         $response->assertSee('ISA Brown');
     }
 
+    public function test_environment_report_includes_fractional_second_readings_on_to_date(): void
+    {
+        $date = now()->subDay()->toDateString();
+        EnvironmentalLog::create([
+            'cage_id' => $this->cageA->id,
+            'recorded_at' => $date . ' 23:59:59.999999',
+            'temperature_c' => 25.0,
+            'humidity_pct' => 60,
+            'is_override' => false,
+        ]);
+
+        $response = $this->actingAs($this->user)->get(route('reports', [
+            'type' => 'environment',
+            'from' => $date,
+            'to' => $date,
+            'cage' => 'all',
+        ]));
+
+        $response->assertOk();
+        $response->assertSee('CAGE-A');
+        $response->assertSee('25.0°C');
+        $this->assertSame('1 reading', $response->viewData('summary')['Total Readings']);
+    }
+
+    public function test_all_reports_environment_section_includes_fractional_second_to_date(): void
+    {
+        $date = now()->subDay()->toDateString();
+        EnvironmentalLog::create([
+            'cage_id' => $this->cageA->id,
+            'recorded_at' => $date . ' 23:59:59.999999',
+            'temperature_c' => 25.0,
+            'humidity_pct' => 60,
+            'is_override' => false,
+        ]);
+
+        $response = $this->actingAs($this->user)->get(route('reports', [
+            'type' => 'all',
+            'from' => $date,
+            'to' => $date,
+            'cage' => 'all',
+        ]));
+
+        $response->assertOk();
+        $environment = collect($response->viewData('sections'))
+            ->firstWhere('type', 'environment');
+        $this->assertNotNull($environment);
+        $this->assertCount(1, $environment['rows']);
+        $this->assertSame('25.00°C', $environment['rows']->first()->temp);
+        $this->assertSame('1 reading', $environment['summary']['Total Readings']);
+    }
+
+    public function test_environment_report_chart_includes_fractional_second_to_date(): void
+    {
+        $date = now()->subDay()->toDateString();
+        EnvironmentalLog::create([
+            'cage_id' => $this->cageA->id,
+            'recorded_at' => $date . ' 23:59:59.999999',
+            'temperature_c' => 25.0,
+            'humidity_pct' => 60,
+            'is_override' => false,
+        ]);
+
+        $response = $this->actingAs($this->user)->get(route('reports', [
+            'type' => 'environment',
+            'from' => $date,
+            'to' => $date,
+            'cage' => 'all',
+            'charts' => '1',
+        ]));
+
+        $response->assertOk();
+        $chart = $response->viewData('chartsPayload')['environment'];
+        $this->assertSame([date('m/d/Y', strtotime($date))], $chart['labels']);
+        $this->assertSame([25.0], $chart['temp']);
+    }
+
     /**
      * Regression test for item #93: the Production report must attribute the
      * breed of an ACTIVE hen, not whichever hen happens to come first in an

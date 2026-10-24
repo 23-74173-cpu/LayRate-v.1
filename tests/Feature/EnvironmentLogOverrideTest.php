@@ -114,6 +114,40 @@ class EnvironmentLogOverrideTest extends TestCase
         $this->assertEquals(1, (int) $entry->reading_count);
     }
 
+    public function test_environment_log_date_filter_includes_the_entire_to_date(): void
+    {
+        $cage = $this->cage('OV-DATE-BOUND');
+        $date = Carbon::parse(ReportingDateService::reportingDateString(), config('app.timezone', 'UTC'))
+            ->subDay()->toDateString();
+
+        EnvironmentalLog::create([
+            'cage_id' => $cage->id,
+            'recorded_at' => "$date 23:59:59",
+            'temperature_c' => 24.0,
+            'humidity_pct' => 60,
+            'is_override' => 0,
+        ]);
+        EnvironmentalLog::create([
+            'cage_id' => $cage->id,
+            'recorded_at' => Carbon::parse($date, config('app.timezone', 'UTC'))->addDay()->startOfDay()->toDateTimeString(),
+            'temperature_c' => 28.0,
+            'humidity_pct' => 65,
+            'is_override' => 0,
+        ]);
+
+        $response = $this->actingAs($this->user)->get(route('environment.logs', [
+            'date_from' => $date,
+            'date_to' => $date,
+            'cage_id' => $cage->id,
+        ]));
+
+        $response->assertOk();
+        $logs = $response->viewData('summaryLogs');
+        $this->assertCount(1, $logs);
+        $this->assertSame($date, $logs->first()->log_date);
+        $this->assertSame(24.0, (float) $logs->first()->avg_temp);
+    }
+
     public function test_all_cages_manual_writes_override_for_every_cage(): void
     {
         $c1 = $this->cage('OV-ALL-A');

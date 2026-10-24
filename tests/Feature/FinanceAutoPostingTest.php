@@ -177,10 +177,10 @@ class FinanceAutoPostingTest extends TestCase
         $batch = FeedBatch::latest('id')->firstOrFail();
         $this->assertSame(2500.0, $this->net('expense'));
 
-        $this->actingAs($this->admin)->put(route('feed.batch.update', $batch), $this->batchPayload(['unit_cost' => '']));
+        $this->actingAs($this->admin)->from(route('feed'))->put(route('feed.batch.update', $batch), $this->batchPayload(['unit_cost' => '']));
         $this->assertSame(0.0, $this->net('expense'));
 
-        $this->actingAs($this->admin)->put(route('feed.batch.update', $batch), $this->batchPayload(['unit_cost' => 30]));
+        $this->actingAs($this->admin)->from(route('feed'))->put(route('feed.batch.update', $batch), $this->batchPayload(['unit_cost' => 30]));
         $this->assertSame(3000.0, $this->net('expense'));
         $this->assertDatabaseMissing('finance_transactions', ['source_id' => $batch->id, 'kind' => 'reversal']);
     }
@@ -192,7 +192,7 @@ class FinanceAutoPostingTest extends TestCase
         $batch = FeedBatch::latest('id')->firstOrFail();
 
         $earlier = Carbon::parse(ReportingDateService::reportingDateString())->subDays(3)->toDateString();
-        $this->actingAs($this->admin)->put(route('feed.batch.update', $batch), $this->batchPayload([
+        $this->actingAs($this->admin)->from(route('feed'))->put(route('feed.batch.update', $batch), $this->batchPayload([
             'unit_cost' => 30,
             'date_received' => $earlier,
         ]));

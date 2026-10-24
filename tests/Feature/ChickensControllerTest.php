@@ -101,4 +101,14 @@ class ChickensControllerTest extends TestCase
         $response->assertOk();
         $response->assertSee('LEG-BAND-42');
     }
+
+    public function test_inventory_list_sort_options_are_valid(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('chickens.index'));
+
+        $response->assertOk();
+        $response->assertSee('params.set(\'sort\', sort)', false);
+        $response->assertDontSee('params.set(\'sort\', sort.sex)', false);
+    }
+
 }

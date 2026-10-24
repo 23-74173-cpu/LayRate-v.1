@@ -322,4 +322,15 @@ class PreOrderTest extends TestCase
         $this->assertEquals(50, $response->json('pools.small'));
     }
 
+    public function test_changing_preorder_filters_does_not_keep_the_old_page(): void
+    {
+        $response = $this->actingAs($this->user)->get(route('eggs.preorders'));
+
+        $response->assertOk();
+        $response->assertSee('var params = new URLSearchParams(new FormData(form));', false);
+        $response->assertSee('params.delete(\'page\')', false);
+        $response->assertSee("if (frame.getAttribute('src') === url) frame.reload();", false);
+        $response->assertSee("else frame.setAttribute('src', url);", false);
+    }
+
 }

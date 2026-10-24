@@ -138,6 +138,17 @@ class DashboardControllerTest extends TestCase
         }
     }
 
+    public function test_dashboard_filter_state_is_written_for_cage_and_date_changes(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('dashboard'));
+
+        $response->assertOk();
+        $response->assertSee("url.searchParams.set('from_date', window.__dashboardFromDate)", false);
+        $response->assertSee("url.searchParams.set('to_date', window.__dashboardToDate)", false);
+        $response->assertSee("if (window.__dashboardWriteState) window.__dashboardWriteState();", false);
+        $response->assertSee('url.searchParams.set(\'cage\', code)', false);
+    }
+
     public function test_cage_scoped_stats_matches_hand_computed_values(): void
     {
         $response = $this->actingAs($this->admin)->get(route('dashboard.stats', ['cage' => 'CAGE-DASH-A']));
@@ -578,6 +589,68 @@ class DashboardControllerTest extends TestCase
         // Yesterday's eggs: cage A 2 + cage B 1 = 3 (not today's 5).
         $this->assertEquals(3, $response->viewData('eggsToday'));
         $this->assertNotNull($response->viewData('kpiAsOf'));
+    }
+
+    public function test_dashboard_environment_chart_includes_fractional_second_on_to_date(): void
+    {
+        $date = \App\Services\ReportingDateService::reportingDate()->subDay()->toDateString();
+        \App\Models\EnvironmentalLog::create([
+            'cage_id' => $this->cageA->id,
+            'recorded_at' => $date . ' 23:59:59.999999',
+            'temperature_c' => 25.0,
+            'humidity_pct' => 60,
+            'is_override' => false,
+        ]);
+
+        $response = $this->actingAs($this->admin)->get(route('dashboard.temp-vs-hdep', [
+            'cage' => $this->cageA->cage_code,
+            'from_date' => $date,
+            'to_date' => $date,
+        ]));
+
+        $response->assertOk();
+        $this->assertContains(['x' => 25.0, 'y' => 50.0], $response->viewData('scatterData'));
+    }
+
+    public function test_dashboard_stats_environment_summary_includes_fractional_second_today(): void
+    {
+        $today = \App\Services\ReportingDateService::reportingDateString();
+        \App\Models\EnvironmentalLog::query()->delete();
+        \App\Models\EnvironmentalLog::create([
+            'cage_id' => $this->cageA->id,
+            'recorded_at' => $today . ' 23:59:59.999999',
+            'temperature_c' => 25.0,
+            'humidity_pct' => 60,
+            'is_override' => false,
+        ]);
+
+        $response = $this->actingAs($this->admin)->get(route('dashboard.stats.environment'));
+
+        $response->assertOk();
+        $response->assertSee('25.0');
+        $response->assertSee('60.0');
+    }
+
+    public function test_heat_stress_includes_fractional_second_on_to_date(): void
+    {
+        $date = \App\Services\ReportingDateService::reportingDate()->subDay()->toDateString();
+        \App\Models\EnvironmentalLog::create([
+            'cage_id' => $this->cageA->id,
+            'recorded_at' => $date . ' 23:59:59.999999',
+            'temperature_c' => 35.0,
+            'humidity_pct' => 80,
+            'is_override' => false,
+        ]);
+
+        $response = $this->actingAs($this->admin)->get(route('dashboard.heat-stress', [
+            'cage' => $this->cageA->cage_code,
+            'from_date' => $date,
+            'to_date' => $date,
+        ]));
+
+        $response->assertOk();
+        $this->assertEquals(35.0, $response->viewData('peakTemp'));
+        $this->assertGreaterThan(0, $response->viewData('highEvents'));
     }
 
     public function test_mortality_kpi_uses_date_bounds_and_ignores_removed_period(): void
