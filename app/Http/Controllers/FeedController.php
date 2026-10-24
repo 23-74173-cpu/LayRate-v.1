@@ -61,6 +61,46 @@ class FeedController extends Controller
 
         $preselectedCageId = (int) request('cage_id') ?: null;
 
+        $viewMode = request('view') === 'calendar' ? 'calendar' : 'records';
+        $today = ReportingDateService::reportingDateString();
+        $requestedMonth = (string) request('month', substr($today, 0, 7));
+        $month = preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $requestedMonth)
+            ? $requestedMonth
+            : substr($today, 0, 7);
+        $monthStart = $month.'-01';
+        $monthEnd = \Carbon\Carbon::createFromFormat('!Y-m-d', $monthStart)->addMonth()->toDateString();
+        $maxMonth = substr($today, 0, 7);
+        if ($month > $maxMonth) {
+            $month = $maxMonth;
+            $monthStart = $month.'-01';
+            $monthEnd = \Carbon\Carbon::createFromFormat('!Y-m-d', $monthStart)->addMonth()->toDateString();
+        }
+
+        $calendarDays = collect();
+        $calendarTotals = ['total' => 0.0, 'average' => 0.0, 'days' => 0, 'missing' => 0];
+        if ($viewMode === 'calendar') {
+            $calendarQuery = FeedConsumptionLog::query()
+                ->when($preselectedCageId, fn ($q) => $q->where('cage_id', $preselectedCageId))
+                ->when(request('walkthrough4') === '1' && request('wt4_log'), fn ($q) => $q->whereKey((int) request('wt4_log')))
+                ->when(request('walkthrough4') === '1' && request('wt4_farm'), fn ($q) => $q->where('farm_feed_entry_id', (int) request('wt4_farm')))
+                ->where('log_date', '>=', $monthStart)
+                ->where('log_date', '<', $monthEnd);
+
+            $calendarDays = (clone $calendarQuery)
+                ->selectRaw('log_date, SUM(feed_consumed_kg) AS total_kg, COUNT(*) AS records')
+                ->groupBy('log_date')
+                ->orderBy('log_date')
+                ->get()
+                ->keyBy(fn ($day) => \Carbon\Carbon::parse($day->log_date)->toDateString());
+
+            $calendarTotals = [
+                'total' => (float) $calendarDays->sum('total_kg'),
+                'average' => $calendarDays->isNotEmpty() ? (float) $calendarDays->avg('total_kg') : 0.0,
+                'days' => $calendarDays->count(),
+                'missing' => $calendarDays->filter(fn ($day) => (int) $day->records < 6)->count(),
+            ];
+        }
+
         $consumptionLogs = FeedConsumptionLog::with(['cage', 'feedBatch', 'farmFeedEntry'])
             ->when(request('walkthrough4') === '1' && request('wt4_log'), fn ($q) => $q->whereKey((int) request('wt4_log')))
             ->when(request('walkthrough4') === '1' && request('wt4_farm'), fn ($q) => $q->where('farm_feed_entry_id', (int) request('wt4_farm')))
@@ -113,9 +153,35 @@ class FeedController extends Controller
 
         return view('feed._live-data', array_merge(
             compact('batches', 'allBatches', 'consumptionLogs', 'avgCp', 'totalFeedWeek', 'avgFeedPerCage',
-                      'totalFeedCostMonth', 'cages', 'preselectedCageId', 'feedAsOf'),
+                      'totalFeedCostMonth', 'cages', 'preselectedCageId', 'feedAsOf', 'viewMode', 'today', 'month',
+                      'monthStart', 'monthEnd', 'maxMonth', 'calendarDays', 'calendarTotals'),
             $fcrData
         ));
+    }
+
+    public function consumptionCalendarDay(Request $request, string $date)
+    {
+        try {
+            $day = \Carbon\Carbon::createFromFormat('!Y-m-d', $date);
+        } catch (\Throwable) {
+            abort(404);
+        }
+        abort_unless($day && $day->format('Y-m-d') === $date, 404);
+        abort_unless($date <= ReportingDateService::reportingDateString(), 404);
+
+        $preselectedCageId = (int) $request->query('cage_id') ?: null;
+        $logs = FeedConsumptionLog::with(['cage', 'feedBatch', 'farmFeedEntry'])
+            ->when($preselectedCageId, fn ($q) => $q->where('cage_id', $preselectedCageId))
+            ->when($request->query('walkthrough4') === '1' && $request->query('wt4_log'), fn ($q) => $q->whereKey((int) $request->query('wt4_log')))
+            ->when($request->query('walkthrough4') === '1' && $request->query('wt4_farm'), fn ($q) => $q->where('farm_feed_entry_id', (int) $request->query('wt4_farm')))
+            ->where('log_date', $date)
+            ->orderBy('log_time')
+            ->orderBy('cage_id')
+            ->get();
+
+        $cages = Cage::orderBy('cage_code')->get(['id', 'cage_code']);
+
+        return view('feed._consumption-calendar-day', compact('date', 'logs', 'cages'));
     }
 
     /**
