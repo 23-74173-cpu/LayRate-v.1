@@ -198,11 +198,11 @@ class EnvironmentController extends Controller
             ->orderBy('cage_id');
 
         if ($request->filled('date_from')) {
-            $query->where('recorded_at', '>=', $request->date_from . ' 00:00:00');
+            $query->where('recorded_at', '>=', ReportingDateService::reportingDayWindow($request->date_from)[0]);
         }
 
         if ($request->filled('date_to')) {
-            $query->where('recorded_at', '<', \Carbon\Carbon::parse($request->date_to)->addDay()->toDateString());
+            $query->where('recorded_at', '<', ReportingDateService::reportingDayWindow($request->date_to)[1]);
         }
 
         if ($request->filled('cage_id')) {

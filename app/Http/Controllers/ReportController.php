@@ -13,6 +13,7 @@ use App\Models\Forecast;
 use App\Models\Hen;
 use App\Models\MortalityLog;
 use App\Models\ProductionLog;
+use App\Services\ReportingDateService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -260,7 +261,7 @@ class ReportController extends Controller
             'environment' => (function () use ($cageIds, $hasRange, $from, $to) {
                 $agg = $this->envReadings()->whereIn('cage_id', $cageIds)
                     ->real()
-                    ->when($hasRange, fn($q) => $q->where('recorded_at', '>=', $from . ' 00:00:00')->where('recorded_at', '<', Carbon::parse($to)->addDay()->toDateString()))
+                    ->when($hasRange, fn($q) => $q->where('recorded_at', '>=', ReportingDateService::reportingDayWindow($from)[0])->where('recorded_at', '<', ReportingDateService::reportingDayWindow($to)[1]))
                     ->selectRaw('AVG(temperature_c) as avg_temp, AVG(humidity_pct) as avg_hum, COUNT(*) as readings, SUM(CASE WHEN temperature_c > 30 OR humidity_pct > 70 THEN 1 ELSE 0 END) as alerts')
                     ->first();
 
@@ -438,7 +439,7 @@ class ReportController extends Controller
 
         $envData = $this->envReadings()->whereIn('cage_id', $cageIds)
             ->real()
-            ->when($hasRange, fn($q) => $q->where('recorded_at', '>=', $from . ' 00:00:00')->where('recorded_at', '<', Carbon::parse($to)->addDay()->toDateString()))
+            ->when($hasRange, fn($q) => $q->where('recorded_at', '>=', ReportingDateService::reportingDayWindow($from)[0])->where('recorded_at', '<', ReportingDateService::reportingDayWindow($to)[1]))
             ->selectRaw('cage_id, DATE(recorded_at) as log_date, AVG(temperature_c) as avg_temp, AVG(humidity_pct) as avg_hum')
             ->groupBy('cage_id', DB::raw('DATE(recorded_at)'))
             ->get()
@@ -521,7 +522,7 @@ class ReportController extends Controller
         return EnvironmentalLog::with('cage')
             ->real()
             ->whereIn('cage_id', $cageIds)
-            ->when($from && $to, fn($q) => $q->where('recorded_at', '>=', $from . ' 00:00:00')->where('recorded_at', '<', Carbon::parse($to)->addDay()->toDateString()))
+            ->when($from && $to, fn($q) => $q->where('recorded_at', '>=', ReportingDateService::reportingDayWindow($from)[0])->where('recorded_at', '<', ReportingDateService::reportingDayWindow($to)[1]))
             ->orderByDesc('recorded_at')
             ->limit(200)
             ->get()
@@ -637,7 +638,7 @@ class ReportController extends Controller
         $hasRange = $from && $to;
         $rows = $this->envReadings()->whereIn('cage_id', $cageIds)
             ->real()
-            ->when($hasRange, fn($q) => $q->where('recorded_at', '>=', $from . ' 00:00:00')->where('recorded_at', '<', Carbon::parse($to)->addDay()->toDateString()))
+            ->when($hasRange, fn($q) => $q->where('recorded_at', '>=', ReportingDateService::reportingDayWindow($from)[0])->where('recorded_at', '<', ReportingDateService::reportingDayWindow($to)[1]))
             ->selectRaw('DATE(recorded_at) as log_date, AVG(temperature_c) as avg_temp, AVG(humidity_pct) as avg_hum')
             ->groupBy(DB::raw('DATE(recorded_at)'))
             ->orderBy('log_date')

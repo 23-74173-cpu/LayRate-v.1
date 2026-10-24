@@ -117,19 +117,20 @@ class EnvironmentLogOverrideTest extends TestCase
     public function test_environment_log_date_filter_includes_the_entire_to_date(): void
     {
         $cage = $this->cage('OV-DATE-BOUND');
-        $date = Carbon::parse(ReportingDateService::reportingDateString(), config('app.timezone', 'UTC'))
+        $date = Carbon::parse(ReportingDateService::reportingDateString(), ReportingDateService::timezone())
             ->subDay()->toDateString();
+        [$dayStart, $dayEnd] = ReportingDateService::reportingDayWindow($date);
 
         EnvironmentalLog::create([
             'cage_id' => $cage->id,
-            'recorded_at' => "$date 23:59:59",
+            'recorded_at' => Carbon::parse($dayEnd, config('app.timezone', 'UTC'))->subMicrosecond()->format('Y-m-d H:i:s.u'),
             'temperature_c' => 24.0,
             'humidity_pct' => 60,
             'is_override' => 0,
         ]);
         EnvironmentalLog::create([
             'cage_id' => $cage->id,
-            'recorded_at' => Carbon::parse($date, config('app.timezone', 'UTC'))->addDay()->startOfDay()->toDateTimeString(),
+            'recorded_at' => $dayEnd,
             'temperature_c' => 28.0,
             'humidity_pct' => 65,
             'is_override' => 0,

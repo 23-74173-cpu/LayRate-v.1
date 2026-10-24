@@ -596,7 +596,7 @@ class DashboardControllerTest extends TestCase
         $date = \App\Services\ReportingDateService::reportingDate()->subDay()->toDateString();
         \App\Models\EnvironmentalLog::create([
             'cage_id' => $this->cageA->id,
-            'recorded_at' => $date . ' 23:59:59.999999',
+            'recorded_at' => \Carbon\Carbon::parse(\App\Services\ReportingDateService::reportingDayWindow($date)[1], config('app.timezone', 'UTC'))->subMicrosecond()->toDateTimeString(),
             'temperature_c' => 25.0,
             'humidity_pct' => 60,
             'is_override' => false,
@@ -618,7 +618,7 @@ class DashboardControllerTest extends TestCase
         \App\Models\EnvironmentalLog::query()->delete();
         \App\Models\EnvironmentalLog::create([
             'cage_id' => $this->cageA->id,
-            'recorded_at' => $today . ' 23:59:59.999999',
+            'recorded_at' => \Carbon\Carbon::parse(\App\Services\ReportingDateService::reportingDayWindow($today)[1], config('app.timezone', 'UTC'))->subMicrosecond()->toDateTimeString(),
             'temperature_c' => 25.0,
             'humidity_pct' => 60,
             'is_override' => false,
@@ -636,7 +636,7 @@ class DashboardControllerTest extends TestCase
         $date = \App\Services\ReportingDateService::reportingDate()->subDay()->toDateString();
         \App\Models\EnvironmentalLog::create([
             'cage_id' => $this->cageA->id,
-            'recorded_at' => $date . ' 23:59:59.999999',
+            'recorded_at' => \Carbon\Carbon::parse(\App\Services\ReportingDateService::reportingDayWindow($date)[1], config('app.timezone', 'UTC'))->subMicrosecond()->toDateTimeString(),
             'temperature_c' => 35.0,
             'humidity_pct' => 80,
             'is_override' => false,

@@ -103,14 +103,12 @@ class ReportingDateService
     /**
      * The reporting-day window for a given reporting date, as a half-open
      * [start, end) pair of naive datetime strings in the app timezone.
-     *
-     * With midnight boundary: the day runs from 00:00 to 23:59:59.999999.
      */
     public static function reportingDayWindow(string $date): array
     {
         $day = Carbon::parse($date, self::timezone())->toDateString();
         $start = Carbon::parse($day . ' 00:00:00', self::timezone());
-        $end = $start->copy()->endOfDay();
+        $end = $start->copy()->addDay();
 
         $appTz = config('app.timezone', 'UTC');
 
