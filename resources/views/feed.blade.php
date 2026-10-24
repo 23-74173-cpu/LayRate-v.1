@@ -437,7 +437,12 @@ function feedReloadLiveData() {
     var pageUrl = new URL(window.location.href);
     url.search = pageUrl.search;
     url.searchParams.delete('page');
-    frame.src = url.toString();
+    var newSrc = url.toString();
+    if (frame.src === newSrc) {
+        frame.reload();
+    } else {
+        frame.src = newSrc;
+    }
 }
 window.feedReloadLiveData = feedReloadLiveData;
 
