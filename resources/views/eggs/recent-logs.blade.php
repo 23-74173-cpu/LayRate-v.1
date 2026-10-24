@@ -12,12 +12,30 @@
 
     <turbo-frame id="egg-content">
 
-        <x-card header="Production Logs">
+        <x-card>
+        <x-slot:header>
+            <div class="flex items-center justify-between gap-3">
+                @if($viewMode === 'calendar')
+                    <h3 class="card-title">Production Calendar</h3>
+                @else
+                    <h3 class="card-title">Production Logs</h3>
+                @endif
+                <div class="inline-flex shrink-0 items-center rounded-lg border border-[#e6e6e6] bg-[#f6f5f4] p-1" role="group" aria-label="Recent Logs view">
+                    <a href="{{ route('eggs.recent-logs', request()->only(['cage_id', 'cage_slot_id', 'breed']) + ($filters['logged_via'] ? ['logged_via[]' => (array) $filters['logged_via']] : []) + ['view' => 'calendar', 'month' => $month]) }}" aria-pressed="{{ $viewMode === 'calendar' ? 'true' : 'false' }}" class="inline-flex min-h-10 items-center justify-center rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy {{ $viewMode === 'calendar' ? 'bg-white text-[#1f1f1f] shadow-sm' : 'text-[#615d59] hover:bg-white/70' }}">Calendar</a>
+                    <a href="{{ route('eggs.recent-logs', request()->only(['cage_id', 'cage_slot_id', 'breed']) + ($filters['logged_via'] ? ['logged_via[]' => (array) $filters['logged_via']] : []) + ['view' => 'list', 'month' => $month]) }}" aria-pressed="{{ $viewMode === 'list' ? 'true' : 'false' }}" class="inline-flex min-h-10 items-center justify-center rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy {{ $viewMode === 'list' ? 'bg-white text-[#1f1f1f] shadow-sm' : 'text-[#615d59] hover:bg-white/70' }}">List</a>
+                </div>
+            </div>
+        </x-slot:header>
+
         <form id="recentLogsForm" onsubmit="return false" class="mb-4">
-            <div class="recent-filters grid grid-cols-2 gap-3 max-md:grid-cols-12 max-md:items-end md:flex md:flex-wrap md:items-end md:gap-x-4 md:gap-y-3">
+            <div class="recent-filters grid grid-cols-2 gap-3 max-md:grid-cols-12 max-md:items-end md:flex md:flex-nowrap md:items-center md:gap-x-4 md:gap-y-3">
+                @if($viewMode === 'calendar')
+                    <input type="hidden" name="view" value="calendar">
+                    <input type="hidden" name="month" value="{{ $month }}">
+                @endif
                 {{-- Cage filter --}}
-                <div class="recent-filter-cage max-md:col-span-6 max-md:col-start-1 max-md:row-start-1">
-                    <label class="block text-xs max-md:text-sm mb-1" style="color: #615d59;">Cage</label>
+                <div class="recent-filter-cage max-md:col-span-6 max-md:col-start-1 max-md:row-start-2">
+                    <label class="block text-sm mb-1" style="color: #615d59;">Cage</label>
                     <select name="cage_id" onchange="recentLogsFilter()"
                             class="w-full min-w-0 max-md:min-h-11 md:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
@@ -31,8 +49,8 @@
                 </div>
 
                 {{-- Slot filter --}}
-                <div class="recent-filter-slot max-md:col-span-6 max-md:col-start-7 max-md:row-start-1">
-                    <label class="block text-xs max-md:text-sm mb-1" style="color: #615d59;">Slot</label>
+                <div class="recent-filter-slot max-md:col-span-6 max-md:col-start-7 max-md:row-start-2">
+                    <label class="block text-sm mb-1" style="color: #615d59;">Slot</label>
                     <select name="cage_slot_id" onchange="recentLogsFilter()"
                             class="w-full min-w-0 max-md:min-h-11 md:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
@@ -46,8 +64,8 @@
                 </div>
 
                 {{-- Breed filter --}}
-                <div class="recent-filter-breed max-md:col-span-9 max-md:col-start-1 max-md:row-start-2">
-                    <label class="block text-xs max-md:text-sm mb-1" style="color: #615d59;">Breed</label>
+                <div class="recent-filter-breed max-md:col-span-9 max-md:col-start-1 max-md:row-start-3">
+                    <label class="block text-sm mb-1" style="color: #615d59;">Breed</label>
                     <select name="breed" onchange="recentLogsFilter()"
                             class="w-full min-w-0 max-md:min-h-11 md:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
@@ -61,9 +79,9 @@
                 </div>
 
                 {{-- Manual vs Sensor filter (checkbox chips) --}}
-                <div class="recent-filter-via max-md:col-span-12 max-md:col-start-1 max-md:row-start-3 md:col-span-1">
-                    <label class="block text-xs max-md:text-sm mb-1" style="color: #615d59;">Logged Via</label>
-                    <div class="flex flex-wrap items-center gap-2">
+                <div class="recent-filter-via max-md:col-span-12 max-md:col-start-1 max-md:row-start-4 md:col-span-1">
+                    <label class="block text-sm mb-1" style="color: #615d59;">Logged Via</label>
+                    <div class="flex flex-wrap items-center gap-2 md:min-h-10">
                         @foreach(['manual' => 'Manual', 'sensor' => 'Sensor', 'unknown' => 'Unknown'] as $value => $label)
                         <label class="recent-via-chip inline-flex max-md:min-h-11 items-center gap-1.5 text-sm cursor-pointer" style="color: #31302e;">
                             <input type="checkbox" name="logged_via[]" value="{{ $value }}" onchange="recentLogsFilter()"
@@ -75,8 +93,8 @@
                     </div>
                 </div>
 
-                <div class="recent-filter-reset max-md:col-span-3 max-md:col-start-10 max-md:row-start-2 max-md:justify-self-end md:col-span-1 flex items-center justify-end gap-2">
-                    <a href="{{ route('eggs.recent-logs') }}"
+                <div class="recent-filter-reset max-md:col-span-3 max-md:col-start-10 max-md:row-start-3 max-md:justify-self-end md:col-span-1 flex items-center justify-end gap-2">
+                    <a href="{{ route('eggs.recent-logs', ['view' => $viewMode, 'month' => $month] + request()->only(['cage_id', 'cage_slot_id', 'breed']) + ($filters['logged_via'] ? ['logged_via[]' => (array) $filters['logged_via']] : [])) }}"
                        class="max-md:inline-flex max-md:items-center max-md:justify-center max-md:min-h-11 px-3 py-1.5 text-xs max-md:text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">
                         Reset
                     </a>
@@ -84,12 +102,28 @@
             </div>
         </form>
 
-        <turbo-frame id="egg-logs-list" src="{{ route('eggs.logging.logs', request()->only(['cage_id', 'cage_slot_id', 'breed', 'logged_via'])) }}" loading="lazy">
-            @include('egg-logging._logs-skeleton')
-        </turbo-frame>
+        @if($viewMode === 'calendar')
+            @include('egg-logging._recent-calendar', ['month' => $month, 'calendarDays' => $calendarDays, 'today' => $today, 'dayUrl' => url('/eggs/recent-logs/day'), 'maxMonth' => substr($today, 0, 7)])
+        @else
+            <turbo-frame id="egg-logs-list" src="{{ route('eggs.logging.logs', request()->only(['cage_id', 'cage_slot_id', 'breed', 'logged_via'])) }}" loading="lazy">
+                @include('egg-logging._logs-skeleton')
+            </turbo-frame>
+        @endif
         </x-card>
 
-        @include('egg-logging._edit-modal')
+        @if($viewMode === 'list')
+            @include('egg-logging._edit-modal')
+        @endif
+
+        @if($viewMode === 'calendar')
+        <div id="calendarDayDialog" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="calendarDayTitle" aria-hidden="true">
+            <button type="button" class="absolute inset-0 h-full w-full bg-black/40" data-calendar-close aria-label="Close day details"></button>
+            <section class="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto rounded-t-2xl bg-white p-5 pb-24 shadow-2xl md:inset-y-0 md:left-auto md:right-0 md:max-h-none md:w-[min(620px,90vw)] md:rounded-none md:pb-5" tabindex="-1">
+                <div class="mb-4 flex items-center justify-between gap-3"><h2 id="calendarDayTitle" class="text-lg font-semibold">Production details</h2><button type="button" class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full hover:bg-black/5" data-calendar-close aria-label="Close day details">×</button></div>
+                <div id="calendarDayContent" aria-live="polite"><x-empty-state icon="egg" message="Loading production records…" /></div>
+            </section>
+        </div>
+        @endif
 
 <script>
 (function () {
@@ -139,12 +173,99 @@ function recentLogsFilter() {
     var form = document.getElementById('recentLogsForm');
     if (!form) return;
     var params = new URLSearchParams(new FormData(form));
+    var currentUrl = new URL(window.location.href);
+    var viewMode = currentUrl.searchParams.get('view') || 'list';
+    var month = currentUrl.searchParams.get('month') || '{{ substr($today, 0, 7) }}';
+    currentUrl.searchParams.delete('cage_id');
+    currentUrl.searchParams.delete('cage_slot_id');
+    currentUrl.searchParams.delete('breed');
+    currentUrl.searchParams.delete('logged_via');
+    ['cage_id', 'cage_slot_id', 'breed'].forEach(function (key) {
+        if (params.has(key)) currentUrl.searchParams.set(key, params.get(key));
+    });
+    params.getAll('logged_via[]').forEach(function (value) { currentUrl.searchParams.append('logged_via[]', value); });
+    if (viewMode === 'calendar') {
+        currentUrl.searchParams.set('view', viewMode);
+        currentUrl.searchParams.set('month', month);
+        window.location.assign(currentUrl.toString());
+        return;
+    }
+    currentUrl.searchParams.set('view', viewMode);
+    if (currentUrl.searchParams.has('month')) currentUrl.searchParams.set('month', month);
+    window.history.replaceState(window.history.state, '', currentUrl.toString());
     var frame = document.querySelector('turbo-frame#egg-logs-list');
-    if (frame) frame.setAttribute('src', '/eggs/logging/logs?' + params.toString());
+    if (frame) {
+        var frameUrl = new URL('/eggs/logging/logs', window.location.origin);
+        ['cage_id', 'cage_slot_id', 'breed'].forEach(function (key) {
+            if (currentUrl.searchParams.has(key)) frameUrl.searchParams.set(key, currentUrl.searchParams.get(key));
+        });
+        currentUrl.searchParams.getAll('logged_via[]').forEach(function (value) { frameUrl.searchParams.append('logged_via[]', value); });
+        frame.setAttribute('src', frameUrl.toString());
+    }
 }
 
+window.openCalendarDay = function (button) {
+    var dialog = document.getElementById('calendarDayDialog');
+    var content = document.getElementById('calendarDayContent');
+    if (!dialog || !content) return;
+    window.__calendarDayOpener = button;
+    window.history.pushState({calendarDayOpen: true}, '', window.location.href);
+    content.innerHTML = '<p class="py-8 text-center text-sm text-[#615d59]">Loading day details…</p>';
+    dialog.classList.remove('hidden');
+    dialog.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('overflow-hidden');
+    dialog.querySelector('section').focus();
+    var url = new URL(button.dataset.detailUrl, window.location.origin);
+    var pageUrl = new URL(window.location.href);
+    var selectedVia = pageUrl.searchParams.getAll('logged_via[]');
+    ['cage_id', 'cage_slot_id', 'breed'].forEach(function (key) {
+        if (pageUrl.searchParams.has(key)) url.searchParams.set(key, pageUrl.searchParams.get(key));
+    });
+    selectedVia.forEach(function (value) { url.searchParams.append('logged_via[]', value); });
+    fetch(url.toString(), {headers: {'X-Requested-With':'XMLHttpRequest'}})
+        .then(function (response) { if (!response.ok) throw new Error('Unable to load this day.'); return response.text(); })
+        .then(function (html) {
+            content.innerHTML = html;
+        if (window.lucide) lucide.createIcons();
+            if (window.__wireConfirmForms) window.__wireConfirmForms();
+        })
+        .catch(function () { content.innerHTML = '<p class="py-8 text-center text-sm text-red-700" role="alert">Could not load these production records. Close this panel and try again.</p>'; });
+};
+
+(function () {
+    var dialog = document.getElementById('calendarDayDialog');
+    if (!dialog || window.__calendarDayDialogBound) return;
+    window.__calendarDayDialogBound = true;
+    function close() {
+        dialog.classList.add('hidden');
+        dialog.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('overflow-hidden');
+        if (window.__calendarDayOpener && window.__calendarDayOpener.isConnected) window.__calendarDayOpener.focus();
+    }
+    dialog.addEventListener('click', function (event) { if (event.target.closest('[data-calendar-close]')) close(); });
+    document.addEventListener('keydown', function (event) {
+        if (dialog.classList.contains('hidden')) return;
+        if (event.key === 'Escape') { event.preventDefault(); close(); return; }
+        if (event.key !== 'Tab') return;
+        var focusables = Array.from(dialog.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter(function (el) { return el.offsetParent !== null; });
+        if (!focusables.length) { event.preventDefault(); dialog.querySelector('section').focus(); return; }
+        var first = focusables[0], last = focusables[focusables.length - 1];
+        if (event.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    });
+    window.addEventListener('popstate', function () {
+        if (dialog.classList.contains('hidden')) return;
+        dialog.classList.add('hidden');
+        dialog.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('overflow-hidden');
+        if (window.__calendarDayOpener && window.__calendarDayOpener.isConnected) window.__calendarDayOpener.focus();
+    });
+})();
+
 function openEditLog({id, date, eggCount, henCount, notes, cageSlotId, sizes}) {
-    document.getElementById('editLogForm').action = '/eggs/logging/' + id;
+    var editForm = document.getElementById('editLogForm');
+    if (!editForm) return;
+    editForm.action = '/eggs/logging/' + id;
     document.getElementById('editLogDate').value = date;
     document.getElementById('editEggCount').value = eggCount;
     document.getElementById('editHenCountDisplay').value = henCount;
@@ -161,7 +282,8 @@ function openEditLog({id, date, eggCount, henCount, notes, cageSlotId, sizes}) {
 }
 
 function closeEditLogModal() {
-    document.getElementById('editLogModal').style.display = 'none';
+    var modal = document.getElementById('editLogModal');
+    if (modal) modal.style.display = 'none';
 }
 
 function editComputeHdep() {

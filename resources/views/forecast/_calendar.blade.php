@@ -227,20 +227,8 @@
         }
     </style>
 
-    {{-- Calendar table: thead = weekdays (Mon–Sun), tbody = week rows, td = day columns --}}
-    <div class="overflow-x-auto -mx-1 px-1">
-        <table class="production-calendar" aria-label="Daily production and forecast egg counts for {{ $calendarMonth->format('F Y') }}">
-            <thead>
-                <tr>
-                    @foreach($weekdays as $dayLabel)
-                    <th scope="col" class="text-center">
-                        <span class="hidden sm:inline">{{ $dayLabel }}</span>
-                        <span class="sm:hidden">{{ substr($dayLabel, 0, 1) }}</span>
-                    </th>
-                    @endforeach
-                </tr>
-            </thead>
-            <tbody>
+    {{-- Shared table shell. Forecast retains its exact day cells and default styles. --}}
+    <x-production-calendar-grid :weekdays="$weekdays" :label="'Daily production and forecast egg counts for '.$calendarMonth->format('F Y')">
                 @php
                     $calendarCells = collect();
 
@@ -377,9 +365,7 @@
                     @endforeach
                 </tr>
                 @endforeach
-            </tbody>
-        </table>
-    </div>
+    </x-production-calendar-grid>
 
 </div>
 

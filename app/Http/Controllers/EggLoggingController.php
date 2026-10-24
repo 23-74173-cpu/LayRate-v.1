@@ -80,6 +80,21 @@ class EggLoggingController extends Controller
     {
         $filters = $this->logFilters($request);
 
+        $viewMode = $request->query('view') === 'calendar' ? 'calendar' : 'list';
+        $today = ReportingDateService::reportingDateString();
+        $requestedMonth = (string) $request->query('month', substr($today, 0, 7));
+        $month = preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $requestedMonth)
+            ? $requestedMonth
+            : substr($today, 0, 7);
+        $monthStart = $month.'-01';
+        $monthEnd = \Carbon\Carbon::createFromFormat('!Y-m-d', $monthStart)->addMonth()->toDateString();
+        $currentMonth = substr($today, 0, 7);
+        if ($month > $currentMonth) {
+            $month = $currentMonth;
+            $monthStart = $month.'-01';
+            $monthEnd = \Carbon\Carbon::createFromFormat('!Y-m-d', $monthStart)->addMonth()->toDateString();
+        }
+
         $cages = Cage::where('is_active', 1)->orderBy('cage_code')->get();
         $cageSlots = CageSlot::with('cage')
             ->when($filters['cage_id'], fn ($q, $cageId) => $q->where('cage_id', $cageId))
@@ -92,12 +107,53 @@ class EggLoggingController extends Controller
             ->orderBy('breed')
             ->pluck('breed');
 
-        $logsQuery = $this->buildFilteredLogsQuery($request);
-        $logs = $logsQuery->paginate((int) config('tables.per_page', 25))->withQueryString();
+        if ($viewMode === 'list') {
+            $logs = $this->buildFilteredLogsQuery($request)->paginate((int) config('tables.per_page', 25))->withQueryString();
+        } else {
+            $logs = null;
+        }
+
+        $calendarDays = collect();
+        if ($viewMode === 'calendar') {
+            $calendarDays = $this->buildFilteredLogsQuery($request)
+                ->setEagerLoads([])
+                ->reorder()
+                ->where('log_date', '>=', $monthStart)
+                ->where('log_date', '<', $monthEnd)
+                ->selectRaw('log_date, SUM(egg_count) AS eggs, SUM(hen_count) AS hens, COUNT(*) AS records')
+                ->selectRaw('SUM(overridden_by_user_id IS NOT NULL) AS override_count')
+                ->selectRaw("SUM(logged_via = 'unknown') AS unknown_count, SUM(logged_via = 'manual') AS manual_count, SUM(logged_via = 'sensor') AS sensor_count")
+                ->groupBy('log_date')
+                ->get()
+                ->keyBy(fn ($day) => \Carbon\Carbon::parse($day->log_date)->toDateString());
+        }
 
         return view('eggs.recent-logs', compact(
-            'logs', 'cages', 'cageSlots', 'breeds', 'filters'
+            'logs', 'cages', 'cageSlots', 'breeds', 'filters', 'viewMode', 'month', 'today', 'calendarDays'
         ));
+    }
+
+    public function calendarDay(Request $request, string $date)
+    {
+        $day = \Carbon\Carbon::createFromFormat('!Y-m-d', $date);
+        abort_unless($day && $day->format('Y-m-d') === $date, 404);
+
+        $queryFilters = $request->query();
+        $dateFilters = Validator::make($queryFilters, ['cage_id' => 'nullable|integer|exists:cages,id', 'cage_slot_id' => 'nullable|integer|exists:cage_slots,id', 'breed' => 'nullable|string|max:100', 'logged_via' => 'nullable|array', 'logged_via.*' => ['string', Rule::in(ProductionLog::LOGGED_VIA_OPTIONS)]])->validate();
+        $filteredRequest = Request::create($request->url(), 'GET', $dateFilters);
+
+        $logs = $this->buildFilteredLogsQuery($filteredRequest)
+            ->where('log_date', $date)
+            ->orderBy('cage_slot_id')
+            ->get();
+        $activeCageCodes = Cage::where('is_active', 1)->orderBy('cage_code')->pluck('cage_code');
+        $logsByCage = $logs->groupBy(fn ($log) => $log->cageSlot?->cage?->cage_code ?? 'Unknown cage');
+        $orderedLogs = collect($activeCageCodes->mapWithKeys(fn ($cageCode) => $logsByCage->has($cageCode) ? [$cageCode => $logsByCage->get($cageCode)] : []));
+        $logsByCage->each(function ($cageLogs, $cageCode) use ($orderedLogs) {
+            if (!$orderedLogs->has($cageCode)) $orderedLogs->put($cageCode, $cageLogs);
+        });
+
+        return view('egg-logging._calendar-day', ['date' => $date, 'logs' => $orderedLogs]);
     }
 
     public function logs(Request $request)

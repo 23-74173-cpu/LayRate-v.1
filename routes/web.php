@@ -146,6 +146,7 @@ Route::middleware(['auth', 'system-time-set'])->group(function () {
     Route::get('/eggs/logging',                        [EggLoggingController::class, 'index'])->name('eggs.logging');
     Route::get('/eggs/logging/logs',                   [EggLoggingController::class, 'logs'])->name('eggs.logging.logs');
     Route::get('/eggs/recent-logs',                    [EggLoggingController::class, 'recentLogs'])->name('eggs.recent-logs');
+    Route::get('/eggs/recent-logs/day/{date}',          [EggLoggingController::class, 'calendarDay'])->name('eggs.recent-logs.day');
     Route::get('/egg-production-history',              [EggProductionHistoryController::class, 'index'])->name('egg-production-history');
     Route::get('/eggs/production-history',             [EggProductionHistoryController::class, 'productionHistory'])->name('eggs.production-history');
     Route::get('/eggs/production-history/day/{date}', [EggProductionHistoryController::class, 'dayDetails'])->name('eggs.production-history.day');
