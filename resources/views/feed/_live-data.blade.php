@@ -100,6 +100,7 @@
             window.history.pushState({}, '', url);
             if (window.feedReloadLiveData) window.feedReloadLiveData();
         }
+        window.setFeedView = setFeedView;
 
         /* ── FCR AJAX with AbortController ── */
         let fcrAbortController = null;
