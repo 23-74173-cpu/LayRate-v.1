@@ -152,7 +152,7 @@
          card. Click is caught in the capture phase by kpi-info.js, which also
          stops card navigation. The per-cage breakdown (data-kpi) moved inside
          the popover as an explicit action. --}}
-    <button type="button" class="kpi-info-btn max-md:w-11 max-md:h-11"
+    <button type="button" class="kpi-info-btn max-md:hidden"
             data-kpi-popover
             data-info-title="{{ $plainLabel }}"
             data-info-text="{{ $infoText ?? '' }}"

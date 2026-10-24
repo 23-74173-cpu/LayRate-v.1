@@ -303,13 +303,6 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   .kpi-card .kpi-secondary-placeholder,
   .kpi-card .kpi-secondary-trend,
   .kpi-card .mobile-kpi-secondary { display: none !important; }
-  .kpi-card .kpi-info-btn {
-    top: 6px;
-    right: 6px;
-    width: 44px;
-    height: 44px;
-    padding: 0;
-  }
   .kpi-card .mobile-kpi-wrap { overflow-wrap: anywhere; }
   .kpi-card .mobile-kpi-secondary { font-size: 14px; line-height: 1.25; }
   .kpi-card .trend-pill-up,
