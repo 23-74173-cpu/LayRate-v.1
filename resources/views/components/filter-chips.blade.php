@@ -30,7 +30,6 @@
         <span class="sr-only">Remove {{ $chip['label'] }} filter</span>
     </button>
     @endforeach
-    <button type="button" data-filter-clear-all class="text-xs font-medium underline underline-offset-2 hover:brightness-90" style="color: var(--color-navy);">Clear all</button>
     @endif
     <span class="text-xs ml-auto" style="color: #615d59;" aria-live="polite" data-filter-result data-filtered-count="{{ (int) $filtered }}">
         @if($first !== null)Showing {{ number_format($first) }}–{{ number_format($last) }} of {{ number_format($filtered) }}@else Showing 0 of {{ number_format($filtered) }}@endif

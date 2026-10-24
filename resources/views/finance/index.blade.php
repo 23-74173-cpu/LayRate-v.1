@@ -96,12 +96,6 @@
                 <x-button type="submit">
                     <i data-lucide="filter" class="w-4 h-4"></i> Apply
                 </x-button>
-                @if($hasFilters)
-                <a href="{{ route('finance.index') }}"
-                   class="px-4 py-2 text-xs font-medium rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">
-                    Reset
-                </a>
-                @endif
             </div>
         </form>
     </x-card>

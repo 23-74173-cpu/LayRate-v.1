@@ -2,9 +2,7 @@
 /**
  * <x-filter-date-range>
  *
- * From/To pair with quick presets. Preset ranges are derived from the
- * server-rendered anchor date (the reporting "today"), never from the
- * browser clock, so there is no timezone drift. Invalid ranges (From after
+ * From/To pair. Invalid ranges (From after
  * To) are blocked inline with an error and no request is sent.
  *
  * Props:
@@ -12,22 +10,13 @@
  *   @param string $toName    Default "to"
  *   @param string $fromValue Current from (Y-m-d)
  *   @param string $toValue   Current to (Y-m-d)
- *   @param string $today     Anchor date (Y-m-d) for presets
- *   @param bool   $presets   Show preset pills (default true)
+ *   @param string $today     Anchor date (Y-m-d) for validation
  * }
 --}}
-@props(['fromName' => 'from', 'toName' => 'to', 'fromValue' => null, 'toValue' => null, 'today' => null, 'presets' => true])
+@props(['fromName' => 'from', 'toName' => 'to', 'fromValue' => null, 'toValue' => null, 'today' => null])
 
 @php $todayAnchor = $today ?: now()->toDateString(); @endphp
 <div class="col-span-2 sm:col-span-1 min-w-0" data-filter-date-range data-today="{{ $todayAnchor }}">
-    @if($presets)
-    <div class="flex flex-wrap gap-1.5 mb-2" role="group" aria-label="Date presets">
-        @foreach([['today', 'Today'], ['7days', '7 days'], ['30days', '30 days'], ['month', 'This month']] as [$preset, $presetLabel])
-        <button type="button" data-preset="{{ $preset }}" aria-pressed="false"
-                class="px-3 min-h-[40px] rounded-full text-xs font-medium border border-[#D9D9D9] bg-white text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">{{ $presetLabel }}</button>
-        @endforeach
-    </div>
-    @endif
     <div class="grid grid-cols-2 gap-3">
         <div class="min-w-0">
             <label for="{{ $fromName }}-{{ substr(md5($fromName . $toName), 0, 6) }}" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">From</label>

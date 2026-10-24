@@ -27,9 +27,6 @@
                 </select>
             </div>
             <button type="submit" class="w-full sm:w-auto max-md:min-h-11 text-center text-xs max-md:text-sm px-4 py-1.5 rounded-lg font-medium text-white transition-colors" style="background-color:var(--color-navy);">Filter</button>
-            @if(request()->hasAny(['date_from','date_to','cage_id']))
-            <a href="{{ route('environment.logs') }}" data-turbo-frame="environment-logs" class="col-span-2 sm:col-span-1 w-full sm:w-auto max-md:min-h-11 inline-flex items-center justify-center text-xs max-md:text-sm px-4 py-1.5 rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">Clear</a>
-            @endif
         </form>
 
         <div class="mobile-wide-table overflow-x-auto">

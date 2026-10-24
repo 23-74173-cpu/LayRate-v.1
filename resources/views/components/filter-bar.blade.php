@@ -31,12 +31,6 @@
          wrapper into the sheet body and back; one set of controls only. --}}
     <div data-filter-fields class="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end sm:gap-x-4 sm:gap-y-3">
         {{ $slot }}
-        <div class="hidden sm:flex sm:items-end">
-            <button type="button" data-filter-reset
-                    class="min-h-[44px] inline-flex items-center px-4 text-xs font-medium rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">
-                Reset
-            </button>
-        </div>
     </div>
 
     {{-- Phone-only entry point: search stays inline above; the rest hides here. --}}
@@ -68,10 +62,8 @@
             <div data-filter-sheet-body></div>
             <p data-filter-error class="hidden text-xs mt-3" style="color: #9b1c24;" role="alert"></p>
             <div class="flex gap-3 mt-4">
-                <button type="button" data-filter-clear
-                        class="flex-1 min-h-[44px] text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">Clear</button>
                 <button type="button" data-filter-apply
-                        class="flex-1 min-h-[44px] inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium text-white hover:brightness-95 transition-colors"
+                        class="w-full min-h-[44px] inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium text-white hover:brightness-95 transition-colors"
                         style="background-color: var(--color-navy);">Apply</button>
             </div>
         </div>

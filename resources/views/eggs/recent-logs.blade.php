@@ -92,12 +92,6 @@
                     </div>
                 </div>
 
-                <div class="recent-filter-reset max-md:col-span-3 max-md:col-start-10 max-md:row-start-3 max-md:justify-self-end md:col-span-1 flex items-center justify-end gap-2">
-                    <a href="{{ route('eggs.recent-logs', ['view' => $viewMode, 'month' => $month] + request()->only(['cage_id', 'cage_slot_id', 'breed']) + ($filters['logged_via'] ? ['logged_via[]' => (array) $filters['logged_via']] : [])) }}"
-                       class="max-md:inline-flex max-md:items-center max-md:justify-center max-md:min-h-11 px-3 py-1.5 text-xs max-md:text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">
-                        Reset
-                    </a>
-                </div>
             </div>
         </form>
 
