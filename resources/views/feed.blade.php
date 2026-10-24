@@ -43,7 +43,7 @@
     @endpush
 
     {{-- Live Data (lazy): metrics, tabs, batches, consumption --}}
-    <turbo-frame id="feed-live-data" src="{{ route('feed.live-data', request()->only('cage_id', 'walkthrough4', 'wt4_batch', 'wt4_log', 'wt4_farm')) }}" loading="lazy">
+    <turbo-frame id="feed-live-data" src="{{ route('feed.live-data', request()->only('cage_id', 'walkthrough4', 'wt4_batch', 'wt4_log', 'wt4_farm', 'tab', 'view', 'month')) }}" loading="lazy">
         @include('feed._live-data-skeleton')
     </turbo-frame>
 </div>
@@ -434,14 +434,12 @@ function feedReloadLiveData() {
     if (!frame) return;
     window.__feedActiveTab = null;
     var url = new URL(frame.src, window.location.origin);
-    var cur = new URL(window.location);
-    cur.searchParams.forEach(function(v, k) { url.searchParams.set(k, v); });
-    if (frame.src === url.toString()) {
-        frame.reload();
-    } else {
-        frame.src = url.toString();
-    }
+    var pageUrl = new URL(window.location.href);
+    url.search = pageUrl.search;
+    url.searchParams.delete('page');
+    frame.src = url.toString();
 }
+window.feedReloadLiveData = feedReloadLiveData;
 
 function openEditBatch(id, brand, cp, qty, cost, threshold, notes) {
     document.getElementById('editBatchForm').action = '/feed/batch/' + id;

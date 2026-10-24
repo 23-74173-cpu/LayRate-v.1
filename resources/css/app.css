@@ -33,11 +33,49 @@ turbo-frame.is-loading { opacity: 0.55; transition: opacity 150ms ease; }
   .recent-production-calendar .production-calendar .recent-calendar-day .production-badge { font-size: 12px; }
 }
 .recent-view-toggle a[aria-current="page"] { box-shadow: 0 1px 2px rgb(31 31 31 / 12%); }
+.feed-view-toggle a[aria-current="page"] { box-shadow: 0 1px 2px rgb(31 31 31 / 12%); }
+.feed-consumption-content { min-width: 0; }
 @media (max-width: 639px) {
   .recent-logs-card-header .card-title { font-size: 1rem; line-height: 1.25; }
   .recent-view-toggle { height: 36px; }
   .recent-view-toggle a { position: relative; padding-left: 10px; padding-right: 10px; }
   .recent-view-toggle a::before { content: ""; position: absolute; inset: -4px -2px; }
+  .feed-view-toggle { height: 36px; }
+  .feed-view-toggle a { position: relative; padding-left: 10px; padding-right: 10px; }
+  .feed-view-toggle a::before { content: ""; position: absolute; inset: -4px -2px; }
+}
+.feed-month-calendar .feed-calendar-control { min-height: 40px; }
+.feed-month-calendar .calendar-nav { min-width: 40px; min-height: 40px; }
+.feed-month-calendar .production-calendar.feed-calendar-grid { width: 100%; min-width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 2px 6px; }
+.feed-month-calendar .production-calendar.feed-calendar-grid th,
+.feed-month-calendar .production-calendar.feed-calendar-grid td { width: 14.285%; }
+.feed-month-calendar .production-calendar.feed-calendar-grid th { padding: 8px 0; color: var(--color-neutral-text); font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.feed-month-calendar .feed-calendar-day { display: flex; width: 100%; min-width: 0; min-height: 48px; padding: 4px; flex-direction: column; align-items: flex-start; text-align: left; }
+.feed-month-calendar .feed-calendar-day:not([aria-disabled="true"]) { cursor: pointer; }
+.feed-month-calendar .feed-calendar-day:focus-visible { outline: 2px solid var(--color-navy); outline-offset: 2px; position: relative; z-index: 1; }
+.feed-month-calendar .feed-calendar-day-number { font-size: 12px; line-height: 1.1; }
+.feed-month-calendar .feed-calendar-amount { max-width: 100%; overflow: hidden; font-size: 12px; line-height: 1.15; text-overflow: clip; white-space: nowrap; }
+.feed-month-calendar .calendar-day-placeholder { min-height: 44px; }
+.feed-calendar-kpi { min-width: 0; padding: .65rem .75rem !important; gap: .5rem !important; }
+.feed-calendar-kpi .kpi-icon-tile { display: none; }
+.feed-calendar-kpi .kpi-label { font-size: 11px; }
+.feed-calendar-kpi .kpi-number { font-size: 16px; }
+@media (min-width: 640px) {
+  .feed-month-calendar .production-calendar.feed-calendar-grid { border-spacing: 8px; }
+  .feed-month-calendar .production-calendar.feed-calendar-grid th { font-size: 11px; }
+  .feed-month-calendar .feed-calendar-day { height: 112px; min-height: 88px; padding: 8px; border-radius: 12px; gap: 6px; }
+  .feed-month-calendar .feed-calendar-day-number { font-size: 12px; }
+  .feed-month-calendar .feed-calendar-amount { font-size: 16px; }
+}
+@media (max-width: 639px) {
+  .feed-month-calendar .production-calendar.feed-calendar-grid { border-spacing: 1px 5px; }
+  .feed-month-calendar .feed-calendar-day { padding: 3px; }
+  .feed-month-calendar .feed-calendar-amount { font-size: 12px; }
+  .feed-consumption-header { gap: 6px; padding-left: 10px; padding-right: 10px; }
+  .feed-consumption-header .card-title { font-size: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .feed-month-calendar *, .feed-view-toggle * { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
 [data-filter-link] { cursor: pointer; }
 [data-filter-link]:hover { text-decoration: underline; text-underline-offset: 3px; }
