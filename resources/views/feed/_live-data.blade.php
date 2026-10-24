@@ -200,11 +200,9 @@
             });
         }
 
-        // Boot: activate tab from URL after DOM is ready (tab panels render after this script)
-        document.addEventListener('DOMContentLoaded', function () {
-            const tab = '{{ request()->query("tab", "batches") }}';
-            if (document.getElementById('tab-' + tab)) feedSwitchTab(tab);
-        });
+        // Boot: activate tab from URL immediately (Turbo frame content is already in DOM when this runs)
+        const tab = '{{ request()->query("tab", "batches") }}';
+        if (document.getElementById('tab-' + tab)) feedSwitchTab(tab);
     })();
     </script>
 
