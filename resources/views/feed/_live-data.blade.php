@@ -77,6 +77,28 @@
                     active.classList.add('border-navy', 'text-navy');
                 }
             }
+            // Auto-load FCR data when FCR tab is selected
+            if (tab === 'fcr' && window.fcrLoad) {
+                window.fcrLoad();
+            }
+        }
+
+        function setFeedView(view) {
+            var url = new URL(window.location);
+            url.searchParams.set('tab', 'consumption');
+            url.searchParams.set('view', view);
+            if (view === 'calendar') {
+                var month = url.searchParams.get('month');
+                if (!month) {
+                    var today = new Date();
+                    month = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+                }
+                url.searchParams.set('month', month);
+            } else {
+                url.searchParams.delete('month');
+            }
+            window.history.pushState({}, '', url);
+            if (window.feedReloadLiveData) window.feedReloadLiveData();
         }
 
         /* ── FCR AJAX with AbortController ── */
@@ -275,8 +297,8 @@
             <header class="feed-consumption-header flex min-w-0 items-center justify-between gap-3 border-b border-[#D9D9D9] px-4 py-3 sm:px-5">
                 <h3 class="card-title min-w-0 truncate">Daily Consumption</h3>
                 <div class="recent-view-toggle feed-view-toggle inline-flex h-8 shrink-0 items-center rounded-full border border-[#e6e6e6] bg-[#f6f5f4] p-0.5" role="group" aria-label="Consumption log view">
-                    <a href="{{ route('feed', request()->except(['view', 'month', 'page']) + ['tab' => 'consumption', 'view' => 'records']) }}" @if(($viewMode ?? 'records') === 'records') aria-current="page" @endif class="inline-flex h-full min-w-0 items-center justify-center rounded-full px-3 text-[13px] font-medium leading-none transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy {{ ($viewMode ?? 'records') === 'records' ? 'bg-white text-[#1f1f1f] shadow-sm' : 'text-[#615d59] hover:bg-white/70' }}" onclick="event.preventDefault(); var u=new URL(this.href); window.history.pushState({},'',u); feedReloadLiveData();">Records</a>
-                    <a href="{{ route('feed', request()->except(['view', 'page']) + ['tab' => 'consumption', 'view' => 'calendar', 'month' => $month ?? substr($today, 0, 7)]) }}" @if(($viewMode ?? 'records') === 'calendar') aria-current="page" @endif class="inline-flex h-full min-w-0 items-center justify-center rounded-full px-3 text-[13px] font-medium leading-none transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy {{ ($viewMode ?? 'records') === 'calendar' ? 'bg-white text-[#1f1f1f] shadow-sm' : 'text-[#615d59] hover:bg-white/70' }}" onclick="event.preventDefault(); var u=new URL(this.href); window.history.pushState({},'',u); feedReloadLiveData();">Calendar</a>
+                    <button type="button" @if(($viewMode ?? 'records') === 'records') aria-current="page" @endif class="inline-flex h-full min-w-0 items-center justify-center rounded-full px-3 text-[13px] font-medium leading-none transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy {{ ($viewMode ?? 'records') === 'records' ? 'bg-white text-[#1f1f1f] shadow-sm' : 'text-[#615d59] hover:bg-white/70' }}" onclick="setFeedView('records')">Records</button>
+                    <button type="button" @if(($viewMode ?? 'records') === 'calendar') aria-current="page" @endif class="inline-flex h-full min-w-0 items-center justify-center rounded-full px-3 text-[13px] font-medium leading-none transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy {{ ($viewMode ?? 'records') === 'calendar' ? 'bg-white text-[#1f1f1f] shadow-sm' : 'text-[#615d59] hover:bg-white/70' }}" onclick="setFeedView('calendar')">Calendar</button>
                 </div>
             </header>
             <div class="feed-consumption-content">
@@ -594,6 +616,14 @@
                 document.getElementById('farmExceedsWarning'),
                 document.getElementById('farmSaveBtn')
             );
+
+        // Boot: activate tab from URL, and load FCR if FCR tab is active
+        const activeTab = '{{ request()->query("tab", "batches") }}';
+        if (document.getElementById('tab-' + activeTab)) {
+            window.__feedPageBooting = true;
+            feedSwitchTab(activeTab);
+            window.__feedPageBooting = false;
+        }
         })();
     </script>
 
