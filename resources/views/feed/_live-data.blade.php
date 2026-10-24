@@ -77,7 +77,8 @@
                     active.classList.add('border-navy', 'text-navy');
                 }
             }
-            function setFeedView(view) {
+
+        function setFeedView(view) {
             var url = new URL(window.location);
             url.searchParams.set('tab', 'consumption');
             url.searchParams.set('view', view);
