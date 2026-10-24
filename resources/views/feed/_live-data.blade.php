@@ -77,13 +77,7 @@
                     active.classList.add('border-navy', 'text-navy');
                 }
             }
-            // Auto-load FCR data when FCR tab is selected
-            if (tab === 'fcr' && window.fcrLoad) {
-                window.fcrLoad();
-            }
-        }
-
-        function setFeedView(view) {
+            function setFeedView(view) {
             var url = new URL(window.location);
             url.searchParams.set('tab', 'consumption');
             url.searchParams.set('view', view);
