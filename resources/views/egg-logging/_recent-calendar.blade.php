@@ -28,7 +28,7 @@
     }
 @endphp
 
-<section class="space-y-4" data-month-calendar data-month="{{ $month }}" aria-label="Production calendar">
+<section class="recent-production-calendar w-full min-w-0 space-y-4" data-month-calendar data-month="{{ $month }}" aria-label="Production calendar">
     <div class="calendar-toolbar flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e6e6e6] bg-[#fafafa] p-3">
         <div class="flex flex-wrap items-center gap-2 min-w-0">
             <label class="sr-only" for="recentCalendarMonth">Select month</label>
@@ -113,7 +113,11 @@
 function calendarChangeMonth(month) {
     var url = new URL(window.location.href);
     var year = document.getElementById('recentCalendarYear').value;
-    url.searchParams.set('month', year + '-' + String(month).padStart(2, '0'));
+    var selectedMonth = String(month).padStart(2, '0');
+    var maxMonth = '{{ $maxMonth }}';
+    var targetMonth = year + '-' + selectedMonth;
+    if (targetMonth > maxMonth) targetMonth = maxMonth;
+    url.searchParams.set('month', targetMonth);
     url.searchParams.set('view', 'calendar');
     url.searchParams.delete('page');
     window.location.assign(url.toString());
@@ -121,7 +125,10 @@ function calendarChangeMonth(month) {
 function calendarChangeYear(year) {
     var month = document.getElementById('recentCalendarMonth').value.padStart(2, '0');
     var url = new URL(window.location.href);
-    url.searchParams.set('month', year + '-' + month);
+    var maxMonth = '{{ $maxMonth }}';
+    var targetMonth = year + '-' + month;
+    if (targetMonth > maxMonth) targetMonth = maxMonth;
+    url.searchParams.set('month', targetMonth);
     url.searchParams.set('view', 'calendar');
     url.searchParams.delete('page');
     window.location.assign(url.toString());

@@ -1,6 +1,6 @@
 @props(['weekdays', 'label'])
 
-<div class="overflow-x-auto -mx-1 px-1">
+<div class="w-full min-w-0 overflow-x-auto -mx-1 px-1">
     <table {{ $attributes->merge(['class' => 'production-calendar']) }} aria-label="{{ $label }}">
         <thead>
             <tr>

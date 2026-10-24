@@ -14,21 +14,21 @@
 
         <x-card>
         <x-slot:header>
-            <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
                 @if($viewMode === 'calendar')
                     <h3 class="card-title">Production Calendar</h3>
                 @else
                     <h3 class="card-title">Production Logs</h3>
                 @endif
-                <div class="inline-flex shrink-0 items-center rounded-lg border border-[#e6e6e6] bg-[#f6f5f4] p-1" role="group" aria-label="Recent Logs view">
-                    <a href="{{ route('eggs.recent-logs', request()->only(['cage_id', 'cage_slot_id', 'breed']) + ($filters['logged_via'] ? ['logged_via[]' => (array) $filters['logged_via']] : []) + ['view' => 'calendar', 'month' => $month]) }}" aria-pressed="{{ $viewMode === 'calendar' ? 'true' : 'false' }}" class="inline-flex min-h-10 items-center justify-center rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy {{ $viewMode === 'calendar' ? 'bg-white text-[#1f1f1f] shadow-sm' : 'text-[#615d59] hover:bg-white/70' }}">Calendar</a>
-                    <a href="{{ route('eggs.recent-logs', request()->only(['cage_id', 'cage_slot_id', 'breed']) + ($filters['logged_via'] ? ['logged_via[]' => (array) $filters['logged_via']] : []) + ['view' => 'list', 'month' => $month]) }}" aria-pressed="{{ $viewMode === 'list' ? 'true' : 'false' }}" class="inline-flex min-h-10 items-center justify-center rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy {{ $viewMode === 'list' ? 'bg-white text-[#1f1f1f] shadow-sm' : 'text-[#615d59] hover:bg-white/70' }}">List</a>
-                </div>
             </div>
         </x-slot:header>
 
         <form id="recentLogsForm" onsubmit="return false" class="mb-4">
             <div class="recent-filters grid grid-cols-2 gap-3 max-md:grid-cols-12 max-md:items-end md:flex md:flex-nowrap md:items-center md:gap-x-4 md:gap-y-3">
+                <div class="recent-view-toggle inline-flex min-h-11 items-center rounded-lg border border-[#e6e6e6] bg-[#f6f5f4] p-1" role="group" aria-label="Recent Logs view">
+                    <a href="{{ route('eggs.recent-logs', request()->only(['cage_id', 'cage_slot_id', 'breed']) + ($filters['logged_via'] ? ['logged_via[]' => (array) $filters['logged_via']] : []) + ['view' => 'calendar', 'month' => $month]) }}" @if($viewMode === 'calendar') aria-current="page" @endif class="inline-flex min-h-10 flex-1 items-center justify-center rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy {{ $viewMode === 'calendar' ? 'bg-white text-[#1f1f1f] shadow-sm' : 'text-[#615d59] hover:bg-white/70' }}">Calendar</a>
+                    <a href="{{ route('eggs.recent-logs', request()->only(['cage_id', 'cage_slot_id', 'breed']) + ($filters['logged_via'] ? ['logged_via[]' => (array) $filters['logged_via']] : []) + ['view' => 'list', 'month' => $month]) }}" @if($viewMode === 'list') aria-current="page" @endif class="inline-flex min-h-10 flex-1 items-center justify-center rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy {{ $viewMode === 'list' ? 'bg-white text-[#1f1f1f] shadow-sm' : 'text-[#615d59] hover:bg-white/70' }}">List</a>
+                </div>
                 @if($viewMode === 'calendar')
                     <input type="hidden" name="view" value="calendar">
                     <input type="hidden" name="month" value="{{ $month }}">
