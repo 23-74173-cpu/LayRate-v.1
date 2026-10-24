@@ -77,6 +77,11 @@
                     active.classList.add('border-navy', 'text-navy');
                 }
             }
+
+            // Auto-load FCR data when FCR tab is activated (safety net for blank tab)
+            if (tab === 'fcr' && window.fcrLoad) {
+                window.fcrLoad();
+            }
         }
 
         function setFeedView(view) {
@@ -195,8 +200,11 @@
             });
         }
 
-        const tab = '{{ request()->query("tab", "batches") }}';
-        if (document.getElementById('tab-' + tab)) feedSwitchTab(tab);
+        // Boot: activate tab from URL after DOM is ready (tab panels render after this script)
+        document.addEventListener('DOMContentLoaded', function () {
+            const tab = '{{ request()->query("tab", "batches") }}';
+            if (document.getElementById('tab-' + tab)) feedSwitchTab(tab);
+        });
     })();
     </script>
 
