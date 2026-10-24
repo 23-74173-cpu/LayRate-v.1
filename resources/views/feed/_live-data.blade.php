@@ -77,6 +77,7 @@
                     active.classList.add('border-navy', 'text-navy');
                 }
             }
+        }
 
         function setFeedView(view) {
             var url = new URL(window.location);
