@@ -857,8 +857,10 @@
         window.__dashboardFromDate = value || '';
         var input = document.getElementById('dashboardFromDate');
         if (input && input.value !== window.__dashboardFromDate) input.value = window.__dashboardFromDate;
-
-
+        var url = new URL(window.location.href);
+        if (window.__dashboardFromDate) url.searchParams.set('from_date', window.__dashboardFromDate);
+        else url.searchParams.delete('from_date');
+        window.history.replaceState({}, '', url);
         reloadCharts();
         if (window.__dashboardWriteState) window.__dashboardWriteState();
     };
@@ -866,8 +868,10 @@
         window.__dashboardToDate = value || '';
         var input = document.getElementById('dashboardToDate');
         if (input && input.value !== window.__dashboardToDate) input.value = window.__dashboardToDate;
-
-
+        var url = new URL(window.location.href);
+        if (window.__dashboardToDate) url.searchParams.set('to_date', window.__dashboardToDate);
+        else url.searchParams.delete('to_date');
+        window.history.replaceState({}, '', url);
         reloadCharts();
         if (window.__dashboardWriteState) window.__dashboardWriteState();
     };
@@ -928,8 +932,8 @@
         if (code === 'all') _url.searchParams.delete('cage');
         else _url.searchParams.set('cage', code);
         window.history.replaceState({}, '', _url);
+        if (window.__dashboardWriteState) window.__dashboardWriteState();
 
-var cageParam = code === 'all' ? null : code;
         // All stats + chart frames pick up Cage + Period + date filters in one place.
         reloadCharts();
         // Forecast overlay is JS-driven, not a Turbo Frame — re-fetch if currently visible

@@ -178,7 +178,7 @@
             var actionList = document.createElement('div');
             actionList.setAttribute('data-dock-action-list', '');
             actionList.className = 'dock-actions-grid egg-actions-grid';
-            actionList.appendChild(tpl.content.cloneNode(true));
+            if (tpl) actionList.appendChild(tpl.content.cloneNode(true));
             var content = document.createElement('div');
             content.className = 'dock-fab-content';
             content.appendChild(sheetHeader);

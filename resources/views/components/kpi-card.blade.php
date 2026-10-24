@@ -3,7 +3,7 @@
  * <x-kpi-card>
  *
  * Single reusable KPI card used system-wide (dashboard, analytics, forecast,
- * feed, environment, hardware, finance, chickens, mortality, eggs).
+ * feed, environment, hardware, chickens, mortality, eggs).
  *
   * Design: solid white card, horizontal two-column layout —
   *   left:  large 72px icon in a soft primary-tinted rounded tile,

@@ -399,7 +399,8 @@ function filterInventory() {
     if (cageId) params.set('cage_id', cageId);
     if (breed) params.set('breed', breed);
     if (search) params.set('search', search);
-    if (sort) params.set('sort', sort.sex);
+    if (sort) params.set('sort', sort);
+    params.set('page', '1');
 
     // De-duplicate: if the computed filter is byte-identical to the last one we
     // actually requested, don't fire a redundant full-frame reload (each reload
@@ -433,6 +434,8 @@ function clearFilters() {
 
     const frame = document.getElementById('chickens-inventory-list');
     frame.src = '{{ route("chickens.inventory-list") }}';
+
+    _lastInventoryFilter = '';
 
     window.history.replaceState({}, '', '{{ route("chickens.index") }}');
 }

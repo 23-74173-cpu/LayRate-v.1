@@ -190,7 +190,7 @@
                         class="flex-1 max-md:min-h-11 bg-navy text-white py-2.5 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed">Add Pre-Order</button>
             </div>
             @if(!empty($autopostOn))
-            <p class="text-xs mt-3" style="color: #a39e98;">Auto-posting is on — marking this order paid later posts its total to Finance. Full payments only.</p>
+            <p class="text-xs mt-3" style="color: #a39e98;">Auto-posting is on — marking this order paid later records its full payment. Full payments only.</p>
             @endif
         </form>
     </div>
@@ -274,7 +274,7 @@
                 @if(auth()->user()->isAdmin())
                 <label id="editMarkPaidRow" class="max-md:min-h-11 flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm" style="background-color: #f6f5f4;">
                     <input type="checkbox" name="mark_paid" id="editMarkPaid" value="1" class="mt-0.5 shrink-0">
-                    <span style="color: #333333;">Mark as paid now <span style="color: #a39e98;">(full payment only — posts the order total to Finance as income)</span></span>
+                    <span style="color: #333333;">Mark as paid now <span style="color: #a39e98;">(records full payment for this order)</span></span>
                 </label>
                 @endif
                 <p id="editPaidNote" class="rounded-lg px-3 py-2.5 text-sm font-medium" style="display: none; background-color: #e8f5ec; color: #1f6b3a;"></p>
@@ -290,7 +290,7 @@
                     <span id="editSnapshotTotal" class="font-semibold tabular-nums" style="color: #1f1f1f;">—</span>
                 </div>
                 @if(!empty($autopostOn))
-                <p class="text-xs" style="color: #a39e98;">Auto-posting is on{{ !empty($autopostDate) ? ' since ' . $autopostDate : '' }} — marking paid posts the total to Finance. Full payments only.</p>
+                <p class="text-xs" style="color: #a39e98;">Auto-posting is on{{ !empty($autopostDate) ? ' since ' . $autopostDate : '' }} — marking paid records the full payment. Full payments only.</p>
                 @endif
             </div>
 
@@ -309,8 +309,13 @@ function preOrdersFilter() {
     var form = document.getElementById('preOrdersForm');
     if (!form) return;
     var params = new URLSearchParams(new FormData(form));
+    params.delete('page');
     var frame = document.querySelector('turbo-frame#eggs-preorders-table');
-    if (frame) frame.setAttribute('src', '/eggs/pre-orders/table?' + params.toString());
+    if (frame) {
+        var url = '/eggs/pre-orders/table' + (params.toString() ? '?' + params.toString() : '');
+        if (frame.getAttribute('src') === url) frame.reload();
+        else frame.setAttribute('src', url);
+    }
 }
 
 var _preorderPools = {};
@@ -579,4 +584,3 @@ function closeEditStatusModal() {
 </x-modal-reopen>
 @endif
 @endsection
-
