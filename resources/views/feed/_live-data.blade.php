@@ -58,10 +58,13 @@
             // Keep the URL's ?tab= in sync so a form submit's redirect back
             // to this page (e.g. Add Consumption) returns to the same tab
             // instead of always bouncing to Feed Batches.
-            const url = new URL(window.location);
-            url.searchParams.set('tab', tab);
-            window.history.replaceState({}, '', url);
-
+            if (!window.__feedPageBooting) {
+                const url = new URL(window.location);
+                url.searchParams.set('tab', tab);
+                if (tab !== 'consumption') { url.searchParams.delete('view'); url.searchParams.delete('month'); }
+                else if (!url.searchParams.has('view')) url.searchParams.set('view', 'records');
+                window.history.replaceState({}, '', url);
+            }
             const nav = document.querySelector('#feed-tabs-nav');
             if (nav) {
                 nav.querySelectorAll('button').forEach(btn => {
@@ -173,11 +176,8 @@
             });
         }
 
-        const params = new URLSearchParams(window.location.search);
-        const tab = params.get('tab') || 'batches';
-        if (document.getElementById('tab-' + tab)) {
-            feedSwitchTab(tab);
-        }
+        const tab = '{{ request()->query("tab", "batches") }}';
+        if (document.getElementById('tab-' + tab)) feedSwitchTab(tab);
     })();
     </script>
 
@@ -270,69 +270,140 @@
     </div>
 
     {{-- Daily Consumption Panel --}}
-    <div id="tab-consumption" class="tab-panel hidden">
-        <turbo-frame id="tab-consumption-frame">
-        <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-x-auto">
-            <table class="w-full">
-                <thead>
-                    <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
-                        <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Date</th>
-                        <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Time</th>
-                        <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Cage</th>
-                        <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Batch</th>
-                        <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Consumed (kg)</th>
-                        <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Source</th>
-                        <th class="px-5 py-3"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($consumptionLogs as $log)
-                    @php
-                        $cColor = $log->cage?->color ?? '#6B7280';
-                        $isDistributed = $log->source === 'distributed';
-                    @endphp
-                    <tr data-feed-log-id="{{ $log->id }}" data-feed-farm-id="{{ $log->farm_feed_entry_id }}" class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
-                        <td class="px-5 py-3.5 text-sm font-mono text-[#333333]">{{ $log->log_date->format('m/d/Y') }}</td>
-                        <td class="px-5 py-3.5 text-sm text-[#6B7280]">{{ $log->log_time?->format('H:i') ?? '—' }}</td>
-                        <td class="px-5 py-3.5 text-sm font-medium" style="color:{{ $cColor }}">{{ $log->cage?->cage_code ?? '—' }}</td>
-                        <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $log->feedBatch->batch_code }}</td>
-                        <td class="px-5 py-3.5 text-sm text-[#333333]">{{ number_format($log->feed_consumed_kg, 2) }} kg</td>
-                        <td class="px-5 py-3.5">
-                            @if($isDistributed)
-                                <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-warning-bg text-warning border border-warning-border" title="Estimated from whole-farm entry">
-                                    <i data-lucide="git-branch" class="w-3 h-3"></i> Estimated
-                                </span>
-                            @else
-                                <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-success-bg text-success border border-success-border">
-                                    <i data-lucide="check-circle-2" class="w-3 h-3"></i> Direct
-                                </span>
-                            @endif
-                        </td>
-                        <td class="px-5 py-3.5">
-                            <div class="flex items-center gap-1">
-                                @if($isDistributed)
-                                    <x-icon-button icon="pencil" label="Edit whole-farm entry" color="neutral"
-                                        onclick="openFarmEntryModal({{ $log->farm_feed_entry_id }}, {{ $log->feed_batch_id }}, '{{ $log->log_date->format('Y-m-d') }}', '{{ $log->log_time?->format('H:i') ?? '' }}', {{ $log->farmFeedEntry?->total_kg ?? 'null' }})"  />
-                                @else
-                                    <x-icon-button icon="pencil" label="Edit consumption" color="neutral"
-                                        onclick="openConsumptionModal({{ $log->cage_id }}, {{ $log->feed_batch_id }}, '{{ $log->log_date->format('Y-m-d') }}', '{{ $log->log_time?->format('H:i') ?? '' }}', {{ $log->feed_consumed_kg }}, {{ $log->id }})" />
-                                    @can('admin')
-                                    <x-icon-button icon="trash-2" label="Delete consumption log" color="red"
-                                        onclick="confirmModal('Delete this consumption record?', { submit: function() { deleteConsumption({{ $log->id }}); } }, 'Delete', 'destructive')" />
-                                    @endcan
-                                @endif
-                            </div>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr><td colspan="7" class="px-5 py-10 text-center text-sm text-[#6B7280]">No consumption data yet.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-            <x-paginator :paginator="$consumptionLogs" />
+        <div id="tab-consumption" class="tab-panel hidden">
+        <div class="feed-consumption-card w-full min-w-0 rounded-lg border border-[#D9D9D9] bg-white">
+            <header class="feed-consumption-header flex min-w-0 items-center justify-between gap-3 border-b border-[#D9D9D9] px-4 py-3 sm:px-5">
+                <h3 class="card-title min-w-0 truncate">Daily Consumption</h3>
+                <div class="recent-view-toggle feed-view-toggle inline-flex h-8 shrink-0 items-center rounded-full border border-[#e6e6e6] bg-[#f6f5f4] p-0.5" role="group" aria-label="Consumption log view">
+                    <a href="{{ route('feed', request()->except(['view', 'month', 'page']) + ['tab' => 'consumption', 'view' => 'records']) }}" @if(($viewMode ?? 'records') === 'records') aria-current="page" @endif class="inline-flex h-full min-w-0 items-center justify-center rounded-full px-3 text-[13px] font-medium leading-none transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy {{ ($viewMode ?? 'records') === 'records' ? 'bg-white text-[#1f1f1f] shadow-sm' : 'text-[#615d59] hover:bg-white/70' }}" onclick="event.preventDefault(); var u=new URL(this.href); window.history.pushState({},'',u); feedReloadLiveData();">Records</a>
+                    <a href="{{ route('feed', request()->except(['view', 'page']) + ['tab' => 'consumption', 'view' => 'calendar', 'month' => $month ?? substr($today, 0, 7)]) }}" @if(($viewMode ?? 'records') === 'calendar') aria-current="page" @endif class="inline-flex h-full min-w-0 items-center justify-center rounded-full px-3 text-[13px] font-medium leading-none transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy {{ ($viewMode ?? 'records') === 'calendar' ? 'bg-white text-[#1f1f1f] shadow-sm' : 'text-[#615d59] hover:bg-white/70' }}" onclick="event.preventDefault(); var u=new URL(this.href); window.history.pushState({},'',u); feedReloadLiveData();">Calendar</a>
+                </div>
+            </header>
+            <div class="feed-consumption-content">
+            @if(($viewMode ?? 'records') === 'calendar')
+                @include('feed._consumption-calendar', compact('month', 'today', 'calendarDays', 'calendarTotals', 'cages', 'maxMonth', 'preselectedCageId'))
+            @else
+                <turbo-frame id="tab-consumption-frame">
+                    <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
+                                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Date</th>
+                                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Time</th>
+                                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Cage</th>
+                                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Batch</th>
+                                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Consumed (kg)</th>
+                                    <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Source</th>
+                                    <th class="px-5 py-3"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($consumptionLogs as $log)
+                                    @php
+                                        $cColor = $log->cage?->color ?? '#6B7280';
+                                        $isDistributed = $log->source === 'distributed';
+                                    @endphp
+                                    <tr data-feed-log-id="{{ $log->id }}" data-feed-farm-id="{{ $log->farm_feed_entry_id }}" class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
+                                        <td class="px-5 py-3.5 text-sm font-mono text-[#333333]">{{ $log->log_date->format('m/d/Y') }}</td>
+                                        <td class="px-5 py-3.5 text-sm text-[#6B7280]">{{ $log->log_time?->format('H:i') ?? '—' }}</td>
+                                        <td class="px-5 py-3.5 text-sm font-medium" style="color:{{ $cColor }}">{{ $log->cage?->cage_code ?? '—' }}</td>
+                                        <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $log->feedBatch->batch_code }}</td>
+                                        <td class="px-5 py-3.5 text-sm text-[#333333]">{{ number_format($log->feed_consumed_kg, 2) }} kg</td>
+                                        <td class="px-5 py-3.5">
+                                            @if($isDistributed)
+                                                <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-warning-bg text-warning border border-warning-border" title="Estimated from whole-farm entry"><i data-lucide="git-branch" class="w-3 h-3"></i> Estimated</span>
+                                            @else
+                                                <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-success-bg text-success border border-success-border"><i data-lucide="check-circle-2" class="w-3 h-3"></i> Direct</span>
+                                            @endif
+                                        </td>
+                                        <td class="px-5 py-3.5">
+                                            <div class="flex items-center gap-1">
+                                                @if($isDistributed)
+                                                    <x-icon-button icon="pencil" label="Edit whole-farm entry" color="neutral" onclick="openFarmEntryModal({{ $log->farm_feed_entry_id }}, {{ $log->feed_batch_id }}, '{{ $log->log_date->format('Y-m-d') }}', '{{ $log->log_time?->format('H:i') ?? '' }}', {{ $log->farmFeedEntry?->total_kg ?? 'null' }})" />
+                                                @else
+                                                    <x-icon-button icon="pencil" label="Edit consumption" color="neutral" onclick="openConsumptionModal({{ $log->cage_id }}, {{ $log->feed_batch_id }}, '{{ $log->log_date->format('Y-m-d') }}', '{{ $log->log_time?->format('H:i') ?? '' }}', {{ $log->feed_consumed_kg }}, {{ $log->id }})" />
+                                                    @can('admin')
+                                                        <x-icon-button icon="trash-2" label="Delete consumption log" color="red" onclick="confirmModal('Delete this consumption record?', { submit: function() { deleteConsumption({{ $log->id }}); } }, 'Delete', 'destructive')" />
+                                                    @endcan
+                                                @endif
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="7" class="px-5 py-10 text-center text-sm text-[#6B7280]">No consumption data yet.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                        <x-paginator :paginator="$consumptionLogs" />
+                    </div>
+                </turbo-frame>
+            @endif
+            </div>
         </div>
-    </turbo-frame>
-    </div>
+        @if(($viewMode ?? 'records') === 'calendar')
+            <div id="feedCalendarDayDialog" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="feedCalendarDayTitle" aria-hidden="true" inert>
+                <button type="button" class="absolute inset-0 h-full w-full bg-black/40" data-feed-calendar-close aria-label="Close day details"></button>
+                <section class="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto rounded-t-2xl bg-white p-5 pb-24 shadow-2xl md:inset-y-0 md:left-auto md:right-0 md:max-h-none md:w-[min(620px,90vw)] md:rounded-none md:pb-5" tabindex="-1">
+                    <div class="mb-4 flex items-center justify-between gap-3"><h2 id="feedCalendarDayTitle" class="text-lg font-semibold">Feed details</h2><button type="button" class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full hover:bg-black/5" data-feed-calendar-close aria-label="Close day details">×</button></div>
+                    <div id="feedCalendarDayContent" aria-live="polite"><p class="py-8 text-center text-sm text-[#615d59]">Select a day to view feedings.</p></div>
+                </section>
+            </div>
+            <script>
+            window.openFeedCalendarDay = function (button) {
+                var dialog = document.getElementById('feedCalendarDayDialog');
+                var content = document.getElementById('feedCalendarDayContent');
+                if (!dialog || !content) return;
+                window.__feedCalendarDayOpener = button;
+                content.innerHTML = '<p class="py-8 text-center text-sm text-[#615d59]">Loading feed details…</p>';
+                dialog.classList.remove('hidden');
+                dialog.inert = false;
+                dialog.setAttribute('aria-hidden', 'false');
+                document.body.classList.add('overflow-hidden');
+                dialog.querySelector('section').focus();
+                var url = new URL(button.dataset.detailUrl, window.location.origin);
+                var pageUrl = new URL(window.location.href);
+                ['cage_id', 'walkthrough4', 'wt4_log', 'wt4_farm'].forEach(function (key) {
+                    if (pageUrl.searchParams.has(key)) url.searchParams.set(key, pageUrl.searchParams.get(key));
+                });
+                fetch(url.toString(), {headers: {'X-Requested-With':'XMLHttpRequest'}})
+                    .then(function (response) { if (!response.ok) throw new Error('Unable to load this day.'); return response.text(); })
+                    .then(function (html) { content.innerHTML = html; if (window.lucide) lucide.createIcons(); })
+                    .catch(function () { content.innerHTML = '<p class="py-8 text-center text-sm text-red-700" role="alert">Could not load these feed records. Close this panel and try again.</p>'; });
+            };
+            window.closeFeedCalendarForEdit = function () {
+                var dialog = document.getElementById('feedCalendarDayDialog');
+                if (!dialog) return;
+                dialog.classList.add('hidden');
+                dialog.inert = true;
+                dialog.setAttribute('aria-hidden', 'true');
+                document.body.classList.remove('overflow-hidden');
+                if (window.__feedCalendarDayOpener?.isConnected) window.__feedCalendarDayOpener.focus();
+            };
+            (function () {
+                var dialog = document.getElementById('feedCalendarDayDialog');
+                if (!dialog || window.__feedCalendarDayDialogBound) return;
+                window.__feedCalendarDayDialogBound = true;
+                function close(restoreFocus) {
+                    dialog.classList.add('hidden');
+                    dialog.setAttribute('aria-hidden', 'true');
+                    dialog.inert = true;
+                    document.body.classList.remove('overflow-hidden');
+                    if (restoreFocus && window.__feedCalendarDayOpener?.isConnected) window.__feedCalendarDayOpener.focus();
+                }
+                dialog.addEventListener('click', function (event) { if (event.target.closest('[data-feed-calendar-close]')) close(true); });
+                document.addEventListener('keydown', function (event) {
+                    if (dialog.classList.contains('hidden')) return;
+                    if (event.key === 'Escape') { event.preventDefault(); close(true); return; }
+                    if (event.key !== 'Tab') return;
+                    var focusables = Array.from(dialog.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter(function (el) { return el.offsetParent !== null; });
+                    if (!focusables.length) { event.preventDefault(); dialog.querySelector('section').focus(); return; }
+                    var first = focusables[0], last = focusables[focusables.length - 1];
+                    if (event.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
+                    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+                });
+            })();
+            </script>
+        @endif
 
     {{-- FCR Panel --}}
     <div id="tab-fcr" class="tab-panel hidden"
@@ -526,9 +597,4 @@
         })();
     </script>
 
-    @if($preselectedCageId ?? null)
-    <script>
-        feedSwitchTab('consumption');
-    </script>
-    @endif
 </turbo-frame>
