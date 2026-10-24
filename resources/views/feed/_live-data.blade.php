@@ -366,7 +366,7 @@
             <div id="feedCalendarDayDialog" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="feedCalendarDayTitle" aria-hidden="true" inert>
                 <button type="button" class="absolute inset-0 h-full w-full bg-black/40" data-feed-calendar-close aria-label="Close day details"></button>
                 <section class="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto rounded-t-2xl bg-white p-5 pb-24 shadow-2xl md:inset-y-0 md:left-auto md:right-0 md:max-h-none md:w-[min(620px,90vw)] md:rounded-none md:pb-5" tabindex="-1">
-                    <div class="mb-4 flex items-center justify-between gap-3"><h2 id="feedCalendarDayTitle" class="text-lg font-semibold">Feed details</h2><button type="button" class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full hover:bg-black/5" data-feed-calendar-close aria-label="Close day details">×</button></div>
+                    <div class="mb-4 flex items-center justify-between gap-3"><h2 id="feedCalendarDayTitle" class="min-w-0 truncate text-base font-semibold md:text-lg">Feed details</h2><button type="button" class="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full hover:bg-black/5" data-feed-calendar-close aria-label="Close day details">×</button></div>
                     <div id="feedCalendarDayContent" aria-live="polite"><p class="py-8 text-center text-sm text-[#615d59]">Select a day to view feedings.</p></div>
                 </section>
             </div>

@@ -54,7 +54,7 @@
         <span class="inline-flex items-center gap-1.5"><i class="h-2.5 w-2.5 rounded-sm border border-emerald-200 bg-emerald-50" aria-hidden="true"></i> HDEP ≥ 80%</span>
         <span class="inline-flex items-center gap-1.5"><i class="h-2.5 w-2.5 rounded-sm border border-amber-200 bg-amber-50" aria-hidden="true"></i> HDEP 50–79%</span>
         <span class="inline-flex items-center gap-1.5"><i class="h-2.5 w-2.5 rounded-sm border border-rose-200 bg-rose-50" aria-hidden="true"></i> HDEP &lt; 50%</span>
-        <span>✦ Override</span>
+        <span><span class="max-md:hidden" aria-hidden="true">✦ </span><span class="sr-only">Override</span></span>
         @if(count($calendarDays) === 0)<span class="sm:ml-auto">No records for {{ $start->format('F Y') }} with the selected filters.</span>@endif
     </div>
     <x-production-calendar-grid :weekdays="['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']" :label="'Daily egg production for '.$start->format('F Y')" class="recent-calendar-grid w-full">
@@ -91,10 +91,10 @@
                             if ($date === $today) $classes .= ' calendar-today';
                             if (!$summary) $classes .= ' border-[#F0F0F0]';
                             $marker = $summary && (int) $summary->override_count > 0
-                                ? '<span title="'.e($summary->override_count).' overridden records" class="text-xs text-violet-700"><span aria-hidden="true">✦</span><span class="sr-only">'.e($summary->override_count).' overridden records</span></span>'
+                                ? '<span title="'.e($summary->override_count).' overridden records" class="text-xs text-violet-700"><span class="max-md:hidden" aria-hidden="true">✦</span><span class="sr-only">'.e($summary->override_count).' overridden records</span></span>'
                                 : '';
                             $content = $summary
-                                ? '<span class="production-badge mt-auto inline-flex items-center gap-1 rounded font-bold whitespace-nowrap"><i data-lucide="egg" class="calendar-count-icon" aria-hidden="true"></i><span>'.e($record['eggs'] >= 1000 ? number_format($record['eggs'] / 1000, 1).'k' : number_format($record['eggs'])).'</span></span><span class="sr-only">'.e($record['sourceLabel']).'</span>'
+                                ? '<span class="production-badge mt-auto inline-flex items-center gap-1 rounded font-bold whitespace-nowrap"><i data-lucide="egg" class="calendar-count-icon max-md:hidden" aria-hidden="true"></i><span>'.e($record['eggs'] >= 1000 ? number_format($record['eggs'] / 1000, 1).'k' : number_format($record['eggs'])).'</span></span><span class="sr-only">'.e($record['sourceLabel']).'</span>'
                                 : '<span class="mt-auto block text-xs">—</span><span class="sr-only">No records</span>';
                         @endphp
                         <td class="align-top">

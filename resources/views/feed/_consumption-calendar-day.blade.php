@@ -5,11 +5,11 @@
     $dateLabel = \Carbon\Carbon::createFromFormat('!Y-m-d', $date)->format('l, j F Y');
 @endphp
 <div class="space-y-5" data-feed-calendar-day-detail>
-    <header class="rounded-xl bg-[#f6f5f4] p-4">
+    <header class="rounded-xl bg-[#f6f5f4] p-3 md:p-4">
         <h3 class="text-base font-semibold">{{ $dateLabel }}</h3>
         <p class="mt-2 text-lg font-bold">{{ number_format($totalKg, 1) }} kg <span class="text-sm font-normal text-[#615d59]">· {{ $logs->count() }} feedings</span></p>
         @if($isEstimated)
-            <span class="mt-2 inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-warning-bg text-warning border border-warning-border" title="Distributed estimates from a whole-farm entry"><i data-lucide="git-branch" class="w-3 h-3"></i> Estimated</span>
+            <span class="mt-2 inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-warning-bg text-warning border border-warning-border" title="Distributed estimates from a whole-farm entry"><i data-lucide="git-branch" class="hidden md:inline-block w-3 h-3" aria-hidden="true"></i> Estimated</span>
         @endif
     </header>
 

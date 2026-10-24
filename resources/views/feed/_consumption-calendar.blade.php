@@ -57,7 +57,7 @@
     <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-[#6B7280]" aria-label="Calendar legend">
         <span class="inline-flex items-center gap-1.5"><span class="inline-flex h-3 w-10 overflow-hidden rounded-sm border border-emerald-300" aria-hidden="true"><i class="flex-1 bg-emerald-50"></i><i class="flex-1 bg-emerald-100"></i><i class="flex-1 bg-emerald-200"></i></span> Low → high</span>
         <span class="inline-flex items-center gap-1.5"><i class="h-2 w-2 rounded-full bg-amber-600" aria-hidden="true"></i> Missing feeding</span>
-        <span class="inline-flex items-center gap-1.5" title="Amounts are distributed estimates from whole-farm entries."><i data-lucide="git-branch" class="h-3.5 w-3.5" aria-hidden="true"></i> Estimated</span>
+        <span class="inline-flex items-center gap-1.5" title="Amounts are distributed estimates from whole-farm entries."><i data-lucide="git-branch" class="hidden md:inline-block h-3.5 w-3.5" aria-hidden="true"></i> Estimated</span>
         @if($calendarDays->isEmpty())<span class="sm:ml-auto">No feed records for {{ $start->format('F Y') }} with the selected filters{{ $filterLabel ? ' ('.$filterLabel.')' : '' }}.</span>@endif
     </div>
 

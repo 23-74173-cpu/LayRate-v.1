@@ -44,6 +44,18 @@ turbo-frame.is-loading { opacity: 0.55; transition: opacity 150ms ease; }
   .feed-view-toggle a { position: relative; padding-left: 10px; padding-right: 10px; }
   .feed-view-toggle a::before { content: ""; position: absolute; inset: -4px -2px; }
 }
+@media (max-width: 767px) {
+  .recent-production-calendar .calendar-control,
+  .recent-production-calendar .calendar-nav,
+  .feed-month-calendar .feed-calendar-control,
+  .feed-month-calendar .calendar-nav { min-height: 44px; }
+  .recent-production-calendar .calendar-nav,
+  .feed-month-calendar .calendar-nav { min-width: 44px; }
+  .recent-view-toggle { height: 36px; }
+  .recent-view-toggle a,
+  .feed-view-toggle button { min-height: 32px; }
+  .feed-month-calendar .feed-calendar-day { min-height: 48px; }
+}
 .feed-month-calendar .feed-calendar-control { min-height: 40px; }
 .feed-month-calendar .calendar-nav { min-width: 40px; min-height: 40px; }
 .feed-month-calendar .production-calendar.feed-calendar-grid { width: 100%; min-width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 2px 6px; }

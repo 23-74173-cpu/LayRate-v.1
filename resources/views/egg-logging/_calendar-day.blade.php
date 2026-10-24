@@ -9,7 +9,7 @@
 @endphp
 
 <div class="space-y-5" data-calendar-day-detail>
-    <header class="rounded-xl bg-[#f6f5f4] p-4">
+    <header class="rounded-xl bg-[#f6f5f4] p-3 md:p-4">
         <h3 class="text-base font-semibold">{{ $dateLabel }}</h3>
         <div class="mt-3 grid grid-cols-3 gap-2 text-center">
             <div><div class="text-xs text-[#615d59]">Eggs</div><div class="text-lg font-bold">{{ number_format($eggsTotal) }}</div></div>
