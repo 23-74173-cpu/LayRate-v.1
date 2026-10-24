@@ -14,7 +14,7 @@
 
         <x-card>
         <x-slot:header>
-            <div class="flex items-center gap-3">
+            <div class="flex items-center justify-between gap-3">
                 @if($viewMode === 'calendar')
                     <h3 class="card-title">Production Calendar</h3>
                 @else
@@ -23,12 +23,13 @@
             </div>
         </x-slot:header>
 
+        <div class="mb-4 inline-flex min-h-11 w-full items-center rounded-lg border border-[#e6e6e6] bg-[#f6f5f4] p-1 sm:w-auto" role="group" aria-label="Recent Logs view">
+            <a href="{{ route('eggs.recent-logs', request()->only(['cage_id', 'cage_slot_id', 'breed']) + ($filters['logged_via'] ? ['logged_via[]' => (array) $filters['logged_via']] : []) + ['view' => 'calendar', 'month' => $month]) }}" @if($viewMode === 'calendar') aria-current="page" @endif class="inline-flex min-h-10 flex-1 items-center justify-center rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy {{ $viewMode === 'calendar' ? 'bg-white text-[#1f1f1f] shadow-sm' : 'text-[#615d59] hover:bg-white/70' }}">Calendar</a>
+            <a href="{{ route('eggs.recent-logs', request()->only(['cage_id', 'cage_slot_id', 'breed']) + ($filters['logged_via'] ? ['logged_via[]' => (array) $filters['logged_via']] : []) + ['view' => 'list', 'month' => $month]) }}" @if($viewMode === 'list') aria-current="page" @endif class="inline-flex min-h-10 flex-1 items-center justify-center rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy {{ $viewMode === 'list' ? 'bg-white text-[#1f1f1f] shadow-sm' : 'text-[#615d59] hover:bg-white/70' }}">List</a>
+        </div>
+
         <form id="recentLogsForm" onsubmit="return false" class="mb-4">
             <div class="recent-filters grid grid-cols-2 gap-3 max-md:grid-cols-12 max-md:items-end md:flex md:flex-nowrap md:items-center md:gap-x-4 md:gap-y-3">
-                <div class="recent-view-toggle inline-flex min-h-11 items-center rounded-lg border border-[#e6e6e6] bg-[#f6f5f4] p-1" role="group" aria-label="Recent Logs view">
-                    <a href="{{ route('eggs.recent-logs', request()->only(['cage_id', 'cage_slot_id', 'breed']) + ($filters['logged_via'] ? ['logged_via[]' => (array) $filters['logged_via']] : []) + ['view' => 'calendar', 'month' => $month]) }}" @if($viewMode === 'calendar') aria-current="page" @endif class="inline-flex min-h-10 flex-1 items-center justify-center rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy {{ $viewMode === 'calendar' ? 'bg-white text-[#1f1f1f] shadow-sm' : 'text-[#615d59] hover:bg-white/70' }}">Calendar</a>
-                    <a href="{{ route('eggs.recent-logs', request()->only(['cage_id', 'cage_slot_id', 'breed']) + ($filters['logged_via'] ? ['logged_via[]' => (array) $filters['logged_via']] : []) + ['view' => 'list', 'month' => $month]) }}" @if($viewMode === 'list') aria-current="page" @endif class="inline-flex min-h-10 flex-1 items-center justify-center rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy {{ $viewMode === 'list' ? 'bg-white text-[#1f1f1f] shadow-sm' : 'text-[#615d59] hover:bg-white/70' }}">List</a>
-                </div>
                 @if($viewMode === 'calendar')
                     <input type="hidden" name="view" value="calendar">
                     <input type="hidden" name="month" value="{{ $month }}">
@@ -81,7 +82,7 @@
                 {{-- Manual vs Sensor filter (checkbox chips) --}}
                 <div class="recent-filter-via max-md:col-span-12 max-md:col-start-1 max-md:row-start-4 md:col-span-1">
                     <label class="block text-sm mb-1" style="color: #615d59;">Logged Via</label>
-                    <div class="flex flex-wrap items-center gap-2 md:min-h-10">
+                    <div class="flex items-center gap-2 md:min-h-10">
                         @foreach(['manual' => 'Manual', 'sensor' => 'Sensor', 'unknown' => 'Unknown'] as $value => $label)
                         <label class="recent-via-chip inline-flex max-md:min-h-11 items-center gap-1.5 text-sm cursor-pointer" style="color: #31302e;">
                             <input type="checkbox" name="logged_via[]" value="{{ $value }}" onchange="recentLogsFilter()"
