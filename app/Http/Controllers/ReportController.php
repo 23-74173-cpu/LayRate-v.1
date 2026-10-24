@@ -260,7 +260,7 @@ class ReportController extends Controller
             'environment' => (function () use ($cageIds, $hasRange, $from, $to) {
                 $agg = $this->envReadings()->whereIn('cage_id', $cageIds)
                     ->real()
-                    ->when($hasRange, fn($q) => $q->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59']))
+                    ->when($hasRange, fn($q) => $q->where('recorded_at', '>=', $from . ' 00:00:00')->where('recorded_at', '<', Carbon::parse($to)->addDay()->toDateString()))
                     ->selectRaw('AVG(temperature_c) as avg_temp, AVG(humidity_pct) as avg_hum, COUNT(*) as readings, SUM(CASE WHEN temperature_c > 30 OR humidity_pct > 70 THEN 1 ELSE 0 END) as alerts')
                     ->first();
 
@@ -438,7 +438,7 @@ class ReportController extends Controller
 
         $envData = $this->envReadings()->whereIn('cage_id', $cageIds)
             ->real()
-            ->when($hasRange, fn($q) => $q->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59']))
+            ->when($hasRange, fn($q) => $q->where('recorded_at', '>=', $from . ' 00:00:00')->where('recorded_at', '<', Carbon::parse($to)->addDay()->toDateString()))
             ->selectRaw('cage_id, DATE(recorded_at) as log_date, AVG(temperature_c) as avg_temp, AVG(humidity_pct) as avg_hum')
             ->groupBy('cage_id', DB::raw('DATE(recorded_at)'))
             ->get()
@@ -521,7 +521,7 @@ class ReportController extends Controller
         return EnvironmentalLog::with('cage')
             ->real()
             ->whereIn('cage_id', $cageIds)
-            ->when($from && $to, fn($q) => $q->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59']))
+            ->when($from && $to, fn($q) => $q->where('recorded_at', '>=', $from . ' 00:00:00')->where('recorded_at', '<', Carbon::parse($to)->addDay()->toDateString()))
             ->orderByDesc('recorded_at')
             ->limit(200)
             ->get()
@@ -637,7 +637,7 @@ class ReportController extends Controller
         $hasRange = $from && $to;
         $rows = $this->envReadings()->whereIn('cage_id', $cageIds)
             ->real()
-            ->when($hasRange, fn($q) => $q->whereBetween('recorded_at', [$from . ' 00:00:00', $to . ' 23:59:59']))
+            ->when($hasRange, fn($q) => $q->where('recorded_at', '>=', $from . ' 00:00:00')->where('recorded_at', '<', Carbon::parse($to)->addDay()->toDateString()))
             ->selectRaw('DATE(recorded_at) as log_date, AVG(temperature_c) as avg_temp, AVG(humidity_pct) as avg_hum')
             ->groupBy(DB::raw('DATE(recorded_at)'))
             ->orderBy('log_date')

@@ -198,11 +198,11 @@ class EnvironmentController extends Controller
             ->orderBy('cage_id');
 
         if ($request->filled('date_from')) {
-            $query->where('recorded_at', '>=', $request->date_from);
+            $query->where('recorded_at', '>=', $request->date_from . ' 00:00:00');
         }
 
         if ($request->filled('date_to')) {
-            $query->where('recorded_at', '<=', $request->date_to . ' 23:59:59');
+            $query->where('recorded_at', '<', \Carbon\Carbon::parse($request->date_to)->addDay()->toDateString());
         }
 
         if ($request->filled('cage_id')) {
@@ -420,4 +420,3 @@ class EnvironmentController extends Controller
         Cache::forget(HardwareItem::ingestionCacheKey($serialNumber, $deviceId));
     }
 }
-

@@ -911,7 +911,7 @@ class DashboardController extends Controller
             ->whereIn('cage_id', $cageIds)
             // Same days as DATE(recorded_at) BETWEEN start AND end, written as
             // a time range so the recorded_at index can be used.
-            ->where('recorded_at', '<=', $endDate . ' 23:59:59')
+            ->where('recorded_at', '<', Carbon::parse($endDate)->addDay()->toDateString())
             ->when($startDate, fn ($q) => $q->where('recorded_at', '>=', $startDate . ' 00:00:00'))
             ->groupBy('cage_id', 'log_date')
             ->get();
@@ -971,7 +971,7 @@ class DashboardController extends Controller
             ->whereIn('cage_id', $cageIds)
             // Same days as DATE(recorded_at) BETWEEN start AND end, written as
             // a time range so the recorded_at index can be used.
-            ->where('recorded_at', '<=', $endDate . ' 23:59:59')
+            ->where('recorded_at', '<', Carbon::parse($endDate)->addDay()->toDateString())
             ->when($startDate, fn ($q) => $q->where('recorded_at', '>=', $startDate . ' 00:00:00'))
             ->groupBy('cage_id', 'log_date')
             ->get();
@@ -1332,7 +1332,7 @@ class DashboardController extends Controller
             ->whereIn('cage_id', $cageIds)
             // Same days as DATE(recorded_at) BETWEEN start AND end, written as
             // a time range so the recorded_at index can be used.
-            ->where('recorded_at', '<=', $endDate . ' 23:59:59')
+            ->where('recorded_at', '<', Carbon::parse($endDate)->addDay()->toDateString())
             ->when($startDate, fn ($q) => $q->where('recorded_at', '>=', $startDate . ' 00:00:00'))
             ->groupBy('cage_id', 'recorded_at')
             ->get();
@@ -1498,7 +1498,8 @@ class DashboardController extends Controller
         // the day's readings meant ~43,000 rows per DHT22 sensor.
         $todayEnv = EnvironmentalLog::whereIn('cage_id', $cages->pluck('id'))
             ->real()
-            ->whereBetween('recorded_at', [$today . ' 00:00:00', $today . ' 23:59:59'])
+            ->where('recorded_at', '>=', $today . ' 00:00:00')
+            ->where('recorded_at', '<', Carbon::parse($today)->addDay()->toDateString())
             ->selectRaw('COUNT(*) as readings, AVG(temperature_c) as avg_temp, AVG(humidity_pct) as avg_hum')
             ->first();
         $avgTemp = $todayEnv->readings ? round((float) $todayEnv->avg_temp, 1) : null;
