@@ -219,3 +219,54 @@ This is an additional phone-only fix for Egg Management → Recent Logs (“Prod
 ### Commit and log
 - Commit on `mobile-ui`, staging by explicit file path, and check `git diff --cached --stat` first. Do not push.
 - In the Results log, record: files changed, what each fix does, whether the floating button was one or two elements, the screenshot paths, and anything left alone.
+
+## Addendum: 640-767px band
+
+This addendum extends the approved phone UI through the 640–767px band without changing the layout below 640px or at `md` (768px) and above. The main rules still apply: UI only; no backend, bridge, ingestion, systemd, `.github/`, Composer, dependency, or test-suite changes; no push, deploy, or Pi access; stage by explicit path only.
+
+### Scope and breakpoint contract
+
+- Mobile classes are now `max-md:` and mobile CSS queries are `(width < 48rem)`. Desktop classes remain `md:` and desktop CSS remains `(width >= 48rem)`. At 767px every mobile rule is active; at 768px every `md:` rule is active and no mobile rule is active.
+- The band-specific refinements are additive and scoped to `@media (width >= 40rem) and (width < 48rem)`, so the approved 360–639px layout stays visually unchanged.
+- Landscape phones in the band use a second scope: `(min-width: 640px) and (width < 48rem) and (max-height: 500px)`.
+
+### What changed
+
+- `resources/css/app.css:1644-1771` — band page clearance (`10rem`), shared filter-chip 44px minimum, Recent Logs one-row Cage/Slot/Breed grid and two-row Logged Via/Reset grid, compact Recent Logs rows with visible HDEP, centered 560px Cage Performance table, wider band pagination window, capped/centered dock sheets with a sticky header, and the landscape right-side clearance for the tab rail, stock cards, Recent Logs filters, and dashboard analytics sections.
+- `resources/views/components/paginator.blade.php:52-68` — adds the band-only first/last + current ±2 page window. The base `.paginator-band-window` stays `display:none`; it is only enabled inside the band.
+- `resources/views/eggs/recent-logs.blade.php:17-84,99,115,126` — band filter classes, Reset placement, one-row Cage/Slot/Breed layout, and 768px JS breakpoints for row expansion.
+- `resources/views/dashboard.blade.php:50,70,82,88` — 44px band filter controls and the `.dashboard-page-content` clearance hook.
+- `resources/views/dashboard/_cage-performance-content.blade.php:72,163,203,212` — `.perf-ranking-wrap` hook and 768px row-expansion breakpoints.
+- `resources/views/components/kpi-card.blade.php:155,168` — KPI info target and mobile-label visibility through the band.
+- `resources/views/eggs/stocks.blade.php:17` — summary cards stay 2-column through the band and return to the existing 3/6-column tablet/desktop grid at 768px.
+- `resources/views/components/underline-tabs.blade.php:42-71` and `resources/views/eggs/_tabs.blade.php:114-121,229-233` — overflow detection and `data-tabs-scrollable` fade suppression; the fade is hidden when the rail fits at 767px.
+- `resources/views/components/quick-actions-dock.blade.php:112,122`, `resources/views/layouts/app.blade.php:651-794`, and `public/js/quick-dock.js:56,232` — dock sheet/backdrop, history/focus, and scroll-away behavior through 767px.
+- 31 Blade/JS files — all mobile-UI `max-sm:` classes were extended to `max-md:`. This includes dashboard, Recent Logs, Egg Logging, Stocks, Pre-Orders, Environment, Feed, Forecast, Hens, Cages, Notifications, Hardware, shared components, and the dock.
+
+### Verification
+
+- `npm run build` succeeded; `php artisan view:clear` and `php artisan view:cache` compiled all views.
+- Band viewports: 640x900, 700x900, 767x900, 667x375, 740x360.
+- Regression viewports: 360x800, 390x844, 414x896, 768x1024, 1280x900.
+- No horizontal page overflow at any checked width.
+- Band dashboard KPI cards stayed 2-column with equal row heights; labels measured 14px with no overflow; info targets measured 44x44. Dashboard Cage/date controls measured 44px; tab targets measured 44px.
+- Recent Logs Cage/Slot/Breed occupied one row; Logged Via and Reset occupied row two; select/chip/Reset heights were 44px. Log rows were 60px with HDEP visible. The band paginator showed `1 2 3 … 2086` on page 1 and `1 … 3 4 5 6 7 … 2086` on page 5, one line, 44px targets.
+- Cage Performance was capped at 560px on portrait band widths and 521px at 667 landscape after the dock gutter; cells were 14px, rows were 63px, and there was no horizontal overflow. At 768/1280 it stayed full-width (694px/438px) and unchanged.
+- Dock sheets measured 496px at 640, 556px at 700, and 560px at 740/767, all centered; at 667 they measured 523px. No sheet overlapped the dock. At 640/700/767 the sheet was 462px tall; at 667/740 it was 308/295px tall and scrolled, with the sticky header pinned to the sheet top and the close button reachable.
+- Landscape: the tab rail, stock summary cards, Recent Logs filter controls, and dashboard analytics cards ended before the dock column at 667x375 and 740x360; measured content/dock intersections were zero and sheets stayed clear.
+- Phone and desktop remained unchanged: 360/390/414 still used the approved phone layout, 768/1280 still used the existing tablet/desktop layout, the band pagination window was hidden outside the band, and the desktop dock menu was still a popover.
+- A normal Playwright navigation run (dashboard → environmental tab → Recent Logs → Egg Stocks sheet → close → 1280 dashboard) reported no console or page errors.
+
+### Intentionally untouched
+
+- All approved below-640px phone layouts and all 768px+ tablet/desktop layouts.
+- `public/js/filter-ui.js` still opens the phone filter sheet below 640px; the band intentionally keeps the shared filter bar inline.
+- Pre-existing `min-width: 640px` rules for the page header, modal actions, calendars, and page typography.
+- Unrelated working-tree work: controllers, `public/js/filter-ui.js`, tests, `serial-bridge/test_service_config.py`, untracked images/result directories, and the mixed JS edits in `dashboard.blade.php`, `chickens/index.blade.php`, and `eggs/pre-orders.blade.php`.
+
+### Results log
+
+- Status: DONE — 640–767px band extended, verified, and committed on `mobile-ui`; not pushed.
+- Screenshots: `mobile-ui-screenshots/band-{640x900,700x900,767x900,667x375,740x360}-*` and `mobile-ui-screenshots/check-{360x800,390x844,414x896,768x1024,1280x900}-*` (including `band-640x900-recent-logs-pagination-page5.png` and the landscape `*-stocks-sheet-scrolled.png`). Screenshots are intentionally not committed.
+- Commit: this commit; see the final report for the hash. No push, deploy, or Pi access.
+- No test suites were run, per the task rules.

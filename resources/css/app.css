@@ -192,7 +192,7 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 .perf-mobile-hdep,
 .perf-hens-label { display: none; }
 
-@media (max-width: 639.98px) {
+@media (width < 48rem) {
   .mobile-body-text { font-size: 14px !important; line-height: 1.35; }
   .mobile-icon-button { min-width: 44px; min-height: 44px; }
   .kpi-card {
@@ -346,7 +346,10 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 /* Unit hint under the mobile egg count; the desktop header already says Eggs. */
 .mobile-log-eggs-label { display: none; }
 
-@media (max-width: 639.98px) {
+/* Wider page window used only by the 640–767px band. */
+.paginator-band-window { display: none; }
+
+@media (width < 48rem) {
   .mobile-log-list {
     border: 1px solid #e6e6e6;
     border-radius: 12px;
@@ -510,7 +513,7 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
    and the card wraps: when icon + number don't fit side by side, the text
    drops under the icon. Cards that fit keep the side-by-side layout, so
    nothing changes where numbers already read correctly. */
-@media (min-width: 640px) {
+@media (min-width: 768px) {
   .kpi-card {
     flex-wrap: wrap;
     row-gap: 10px;
@@ -636,7 +639,7 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   word-break: break-word;
   min-width: 0;
 }
-@media (min-width: 640px) {
+@media (min-width: 768px) {
   .kpi-number,
   .kpi-value {
     font-size: 28px;
@@ -695,7 +698,7 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 
 /* Phone-only tab rail affordance; the fade hints at more tabs without
    clipping full labels or changing the tablet/desktop presentation. */
-@media (max-width: 639.98px) {
+@media (width < 48rem) {
   .mobile-tab-rail {
     position: relative;
     scroll-padding-inline: 12px;
@@ -722,6 +725,7 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
     scroll-snap-align: start;
   }
   .mobile-tab-rail [role="tab"]:focus-visible { scroll-margin-inline: 12px; }
+  .mobile-tab-rail[data-tabs-scrollable="false"]::after { display: none; }
 }
 
 /* (Retired: gradient-clipped KPI numbers were removed with the white-card
@@ -901,7 +905,7 @@ div[data-modal] > div.relative {
 }
 /* Tablet/desktop: keep the per-action stagger the dock had before the
    grid wrapper was introduced. */
-@media (min-width: 640px) {
+@media (min-width: 768px) {
   #dockFabMenu:not(.hidden) > .dock-actions-grid { animation: none; }
   #dockFabMenu:not(.hidden) .dock-actions-grid > * { animation: dockMenuItemIn 240ms cubic-bezier(0.16, 1, 0.3, 1) both; }
   #dockFabMenu:not(.hidden) .dock-actions-grid > *:nth-child(2) { animation-delay: 45ms; }
@@ -911,7 +915,7 @@ div[data-modal] > div.relative {
 /* Mobile: checklist and "+" actions become full-width bottom sheets that
    pin to the viewport bottom (fixed, so transformed ancestors cannot move
    them). */
-@media (max-width: 639.98px) {
+@media (width < 48rem) {
   #dataChecklistPanel {
     position: fixed !important;
     left: 0 !important;
@@ -1633,6 +1637,136 @@ html.chart-fs-open .page-wrapper { overflow: hidden !important; }
 
 /* Phones: icon-only chart controls get the 44px touch target even where the
    shared .chart-fs-btn base is a 32px circle. */
-@media (max-width: 639.98px) {
+@media (width < 48rem) {
   .chart-fs-btn { min-width: 44px; min-height: 44px; }
+}
+
+/* ── 640–767px band ───────────────────────────────────────────────────
+   Keep the phone layout in this band, but use the extra width instead of
+   stretching the 360px layout: filters share a row, Recent Logs keeps its
+   compact row plus HDEP, and the dock sheets cap and center. `md` (768px)
+   is still the exact desktop/tablet breakpoint. */
+@media (width >= 40rem) and (width < 48rem) {
+  /* The dock stacks two 56px buttons, so keep 10rem of page clearance (the
+     phone rules use less because that layout is approved as-is). */
+  .dashboard-page-content,
+  .recent-logs-page { padding-bottom: 10rem; }
+
+  /* Shared filter-bar quick chips were 40px; keep every band tap target
+     at least 44px without touching the approved phone/desktop sizes. */
+  [data-filter-bar] button { min-height: 44px; }
+
+  /* Recent Logs filters: Cage / Slot / Breed share one row; Reset joins
+     the Logged Via row so the dock never sits over a filter control. */
+  #recentLogsForm .recent-filters {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    align-items: end;
+    gap: 12px;
+  }
+  #recentLogsForm .recent-filter-cage { grid-column: span 4 / span 4; grid-row: 1; }
+  #recentLogsForm .recent-filter-slot { grid-column: span 4 / span 4; grid-row: 1; }
+  #recentLogsForm .recent-filter-breed { grid-column: span 4 / span 4; grid-row: 1; }
+  #recentLogsForm .recent-filter-via { grid-column: 1 / span 9; grid-row: 2; }
+  #recentLogsForm .recent-filter-reset { grid-column: 10 / span 3; grid-row: 2; align-self: end; justify-self: end; }
+
+  /* Recent Logs rows: stay compact, show HDEP, and keep comfortable padding. */
+  .mobile-log-list { max-width: 700px; margin-left: auto; margin-right: auto; }
+  .mobile-log-table .mobile-log-row {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    column-gap: 14px;
+    min-height: 60px;
+    padding: 10px 18px;
+  }
+  .mobile-log-table .mobile-log-row > .mobile-log-detail[data-label="HDEP"] {
+    display: block;
+    grid-column: 3;
+    grid-row: 1;
+    align-self: center;
+    padding: 0;
+    text-align: right;
+    white-space: nowrap;
+    font-size: 14px;
+    color: #615d59;
+  }
+  .mobile-log-table .mobile-log-row:not(.is-expanded) > .mobile-log-detail[data-label="HDEP"]::before {
+    content: "HDEP ";
+    color: #9ca3af;
+    font-weight: 500;
+  }
+  .mobile-log-table .mobile-log-eggs { grid-column: 4; }
+  .mobile-log-table .mobile-log-row.is-expanded > .mobile-log-detail[data-label="HDEP"] {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    padding-top: 8px;
+    text-align: left;
+  }
+
+  /* Cage Performance: compact table, centered so rows are not sparse. */
+  .perf-ranking-wrap { width: 100%; max-width: 560px; margin-left: auto; margin-right: auto; }
+  .perf-ranking-table .perf-table-row { min-height: 50px; }
+  .perf-ranking-table th,
+  .perf-ranking-table td { padding: 9px 10px; }
+
+  /* Pagination: show a wider page window when it fits on one line. */
+  .recent-logs-paginator .paginator-current,
+  .recent-logs-paginator .paginator-adjacent,
+  .recent-logs-paginator .paginator-edge,
+  .recent-logs-paginator .paginator-ellipsis { display: none !important; }
+  .recent-logs-paginator .paginator-band-window {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    order: 0;
+  }
+  .recent-logs-paginator .paginator-band-page {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 6px;
+    border-radius: 6px;
+    color: var(--color-navy);
+    font-size: 14px;
+    text-decoration: none;
+  }
+  .recent-logs-paginator .paginator-band-page:hover { background: rgba(0, 0, 0, 0.05); }
+  .recent-logs-paginator .paginator-band-page[aria-current="page"] { background: #f6f5f4; color: #1f1f1f; font-weight: 600; }
+  .recent-logs-paginator .paginator-band-gap { padding: 0 2px; color: #a39e98; font-size: 12px; }
+
+  /* Dock sheets: cap and center instead of spanning the full band width. */
+  #quickDock .fab-menu,
+  #dataChecklistPanel {
+    left: 0 !important;
+    right: 0 !important;
+    width: min(560px, calc(100vw - 144px)) !important;
+    max-width: 560px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    overscroll-behavior: contain;
+  }
+  #quickDock .fab-menu { padding-top: 0 !important; }
+  #quickDock .fab-menu .dock-fab-sheet-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding-top: 12px;
+    background: #ffffff;
+  }
+  #dataChecklistPanel {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Landscape phones in the band: the stacked dock reaches higher than in
+   portrait, so keep the tab rail and stock cards out of its column. */
+@media (min-width: 640px) and (width < 48rem) and (max-height: 500px) {
+  .mobile-tab-rail { padding-right: 72px; }
+  .mobile-tab-rail::after { right: 72px; }
+  #summaryCards { padding-right: 72px; }
+  #recentLogsForm .recent-filters { padding-right: 72px; }
+  .dashboard-page-content .analytics-section { padding-right: 72px; }
 }

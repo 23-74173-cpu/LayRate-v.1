@@ -4,7 +4,7 @@
 @push('head')
 <style>
     .wt5-record-highlight { outline: 2px solid var(--color-navy); outline-offset: -2px; background-color: #eef4ff; }
-    @media (max-width: 639.98px) {
+    @media (width < 48rem) {
         .environment-mobile-copy { font-size: 14px !important; line-height: 1.35; }
     }
 </style>
@@ -13,7 +13,7 @@
 @section('content')
 {{-- Bottom clearance: the fixed quick-dock floats over the viewport's
      bottom-right, so trailing space keeps it off the last table row/paginator. --}}
-<div class="space-y-5 max-sm:pb-40 sm:pb-16">
+<div class="space-y-5 max-md:pb-40 md:pb-16">
 
     <x-page-header title="Environment" subtitle="Monitor coop temperature, humidity, and alert thresholds" />
 
@@ -80,7 +80,7 @@
     <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
             <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Alert Thresholds</h2>
-            <button onclick="closeEnvThresholdsModal()" class="p-1.5 max-sm:min-w-11 max-sm:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+            <button onclick="closeEnvThresholdsModal()" class="p-1.5 max-md:min-w-11 max-md:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
         </div>
@@ -92,28 +92,28 @@
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TEMP MIN (°C)</label>
                     <input type="number" name="temp_min" required min="0" max="50" data-optimal-kind="temp" step="0.5"
                            value="{{ $thresholds['temp_min'] }}"
-                           class="w-full max-sm:min-h-11 border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+                           class="w-full max-md:min-h-11 border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                     <p class="text-xs mt-1 truncate" data-optimal-hint aria-live="polite"></p>
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TEMP MAX (°C)</label>
                     <input type="number" name="temp_max" required min="0" max="50" data-optimal-kind="temp" step="0.5"
                            value="{{ $thresholds['temp_max'] }}"
-                           class="w-full max-sm:min-h-11 border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+                           class="w-full max-md:min-h-11 border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                     <p class="text-xs mt-1 truncate" data-optimal-hint aria-live="polite"></p>
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">HUMIDITY MIN (%)</label>
                     <input type="number" name="hum_min" required min="0" max="100" data-optimal-kind="hum" step="1"
                            value="{{ $thresholds['hum_min'] }}"
-                           class="w-full max-sm:min-h-11 border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+                           class="w-full max-md:min-h-11 border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                     <p class="text-xs mt-1 truncate" data-optimal-hint aria-live="polite"></p>
                 </div>
                 <div>
                     <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">HUMIDITY MAX (%)</label>
                     <input type="number" name="hum_max" required min="0" max="100" data-optimal-kind="hum" step="1"
                            value="{{ $thresholds['hum_max'] }}"
-                           class="w-full max-sm:min-h-11 border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+                           class="w-full max-md:min-h-11 border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                     <p class="text-xs mt-1 truncate" data-optimal-hint aria-live="polite"></p>
                 </div>
             </div>
@@ -135,7 +135,7 @@
     <div class="relative w-full max-w-sm rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
             <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Override Environment Log</h2>
-            <button onclick="closeEnvLogOverride()" class="p-1.5 max-sm:min-w-11 max-sm:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+            <button onclick="closeEnvLogOverride()" class="p-1.5 max-md:min-w-11 max-md:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
         </div>
@@ -147,14 +147,14 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Temperature (°C)</label>
                     <input type="number" name="temperature_c" id="envOverrideTemp" step="0.1" required
-                           class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                           class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                     <x-input-error name="temperature_c" />
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Humidity (%)</label>
                     <input type="number" name="humidity_pct" id="envOverrideHum" step="1" required
-                           class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                           class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                     <x-input-error name="humidity_pct" />
                 </div>
@@ -162,8 +162,8 @@
 
             <div class="flex gap-3 mt-5">
                 <button type="button" onclick="closeEnvLogOverride()"
-                        class="flex-1 max-sm:min-h-11 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">Cancel</button>
-                <x-button type="submit" class="flex-1 max-sm:min-h-11 py-2.5">Save Override</x-button>
+                        class="flex-1 max-md:min-h-11 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">Cancel</button>
+                <x-button type="submit" class="flex-1 max-md:min-h-11 py-2.5">Save Override</x-button>
             </div>
         </form>
     </div>
@@ -175,7 +175,7 @@
     <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-2">
             <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Cooling Fan</h2>
-            <button onclick="closeEnvFanModal()" class="p-1.5 max-sm:min-w-11 max-sm:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+            <button onclick="closeEnvFanModal()" class="p-1.5 max-md:min-w-11 max-md:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
         </div>
@@ -198,17 +198,17 @@
 
         <div class="flex items-center gap-2 flex-wrap mt-5">
             <button type="button" data-relay-action="on"
-                    class="relay-action-btn max-sm:min-h-11 inline-flex items-center justify-center rounded-lg border border-[#D9D9D9] px-4 py-2 text-sm font-medium text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">Fan ON</button>
+                    class="relay-action-btn max-md:min-h-11 inline-flex items-center justify-center rounded-lg border border-[#D9D9D9] px-4 py-2 text-sm font-medium text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">Fan ON</button>
             <button type="button" data-relay-action="off"
-                    class="relay-action-btn max-sm:min-h-11 inline-flex items-center justify-center rounded-lg border border-[#D9D9D9] px-4 py-2 text-sm font-medium text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">Fan OFF</button>
+                    class="relay-action-btn max-md:min-h-11 inline-flex items-center justify-center rounded-lg border border-[#D9D9D9] px-4 py-2 text-sm font-medium text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">Fan OFF</button>
             <button type="button" data-relay-action="auto"
-                    class="relay-action-btn max-sm:min-h-11 inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors"
+                    class="relay-action-btn max-md:min-h-11 inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors"
                     style="background:var(--color-navy);">AUTO</button>
         </div>
 
         <div class="flex gap-3 mt-5">
             <button type="button" onclick="closeEnvFanModal()"
-                    class="flex-1 max-sm:min-h-11 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">Close</button>
+                    class="flex-1 max-md:min-h-11 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">Close</button>
         </div>
     </div>
 </div>
@@ -219,7 +219,7 @@
     <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-2">
             <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Manual Reading Entry</h2>
-            <button onclick="closeEnvManualModal()" class="p-1.5 max-sm:min-w-11 max-sm:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+            <button onclick="closeEnvManualModal()" class="p-1.5 max-md:min-w-11 max-md:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
         </div>
@@ -230,7 +230,7 @@
             <div class="sm:col-span-2">
                 <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color:#615d59;">Cage</label>
                 <select name="cage_id" id="envManualCage" required
-                        class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                        class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                         style="border-color:#e6e6e6;color:#1f1f1f;">
                     <option value="">Select cage…</option>
                     <option value="all" {{ old('cage_id') === 'all' ? 'selected' : '' }}>All Cages</option>
@@ -242,20 +242,20 @@
             <div>
                 <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color:#615d59;">Temperature (°C)</label>
                 <input type="number" name="temperature_c" id="envManualTemp" step="0.1" min="-10" max="60" required
-                       class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                       class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                        style="border-color:#e6e6e6;color:#1f1f1f;">
             </div>
             <div>
                 <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color:#615d59;">Humidity (%)</label>
                 <input type="number" name="humidity_pct" id="envManualHum" step="1" min="0" max="100" required
-                       class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                       class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                        style="border-color:#e6e6e6;color:#1f1f1f;">
             </div>
             <div id="envManualMsg" class="hidden mt-3 text-sm sm:col-span-2"></div>
             <div class="flex gap-3 sm:col-span-2">
                 <button type="button" onclick="closeEnvManualModal()"
-                        class="flex-1 max-sm:min-h-11 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">Cancel</button>
-                <button type="submit" class="flex-1 max-sm:min-h-11 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white hover:brightness-95 transition-colors"
+                        class="flex-1 max-md:min-h-11 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">Cancel</button>
+                <button type="submit" class="flex-1 max-md:min-h-11 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white hover:brightness-95 transition-colors"
                         style="background-color:var(--color-navy);">
                     <i data-lucide="save" class="w-4 h-4"></i> Save Reading
                 </button>

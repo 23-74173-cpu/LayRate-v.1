@@ -47,7 +47,7 @@
                     <span>Cage</span>
                 </label>
                 <select id="dashboardCageSelect" onchange="filterDashboard(this.value)"
-                        class="w-full sm:w-44 shrink-0 border border-[#D9D9D9] rounded-lg px-3 py-2.5 sm:py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy">
+                        class="w-full sm:w-44 shrink-0 border border-[#D9D9D9] rounded-lg px-3 py-2.5 sm:py-2 sm:max-md:min-h-11 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy">
                     <option value="all" {{ request('cage', 'all') === 'all' ? 'selected' : '' }}>All Cages ({{ $cages->count() }})</option>
                     @foreach($cages as $cage)
                         <option value="{{ $cage->cage_code }}" {{ request('cage') === $cage->cage_code ? 'selected' : '' }}>{{ $cage->cage_code }}</option>
@@ -67,7 +67,7 @@
                        max="{{ now()->toDateString() }}"
                        onchange="setDashboardFromDate(this.value)"
                        title="Show analytics from this date"
-                       class="w-full min-w-0 sm:w-44 sm:shrink-0 border border-[#D9D9D9] rounded-lg px-2.5 py-2.5 sm:py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy">
+                       class="w-full min-w-0 sm:w-44 sm:shrink-0 border border-[#D9D9D9] rounded-lg px-2.5 py-2.5 sm:py-2 sm:max-md:min-h-11 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy">
             </div>
 
             <div class="min-w-0 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 sm:shrink-0">
@@ -79,13 +79,13 @@
                        max="{{ now()->toDateString() }}"
                        onchange="setDashboardToDate(this.value)"
                        title="Show analytics up to this date"
-                       class="w-full min-w-0 sm:w-44 sm:shrink-0 border border-[#D9D9D9] rounded-lg px-2.5 py-2.5 sm:py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy">
+                       class="w-full min-w-0 sm:w-44 sm:shrink-0 border border-[#D9D9D9] rounded-lg px-2.5 py-2.5 sm:py-2 sm:max-md:min-h-11 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy">
             </div>
             </div>
         </div>
     </div>
 
-    <div class="space-y-6 max-sm:pb-24">
+    <div class="dashboard-page-content space-y-6 max-md:pb-24">
         {{-- Checklist lives in the global dock now (layouts/app) — kept out
              of the page so it never renders twice. --}}
 

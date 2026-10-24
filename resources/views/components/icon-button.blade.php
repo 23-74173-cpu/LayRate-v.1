@@ -24,7 +24,7 @@
         'red'     => ['c' => '#9b1c24', 'b' => '#f3cdd0', 'hb' => '#fbe4e6', 'hbc' => '#e8a3a9'],
     ];
     $p = $palette[$color] ?? $palette['neutral'];
-    $classes = 'inline-flex items-center justify-center p-1.5 rounded-full border transition-all shrink-0 max-sm:min-w-11 max-sm:min-h-11 ' . $class;
+    $classes = 'inline-flex items-center justify-center p-1.5 rounded-full border transition-all shrink-0 max-md:min-w-11 max-md:min-h-11 ' . $class;
 @endphp
 
 <button type="{{ $type }}"

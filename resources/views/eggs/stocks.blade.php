@@ -4,7 +4,7 @@
 @section('content')
 {{-- Bottom clearance: the fixed quick-dock floats over the viewport's
      bottom-right, so trailing space keeps it off the last table row/paginator. --}}
-<div class="space-y-5 max-sm:pb-40 sm:pb-16">
+<div class="space-y-5 max-md:pb-40 md:pb-16">
 
     <x-page-header title="Egg Management" subtitle="Track harvested egg inventory by size and freshness" subtitle-id="egg-header-subtitle" />
 
@@ -14,7 +14,7 @@
     <div class="space-y-5">
 
     {{-- ── Summary Cards — dashboard gradient KPI design ── --}}
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3" id="summaryCards">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3" id="summaryCards">
         @foreach($sizes as $size)
         @php
             $total = $totals[$size] ?? 0;
@@ -95,7 +95,7 @@
     <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
             <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Add Stock Batch</h2>
-            <button onclick="closeAddStockModal()" class="p-1.5 max-sm:min-w-11 max-sm:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+            <button onclick="closeAddStockModal()" class="p-1.5 max-md:min-w-11 max-md:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
         </div>
@@ -108,14 +108,14 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">HARVESTED DATE</label>
                     <input type="date" name="harvested_date" value="{{ now()->toDateString() }}" required
-                           class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                           class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                     <p class="text-xs mt-1" style="color: #9CA3AF;">Determines which harvest pool eggs are drawn from.</p>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG SIZE</label>
                     <select name="egg_size" id="addStockEggSize" required
-                            class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                            class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select size…</option>
                         @foreach(\App\Enums\EggSize::stockValues() as $sz)
@@ -128,7 +128,7 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG COUNT</label>
                     <input type="number" name="count" id="addStockCount" min="1" placeholder="Enter quantity" required
-                           class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                           class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                     <p id="addStockPoolHint" class="text-xs mt-1" style="color: #a39e98;">Select a size and source cage to see available pool.</p>
                     <p id="addStockExceedsWarning" class="hidden text-xs mt-1" style="color: #9B1C24;"></p>
@@ -144,31 +144,31 @@
                         <div>
                             <label class="block text-xs text-[#2D7D46] font-medium mb-1">Small</label>
                             <input type="number" name="classify_small" min="0" placeholder="0"
-                                   class="classify-input w-full max-sm:min-h-11 border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                                   class="classify-input w-full max-md:min-h-11 border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                         <div>
                             <label class="block text-xs text-info font-medium mb-1">Medium</label>
                             <input type="number" name="classify_medium" min="0" placeholder="0"
-                                   class="classify-input w-full max-sm:min-h-11 border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                                   class="classify-input w-full max-md:min-h-11 border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                         <div>
                             <label class="block text-xs text-[#C2703E] font-medium mb-1">Large</label>
                             <input type="number" name="classify_large" min="0" placeholder="0"
-                                   class="classify-input w-full max-sm:min-h-11 border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                                   class="classify-input w-full max-md:min-h-11 border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                         <div>
                             <label class="block text-xs font-medium mb-1" style="color: var(--color-teal-600);">XL</label>
                             <input type="number" name="classify_xl" min="0" placeholder="0"
-                                   class="classify-input w-full max-sm:min-h-11 border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                                   class="classify-input w-full max-md:min-h-11 border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                         <div>
                             <label class="block text-xs text-[#6B4C8A] font-medium mb-1">Jumbo</label>
                             <input type="number" name="classify_jumbo" min="0" placeholder="0"
-                                   class="classify-input w-full max-sm:min-h-11 border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                                   class="classify-input w-full max-md:min-h-11 border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                     </div>
@@ -182,7 +182,7 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">SOURCE CAGE <span class="font-normal normal-case tracking-normal" style="color: #9CA3AF;">— pool scope</span></label>
                     <select name="cage_id" id="stockCageSelect"
-                            class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                            class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">All Cages (farm-wide pool)</option>
                         @foreach($cages as $cage)
@@ -194,7 +194,7 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">PRODUCTION LOG <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
                     <select name="source_production_log_id" id="stockLogSelect"
-                            class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                            class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">Select log…</option>
                     </select>
@@ -203,9 +203,9 @@
 
             <div class="flex gap-3 mt-5">
                 <button type="button" onclick="closeAddStockModal()"
-                        class="flex-1 max-sm:min-h-11 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">Cancel</button>
+                        class="flex-1 max-md:min-h-11 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">Cancel</button>
                 <button type="submit" id="addStockBtn"
-                        class="flex-1 max-sm:min-h-11 py-2.5 text-sm font-medium rounded-lg bg-navy text-white hover:bg-navy transition-colors">Add Stock</button>
+                        class="flex-1 max-md:min-h-11 py-2.5 text-sm font-medium rounded-lg bg-navy text-white hover:bg-navy transition-colors">Add Stock</button>
             </div>
         </form>
     </div>
@@ -216,7 +216,7 @@
     <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
             <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Edit Stock Batch</h2>
-            <button onclick="closeEditStockModal()" class="p-1.5 max-sm:min-w-11 max-sm:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+            <button onclick="closeEditStockModal()" class="p-1.5 max-md:min-w-11 max-md:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
         </div>
@@ -228,7 +228,7 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG SIZE</label>
                     <select name="egg_size" id="editEggSize" required
-                            class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                            class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="small">Small</option>
                         <option value="medium">Medium</option>
@@ -242,14 +242,14 @@
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG COUNT</label>
                     <input type="number" name="count" id="editEggCount" min="1" required
-                            class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                            class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                     <x-input-error name="count" />
                 </div>
                 <div>
                     <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">HARVESTED DATE</label>
                     <input type="date" name="harvested_date" id="editHarvestedDate" required
-                            class="w-full max-sm:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
+                            class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                     <x-input-error name="harvested_date" />
                 </div>
@@ -257,10 +257,10 @@
 
             <div class="flex gap-3 mt-5">
                 <button type="button" onclick="closeEditStockModal()"
-                        class="flex-1 max-sm:min-h-11 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">
+                        class="flex-1 max-md:min-h-11 py-2.5 text-sm font-medium rounded-lg border border-[#e6e6e6] text-[#1f1f1f] hover:bg-[#f6f5f4] transition-colors">
                     Cancel
                 </button>
-                <x-button type="submit" class="flex-1 max-sm:min-h-11 py-2.5">
+                <x-button type="submit" class="flex-1 max-md:min-h-11 py-2.5">
                     Save Changes
                 </x-button>
             </div>
@@ -274,7 +274,7 @@
     <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
             <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Egg Weights</h2>
-            <button onclick="closeEggWeightsModal()" class="p-1.5 max-sm:min-w-11 max-sm:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+            <button onclick="closeEggWeightsModal()" class="p-1.5 max-md:min-w-11 max-md:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
         </div>
@@ -343,7 +343,7 @@
     <div class="relative w-full max-w-lg rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
             <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Thresholds</h2>
-            <button onclick="closeThresholdsModal()" class="p-1.5 max-sm:min-w-11 max-sm:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+            <button onclick="closeThresholdsModal()" class="p-1.5 max-md:min-w-11 max-md:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
         </div>

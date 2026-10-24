@@ -3,7 +3,7 @@
     @include('environment._reference-card')
 
     {{-- ── Top Metric Cards — dashboard gradient KPI design ── --}}
-    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-8">
         <x-kpi-card
             label="Coop Avg Temp" infoKey="environment.avg-temp"
             icon="thermometer"
@@ -23,7 +23,7 @@
             <div class="mobile-body-text text-xs mt-1.5 font-medium" style="color: #615d59;">Spread {{ $humValues->count() > 1 ? number_format(max(0, $humValues->max() - $humValues->min()), 1) . '% across cages' : 'across cages' }}</div>
         </x-kpi-card>
         <x-kpi-card
-            class="col-span-2 sm:col-span-1"
+            class="col-span-2 md:col-span-1"
             label="Active Sensors" infoKey="environment.active-sensors"
             icon="radio"
             cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))"
@@ -56,7 +56,7 @@
                 <div class="flex items-center justify-between mb-3">
                     <div class="flex items-center gap-2">
                         <span class="w-2.5 h-2.5 rounded-full" style="background:{{ $color }}"></span>
-                        <span class="text-sm font-semibold text-[#1f1f1f] max-sm:whitespace-nowrap">{{ $r->cage->cage_code }}</span>
+                        <span class="text-sm font-semibold text-[#1f1f1f] max-md:whitespace-nowrap">{{ $r->cage->cage_code }}</span>
                     </div>
                     <span class="mobile-body-text text-[10px] font-semibold tracking-[0.05em] uppercase px-2 py-0.5 rounded-full"
                           style="background:{{ $r->source === 'Manual Log' ? '#fdf3e0' : '#e8f5ec' }};color:{{ $r->source === 'Manual Log' ? '#8a5a00' : '#1f6b3a' }};">{{ $r->source }}</span>
@@ -117,11 +117,11 @@
             <div class="px-4 py-3 flex items-center justify-between">
                 <div class="flex items-center gap-2">
                     <span class="w-2.5 h-2.5 rounded-full" style="background:{{ $cage->color }}"></span>
-                    <span class="text-sm font-medium text-[#333333] max-sm:whitespace-nowrap">{{ $cage->cage_code }}</span>
+                    <span class="text-sm font-medium text-[#333333] max-md:whitespace-nowrap">{{ $cage->cage_code }}</span>
                 </div>
                 <span class="mobile-body-text text-[10px] font-semibold tracking-[0.05em] uppercase px-2 py-0.5 rounded-full bg-[#F5F6F8] text-[#a39e98]">Offline</span>
             </div>
-            <div class="px-4 py-6 text-center text-xs max-sm:text-sm text-[#6B7280]">
+            <div class="px-4 py-6 text-center text-xs max-md:text-sm text-[#6B7280]">
                 <i data-lucide="wifi-off" class="w-5 h-5 mx-auto mb-2 text-gray-300"></i>
                 {{ ! $hasSensor ? 'No sensor assigned' : 'No sensor data' }}
             </div>
@@ -134,7 +134,7 @@
     <div class="flex items-center justify-between mb-3">
         <span class="text-sm font-semibold text-[#1f1f1f]">Trend Charts</span>
         <select id="trendRange" onchange="changeTrendRange(this.value)"
-                class="max-sm:min-h-11 text-xs max-sm:text-sm border border-[#D9D9D9] rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-navy/30">
+                class="max-md:min-h-11 text-xs max-md:text-sm border border-[#D9D9D9] rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-navy/30">
             <option value="24h" {{ ($range ?? '24h') === '24h' ? 'selected' : '' }}>24 Hours</option>
             <option value="week" {{ ($range ?? '24h') === 'week' ? 'selected' : '' }}>Week</option>
             <option value="month" {{ ($range ?? '24h') === 'month' ? 'selected' : '' }}>Month</option>

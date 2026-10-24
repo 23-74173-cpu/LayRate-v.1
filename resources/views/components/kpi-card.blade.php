@@ -152,7 +152,7 @@
          card. Click is caught in the capture phase by kpi-info.js, which also
          stops card navigation. The per-cage breakdown (data-kpi) moved inside
          the popover as an explicit action. --}}
-    <button type="button" class="kpi-info-btn max-sm:w-11 max-sm:h-11"
+    <button type="button" class="kpi-info-btn max-md:w-11 max-md:h-11"
             data-kpi-popover
             data-info-title="{{ $plainLabel }}"
             data-info-text="{{ $infoText ?? '' }}"
@@ -165,11 +165,11 @@
             <i data-lucide="{{ $icon }}"></i>
         </span>
     @endif
-    <div class="relative min-w-0 flex-1 pr-10 max-sm:pr-12">
+    <div class="relative min-w-0 flex-1 pr-10 max-md:pr-12">
         <div class="flex items-start justify-between gap-2">
             <span class="kpi-label min-w-0 flex-1">
                 @if($mobileLabel !== null && trim((string) $mobileLabel) !== '')
-                    <span class="max-sm:hidden">{{ $label }}</span><span class="sm:hidden">{{ $mobileLabel }}</span>
+                    <span class="max-md:hidden">{{ $label }}</span><span class="md:hidden">{{ $mobileLabel }}</span>
                 @else
                     {{ $label }}
                 @endif

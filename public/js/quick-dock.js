@@ -53,7 +53,7 @@
         p.classList.toggle('hidden', !willShow);
         p.setAttribute('aria-hidden', willShow ? 'false' : 'true');
         var backdrop = document.getElementById('dockFabBackdrop');
-        if (backdrop) backdrop.classList.toggle('hidden', !willShow || !window.matchMedia('(max-width: 639.98px)').matches);
+        if (backdrop) backdrop.classList.toggle('hidden', !willShow || !window.matchMedia('(max-width: 767.98px)').matches);
         if (btn) btn.setAttribute('aria-expanded', willShow ? 'true' : 'false');
         if (willShow) {
             if (window.lucide) lucide.createIcons();
@@ -229,7 +229,7 @@
     document.addEventListener('scroll', function () {
         var d = dock();
         if (!d) return;
-        var isPhone = window.matchMedia('(max-width: 639.98px)').matches;
+        var isPhone = window.matchMedia('(max-width: 767.98px)').matches;
         var scroller = document.querySelector('main.page-wrapper');
         var currentY = scroller ? scroller.scrollTop : (window.scrollY || document.documentElement.scrollTop || 0);
         var previousY = Number(d.dataset.scrollY || currentY);

@@ -16,7 +16,7 @@
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 mb-0.5">
                             @if($alert->cage)
-                            <a href="{{ route('cages.index') }}" class="max-sm:min-h-11 inline-flex items-center text-xs max-sm:text-sm font-medium hover:underline max-sm:whitespace-nowrap" style="color: #31302e;">{{ $alert->cage->cage_code }}</a>
+                            <a href="{{ route('cages.index') }}" class="max-md:min-h-11 inline-flex items-center text-xs max-md:text-sm font-medium hover:underline max-md:whitespace-nowrap" style="color: #31302e;">{{ $alert->cage->cage_code }}</a>
                             @else
                             <span class="text-xs font-medium" style="color: #31302e;">Farm-wide</span>
                             @endif
@@ -31,7 +31,7 @@
                             @if(!$alert->is_read)
                             <form method="POST" action="{{ route('alerts.read', $alert) }}" class="inline" data-turbo="false">
                                 @csrf
-                                <button type="submit" class="max-sm:min-h-11 text-xs max-sm:text-sm font-medium hover:underline" style="color: var(--color-navy);">Mark read</button>
+                                <button type="submit" class="max-md:min-h-11 text-xs max-md:text-sm font-medium hover:underline" style="color: var(--color-navy);">Mark read</button>
                             </form>
                             @else
                             <span class="text-xs" style="color: #6B7280;">Read</span>

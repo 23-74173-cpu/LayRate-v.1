@@ -69,7 +69,7 @@ $hasData = $totalEggs > 0 || $performance->contains(fn ($p) => $p['hdep'] > 0);
                          :actionUrl="route('eggs.logging')" actionLabel="Log Eggs" />
     @else
         {{-- Ranking table (top of section) --}}
-        <div class="rounded-xl border border-[#D9D9D9] overflow-hidden mb-4">
+        <div class="perf-ranking-wrap rounded-xl border border-[#D9D9D9] overflow-hidden mb-4">
             <table class="perf-ranking-table w-full text-left border-collapse">
                 <thead>
                     <tr class="text-left text-[10px] font-semibold uppercase tracking-[0.125px] text-[#6B7280]" style="background-color:#F7F7F5;">
@@ -160,7 +160,7 @@ if (window.lucide && typeof window.lucide.createIcons === 'function') {
 if (!window.__dashPerfToggleBound) {
     window.__dashPerfToggleBound = true;
     document.addEventListener('click', function (e) {
-        if (window.matchMedia('(max-width: 639.98px)').matches) {
+        if (window.matchMedia('(max-width: 767.98px)').matches) {
             var mobileRow = e.target.closest('.perf-table-row');
             if (mobileRow && !e.target.closest('button, a')) {
                 var expanded = mobileRow.classList.toggle('is-expanded');
@@ -200,7 +200,7 @@ if (!window.__dashPerfToggleBound) {
         }
     });
     document.addEventListener('keydown', function (e) {
-        if (!window.matchMedia('(max-width: 639.98px)').matches) return;
+        if (!window.matchMedia('(max-width: 767.98px)').matches) return;
         var row = e.target.closest('.perf-table-row');
         if (!row || (e.key !== 'Enter' && e.key !== ' ')) return;
         if (e.target.closest('button, a')) return;
@@ -209,7 +209,7 @@ if (!window.__dashPerfToggleBound) {
         row.setAttribute('aria-expanded', expanded ? 'true' : 'false');
     });
     function decoratePerfRows() {
-        var phone = window.matchMedia('(max-width: 639.98px)').matches;
+        var phone = window.matchMedia('(max-width: 767.98px)').matches;
         document.querySelectorAll('.perf-table-row').forEach(function (row) {
             if (phone) {
                 row.setAttribute('tabindex', '0');

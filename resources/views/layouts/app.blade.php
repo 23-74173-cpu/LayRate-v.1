@@ -476,7 +476,7 @@
                 @hasSection('header-clock')
                 <span class="text-xs text-ink-muted whitespace-nowrap hidden sm:inline">@yield('header-clock')</span>
                 @endif
-                <a href="{{ route('notifications.index') }}" class="relative max-sm:min-w-11 max-sm:min-h-11 inline-flex items-center justify-center rounded-full p-1.5 text-ink hover:bg-black/5 transition-colors" aria-label="Notifications">
+                <a href="{{ route('notifications.index') }}" class="relative max-md:min-w-11 max-md:min-h-11 inline-flex items-center justify-center rounded-full p-1.5 text-ink hover:bg-black/5 transition-colors" aria-label="Notifications">
                     <i data-lucide="bell" class="w-5 h-5 block"></i>
                     @if($globalAlertCount > 0)
                     <span class="absolute -top-0.5 -right-0.5 min-w-3.5 h-3.5 px-0.5 bg-alert-text text-white text-[10px] leading-3.5 rounded-full flex items-center justify-center font-bold">{{ $globalAlertCount }}</span>
@@ -484,7 +484,7 @@
                 </a>
                 <div class="relative pl-2 border-l border-hairline">
                     <button id="profileMenuBtn" type="button"
-                            class="max-sm:min-h-11 flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-black/5 transition-colors"
+                            class="max-md:min-h-11 flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-black/5 transition-colors"
                             aria-haspopup="true" aria-expanded="false" aria-label="Account menu">
                         @php
                             $initials = collect(preg_split('/\s+/', trim(auth()->user()->name ?? '')))->filter()->map(fn($p) => mb_strtoupper(mb_substr($p, 0, 1)))->take(2)->implode('');
@@ -497,10 +497,10 @@
                         <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-ink-muted"></i>
                     </button>
                     <div id="profileMenu" class="hidden absolute right-0 top-full mt-2 w-44 rounded-lg border border-hairline bg-surface shadow-soft py-1 z-50">
-                        <a href="{{ route('profile') }}" class="max-sm:min-h-11 flex items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/5 transition-colors">
+                        <a href="{{ route('profile') }}" class="max-md:min-h-11 flex items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/5 transition-colors">
                             <i data-lucide="user" class="w-4 h-4"></i> Profile
                         </a>
-                        <a href="{{ route('profile', ['tab' => 'settings']) }}" class="max-sm:min-h-11 flex items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/5 transition-colors">
+                        <a href="{{ route('profile', ['tab' => 'settings']) }}" class="max-md:min-h-11 flex items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/5 transition-colors">
                             <i data-lucide="settings" class="w-4 h-4"></i> Settings
                         </a>
                         <div class="my-1 border-t border-hairline"></div>
@@ -648,7 +648,7 @@
                 toggle.setAttribute('aria-label', 'Close menu');
                 if (icon) icon.style.transform = 'rotate(45deg)';
                 var backdrop = document.getElementById('dockFabBackdrop');
-                var isPhoneSheet = window.matchMedia('(max-width: 639.98px)').matches;
+                var isPhoneSheet = window.matchMedia('(max-width: 767.98px)').matches;
                 if (backdrop && isPhoneSheet) backdrop.classList.remove('hidden');
                 if (isPhoneSheet) {
                     toggle.dataset.mobileSheetOpen = 'true';
@@ -691,7 +691,7 @@
         }
         var closeSheet = e.target.closest('[data-dock-close-fab]');
         var sheetBackdrop = e.target.closest('[data-dock-fab-backdrop]');
-        if (sheetBackdrop && window.matchMedia('(max-width: 639.98px)').matches) {
+        if (sheetBackdrop && window.matchMedia('(max-width: 767.98px)').matches) {
             var checklistPanel = document.getElementById('dataChecklistPanel');
             var checklistButton = document.querySelector('#quickDock [data-dock-action="checklist"]');
             if (checklistPanel && !checklistPanel.classList.contains('hidden')) {
@@ -725,7 +725,7 @@
             return;
         }
         var pageAction = e.target.closest('#dockFabMenu [data-dock-action-list] button:not([data-dock-close-fab]):not(.dock-settings-heading), #dockFabMenu [data-dock-action-list] a, #dockFabMenu [data-dock-action-list] input, #dockFabMenu [data-dock-action-list] select');
-        if (pageAction && window.matchMedia('(max-width: 639.98px)').matches) {
+        if (pageAction && window.matchMedia('(max-width: 767.98px)').matches) {
             var actionMenu = document.getElementById('dockFabMenu');
             var actionFab = actionMenu && actionMenu.closest('.fab');
             var actionToggle = actionFab && actionFab.querySelector('.fab-toggle');
@@ -777,7 +777,7 @@
             }
         }
         document.addEventListener('click', function (e) {
-            if (window.matchMedia('(max-width: 639.98px)').matches && e.target.closest('#quickDock .fab-toggle, #quickDock [data-dock-action="checklist"]')) {
+            if (window.matchMedia('(max-width: 767.98px)').matches && e.target.closest('#quickDock .fab-toggle, #quickDock [data-dock-action="checklist"]')) {
                 var menu = document.getElementById('dockFabMenu');
                 var panel = document.getElementById('dataChecklistPanel');
                 var willOpen = e.target.closest('.fab-toggle')
@@ -791,7 +791,7 @@
         document.addEventListener('keydown', function(e) {
             var menu = document.getElementById('dockFabMenu');
             var checklist = document.getElementById('dataChecklistPanel');
-            if (e.key === 'Tab' && menu && !menu.classList.contains('hidden') && window.matchMedia('(max-width: 639.98px)').matches) {
+            if (e.key === 'Tab' && menu && !menu.classList.contains('hidden') && window.matchMedia('(max-width: 767.98px)').matches) {
                 var focusable = Array.prototype.filter.call(menu.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'), function (el) {
                     return el.offsetParent !== null;
                 });

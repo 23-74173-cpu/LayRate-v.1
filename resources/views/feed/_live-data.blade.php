@@ -251,7 +251,7 @@
                                     onclick="openEditBatch({{ $batch->id }}, '{{ addslashes($batch->brand ?? '') }}', {{ $batch->crude_protein }}, {{ $batch->total_quantity_kg ?? 'null' }}, {{ $batch->unit_cost ?? 'null' }}, {{ $batch->low_stock_threshold ?? 'null' }}, '{{ addslashes($batch->notes ?? '') }}')" />
                                 @can('admin')
                                 <button onclick="deleteBatch({{ $batch->id }})"
-                                        class="flex items-center justify-center gap-1 text-xs border border-[#D9D9D9] px-2.5 py-1.5 rounded hover:bg-red-50 text-[#6B7280] max-sm:min-w-11 max-sm:min-h-11 max-sm:px-0"
+                                        class="flex items-center justify-center gap-1 text-xs border border-[#D9D9D9] px-2.5 py-1.5 rounded hover:bg-red-50 text-[#6B7280] max-md:min-w-11 max-md:min-h-11 max-md:px-0"
                                         aria-label="Delete batch">
                                     <i data-lucide="trash-2" class="w-3 h-3" style="color: #9b1c24;"></i>
                                 </button>

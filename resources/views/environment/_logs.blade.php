@@ -9,31 +9,31 @@
             <div>
                 <label class="block text-xs text-[#6B7280] mb-1">From</label>
                 <input type="date" name="date_from" value="{{ request('date_from') }}"
-                       class="w-full min-w-0 max-sm:min-h-11 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30">
+                       class="w-full min-w-0 max-md:min-h-11 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30">
             </div>
             <div>
                 <label class="block text-xs text-[#6B7280] mb-1">To</label>
                 <input type="date" name="date_to" value="{{ request('date_to') }}"
-                       class="w-full min-w-0 max-sm:min-h-11 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30">
+                       class="w-full min-w-0 max-md:min-h-11 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30">
             </div>
             <div>
                 <label class="block text-xs text-[#6B7280] mb-1">Cage</label>
                 <select name="cage_id"
-                        class="w-full min-w-0 max-sm:min-h-11 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30">
+                        class="w-full min-w-0 max-md:min-h-11 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30">
                     <option value="">All Cages</option>
                     @foreach($cages as $id => $code)
                     <option value="{{ $id }}" {{ request('cage_id') == $id ? 'selected' : '' }}>{{ $code }}</option>
                     @endforeach
                 </select>
             </div>
-            <button type="submit" class="w-full sm:w-auto max-sm:min-h-11 text-center text-xs max-sm:text-sm px-4 py-1.5 rounded-lg font-medium text-white transition-colors" style="background-color:var(--color-navy);">Filter</button>
+            <button type="submit" class="w-full sm:w-auto max-md:min-h-11 text-center text-xs max-md:text-sm px-4 py-1.5 rounded-lg font-medium text-white transition-colors" style="background-color:var(--color-navy);">Filter</button>
             @if(request()->hasAny(['date_from','date_to','cage_id']))
-            <a href="{{ route('environment.logs') }}" data-turbo-frame="environment-logs" class="col-span-2 sm:col-span-1 w-full sm:w-auto max-sm:min-h-11 inline-flex items-center justify-center text-xs max-sm:text-sm px-4 py-1.5 rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">Clear</a>
+            <a href="{{ route('environment.logs') }}" data-turbo-frame="environment-logs" class="col-span-2 sm:col-span-1 w-full sm:w-auto max-md:min-h-11 inline-flex items-center justify-center text-xs max-md:text-sm px-4 py-1.5 rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">Clear</a>
             @endif
         </form>
 
         <div class="mobile-wide-table overflow-x-auto">
-        <table class="w-full max-sm:min-w-[900px] mobile-sticky-first">
+        <table class="w-full max-md:min-w-[900px] mobile-sticky-first">
             <thead>
                 <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium" data-sticky-label>Date</th>
@@ -53,7 +53,7 @@
                     $cageCode = $cages[$log->cage_id] ?? 'Cage #'.$log->cage_id;
                 @endphp
                 <tr data-env-log-cage="{{ $log->cage_id }}" data-env-log-date="{{ $log->log_date }}" class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
-                    <td class="px-5 py-3.5 text-sm text-[#333333] font-mono max-sm:whitespace-nowrap" data-sticky-label>{{ \App\Services\ReportingDateService::displayDate($log->log_date) }}</td>
+                    <td class="px-5 py-3.5 text-sm text-[#333333] font-mono max-md:whitespace-nowrap" data-sticky-label>{{ \App\Services\ReportingDateService::displayDate($log->log_date) }}</td>
                     <td class="px-5 py-3.5 text-sm font-medium text-[#333333]">{{ $cageCode }}</td>
                     <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $log->avg_temp }}°C</td>
                     <td class="px-5 py-3.5 text-sm text-[#6B7280]">{{ $log->min_temp }}–{{ $log->max_temp }}°C</td>
@@ -64,7 +64,7 @@
                     </td>
                     <td class="px-5 py-3.5">
                         <button type="button" onclick="openEnvLogOverride({{ $log->cage_id }}, '{{ $log->log_date }}', {{ $log->avg_temp }}, {{ $log->avg_hum }}, '{{ $cageCode }}')"
-                                class="max-sm:min-h-11 text-xs max-sm:text-sm px-2.5 py-1 rounded border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">
+                                class="max-md:min-h-11 text-xs max-md:text-sm px-2.5 py-1 rounded border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] transition-colors">
                             Override
                         </button>
                     </td>

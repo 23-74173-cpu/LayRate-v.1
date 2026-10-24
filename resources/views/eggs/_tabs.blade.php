@@ -10,7 +10,7 @@
         ] as $key => $tab)
             @php
                 $isActive = $key === $activeTab;
-                $classes = 'max-sm:min-h-[44px] inline-flex items-center pb-2 text-sm font-medium border-b-2 transition-colors shrink-0 whitespace-nowrap ' .
+                $classes = 'max-md:min-h-[44px] inline-flex items-center pb-2 text-sm font-medium border-b-2 transition-colors shrink-0 whitespace-nowrap ' .
                     ($isActive ? 'border-navy text-navy' : 'border-transparent text-[#6B7280] hover:text-[#333]');
             @endphp
             <a href="{{ route($tab['route']) }}" class="{{ $classes }}" role="tab" aria-selected="{{ $isActive ? 'true' : 'false' }}" @if($isActive) aria-current="page" @endif
@@ -88,7 +88,7 @@
         <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
             <div class="flex items-center justify-between mb-1">
                 <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Egg Prices</h2>
-                <button type="button" onclick="closeEggPricesModal()" class="p-1.5 max-sm:min-w-11 max-sm:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
+                <button type="button" onclick="closeEggPricesModal()" class="p-1.5 max-md:min-w-11 max-md:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                     <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
                 </button>
             </div>
@@ -110,6 +110,13 @@
     (function() {
         var links = document.querySelectorAll('nav a[data-tab-key]');
         var MENU_ID = 'dockFabMenu';
+
+        function updateRailOverflow() {
+            var rail = document.querySelector('[data-egg-tab-rail]');
+            var nav = rail && rail.querySelector('nav');
+            if (!rail || !nav) return;
+            rail.dataset.tabsScrollable = nav.scrollWidth > nav.clientWidth + 1 ? 'true' : 'false';
+        }
 
         function syncActive() {
             var activeLink = null;
@@ -142,6 +149,7 @@
                 var activeRect = activeLink.getBoundingClientRect();
                 if (activeRect.left < navRect.left || activeRect.right > navRect.right) tabNav.scrollLeft += activeRect.left - navRect.left;
             }
+            updateRailOverflow();
 
             var subtitleEl = document.getElementById('egg-header-subtitle');
             if (subtitleEl) subtitleEl.textContent = activeLink.dataset.subtitle;
@@ -166,7 +174,7 @@
             var sheetHeader = document.createElement('div');
             sheetHeader.className = 'dock-fab-sheet-header';
             sheetHeader.setAttribute('data-dock-sheet-header', '');
-            sheetHeader.innerHTML = '<h2 id="dockFabTitle">Quick actions</h2><button type="button" data-dock-close-fab aria-label="Close quick actions" class="sm:hidden max-sm:min-w-11 max-sm:min-h-11"><i data-lucide="x" aria-hidden="true"></i></button>';
+            sheetHeader.innerHTML = '<h2 id="dockFabTitle">Quick actions</h2><button type="button" data-dock-close-fab aria-label="Close quick actions" class="md:hidden max-md:min-w-11 max-md:min-h-11"><i data-lucide="x" aria-hidden="true"></i></button>';
             var actionList = document.createElement('div');
             actionList.setAttribute('data-dock-action-list', '');
             actionList.className = 'dock-actions-grid egg-actions-grid';
@@ -218,6 +226,11 @@
         // frame content doesn't fire turbo:frame-load on the first paint).
         window.__eggSyncDock = syncActive;
         syncActive();
+        requestAnimationFrame(updateRailOverflow);
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(updateRailOverflow);
+        }
+        window.addEventListener('resize', updateRailOverflow);
 
         if (!window.__eggHeaderSyncBound) {
             window.__eggHeaderSyncBound = true;

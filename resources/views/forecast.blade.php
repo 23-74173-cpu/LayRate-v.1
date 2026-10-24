@@ -3,7 +3,7 @@
 
 @section('content')
 <span hidden id="forecast-walkthrough-state" data-admin="{{ auth()->user()->isAdmin() ? '1' : '0' }}"></span>
-<div class="space-y-5 max-sm:pb-40">
+<div class="space-y-5 max-md:pb-40">
 
     <x-page-header title="Forecast" subtitle="Project egg production based on historical egg count trends" />
 

@@ -14,7 +14,7 @@
 --}}
 @props(['cage', 'dot' => true, 'label' => true, 'soft' => false, 'class' => '', 'truncate' => false])
 
-<span class="inline-flex items-center gap-1.5 max-sm:whitespace-nowrap {{ $class }}">
+<span class="inline-flex items-center gap-1.5 max-md:whitespace-nowrap {{ $class }}">
     @if($soft)
         <span
             class="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
@@ -30,7 +30,7 @@
             ></span>
         @endif
         @if($label)
-            <span class="text-sm font-medium max-sm:whitespace-nowrap{{ $truncate ? ' truncate min-w-0' : '' }}" style="color: {{ $cage->color }}"@if($truncate) title="{{ $cage->cage_code }}"@endif>
+            <span class="text-sm font-medium max-md:whitespace-nowrap{{ $truncate ? ' truncate min-w-0' : '' }}" style="color: {{ $cage->color }}"@if($truncate) title="{{ $cage->cage_code }}"@endif>
                 {{ $cage->cage_code }}
             </span>
         @endif

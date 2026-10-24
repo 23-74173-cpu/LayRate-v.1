@@ -56,7 +56,7 @@
                 <h3 id="dockChecklistTitle" class="text-base font-semibold text-ink leading-tight">Today's Checklist</h3>
                 <p class="text-[13px] text-ink-muted leading-tight mt-0.5">{{ now()->format('m/d/Y') }} · {{ $loggedSum }} of {{ $totalSum }} done</p>
             </div>
-            <button type="button" data-dock-close-panel class="p-1.5 max-sm:min-w-11 max-sm:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors shrink-0" aria-label="Close checklist">
+            <button type="button" data-dock-close-panel class="p-1.5 max-md:min-w-11 max-md:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors shrink-0" aria-label="Close checklist">
                 <i data-lucide="x" class="w-5 h-5 text-ink-muted"></i>
             </button>
         </div>
@@ -72,7 +72,7 @@
                     $isComplete = $d['complete'];
                     $isPartial = !$isComplete && ($d['logged'] ?? 0) > 0;
                 @endphp
-                <a href="{{ $item['route'] }}" class="flex max-sm:min-h-11 items-center gap-3 px-2 py-2 rounded-lg hover:bg-canvas-soft focus-visible:outline-2 transition-colors">
+                <a href="{{ $item['route'] }}" class="flex max-md:min-h-11 items-center gap-3 px-2 py-2 rounded-lg hover:bg-canvas-soft focus-visible:outline-2 transition-colors">
                     @if($isComplete)
                         <i data-lucide="check-circle-2" class="w-5 h-5 shrink-0 text-success" aria-hidden="true"></i>
                     @elseif($isPartial)
@@ -109,7 +109,7 @@
         <div id="dockFabMenu" class="fab-menu hidden absolute bottom-full right-0 mb-2 w-max max-w-[calc(100vw-2rem)] flex flex-col items-end gap-2" role="dialog" aria-labelledby="dockFabTitle" aria-label="Quick actions" tabindex="-1" aria-hidden="true" data-dock-fab-menu>
             <div class="dock-fab-sheet-header" data-dock-sheet-header>
                 <h2 id="dockFabTitle">Quick actions</h2>
-                <button type="button" data-dock-close-fab aria-label="Close quick actions" class="sm:hidden max-sm:min-w-11 max-sm:min-h-11"><i data-lucide="x" aria-hidden="true"></i></button>
+                <button type="button" data-dock-close-fab aria-label="Close quick actions" class="md:hidden max-md:min-w-11 max-md:min-h-11"><i data-lucide="x" aria-hidden="true"></i></button>
             </div>
             <div data-dock-action-list class="dock-actions-grid">@stack('dock-actions')</div>
         </div>
@@ -119,5 +119,5 @@
         </button>
     </div>
 </div>
-<div id="dockFabBackdrop" class="dock-fab-backdrop hidden sm:hidden" data-dock-fab-backdrop aria-hidden="true"></div>
+<div id="dockFabBackdrop" class="dock-fab-backdrop hidden md:hidden" data-dock-fab-backdrop aria-hidden="true"></div>
 @endif

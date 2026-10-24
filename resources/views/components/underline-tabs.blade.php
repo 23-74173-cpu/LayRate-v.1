@@ -9,7 +9,7 @@
             @php
                 $isActive = $key === $active;
                 // No cursor-pointer: global rules cover <button> and a[href].
-                $classes = 'max-sm:min-h-[44px] inline-flex items-center pb-2 text-sm font-medium border-b-2 transition-colors shrink-0 whitespace-nowrap ' .
+                $classes = 'max-md:min-h-[44px] inline-flex items-center pb-2 text-sm font-medium border-b-2 transition-colors shrink-0 whitespace-nowrap ' .
                     ($isActive ? 'border-navy text-navy' : 'border-transparent text-ink-muted hover:text-ink');
             @endphp
             @if(isset($tab['route']))
@@ -34,8 +34,18 @@
     // tab bars and Turbo re-runs stay safe.
     if (window.__underlineTabsAriaBound) return;
     window.__underlineTabsAriaBound = true;
+    // Only hint at more tabs when the rail actually overflows. The CSS fade
+    // is shown below md, where the rail is scrollable.
+    function updateTabOverflow(root) {
+        (root || document).querySelectorAll('[data-underline-tabs]').forEach(function (bar) {
+            var nav = bar.querySelector('nav');
+            if (!nav) return;
+            bar.dataset.tabsScrollable = nav.scrollWidth > nav.clientWidth + 1 ? 'true' : 'false';
+        });
+    }
     function revealActiveTabs(root) {
-        if (!window.matchMedia('(max-width: 639.98px)').matches) return;
+        updateTabOverflow(root);
+        if (!window.matchMedia('(max-width: 767.98px)').matches) return;
         (root || document).querySelectorAll('[data-underline-tabs]').forEach(function (bar) {
             var active = bar.querySelector('[role="tab"][aria-selected="true"]');
             var nav = bar.querySelector('nav');
@@ -49,6 +59,11 @@
         });
     }
     revealActiveTabs();
+    requestAnimationFrame(function () { updateTabOverflow(); });
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(function () { updateTabOverflow(); });
+    }
+    window.addEventListener('resize', function () { updateTabOverflow(); });
     document.addEventListener('turbo:load', function () { revealActiveTabs(); });
     document.addEventListener('click', function (e) {
         var btn = e.target && e.target.closest ? e.target.closest('[data-underline-tabs] [role="tab"]') : null;

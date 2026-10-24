@@ -1,7 +1,7 @@
 <turbo-frame id="eggs-preorders-table">
     <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
         <div class="mobile-wide-table overflow-x-auto">
-        <table class="w-full max-sm:min-w-[900px] mobile-sticky-first">
+        <table class="w-full max-md:min-w-[900px] mobile-sticky-first">
             <thead>
                 <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium" data-sticky-label>CUSTOMER</th>
@@ -28,22 +28,22 @@
                     [$szBg, $szTxt, $szBorder] = $sizeColors[$order->egg_size];
                 @endphp
                 <tr class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
-                    <td class="px-5 py-3.5 text-sm font-medium text-[#333333] max-sm:whitespace-nowrap" data-sticky-label>{{ $order->customer_name }}</td>
+                    <td class="px-5 py-3.5 text-sm font-medium text-[#333333] max-md:whitespace-nowrap" data-sticky-label>{{ $order->customer_name }}</td>
                     <td class="px-5 py-3.5">
-                        <span class="max-sm:min-h-11 inline-flex items-center px-2.5 rounded-full text-xs max-sm:text-sm font-semibold max-sm:whitespace-nowrap" style="background:{{ $szBg }};color:{{ $szTxt }};border:1px solid {{ $szBorder }}">
+                        <span class="max-md:min-h-11 inline-flex items-center px-2.5 rounded-full text-xs max-md:text-sm font-semibold max-md:whitespace-nowrap" style="background:{{ $szBg }};color:{{ $szTxt }};border:1px solid {{ $szBorder }}">
                             {{ \App\Enums\EggSize::labelFor($order->egg_size) }}
                         </span>
                     </td>
                     <td class="px-5 py-3.5 text-sm font-medium text-[#333333]">{{ number_format($order->egg_count) }}</td>
-                    <td class="px-5 py-3.5 text-sm text-[#6B7280] max-sm:whitespace-nowrap">{{ $order->egg_label }}</td>
-                    <td class="px-5 py-3.5 text-sm font-mono text-[#333333] max-sm:whitespace-nowrap">{{ $order->requested_date->format('m/d/Y') }}</td>
-                    <td class="px-5 py-3.5 text-sm font-mono text-[#6B7280] max-sm:whitespace-nowrap">
+                    <td class="px-5 py-3.5 text-sm text-[#6B7280] max-md:whitespace-nowrap">{{ $order->egg_label }}</td>
+                    <td class="px-5 py-3.5 text-sm font-mono text-[#333333] max-md:whitespace-nowrap">{{ $order->requested_date->format('m/d/Y') }}</td>
+                    <td class="px-5 py-3.5 text-sm font-mono text-[#6B7280] max-md:whitespace-nowrap">
                         {{ $order->fulfillment_date ? $order->fulfillment_date->format('m/d/Y') : 'Pending' }}
                     </td>
                     <td class="px-5 py-3.5">
                         <x-status-badge :status="$order->status" type="general" />
                     </td>
-                    <td class="px-5 py-3.5 text-sm font-medium text-right tabular-nums max-sm:whitespace-nowrap" style="color: #333333;">
+                    <td class="px-5 py-3.5 text-sm font-medium text-right tabular-nums max-md:whitespace-nowrap" style="color: #333333;">
                         {{ $order->total_amount !== null ? '₱' . number_format((float) $order->total_amount, 2) : '—' }}
                         @if($order->payment_status === 'paid')
                         <span class="block mt-1">
