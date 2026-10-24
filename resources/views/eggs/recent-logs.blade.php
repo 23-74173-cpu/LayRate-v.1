@@ -14,7 +14,7 @@
 
         <x-card>
         <x-slot:header>
-            <div class="recent-logs-card-header flex min-w-0 items-center justify-between gap-3">
+            <div class="recent-logs-card-header -mx-5 -my-3 flex min-w-0 items-center justify-between gap-3 border-b border-hairline px-5 py-3">
                 @if($viewMode === 'calendar')
                     <h3 class="card-title min-w-0 truncate">Production Calendar</h3>
                 @else
