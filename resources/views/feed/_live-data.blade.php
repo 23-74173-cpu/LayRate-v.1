@@ -135,15 +135,14 @@
                         : 'border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]');
             });
 
-            /* Show loading, hide error + content */
+            /* Keep server-rendered content visible while refreshing */
             var loadingEl = document.getElementById('fcr-loading');
             var errorEl   = document.getElementById('fcr-error');
             var contentEl = document.getElementById('fcr-content');
             if (loadingEl) loadingEl.classList.remove('hidden');
             if (errorEl)   errorEl.classList.add('hidden');
-            if (contentEl) contentEl.classList.add('hidden');
 
-            var url = '/feed/fcr-data?cage_id=' + encodeURIComponent(cageId) + '&group_by=' + encodeURIComponent(groupBy);
+            var url = '{{ route('feed.fcr-data') }}?cage_id=' + encodeURIComponent(cageId) + '&group_by=' + encodeURIComponent(groupBy);
 
             fetch(url, { signal: fcrAbortController.signal })
                 .then(function(r) {
@@ -155,7 +154,6 @@
                     contentEl.innerHTML = html;
                     panel.setAttribute('data-fcr-cage-id', cageId);
                     if (loadingEl) loadingEl.classList.add('hidden');
-                    contentEl.classList.remove('hidden');
                     /* Re-run lucide icon replacement on new content */
                     if (typeof lucide !== 'undefined' && lucide.createIcons) {
                         lucide.createIcons({ els: contentEl.querySelectorAll('[data-lucide]') });
@@ -165,7 +163,6 @@
                     if (err.name === 'AbortError') return;
                     if (loadingEl) loadingEl.classList.add('hidden');
                     if (errorEl)   errorEl.classList.remove('hidden');
-                    if (contentEl) contentEl.classList.add('hidden');
                 });
         }
 

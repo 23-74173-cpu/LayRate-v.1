@@ -223,6 +223,17 @@ class FeedBatchManagementTest extends TestCase
         });
     }
 
+    public function test_fcr_tab_is_server_rendered_when_selected(): void
+    {
+        $response = $this->actingAs($this->user)->get('/feed/live-data?tab=fcr');
+
+        $response->assertOk();
+        $response->assertSee('id="tab-fcr"', false);
+        $response->assertSee('id="fcr-content"', false);
+        $response->assertSee('Feed Conversion Ratio');
+        $response->assertSee('No feed or production data for');
+    }
+
     // ─── 6. Remaining stock calculation ─────────────────────────
 
     public function test_remaining_kg_matches_total_minus_consumed(): void
