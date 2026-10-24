@@ -234,6 +234,14 @@ class FeedBatchManagementTest extends TestCase
         $response->assertSee('No feed or production data for');
     }
 
+    public function test_feed_consumption_calendar_does_not_render_summary_kpi_cards(): void
+    {
+        $response = $this->actingAs($this->user)->get('/feed/live-data?tab=consumption&view=calendar');
+
+        $response->assertOk();
+        $response->assertDontSee('aria-label="Monthly feed summary"', false);
+    }
+
     // ─── 6. Remaining stock calculation ─────────────────────────
 
     public function test_remaining_kg_matches_total_minus_consumed(): void

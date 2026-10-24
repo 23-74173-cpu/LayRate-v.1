@@ -54,13 +54,6 @@
         <p class="mt-3 text-sm text-[#615d59]" aria-live="polite">Filtered to <span class="font-semibold text-[#333333]">{{ $filterLabel }}</span></p>
     @endif
 
-    <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Monthly feed summary">
-        <x-kpi-card label="Total feed" icon="wheat" :value="number_format($calendarTotals['total'], 1).' kg'" class="feed-calendar-kpi" />
-        <x-kpi-card label="Average per day" icon="scale" :value="number_format($calendarTotals['average'], 1).' kg'" class="feed-calendar-kpi" />
-        <x-kpi-card label="Days with records" icon="calendar-check" :value="(string) $calendarTotals['days']" class="feed-calendar-kpi" />
-        <x-kpi-card label="Missing feedings" icon="circle-alert" :value="(string) $calendarTotals['missing']" class="feed-calendar-kpi" />
-    </div>
-
     <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-[#6B7280]" aria-label="Calendar legend">
         <span class="inline-flex items-center gap-1.5"><span class="inline-flex h-3 w-10 overflow-hidden rounded-sm border border-emerald-300" aria-hidden="true"><i class="flex-1 bg-emerald-50"></i><i class="flex-1 bg-emerald-100"></i><i class="flex-1 bg-emerald-200"></i></span> Low → high</span>
         <span class="inline-flex items-center gap-1.5"><i class="h-2 w-2 rounded-full bg-amber-600" aria-hidden="true"></i> Missing feeding</span>
