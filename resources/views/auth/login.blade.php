@@ -109,12 +109,12 @@
             <i data-lucide="alert-circle" class="w-4 h-4 mt-0.5 shrink-0 text-danger"></i>
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.05em] text-danger">Sign in failed</p>
-                <p class="text-sm mt-0.5 text-ink">{{ $errors->first() }}</p>
+                <p class="text-sm mt-0.5 text-ink" data-login-error>{{ $errors->first() }}</p>
             </div>
         </div>
         @endif
 
-        <div id="login-request-error" class="mb-4 rounded-lg px-4 py-3 bg-danger-bg border border-danger-border text-sm text-danger" role="alert" aria-live="assertive" hidden></div>
+        <div id="login-request-error" class="mb-4 rounded-lg px-4 py-3 bg-danger-bg border border-danger-border text-sm text-danger" role="alert" aria-live="assertive" tabindex="-1" hidden></div>
 
         {{-- Card --}}
         <div class="modal-card border border-hairline p-7">
@@ -190,8 +190,8 @@
         });
 
         // Intercept login to preserve the successful exit transition. Failed
-        // requests navigate to Laravel's flashed-error page; network/server
-        // failures stay on this page with feedback and a usable form.
+        // sign-ins and network/server failures stay on this page with
+        // feedback and a usable form.
         (function () {
             var form = document.querySelector('form');
             if (!form) return;
@@ -263,9 +263,18 @@
                     var hasRedirected = res.redirected;
 
                     // Server bounced us back to the login page → auth failed.
+                    // Laravel shows its error once, and the page this fetch
+                    // followed already used it: loading /login again would
+                    // show a blank form. Show the message from that page.
                     if (url.indexOf('/login') !== -1) {
-                        window.location.replace(url);
-                        return;
+                        return res.text().then(function (html) {
+                            var found = new DOMParser().parseFromString(html, 'text/html')
+                                .querySelector('[data-login-error]');
+                            if (!found) { window.location.replace(url); return; }
+                            var password = form.querySelector('#password');
+                            if (password) password.value = '';
+                            showRequestError(found.textContent.trim());
+                        });
                     }
 
                     if (!hasRedirected) {

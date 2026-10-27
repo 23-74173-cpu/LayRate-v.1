@@ -79,6 +79,25 @@ class AuthControllerTest extends TestCase
             ->assertDontSee('form.submit()', false);
     }
 
+    public function test_failed_login_message_is_shown_once_and_marked_for_the_login_script(): void
+    {
+        $this->from(route('login'))->post(route('login'), [
+            'email' => 'nobody@layrate.local',
+            'password' => 'wrong-password',
+        ])->assertRedirect(route('login'));
+
+        // The login script's fetch() follows that redirect, so this first GET
+        // is the only one carrying the error. The script reads it from the
+        // data-login-error element instead of loading /login again.
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSeeInOrder(['data-login-error', 'Invalid email or password.'], false);
+
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertDontSee('Invalid email or password.');
+    }
+
     public function test_login_rate_limit_error_is_flashed_and_does_not_authenticate(): void
     {
         $user = User::where('email', 'operator@layrate.local')->firstOrFail();
