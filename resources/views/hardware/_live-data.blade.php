@@ -33,7 +33,8 @@
 
     {{-- Device Table --}}
     <div class="rounded-xl border" style="background-color: #ffffff; border-color: #e6e6e6;">
-        <div class="overflow-x-auto">
+        <p class="px-4 py-2 text-xs text-ink-muted md:hidden" aria-hidden="true">Swipe horizontally to view each device’s last reading and actions.</p>
+        <div class="overflow-x-auto" tabindex="0" role="region" aria-label="Hardware inventory table. Scroll horizontally to view all columns">
             <table class="w-full">
                 <thead>
                     <tr class="border-b" style="background-color: #f6f5f4; border-color: #e6e6e6;">

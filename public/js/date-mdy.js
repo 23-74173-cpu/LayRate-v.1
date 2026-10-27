@@ -264,6 +264,12 @@
         else if (!withTime) display.setAttribute('inputmode', 'numeric');
         var aria = native.getAttribute('aria-label');
         if (aria) display.setAttribute('aria-label', aria);
+        else {
+            var associatedLabel = native.labels && native.labels[0];
+            if (associatedLabel) {
+                display.setAttribute('aria-label', associatedLabel.textContent.replace(/\s+/g, ' ').trim());
+            }
+        }
 
         var state = {
             native: native, display: display, withTime: withTime,

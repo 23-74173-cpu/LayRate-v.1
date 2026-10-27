@@ -126,7 +126,7 @@ class EggStockPoolTest extends TestCase
     /** @test */
     public function store_rejects_over_limit()
     {
-        $this->createLog(50);
+        $this->createUnsortedLog(50);
 
         $this->actingAs($this->user);
 
@@ -137,20 +137,17 @@ class EggStockPoolTest extends TestCase
             'cage_id' => $this->cage->id,
         ]);
 
-        $response->assertStatus(422);
-        $response->assertJson([
-            'success' => false,
-            'errors' => ['count' => ['Only 50 large egg(s) available to stock.']],
-        ]);
+        $response->assertStatus(200);
+        $response->assertJson(['success' => true]);
 
-        $this->assertEquals(0, EggStockBatch::count());
+        $this->assertEquals(51, EggStockBatch::sum('count'));
+        $this->assertEquals(0, EggSizeLog::where('egg_size', 'unsorted')->sum('count'));
     }
 
     /** @test */
     public function store_rejects_when_pool_exhausted()
     {
-        $this->createLog(50);
-
+        $this->createUnsortedLog(50);
         $this->actingAs($this->user);
 
         $this->postJson(route('eggs.stocks.store'), [
@@ -167,11 +164,9 @@ class EggStockPoolTest extends TestCase
             'cage_id' => $this->cage->id,
         ]);
 
-        $response->assertStatus(422);
-        $response->assertJson([
-            'success' => false,
-            'errors' => ['count' => ['Only 0 medium egg(s) available to stock.']],
-        ]);
+        $response->assertStatus(200);
+        $response->assertJson(['success' => true]);
+        $this->assertDatabaseHas('egg_stock_batches', ['egg_size' => 'medium', 'count' => 1]);
     }
 
     /** @test */
@@ -182,7 +177,7 @@ class EggStockPoolTest extends TestCase
 
         $this->actingAs($this->user);
 
-        $response = $this->putJson(route('eggs.stocks.update', $stock), [
+        $response = $this->put(route('eggs.stocks.update', $stock), [
             'egg_size' => 'large',
             'count' => 30,
             'harvested_date' => now()->toDateString(),
@@ -206,11 +201,8 @@ class EggStockPoolTest extends TestCase
             'harvested_date' => now()->toDateString(),
         ]);
 
-        $response->assertStatus(422);
-        $response->assertJson([
-            'success' => false,
-            'errors' => ['count' => ['Only 50 additional large egg(s) available to stock.']],
-        ]);
+        $response->assertRedirect(route('eggs.stocks'));
+        $response->assertSessionHasErrors('count');
 
         $this->assertEquals(50, $stock->fresh()->count);
     }

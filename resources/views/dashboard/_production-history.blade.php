@@ -44,10 +44,14 @@
         @else
             @php
                 $peakVal = 0; $peakLabel = '';
+                $historyTableRows = [];
                 foreach ($chartData['datasets'] as $ds) {
                     foreach ($ds['data'] as $i => $v) {
                         if ($v > $peakVal) { $peakVal = $v; $peakLabel = $chartData['labels'][$i] ?? ''; }
                     }
+                }
+                foreach ($chartData['labels'] as $i => $label) {
+                    $historyTableRows[] = ['label' => $label, 'values' => array_map(fn ($dataset) => $dataset['data'][$i] ?? null, $chartData['datasets'])];
                 }
             @endphp
             @if($peakVal > 0)
@@ -59,8 +63,26 @@
             </div>
             @endif
             <div class="relative w-full h-[200px] flex-none lg:h-auto lg:flex-1 lg:min-h-[240px] chart-fade-in">
-                <canvas id="dashProductionHistoryChart" style="width: 100%; height: 100%; display: block;"></canvas>
+                <canvas id="dashProductionHistoryChart" role="img" aria-label="Egg production history chart for the selected period" style="width: 100%; height: 100%; display: block;"></canvas>
             </div>
+            <details class="mt-3 text-sm text-ink-secondary">
+                <summary class="cursor-pointer font-medium">View chart data</summary>
+                <div class="mt-2 overflow-x-auto">
+                    <table class="w-full border-collapse text-left">
+                        <caption class="sr-only">Egg production history values by date</caption>
+                        <thead><tr><th scope="col" class="border-b border-hairline px-2 py-1">Date</th>
+                            @foreach($chartData['datasets'] as $dataset)<th scope="col" class="border-b border-hairline px-2 py-1">{{ $dataset['label'] }}</th>@endforeach
+                        </tr></thead>
+                        <tbody>
+                            @foreach($historyTableRows as $row)
+                                <tr><th scope="row" class="border-b border-hairline px-2 py-1 font-medium">{{ $row['label'] }}</th>
+                                    @foreach($row['values'] as $value)<td class="border-b border-hairline px-2 py-1">{{ $value ?? '—' }}</td>@endforeach
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </details>
         @endif
     </div>
 

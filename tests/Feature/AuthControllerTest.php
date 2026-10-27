@@ -47,7 +47,76 @@ class AuthControllerTest extends TestCase
         $this->post(route('login'), [
             'email'    => 'nonexistent@layrate.local',
             'password' => 'wrongpassword',
+        ])->assertRedirect('/')
+            ->assertSessionHasErrors(['email' => 'Invalid email or password.']);
+
+        $this->assertGuest();
+    }
+
+    public function test_login_validation_errors_return_to_form_with_flashed_messages(): void
+    {
+        $this->from(route('login'))->post(route('login'), [
+            'email' => 'not-an-email',
+            'password' => '',
+        ])->assertRedirect(route('login'))
+            ->assertSessionHasErrors(['email', 'password']);
+
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee('Enter a valid email address, like name@farm.com.')
+            ->assertSee('id="password"', false)
+            ->assertSee('autocomplete="current-password"', false);
+    }
+
+    public function test_login_form_contains_recoverable_request_feedback_hooks(): void
+    {
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee('id="login-request-error"', false)
+            ->assertSee('data-login-status', false)
+            ->assertSee('data-login-timeout', false)
+            ->assertSee('AbortController', false)
+            ->assertDontSee('form.submit()', false);
+    }
+
+    public function test_login_rate_limit_error_is_flashed_and_does_not_authenticate(): void
+    {
+        $user = User::where('email', 'operator@layrate.local')->firstOrFail();
+
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $this->post(route('login'), [
+                'email' => $user->email,
+                'password' => 'incorrect',
+            ])->assertRedirect('/');
+        }
+
+        $this->post(route('login'), [
+            'email' => $user->email,
+            'password' => 'password',
         ])->assertSessionHasErrors(['email']);
+
+        $this->assertGuest();
+    }
+
+    public function test_login_rate_limit_message_is_rendered_on_login_page(): void
+    {
+        $user = User::where('email', 'operator@layrate.local')->firstOrFail();
+
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $this->post(route('login'), [
+                'email' => $user->email,
+                'password' => 'incorrect',
+            ]);
+        }
+
+        $this->post(route('login'), [
+            'email' => $user->email,
+            'password' => 'password',
+        ]);
+
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee('Too many sign-in attempts. Try again in');
 
         $this->assertGuest();
     }

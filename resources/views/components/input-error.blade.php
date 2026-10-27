@@ -13,7 +13,7 @@
 @props(['name', 'text' => null, 'class' => ''])
 
 @error($name)
-<div class="flex items-center gap-1 mt-1 {{ $class }}">
+<div id="{{ str_replace(['[', ']'], ['-', ''], $name) }}-error" class="flex items-center gap-1 mt-1 {{ $class }}" role="alert">
     <i data-lucide="alert-circle" class="w-3 h-3 shrink-0" style="color: #9b1c24;"></i>
     <p class="text-xs" style="color: #9b1c24;">{{ $text ?? $message }}</p>
 </div>

@@ -34,8 +34,8 @@
                 @endif
                 {{-- Cage filter --}}
                 <div class="recent-filter-cage max-md:col-span-6 max-md:col-start-1 max-md:row-start-2">
-                    <label class="block text-sm mb-1" style="color: #615d59;">Cage</label>
-                    <select name="cage_id" onchange="recentLogsFilter()"
+                    <label for="recentLogsCage" class="block text-sm mb-1" style="color: #615d59;">Cage</label>
+                    <select id="recentLogsCage" name="cage_id" onchange="recentLogsFilter()"
                             class="w-full min-w-0 max-md:min-h-11 md:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">All Cages</option>
@@ -49,8 +49,8 @@
 
                 {{-- Slot filter --}}
                 <div class="recent-filter-slot max-md:col-span-6 max-md:col-start-7 max-md:row-start-2">
-                    <label class="block text-sm mb-1" style="color: #615d59;">Slot</label>
-                    <select name="cage_slot_id" onchange="recentLogsFilter()"
+                    <label for="recentLogsSlot" class="block text-sm mb-1" style="color: #615d59;">Slot</label>
+                    <select id="recentLogsSlot" name="cage_slot_id" onchange="recentLogsFilter()"
                             class="w-full min-w-0 max-md:min-h-11 md:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">All Slots</option>
@@ -64,8 +64,8 @@
 
                 {{-- Breed filter --}}
                 <div class="recent-filter-breed max-md:col-span-9 max-md:col-start-1 max-md:row-start-3">
-                    <label class="block text-sm mb-1" style="color: #615d59;">Breed</label>
-                    <select name="breed" onchange="recentLogsFilter()"
+                    <label for="recentLogsBreed" class="block text-sm mb-1" style="color: #615d59;">Breed</label>
+                    <select id="recentLogsBreed" name="breed" onchange="recentLogsFilter()"
                             class="w-full min-w-0 max-md:min-h-11 md:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                         <option value="">All Breeds</option>
@@ -79,7 +79,7 @@
 
                 {{-- Manual vs Sensor filter (checkbox chips) --}}
                 <div class="recent-filter-via max-md:col-span-12 max-md:col-start-1 max-md:row-start-4 md:col-span-1">
-                    <label class="block text-sm mb-1" style="color: #615d59;">Logged Via</label>
+                    <fieldset class="m-0 border-0 p-0"><legend class="block text-sm mb-1" style="color: #615d59;">Logged Via</legend>
                     <div class="flex items-center gap-2 md:min-h-10">
                         @foreach(['manual' => 'Manual', 'sensor' => 'Sensor', 'unknown' => 'Unknown'] as $value => $label)
                         <label class="recent-via-chip inline-flex max-md:min-h-11 items-center gap-1.5 text-sm cursor-pointer" style="color: #31302e;">
@@ -89,7 +89,7 @@
                             {{ $label }}
                         </label>
                         @endforeach
-                    </div>
+                    </div></fieldset>
                 </div>
 
             </div>
@@ -109,7 +109,7 @@
         @endif
 
         @if($viewMode === 'calendar')
-        <div id="calendarDayDialog" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="calendarDayTitle" aria-hidden="true">
+        <div id="calendarDayDialog" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="calendarDayTitle" aria-hidden="true" data-focus-dialog>
             <button type="button" class="absolute inset-0 h-full w-full bg-black/40" data-calendar-close aria-label="Close day details"></button>
             <section class="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto rounded-t-2xl bg-white p-5 pb-24 shadow-2xl md:inset-y-0 md:left-auto md:right-0 md:max-h-none md:w-[min(620px,90vw)] md:rounded-none md:pb-5" tabindex="-1">
                 <div class="mb-4 flex items-center justify-between gap-3"><h2 id="calendarDayTitle" class="text-lg font-semibold">Production details</h2><button type="button" class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full hover:bg-black/5" data-calendar-close aria-label="Close day details">×</button></div>

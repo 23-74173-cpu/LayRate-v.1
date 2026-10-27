@@ -15,7 +15,7 @@
             <span id="chart-title-period">{{ $dayLabel }}</span><span id="chart-title-period-suffix" style="{{ $isFull ? 'display:none' : '' }}">-DAY</span> HDEP TREND — <span id="chart-title-label-hdep">{{ $displayLabel }}</span>
         </div>
         <div id="hdepChartWrap" class="relative w-full h-[310px]" style="display:{{ $hasLogs ? '' : 'none' }}">
-            <canvas id="hdepChart" style="width: 100%; height: 100%; display: block;"></canvas>
+            <canvas id="hdepChart" role="img" aria-label="HDEP trend for {{ $displayLabel }}, {{ $dayLabel === 'ALL-TIME' ? 'all available time' : 'the last ' . $dayLabel . ' days' }}" style="width: 100%; height: 100%; display: block;"></canvas>
         </div>
         <div id="hdepChartEmpty" class="h-[100px] flex items-center justify-center text-sm" style="color: #a39e98; display:{{ $hasLogs ? 'none' : '' }};">No production data for this period.</div>
     </div>
@@ -26,7 +26,7 @@
             <x-chart-fullscreen-button chart="eggsChart" title="Eggs Collected per Day" :floating="true" />
             <div class="text-xs tracking-wider text-[#6B7280] mb-4 pr-8">EGGS COLLECTED PER DAY — <span id="chart-title-label-eggs">{{ $displayLabel }}</span></div>
             <div id="eggsChartWrap" class="relative w-full h-[189px]" style="display:{{ $hasLogs ? '' : 'none' }}">
-                <canvas id="eggsChart" style="width: 100%; height: 100%; display: block;"></canvas>
+                <canvas id="eggsChart" role="img" aria-label="Eggs collected per day for {{ $displayLabel }}" style="width: 100%; height: 100%; display: block;"></canvas>
             </div>
             <div id="eggsChartEmpty" class="h-[130px] flex items-center justify-center text-sm" style="color: #a39e98; display:{{ $hasLogs ? 'none' : '' }};">No production data for this period.</div>
         </div>
@@ -34,7 +34,7 @@
             <x-chart-fullscreen-button chart="feedHdepChart" title="Feed vs HDEP" :floating="true" />
             <div class="text-xs tracking-wider text-[#6B7280] mb-4 pr-8">FEED VS HDEP — <span id="chart-title-label-feed">{{ $displayLabel }}</span></div>
             <div id="feedHdepChartWrap" class="relative w-full h-[189px]" style="display:{{ $hasFeedOverlap ? '' : 'none' }}">
-                <canvas id="feedHdepChart" style="width: 100%; height: 100%; display: block;"></canvas>
+                <canvas id="feedHdepChart" role="img" aria-label="Feed consumption compared with HDEP for {{ $displayLabel }}" style="width: 100%; height: 100%; display: block;"></canvas>
             </div>
             <div id="feedHdepChartEmpty" class="h-[130px] flex items-center justify-center text-sm" style="color: #a39e98; display:{{ $hasFeedOverlap ? 'none' : '' }};">No overlapping feed and production data for this period.</div>
         </div>

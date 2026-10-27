@@ -50,8 +50,8 @@
     <x-card padding="p-4">
         <form id="preOrdersForm" onsubmit="return false" class="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-end sm:gap-x-4 sm:gap-y-3 gap-3">
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">STATUS</label>
-                    <select name="status" onchange="preOrdersFilter()"
+                    <label for="preOrderFilterStatus" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">STATUS</label>
+                    <select id="preOrderFilterStatus" name="status" onchange="preOrdersFilter()"
                             class="w-full min-w-0 max-md:min-h-11 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         <option value="all" {{ $filters['status'] === 'all' ? 'selected' : '' }}>All Statuses</option>
                         <option value="pending" {{ $filters['status'] === 'pending' ? 'selected' : '' }}>Pending</option>
@@ -60,8 +60,8 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">EGG SIZE</label>
-                    <select name="egg_size" onchange="preOrdersFilter()"
+                    <label for="preOrderFilterSize" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">EGG SIZE</label>
+                    <select id="preOrderFilterSize" name="egg_size" onchange="preOrdersFilter()"
                             class="w-full min-w-0 max-md:min-h-11 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         <option value="all" {{ $filters['egg_size'] === 'all' ? 'selected' : '' }}>All Sizes</option>
                         <option value="small" {{ $filters['egg_size'] === 'small' ? 'selected' : '' }}>Small</option>
@@ -72,13 +72,13 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">FROM</label>
-                    <input type="date" name="from" value="{{ $filters['from'] }}" onchange="preOrdersFilter()"
+                    <label for="preOrderFilterFrom" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">FROM</label>
+                    <input type="date" id="preOrderFilterFrom" name="from" value="{{ $filters['from'] }}" onchange="preOrdersFilter()"
                            class="w-full min-w-0 max-md:min-h-11 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                 </div>
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TO</label>
-                    <input type="date" name="to" value="{{ $filters['to'] }}" onchange="preOrdersFilter()"
+                    <label for="preOrderFilterTo" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TO</label>
+                    <input type="date" id="preOrderFilterTo" name="to" value="{{ $filters['to'] }}" onchange="preOrdersFilter()"
                            class="w-full min-w-0 max-md:min-h-11 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                 </div>
             </form>
@@ -92,11 +92,11 @@
     </div>
 
 {{-- Add Pre-Order Modal --}}
-<div id="addOrderModal" data-modal  data-close="closeAddOrderModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" style="display: none;">
+<div id="addOrderModal" data-modal data-focus-dialog data-close="closeAddOrderModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="addOrderTitle" style="display: none;">
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeAddOrderModal()"></div>
     <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
-            <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Add Pre-Order</h2>
+            <h2 id="addOrderTitle" class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Add Pre-Order</h2>
             <button onclick="closeAddOrderModal()" class="p-1.5 max-md:min-w-11 max-md:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
@@ -120,15 +120,15 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">CUSTOMER NAME</label>
-                    <input type="text" name="customer_name" value="{{ old('customer_name') }}" required
+                    <label for="addOrderCustomerName" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">CUSTOMER NAME</label>
+                    <input type="text" id="addOrderCustomerName" name="customer_name" value="{{ old('customer_name') }}" required
                            class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                     <x-input-error name="customer_name" />
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG SIZE</label>
+                    <label for="orderEggSize" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG SIZE</label>
                     <select name="egg_size" id="orderEggSize" required onchange="onOrderSizeChange()"
                             class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
@@ -143,7 +143,7 @@
                     <div id="orderSizeSuggestion" class="hidden mt-1.5 text-xs" style="color: #8a5a00;"></div>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG COUNT</label>
+                    <label for="orderEggCount" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG COUNT</label>
                     <input type="number" name="egg_count" id="orderEggCount" min="1" value="{{ old('egg_count') }}" required
                            oninput="onOrderCountChange()"
                            class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
@@ -151,27 +151,27 @@
                     <x-input-error name="egg_count" />
                     <div id="orderTrayLabel" class="mt-1 text-xs" style="color: #6B7280;"></div>
                     <div id="orderTotalLine" class="mt-1 text-xs font-semibold tabular-nums" style="color: #1f1f1f;" aria-live="polite"></div>
-                    <div id="orderRemainingIndicator" class="hidden mt-1 text-xs"></div>
+                    <div id="orderRemainingIndicator" class="hidden mt-1 text-xs" role="status" aria-live="polite"></div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">REQUESTED DATE</label>
-                        <input type="date" name="requested_date" value="{{ old('requested_date', now()->toDateString()) }}" required
+                        <label for="addOrderRequestedDate" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">REQUESTED DATE</label>
+                        <input type="date" id="addOrderRequestedDate" name="requested_date" value="{{ old('requested_date', now()->toDateString()) }}" required
                                class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                style="border-color: #e6e6e6; color: #1f1f1f;">
                         <x-input-error name="requested_date" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">FULFILLMENT DATE <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
-                        <input type="date" name="fulfillment_date" value="{{ old('fulfillment_date') }}"
+                        <label for="addOrderFulfillmentDate" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">FULFILLMENT DATE <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
+                        <input type="date" id="addOrderFulfillmentDate" name="fulfillment_date" value="{{ old('fulfillment_date') }}"
                                class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                style="border-color: #e6e6e6; color: #1f1f1f;">
                         <x-input-error name="fulfillment_date" />
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">NOTES <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
-                    <textarea name="notes" rows="2"
+                    <label for="addOrderNotes" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">NOTES <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
+                    <textarea id="addOrderNotes" name="notes" rows="2"
                               class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1 resize-y"
                               style="border-color: #e6e6e6; color: #1f1f1f;">{{ old('notes') }}</textarea>
                 </div>
@@ -198,11 +198,11 @@
 @endif
 
 {{-- Edit Status Modal --}}
-<div id="editStatusModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" style="display: none;">
+<div id="editStatusModal" data-focus-dialog class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="editOrderTitle" style="display: none;">
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEditStatusModal()"></div>
     <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
-            <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Edit Pre-Order</h2>
+            <h2 id="editOrderTitle" class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Edit Pre-Order</h2>
             <button onclick="closeEditStatusModal()" class="p-1.5 max-md:min-w-11 max-md:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
@@ -212,14 +212,14 @@
             @csrf @method('PATCH')
             <div class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">CUSTOMER NAME</label>
+                    <label for="editCustomerName" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">CUSTOMER NAME</label>
                     <input type="text" name="customer_name" id="editCustomerName" required
                            class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                     <x-input-error name="customer_name" />
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG SIZE</label>
+                    <label for="editEggSize" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG SIZE</label>
                     <select name="egg_size" id="editEggSize" required
                             class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
@@ -232,7 +232,7 @@
                     <x-input-error name="egg_size" />
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG COUNT</label>
+                    <label for="editEggCount" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG COUNT</label>
                     <input type="number" name="egg_count" id="editEggCount" min="1" required
                            class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
@@ -240,14 +240,14 @@
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">REQUESTED DATE</label>
+                        <label for="editRequestedDate" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">REQUESTED DATE</label>
                         <input type="date" name="requested_date" id="editRequestedDate" required
                                class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                style="border-color: #e6e6e6; color: #1f1f1f;">
                         <x-input-error name="requested_date" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">FULFILLMENT DATE <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
+                        <label for="editFulfillmentDate" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">FULFILLMENT DATE <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
                         <input type="date" name="fulfillment_date" id="editFulfillmentDate"
                                class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                style="border-color: #e6e6e6; color: #1f1f1f;">
@@ -255,7 +255,7 @@
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">STATUS</label>
+                    <label for="editStatusSelect" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">STATUS</label>
                     <select name="status" id="editStatusSelect" required
                             class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
@@ -274,7 +274,7 @@
                 <p id="editPaidNote" class="rounded-lg px-3 py-2.5 text-sm font-medium" style="display: none; background-color: #e8f5ec; color: #1f6b3a;"></p>
                 <x-input-error name="payment_status" />
                 <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">NOTES <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
+                    <label for="editNotes" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">NOTES <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
                     <textarea name="notes" id="editNotes" rows="2"
                               class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1 resize-y"
                               style="border-color: #e6e6e6; color: #1f1f1f;"></textarea>

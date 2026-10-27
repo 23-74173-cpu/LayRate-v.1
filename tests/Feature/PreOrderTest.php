@@ -37,6 +37,16 @@ class PreOrderTest extends TestCase
         return $log;
     }
 
+    private function createStock(int $count, string $size = 'large'): EggStockBatch
+    {
+        return EggStockBatch::createWithinPool([
+            'cage_id' => $this->cage->id,
+            'egg_size' => $size,
+            'count' => $count,
+            'harvested_date' => now()->toDateString(),
+        ]);
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -66,41 +76,30 @@ class PreOrderTest extends TestCase
     public function pool_validation_rejects_over_limit()
     {
         // Log 50 large eggs
-        $this->createLog(50);
+        $this->createLog(50, 'large');
 
-        // Stock 30 of them — leaves 20 available
-        EggStockBatch::createWithinPool([
-            'egg_size' => 'large',
-            'count' => 30,
-            'harvested_date' => now()->toDateString(),
-            'cage_id' => $this->cage->id,
-        ]);
+        // Pre-orders reserve from recorded size counts; stocked eggs are accounted for separately.
+        $this->createStock(30);
 
         $this->actingAs($this->user);
 
-        // Pre-order for 25 should be rejected (only 20 available)
+        // Pre-order for 51 should be rejected (only 50 eggs are logged).
         $response = $this->post(route('eggs.preorders.store'), [
             'customer_name' => 'Test Customer',
             'egg_size' => 'large',
-            'egg_count' => 25,
+            'egg_count' => 51,
             'requested_date' => now()->addDay()->toDateString(),
         ]);
 
         $response->assertSessionHasErrors('egg_count');
-        $this->assertEquals(0, PreOrder::count());
+        $this->assertSame(0, PreOrder::count());
     }
 
     /** @test */
     public function pool_validation_accepts_within_limit()
     {
         $this->createLog(50);
-
-        EggStockBatch::createWithinPool([
-            'egg_size' => 'large',
-            'count' => 30,
-            'harvested_date' => now()->toDateString(),
-            'cage_id' => $this->cage->id,
-        ]);
+        $this->createStock(30);
 
         $this->actingAs($this->user);
 
@@ -121,17 +120,11 @@ class PreOrderTest extends TestCase
     public function cancel_order_returns_stock_to_pool()
     {
         $this->createLog(50);
-
-        EggStockBatch::createWithinPool([
-            'egg_size' => 'large',
-            'count' => 30,
-            'harvested_date' => now()->toDateString(),
-            'cage_id' => $this->cage->id,
-        ]);
+        $this->createStock(30);
 
         $this->actingAs($this->user);
 
-        // Create a pre-order for 10 (from 20 available)
+        // Create a pre-order for 10 from the 20 available eggs.
         $order = PreOrder::createWithinPool([
             'customer_name' => 'Test',
             'egg_size' => 'large',
@@ -153,13 +146,7 @@ class PreOrderTest extends TestCase
     public function fulfill_order_frees_pool()
     {
         $this->createLog(50);
-
-        EggStockBatch::createWithinPool([
-            'egg_size' => 'large',
-            'count' => 30,
-            'harvested_date' => now()->toDateString(),
-            'cage_id' => $this->cage->id,
-        ]);
+        $this->createStock(30);
 
         $this->actingAs($this->user);
 
@@ -186,13 +173,7 @@ class PreOrderTest extends TestCase
     public function delete_order_returns_stock_to_pool()
     {
         $this->createLog(50);
-
-        EggStockBatch::createWithinPool([
-            'egg_size' => 'large',
-            'count' => 30,
-            'harvested_date' => now()->toDateString(),
-            'cage_id' => $this->cage->id,
-        ]);
+        $this->createStock(30);
 
         $this->actingAs($this->user);
 
@@ -216,6 +197,7 @@ class PreOrderTest extends TestCase
     public function concurrent_orders_do_not_over_commit()
     {
         $this->createLog(100);
+        $this->createStock(100);
 
         $this->actingAs($this->user);
 
@@ -275,6 +257,7 @@ class PreOrderTest extends TestCase
     public function requested_date_allows_past_dates()
     {
         $this->createLog(50);
+        $this->createStock(50);
 
         $this->actingAs($this->user);
 
@@ -310,7 +293,9 @@ class PreOrderTest extends TestCase
     public function pool_data_endpoint_returns_pools()
     {
         $this->createLog(100, 'large', now()->subDay()->toDateString());
+        $this->createStock(100);
         $this->createLog(50, 'small');
+        $this->createStock(50, 'small');
 
         $this->actingAs($this->user);
 

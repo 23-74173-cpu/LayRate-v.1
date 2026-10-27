@@ -11,7 +11,7 @@ $variants = [
 $wrapper = $variants[$variant] ?? $variants['default'];
 @endphp
 
-<div {{ $attributes->merge(['class' => "animate-pulse " . $wrapper . " " . $class]) }} aria-busy="true" aria-label="Loading…">
+<div {{ $attributes->merge(['class' => "animate-pulse motion-reduce:animate-none " . $wrapper . " " . $class]) }} aria-busy="true" aria-label="Loading…">
     @if($variant === 'metric')
         <div class="h-3 bg-gray-200 rounded w-1/2"></div>
         <div class="h-8 bg-gray-200 rounded w-3/4"></div>

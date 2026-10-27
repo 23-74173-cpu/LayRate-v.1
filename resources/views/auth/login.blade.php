@@ -114,6 +114,8 @@
         </div>
         @endif
 
+        <div id="login-request-error" class="mb-4 rounded-lg px-4 py-3 bg-danger-bg border border-danger-border text-sm text-danger" role="alert" aria-live="assertive" hidden></div>
+
         {{-- Card --}}
         <div class="modal-card border border-hairline p-7">
             {{-- Logo — the egg alone, centered above Sign in. --}}
@@ -125,7 +127,7 @@
             <div class="signin-title-accent"></div>
             <p class="text-xs mb-6 mt-3 text-center text-ink-muted">Enter your credentials to access the dashboard.</p>
 
-            <form action="{{ route('login') }}" method="POST" class="space-y-4">
+            <form action="{{ route('login') }}" method="POST" class="space-y-4" data-login-timeout="15000">
                 @csrf
 
                 <div>
@@ -154,6 +156,7 @@
                 </div>
 
                 <x-button type="submit" class="w-full py-2.5 mt-2">Sign In</x-button>
+                <p class="sr-only" data-login-status role="status" aria-live="polite"></p>
 
                 <div class="text-center mt-4 pt-4 border-t border-hairline">
                     <a href="{{ route('landing') }}"
@@ -186,9 +189,9 @@
             }, 1500);
         });
 
-        // Exit transition on successful sign-in: intercept the POST, follow the
-        // server redirect with fetch, play the reverse circle-wipe, then go.
-        // On failure we land back on /login, so reload it to show the banner.
+        // Intercept login to preserve the successful exit transition. Failed
+        // requests navigate to Laravel's flashed-error page; network/server
+        // failures stay on this page with feedback and a usable form.
         (function () {
             var form = document.querySelector('form');
             if (!form) return;
@@ -199,18 +202,52 @@
                 if (form.dataset.submitting) { e.preventDefault(); return; }
                 form.dataset.submitting = '1';
                 var btn = form.querySelector('button[type="submit"]');
+                var requestError = document.getElementById('login-request-error');
+                var status = form.querySelector('[data-login-status]');
+                var originalButtonText = btn ? btn.textContent : 'Sign In';
+                var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+                var timeout = window.setTimeout(function () {
+                    if (controller) controller.abort();
+                }, Number(form.dataset.loginTimeout) || 15000);
+
+                if (requestError) {
+                    requestError.hidden = true;
+                    requestError.textContent = '';
+                }
                 if (btn) {
                     btn.disabled = true;
                     btn.textContent = 'Signing in…';
                 }
+                if (status) status.textContent = 'Signing in. Please wait.';
                 e.preventDefault();
+
+                function finishRequest() {
+                    window.clearTimeout(timeout);
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = originalButtonText;
+                    }
+                    if (status) status.textContent = '';
+                    delete form.dataset.submitting;
+                }
+
+                function showRequestError(message) {
+                    finishRequest();
+                    if (requestError) {
+                        requestError.textContent = message;
+                        requestError.hidden = false;
+                        requestError.focus && requestError.focus();
+                    }
+                }
 
                 fetch(form.action, {
                     method: 'POST',
                     body: new FormData(form),
                     redirect: 'follow',
                     credentials: 'same-origin',
+                    signal: controller ? controller.signal : undefined,
                 }).then(function (res) {
+                    window.clearTimeout(timeout);
                     if (res.status === 419) {
                         // Session/token expired (e.g. a login page rendered before
                         // a logout rotated the CSRF token). Reload fresh instead of
@@ -218,13 +255,21 @@
                         window.location.reload();
                         return;
                     }
-                    if (!res.ok) throw new Error('request failed');
+                    if (!res.ok) {
+                        showRequestError('Sign-in could not be completed because the server returned an error. Please try again.');
+                        return;
+                    }
                     var url = res.url || window.location.href;
                     var hasRedirected = res.redirected;
 
                     // Server bounced us back to the login page → auth failed.
                     if (url.indexOf('/login') !== -1) {
                         window.location.replace(url);
+                        return;
+                    }
+
+                    if (!hasRedirected) {
+                        showRequestError('Sign-in did not complete. Please try again.');
                         return;
                     }
 
@@ -247,12 +292,11 @@
                             setTimeout(go, 700);
                         });
                     });
-                }).catch(function () {
-                    // Fetch failed (network/dup-click guard) → fall back to the
-                    // native POST so the browser behaves as usual.
-                    if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
-                    delete form.dataset.submitting;
-                    form.submit();
+                }).catch(function (error) {
+                    var message = error && error.name === 'AbortError'
+                        ? 'The sign-in request timed out. Check your connection and try again.'
+                        : 'Unable to reach the sign-in service. Check your connection and try again.';
+                    showRequestError(message);
                 });
             });
         })();

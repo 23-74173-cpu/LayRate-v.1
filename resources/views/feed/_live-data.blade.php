@@ -39,10 +39,10 @@
     {{-- ── Tabs ── --}}
     <div id="feed-tabs-nav" class="mb-5">
         <x-underline-tabs :tabs="[
-            'batches'     => ['label' => 'Feed Batches',     'icon' => 'folder',    'onclick' => 'feedSwitchTab(\'batches\')'],
-            'consumption' => ['label' => 'Daily Consumption','icon' => 'utensils', 'onclick' => 'feedSwitchTab(\'consumption\')'],
-            'fcr'         => ['label' => 'FCR',              'icon' => 'scale',     'onclick' => 'feedSwitchTab(\'fcr\')'],
-        ]" active="{{ request()->get('tab', 'batches') }}" />
+            'batches'     => ['label' => 'Feed Batches', 'icon' => 'folder', 'panelId' => 'tab-batches', 'onclick' => 'feedSwitchTab(\'batches\')', 'tabBehavior' => 'authoritative'],
+            'consumption' => ['label' => 'Daily Consumption', 'icon' => 'utensils', 'panelId' => 'tab-consumption', 'onclick' => 'feedSwitchTab(\'consumption\')', 'tabBehavior' => 'authoritative'],
+            'fcr'         => ['label' => 'FCR', 'icon' => 'scale', 'panelId' => 'tab-fcr', 'onclick' => 'feedSwitchTab(\'fcr\')', 'tabBehavior' => 'authoritative'],
+        ]" active="{{ request()->get('tab', 'batches') }}" id="feed-tabs" />
     </div>
 
     <script>
@@ -51,9 +51,9 @@
             if (window.__feedActiveTab === tab) return;
             window.__feedActiveTab = tab;
 
-            document.querySelectorAll('.tab-panel').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-panel').forEach(el => { el.classList.add('hidden'); el.hidden = true; });
             var panel = document.getElementById('tab-'+tab);
-            if (panel) panel.classList.remove('hidden');
+            if (panel) { panel.classList.remove('hidden'); panel.hidden = false; }
 
             // Keep the URL's ?tab= in sync so a form submit's redirect back
             // to this page (e.g. Add Consumption) returns to the same tab
@@ -75,6 +75,13 @@
                 if (active) {
                     active.classList.remove('border-transparent', 'text-[#6B7280]');
                     active.classList.add('border-navy', 'text-navy');
+                    nav.querySelectorAll('button[role="tab"]').forEach(btn => {
+                        const selected = btn === active;
+                        btn.setAttribute('aria-selected', selected ? 'true' : 'false');
+                        btn.tabIndex = selected ? 0 : -1;
+                        const controlledPanel = document.getElementById(btn.getAttribute('aria-controls'));
+                        if (controlledPanel) controlledPanel.hidden = !selected;
+                    });
                 }
             }
 
@@ -204,7 +211,7 @@
     </script>
 
     {{-- Feed Batches Panel --}}
-    <div id="tab-batches" class="tab-panel">
+        <div id="tab-batches" class="tab-panel" role="tabpanel" tabindex="0" aria-labelledby="feed-tabs-batches">
         <turbo-frame id="tab-batches-frame">
         <div class="flex items-center gap-4 text-xs mb-3" style="color: #615d59;">
             <span class="flex items-center gap-1.5">
@@ -217,7 +224,8 @@
                 <span class="w-2 h-2 rounded-full" style="background:#9b1c24"></span> Critical
             </span>
         </div>
-        <div class="rounded-xl border overflow-x-auto" style="background-color: #ffffff; border-color: #e6e6e6;">
+        <p class="px-4 py-2 text-xs text-ink-muted md:hidden" aria-hidden="true">Swipe horizontally to view all feed batches and actions.</p>
+        <div class="rounded-xl border overflow-x-auto" tabindex="0" role="region" aria-label="Feed batches table. Scroll horizontally to view all columns" style="background-color: #ffffff; border-color: #e6e6e6;">
             <table class="w-full">
                 <thead>
                     <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
@@ -292,7 +300,7 @@
     </div>
 
     {{-- Daily Consumption Panel --}}
-        <div id="tab-consumption" class="tab-panel hidden">
+        <div id="tab-consumption" class="tab-panel hidden" role="tabpanel" tabindex="0" aria-labelledby="feed-tabs-consumption" hidden>
         <div class="feed-consumption-card w-full min-w-0 rounded-lg border border-[#D9D9D9] bg-white">
             <header class="feed-consumption-header flex min-w-0 items-center justify-between gap-3 border-b border-[#D9D9D9] px-4 py-3 sm:px-5">
                 <h3 class="card-title min-w-0 truncate">Daily Consumption</h3>
@@ -306,7 +314,8 @@
                 @include('feed._consumption-calendar', compact('month', 'today', 'calendarDays', 'calendarTotals', 'cages', 'maxMonth', 'preselectedCageId'))
             @else
                 <turbo-frame id="tab-consumption-frame">
-                    <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-x-auto">
+                    <p class="px-4 py-2 text-xs text-ink-muted md:hidden" aria-hidden="true">Swipe horizontally to view feed consumption details.</p>
+                    <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-x-auto" tabindex="0" role="region" aria-label="Feed consumption table. Scroll horizontally to view all columns">
                         <table class="w-full">
                             <thead>
                                 <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
@@ -428,7 +437,7 @@
         @endif
 
     {{-- FCR Panel --}}
-    <div id="tab-fcr" class="tab-panel hidden"
+    <div id="tab-fcr" class="tab-panel hidden" role="tabpanel" tabindex="0" aria-labelledby="feed-tabs-fcr" hidden
          data-fcr-cage-id="{{ $fcrSelectedId ?? $cages->value('id') ?? '' }}"
          data-fcr-group-by="{{ $fcrGroupBy }}">
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5 relative">

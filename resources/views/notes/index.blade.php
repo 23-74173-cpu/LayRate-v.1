@@ -54,6 +54,7 @@
             <input type="hidden" name="return_category" value="{{ $category }}">
             <div class="flex flex-col sm:flex-row gap-3">
                 <div class="flex-1">
+                    <label for="noteAddBody" class="sr-only">Note</label>
                     <textarea name="body" id="noteAddBody" rows="2" required maxlength="{{ \App\Models\Note::MAX_LENGTH }}"
                               placeholder="Write a note…"
                               data-error-message="Please add a note before saving."

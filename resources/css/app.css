@@ -301,7 +301,8 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
     white-space: normal;
     overflow: visible;
     text-overflow: clip;
-    overflow-wrap: anywhere;
+    overflow-wrap: normal;
+    word-break: normal;
   }
   .kpi-card .kpi-label > span { white-space: normal; }
   .kpi-card > .kpi-icon-tile { display: none !important; }
@@ -311,7 +312,7 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   .kpi-card .kpi-secondary-placeholder,
   .kpi-card .kpi-secondary-trend,
   .kpi-card .mobile-kpi-secondary { display: none !important; }
-  .kpi-card .mobile-kpi-wrap { overflow-wrap: anywhere; }
+  .kpi-card .mobile-kpi-wrap { overflow-wrap: normal; word-break: normal; }
   .kpi-card .mobile-kpi-secondary { font-size: 14px; line-height: 1.25; }
   .kpi-card .kpi-value,
   .kpi-card .kpi-number { min-width: 0; }
@@ -358,7 +359,8 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
     white-space: normal;
     overflow: visible;
     text-overflow: clip;
-    overflow-wrap: anywhere;
+    overflow-wrap: normal;
+    word-break: normal;
   }
   .kpi-rhythm .kpi-card .kpi-label > span { white-space: normal; }
   .kpi-rhythm .kpi-card .kpi-number,
@@ -749,7 +751,6 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   border-radius: 9999px;
   padding: 2px 8px;
   border: 1px solid;
-  max-width: 100%;
 }
 .trend-pill-up {
   color: #1f6b3a;
@@ -1422,6 +1423,7 @@ div[data-modal] > div.relative {
   transform: translateY(-50%);
   width: 190px;
   height: 190px;
+  max-width: 100%;
   color: #ffffff;
   opacity: 0.06;
   pointer-events: none;

@@ -268,7 +268,7 @@ class ReportControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Total Stocked');
-        $response->assertSee('1332'); // 333 + 444 + 555 — NULL-cage batch included
+        $response->assertSee('1,332 eggs'); // 333 + 444 + 555 — NULL-cage batch included
         $response->assertSee('333');
         $response->assertSee('444');
         $response->assertSee('555');
@@ -621,7 +621,11 @@ class ReportControllerTest extends TestCase
         // image must add one more "/Image" than the same export without one.
         $withChartCount    = substr_count($withChart->getContent(), '/Image');
         $withoutChartCount = substr_count($withoutChart->getContent(), '/Image');
-        $this->assertGreaterThan($withoutChartCount, $withChartCount);
+        if (! extension_loaded('gd')) {
+            $this->assertSame($withoutChartCount, $withChartCount, 'Without GD, chart images are intentionally omitted.');
+        } else {
+            $this->assertGreaterThan($withoutChartCount, $withChartCount);
+        }
     }
 
     /** @test */

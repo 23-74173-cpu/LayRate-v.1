@@ -21,24 +21,24 @@
                 <input type="hidden" name="cage" value="{{ $cageCode }}" id="formCage">
                 <input type="hidden" name="breed" value="{{ $breed }}" id="formBreed">
 
-                <label class="block text-sm text-[#333333] mb-2">Scope</label>
-                <div class="flex flex-col gap-2 mb-4">
+                <p class="block text-sm text-[#333333] mb-2" id="forecastScopeLabel">Scope</p>
+                <div role="group" aria-labelledby="forecastScopeLabel" class="flex flex-col gap-2 mb-4">
                     <a href="{{ route('forecast', ['scope'=>'farm','horizon'=>$horizon]) }}" data-forecast-scope="farm" data-turbo-frame="forecast-workspace"
-                       class="flex items-center justify-center gap-2 overflow-hidden py-2 rounded-lg text-sm border whitespace-nowrap {{ $scope === 'farm' ? 'bg-navy text-white border-navy' : 'border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]' }}">
+                        @if($scope === 'farm') aria-current="page" @endif class="flex items-center justify-center gap-2 overflow-hidden py-2 rounded-lg text-sm border whitespace-nowrap {{ $scope === 'farm' ? 'bg-navy text-white border-navy' : 'border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]' }}">
                         <i data-lucide="globe" class="w-4 h-4 shrink-0"></i> Whole Farm
                     </a>
                     <a href="{{ route('forecast', ['scope'=>'cage','cage'=>$cageCode,'horizon'=>$horizon]) }}" data-forecast-scope="cage" data-turbo-frame="forecast-workspace"
-                       class="flex items-center justify-center gap-2 overflow-hidden py-2 rounded-lg text-sm border whitespace-nowrap {{ $scope === 'cage' ? 'bg-navy text-white border-navy' : 'border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]' }}">
+                        @if($scope === 'cage') aria-current="page" @endif class="flex items-center justify-center gap-2 overflow-hidden py-2 rounded-lg text-sm border whitespace-nowrap {{ $scope === 'cage' ? 'bg-navy text-white border-navy' : 'border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]' }}">
                         <i data-lucide="box" class="w-4 h-4 shrink-0"></i> Per Cage
                     </a>
                     <a href="{{ route('forecast', ['scope'=>'breed','breed'=>$allBreeds->first() ?? 'ISA Brown','horizon'=>$horizon]) }}" data-forecast-scope="breed" data-turbo-frame="forecast-workspace"
-                       class="flex items-center justify-center gap-2 overflow-hidden py-2 rounded-lg text-sm border whitespace-nowrap {{ $scope === 'breed' ? 'bg-navy text-white border-navy' : 'border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]' }}">
+                        @if($scope === 'breed') aria-current="page" @endif class="flex items-center justify-center gap-2 overflow-hidden py-2 rounded-lg text-sm border whitespace-nowrap {{ $scope === 'breed' ? 'bg-navy text-white border-navy' : 'border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8]' }}">
                         <i data-lucide="bird" class="w-4 h-4 shrink-0"></i> Per Breed
                     </a>
                 </div>
 
                 <div id="cageScopeBlock" {!! $scope !== 'cage' ? 'style="display:none"' : '' !!}>
-                    <label class="block text-sm text-[#333333] mb-2">Select Cage</label>
+                    <label for="cageSelect" class="block text-sm text-[#333333] mb-2">Select Cage</label>
                     <select name="cage" id="cageSelect" onchange="window.refreshForecastWorkspace && refreshForecastWorkspace()"
                             class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white mb-4 focus:outline-none focus:border-navy">
                         @foreach($allCages as $c)
@@ -49,7 +49,7 @@
                 </div>
 
                 <div id="breedScopeBlock" {!! $scope !== 'breed' ? 'style="display:none"' : '' !!}>
-                    <label class="block text-sm text-[#333333] mb-2">Select Breed</label>
+                    <label for="breedSelect" class="block text-sm text-[#333333] mb-2">Select Breed</label>
                     <select name="breed" id="breedSelect" onchange="window.refreshForecastWorkspace && refreshForecastWorkspace()"
                             class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm bg-white mb-4 focus:outline-none focus:border-navy">
                         @foreach($allBreeds as $b)
@@ -63,7 +63,8 @@
                     <p class="text-xs text-[#6B7280] mb-4">Forecasting: <span class="forecast-target-label font-medium text-[#333333]">Whole Farm</span></p>
                 </div>
 
-                <label class="block text-sm text-[#333333] mb-2">Forecast horizon</label>
+                <fieldset class="mb-5">
+                    <legend class="block text-sm text-[#333333] mb-2">Forecast horizon</legend>
                 <div id="forecastHorizonChoices" class="flex gap-4 mb-5">
                     @foreach([7,14,30] as $h)
                     <label class="flex items-center gap-1.5 text-sm cursor-pointer">
@@ -72,6 +73,7 @@
                     </label>
                     @endforeach
                 </div>
+                </fieldset>
 
                 @can('admin')
                 <button type="submit" id="generateForecastBtn" class="w-full bg-navy text-white py-2.5 rounded-lg text-sm hover:bg-navy transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">

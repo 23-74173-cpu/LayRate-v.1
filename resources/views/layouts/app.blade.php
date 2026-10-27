@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="turbo-cache-control" content="no-preview">
     {{-- No hover prefetch: on the Pi (and php artisan serve) every hovered
@@ -1183,7 +1183,7 @@
     });
 })();
 
-// ── Shared modal keyboard nav (Esc = close, Enter = submit) — bind once ──
+// ── Shared modal keyboard nav and focus lifecycle — bind once ──
 // Opt-in via `data-modal` (+ `data-modal-destructive` for Esc-only, and
 // optional `data-close="closeFnName"`). Nested overlays: when the shared
 // confirm modal (confirm-modal) is open on top of a data-modal, it OWNS the
@@ -1202,7 +1202,7 @@
         return !!(el && getComputedStyle(el).display !== 'none');
     }
     function topmostOpen() {
-        var all = document.querySelectorAll('[data-modal]');
+        var all = document.querySelectorAll('[data-modal], [data-focus-dialog]');
         var top = null;
         for (var i = 0; i < all.length; i++) if (visible(all[i])) top = all[i];
         return top;
@@ -1212,8 +1212,57 @@
         if (fn && typeof window[fn] === 'function') { window[fn](); return; }
         el.style.display = 'none';
     }
+    var dialogTriggers = new WeakMap();
+    function focusable(container) {
+        return Array.prototype.slice.call(container.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+            .filter(function (el) { return el.getClientRects().length && el.getAttribute('aria-hidden') !== 'true'; });
+    }
+    function rememberOpenDialogs() {
+        document.querySelectorAll('[data-modal], [data-focus-dialog]').forEach(function (dialog) {
+            if (dialog.dataset.focusWasOpen === 'true' || !visible(dialog)) return;
+            dialog.dataset.focusWasOpen = 'true';
+            dialogTriggers.set(dialog, document.activeElement);
+            var target = dialog.querySelector('[autofocus]') || dialog.querySelector('h1, h2, h3, [data-dialog-initial-focus]') || focusable(dialog)[0];
+            if (target) {
+                if (!target.matches('a[href], button, input, select, textarea, [tabindex]')) target.setAttribute('tabindex', '-1');
+                target.focus({ preventScroll: true });
+            }
+        });
+    }
+    function restoreClosedDialogs() {
+        document.querySelectorAll('[data-modal], [data-focus-dialog]').forEach(function (dialog) {
+            if (dialog.dataset.focusWasOpen !== 'true' || visible(dialog)) return;
+            dialog.dataset.focusWasOpen = 'false';
+            var trigger = dialogTriggers.get(dialog);
+            if (trigger && trigger.isConnected && typeof trigger.focus === 'function') trigger.focus();
+        });
+    }
+    function trapDialogFocus(e) {
+        var dialog = topmostOpen() || document.querySelector('[data-focus-dialog]');
+        if (!dialog || !visible(dialog)) return;
+        if (!dialog.contains(e.target)) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                var target = focusable(dialog)[0] || dialog;
+                target.focus({ preventScroll: true });
+            }
+            return;
+        }
+        if (e.key === 'Tab') {
+            var items = focusable(dialog);
+            if (!items.length) { e.preventDefault(); dialog.setAttribute('tabindex', '-1'); dialog.focus(); return; }
+            var first = items[0], last = items[items.length - 1];
+            if (e.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
+            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        }
+    }
+    document.addEventListener('focusin', function () { rememberOpenDialogs(); restoreClosedDialogs(); });
+    document.addEventListener('click', function () { requestAnimationFrame(function () { rememberOpenDialogs(); restoreClosedDialogs(); }); });
+    document.addEventListener('turbo:load', function () { rememberOpenDialogs(); restoreClosedDialogs(); });
+    document.addEventListener('modal:shown', function () { requestAnimationFrame(rememberOpenDialogs); });
 
     document.addEventListener('keydown', function (e) {
+        trapDialogFocus(e);
         if (confirmOpen()) return;          // nested confirm owns Esc/Enter
 
         var m = topmostOpen();
@@ -1222,6 +1271,7 @@
         if (e.key === 'Escape') {
             e.preventDefault();
             closeEl(m);
+            requestAnimationFrame(restoreClosedDialogs);
             return;
         }
         if (e.key === 'Enter') {

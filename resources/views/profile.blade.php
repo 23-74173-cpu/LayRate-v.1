@@ -9,11 +9,11 @@
     {{-- Tabs --}}
     <div id="profile-tabs-nav">
         <x-underline-tabs :tabs="[
-            'profile'  => ['label' => 'Profile',         'icon' => 'user',     'onclick' => 'switchProfileTab(\'profile\')'],
-            'settings' => ['label' => 'Profile Settings', 'icon' => 'settings', 'onclick' => 'switchProfileTab(\'settings\')'],
-            'system'   => ['label' => 'System Settings', 'icon' => 'server',  'onclick' => 'switchProfileTab(\'system\')'],
-            'manual'   => ['label' => 'User Manual', 'icon' => 'book-open', 'onclick' => 'switchProfileTab(\'manual\')'],
-        ]" active="{{ $tab }}" />
+            'profile'  => ['label' => 'Profile', 'icon' => 'user', 'panelId' => 'panelProfile', 'onclick' => 'switchProfileTab(\'profile\')', 'tabBehavior' => 'authoritative'],
+            'settings' => ['label' => 'Profile Settings', 'icon' => 'settings', 'panelId' => 'panelSettings', 'onclick' => 'switchProfileTab(\'settings\')', 'tabBehavior' => 'authoritative'],
+            'system'   => ['label' => 'System Settings', 'icon' => 'server', 'panelId' => 'panelSystem', 'onclick' => 'switchProfileTab(\'system\')', 'tabBehavior' => 'authoritative'],
+            'manual'   => ['label' => 'User Manual', 'icon' => 'book-open', 'panelId' => 'panelManual', 'onclick' => 'switchProfileTab(\'manual\')', 'tabBehavior' => 'authoritative'],
+        ]" active="{{ $tab }}" id="profile-tabs" />
     </div>
 
     <div class="w-full space-y-5">
@@ -21,7 +21,7 @@
         {{-- ============================================ --}}
         {{-- PROFILE TAB --}}
         {{-- ============================================ --}}
-        <div id="panelProfile" class="{{ $tab !== 'profile' ? 'hidden' : '' }} space-y-5">
+        <div id="panelProfile" class="{{ $tab !== 'profile' ? 'hidden' : '' }} space-y-5" role="tabpanel" tabindex="0" aria-labelledby="profile-tabs-profile" {{ $tab !== 'profile' ? 'hidden' : '' }}>
 
             {{-- Identity header --}}
             <div class="bg-white rounded-lg border border-[#D9D9D9] p-5 flex items-center gap-4">
@@ -53,15 +53,15 @@
                 <form method="POST" action="{{ route('profile.update') }}" class="space-y-4">
                     @csrf
                     <div>
-                        <label class="block text-sm text-[#333333] mb-1.5">Name</label>
-                        <input type="text" name="name" value="{{ old('name', auth()->user()->name) }}" required
+                        <label for="profileName" class="block text-sm text-[#333333] mb-1.5">Name</label>
+                        <input id="profileName" type="text" name="name" value="{{ old('name', auth()->user()->name) }}" required
                                class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-navy">
                         @error('name')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
                     </div>
 
                     <div>
-                        <label class="block text-sm text-[#333333] mb-1.5">Email</label>
-                        <input type="email" name="email" value="{{ old('email', auth()->user()->email) }}" required
+                        <label for="profileEmail" class="block text-sm text-[#333333] mb-1.5">Email</label>
+                        <input id="profileEmail" type="email" name="email" value="{{ old('email', auth()->user()->email) }}" required
                                class="w-full border border-[#D9D9D9] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-navy">
                         @error('email')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
                     </div>
@@ -108,7 +108,7 @@
         {{-- ============================================ --}}
         {{-- ACCOUNT SETTINGS TAB --}}
         {{-- ============================================ --}}
-        <div id="panelSettings" class="{{ $tab !== 'settings' ? 'hidden' : '' }} space-y-5">
+        <div id="panelSettings" class="{{ $tab !== 'settings' ? 'hidden' : '' }} space-y-5" role="tabpanel" tabindex="0" aria-labelledby="profile-tabs-settings" {{ $tab !== 'settings' ? 'hidden' : '' }}>
 
             {{-- Change Password --}}
             <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
@@ -347,7 +347,7 @@
         {{-- ============================================ --}}
         {{-- SYSTEM SETTINGS TAB --}}
         {{-- ============================================ --}}
-        <div id="panelSystem" class="{{ $tab !== 'system' ? 'hidden' : '' }} space-y-5">
+        <div id="panelSystem" class="{{ $tab !== 'system' ? 'hidden' : '' }} space-y-5" role="tabpanel" tabindex="0" aria-labelledby="profile-tabs-system" {{ $tab !== 'system' ? 'hidden' : '' }}>
 
             {{-- Admin: farm configuration overview --}}
             @if($farmSettings)
@@ -471,7 +471,7 @@
         {{-- ============================================ --}}
         {{-- USER MANUAL TAB --}}
         {{-- ============================================ --}}
-        <div id="panelManual" class="{{ $tab !== 'manual' ? 'hidden' : '' }} space-y-5">
+        <div id="panelManual" class="{{ $tab !== 'manual' ? 'hidden' : '' }} space-y-5" role="tabpanel" tabindex="0" aria-labelledby="profile-tabs-manual" {{ $tab !== 'manual' ? 'hidden' : '' }}>
 
         {{-- STEP 1: Create a cage and view its details --}}
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
@@ -736,6 +736,10 @@
             document.getElementById('panelSettings').classList.toggle('hidden', tab !== 'settings');
             document.getElementById('panelSystem').classList.toggle('hidden', tab !== 'system');
             document.getElementById('panelManual').classList.toggle('hidden', tab !== 'manual');
+            ['profile', 'settings', 'system', 'manual'].forEach(function(name) {
+                var panel = document.getElementById('panel' + name.charAt(0).toUpperCase() + name.slice(1));
+                if (panel) panel.hidden = name !== tab;
+            });
 
         const nav = document.getElementById('profile-tabs-nav');
         if (nav) {
@@ -747,6 +751,12 @@
             if (active) {
                 active.classList.remove('border-transparent', 'text-[#6B7280]');
                 active.classList.add('border-navy', 'text-navy');
+                nav.querySelectorAll('button[role="tab"]').forEach(btn => {
+                    const selected = btn === active;
+                    btn.setAttribute('aria-selected', selected ? 'true' : 'false');
+                    btn.tabIndex = selected ? 0 : -1;
+                    btn.tabIndex = selected ? 0 : -1;
+                });
             }
         }
 

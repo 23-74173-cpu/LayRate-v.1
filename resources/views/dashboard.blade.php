@@ -9,23 +9,23 @@
 
     {{-- Onboarding Modal --}}
     @if($needsOnboarding)
-        <div id="onboardingModal" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+        <div id="onboardingModal" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle" data-focus-dialog>
             <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);"></div>
         <div class="relative w-full max-w-sm rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
-            <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px] mb-2" style="color: #1f1f1f;">Farm Layout Setup</h2>
+            <h2 id="onboardingTitle" class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px] mb-2" style="color: #1f1f1f;">Farm Layout Setup</h2>
             <p class="text-sm mb-4" style="color: #615d59;">Define your farm grid dimensions to visualize cage placement.</p>
             <form method="POST" action="{{ route('settings.farm-layout') }}">
                 @csrf
                 <div class="grid grid-cols-2 gap-4 mb-4">
                     <div>
-                        <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Rows</label>
-                        <input type="number" name="rows" value="4" min="1" max="50" required
+                        <label for="onboardingRows" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Rows</label>
+                        <input type="number" id="onboardingRows" name="rows" value="4" min="1" max="50" required
                                class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                style="border-color: #e6e6e6; color: #1f1f1f;">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Columns</label>
-                        <input type="number" name="cols" value="4" min="1" max="50" required
+                        <label for="onboardingCols" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Columns</label>
+                        <input type="number" id="onboardingCols" name="cols" value="4" min="1" max="50" required
                                class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                style="border-color: #e6e6e6; color: #1f1f1f;">
                     </div>
@@ -90,14 +90,15 @@
              of the page so it never renders twice. --}}
 
         @php
+            $analyticsTablistId = 'dashboard-analytics-tabs';
             $analyticsTabs = [
-                'production' => ['label' => 'Production Performance', 'icon' => 'bar-chart-3', 'onclick' => "filterAnalytics('production')"],
-                'environmental' => ['label' => 'Environmental Analytics', 'icon' => 'thermometer', 'onclick' => "filterAnalytics('environmental')"],
-                'feed' => ['label' => 'Feed Analytics', 'icon' => 'wheat', 'onclick' => "filterAnalytics('feed')"],
-                'flock' => ['label' => 'Flock Analytics', 'icon' => 'heart-pulse', 'onclick' => "filterAnalytics('flock')"],
+                'production' => ['label' => 'Production Performance', 'icon' => 'bar-chart-3', 'panelId' => 'dashboard-panel-production', 'onclick' => "filterAnalytics('production')", 'tabBehavior' => 'authoritative'],
+                'environmental' => ['label' => 'Environmental Analytics', 'icon' => 'thermometer', 'panelId' => 'dashboard-panel-environmental', 'onclick' => "filterAnalytics('environmental')", 'tabBehavior' => 'authoritative'],
+                'feed' => ['label' => 'Feed Analytics', 'icon' => 'wheat', 'panelId' => 'dashboard-panel-feed', 'onclick' => "filterAnalytics('feed')", 'tabBehavior' => 'authoritative'],
+                'flock' => ['label' => 'Flock Analytics', 'icon' => 'heart-pulse', 'panelId' => 'dashboard-panel-flock', 'onclick' => "filterAnalytics('flock')", 'tabBehavior' => 'authoritative'],
             ];
             @endphp
-            <x-underline-tabs :tabs="$analyticsTabs" active="production" />
+            <x-underline-tabs :tabs="$analyticsTabs" active="production" id="{{ $analyticsTablistId }}" />
 
             <style>
                 .analytics-section { display: none !important; }
@@ -137,8 +138,8 @@
             // (page load / tab restore) instead of all at once (tab clicks).
             function filterAnalytics(section, staggerLoad) {
                 window.__dashboardSection = section;
-                document.querySelectorAll('[data-underline-tabs] button[onclick^="filterAnalytics("]').forEach(function(btn) {
-                    var isActive = btn.getAttribute('onclick') === "filterAnalytics('" + section + "')";
+                document.querySelectorAll('#dashboard-analytics-tabs button[onclick^="filterAnalytics("]').forEach(function(btn) {
+                    var isActive = btn.getAttribute('onclick').indexOf("'" + section + "'") !== -1;
                     btn.classList.toggle('border-navy', isActive);
                     btn.classList.toggle('text-navy', isActive);
                     btn.classList.toggle('border-transparent', !isActive);
@@ -147,11 +148,10 @@
                     btn.classList.toggle('border-navy', isActive);
                     btn.classList.toggle('text-navy', isActive);
                     btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                    btn.tabIndex = isActive ? 0 : -1;
                     if (isActive) btn.dataset.tabKey = section;
-                    if (isActive) btn.setAttribute('aria-current', 'page');
-                    else btn.removeAttribute('aria-current');
                 });
-                var activeTab = document.querySelector('[data-underline-tabs] button[aria-selected="true"]');
+                var activeTab = document.querySelector('#dashboard-analytics-tabs button[aria-selected="true"]');
                 if (activeTab) {
                     var nav = activeTab.closest('nav');
                     var navRect = nav && nav.getBoundingClientRect();
@@ -159,7 +159,9 @@
                     if (navRect && (tabRect.left < navRect.left || tabRect.right > navRect.right)) nav.scrollLeft += tabRect.left - navRect.left;
                 }
                 document.querySelectorAll('.analytics-section').forEach(function(el) {
-                    el.classList.toggle('active-section', el.dataset.analyticsSection === section);
+                    var isActive = el.dataset.analyticsSection === section;
+                    el.classList.toggle('active-section', isActive);
+                    el.hidden = !isActive;
                 });
                 // Load this section's frames on demand (data-src → src) so coming back
                 // to the dashboard only renders the section you were last on.
@@ -206,7 +208,7 @@
             </script>
 
             {{-- ═══ SECTION 1 — Production Performance ═══ --}}
-            <div class="analytics-section active-section" data-analytics-section="production">
+                <div id="dashboard-panel-production" class="analytics-section active-section" data-analytics-section="production" role="tabpanel" tabindex="0" aria-labelledby="dashboard-analytics-tabs-production">
                 <div class="space-y-4">
                     <turbo-frame id="dashboard-stats-production" data-src="{{ route('dashboard.stats.production', ['cage' => request('cage'), 'from_date' => request('from_date'), 'to_date' => request('to_date')]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[430px] sm:min-h-[258px] lg:min-h-[153px]"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-4 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
@@ -238,7 +240,7 @@
             </div>
 
             {{-- ═══ SECTION 2 — Environmental Analytics ═══ --}}
-            <div class="analytics-section" data-analytics-section="environmental">
+                <div id="dashboard-panel-environmental" class="analytics-section" data-analytics-section="environmental" role="tabpanel" tabindex="0" aria-labelledby="dashboard-analytics-tabs-environmental" hidden>
                 <div class="space-y-4">
                     <turbo-frame id="dashboard-stats-environment" data-src="{{ route('dashboard.stats.environment', ['cage' => request('cage'), 'from_date' => request('from_date'), 'to_date' => request('to_date')]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[184px] sm:min-h-0"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-3 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
@@ -268,7 +270,7 @@
             </div>
 
             {{-- ═══ SECTION 3 — Feed Analytics ═══ --}}
-            <div class="analytics-section" data-analytics-section="feed">
+                <div id="dashboard-panel-feed" class="analytics-section" data-analytics-section="feed" role="tabpanel" tabindex="0" aria-labelledby="dashboard-analytics-tabs-feed" hidden>
                 <div class="space-y-4">
                     <turbo-frame id="dashboard-stats-feed" data-src="{{ route('dashboard.stats.feed', ['cage' => request('cage'), 'from_date' => request('from_date'), 'to_date' => request('to_date')]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[386px] sm:min-h-[255px] lg:min-h-[150px]"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-4 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
@@ -292,7 +294,7 @@
             </div>
 
             {{-- ═══ SECTION 4 — Flock Analytics ═══ --}}
-            <div class="analytics-section" data-analytics-section="flock">
+                <div id="dashboard-panel-flock" class="analytics-section" data-analytics-section="flock" role="tabpanel" tabindex="0" aria-labelledby="dashboard-analytics-tabs-flock" hidden>
                 <div class="space-y-4">
                     <turbo-frame id="dashboard-stats-flock" data-src="{{ route('dashboard.stats.flock', ['cage' => request('cage'), 'from_date' => request('from_date'), 'to_date' => request('to_date')]) }}" loading="lazy" class="block">
                         <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3 animate-pulse min-h-[341px] sm:min-h-[248px] lg:min-h-0"><div class="h-4 w-32 bg-gray-200 rounded mb-3"></div><div class="grid grid-cols-3 gap-3"><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div><div class="h-20 bg-gray-100 rounded-xl"></div></div></div>
@@ -330,7 +332,7 @@
         </div>
 
     {{-- ── Stats Modal ── --}}
-    <div id="statsModal" data-modal data-close="closeStatsModal" style="display: none;" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div id="statsModal" data-modal data-focus-dialog data-close="closeStatsModal" style="display: none;" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="statsCageCode">
         <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeStatsModal()"></div>
         <div class="relative w-full max-w-sm rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
             <div class="flex items-center justify-between mb-4">
@@ -388,7 +390,7 @@
 
 
     {{-- ── KPI Breakdown Modal (shared by all metric cards — item 9) ── --}}
-    <div id="kpiModal" data-modal  data-close="closeKpiModal" style="display: none;" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div id="kpiModal" data-modal data-focus-dialog data-close="closeKpiModal" style="display: none;" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="kpiModalTitle">
         <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeKpiModal()"></div>
         <div class="relative w-full max-w-sm rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
             <div class="flex items-center justify-between mb-4">
@@ -402,12 +404,12 @@
     </div>
 
     {{-- ── Yesterday's Production Record Popup ── --}}
-    <div id="yesterdaySummaryModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div id="yesterdaySummaryModal" data-focus-dialog style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="yesterdaySummaryTitle">
         <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeYesterdaySummary()"></div>
         <div class="relative w-full max-w-sm rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <h3 class="text-[18px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Yesterday's Production Record</h3>
+                    <h3 id="yesterdaySummaryTitle" class="text-[18px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Yesterday's Production Record</h3>
                     <p class="text-xs mt-0.5" style="color: #a39e98;">{{ \Carbon\Carbon::yesterday()->format('l, m/d/Y') }}</p>
                 </div>
                 <button onclick="closeYesterdaySummary()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
@@ -468,13 +470,13 @@
     </div>
 
     {{-- ── Day Production Complete Popup ── --}}
-    <div id="dayCompleteModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div id="dayCompleteModal" data-focus-dialog style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="dayCompleteTitle">
         <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeDayComplete()"></div>
         <div class="relative w-full max-w-sm rounded-2xl p-6 text-center" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
             <div class="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center" style="background-color: #e6f6ee;">
                 <i data-lucide="check-circle" class="w-8 h-8" style="color: #16a34a;"></i>
             </div>
-            <h3 class="text-lg font-semibold mb-1" style="color: #1f1f1f;">Day Production Complete</h3>
+            <h3 id="dayCompleteTitle" class="text-lg font-semibold mb-1" style="color: #1f1f1f;">Day Production Complete</h3>
             <p class="text-sm mb-5" style="color: #a39e98;">Reporting day has ended. Data for today is locked.</p>
             <button onclick="closeDayComplete()" class="w-full py-2.5 rounded-xl text-sm font-medium text-white transition-colors" style="background-color: #16a34a;">
                 Got it

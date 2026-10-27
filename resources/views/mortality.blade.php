@@ -28,8 +28,8 @@
 
                 {{-- Date --}}
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">DATE</label>
-                    <input type="date" name="log_date" required
+                    <label for="mortalityDate" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">DATE</label>
+                    <input type="date" id="mortalityDate" name="log_date" required
                            value="{{ old('log_date', \App\Services\ReportingDateService::reportingDateString()) }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                     @error('log_date')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
@@ -37,7 +37,7 @@
 
                 {{-- Hens --}}
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">SELECT HENS <span class="text-danger">*</span></label>
+                    <label for="mortalityHenIds" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">SELECT HENS <span class="text-danger">*</span></label>
                     <input type="hidden" name="hen_ids" id="mortalityHenIds" value="">
                     <button type="button" onclick="openHenPickerModal()" id="henPickerBtn"
                             class="w-full flex items-center justify-between border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white text-left focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy transition-colors hover:border-[#9CA3AF]">
@@ -49,7 +49,7 @@
 
                 {{-- Reason dropdown --}}
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CAUSE OF DEATH</label>
+                    <label for="reasonSelect" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CAUSE OF DEATH</label>
                     <select name="reason" required id="reasonSelect"
                             class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white text-[#333333] focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         <option value="">Select reason…</option>
@@ -64,9 +64,9 @@
 
                 {{-- Notes (always visible, below reason) --}}
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">ADDITIONAL NOTES</label>
+                    <label for="mortalityNotes" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">ADDITIONAL NOTES</label>
                     <x-saved-note-picker category="Mortality" target="textarea[name='notes']" :notes="$mortalityNotes" />
-                    <textarea name="notes" rows="3" maxlength="1000"
+                    <textarea name="notes" id="mortalityNotes" rows="3" maxlength="1000"
                               placeholder="Describe symptoms, location in cage, or any observations…"
                               class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] resize-none focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">{{ old('notes') }}</textarea>
                     @error('notes')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
@@ -126,13 +126,13 @@
         <div class="px-5 pt-4 pb-3 space-y-3 border-b border-[#E6E6E6]">
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-[10px] font-semibold uppercase tracking-wider text-[#6B7280] mb-1">Cage</label>
+                    <label for="pickerCageSelect" class="block text-[10px] font-semibold uppercase tracking-wider text-[#6B7280] mb-1">Cage</label>
                     <select id="pickerCageSelect" onchange="onPickerCageChange()" class="w-full border border-[#D9D9D9] rounded-lg px-2.5 py-1.5 text-xs text-[#333333] bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         <option value="">All cages</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-[10px] font-semibold uppercase tracking-wider text-[#6B7280] mb-1">Slot</label>
+                    <label for="pickerSlotSelect" class="block text-[10px] font-semibold uppercase tracking-wider text-[#6B7280] mb-1">Slot</label>
                     <select id="pickerSlotSelect" onchange="onPickerFilterChange()" class="w-full border border-[#D9D9D9] rounded-lg px-2.5 py-1.5 text-xs text-[#333333] bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy" disabled>
                         <option value="">All slots</option>
                     </select>
@@ -140,6 +140,7 @@
             </div>
             <div class="relative">
                 <i data-lucide="search" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style="color: #9CA3AF;"></i>
+                <label for="pickerSearch" class="sr-only">Search by hen ID</label>
                 <input type="text" id="pickerSearch" placeholder="Search by ID..." oninput="onPickerFilterChange()"
                        class="w-full border border-[#D9D9D9] rounded-lg pl-8 pr-2.5 py-1.5 text-xs text-[#333333] bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
             </div>
@@ -177,21 +178,21 @@
 
             <div class="space-y-4">
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">DATE</label>
+                    <label for="editMortDate" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">DATE</label>
                     <input type="date" name="log_date" id="editMortDate" required
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                     <x-input-error name="log_date" />
                 </div>
 
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">NUMBER OF DEATHS</label>
+                    <label for="editMortCount" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">NUMBER OF DEATHS</label>
                     <input type="number" name="count" id="editMortCount" min="1" required
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                     <x-input-error name="count" />
                 </div>
 
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CAUSE OF DEATH</label>
+                    <label for="editMortReason" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CAUSE OF DEATH</label>
                     <select name="reason" id="editMortReason" required
                             class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm bg-white text-[#333333] focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         <option value="">Select reason…</option>
@@ -203,7 +204,7 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">ADDITIONAL NOTES</label>
+                    <label for="editMortNotes" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">ADDITIONAL NOTES</label>
                     <x-saved-note-picker category="Mortality" target="#editMortNotes" :notes="$mortalityNotes" />
                     <textarea name="notes" id="editMortNotes" rows="3" maxlength="1000"
                               class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2.5 text-sm text-[#333333] resize-none focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">{{ old('notes') }}</textarea>

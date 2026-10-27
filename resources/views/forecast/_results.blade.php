@@ -14,13 +14,14 @@
     {{-- ── Chart Panel ── --}}
     <div class="xl:col-span-2 bg-white rounded-lg border border-[#D9D9D9] p-5 mb-8">
         <x-card-header title="Historical vs Forecast Eggs" subtitle="{{ $scopeLabel }}" icon="chart-line" />
-        <canvas id="forecastChart" height="160"></canvas>
+        <canvas id="forecastChart" height="160" role="img" aria-label="Historical and forecast egg production for {{ $scopeLabel }}"></canvas>
     </div>
 
     {{-- ── Forecast Table ── --}}
     <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
         <p class="px-5 py-3 text-xs leading-relaxed text-[#6B7280] border-b border-[#D9D9D9]">Forecast uncertainty generally increases with time. Predictions for dates farther ahead may differ more from actual production.</p>
         <table class="w-full">
+            <caption class="sr-only">Historical and forecast egg counts for {{ $scopeLabel }}</caption>
             <thead>
                 <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
                     <th class="text-left text-xs text-[#6B7280] px-5 py-3 font-medium">Date</th>

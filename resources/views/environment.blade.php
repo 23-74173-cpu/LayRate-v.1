@@ -46,12 +46,12 @@
 
     {{-- Page-level tabs: Live Data / Log History --}}
     <x-underline-tabs :tabs="[
-        'live' => ['label' => 'Live Data',  'icon' => 'activity', 'onclick' => 'switchEnvTab(\'live\')'],
-        'logs'  => ['label' => 'Log History', 'icon' => 'clock',   'onclick' => 'switchEnvTab(\'logs\')'],
-    ]" active="{{ $envTab ?? 'live' }}" />
+        'live' => ['label' => 'Live Data', 'icon' => 'activity', 'panelId' => 'panelLiveData', 'onclick' => 'switchEnvTab(\'live\')', 'tabBehavior' => 'authoritative'],
+        'logs' => ['label' => 'Log History', 'icon' => 'clock', 'panelId' => 'panelLogHistory', 'onclick' => 'switchEnvTab(\'logs\')', 'tabBehavior' => 'authoritative'],
+    ]" active="{{ $envTab ?? 'live' }}" id="environment-tabs" />
 
     {{-- ── LIVE DATA TAB ── --}}
-    <div id="panelLiveData" class="{{ ($envTab ?? 'live') !== 'live' ? 'hidden' : '' }}">
+    <div id="panelLiveData" class="{{ ($envTab ?? 'live') !== 'live' ? 'hidden' : '' }}" role="tabpanel" tabindex="0" aria-labelledby="environment-tabs-live" {{ ($envTab ?? 'live') !== 'live' ? 'hidden' : '' }}>
 
         <style>
             @keyframes layrate-fan-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -65,7 +65,7 @@
     </div>
 
     {{-- ── LOG HISTORY TAB ── --}}
-    <div id="panelLogHistory" class="{{ ($envTab ?? 'live') !== 'logs' ? 'hidden' : '' }}">
+    <div id="panelLogHistory" class="{{ ($envTab ?? 'live') !== 'logs' ? 'hidden' : '' }}" role="tabpanel" tabindex="0" aria-labelledby="environment-tabs-logs" {{ ($envTab ?? 'live') !== 'logs' ? 'hidden' : '' }}>
 
         <turbo-frame id="environment-logs" src="{{ route('environment.logs') }}" loading="lazy">
             @include('environment._logs-skeleton')
@@ -274,12 +274,19 @@ function switchEnvTab(tab) {
 
     document.getElementById('panelLiveData').classList.toggle('hidden', tab !== 'live');
     document.getElementById('panelLogHistory').classList.toggle('hidden', tab !== 'logs');
+    document.getElementById('panelLiveData').hidden = tab !== 'live';
+    document.getElementById('panelLogHistory').hidden = tab !== 'logs';
+    document.getElementById('panelLiveData').setAttribute('aria-labelledby', 'environment-tabs-live');
+    document.getElementById('panelLogHistory').setAttribute('aria-labelledby', 'environment-tabs-logs');
     document.querySelectorAll('[onclick^="switchEnvTab"]').forEach(function(btn) {
         var key = btn.getAttribute('onclick').match(/'(\w+)'/)?.[1];
         var isActive = key === tab;
+        btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        btn.tabIndex = isActive ? 0 : -1;
         btn.className = 'pb-2 text-sm font-medium border-b-2 transition-colors ' +
             (isActive ? 'border-navy text-navy' : 'border-transparent text-[#6B7280] hover:text-[#333]');
     });
+    var activeTab = document.querySelector('#environment-tabs button[aria-selected="true"]');
     if (tab === 'live') {
         startLivePolling();
         startRelaySSE();

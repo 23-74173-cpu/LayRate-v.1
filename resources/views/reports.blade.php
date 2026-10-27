@@ -81,7 +81,7 @@
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
             <form method="GET" action="{{ route('reports') }}" class="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-end sm:gap-x-4 sm:gap-y-3 gap-3" id="reportForm" data-turbo="false">
                 <div class="col-span-2 sm:col-span-1">
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">REPORT TYPE</label>
+                    <label for="reportType" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">REPORT TYPE</label>
                     <select name="type" id="reportType"
                             class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         <option value="production" {{ $type === 'production' ? 'selected' : '' }}>Production Report</option>
@@ -93,18 +93,18 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">FROM</label>
-                    <input type="date" name="from" value="{{ $from }}"
+                    <label for="reportFrom" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">FROM</label>
+                    <input type="date" id="reportFrom" name="from" value="{{ $from }}"
                            class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                 </div>
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TO</label>
-                    <input type="date" name="to" value="{{ $to }}"
+                    <label for="reportTo" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TO</label>
+                    <input type="date" id="reportTo" name="to" value="{{ $to }}"
                            class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                 </div>
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CAGE</label>
-                    <select name="cage"
+                    <label for="reportCage" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">CAGE</label>
+                    <select id="reportCage" name="cage"
                             class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         <option value="all" {{ $cageId === 'all' ? 'selected' : '' }}>All Cages</option>
                         @foreach($allCages as $c)
@@ -115,8 +115,8 @@
 
                 {{-- Reason filter — only relevant when mortality data is shown (single mortality report, or the mortality section within "All Reports") --}}
                 <div id="reasonFilter" class="{{ in_array($type, ['mortality', 'all']) ? '' : 'hidden' }}">
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">REASON</label>
-                    <select name="reason"
+                    <label for="reportReason" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">REASON</label>
+                    <select id="reportReason" name="reason"
                             class="w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         <option value="all" {{ $reason === 'all' ? 'selected' : '' }}>All Reasons</option>
                         @foreach(\App\Models\MortalityLog::REASONS as $r)

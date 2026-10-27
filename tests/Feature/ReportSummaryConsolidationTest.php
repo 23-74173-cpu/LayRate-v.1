@@ -12,6 +12,7 @@ use App\Models\MortalityLog;
 use App\Models\ProductionLog;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -62,23 +63,45 @@ class ReportSummaryConsolidationTest extends TestCase
         ProductionLog::create(['cage_slot_id' => $this->slot->id, 'log_date' => now()->subDay()->toDateString(), 'egg_count' => 4, 'hen_count' => 4, 'hdep' => 100.00]);
         ProductionLog::create(['cage_slot_id' => $this->slot->id, 'log_date' => now()->subDays(2)->toDateString(), 'egg_count' => 2, 'hen_count' => 4, 'hdep' => 50.00]);
 
-        DB::enableQueryLog();
+        $summaryQueries = [];
+        $requestQueries = [];
+        $measureSummary = false;
+        $summaryListener = function (QueryExecuted $query) use (&$summaryQueries, &$measureSummary): void {
+            $entry = ['sql' => $query->sql, 'time_ms' => $query->time];
+            if ($measureSummary) {
+                $summaryQueries[] = $entry;
+            }
+        };
+        $requestListener = function (QueryExecuted $query) use (&$requestQueries): void {
+            $requestQueries[] = ['sql' => $query->sql, 'time_ms' => $query->time];
+        };
+        DB::listen($summaryListener);
+
+        $request = \Illuminate\Http\Request::create($this->reportUrl('production'), 'GET');
+        app()->instance('request', $request);
+        $allCages = Cage::orderBy('cage_code')->get();
+        $controller = new \App\Http\Controllers\ReportController();
+        $summaryMethod = new \ReflectionMethod($controller, 'buildSummary');
+        $summaryMethod->setAccessible(true);
+        $measureSummary = true;
+        $summaryMethod->invoke($controller, 'production', now()->subDays(5)->toDateString(), now()->toDateString(), 'CAGE-SUM', 'all', $allCages);
+        $measureSummary = false;
+
+        DB::listen($requestListener);
         $response = $this->actingAs($this->user)->get($this->reportUrl('production'));
-        $queryCount = count(DB::getQueryLog());
-        DB::disableQueryLog();
 
         $response->assertOk();
         $response->assertSee('6'); // total_eggs = 4 + 2
         $response->assertSee('75.0%'); // avg_hdep = (100 + 50) / 2
         $response->assertSee('2'); // days (appears alongside total_eggs=6, but both are asserted)
 
-        // Verified via git-stash comparison against the pre-consolidation
-        // code on this exact test: old = 14 queries, new = 12 — exactly the
-        // expected 4-to-2 reduction for this branch (sum/avg/count/days
-        // collapsed into one selectRaw(), total_hens stays separate). A
-        // small allowance above 12 avoids flaking on incidental query-count
-        // drift from unrelated page-load queries (auth, view rendering).
-        $this->assertLessThanOrEqual(13, $queryCount, "Query count is {$queryCount}, expected ~12 — consolidation may have regressed.");
+        // Exactly two summary queries are intended: one combined production
+        // aggregate, plus the separate active-hen count. Auth, report rows,
+        // filter data, and rendering are measured separately as request work.
+        $this->assertCount(2, $summaryQueries, 'Production summary should issue one aggregate and one active-hens query.');
+        $aggregateQueries = array_filter($summaryQueries, fn (array $query) => str_contains(strtolower($query['sql']), 'sum('));
+        $this->assertCount(1, $aggregateQueries, 'Production aggregates must remain consolidated into one SQL statement.');
+        $this->assertGreaterThan(0, count($requestQueries), 'Full request should execute measured queries.');
     }
 
     public function test_feed_summary_fields_are_all_correct(): void

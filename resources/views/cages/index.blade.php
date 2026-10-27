@@ -117,7 +117,7 @@
              drag-and-drop tile math (farmCanvas rect + scroll offsets) is
              unaffected; when the grid is wider than available the container
              caps at 100% and scrolls exactly as before. --}}
-        <div id="farmCanvas" class="relative overflow-auto rounded-lg border select-none mx-auto w-max max-w-full" style="border-color: #e6e6e6; background-color: #f9fafb; min-height: 120px; max-height: 60vh;">
+        <div id="farmCanvas" class="relative overflow-auto rounded-lg border select-none mx-auto w-max max-w-full" role="region" aria-label="Farm cage layout. Scroll horizontally and vertically to view the full grid" tabindex="0" style="border-color: #e6e6e6; background-color: #f9fafb; min-height: 120px; max-height: 60vh;">
             <div id="canvasScaler" style="transform-origin: top left;">
                 <div id="canvasContent" class="relative inline-block">
                     {{-- Tile background grid --}}
@@ -128,7 +128,7 @@
             </div>
             {{-- Saving overlay --}}
             <div id="farmSaveOverlay" class="hidden absolute inset-0 z-10 items-center justify-center rounded-lg" style="background-color: rgba(255,255,255,0.7);">
-                <i data-lucide="loader" class="animate-spin w-8 h-8" style="color: var(--color-navy);"></i>
+                <i data-lucide="loader" class="animate-spin motion-reduce:animate-none w-8 h-8" style="color: var(--color-navy);"></i>
             </div>
         </div>
 
@@ -243,7 +243,7 @@
             same as gridSettingsModal/addCageModal below. Formerly an anchored
             popover positioned next to the clicked cage (see positionCageInfoPopup,
             now a no-op kept for its callers). --}}
-        <div id="cageInfoPopup" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Cage slot details">
+        <div id="cageInfoPopup" data-modal data-close="closeCageInfoPopup" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Cage slot details">
             <div id="cageInfoCard" class="rounded-xl border bg-white shadow-lg" style="border-color: #e6e6e6; width: min(58rem, calc(100vw - 2rem)); max-height: min(640px, calc(100vh - 3rem)); overflow-y: auto;">
                 <div id="cageInfoPopupContent"></div>
             </div>
@@ -1487,6 +1487,9 @@ function renderCanvas() {
     renderTileGrid();
     renderCageOverlays();
     updateCanvasSize();
+    // The max-content canvas needs its width after the scaled child is laid out;
+    // schedule a second fit so mobile/short-width grids retain their pan range.
+    requestAnimationFrame(fitCanvasToWidth);
     updateStagingVisibility();
     updateSaveButton();
 }
@@ -1817,6 +1820,7 @@ function openCageInfoPopup(cageId, btnEl) {
     if (backdrop) backdrop.classList.remove('hidden');
     popup._cageInfoBtnEl = btnEl;
     popup._cageInfoCageId = cageId;
+    document.dispatchEvent(new CustomEvent('modal:shown'));
     // Size the modal to the cage being viewed: just wide enough for its
     // actual column count (Cage A 20 cols ≈ 59rem, B/C 12 cols ≈ 38rem),
     // capped so it never exceeds the viewport. The grid scrolls internally
@@ -2052,14 +2056,15 @@ function fitCanvasToWidth() {
     var containerW = canvas.parentElement.clientWidth
         - parseFloat(parentCS.paddingLeft) - parseFloat(parentCS.paddingRight) - 2 - 4;
     if (containerW < 1) return;
-    var scale = Math.min(1, containerW / contentW);
-    // On narrow viewports, keep tiles readable and scroll horizontally instead of
-    // shrinking everything to an unusable size.
-    var minScale = window.innerWidth < 640 ? 0.65 : (window.innerWidth < 1024 ? 0.85 : 1);
-    scale = Math.max(minScale, scale);
+    var scale = 1;
+    // Preserve the natural tile size; let the labeled canvas scroller expose
+    // the full layout when it cannot fit in the available viewport.
     scaler.style.transform = 'scale(' + scale + ')';
     scaler.style.width = (contentW * scale) + 'px';
     scaler.style.height = (canvasH() * scale) + 'px';
+    // The canvas is max-content sized. Explicitly size it to the available
+    // viewport when the natural grid is wider so its overflow area can scroll.
+    canvas.style.width = contentW > containerW ? containerW + 'px' : '';
     // Keep the mobile info-button visually large: expose the inverse scale so
     // the CSS media query can size grid cages' buttons past the canvas zoom.
     document.documentElement.style.setProperty('--cage-info-btn-scale', (1 / scale).toFixed(3));

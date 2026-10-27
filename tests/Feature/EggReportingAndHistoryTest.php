@@ -240,7 +240,7 @@ class EggReportingAndHistoryTest extends TestCase
         $response->assertSee('CAGE-A');
         $response->assertDontSee('CAGE-B');
         // Only one data row (the sensor log for CAGE-A ISA Brown) should be present.
-        $this->assertEquals(1, substr_count($response->getContent(), '<tr class="border-b hover:bg-black'));
+        $this->assertEquals(1, substr_count($response->getContent(), 'class="mobile-log-row '));
     }
 
     /** @test */
@@ -483,6 +483,12 @@ class EggReportingAndHistoryTest extends TestCase
             ])->id,
             'status' => 'active',
         ]);
+        \App\Models\SensorOccupancyReading::create([
+            'hardware_item_id' => $overrideItem->id,
+            'cage_slot_id' => $this->slotA1->id,
+            'reported_count' => 2,
+            'recorded_at' => now()->subSecond(),
+        ]);
         $this->postJson('/api/sensor-readings', [
             'readings' => [['serial_number' => $overrideItem->serial_number, 'count' => 2, 'trigger_count' => 3, 'new_trigger_count' => 1]],
             'recorded_at' => now()->addSecond()->toDateTimeString(),
@@ -507,23 +513,29 @@ class EggReportingAndHistoryTest extends TestCase
             'device_id' => $device->id,
             'status' => 'active',
         ]);
+        \App\Models\SensorOccupancyReading::create([
+            'hardware_item_id' => $item->id,
+            'cage_slot_id' => $this->slotB1->id,
+            'reported_count' => 2,
+            'recorded_at' => now()->subSecond(),
+        ]);
         $sensorLog = $this->createLog($this->slotB1, 0, now()->toDateString(), 'Sensor reading', 'sensor');
         $this->postJson('/api/sensor-readings', [
-            'readings' => [['serial_number' => 'IRBBS-OVERRIDE-001', 'count' => 2]],
+            'readings' => [['serial_number' => 'IRBBS-OVERRIDE-001', 'count' => 2, 'trigger_count' => 3, 'new_trigger_count' => 1]],
             'recorded_at' => now()->addSecond()->toDateTimeString(),
+        ], ['X-Device-Key' => 'override-test-key'])->assertOk();
+
+        $this->assertSame(1, (int) $sensorLog->fresh()->egg_count);
+        $this->assertSame(1, EggCountEvent::where('hardware_item_id', $item->id)
+            ->where('event_type', 'sensor_trigger')->count());
+
+        $this->postJson('/api/sensor-readings', [
+            'readings' => [['serial_number' => 'IRBBS-OVERRIDE-001', 'count' => 3, 'trigger_count' => 4, 'new_trigger_count' => 1]],
+            'recorded_at' => now()->addSeconds(2)->toDateTimeString(),
         ], ['X-Device-Key' => 'override-test-key'])->assertOk();
 
         $this->assertSame(2, (int) $sensorLog->fresh()->egg_count);
         $this->assertSame(2, EggCountEvent::where('hardware_item_id', $item->id)
-            ->where('event_type', 'sensor_trigger')->count());
-
-        $this->postJson('/api/sensor-readings', [
-            'readings' => [['serial_number' => 'IRBBS-OVERRIDE-001', 'count' => 3]],
-            'recorded_at' => now()->addSeconds(2)->toDateTimeString(),
-        ], ['X-Device-Key' => 'override-test-key'])->assertOk();
-
-        $this->assertSame(3, (int) $sensorLog->fresh()->egg_count);
-        $this->assertSame(3, EggCountEvent::where('hardware_item_id', $item->id)
             ->where('event_type', 'sensor_trigger')->count());
     }
 
@@ -543,15 +555,28 @@ class EggReportingAndHistoryTest extends TestCase
         $item = \App\Models\HardwareItem::create([
             'device_type' => 'IR_breakbeam',
             'serial_number' => 'IRBBS-ZERO-001',
-            'cage_slot_id' => $this->slotB1->id,
+            'cage_slot_id' => $this->slotA1->id,
             'device_id' => $device->id,
             'status' => 'active',
         ]);
-        $nextLog = $this->createLog($this->slotB1, 0, now()->toDateString(), 'Sensor reading', 'sensor');
-
+        $nextLog = $log;
+        $this->travel(-2)->seconds();
         $this->postJson('/api/sensor-readings', [
-            'readings' => [['serial_number' => 'IRBBS-ZERO-001', 'count' => 1]],
-            'recorded_at' => now()->addSecond()->toDateTimeString(),
+            'readings' => [['serial_number' => $item->serial_number, 'count' => 2, 'trigger_count' => 2, 'new_trigger_count' => 0]],
+            'recorded_at' => now()->toDateTimeString(),
+        ], ['X-Device-Key' => 'zero-override-key'])->assertOk();
+        $this->travel(1)->seconds();
+        \App\Models\SensorOccupancyReading::create([
+            'hardware_item_id' => $item->id,
+            'cage_slot_id' => $this->slotA1->id,
+            'reported_count' => 2,
+            'recorded_at' => now()->toDateTimeString(),
+        ]);
+
+        $this->travel(2)->seconds();
+        $this->postJson('/api/sensor-readings', [
+            'readings' => [['serial_number' => 'IRBBS-ZERO-001', 'count' => 3, 'trigger_count' => 3, 'new_trigger_count' => 1]],
+            'recorded_at' => now()->toDateTimeString(),
         ], ['X-Device-Key' => 'zero-override-key'])->assertOk();
 
         $this->assertSame(1, (int) $nextLog->fresh()->egg_count);
@@ -578,8 +603,16 @@ class EggReportingAndHistoryTest extends TestCase
             'status' => 'active',
         ]);
 
+        // Establish a prior cumulative sensor reading, then verify that a new
+        // edge is persisted. This avoids treating an initial baseline as an egg.
+        \App\Models\SensorOccupancyReading::create([
+            'hardware_item_id' => $item->id,
+            'cage_slot_id' => $this->slotA1->id,
+            'reported_count' => 0,
+            'recorded_at' => now()->subSecond(),
+        ]);
         $this->postJson('/api/sensor-readings', [
-            'readings' => [['serial_number' => $item->serial_number, 'count' => 1]],
+            'readings' => [['serial_number' => $item->serial_number, 'count' => 1, 'trigger_count' => 1, 'new_trigger_count' => 1]],
             'recorded_at' => now()->toDateTimeString(),
         ], ['X-Device-Key' => 'persist-test-key'])->assertOk();
 

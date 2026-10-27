@@ -65,12 +65,12 @@
                 <div class="flex items-center justify-between gap-3">
                     {{-- Temp --}}
                     <div class="flex-1">
-                        <div class="mobile-body-text text-[10px] font-semibold tracking-[0.125px] uppercase text-[#9CA3AF] mb-1 flex items-center gap-1">
+                        <div class="mobile-body-text text-[10px] font-semibold tracking-[0.125px] uppercase text-ink-muted mb-1 flex items-center gap-1">
                             <i data-lucide="thermometer" class="w-3 h-3"></i> Temp
                         </div>
                         <div class="flex items-baseline gap-0.5">
                             <span class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#1f1f1f]">{{ number_format($r->env->temperature_c, 1) }}</span>
-                            <span class="mobile-body-text text-xs font-medium text-[#a39e98]">°C</span>
+                            <span class="mobile-body-text text-xs font-medium text-ink-muted">°C</span>
                         </div>
                         <span class="mobile-body-text text-[10px] font-semibold uppercase mt-1 inline-block px-1.5 py-0.5 rounded" style="background:{{ $tBg }};color:{{ $tTxt }}">{{ $r->tempStatus }}</span>
                     </div>
@@ -78,12 +78,12 @@
                     <div class="w-px self-stretch" style="background:{{ $soft }}"></div>
                     {{-- Humidity --}}
                     <div class="flex-1">
-                        <div class="mobile-body-text text-[10px] font-semibold tracking-[0.125px] uppercase text-[#9CA3AF] mb-1 flex items-center gap-1">
+                        <div class="mobile-body-text text-[10px] font-semibold tracking-[0.125px] uppercase text-ink-muted mb-1 flex items-center gap-1">
                             <i data-lucide="droplets" class="w-3 h-3"></i> Humidity
                         </div>
                         <div class="flex items-baseline gap-0.5">
                             <span class="text-2xl font-bold leading-none tracking-[-0.5px] text-[#1f1f1f]">{{ number_format($r->env->humidity_pct, 0) }}</span>
-                            <span class="mobile-body-text text-xs font-medium text-[#a39e98]">%</span>
+                            <span class="mobile-body-text text-xs font-medium text-ink-muted">%</span>
                         </div>
                         <span class="mobile-body-text text-[10px] font-semibold uppercase mt-1 inline-block px-1.5 py-0.5 rounded" style="background:{{ $hBg }};color:{{ $hTxt }}">{{ $r->humStatus }}</span>
                     </div>
@@ -91,16 +91,16 @@
             </div>
 
             <div class="px-4 py-2.5 flex items-center justify-between border-t border-[#F0F0F0]" style="background:{{ $soft }}33">
-                <span class="mobile-body-text text-[11px] {{ $isStale ? 'text-[#9b1c24] font-medium' : 'text-[#9CA3AF]' }} flex items-center gap-1">
+                <span class="mobile-body-text text-xs {{ $isStale ? 'text-[#9b1c24] font-semibold' : 'text-ink-muted font-medium' }} flex items-center gap-1">
                     <i data-lucide="{{ $isStale ? 'alert-triangle' : 'clock' }}" class="w-3 h-3"></i>
                     {{ $isStale ? 'Stale · ' : '' }}{{ $r->env->recorded_at?->diffForHumans() ?? 'No timestamp' }}
                 </span>
-                <span class="mobile-body-text text-[11px] text-[#9CA3AF]">{{ $r->status }}</span>
+                <span class="mobile-body-text text-xs text-ink-muted">{{ $r->status }}</span>
             </div>
         </div>
         @empty
         <div class="col-span-full">
-            <div class="bg-white rounded-lg border border-dashed border-[#D9D9D9] py-10 text-center text-sm" style="color: #a39e98;">
+            <div class="bg-white rounded-lg border border-dashed border-[#D9D9D9] py-10 text-center text-sm text-ink-muted">
                 No environmental readings recorded yet.
             </div>
         </div>
@@ -119,7 +119,7 @@
                     <span class="w-2.5 h-2.5 rounded-full" style="background:{{ $cage->color }}"></span>
                     <span class="text-sm font-medium text-[#333333] max-md:whitespace-nowrap">{{ $cage->cage_code }}</span>
                 </div>
-                <span class="mobile-body-text text-[10px] font-semibold tracking-[0.05em] uppercase px-2 py-0.5 rounded-full bg-[#F5F6F8] text-[#a39e98]">Offline</span>
+                <span class="mobile-body-text text-xs font-semibold tracking-[0.05em] uppercase px-2 py-0.5 rounded-full bg-[#F5F6F8] text-ink-muted">Offline</span>
             </div>
             <div class="px-4 py-6 text-center text-xs max-md:text-sm text-[#6B7280]">
                 <i data-lucide="wifi-off" class="w-5 h-5 mx-auto mb-2 text-gray-300"></i>
@@ -132,7 +132,7 @@
 
     {{-- ── Trend Charts ── --}}
     <div class="flex items-center justify-between mb-3">
-        <span class="text-sm font-semibold text-[#1f1f1f]">Trend Charts</span>
+        <label for="trendRange" class="text-sm font-semibold text-[#1f1f1f]">Trend Charts</label>
         <select id="trendRange" onchange="changeTrendRange(this.value)"
                 class="max-md:min-h-11 text-xs max-md:text-sm border border-[#D9D9D9] rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-navy/30">
             <option value="24h" {{ ($range ?? '24h') === '24h' ? 'selected' : '' }}>24 Hours</option>

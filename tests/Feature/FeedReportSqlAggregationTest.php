@@ -188,11 +188,21 @@ class FeedReportSqlAggregationTest extends TestCase
         $rows = $method->invoke(app(ReportController::class), null, null, $cageIds, $allCages, false)
             ->map(fn ($r) => [$r->date, $r->cage, $r->breed, $r->eggs, $r->hens, $r->hdep])->all();
 
-        // Old algorithm: hydrate, group by (date, cage), newest first, stable.
-        $old = ProductionLog::with(['cageSlot.cage', 'cageSlot.hens' => fn ($q) => $q->where('is_active', 1)])
-            ->real()->whereHas('cageSlot', fn ($q) => $q->whereIn('cage_id', $cageIds))->get()
+        // The current SQL query orders same-day cages by the first production
+        // log id; reproduce that order while retaining the former hydrated
+        // aggregation as the parity oracle.
+        $logs = ProductionLog::with(['cageSlot.cage', 'cageSlot.hens' => fn ($q) => $q->where('is_active', 1)])
+            ->real()->whereHas('cageSlot', fn ($q) => $q->whereIn('cage_id', $cageIds))->get();
+        $firstIdsByCageDate = $logs->groupBy(fn ($log) => $log->log_date->format('Y-m-d') . '-' . $log->cageSlot->cage->id)
+            ->map(fn ($group) => $group->min('id'));
+        $old = $logs
             ->groupBy(fn ($l) => $l->log_date->format('Y-m-d') . '-' . $l->cageSlot->cage->id)
-            ->sortByDesc(fn ($g) => $g->first()->log_date->format('Y-m-d'))
+            ->sortKeysUsing(function ($left, $right) use ($firstIdsByCageDate) {
+                $dateOrder = strcmp(substr($right, 0, 10), substr($left, 0, 10));
+                return $dateOrder !== 0
+                    ? $dateOrder
+                    : $firstIdsByCageDate[$left] <=> $firstIdsByCageDate[$right];
+            })
             ->map(function ($g) {
                 $breeds = $g->flatMap(fn ($l) => $l->cageSlot->hens->pluck('breed'))->filter()->unique();
                 $eggs = $g->sum('egg_count');

@@ -66,7 +66,7 @@ class FeedBatchManagementTest extends TestCase
 
         // All unique in DB
         $codes = FeedBatch::pluck('batch_code')->toArray();
-        $this->assertCount(3 + 3 /* seeder */, array_unique($codes));
+        $this->assertCount(3, array_unique($codes));
     }
 
     public function test_batch_code_ignores_passed_value_in_request(): void
@@ -315,6 +315,7 @@ class FeedBatchManagementTest extends TestCase
             'cage_id' => $this->testCage->id,
             'feed_batch_id' => $batch->id,
             'log_date' => today()->toDateString(),
+            'log_time' => '08:00',
             'feed_consumed_kg' => 45.0,
         ]);
 
@@ -345,6 +346,7 @@ class FeedBatchManagementTest extends TestCase
             'cage_id' => $this->testCage->id,
             'feed_batch_id' => $batch->id,
             'log_date' => today()->toDateString(),
+            'log_time' => '08:00',
             'feed_consumed_kg' => 5.0,
         ]);
 
@@ -369,6 +371,7 @@ class FeedBatchManagementTest extends TestCase
             'cage_id' => $this->testCage->id,
             'feed_batch_id' => $batch->id,
             'log_date' => today()->toDateString(),
+            'log_time' => '08:00',
             'feed_consumed_kg' => 45.0,
         ]);
 
@@ -379,6 +382,7 @@ class FeedBatchManagementTest extends TestCase
             'cage_id' => $this->testCage->id,
             'feed_batch_id' => $batch->id,
             'log_date' => today()->toDateString(),
+            'log_time' => '16:00',
             'feed_consumed_kg' => 50.0, // update existing, remaining still 0
         ]);
 
@@ -400,6 +404,7 @@ class FeedBatchManagementTest extends TestCase
             'cage_id' => $this->testCage->id,
             'feed_batch_id' => $batch->id,
             'log_date' => today()->toDateString(),
+            'log_time' => '08:00',
             'feed_consumed_kg' => 45.0,
         ]);
 
@@ -412,6 +417,7 @@ class FeedBatchManagementTest extends TestCase
             'cage_id' => $this->testCage->id,
             'feed_batch_id' => $batch->id,
             'log_date' => today()->toDateString(),
+            'log_time' => '16:00',
             'feed_consumed_kg' => 1.0,
         ]);
 
@@ -425,6 +431,7 @@ class FeedBatchManagementTest extends TestCase
                 'cage_id' => $this->testCage->id,
                 'feed_batch_id' => $batch->id,
                 'log_date' => today()->toDateString(),
+                'log_time' => '08:00',
                 'feed_consumed_kg' => 1.0,
             ]);
 
@@ -512,19 +519,15 @@ class FeedBatchManagementTest extends TestCase
     {
         $batch = FeedBatch::create(['crude_protein' => 17.0, 'date_received' => today()]);
 
-        $this->actingAs($this->user)->post('/feed/consumption', [
+        $response = $this->actingAs($this->user)->post('/feed/consumption', [
             'cage_id' => $this->testCage->id,
             'feed_batch_id' => $batch->id,
             'log_date' => today()->toDateString(),
             'feed_consumed_kg' => 5.0,
         ]);
 
-        $this->assertDatabaseHas('feed_consumption_logs', [
-            'cage_id' => $this->testCage->id,
-            'log_date' => today()->toDateString(),
-            'log_time' => null,
-            'feed_consumed_kg' => 5.0,
-        ]);
+        $response->assertSessionHasErrors('log_time');
+        $this->assertSame(0, FeedConsumptionLog::where('cage_id', $this->testCage->id)->count());
     }
 
     public function test_destroy_consumption_deletes_log(): void
@@ -535,6 +538,7 @@ class FeedBatchManagementTest extends TestCase
             'cage_id' => $this->testCage->id,
             'feed_batch_id' => $batch->id,
             'log_date' => today()->toDateString(),
+            'log_time' => '08:00',
             'feed_consumed_kg' => 10.0,
         ]);
 
@@ -711,6 +715,7 @@ class FeedBatchManagementTest extends TestCase
         $this->actingAs($this->user)->post('/feed/farm-entry', [
             'feed_batch_id' => $batch->id,
             'log_date' => today()->toDateString(),
+            'log_time' => '08:00',
             'total_kg' => 100.0,
         ]);
 
@@ -720,7 +725,9 @@ class FeedBatchManagementTest extends TestCase
         // Two cages get 33.34, one gets 33.32 (or any largest-remainder allocation that sums to 100)
         $this->assertEqualsWithDelta(100.0, $distributed->sum('feed_consumed_kg'), 0.01);
         $this->assertCount(3, $distributed);
-        $this->assertContainsEquals(33.34, $distributed->pluck('feed_consumed_kg')->map(fn($v) => round($v, 2))->all());
+        $shares = $distributed->pluck('feed_consumed_kg')->map(fn($v) => round($v, 2))->all();
+        sort($shares);
+        $this->assertSame([33.33, 33.33, 33.34], $shares);
     }
 
     public function test_farm_entry_omitting_unit_cost_falls_back_to_batch_cost(): void
@@ -737,6 +744,7 @@ class FeedBatchManagementTest extends TestCase
         $this->actingAs($this->user)->post('/feed/farm-entry', [
             'feed_batch_id' => $batch->id,
             'log_date' => today()->toDateString(),
+            'log_time' => '08:00',
             'total_kg' => 100.0,
         ]);
 
@@ -755,11 +763,14 @@ class FeedBatchManagementTest extends TestCase
 
         $batch = FeedBatch::create(['crude_protein' => 17.0, 'date_received' => today()]);
 
-        $this->actingAs($this->user)->post('/feed/farm-entry', [
+        $farmEntryResponse = $this->actingAs($this->user)->post('/feed/farm-entry', [
             'feed_batch_id' => $batch->id,
             'log_date' => today()->toDateString(),
+            'log_time' => '08:00',
             'total_kg' => 50.0,
         ]);
+
+        $farmEntryResponse->assertSessionHas('success');
 
         $entry = FarmFeedEntry::first();
         $distributed = FeedConsumptionLog::where('farm_feed_entry_id', $entry->id)->get();
@@ -777,11 +788,14 @@ class FeedBatchManagementTest extends TestCase
 
         $batch = FeedBatch::create(['crude_protein' => 17.0, 'date_received' => today()]);
 
-        $this->actingAs($this->user)->post('/feed/farm-entry', [
+        $farmEntryResponse = $this->actingAs($this->user)->post('/feed/farm-entry', [
             'feed_batch_id' => $batch->id,
             'log_date' => today()->toDateString(),
+            'log_time' => '08:00',
             'total_kg' => 50.0,
         ]);
+
+        $farmEntryResponse->assertSessionHas('success');
 
         $this->assertCount(1, FarmFeedEntry::all());
         $entry = FarmFeedEntry::first();
@@ -896,6 +910,7 @@ class FeedBatchManagementTest extends TestCase
         $this->actingAs($this->user)->post('/feed/farm-entry', [
             'feed_batch_id' => $batch->id,
             'log_date' => today()->toDateString(),
+            'log_time' => '08:00',
             'total_kg' => 100.0,
         ]);
 
@@ -905,6 +920,7 @@ class FeedBatchManagementTest extends TestCase
         $this->actingAs($this->user)->put("/feed/farm-entry/{$entry->id}", [
             'feed_batch_id' => $batch->id,
             'log_date' => today()->toDateString(),
+            'log_time' => '08:00',
             'total_kg' => 60.0,
         ]);
 
@@ -922,11 +938,14 @@ class FeedBatchManagementTest extends TestCase
         $cage = $this->createCageWithHens('CAGE-WD', 10);
         $batch = FeedBatch::create(['crude_protein' => 17.0, 'date_received' => today()]);
 
-        $this->actingAs($this->user)->post('/feed/farm-entry', [
+        $farmEntryResponse = $this->actingAs($this->user)->post('/feed/farm-entry', [
             'feed_batch_id' => $batch->id,
             'log_date' => today()->toDateString(),
+            'log_time' => '08:00',
             'total_kg' => 50.0,
         ]);
+
+        $farmEntryResponse->assertSessionHas('success');
 
         $entry = FarmFeedEntry::first();
         $this->assertCount(1, $entry->consumptionLogs);
@@ -947,6 +966,7 @@ class FeedBatchManagementTest extends TestCase
         $this->actingAs($this->user)->post('/feed/farm-entry', [
             'feed_batch_id' => $batch->id,
             'log_date' => today()->toDateString(),
+            'log_time' => '08:00',
             'total_kg' => 50.0,
         ]);
 

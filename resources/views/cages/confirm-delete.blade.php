@@ -26,7 +26,8 @@
             </div>
         </x-slot:headerSlot>
 
-        <form method="POST" action="{{ route('cages.force-destroy', $cage) }}" id="deleteForm">
+        <form method="POST" action="{{ route('cages.force-destroy', $cage) }}" id="deleteForm" data-cage-code="{{ $cage->cage_code }}"
+              data-counts="{{ json_encode(['slots' => $slotCount, 'sensorSlots' => $sensorSlotCount, 'hens' => $henCount, 'production' => $productionLogCount, 'environment' => $envLogCount, 'feed' => $feedLogCount, 'mortality' => $mortalityCount, 'alerts' => $alertCount], JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_HEX_TAG) }}">
             @csrf @method('DELETE')
 
             {{-- Data-loss summary --}}
@@ -37,7 +38,7 @@
                         <span style="color: #6B7280;">Cage slots</span>
                         <span class="font-medium" style="color: #1f1f1f;">{{ $slotCount }}</span>
                     </div>
-                    <div class="flex justify-between">
+                    <div class="flex justify-between" data-sensor-slot-count="{{ $sensorSlotCount }}">
                         <span style="color: #6B7280;">Sensor-equipped slots</span>
                         <span class="font-medium" style="color: #1f1f1f;">{{ $sensorSlotCount }}</span>
                     </div>
@@ -124,7 +125,7 @@
 
             {{-- Type to confirm --}}
             <div class="mb-5">
-                <label class="block text-sm font-semibold mb-1.5" style="color: #1f1f1f;">
+                <label for="confirmationInput" class="block text-sm font-semibold mb-1.5" style="color: #1f1f1f;">
                     Type <span class="font-mono font-bold text-red-600">{{ $cage->cage_code }}</span> to confirm
                 </label>
                 <input type="text" name="confirmation" id="confirmationInput" value="{{ old('confirmation') }}" autocomplete="off" required
@@ -135,19 +136,87 @@
                 <x-input-error name="confirmation" />
             </div>
 
-            <div class="flex gap-3">
+                <div class="flex gap-3" id="deleteOptionsActions">
                 <a href="{{ route('cages.index') }}"
                    class="flex-1 border border-[#D9D9D9] py-2.5 rounded-lg text-sm text-center hover:bg-[#F5F6F8]"
                    style="color: #6B7280;">
                     Cancel
                 </a>
-                <button type="submit" id="deleteBtn" disabled
+                <button type="button" id="deleteBtn" disabled data-review-submit
                         class="flex-1 py-2.5 text-sm font-medium rounded-full text-white transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
                         style="background-color: #9b1c24;">
                     Delete {{ $cage->cage_code }}
                 </button>
             </div>
+
+            <section id="deleteReview" class="hidden mt-5 rounded-lg border border-red-200 bg-red-50 p-4" aria-labelledby="confirmDeleteReview" tabindex="-1" hidden>
+                <h2 id="confirmDeleteReview" class="text-base font-semibold text-red-900" data-dialog-initial-focus tabindex="-1">Final review: delete {{ $cage->cage_code }}?</h2>
+                <p class="mt-1 text-sm text-red-900">This is permanent. Review these effects before confirming.</p>
+                <dl class="mt-3 space-y-1 text-sm text-[#1f1f1f]" id="deleteReviewSummary"></dl>
+                <div class="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                    <button type="button" data-review-back class="min-h-11 rounded-lg border border-[#D9D9D9] bg-white px-4 py-2 text-sm font-medium text-[#1f1f1f] hover:bg-[#F5F6F8]">Back and review choices</button>
+                    <button type="submit" id="confirmDeleteSubmit" class="min-h-11 rounded-lg px-4 py-2 text-sm font-semibold text-white" style="background-color: #9b1c24;">Permanently delete {{ $cage->cage_code }}</button>
+                </div>
+            </section>
         </form>
     </x-card>
 </div>
+<script>
+(() => {
+    const form = document.getElementById('deleteForm');
+    const firstActions = document.getElementById('deleteOptionsActions');
+    const review = document.getElementById('deleteReview');
+    const summary = document.getElementById('deleteReviewSummary');
+    const reviewButton = form && form.querySelector('[data-review-submit]');
+    const backButton = form && form.querySelector('[data-review-back]');
+    if (!form || !firstActions || !review || !summary || !reviewButton || !backButton) return;
+
+    const countLabels = {
+        slots: 'Cage slots', hens: 'Active hen records', production: 'Production logs',
+        environment: 'Environmental logs', feed: 'Feed consumption logs', mortality: 'Mortality records', alerts: 'Alerts'
+    };
+    function addSummary(label, value) {
+        const row = document.createElement('div');
+        row.className = 'flex justify-between gap-4';
+        const term = document.createElement('dt');
+        const detail = document.createElement('dd');
+        term.textContent = label;
+        detail.className = 'font-semibold text-right';
+        detail.textContent = value;
+        row.append(term, detail);
+        summary.appendChild(row);
+    }
+    function buildReview() {
+        summary.replaceChildren();
+        addSummary('Cage', form.dataset.cageCode);
+        let counts = {};
+        try { counts = JSON.parse(form.dataset.counts || '{}'); } catch (error) { counts = {}; }
+        Object.entries(countLabels).forEach(([key, label]) => {
+            if (key === 'hens' || key === 'slots') return;
+            const preserveName = { production: 'preserve_production', environment: 'preserve_environment', feed: 'preserve_feed', mortality: 'preserve_mortality' }[key];
+            const preserve = Boolean(preserveName && form.elements[preserveName]?.checked);
+            addSummary(preserve ? `${label} preserved` : `${label} deleted`, `${counts[key] ?? 0}`);
+        });
+        addSummary('Cage slots', `${counts.slots ?? 0} deleted`);
+        const henAction = form.querySelector('[name="hens_action"]:checked')?.value;
+        addSummary(henAction === 'delete' ? 'Active hen records deleted' : 'Active hens detached and records kept', `${counts.hens ?? 0}`);
+        addSummary('Sensor-equipped slots affected', `${counts.sensorSlots ?? 0}`);
+        addSummary('Sensor disposition', form.elements.return_sensors?.checked ? 'Return to spare inventory' : 'Not returned to spare inventory');
+    }
+    reviewButton.addEventListener('click', () => {
+        if (!form.reportValidity()) return;
+        buildReview();
+        firstActions.classList.add('hidden');
+        review.classList.remove('hidden');
+        review.hidden = false;
+        review.focus();
+    });
+    backButton.addEventListener('click', () => {
+        review.classList.add('hidden');
+        review.hidden = true;
+        firstActions.classList.remove('hidden');
+        reviewButton.focus();
+    });
+})();
+</script>
 @endsection

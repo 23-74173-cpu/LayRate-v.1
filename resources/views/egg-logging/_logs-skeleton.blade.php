@@ -1,5 +1,5 @@
 {{-- Placeholder for the KPI row + table in egg-logging/_logs, sized to match. --}}
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4 animate-pulse" aria-hidden="true">
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4 animate-pulse motion-reduce:animate-none" aria-hidden="true">
     @for($i = 0; $i < 4; $i++)
     <div class="rounded-2xl border border-[#E6E6E6] bg-white p-4 min-h-[104px] flex items-start gap-4">
         <div class="w-14 h-14 rounded-2xl bg-gray-100 shrink-0"></div>

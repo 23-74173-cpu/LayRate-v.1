@@ -90,11 +90,11 @@
     </div>
 
 {{-- Add Stock Modal --}}
-<div id="addStockModal" data-modal  data-close="closeAddStockModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+<div id="addStockModal" data-modal data-focus-dialog data-close="closeAddStockModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="addStockTitle">
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeAddStockModal()"></div>
     <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
-            <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Add Stock Batch</h2>
+            <h2 id="addStockTitle" class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Add Stock Batch</h2>
             <button onclick="closeAddStockModal()" class="p-1.5 max-md:min-w-11 max-md:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
@@ -106,14 +106,14 @@
             @csrf
             <div class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">HARVESTED DATE</label>
-                    <input type="date" name="harvested_date" value="{{ now()->toDateString() }}" required
+                    <label for="addStockHarvestedDate" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">HARVESTED DATE</label>
+                    <input type="date" id="addStockHarvestedDate" name="harvested_date" value="{{ now()->toDateString() }}" required
                            class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
                     <p class="text-xs mt-1" style="color: #9CA3AF;">Determines which harvest pool eggs are drawn from.</p>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG SIZE</label>
+                    <label for="addStockEggSize" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG SIZE</label>
                     <select name="egg_size" id="addStockEggSize" required
                             class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
@@ -123,15 +123,15 @@
                         <option value="{{ $sz }}" data-available="{{ $pool }}">{{ $label }} ({{ number_format($pool) }} avail.)</option>
                         @endforeach
                     </select>
-                    <p id="addStockPoolNote" class="text-xs mt-1" style="color: #9CA3AF;">Pool reflects logged minus stocked eggs. Any size can be selected — server validates against pool on save.</p>
+                    <p id="addStockPoolNote" class="text-xs mt-1" style="color: #615d59;">Pool reflects logged minus stocked eggs. Any size can be selected — server validates against pool on save.</p>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG COUNT</label>
+                    <label for="addStockCount" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG COUNT</label>
                     <input type="number" name="count" id="addStockCount" min="1" placeholder="Enter quantity" required
                            class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                            style="border-color: #e6e6e6; color: #1f1f1f;">
-                    <p id="addStockPoolHint" class="text-xs mt-1" style="color: #a39e98;">Select a size and source cage to see available pool.</p>
-                    <p id="addStockExceedsWarning" class="hidden text-xs mt-1" style="color: #9B1C24;"></p>
+                    <p id="addStockPoolHint" class="text-xs mt-1" role="status" aria-live="polite" style="color: #615d59;">Select a size and source cage to see available pool.</p>
+                    <p id="addStockExceedsWarning" class="hidden text-xs mt-1" role="alert" aria-live="assertive" style="color: #9B1C24;"></p>
                 </div>
 
                 <div id="classifySection" class="hidden p-4 rounded-lg border border-dashed" style="border-color: #D9D9D9; background-color: #fafafa;">
@@ -142,45 +142,45 @@
                     <p class="text-xs text-[#6B7280] mb-3">Optionally distribute these eggs into standard sizes. Leave blank to stock as Unsorted.</p>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-xs text-[#2D7D46] font-medium mb-1">Small</label>
-                            <input type="number" name="classify_small" min="0" placeholder="0"
+                            <label for="addStockClassifySmall" class="block text-xs text-[#2D7D46] font-medium mb-1">Small</label>
+                            <input type="number" id="addStockClassifySmall" name="classify_small" min="0" placeholder="0"
                                    class="classify-input w-full max-md:min-h-11 border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                         <div>
-                            <label class="block text-xs text-info font-medium mb-1">Medium</label>
-                            <input type="number" name="classify_medium" min="0" placeholder="0"
+                            <label for="addStockClassifyMedium" class="block text-xs text-info font-medium mb-1">Medium</label>
+                            <input type="number" id="addStockClassifyMedium" name="classify_medium" min="0" placeholder="0"
                                    class="classify-input w-full max-md:min-h-11 border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                         <div>
-                            <label class="block text-xs text-[#C2703E] font-medium mb-1">Large</label>
-                            <input type="number" name="classify_large" min="0" placeholder="0"
+                            <label for="addStockClassifyLarge" class="block text-xs text-[#C2703E] font-medium mb-1">Large</label>
+                            <input type="number" id="addStockClassifyLarge" name="classify_large" min="0" placeholder="0"
                                    class="classify-input w-full max-md:min-h-11 border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                         <div>
-                            <label class="block text-xs font-medium mb-1" style="color: var(--color-teal-600);">XL</label>
-                            <input type="number" name="classify_xl" min="0" placeholder="0"
+                            <label for="addStockClassifyXl" class="block text-xs font-medium mb-1" style="color: var(--color-teal-600);">XL</label>
+                            <input type="number" id="addStockClassifyXl" name="classify_xl" min="0" placeholder="0"
                                    class="classify-input w-full max-md:min-h-11 border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                         <div>
-                            <label class="block text-xs text-[#6B4C8A] font-medium mb-1">Jumbo</label>
-                            <input type="number" name="classify_jumbo" min="0" placeholder="0"
+                            <label for="addStockClassifyJumbo" class="block text-xs text-[#6B4C8A] font-medium mb-1">Jumbo</label>
+                            <input type="number" id="addStockClassifyJumbo" name="classify_jumbo" min="0" placeholder="0"
                                    class="classify-input w-full max-md:min-h-11 border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                    style="border-color: #e6e6e6; color: #1f1f1f;">
                         </div>
                     </div>
-                    <div id="classifyRemaining" class="flex items-center gap-2 text-xs mt-2 font-medium" style="color: #6B7280;">
+                    <div id="classifyRemaining" class="flex items-center gap-2 text-xs mt-2 font-medium" role="status" aria-live="polite" style="color: #6B7280;">
                         <span>Remaining to classify:</span>
                         <span id="classifyRemainingCount">0</span>
                     </div>
-                    <p id="classifySumHint" class="text-xs mt-1 hidden" style="color: #a39e98;"></p>
+                    <p id="classifySumHint" class="text-xs mt-1 hidden" role="status" aria-live="polite" style="color: #615d59;"></p>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">SOURCE CAGE <span class="font-normal normal-case tracking-normal" style="color: #9CA3AF;">— pool scope</span></label>
+                    <label for="stockCageSelect" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">SOURCE CAGE <span class="font-normal normal-case tracking-normal" style="color: #9CA3AF;">— pool scope</span></label>
                     <select name="cage_id" id="stockCageSelect"
                             class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
@@ -192,7 +192,7 @@
                     <p class="text-xs mt-1" style="color: #9CA3AF;">Select a cage to scope the available pool, or leave as "All Cages" for farm-wide pool.</p>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">PRODUCTION LOG <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
+                    <label for="stockLogSelect" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">PRODUCTION LOG <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
                     <select name="source_production_log_id" id="stockLogSelect"
                             class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
@@ -211,11 +211,11 @@
     </div>
 </div>
 {{-- Edit Stock Modal --}}
-<div id="editStockModal" data-modal  data-close="closeEditStockModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+<div id="editStockModal" data-modal data-focus-dialog data-close="closeEditStockModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="editStockTitle">
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEditStockModal()"></div>
     <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
-            <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Edit Stock Batch</h2>
+            <h2 id="editStockTitle" class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Edit Stock Batch</h2>
             <button onclick="closeEditStockModal()" class="p-1.5 max-md:min-w-11 max-md:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
@@ -226,7 +226,7 @@
 
             <div class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG SIZE</label>
+                    <label for="editEggSize" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG SIZE</label>
                     <select name="egg_size" id="editEggSize" required
                             class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
@@ -240,14 +240,14 @@
                     <x-input-error name="egg_size" />
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG COUNT</label>
+                    <label for="editEggCount" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">EGG COUNT</label>
                     <input type="number" name="count" id="editEggCount" min="1" required
                             class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
                     <x-input-error name="count" />
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">HARVESTED DATE</label>
+                    <label for="editHarvestedDate" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">HARVESTED DATE</label>
                     <input type="date" name="harvested_date" id="editHarvestedDate" required
                             class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                             style="border-color: #e6e6e6; color: #1f1f1f;">
@@ -269,11 +269,11 @@
 </div>
 
 {{-- Egg Weights Modal --}}
-<div id="eggWeightsModal" data-modal  data-close="closeEggWeightsModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+<div id="eggWeightsModal" data-modal data-focus-dialog data-close="closeEggWeightsModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="eggWeightsTitle">
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEggWeightsModal()"></div>
     <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
-            <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Egg Weights</h2>
+            <h2 id="eggWeightsTitle" class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Egg Weights</h2>
             <button onclick="closeEggWeightsModal()" class="p-1.5 max-md:min-w-11 max-md:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
@@ -285,38 +285,38 @@
             @csrf
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">SMALL (g)</label>
-                    <input type="number" name="egg_weight_small" step="0.1" min="1" max="500"
+                    <label for="eggWeightSmall" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">SMALL (g)</label>
+                    <input type="number" id="eggWeightSmall" name="egg_weight_small" step="0.1" min="1" max="500"
                            value="{{ $eggWeights['small'] }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                 </div>
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">MEDIUM (g)</label>
-                    <input type="number" name="egg_weight_medium" step="0.1" min="1" max="500"
+                    <label for="eggWeightMedium" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">MEDIUM (g)</label>
+                    <input type="number" id="eggWeightMedium" name="egg_weight_medium" step="0.1" min="1" max="500"
                            value="{{ $eggWeights['medium'] }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                 </div>
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">LARGE (g)</label>
-                    <input type="number" name="egg_weight_large" step="0.1" min="1" max="500"
+                    <label for="eggWeightLarge" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">LARGE (g)</label>
+                    <input type="number" id="eggWeightLarge" name="egg_weight_large" step="0.1" min="1" max="500"
                            value="{{ $eggWeights['large'] }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                 </div>
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">XL (g)</label>
-                    <input type="number" name="egg_weight_xl" step="0.1" min="1" max="500"
+                    <label for="eggWeightXl" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">XL (g)</label>
+                    <input type="number" id="eggWeightXl" name="egg_weight_xl" step="0.1" min="1" max="500"
                            value="{{ $eggWeights['xl'] }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                 </div>
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">JUMBO (g)</label>
-                    <input type="number" name="egg_weight_jumbo" step="0.1" min="1" max="500"
+                    <label for="eggWeightJumbo" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">JUMBO (g)</label>
+                    <input type="number" id="eggWeightJumbo" name="egg_weight_jumbo" step="0.1" min="1" max="500"
                            value="{{ $eggWeights['jumbo'] }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                 </div>
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">FALLBACK (g)</label>
-                    <input type="number" name="egg_weight_fallback" step="0.1" min="1" max="500"
+                    <label for="eggWeightFallback" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">FALLBACK (g)</label>
+                    <input type="number" id="eggWeightFallback" name="egg_weight_fallback" step="0.1" min="1" max="500"
                            value="{{ $eggWeights['fallback'] }}"
                            class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                 </div>
@@ -338,11 +338,11 @@
 </div>
 
 {{-- Thresholds Modal --}}
-<div id="thresholdsModal" data-modal  data-close="closeThresholdsModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+<div id="thresholdsModal" data-modal data-focus-dialog data-close="closeThresholdsModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="thresholdsTitle">
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeThresholdsModal()"></div>
     <div class="relative w-full max-w-lg rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
         <div class="flex items-center justify-between mb-5">
-            <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Thresholds</h2>
+            <h2 id="thresholdsTitle" class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Thresholds</h2>
             <button onclick="closeThresholdsModal()" class="p-1.5 max-md:min-w-11 max-md:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                 <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
             </button>
@@ -358,8 +358,9 @@
                         @foreach(['small' => '#2D7D46', 'medium' => 'var(--color-info)', 'large' => '#C2703E', 'xl' => 'var(--color-teal-600)', 'jumbo' => '#6B4C8A', 'unsorted' => '#6B7280'] as $sz => $szColor)
                         @php $key = "egg_low_stock_threshold_{$sz}"; $label = $sz === 'unsorted' ? 'Unsorted' : ucfirst($sz); @endphp
                         <div>
-                            <label class="block text-xs tracking-wider mb-1.5" style="color: {{ $szColor }}">{{ $label }}</label>
-                            <input type="number" name="{{ $key }}" min="0" placeholder="0"
+                            @php $fieldId = 'eggLowStockThreshold' . ucfirst($sz); @endphp
+                            <label for="{{ $fieldId }}" class="block text-xs tracking-wider mb-1.5" style="color: {{ $szColor }}">{{ $label }}</label>
+                            <input type="number" id="{{ $fieldId }}" name="{{ $key }}" min="0" placeholder="0"
                                    value="{{ $eggStockThresholds[$sz] ?? 0 }}"
                                    class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         </div>
@@ -372,14 +373,14 @@
                     <p class="text-xs text-[#6B7280] mb-4">Day boundaries for freshness status (Fresh → Aging → Old).</p>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs tracking-wider text-[#1f6b3a] mb-1.5">Fresh (≤ days)</label>
-                            <input type="number" name="egg_freshness_fresh_days" min="1" placeholder="7"
+                            <label for="eggFreshnessFreshDays" class="block text-xs tracking-wider text-[#1f6b3a] mb-1.5">Fresh (≤ days)</label>
+                            <input type="number" id="eggFreshnessFreshDays" name="egg_freshness_fresh_days" min="1" placeholder="7"
                                    value="{{ $freshnessThresholds['fresh_days'] }}"
                                    class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         </div>
                         <div>
-                            <label class="block text-xs tracking-wider text-[#8a5a00] mb-1.5">Aging (≤ days)</label>
-                            <input type="number" name="egg_freshness_aging_days" min="1" placeholder="14"
+                            <label for="eggFreshnessAgingDays" class="block text-xs tracking-wider text-[#8a5a00] mb-1.5">Aging (≤ days)</label>
+                            <input type="number" id="eggFreshnessAgingDays" name="egg_freshness_aging_days" min="1" placeholder="14"
                                    value="{{ $freshnessThresholds['aging_days'] }}"
                                    class="w-full border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         </div>
@@ -576,6 +577,7 @@ function openEditStock(id, eggSize, count, harvestedDate) {
     document.getElementById('editHarvestedDate').value = harvestedDate;
     document.getElementById('editStockModal').style.display = 'flex';
     lucide.createIcons();
+    document.dispatchEvent(new Event('modal:shown'));
 }
 
 function closeEditStockModal() {
@@ -585,6 +587,7 @@ function closeEditStockModal() {
 function openEggWeightsModal() {
     document.getElementById('eggWeightsModal').style.display = 'flex';
     lucide.createIcons();
+    document.dispatchEvent(new Event('modal:shown'));
 }
 
 function closeEggWeightsModal() {
@@ -594,6 +597,7 @@ function closeEggWeightsModal() {
 function openThresholdsModal() {
     document.getElementById('thresholdsModal').style.display = 'flex';
     lucide.createIcons();
+    document.dispatchEvent(new Event('modal:shown'));
 }
 
 function closeThresholdsModal() {

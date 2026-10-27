@@ -167,9 +167,9 @@
 
             <div class="flex items-center gap-2">
                 @if($isAtFirstSelectableMonth)
-                <span class="calendar-nav w-10 h-10 flex items-center justify-center rounded-lg border border-[#F0F0F0] bg-[#F9F9F7] text-[#D9D9D9] cursor-not-allowed transition-colors" title="Earliest month with production data">
+                <button type="button" class="calendar-nav w-10 h-10 flex items-center justify-center rounded-lg border border-[#F0F0F0] bg-[#F9F9F7] text-[#D9D9D9] cursor-not-allowed transition-colors" title="Earliest month with production data" aria-label="Previous month unavailable: earliest month with production data" disabled>
                     <i data-lucide="chevron-left" class="w-4 h-4"></i>
-                </span>
+                </button>
                 @else
                 <a aria-label="Previous month" href="{{ $prevUrl }}" data-turbo-frame="production-calendar" data-turbo-action="advance" class="calendar-nav w-10 h-10 flex items-center justify-center rounded-lg border border-[#D9D9D9] text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#333333] transition-colors">
                     <i data-lucide="chevron-left" class="w-4 h-4"></i>
@@ -370,7 +370,7 @@
 </div>
 
 {{-- Single-day forecast modal --}}
-<div id="forecastDayModal" class="fixed inset-0 min-h-screen min-h-[100dvh] bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
+<div id="forecastDayModal" class="fixed inset-0 min-h-screen min-h-[100dvh] bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="forecastDayModalTitle" data-focus-dialog>
     <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-auto overflow-hidden">
         <div class="flex items-center justify-between px-5 py-4 border-b border-[#F0F0F0]">
             <div class="flex items-center gap-2">

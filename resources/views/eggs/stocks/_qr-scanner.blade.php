@@ -74,7 +74,7 @@
 
             {{-- Working --}}
             <div id="eggQrBusy" class="hidden flex-col items-center justify-center py-16 text-white">
-                <span class="animate-spin inline-block w-8 h-8 border-[3px] border-white border-t-transparent rounded-full"></span>
+                <span class="animate-spin motion-reduce:animate-none inline-block w-8 h-8 border-[3px] border-white border-t-transparent rounded-full" aria-hidden="true"></span>
                 <p id="eggQrBusyText" class="mt-4 text-sm" aria-live="polite">Reading QR code…</p>
             </div>
 

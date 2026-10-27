@@ -1,6 +1,7 @@
 *.log
 .DS_Store
 .env
+.env.testing
 .env.backup
 .env.production
 .phpactor.json
@@ -69,6 +70,12 @@ forecast-api/venv/
 !mobile-api/README.md
 !API_ROUTES.md
 !WHAT_WE_CAN_DELIVER.md
+!docs/LAYRATE_FINAL_DEFENSE_VERIFICATION.md
+!docs/LAYRATE_FINAL_QA_AND_REGRESSION_REPORT.md
+!docs/LAYRATE_REGRESSION_FAILURE_RESOLUTION.md
+!docs/LAYRATE_UI_UX_DEFENSE_READINESS.md
+!docs/LAYRATE_AUTHENTICATED_BROWSER_QA_REPORT.md
+!docs_dev/regression_failure_inventory.md
 
 # ------------------------------------------------------------------
 # Table XIII / XIV / XV live-report test scripts + their generated

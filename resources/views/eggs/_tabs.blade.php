@@ -1,5 +1,5 @@
-<div class="border-b border-[#D9D9D9] mobile-tab-rail" data-underline-tabs data-egg-tab-rail>
-    <nav class="-mb-px flex gap-6 overflow-x-auto overflow-y-hidden" role="tablist" aria-label="Egg management sections">
+<div class="border-b border-[#D9D9D9] mobile-tab-rail" data-underline-tabs data-egg-tab-rail data-tablist-id="egg-management-sections">
+    <nav id="egg-management-sections" class="-mb-px flex gap-6 overflow-x-auto overflow-y-hidden" aria-label="Egg management sections">
         @foreach([
             'production-history' => ['label' => 'Production History', 'icon' => 'calendar-days', 'route' => 'eggs.production-history', 'subtitle' => 'Daily egg logs calendar'],
             'logging'     => ['label' => 'Egg Logging', 'icon' => 'egg',         'route' => 'eggs.logging',            'subtitle' => 'Log daily egg production per cage slot'],
@@ -13,7 +13,7 @@
                 $classes = 'max-md:min-h-[44px] inline-flex items-center pb-2 text-sm font-medium border-b-2 transition-colors shrink-0 whitespace-nowrap ' .
                     ($isActive ? 'border-navy text-navy' : 'border-transparent text-[#6B7280] hover:text-[#333]');
             @endphp
-            <a href="{{ route($tab['route']) }}" class="{{ $classes }}" role="tab" aria-selected="{{ $isActive ? 'true' : 'false' }}" @if($isActive) aria-current="page" @endif
+            <a href="{{ route($tab['route']) }}" class="{{ $classes }}" @if($isActive) aria-current="page" @endif
                 data-turbo-frame="egg-content"
                data-turbo-prefetch
                data-tab-key="{{ $key }}" data-subtitle="{{ $tab['subtitle'] }}">
@@ -83,11 +83,11 @@
 
     {{-- Egg Prices modal (admin-only entry via the dock). The form loads on
          demand through the frame so egg pages never pay for it unopened. --}}
-    <div id="eggPricesModal" data-modal data-close="closeEggPricesModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div id="eggPricesModal" data-modal data-close="closeEggPricesModal" style="display: none;" class="fixed inset-0 z-50 min-h-screen min-h-[100dvh] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="eggPricesModalTitle">
         <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]" style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);" onclick="closeEggPricesModal()"></div>
         <div class="relative w-full max-w-md rounded-2xl p-6 max-h-screen max-h-[100dvh] overflow-y-auto" style="background-color: #ffffff; box-shadow: rgba(0,0,0,0.01) 0 0.175px 1.041px, rgba(0,0,0,0.02) 0 0 0.8px 2.925px, rgba(0,0,0,0.027) 0 2.025px 7.847px, rgba(0,0,0,0.04) 0 4px 18px, rgba(0,0,0,0.05) 0 23px 52px;">
             <div class="flex items-center justify-between mb-1">
-                <h2 class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Egg Prices</h2>
+                <h2 id="eggPricesModalTitle" class="text-[20px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Egg Prices</h2>
                 <button type="button" onclick="closeEggPricesModal()" class="p-1.5 max-md:min-w-11 max-md:min-h-11 inline-flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                     <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
                 </button>
@@ -108,7 +108,7 @@
 
     <script>
     (function() {
-        var links = document.querySelectorAll('nav a[data-tab-key]');
+        var links = document.querySelectorAll('[data-egg-tab-rail] nav a[data-tab-key]');
         var MENU_ID = 'dockFabMenu';
 
         function updateRailOverflow() {
@@ -118,9 +118,10 @@
             rail.dataset.tabsScrollable = nav.scrollWidth > nav.clientWidth + 1 ? 'true' : 'false';
         }
 
+
         function syncActive() {
             var activeLink = null;
-            document.querySelectorAll('nav a[data-tab-key]').forEach(function(a) {
+            document.querySelectorAll('[data-egg-tab-rail] nav a[data-tab-key]').forEach(function(a) {
                 if (a.pathname === window.location.pathname) activeLink = a;
             });
             if (!activeLink) return;
@@ -135,11 +136,9 @@
             });
             activeLink.classList.remove('border-transparent', 'text-[#6B7280]', 'hover:text-[#333]');
             activeLink.classList.add('border-navy', 'text-navy');
-            activeLink.setAttribute('aria-selected', 'true');
             activeLink.setAttribute('aria-current', 'page');
             links.forEach(function(a) {
                 if (a !== activeLink) {
-                    a.setAttribute('aria-selected', 'false');
                     a.removeAttribute('aria-current');
                 }
             });
@@ -203,11 +202,9 @@
                 });
                 this.classList.remove('border-transparent', 'text-[#6B7280]', 'hover:text-[#333]');
                 this.classList.add('border-navy', 'text-navy');
-                this.setAttribute('aria-selected', 'true');
                 this.setAttribute('aria-current', 'page');
                 links.forEach(function(a) {
                     if (a !== this) {
-                        a.setAttribute('aria-selected', 'false');
                         a.removeAttribute('aria-current');
                     }
                 }, this);
@@ -222,6 +219,15 @@
             });
         });
 
+        document.addEventListener('focusin', function(e) {
+            var link = e.target && e.target.closest ? e.target.closest('[data-egg-tab-rail] nav a[data-tab-key]') : null;
+            if (!link) return;
+            var nav = link.closest('nav');
+            var linkRect = link.getBoundingClientRect();
+            var navRect = nav.getBoundingClientRect();
+            if (linkRect.left < navRect.left || linkRect.right > navRect.right) nav.scrollLeft += linkRect.left - navRect.left;
+        });
+
         // Populate the dock menu for the initially-rendered tab (the server-side
         // frame content doesn't fire turbo:frame-load on the first paint).
         window.__eggSyncDock = syncActive;
@@ -231,7 +237,6 @@
             document.fonts.ready.then(updateRailOverflow);
         }
         window.addEventListener('resize', updateRailOverflow);
-
         if (!window.__eggHeaderSyncBound) {
             window.__eggHeaderSyncBound = true;
             document.addEventListener('turbo:frame-load', function(e) {

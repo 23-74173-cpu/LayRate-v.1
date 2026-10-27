@@ -373,15 +373,15 @@
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {{-- Date --}}
                             <div>
-                                <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Date</label>
-                                <input type="date" name="log_date" value="{{ \App\Services\ReportingDateService::reportingDateString() }}" required
+                                <label for="eggLogDate" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Date</label>
+                                <input type="date" id="eggLogDate" name="log_date" value="{{ \App\Services\ReportingDateService::reportingDateString() }}" required
                                        class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                        style="border-color: #e6e6e6; color: #1f1f1f;">
                             </div>
 
                             {{-- Egg Count --}}
                             <div>
-                                <label id="eggCountLabel" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Egg Count</label>
+                                <label id="eggCountLabel" for="eggCount" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Egg Count</label>
                                 <x-number-input name="egg_count" id="eggCount" min="0" value="{{ old('egg_count', '') }}" required
                                        oninput="computeHdep(); checkSizeSum(); validateForm()"
                                        data-error-message="Enter the egg count for this slot."
@@ -401,7 +401,7 @@
 
                             {{-- Hen Count --}}
                             <div>
-                                <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Hen Count</label>
+                                <label for="henCount" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Hen Count</label>
                                 <input type="number" name="hen_count" id="henCount" min="1" value="1" required readonly
                                        class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white cursor-not-allowed focus:outline-none"
                                        style="border-color: #e6e6e6; color: #615d59; background-color: #f6f5f4;">
@@ -417,9 +417,9 @@
 
                             {{-- Notes --}}
                             <div>
-                                <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Notes <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
+                                <label for="eggLogNotes" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Notes <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional)</span></label>
                                 <x-saved-note-picker category="Production" target="textarea[name='notes']" />
-                                <textarea name="notes" rows="2" placeholder="e.g. 2 broken eggs"
+                                <textarea id="eggLogNotes" name="notes" rows="2" placeholder="e.g. 2 broken eggs"
                                           class="w-full max-md:min-h-11 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1 resize-y"
                                           style="border-color: #e6e6e6; color: #1f1f1f;"></textarea>
                             </div>
@@ -427,48 +427,49 @@
 
                         {{-- Size Breakdown --}}
                         <div class="mt-4 border-t pt-3" style="border-color: #e6e6e6;">
-                            <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-3" style="color: #615d59;">
+                            <fieldset class="min-w-0"><legend class="block text-xs font-semibold tracking-[0.05em] uppercase mb-3" style="color: #615d59;">
                                 Size Breakdown
                                 <span class="font-normal normal-case tracking-normal" style="color: #a39e98;">(optional — fill all or leave blank)</span>
-                            </label>
+                            </legend>
                             <div class="grid grid-cols-5 gap-3" id="sizeBreakdown">
                                 <div>
-                                    <label class="block text-xs text-center mb-1" style="color: #2D7D46;">Small</label>
-                                    <input type="number" name="size_small" min="0" value="0"
+                                    <label for="eggSizeSmall" class="block text-xs text-center mb-1" style="color: #2D7D46;">Small</label>
+                                    <input type="number" id="eggSizeSmall" name="size_small" min="0" value="0"
                                            oninput="checkSizeSum(); validateForm()"
                                            class="size-input w-full max-md:min-h-11 border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                            style="border-color: #e6e6e6; color: #1f1f1f;">
                                 </div>
                                 <div>
-                                    <label class="block text-xs text-center mb-1" style="color: var(--color-info);">Medium</label>
-                                    <input type="number" name="size_medium" min="0" value="0"
+                                    <label for="eggSizeMedium" class="block text-xs text-center mb-1" style="color: var(--color-info);">Medium</label>
+                                    <input type="number" id="eggSizeMedium" name="size_medium" min="0" value="0"
                                            oninput="checkSizeSum(); validateForm()"
                                            class="size-input w-full max-md:min-h-11 border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                            style="border-color: #e6e6e6; color: #1f1f1f;">
                                 </div>
                                 <div>
-                                    <label class="block text-xs text-center mb-1" style="color: #C2703E;">Large</label>
-                                    <input type="number" name="size_large" min="0" value="0"
+                                    <label for="eggSizeLarge" class="block text-xs text-center mb-1" style="color: #C2703E;">Large</label>
+                                    <input type="number" id="eggSizeLarge" name="size_large" min="0" value="0"
                                            oninput="checkSizeSum(); validateForm()"
                                            class="size-input w-full max-md:min-h-11 border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                            style="border-color: #e6e6e6; color: #1f1f1f;">
                                 </div>
                                 <div>
-                                    <label class="block text-xs text-center mb-1" style="color: var(--color-teal-600);">XL</label>
-                                    <input type="number" name="size_xl" min="0" value="0"
+                                    <label for="eggSizeXl" class="block text-xs text-center mb-1" style="color: var(--color-teal-600);">XL</label>
+                                    <input type="number" id="eggSizeXl" name="size_xl" min="0" value="0"
                                            oninput="checkSizeSum(); validateForm()"
                                            class="size-input w-full max-md:min-h-11 border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                            style="border-color: #e6e6e6; color: #1f1f1f;">
                                 </div>
                                 <div>
-                                    <label class="block text-xs text-center mb-1" style="color: #6B4C8A;">Jumbo</label>
-                                    <input type="number" name="size_jumbo" min="0" value="0"
+                                    <label for="eggSizeJumbo" class="block text-xs text-center mb-1" style="color: #6B4C8A;">Jumbo</label>
+                                    <input type="number" id="eggSizeJumbo" name="size_jumbo" min="0" value="0"
                                            oninput="checkSizeSum(); validateForm()"
                                            class="size-input w-full max-md:min-h-11 border rounded-lg px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
                                            style="border-color: #e6e6e6; color: #1f1f1f;">
                                 </div>
                             </div>
-                            <div id="sizeSumMsg" class="mt-2 text-xs" style="color: #a39e98;">Sum: 0 <span id="sizeSumStatus" style="color: #a39e98;">—</span></div>
+                            <div id="sizeSumMsg" class="mt-2 text-xs" role="status" aria-live="polite" style="color: #615d59;">Sum: 0 <span id="sizeSumStatus" style="color: #615d59;">—</span></div>
+                            </fieldset>
                         </div>
                         </div>
 
@@ -515,7 +516,7 @@
                     </div>
 
                     <div class="border-t pt-4" style="border-color: #e6e6e6;">
-                        <label class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Total Eggs</label>
+                        <label for="tcTotalEggs" class="block text-xs font-semibold tracking-[0.05em] uppercase mb-1.5" style="color: #615d59;">Total Eggs</label>
                         <input type="number" id="tcTotalEggs" min="0" placeholder="0"
                                oninput="validateTotalCageLog()"
                                class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"

@@ -72,8 +72,9 @@
     $hasBody = isset($slot) && trim((string) $slot) !== '';
 @endphp
 
+@php $modalId = $attributes->get('id'); @endphp
 <div {{ $attributes->merge(['class' => 'fixed inset-0 z-50 hidden min-h-screen min-h-[100dvh] items-center justify-center p-4']) }}
-     role="dialog" aria-modal="true" aria-label="{{ $title }}">
+     role="dialog" aria-modal="true" aria-labelledby="{{ $modalId ? $modalId . '-title' : 'shared-modal-title' }}" data-focus-dialog data-modal>
     {{-- Backdrop --}}
     <div class="absolute inset-0 h-full min-h-screen min-h-[100dvh]"
          style="background-color: rgba(0,0,0,0.35); backdrop-filter: blur(4px);"
@@ -95,7 +96,7 @@
         </div>
 
         {{-- Title + message --}}
-        <h3 class="modal-title mt-4">{{ $title }}</h3>
+        <h3 id="{{ $modalId ? $modalId . '-title' : 'shared-modal-title' }}" class="modal-title mt-4" data-dialog-initial-focus tabindex="-1">{{ $title }}</h3>
         @if($hasMessage)
             <p class="modal-message">{{ $message }}</p>
         @endif

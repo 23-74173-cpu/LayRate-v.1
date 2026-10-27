@@ -47,17 +47,17 @@
     {{-- Tabs --}}
     <div id="chickens-tabs-nav" class="mb-5">
         <x-underline-tabs :tabs="[
-            'inventory' => ['label' => 'Inventory', 'icon' => 'list', 'onclick' => 'switchTab(\'inventory\')'],
-            'mortality' => ['label' => 'Mortality', 'icon' => 'skull', 'onclick' => 'switchTab(\'mortality\')'],
-            'culling'   => ['label' => 'Culled',   'icon' => 'crosshair', 'onclick' => 'switchTab(\'culling\')'],
-            'removal'   => ['label' => 'Removed',   'icon' => 'log-out',  'onclick' => 'switchTab(\'removal\')'],
-        ]" active="{{ $tab }}" />
+            'inventory' => ['label' => 'Inventory', 'icon' => 'list', 'panelId' => 'panelInventory', 'onclick' => 'switchTab(\'inventory\')', 'tabBehavior' => 'authoritative'],
+            'mortality' => ['label' => 'Mortality', 'icon' => 'skull', 'panelId' => 'panelMortality', 'onclick' => 'switchTab(\'mortality\')', 'tabBehavior' => 'authoritative'],
+            'culling'   => ['label' => 'Culled',   'icon' => 'crosshair', 'panelId' => 'panelCulling', 'onclick' => 'switchTab(\'culling\')', 'tabBehavior' => 'authoritative'],
+            'removal'   => ['label' => 'Removed',   'icon' => 'log-out', 'panelId' => 'panelRemoval', 'onclick' => 'switchTab(\'removal\')', 'tabBehavior' => 'authoritative'],
+        ]" active="{{ $tab }}" id="chickens-tabs" />
     </div>
 
     {{-- ============================================ --}}
     {{-- INVENTORY TAB --}}
     {{-- ============================================ --}}
-    <div id="panelInventory" class="{{ $tab !== 'inventory' ? 'hidden' : '' }}">
+    <div id="panelInventory" class="{{ $tab !== 'inventory' ? 'hidden' : '' }}" role="tabpanel" tabindex="0" aria-labelledby="chickens-tabs-inventory" {{ $tab !== 'inventory' ? 'hidden' : '' }}>
 
         {{-- Filter Bar (single row, wraps on mobile) --}}
         <div id="inventoryFilters" class="mb-5">
@@ -79,7 +79,7 @@
 
                 {{-- Tag Code (live debounced search, capped width) --}}
                 <div>
-                    <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Tag Code</label>
+                    <label for="tagSearchInput" class="block text-xs font-medium text-[#9CA3AF] mb-1">Tag Code</label>
                     <input type="text" name="search" value="{{ $search }}" placeholder="Search tag..."
                            class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-full min-w-0 sm:w-40 focus:outline-none focus:ring-1 focus:ring-navy"
                            id="tagSearchInput"
@@ -88,8 +88,8 @@
 
                 {{-- Cage --}}
                 <div>
-                    <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Cage</label>
-                    <select name="cage_id" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-full min-w-0 sm:w-auto focus:outline-none focus:ring-1 focus:ring-navy" onchange="filterInventory()">
+                    <label for="henCageFilter" class="block text-xs font-medium text-[#9CA3AF] mb-1">Cage</label>
+                    <select id="henCageFilter" name="cage_id" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-full min-w-0 sm:w-auto focus:outline-none focus:ring-1 focus:ring-navy" onchange="filterInventory()">
                         <option value="">All Cages</option>
                         @foreach($cages as $c)
                         <option value="{{ $c->id }}" {{ $cageId == $c->id ? 'selected' : '' }}>{{ $c->cage_code }}</option>
@@ -99,8 +99,8 @@
 
                 {{-- Breed --}}
                 <div>
-                    <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Breed</label>
-                    <select name="breed" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-full min-w-0 sm:w-auto focus:outline-none focus:ring-1 focus:ring-navy" onchange="filterInventory()">
+                    <label for="henBreedFilter" class="block text-xs font-medium text-[#9CA3AF] mb-1">Breed</label>
+                    <select id="henBreedFilter" name="breed" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-full min-w-0 sm:w-auto focus:outline-none focus:ring-1 focus:ring-navy" onchange="filterInventory()">
                         <option value="">All Breeds</option>
                         @foreach($breeds as $b)
                         <option value="{{ $b }}" {{ $breed == $b ? 'selected' : '' }}>{{ $b }}</option>
@@ -110,8 +110,8 @@
 
                 {{-- Sort --}}
                 <div>
-                    <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Sort</label>
-                    <select name="sort" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-full min-w-0 sm:w-auto focus:outline-none focus:ring-1 focus:ring-navy" onchange="filterInventory()">
+                    <label for="henSortFilter" class="block text-xs font-medium text-[#9CA3AF] mb-1">Sort</label>
+                    <select id="henSortFilter" name="sort" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-full min-w-0 sm:w-auto focus:outline-none focus:ring-1 focus:ring-navy" onchange="filterInventory()">
                         <option value="" {{ $sort === '' ? 'selected' : '' }}>Hen ID (A-Z)</option>
                         <option value="chicken_id_desc" {{ $sort === 'chicken_id_desc' ? 'selected' : '' }}>Hen ID (Z-A)</option>
                         <option value="age_asc" {{ $sort === 'age_asc' ? 'selected' : '' }}>Age (Youngest)</option>
@@ -157,7 +157,7 @@
     {{-- ============================================ --}}
     {{-- MORTALITY TAB --}}
     {{-- ============================================ --}}
-    <div id="panelMortality" class="{{ $tab !== 'mortality' ? 'hidden' : '' }}">
+    <div id="panelMortality" class="{{ $tab !== 'mortality' ? 'hidden' : '' }}" role="tabpanel" tabindex="0" aria-labelledby="chickens-tabs-mortality" {{ $tab !== 'mortality' ? 'hidden' : '' }}>
 
         {{-- Summary Cards — 3-card layout: Deaths Today / Livability / Total --}}
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5 kpi-rhythm" id="mortality-summary">
@@ -241,7 +241,7 @@
     {{-- ============================================ --}}
     {{-- CULLING TAB --}}
     {{-- ============================================ --}}
-    <div id="panelCulling" class="{{ $tab !== 'culling' ? 'hidden' : '' }}">
+    <div id="panelCulling" class="{{ $tab !== 'culling' ? 'hidden' : '' }}" role="tabpanel" tabindex="0" aria-labelledby="chickens-tabs-culling" {{ $tab !== 'culling' ? 'hidden' : '' }}>
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {{-- Record Cull form --}}
             <x-card>
@@ -296,7 +296,7 @@
     {{-- ============================================ --}}
     {{-- REMOVAL TAB --}}
     {{-- ============================================ --}}
-    <div id="panelRemoval" class="{{ $tab !== 'removal' ? 'hidden' : '' }}">
+    <div id="panelRemoval" class="{{ $tab !== 'removal' ? 'hidden' : '' }}" role="tabpanel" tabindex="0" aria-labelledby="chickens-tabs-removal" {{ $tab !== 'removal' ? 'hidden' : '' }}>
         <turbo-frame id="chickens-removal-records" src="{{ route('chickens.removal-records') }}" loading="lazy" target="_top">
             @include('chickens._removal-records-skeleton')
         </turbo-frame>
@@ -455,6 +455,10 @@ function switchTab(tab) {
     document.getElementById('panelMortality').classList.toggle('hidden', tab !== 'mortality');
     document.getElementById('panelCulling').classList.toggle('hidden', tab !== 'culling');
     document.getElementById('panelRemoval').classList.toggle('hidden', tab !== 'removal');
+    ['Inventory', 'Mortality', 'Culling', 'Removal'].forEach(function(name) {
+        var panel = document.getElementById('panel' + name);
+        if (panel) panel.hidden = panel.id !== 'panel' + tab.charAt(0).toUpperCase() + tab.slice(1);
+    });
 
     // Keep the URL's ?tab= in sync so redirect()->back() after a form submit
     // (record mortality, register a chicken, etc.) returns to the tab the
@@ -473,6 +477,11 @@ function switchTab(tab) {
         if (active) {
             active.classList.remove('border-transparent', 'text-[#6B7280]');
             active.classList.add('border-navy', 'text-navy');
+            nav.querySelectorAll('button[role="tab"]').forEach(btn => {
+                const selected = btn === active;
+                    btn.setAttribute('aria-selected', selected ? 'true' : 'false');
+                btn.tabIndex = selected ? 0 : -1;
+            });
         }
     }
 }

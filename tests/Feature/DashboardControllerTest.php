@@ -222,43 +222,62 @@ class DashboardControllerTest extends TestCase
         $this->assertEquals(4, $filtered->viewData('totalMortality'));
     }
 
-    public function test_cage_performance_endpoint_returns_view_with_rankings(): void
+    public function test_cage_performance_is_a_selected_date_snapshot_with_exact_daily_totals_and_hdep(): void
     {
-        $response = $this->actingAs($this->admin)->get(route('dashboard.cage-performance'));
+        $selectedDate = now()->subDay()->toDateString();
+        $response = $this->actingAs($this->admin)->get(route('dashboard.cage-performance', ['to_date' => $selectedDate]));
         $response->assertOk();
 
         $cages = $response->viewData('cages');
         $cageA = $cages->firstWhere('cage_code', 'CAGE-DASH-A');
         $cageB = $cages->firstWhere('cage_code', 'CAGE-DASH-B');
 
-        // Default view is Week (7 days) — includes today + yesterday.
-        $this->assertEquals(6, $cageA->period_eggs);
-        $this->assertEquals(21.4, $cageA->period_hdep);
-        $this->assertEquals(2, $cageB->period_eggs);
-        $this->assertEquals(14.3, $cageB->period_hdep);
+        $this->assertSame(2, $cageA->period_eggs);
+        $this->assertSame(50.0, $cageA->period_hdep);
+        $this->assertSame(1, $cageB->period_eggs);
+        $this->assertSame(50.0, $cageB->period_hdep);
+        $response->assertSee('Cage Performance Overview')
+            ->assertSee(now()->subDay()->format('M j, Y'))
+            ->assertSee('Ranked by eggs collected on '.now()->subDay()->format('m/d/Y').', then by HDEP.');
     }
 
-    public function test_cage_performance_ranks_cages_by_eggs_collected(): void
+    public function test_cage_performance_ranks_selected_date_eggs_then_hdep_and_isolates_selected_cage(): void
     {
-        $response = $this->actingAs($this->admin)->get(route('dashboard.cage-performance'));
+        $selectedDate = now()->subDay()->toDateString();
+        $response = $this->actingAs($this->admin)->get(route('dashboard.cage-performance', ['to_date' => $selectedDate]));
         $response->assertOk();
 
-        // Default Week: Cage A = 6 eggs, Cage B = 2 eggs, so A is #1.
-        $response->assertSee('CAGE-DASH-A');
-        $response->assertSee('21.4%');
-        $response->assertSee('6');
+        $ranked = $response->viewData('cages')->sortByDesc('period_eggs')->sortByDesc('period_hdep')->values();
+        $this->assertSame(['CAGE-DASH-A', 'CAGE-DASH-B'], $ranked->pluck('cage_code')->all());
+
+        $filtered = $this->actingAs($this->admin)->get(route('dashboard.cage-performance', [
+            'cage' => 'CAGE-DASH-B', 'to_date' => $selectedDate,
+        ]));
+        $filtered->assertOk();
+        $this->assertSame(['CAGE-DASH-B'], $filtered->viewData('cages')->pluck('cage_code')->all());
+        $this->assertSame(1, $filtered->viewData('cages')->first()->period_eggs);
     }
 
-    public function test_cage_performance_7_day_filter_works(): void
+    public function test_cage_performance_equal_egg_counts_use_hdep_as_tiebreaker(): void
     {
-        $response = $this->actingAs($this->admin)->get(route('dashboard.cage-performance', ['days' => 7]));
+        $selectedDate = now()->subDay()->toDateString();
+        $slotA = $this->cageA->cageSlots()->firstOrFail();
+        $slotB = $this->cageB->cageSlots()->firstOrFail();
+        ProductionLog::where('cage_slot_id', $slotA->id)->where('log_date', $selectedDate)->update(['egg_count' => 1, 'hen_count' => 4, 'hdep' => 25.00]);
+        ProductionLog::where('cage_slot_id', $slotB->id)->where('log_date', $selectedDate)->update(['egg_count' => 1, 'hen_count' => 2, 'hdep' => 50.00]);
+
+        $response = $this->actingAs($this->admin)->get(route('dashboard.cage-performance', ['to_date' => $selectedDate]));
         $response->assertOk();
 
         $cages = $response->viewData('cages');
         $cageA = $cages->firstWhere('cage_code', 'CAGE-DASH-A');
+        $cageB = $cages->firstWhere('cage_code', 'CAGE-DASH-B');
 
-        $this->assertEquals(6, $cageA->period_eggs);
-        $this->assertEquals(21.4, $cageA->period_hdep);
+        $this->assertSame(1, $cageA->period_eggs);
+        $this->assertSame(25.0, $cageA->period_hdep);
+        $this->assertSame(1, $cageB->period_eggs);
+        $this->assertSame(50.0, $cageB->period_hdep);
+        $response->assertSee('CAGE-DASH-B');
     }
 
     public function test_cage_performance_renders_comparison_charts(): void
@@ -296,14 +315,33 @@ class DashboardControllerTest extends TestCase
         $response->assertViewHas('days', 7);
     }
 
-    public function test_cage_performance_90_day_filter_shows_3_months_label_and_footer(): void
+    public function test_cage_performance_date_change_updates_snapshot_and_future_date_is_clamped(): void
     {
-        $response = $this->actingAs($this->admin)->get(route('dashboard.cage-performance', ['days' => 90]));
-        $response->assertOk();
-        $response->assertViewHas('days', 90);
-        $response->assertSee('3 Months');
-        $response->assertSee('Ranked by eggs collected over the last 90 days');
-        $response->assertSee('HDEP by Cage (3 Months)');
+        $historical = now()->subDays(30)->toDateString();
+        $response = $this->actingAs($this->admin)->get(route('dashboard.cage-performance', ['from_date' => $historical]));
+        $response->assertOk()->assertSee(now()->subDays(30)->format('M j, Y'));
+        $cageA = $response->viewData('cages')->firstWhere('cage_code', 'CAGE-DASH-A');
+        $this->assertSame(1, $cageA->period_eggs);
+        $this->assertSame(25.0, $cageA->period_hdep);
+
+        $future = now()->addDays(20)->toDateString();
+        $clamped = $this->actingAs($this->admin)->get(route('dashboard.cage-performance', ['to_date' => $future]));
+        $clamped->assertOk()->assertSee(now()->format('M j, Y'));
+        $todayA = $clamped->viewData('cages')->firstWhere('cage_code', 'CAGE-DASH-A');
+        $this->assertSame(4, $todayA->period_eggs);
+        $this->assertSame(100.0, $todayA->period_hdep);
+    }
+
+    public function test_cage_performance_selected_date_without_logs_renders_zero_snapshot(): void
+    {
+        $emptyDate = now()->subDays(10)->toDateString();
+        $response = $this->actingAs($this->admin)->get(route('dashboard.cage-performance', ['to_date' => $emptyDate]));
+        $response->assertOk()->assertSee('No production data recorded for '.now()->subDays(10)->format('m/d/Y').'.');
+
+        foreach ($response->viewData('cages') as $cage) {
+            $this->assertSame(0, $cage->period_eggs);
+            $this->assertSame(0, $cage->period_hdep);
+        }
     }
 
     public function test_production_history_scopes_to_selected_cage(): void
@@ -342,18 +380,16 @@ class DashboardControllerTest extends TestCase
         // The endpoint still accepts a historical window for existing callers.
     }
 
-    public function test_cage_performance_full_days_accumulates_all_time_eggs(): void
+    public function test_cage_performance_ignores_legacy_period_parameter(): void
     {
         $response = $this->actingAs($this->admin)->get(route('dashboard.cage-performance', ['cage' => 'CAGE-DASH-A', 'days' => 0]));
         $response->assertOk();
-        $response->assertViewHas('days', 0);
 
         $cageA = $response->viewData('cages')->firstWhere('cage_code', 'CAGE-DASH-A');
-        // All-time for A = 4 + 2 + 1 = 7 eggs.
-        $this->assertEquals(7, $cageA->period_eggs);
-
-        // The All-Time (day 1) ranking hint and HDEP chart header must render.
-        $response->assertSee('All-Time');
+        $this->assertSame(4, $cageA->period_eggs);
+        $this->assertSame(100.0, $cageA->period_hdep);
+        $response->assertSee(now()->format('M j, Y'))
+            ->assertSee('Ranked by eggs collected on '.now()->format('m/d/Y').', then by HDEP.');
     }
 
     public function test_production_history_compare_mode_renders_multiple_datasets(): void

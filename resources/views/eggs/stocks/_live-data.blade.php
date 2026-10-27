@@ -5,7 +5,8 @@
     </div>
     {{-- Batch Table --}}
     <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
-        <div class="mobile-wide-table overflow-x-auto">
+        <p class="px-4 py-2 text-xs text-ink-muted md:hidden" aria-hidden="true">Swipe horizontally to view all stock details and actions.</p>
+        <div class="mobile-wide-table overflow-x-auto" tabindex="0" role="region" aria-label="Egg stock batches table. Scroll horizontally to view all columns">
         <table class="w-full max-md:min-w-[720px] mobile-sticky-first">
             <thead>
                 <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
