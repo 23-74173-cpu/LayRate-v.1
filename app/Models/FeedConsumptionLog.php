@@ -18,6 +18,8 @@ class FeedConsumptionLog extends Model
         'recorded_by',
         'source',
         'farm_feed_entry_id',
+        'source_key',
+        'crude_protein_pct',
     ];
 
     protected $casts = [
@@ -25,6 +27,7 @@ class FeedConsumptionLog extends Model
         'log_time' => 'datetime:H:i',
         'created_at' => 'datetime',
         'feed_consumed_kg' => 'float',
+        'crude_protein_pct' => 'float',
     ];
 
     public function cage(): BelongsTo

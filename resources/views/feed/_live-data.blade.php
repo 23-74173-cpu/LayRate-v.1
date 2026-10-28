@@ -2,8 +2,8 @@
 <turbo-frame id="feed-live-data">
     <span hidden data-feed-batch-count="{{ $allBatches->count() }}"></span>
     {{-- ── Metric Cards — dashboard gradient KPI design (cardGradient) ── --}}
-    @if($feedAsOf ?? null)
-    <p class="text-xs font-medium mb-3" style="color:#9ca3af;">Showing last logged week · as of {{ $feedAsOf }}</p>
+    @if(($feedAsOf ?? null) || ($fcrAsOf ?? null))
+    <p class="text-xs font-medium mb-3" style="color:#615d59;">Showing latest available feed history · as of {{ $fcrAsOf ?? $feedAsOf }}</p>
     @endif
     <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
         <x-kpi-card
@@ -84,7 +84,6 @@
                     });
                 }
             }
-
             // Auto-load FCR data when FCR tab is activated (safety net for blank tab)
             if (tab === 'fcr' && window.fcrLoad) {
                 window.fcrLoad();
@@ -110,6 +109,13 @@
         }
         window.setFeedView = setFeedView;
 
+        if (!window.__feedPagePopstateBound) {
+            window.__feedPagePopstateBound = true;
+            window.addEventListener('popstate', function() {
+                if (window.feedReloadLiveData) window.feedReloadLiveData();
+            });
+        }
+
         /* ── FCR AJAX with AbortController ── */
         let fcrAbortController = null;
 
@@ -125,7 +131,7 @@
 
             /* Read current selections */
             var cageSelect = document.getElementById('fcr-cage-select');
-            var cageId = cageSelect ? cageSelect.value : 'all';
+            var cageId = cageSelect ? cageSelect.value : (panel.getAttribute('data-fcr-cage-id') || 'all');
 
             /* Update group-by if provided, otherwise keep current */
             if (!groupBy) {
@@ -148,17 +154,26 @@
             var contentEl = document.getElementById('fcr-content');
             if (loadingEl) loadingEl.classList.remove('hidden');
             if (errorEl)   errorEl.classList.add('hidden');
+            if (contentEl) contentEl.setAttribute('aria-busy', 'true');
 
+            var filters = new URLSearchParams(window.location.search);
             var url = '{{ route('feed.fcr-data') }}?cage_id=' + encodeURIComponent(cageId) + '&group_by=' + encodeURIComponent(groupBy);
+            url += '&fcr_cage_id=' + encodeURIComponent(cageId) + '&fcr_group_by=' + encodeURIComponent(groupBy);
+            ['feed_preset', 'feed_from', 'feed_to', 'feed_cage'].forEach(function (key) {
+                if (filters.has(key)) url += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(filters.get(key));
+            });
 
+            var requestController = fcrAbortController;
             fetch(url, { signal: fcrAbortController.signal })
                 .then(function(r) {
                     if (!r.ok) throw new Error('HTTP ' + r.status);
                     return r.text();
                 })
                 .then(function(html) {
+                    if (requestController !== fcrAbortController) return;
                     if (!contentEl) return;
                     contentEl.innerHTML = html;
+                    contentEl.removeAttribute('aria-busy');
                     panel.setAttribute('data-fcr-cage-id', cageId);
                     if (loadingEl) loadingEl.classList.add('hidden');
                     /* Re-run lucide icon replacement on new content */
@@ -168,8 +183,14 @@
                 })
                 .catch(function(err) {
                     if (err.name === 'AbortError') return;
+                    if (requestController !== fcrAbortController) return;
                     if (loadingEl) loadingEl.classList.add('hidden');
                     if (errorEl)   errorEl.classList.remove('hidden');
+                    var errorMessage = errorEl && errorEl.querySelector('[data-fcr-error-message]');
+                    if (errorMessage) errorMessage.textContent = err.message.startsWith('HTTP ')
+                        ? 'The FCR service returned an error. Please try again.'
+                        : 'FCR data could not be loaded. Check your connection and try again.';
+                    if (contentEl) contentEl.removeAttribute('aria-busy');
                 });
         }
 
@@ -203,6 +224,14 @@
                 if (e.key === 'Escape') closeFcrGuideModal();
             });
         }
+
+        document.addEventListener('turbo:frame-load', function(event) {
+            if (event.target && event.target.id === 'feed-live-data') {
+                const activeTab = new URL(window.location.href).searchParams.get('tab') || 'batches';
+                window.__feedActiveTab = null;
+                if (document.getElementById('tab-' + activeTab)) feedSwitchTab(activeTab);
+            }
+        });
 
         // Boot: activate tab from URL immediately (Turbo frame content is already in DOM when this runs)
         const tab = '{{ request()->query("tab", "batches") }}';
@@ -333,15 +362,19 @@
                                     @php
                                         $cColor = $log->cage?->color ?? '#6B7280';
                                         $isDistributed = $log->source === 'distributed';
+                                        $isHistoricalImport = str_starts_with((string) $log->source_key, 'production_data_clean:');
                                     @endphp
                                     <tr data-feed-log-id="{{ $log->id }}" data-feed-farm-id="{{ $log->farm_feed_entry_id }}" class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
                                         <td class="px-5 py-3.5 text-sm font-mono text-[#333333]">{{ $log->log_date->format('m/d/Y') }}</td>
                                         <td class="px-5 py-3.5 text-sm text-[#6B7280]">{{ $log->log_time?->format('H:i') ?? '—' }}</td>
                                         <td class="px-5 py-3.5 text-sm font-medium" style="color:{{ $cColor }}">{{ $log->cage?->cage_code ?? '—' }}</td>
-                                        <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $log->feedBatch->batch_code }}</td>
+                                        <td class="px-5 py-3.5 text-sm text-[#333333]">{{ $log->feedBatch?->batch_code ?? 'Unbatched historical import' }}</td>
                                         <td class="px-5 py-3.5 text-sm text-[#333333]">{{ number_format($log->feed_consumed_kg, 2) }} kg</td>
                                         <td class="px-5 py-3.5">
-                                            @if($isDistributed)
+                                            @if($isHistoricalImport)
+                                                <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-info-bg text-info border border-info-border">Historical CSV</span>
+                                                @if($log->crude_protein_pct !== null)<span class="ml-1 text-xs text-[#615d59]">{{ number_format($log->crude_protein_pct, 1) }}% CP</span>@endif
+                                            @elseif($isDistributed)
                                                 <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-warning-bg text-warning border border-warning-border" title="Estimated from whole-farm entry"><i data-lucide="git-branch" class="w-3 h-3"></i> Estimated</span>
                                             @else
                                                 <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-success-bg text-success border border-success-border"><i data-lucide="check-circle-2" class="w-3 h-3"></i> Direct</span>
@@ -438,7 +471,7 @@
 
     {{-- FCR Panel --}}
     <div id="tab-fcr" class="tab-panel hidden" role="tabpanel" tabindex="0" aria-labelledby="feed-tabs-fcr" hidden
-         data-fcr-cage-id="{{ $fcrSelectedId ?? $cages->value('id') ?? '' }}"
+         data-fcr-cage-id="{{ $fcrSelectedId ?? 'all' }}"
          data-fcr-group-by="{{ $fcrGroupBy }}">
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5 relative">
             <x-card-header title="Feed Conversion Ratio" subtitle="kg feed ÷ kg egg mass (lower is better)" icon="scale">
@@ -446,9 +479,9 @@
                     <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
                     <select id="fcr-cage-select" onchange="fcrLoad()"
                             class="w-full sm:w-auto min-w-0 border border-[#D9D9D9] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-navy">
-                        <option value="all">All Cages</option>
+                        <option value="all" {{ $fcrSelectedId === 'all' ? 'selected' : '' }}>All Cages</option>
                         @foreach($cages as $c)
-                        <option value="{{ $c->id }}" {{ (int) $fcrSelectedId === $c->id ? 'selected' : '' }}>
+                        <option value="{{ $c->id }}" {{ $fcrSelectedId !== 'all' && (int) $fcrSelectedId === $c->id ? 'selected' : '' }}>
                             {{ $c->cage_code }}
                         </option>
                         @endforeach
@@ -484,7 +517,7 @@
             <div id="fcr-error" class="hidden text-center py-8">
                 <p class="text-sm text-[#9B1C24] mb-3">
                     <i data-lucide="alert-triangle" class="inline-block w-4 h-4 align-text-bottom"></i>
-                    Failed to load FCR data.
+                    <span data-fcr-error-message>FCR data could not be loaded. Check your connection and try again.</span>
                 </p>
                 <x-button variant="secondary" size="sm" type="button" onclick="fcrLoad()">
                     Retry
@@ -501,6 +534,7 @@
                     'fcrSelectedId' => $fcrSelectedId,
                     'fcrTotalFeedKg'    => $fcrTotalFeedKg,
                     'fcrTotalEggMassKg' => $fcrTotalEggMassKg,
+                    'fcrAsOf' => $fcrAsOf ?? null,
                 ])
             </div>
 

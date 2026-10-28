@@ -225,13 +225,78 @@ class FeedBatchManagementTest extends TestCase
 
     public function test_fcr_tab_is_server_rendered_when_selected(): void
     {
-        $response = $this->actingAs($this->user)->get('/feed/live-data?tab=fcr');
+        $response = $this->actingAs($this->user)->get('/feed/live-data?tab=fcr&fcr_cage_id='.$this->cage->id);
 
         $response->assertOk();
         $response->assertSee('id="tab-fcr"', false);
         $response->assertSee('id="fcr-content"', false);
         $response->assertSee('Feed Conversion Ratio');
-        $response->assertSee('No feed or production data for');
+        $response->assertSee('No feed or production history is available for');
+    }
+
+    public function test_fcr_window_uses_latest_shared_history_when_data_is_stale(): void
+    {
+        $date = '2026-08-27';
+        $batch = FeedBatch::create([
+            'batch_code' => 'F-FCR-HISTORY',
+            'crude_protein' => 17,
+            'date_received' => $date,
+        ]);
+        $slot = CageSlot::create([
+            'cage_id' => $this->cage->id,
+            'slot_number' => 1,
+            'row_number' => 1,
+            'column_number' => 1,
+            'current_occupancy' => 4,
+        ]);
+        ProductionLog::create([
+            'cage_slot_id' => $slot->id,
+            'log_date' => $date,
+            'egg_count' => 100,
+            'hen_count' => 4,
+            'hdep' => 2500,
+            'recorded_by' => $this->user->id,
+            'logged_via' => 'manual',
+            'is_demo' => false,
+        ]);
+        FeedConsumptionLog::create([
+            'cage_id' => $this->cage->id,
+            'feed_batch_id' => $batch->id,
+            'log_date' => $date,
+            'feed_consumed_kg' => 12,
+            'recorded_by' => $this->user->id,
+        ]);
+
+        $response = $this->actingAs($this->user)->get('/feed/live-data?tab=fcr&fcr_cage_id='.$this->cage->id);
+
+        $response->assertOk()
+            ->assertSee('Week 35, 2026')
+            ->assertSee('FCR (This week)')
+            ->assertSee('2.00');
+    }
+
+    public function test_feed_global_filters_scope_records_and_are_passed_to_view(): void
+    {
+        $batch = FeedBatch::create(['batch_code' => 'FILTER-BATCH', 'crude_protein' => 17, 'date_received' => '2026-08-01']);
+        $slot = CageSlot::create(['cage_id' => $this->cage->id, 'slot_number' => 1, 'row_number' => 1, 'column_number' => 1, 'current_occupancy' => 2]);
+        ProductionLog::create(['cage_slot_id' => $slot->id, 'log_date' => '2026-08-27', 'egg_count' => 100, 'hen_count' => 2, 'hdep' => 50, 'logged_via' => 'manual']);
+        $log = FeedConsumptionLog::create(['cage_id' => $this->cage->id, 'feed_batch_id' => $batch->id, 'log_date' => '2026-08-27', 'log_time' => '08:00', 'feed_consumed_kg' => 12, 'recorded_by' => $this->user->id]);
+
+        $response = $this->actingAs($this->user)->get(route('feed.live-data', [
+            'feed_from' => '2026-08-27', 'feed_to' => '2026-08-27', 'feed_cage' => $this->cage->id,
+        ]));
+
+        $response->assertOk()->assertViewHas('filters', fn ($filters) => $filters['cage_id'] === $this->cage->id && $filters['from'] === '2026-08-27')
+            ->assertSee('data-feed-log-id="'.$log->id.'"', false);
+    }
+
+    public function test_feed_filter_latest_available_action_is_rendered_for_empty_period(): void
+    {
+        $response = $this->actingAs($this->user)->get(route('feed.live-data', ['feed_from' => '2026-08-27', 'feed_to' => '2026-08-27', 'tab' => 'fcr']));
+
+        $response->assertOk()->assertSee('No FCR data for this period')
+            ->assertSee('data-fcr-latest-action', false)
+            ->assertSee('View Latest Available Data');
     }
 
     public function test_feed_consumption_calendar_does_not_render_summary_kpi_cards(): void

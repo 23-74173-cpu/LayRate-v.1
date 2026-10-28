@@ -8,22 +8,73 @@ use App\Models\FarmFeedEntry;
 use App\Models\FeedBatch;
 use App\Models\FeedConsumptionLog;
 use App\Models\Note;
+use App\Models\ProductionLog;
 use App\Services\FcrCalculator;
 use App\Services\FinancePostingService;
 use App\Services\ReportingDateService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 
 class FeedController extends Controller
 {
     public function index()
     {
+        $filters = $this->feedFilters();
         return view('feed', [
             'preselectedCageId' => (int) request('cage_id') ?: null,
+            'feedFilters' => $filters,
             'autopostOn' => FinancePostingService::autopostOn(),
             'autopostDate' => FinancePostingService::cutover(),
         ]);
+    }
+
+    /** Resolve explicit filters without silently rewriting the user's dates. */
+    private function feedFilters(): array
+    {
+        $today = ReportingDateService::reportingDateString();
+        $preset = request()->query('feed_preset');
+        $from = request()->query('feed_from');
+        $to = request()->query('feed_to');
+
+        $cageId = filter_var(request()->query('feed_cage', request()->query('cage_id')), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: null;
+        if ($cageId && ! Cage::whereKey($cageId)->where('is_active', true)->exists()) $cageId = null;
+
+        if ($preset === 'latest') {
+            $latest = FeedConsumptionLog::query()
+                ->when($cageId, fn ($q) => $q->where('cage_id', $cageId))
+                ->whereHas('cage', fn ($q) => $q->where('is_active', true))
+                ->max('log_date');
+            $from = $latest;
+            $to = $latest;
+            if (! $latest) {
+                $from = $to = $today;
+            }
+        } elseif (in_array($preset, ['today', '7d', '30d'], true)) {
+            $to = $today;
+            $from = match ($preset) {
+                'today' => $today,
+                '7d' => Carbon::parse($today)->subDays(6)->toDateString(),
+                default => Carbon::parse($today)->subDays(29)->toDateString(),
+            };
+        }
+
+        $validDate = fn ($date) => is_string($date)
+            && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)
+            && Carbon::createFromFormat('!Y-m-d', $date)?->format('Y-m-d') === $date;
+        if (! $validDate($from)) $from = null;
+        if (! $validDate($to)) $to = null;
+        if ($from && $to && $from > $to) [$from, $to] = [$to, $from];
+        if ($to && $to > $today) $to = $today;
+
+        if (($preset === 'latest' || $preset === 'today' || $preset === '7d' || $preset === '30d') && ! $from) {
+            // An explicit empty result remains an empty result; don't turn it into an unbounded query.
+            $from = $today;
+            $to = $today;
+        }
+        return ['preset' => in_array($preset, ['today', '7d', '30d', 'latest'], true) ? $preset : '', 'from' => $from, 'to' => $to, 'cage_id' => $cageId, 'today' => $today];
     }
 
     public function batchSessionData()
@@ -46,20 +97,35 @@ class FeedController extends Controller
 
     public function liveData()
     {
+        $filters = $this->feedFilters();
+        $cageId = $filters['cage_id'];
+        $dateStart = $filters['from'];
+        $dateEnd = $filters['to'];
         // Lean batch fetch: the page only needs id/code/cost/qty for the modal
         // dropdowns and the JS remaining-kg map (accessors read the preloaded
         // consumed_sum, so no per-batch SUM queries). avg CP% is a single
         // aggregate instead of hydrating every batch ever recorded.
         $allBatches = FeedBatch::orderByDesc('date_received')
-            ->withSum('consumptionLogs as consumed_sum', 'feed_consumed_kg')
+            ->withSum(['consumptionLogs as consumed_sum' => fn ($q) => $q
+                ->when($cageId, fn ($query) => $query->where('cage_id', $cageId))
+                ->when($dateStart, fn ($query) => $query->where('log_date', '>=', $dateStart))
+                ->when($dateEnd, fn ($query) => $query->where('log_date', '<=', $dateEnd))], 'feed_consumed_kg')
             ->get(['id', 'batch_code', 'unit_cost', 'total_quantity_kg']);
-        $avgCp = FeedBatch::avg('crude_protein');
+        $avgCp = FeedBatch::query()
+            ->whereHas('consumptionLogs', fn ($q) => $q->when($cageId, fn ($query) => $query->where('cage_id', $cageId))
+                ->when($dateStart, fn ($query) => $query->where('log_date', '>=', $dateStart))
+                ->when($dateEnd, fn ($query) => $query->where('log_date', '<=', $dateEnd)))
+            ->avg('crude_protein');
 
-        $batches = FeedBatch::withSum('consumptionLogs as consumed_sum', 'feed_consumed_kg')
+        $batches = FeedBatch::withSum(['consumptionLogs as consumed_sum' => fn ($q) => $q
+            ->when($cageId, fn ($query) => $query->where('cage_id', $cageId))
+            ->when($dateStart, fn ($query) => $query->where('log_date', '>=', $dateStart))
+            ->when($dateEnd, fn ($query) => $query->where('log_date', '<=', $dateEnd))], 'feed_consumed_kg')
+            ->when($dateEnd, fn ($q) => $q->where('date_received', '<=', $dateEnd))
             ->when(request('walkthrough4') === '1' && request('wt4_batch'), fn ($q) => $q->whereKey((int) request('wt4_batch')))
             ->orderByDesc('date_received')->paginate((int) config('tables.per_page', 25))->withQueryString();
 
-        $preselectedCageId = (int) request('cage_id') ?: null;
+        $preselectedCageId = $cageId;
 
         $viewMode = request('view') === 'calendar' ? 'calendar' : 'records';
         $today = ReportingDateService::reportingDateString();
@@ -79,7 +145,7 @@ class FeedController extends Controller
         $calendarDays = collect();
         $calendarTotals = ['total' => 0.0, 'average' => 0.0, 'days' => 0, 'missing' => 0];
         if ($viewMode === 'calendar') {
-            $calendarQuery = FeedConsumptionLog::query()
+            $calendarQuery = $this->scopedConsumptionQuery($cageId, $dateStart, $dateEnd)
                 ->when($preselectedCageId, fn ($q) => $q->where('cage_id', $preselectedCageId))
                 ->when(request('walkthrough4') === '1' && request('wt4_log'), fn ($q) => $q->whereKey((int) request('wt4_log')))
                 ->when(request('walkthrough4') === '1' && request('wt4_farm'), fn ($q) => $q->where('farm_feed_entry_id', (int) request('wt4_farm')))
@@ -104,11 +170,23 @@ class FeedController extends Controller
         $consumptionLogs = FeedConsumptionLog::with(['cage', 'feedBatch', 'farmFeedEntry'])
             ->when(request('walkthrough4') === '1' && request('wt4_log'), fn ($q) => $q->whereKey((int) request('wt4_log')))
             ->when(request('walkthrough4') === '1' && request('wt4_farm'), fn ($q) => $q->where('farm_feed_entry_id', (int) request('wt4_farm')))
-            ->when($preselectedCageId, fn ($q) => $q->where('cage_id', $preselectedCageId))
+            ->when($cageId, fn ($q) => $q->where('cage_id', $cageId))
+            ->when($dateStart, fn ($q) => $q->where('log_date', '>=', $dateStart))
+            ->when($dateEnd, fn ($q) => $q->where('log_date', '<=', $dateEnd))
             ->orderByDesc('log_date')
             ->orderByDesc('log_time')
             ->paginate((int) config('tables.per_page', 25))
             ->withQueryString();
+
+        // Read-only exposure for imported aggregate feed protein. It is source
+        // data, not a feed batch or purchase and must not affect inventory/cost.
+        $crudeProteinByCageDate = Schema::hasColumn('feed_consumption_logs', 'crude_protein_pct')
+            ? FeedConsumptionLog::query()->when($cageId, fn ($q) => $q->where('cage_id', $cageId))
+                ->when($dateStart, fn ($q) => $q->where('log_date', '>=', $dateStart))
+                ->when($dateEnd, fn ($q) => $q->where('log_date', '<=', $dateEnd))
+                ->whereNotNull('crude_protein_pct')->get(['cage_id', 'log_date', 'crude_protein_pct'])
+                ->keyBy(fn ($row) => $row->cage_id.'-'.$row->log_date->toDateString())
+            : collect();
 
         $reportingNow = ReportingDateService::now();
 
@@ -116,20 +194,28 @@ class FeedController extends Controller
         // was logged in the last 7 days, anchor "this week/month" to the
         // latest feed log so the cards summarize real history instead of
         // reading 0. Live behavior is unchanged when data is current.
-        $feedRef = $this->feedReferenceDate();
+        $feedRef = $this->feedReferenceDate($dateEnd, $cageId);
         $feedAsOf = $feedRef->toDateString() < $reportingNow->toDateString()
             ? $feedRef->format('m/d/Y')
             : null;
 
-        $totalFeedWeek = FeedConsumptionLog::where('log_date', '>=', $feedRef->copy()->subDays(7)->toDateString())
+        $totalFeedWeek = $this->scopedConsumptionQuery(
+            $cageId,
+            $dateStart ?? $feedRef->copy()->subDays(6)->toDateString(),
+            $dateEnd ?? $feedRef->toDateString()
+        )
             ->sum('feed_consumed_kg');
 
-        $activeCagesCount = Cage::where('is_active', 1)->count();
+        $activeCagesCount = $cageId ? 1 : Cage::where('is_active', 1)->count();
         $avgFeedPerCage = $activeCagesCount
             ? round($totalFeedWeek / max($activeCagesCount, 1) / 7, 1)
             : 0;
 
-        $totalFeedCostMonth = FeedConsumptionLog::where('feed_consumption_logs.log_date', '>=', $feedRef->copy()->startOfMonth()->toDateString())
+        $totalFeedCostMonth = $this->scopedConsumptionQuery(
+            $cageId,
+            $dateStart ?? $feedRef->copy()->startOfMonth()->toDateString(),
+            $dateEnd ?? $feedRef->toDateString()
+        )
             ->join('feed_batches', 'feed_consumption_logs.feed_batch_id', '=', 'feed_batches.id')
             ->selectRaw('SUM(feed_consumption_logs.feed_consumed_kg * feed_batches.unit_cost) as total')
             ->whereNotNull('feed_batches.unit_cost')
@@ -137,26 +223,35 @@ class FeedController extends Controller
 
         $cages = Cage::where('is_active', 1)->orderBy('cage_code')->get();
 
-        $fcrCageId = request('fcr_cage_id', $preselectedCageId ? (string) $preselectedCageId : null);
+        $requestedFcrCage = request('fcr_cage_id', $cageId ? (string) $cageId : null);
+        $validFcrCages = array_merge(['all'], $cages->pluck('id')->map(fn ($id) => (string) $id)->all());
+        $fcrCageId = in_array($requestedFcrCage, $validFcrCages, true)
+            ? $requestedFcrCage
+            : ($cageId ? (string) $cageId : 'all');
         $fcrGroupBy = request('fcr_group_by', 'week');
         if (! in_array($fcrGroupBy, ['day', 'week', 'month'])) {
             $fcrGroupBy = 'week';
         }
 
-        // Default to first cage when no FCR selection is provided
-        if ($fcrCageId === null) {
-            $firstCage = $cages->first();
-            $fcrCageId = $firstCage ? (string) $firstCage->id : null;
-        }
-
-        $fcrData = $this->computeFcrData($fcrCageId, $fcrGroupBy, $feedRef);
-
+        $fcrData = $this->computeFcrData($fcrCageId, $fcrGroupBy, $feedRef, $dateStart, $dateEnd);
+        $fcrData['fcrAsOf'] = $fcrData['fcrTimeline']->isNotEmpty()
+            ? 'Historical FCR through '.Carbon::parse($fcrData['fcrTimeline']->max('period_start'))->format('m/d/Y')
+            : $feedAsOf;
         return view('feed._live-data', array_merge(
             compact('batches', 'allBatches', 'consumptionLogs', 'avgCp', 'totalFeedWeek', 'avgFeedPerCage',
                       'totalFeedCostMonth', 'cages', 'preselectedCageId', 'feedAsOf', 'viewMode', 'today', 'month',
-                      'monthStart', 'monthEnd', 'maxMonth', 'calendarDays', 'calendarTotals'),
+                      'monthStart', 'monthEnd', 'maxMonth', 'calendarDays', 'calendarTotals', 'crudeProteinByCageDate', 'filters'),
             $fcrData
         ));
+    }
+
+    /** Safe selectors for applying shared feed/FCR filters to all page tabs. */
+    private function scopedConsumptionQuery(?int $cageId, ?string $from, ?string $to)
+    {
+        return FeedConsumptionLog::query()
+            ->when($cageId, fn ($q) => $q->where('cage_id', $cageId))
+            ->when($from, fn ($q) => $q->where('log_date', '>=', $from))
+            ->when($to, fn ($q) => $q->where('log_date', '<=', $to));
     }
 
     public function consumptionCalendarDay(Request $request, string $date)
@@ -189,13 +284,39 @@ class FeedController extends Controller
      */
     public function fcrData()
     {
-        $cageId = request('cage_id', 'all');
+        $filters = $this->feedFilters();
+        $cageId = request('fcr_cage_id', request('cage_id', request('cage', 'all')));
+        $activeIds = Cage::where('is_active', true)->pluck('id')->map(fn ($id) => (string) $id)->all();
+        if ($cageId !== 'all' && ! in_array((string) $cageId, $activeIds, true)) $cageId = 'all';
+        if ($cageId === 'all' && ! request()->has('fcr_cage_id') && ! request()->has('cage_id') && ! request()->has('cage')) {
+            $cageId = $activeIds[0] ?? 'all';
+        }
         $groupBy = request('group_by', 'week');
         if (! in_array($groupBy, ['day', 'week', 'month'])) {
             $groupBy = 'week';
         }
 
-        $fcrData = $this->computeFcrData($cageId, $groupBy, $this->feedReferenceDate());
+        $dateStart = $filters['from'];
+        $dateEnd = $filters['to'];
+        $feedRef = $this->feedReferenceDate($dateEnd, $cageId === 'all' ? null : (int) $cageId);
+        $fcrData = $this->computeFcrData($cageId, $groupBy, $feedRef, $dateStart, $dateEnd);
+        $hasImportedHistory = Schema::hasColumn('feed_consumption_logs', 'source_key')
+            && FeedConsumptionLog::where('source_key', 'like', 'production_data_clean:%')->exists();
+        $latestFeedDate = FeedConsumptionLog::query()
+            ->when($hasImportedHistory && ! $dateStart && ! $dateEnd, fn ($q) => $q->where('source_key', 'like', 'production_data_clean:%:feed'))
+            ->when($hasImportedHistory && ($dateStart || $dateEnd), fn ($q) => $q->where(function ($sources) {
+                $sources->whereNull('feed_consumption_logs.source_key')->orWhere('feed_consumption_logs.source_key', 'like', 'production_data_clean:%:feed');
+            }))
+            ->when($cageId !== 'all' && $cageId !== null, fn ($q) => $q->where('cage_id', (int) $cageId))
+            ->when($cageId === 'all' || $cageId === null, fn ($q) => $q->whereHas('cage', fn ($c) => $c->where('is_active', 1)))
+            ->when($dateEnd, fn ($q) => $q->where('log_date', '<=', $dateEnd))
+            ->when($dateStart, fn ($q) => $q->where('log_date', '>=', $dateStart))
+            ->max('log_date');
+        $hasImportedFcrHistory = Schema::hasColumn('feed_consumption_logs', 'source_key')
+            && FeedConsumptionLog::where('source_key', 'like', 'production_data_clean:%:feed')->exists();
+        $fcrData['fcrAsOf'] = $fcrData['fcrTimeline']->isNotEmpty() && $latestFeedDate
+            ? 'Historical FCR through '.Carbon::parse($latestFeedDate)->format('m/d/Y')
+            : null;
 
         return view('feed._fcr-content', $fcrData);
     }
@@ -204,10 +325,15 @@ class FeedController extends Controller
      * Latest-data fallback shared by liveData() and fcrData(): today when
      * feed data is current, otherwise the latest feed log date.
      */
-    private function feedReferenceDate(): \Carbon\Carbon
+    private function feedReferenceDate(?string $endDate = null, ?int $cageId = null): \Carbon\Carbon
     {
         $now = ReportingDateService::now();
-        $latest = FeedConsumptionLog::max('log_date');
+        $latest = FeedConsumptionLog::when($cageId, fn ($q) => $q->where('cage_id', $cageId))
+            ->when($endDate, fn ($q) => $q->where('log_date', '<=', $endDate))
+            ->when(Schema::hasColumn('feed_consumption_logs', 'source_key'), fn ($q) => $q->where(function ($sources) {
+                $sources->whereNull('feed_consumption_logs.source_key')
+                    ->orWhere('feed_consumption_logs.source_key', 'like', 'production_data_clean:%:feed');
+            }))->max('log_date');
         if ($latest && $latest < $now->copy()->subDays(7)->toDateString()) {
             return \Carbon\Carbon::parse($latest);
         }
@@ -222,7 +348,7 @@ class FeedController extends Controller
      * day end); callers pass the latest-data fallback so FCR reflects the
      * newest history instead of an empty trailing window.
      */
-    private function computeFcrData(string|null $cageId, string $groupBy, ?\Carbon\Carbon $refEnd = null): array
+    private function computeFcrData(string|null $cageId, string $groupBy, ?\Carbon\Carbon $refEnd = null, ?string $from = null, ?string $to = null): array
     {
         $periodDays = match ($groupBy) {
             'month' => 30,
@@ -230,15 +356,82 @@ class FeedController extends Controller
             default  => 1,
         };
 
+        // Historical imports can end months before the current system date.
+        // Anchor the range to the latest date shared by feed and production,
+        // so the headline ratio uses a period where its numerator and
+        // denominator are both observed rather than a synthetic empty tail.
+        $cageForRange = ($cageId !== 'all' && $cageId !== null)
+            ? Cage::find((int) $cageId)
+            : null;
+        $hasImportedHistory = Schema::hasColumn('production_logs', 'source_key')
+            && DB::table('production_logs')->where('source_key', 'like', 'production_data_clean:%')->exists();
+        $hasLiveProduction = Schema::hasColumn('production_logs', 'source_key')
+            ? DB::table('production_logs')->whereNull('source_key')->exists()
+            : DB::table('production_logs')->exists();
+        $latestFeed = FeedConsumptionLog::query()
+            ->when($hasImportedHistory && ! $from && ! $to, fn ($q) => $q->where('source_key', 'like', 'production_data_clean:%:feed'))
+            ->when((! $hasImportedHistory || $from || $to) && Schema::hasColumn('feed_consumption_logs', 'source_key'), fn ($q) => $q->where(function ($sources) {
+                $sources->whereNull('feed_consumption_logs.source_key')
+                    ->orWhere('feed_consumption_logs.source_key', 'like', 'production_data_clean:%:feed');
+            }))
+            ->when($cageForRange, fn ($q) => $q->where('cage_id', $cageForRange->id))
+            ->when(! $cageForRange, fn ($q) => $q->whereHas('cage', fn ($c) => $c->where('is_active', 1)))
+            ->when($to, fn ($q) => $q->where('log_date', '<=', $to))
+            ->when($from, fn ($q) => $q->where('log_date', '>=', $from))
+            ->max('log_date');
+        $latestProductionQuery = DB::table('production_logs as pl')
+            ->leftJoin('cage_slots as cs', 'cs.id', '=', 'pl.cage_slot_id')
+            ->leftJoin('cages as imported_cage', function ($join) {
+                $join->on('imported_cage.cage_code', '=', DB::raw("SUBSTRING_INDEX(SUBSTRING_INDEX(pl.source_key, ':', 3), ':', -1)"));
+            })
+            ->where('pl.is_demo', false)
+            ->when($cageForRange, fn ($q) => $q->where(function ($scope) use ($cageForRange) {
+                $scope->where('cs.cage_id', $cageForRange->id)
+                    ->orWhere(function ($imported) use ($cageForRange) {
+                        $imported->where('pl.source_key', 'like', 'production_data_clean:%:production')
+                            ->where('imported_cage.id', $cageForRange->id);
+                    });
+            }))
+            ->when(! $cageForRange, fn ($q) => $q->where(function ($scope) {
+                $scope->whereExists(function ($active) {
+                    $active->selectRaw('1')->from('cages as slot_cage')
+                        ->whereColumn('slot_cage.id', 'cs.cage_id')->where('slot_cage.is_active', 1);
+                })->orWhere(function ($imported) {
+                    $imported->where('pl.source_key', 'like', 'production_data_clean:%:production')
+                        ->where('imported_cage.is_active', 1);
+                });
+            }))
+            ->when($to, fn ($q) => $q->where('pl.log_date', '<=', $to))
+            ->when($from, fn ($q) => $q->where('pl.log_date', '>=', $from));
+        if ($from || $to) {
+            $latestProductionQuery->when(Schema::hasColumn('production_logs', 'source_key'), fn ($q) => $q->where(function ($sources) {
+                $sources->whereNull('pl.source_key')->orWhere('pl.source_key', 'like', 'production_data_clean:%:production');
+            }));
+        } elseif ($hasImportedHistory) {
+            $latestProductionQuery->where('pl.source_key', 'like', 'production_data_clean:%:production');
+        } else {
+            $latestProductionQuery->when(Schema::hasColumn('production_logs', 'source_key'), fn ($q) => $q->whereNull('pl.source_key'));
+        }
+        $latestProduction = $latestProductionQuery->max('pl.log_date');
+        $sharedLatest = collect([$latestFeed, $latestProduction])->filter()->min();
+        if ($sharedLatest) {
+            $sharedDate = \Carbon\Carbon::parse($sharedLatest);
+            if ($from || $to || ($hasImportedHistory && ! $hasLiveProduction) || ! $refEnd || $sharedDate->lt($refEnd)) {
+                $refEnd = $sharedDate;
+            }
+        }
+
         $dayEnd = $refEnd
             ? $refEnd->copy()->endOfDay()
             : ReportingDateService::reportingDayEnd()->subSecond();
         $dayStart = $dayEnd->copy()->subDays($periodDays - 1);
+        if ($from) $dayStart = Carbon::parse($from)->startOfDay();
+        if ($to) $dayEnd = Carbon::parse($to)->endOfDay();
 
         // Bound the timeline fetch to recent periods only (the tab renders the
         // latest 5 and totals "shown periods"). Previously unbounded: every
         // production + feed row ever recorded was hydrated on each view.
-        $timelineSince = match ($groupBy) {
+        $timelineSince = $from ? Carbon::parse($from)->startOfDay() : match ($groupBy) {
             'month' => $dayEnd->copy()->subMonths(11)->startOfDay(),
             'week'  => $dayEnd->copy()->subWeeks(11)->startOfDay(),
             default => $dayEnd->copy()->subDays(29)->startOfDay(),
@@ -254,7 +447,7 @@ class FeedController extends Controller
                     $dayStart,
                     $dayEnd
                 );
-                $fcrTimeline = FcrCalculator::timelineAll($groupBy, $timelineSince);
+                $fcrTimeline = FcrCalculator::timelineAll($groupBy, $timelineSince, $to);
                 $label       = 'All Cages';
                 $selectedCageId = 'all';
             } else {
@@ -267,7 +460,7 @@ class FeedController extends Controller
             $selectedCageId = (int) $cageId;
             $cage = Cage::find($selectedCageId);
             if ($cage) {
-                $fcrTimeline = FcrCalculator::timeline($cage, $groupBy, $timelineSince);
+                $fcrTimeline = FcrCalculator::timeline($cage, $groupBy, $timelineSince, $to);
                 $fcrCurrent  = FcrCalculator::forCage(
                     $cage,
                     $dayStart,
@@ -281,12 +474,40 @@ class FeedController extends Controller
             }
         }
 
+        if ($from || $to) {
+            $fcrTimeline = $fcrTimeline->filter(function ($row) use ($from, $to, $groupBy) {
+                $date = Carbon::parse($row['period_start'] ?? $row['period']);
+                $periodEnd = match ($groupBy) {
+                    'week' => $date->copy()->endOfWeek(),
+                    'month' => $date->copy()->endOfMonth(),
+                    default => $date->copy()->endOfDay(),
+                };
+                return (! $from || $periodEnd->toDateString() >= $from)
+                    && (! $to || $date->toDateString() <= $to);
+            })->values();
+            $fcrCurrent = $cageId === 'all'
+                ? FcrCalculator::forAllCages($dayStart, $dayEnd)
+                : (($cage ?? null) ? FcrCalculator::forCage($cage, $dayStart, $dayEnd) : null);
+        }
+
         // All-time header totals via SQL aggregates (no date bound, no model
         // hydration): identical row sets and weight math to the old unbounded
         // timeline sums, so the header cards read exactly as before.
         $fcrTotals = ['feed_kg' => 0.0, 'egg_mass_kg' => 0.0];
         if ($cageId === 'all' || ($cage ?? null)) {
             $fcrTotals = FcrCalculator::allTimeTotals($cageId === 'all' ? null : $cage);
+            if ($from || $to) {
+                $feedQuery = FeedConsumptionLog::query()
+            ->when($cageId !== 'all', fn ($q) => $q->where('cage_id', $cage?->id))
+                    ->when($cageId === 'all', fn ($q) => $q->whereHas('cage', fn ($c) => $c->where('is_active', 1)))
+                    ->when(Schema::hasColumn('feed_consumption_logs', 'source_key'), fn ($q) => $q->where(function ($s) {
+                        $s->whereNull('source_key')->orWhere('source_key', 'like', 'production_data_clean:%:feed');
+                    }))
+                    ->when($from, fn ($q) => $q->where('log_date', '>=', $from))
+                    ->when($to, fn ($q) => $q->where('log_date', '<=', $to));
+                $eggMass = FcrCalculator::eggMassForRange($cageId === 'all' ? null : $cage, $from, $to);
+                $fcrTotals = ['feed_kg' => (float) $feedQuery->sum('feed_consumed_kg'), 'egg_mass_kg' => $eggMass];
+            }
         }
 
         return [

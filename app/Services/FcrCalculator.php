@@ -9,6 +9,7 @@ use App\Models\Setting;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Feed Conversion Ratio (FCR) calculator.
@@ -47,6 +48,10 @@ class FcrCalculator
     public static function forCage(Cage $cage, Carbon $start, Carbon $end): ?float
     {
         $feedKg = FeedConsumptionLog::where('cage_id', $cage->id)
+            ->whereHas('cage', fn ($q) => $q->where('is_active', true))
+            ->when(Schema::hasColumn('feed_consumption_logs', 'source_key'), fn ($q) => $q->where(function ($source) {
+                $source->whereNull('feed_consumption_logs.source_key')->orWhere('feed_consumption_logs.source_key', 'like', 'production_data_clean:%:feed');
+            }))
             ->whereBetween('log_date', [$start->toDateString(), $end->toDateString()])
             ->sum('feed_consumed_kg');
 
@@ -78,6 +83,9 @@ class FcrCalculator
 
         $perLog = DB::table('production_logs as pl')
             ->where('pl.is_demo', false)
+            ->when(Schema::hasColumn('production_logs', 'source_key'), fn ($q) => $q->where(function ($source) {
+                $source->whereNull('pl.source_key')->orWhere('pl.source_key', 'like', 'production_data_clean:%:production');
+            }))
             ->selectRaw(
                 'pl.id, pl.log_date, pl.egg_count, COUNT(esl.id) AS size_rows, ' .
                 'COALESCE(SUM(esl.`count` * CASE esl.egg_size ' .
@@ -90,9 +98,27 @@ class FcrCalculator
                 ]
             )
             ->leftJoin('egg_size_logs as esl', 'esl.production_log_id', '=', 'pl.id')
-            ->join('cage_slots as cs', 'cs.id', '=', 'pl.cage_slot_id')
-            ->when($cage, fn ($q) => $q->where('cs.cage_id', $cage->id))
-            ->when($activeCagesOnly, fn ($q) => $q->join('cages as c', 'c.id', '=', 'cs.cage_id')->where('c.is_active', 1))
+            ->leftJoin('cage_slots as cs', 'cs.id', '=', 'pl.cage_slot_id')
+            ->leftJoin('cages as imported_cage', function ($join) {
+                $join->on('imported_cage.cage_code', '=', DB::raw("SUBSTRING_INDEX(SUBSTRING_INDEX(pl.source_key, ':', 3), ':', -1)"));
+            })
+            ->when($cage, fn ($q) => $q->where(function ($scope) use ($cage) {
+                $scope->where('cs.cage_id', $cage->id)->orWhere(function ($imported) use ($cage) {
+                    $imported->where('pl.source_key', 'like', 'production_data_clean:%:production')
+                        ->where('imported_cage.id', $cage->id);
+                });
+            }))
+            ->when($activeCagesOnly, fn ($q) => $q->where(function ($scope) {
+                $scope->where(function ($slot) {
+                    $slot->whereNotNull('cs.id')->whereExists(function ($active) {
+                        $active->selectRaw('1')->from('cages as slot_cage')
+                            ->whereColumn('slot_cage.id', 'cs.cage_id')->where('slot_cage.is_active', 1);
+                    });
+                })->orWhere(function ($imported) {
+                    $imported->where('pl.source_key', 'like', 'production_data_clean:%:production')
+                        ->where('imported_cage.is_active', 1);
+                });
+            }))
             ->when($from, fn ($q) => $q->where('pl.log_date', '>=', $from))
             ->when($to, fn ($q) => $q->where('pl.log_date', '<=', $to))
             ->groupBy('pl.id', 'pl.log_date', 'pl.egg_count');
@@ -106,6 +132,11 @@ class FcrCalculator
             ->orderBy('sized.log_date')
             ->pluck('grams', 'log_date')
             ->map(fn ($grams) => (float) $grams / 1000);
+    }
+
+    public static function eggMassForRange(?Cage $cage, ?string $from, ?string $to): float
+    {
+        return (float) self::eggMassByDate($cage, $cage === null, $from, $to)->sum();
     }
 
     /**
@@ -132,6 +163,9 @@ class FcrCalculator
     {
         $feedKg = FeedConsumptionLog::whereBetween('log_date', [$start->toDateString(), $end->toDateString()])
             ->whereHas('cage', fn ($q) => $q->where('is_active', 1))
+            ->when(Schema::hasColumn('feed_consumption_logs', 'source_key'), fn ($q) => $q->where(function ($source) {
+                $source->whereNull('feed_consumption_logs.source_key')->orWhere('feed_consumption_logs.source_key', 'like', 'production_data_clean:%:feed');
+            }))
             ->sum('feed_consumed_kg');
 
         $eggMassKg = self::eggMassByDate(null, true, $start->toDateString(), $end->toDateString())->sum();
@@ -157,11 +191,19 @@ class FcrCalculator
      */
     public static function allTimeTotals(?Cage $cage = null): array
     {
+        $hasSourceKey = Schema::hasColumn('feed_consumption_logs', 'source_key');
         $feedQuery = FeedConsumptionLog::query();
         if ($cage) {
-            $feedQuery->where('cage_id', $cage->id);
+            $feedQuery->where('cage_id', $cage->id)
+                ->whereHas('cage', fn ($q) => $q->where('is_active', true))
+                ->when($hasSourceKey, fn ($q) => $q->where(function ($source) {
+                    $source->whereNull('feed_consumption_logs.source_key')->orWhere('feed_consumption_logs.source_key', 'like', 'production_data_clean:%:feed');
+                }));
         } else {
-            $feedQuery->whereHas('cage', fn ($q) => $q->where('is_active', 1));
+            $feedQuery->whereHas('cage', fn ($q) => $q->where('is_active', 1))
+                ->when($hasSourceKey, fn ($q) => $q->where(function ($source) {
+                    $source->whereNull('feed_consumption_logs.source_key')->orWhere('feed_consumption_logs.source_key', 'like', 'production_data_clean:%:feed');
+                }));
         }
         $feedKg = (float) $feedQuery->sum('feed_consumed_kg');
 
@@ -175,6 +217,9 @@ class FcrCalculator
 
         $perLog = DB::table('production_logs as pl')
             ->where('pl.is_demo', false)
+            ->when(Schema::hasColumn('production_logs', 'source_key'), fn ($q) => $q->where(function ($source) {
+                $source->whereNull('pl.source_key')->orWhere('pl.source_key', 'like', 'production_data_clean:%:production');
+            }))
             ->selectRaw(
                 'pl.id, pl.egg_count, COUNT(esl.id) AS size_rows, ' .
                 'COALESCE(SUM(esl.`count` * CASE esl.egg_size ' .
@@ -185,12 +230,28 @@ class FcrCalculator
             ->groupBy('pl.id', 'pl.egg_count');
 
         if ($cage) {
-            $perLog->join('cage_slots as cs', 'cs.id', '=', 'pl.cage_slot_id')
-                ->where('cs.cage_id', $cage->id);
+            $perLog->leftJoin('cage_slots as cs', 'cs.id', '=', 'pl.cage_slot_id')
+                ->leftJoin('cages as imported_cage', function ($join) {
+                    $join->on('imported_cage.cage_code', '=', DB::raw("SUBSTRING_INDEX(SUBSTRING_INDEX(pl.source_key, ':', 3), ':', -1)"));
+                })
+                ->where(function ($scope) use ($cage) {
+                    $scope->where('cs.cage_id', $cage->id)->orWhere(function ($imported) use ($cage) {
+                        $imported->where('pl.source_key', 'like', 'production_data_clean:%:production')
+                            ->where('imported_cage.id', $cage->id);
+                    });
+                });
         } else {
-            $perLog->join('cage_slots as cs', 'cs.id', '=', 'pl.cage_slot_id')
-                ->join('cages as c', 'c.id', '=', 'cs.cage_id')
-                ->where('c.is_active', 1);
+            $perLog->leftJoin('cage_slots as cs', 'cs.id', '=', 'pl.cage_slot_id')
+                ->leftJoin('cages as slot_cage', 'slot_cage.id', '=', 'cs.cage_id')
+                ->leftJoin('cages as imported_cage', function ($join) {
+                    $join->on('imported_cage.cage_code', '=', DB::raw("SUBSTRING_INDEX(SUBSTRING_INDEX(pl.source_key, ':', 3), ':', -1)"));
+                })
+                ->where(function ($scope) {
+                    $scope->where('slot_cage.is_active', 1)->orWhere(function ($imported) {
+                        $imported->where('pl.source_key', 'like', 'production_data_clean:%:production')
+                            ->where('imported_cage.is_active', 1);
+                    });
+                });
         }
 
         $totalGrams = (float) (DB::query()->fromSub($perLog, 'sized')
@@ -214,14 +275,18 @@ class FcrCalculator
      *
      * @return Collection Each item: period, label, feed_kg, egg_mass_kg, fcr
      */
-    public static function timelineAll(string $groupBy, ?Carbon $since = null): Collection
+    public static function timelineAll(string $groupBy, ?Carbon $since = null, ?string $to = null): Collection
     {
         if (! in_array($groupBy, ['day', 'week', 'month'])) {
             $groupBy = 'day';
         }
 
         $feedLogs = FeedConsumptionLog::whereHas('cage', fn ($q) => $q->where('is_active', 1))
+            ->when(Schema::hasColumn('feed_consumption_logs', 'source_key'), fn ($q) => $q->where(function ($source) {
+                $source->whereNull('feed_consumption_logs.source_key')->orWhere('feed_consumption_logs.source_key', 'like', 'production_data_clean:%:feed');
+            }))
             ->when($since, fn ($q) => $q->where('log_date', '>=', $since->toDateString()))
+            ->when($to, fn ($q) => $q->where('log_date', '<=', $to))
             ->orderBy('log_date')
             ->get();
 
@@ -230,7 +295,7 @@ class FcrCalculator
         )->map(fn ($group) => $group->sum('feed_consumed_kg'));
 
         $eggMassByPeriod = self::eggMassByPeriod(
-            self::eggMassByDate(null, true, $since?->toDateString()),
+            self::eggMassByDate(null, true, $since?->toDateString(), $to),
             $groupBy
         );
 
@@ -243,6 +308,7 @@ class FcrCalculator
             return [
                 'period' => $period,
                 'label' => ProductionTimelineService::periodLabel($period, $groupBy),
+                'period_start' => $groupBy === 'week' ? self::isoWeekStart($period) : ($groupBy === 'month' ? Carbon::parse($period.'-01')->toDateString() : $period),
                 'feed_kg' => round($feedKg, 2),
                 'egg_mass_kg' => round($eggMassKg, 3),
                 'fcr' => ($feedKg > 0 && $eggMassKg > 0) ? round($feedKg / $eggMassKg, 2) : null,
@@ -258,14 +324,19 @@ class FcrCalculator
      *
      * @return Collection Each item: period, label, feed_kg, egg_mass_kg, fcr
      */
-    public static function timeline(Cage $cage, string $groupBy, ?Carbon $since = null): Collection
+    public static function timeline(Cage $cage, string $groupBy, ?Carbon $since = null, ?string $to = null): Collection
     {
         if (! in_array($groupBy, ['day', 'week', 'month'])) {
             $groupBy = 'day';
         }
 
         $feedLogs = FeedConsumptionLog::where('cage_id', $cage->id)
+            ->whereHas('cage', fn ($q) => $q->where('is_active', true))
+            ->when(Schema::hasColumn('feed_consumption_logs', 'source_key'), fn ($q) => $q->where(function ($source) {
+                $source->whereNull('feed_consumption_logs.source_key')->orWhere('feed_consumption_logs.source_key', 'like', 'production_data_clean:%:feed');
+            }))
             ->when($since, fn ($q) => $q->where('log_date', '>=', $since->toDateString()))
+            ->when($to, fn ($q) => $q->where('log_date', '<=', $to))
             ->orderBy('log_date')
             ->get();
 
@@ -275,7 +346,7 @@ class FcrCalculator
         )->map(fn ($group) => $group->sum('feed_consumed_kg'));
 
         $eggMassByPeriod = self::eggMassByPeriod(
-            self::eggMassByDate($cage, false, $since?->toDateString()),
+            self::eggMassByDate($cage, false, $since?->toDateString(), $to),
             $groupBy
         );
 
@@ -289,10 +360,17 @@ class FcrCalculator
             return [
                 'period' => $period,
                 'label' => ProductionTimelineService::periodLabel($period, $groupBy),
+                'period_start' => $groupBy === 'week' ? self::isoWeekStart($period) : ($groupBy === 'month' ? Carbon::parse($period.'-01')->toDateString() : $period),
                 'feed_kg' => round($feedKg, 2),
                 'egg_mass_kg' => round($eggMassKg, 3),
                 'fcr' => ($feedKg > 0 && $eggMassKg > 0) ? round($feedKg / $eggMassKg, 2) : null,
             ];
         });
+    }
+
+    private static function isoWeekStart(string $period): string
+    {
+        [$year, $week] = array_map('intval', explode('-', $period, 2));
+        return Carbon::now()->setISODate($year, $week, 1)->toDateString();
     }
 }

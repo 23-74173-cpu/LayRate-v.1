@@ -16,6 +16,7 @@ use App\Services\ReportingDateService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
 {
@@ -94,7 +95,7 @@ class DashboardController extends Controller
         // Swap the eager-loaded latest reading for the latest REAL one per
         // cage (demo-quarantined; see EnvironmentalLog::latestRealPerCage).
         // Downstream reads ($liveReadings, sensorStatusText) are unchanged.
-        $latestReal = EnvironmentalLog::latestRealPerCage($cageIds);
+        $latestReal = EnvironmentalLog::latestRealPerCage($cageIds, excludeHistoricalAggregates: true);
         $cages->each(fn ($cage) => $cage->setRelation(
             'latestEnvironmentLog', $latestReal->get($cage->id)
         ));
@@ -102,11 +103,10 @@ class DashboardController extends Controller
         $todayEggsByCage = ProductionLog::query()
             ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
             ->whereIn('cage_slots.cage_id', $cageIds)
-            ->where('production_logs.log_date', $today)
             ->where('production_logs.is_demo', false)
+            ->where('production_logs.log_date', $today)
             ->selectRaw('cage_slots.cage_id as cage_id, SUM(production_logs.egg_count) as total')
-            ->groupBy('cage_slots.cage_id')
-            ->pluck('total', 'cage_id');
+            ->groupBy('cage_slots.cage_id')->pluck('total', 'cage_id');
 
         // Per-cage lifetime eggs for the "Lifetime Eggs by Cage" breakdown,
         // the same total as $cage->productionLogs->sum('egg_count') (every
@@ -115,9 +115,9 @@ class DashboardController extends Controller
         $lifetimeEggsByCage = ProductionLog::query()
             ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
             ->whereIn('cage_slots.cage_id', $cageIds)
+            ->where('production_logs.is_demo', false)
             ->selectRaw('cage_slots.cage_id as cage_id, SUM(production_logs.egg_count) as total')
-            ->groupBy('cage_slots.cage_id')
-            ->pluck('total', 'cage_id');
+            ->groupBy('cage_slots.cage_id')->pluck('total', 'cage_id');
 
         // Attach today's stats to each cage
         $cages->each(function ($cage) use ($todayEggsByCage, $lifetimeEggsByCage) {
@@ -126,7 +126,7 @@ class DashboardController extends Controller
             $cage->hen_count = $cage->hens->count();
             // HDEP today = eggs collected again ÷ hens in the cage, as a percentage
             $cage->today_hdep = $cage->hen_count > 0 ? round($cage->today_eggs / $cage->hen_count * 100, 1) : 0;
-            $cage->breed = $cage->hens->first()?->breed ?? '—';
+            $cage->breed = $cage->hens->first()?->breed ?? $cage->breed_snapshot ?? '—';
             $cage->has_sensor = $cage->cageSlots->contains(fn ($s) => $s->hasBreakbeam()) || $cage->hasDht22();
             $cage->sensor_status = $this->sensorStatusText($cage);
         });
@@ -138,19 +138,47 @@ class DashboardController extends Controller
      * Farm-wide eggs and average HDEP for one day. Only logs still tied to a
      * live cage slot count (see the global branch of buildDashboardData()).
      */
-    private function farmProductionForDay(string $date): array
+    private function farmProductionForDay(string $date, ?string $cageCode = null): array
     {
-        $logs = ProductionLog::where('log_date', $date)->real()->whereNotNull('cage_slot_id')->get();
+        $stats = ProductionLog::query()
+            ->leftJoin('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
+            ->leftJoin('cages as slot_cages', 'slot_cages.id', '=', 'cage_slots.cage_id')
+            ->leftJoin('cages as imported_cages', function ($join) {
+                $join->on('imported_cages.cage_code', '=', DB::raw("SUBSTRING_INDEX(SUBSTRING_INDEX(production_logs.source_key, ':', 3), ':', -1)"));
+            })
+            ->where('production_logs.log_date', $date)
+            ->where('production_logs.is_demo', false)
+            ->when(Schema::hasColumn('production_logs', 'source_key'), fn ($q) => $q->where(function ($sources) {
+                $sources->whereNull('production_logs.source_key')
+                    ->orWhere('production_logs.source_key', 'like', 'production_data_clean:%:production');
+            }))
+            ->where(function ($q) {
+                $q->where('slot_cages.is_active', 1)
+                    ->orWhere(function ($imported) {
+                        $imported->where('production_logs.source_key', 'like', 'production_data_clean:%:production')
+                            ->where('imported_cages.is_active', 1);
+                    });
+            })
+            ->when($cageCode, fn ($q) => $q->where(function ($scope) use ($cageCode) {
+                $scope->where('slot_cages.cage_code', $cageCode)
+                    ->orWhere(function ($imported) use ($cageCode) {
+                        $imported->where('production_logs.source_key', 'like', 'production_data_clean:%:production')
+                            ->where('imported_cages.cage_code', $cageCode);
+                    });
+            }))
+            ->selectRaw('SUM(production_logs.egg_count) as eggs, SUM(production_logs.hen_count) as hens')
+            ->first();
 
-        return [
-            'eggs' => $logs->sum('egg_count'),
-            'hdep' => $logs->count() ? round($logs->avg('hdep'), 1) : 0,
-        ];
+        $hens = (int) ($stats->hens ?? 0);
+        $eggs = (int) ($stats->eggs ?? 0);
+
+        return ['eggs' => $eggs, 'hens' => $hens, 'hdep' => $hens > 0 ? round($eggs / $hens * 100, 1) : 0];
     }
 
     private function mortalityTotalForDay(?string $cageCode, string $date)
     {
         return MortalityLog::where('log_date', $date)
+            ->when(Schema::hasColumn('mortality_logs', 'source_key'), fn ($q) => $q->whereNull('source_key'))
             ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
             ->sum('count');
     }
@@ -174,7 +202,7 @@ class DashboardController extends Controller
         $snapshotDate = $reportingDate->copy();
         foreach ([$fromDate, $toDate] as $bound) {
             if ($date = $this->validRangeDate($bound)) {
-                $candidate = Carbon::parse($date);
+                $candidate = Carbon::parse($date, ReportingDateService::timezone());
                 $snapshotDate = $candidate->greaterThan($reportingDate)
                     ? $reportingDate->copy()
                     : $candidate;
@@ -288,26 +316,16 @@ class DashboardController extends Controller
         // the rest of buildDashboardData() was computed and thrown away.
         // Same "today" as before: buildDashboardData($cageCode) had no date
         // filter, so it used the live reporting date.
-        $data = ['cages' => $this->cagesWithTodayStats($cageCode, $this->snapshotDate(null, null)->toDateString())];
+        $selectedSnapshot = $this->snapshotDate(request('from_date'), request('to_date'));
+        $data = ['cages' => $this->cagesWithTodayStats($cageCode, $selectedSnapshot->toDateString())];
+        $data['targetDate'] = $selectedSnapshot;
 
         // HDEP is reported for a single date only: the selected To date when
         // one is set, otherwise the selected From date, otherwise the
         // reporting (today) date. No week / month / full-period aggregation
         // is applied to layrate.
-        $reportingDate = ReportingDateService::reportingDate();
-        $selectedDate = $reportingDate;
-        $fromDate = request('from_date');
-        $toDate = request('to_date');
-        foreach ([$fromDate, $toDate] as $bound) {
-            if ($bound && preg_match('/^\d{4}-\d{2}-\d{2}$/', $bound)) {
-                $candidate = \Carbon\Carbon::parse($bound);
-                if ($candidate->lessThanOrEqualTo($reportingDate)) {
-                    $selectedDate = $candidate;
-                }
-            }
-        }
+        $selectedDate = $selectedSnapshot;
         $dateStr = $selectedDate->toDateString();
-
         $cageIds = $data['cages']->pluck('id');
 
         $dayStats = ProductionLog::query()
@@ -323,15 +341,13 @@ class DashboardController extends Controller
         $data['cages']->each(function ($cage) use ($dayStats) {
             $stats = $dayStats->get($cage->id);
             $cage->period_eggs = (int) ($stats?->total_eggs ?? 0);
-            // HDEP for the chosen date only: average of that date's per-log
-            // HDEP, where each log already weights by its own recorded hen
-            // count. 0 when the selected date has no production logs.
+            // HDEP for the selected date is the average of the already
+            // per-log HDEP values. 0 when the date has no production logs.
             $cage->period_hdep = $stats?->avg_hdep !== null
                 ? round((float) $stats->avg_hdep, 1)
                 : 0;
         });
 
-        $data['targetDate'] = $selectedDate;
         $data['cageCode'] = $cageCode;
 
         return view('dashboard._cage-performance', $data);
@@ -621,6 +637,9 @@ class DashboardController extends Controller
         $forecastQuery->whereBetween('target_date', [$startDate, $endDate]);
         if ($days > 0) {
             $rangeDays = max(1, (int) Carbon::parse($startDate)->diffInDays(Carbon::parse($endDate)) + 1);
+            if (! $this->validRangeDate($toDate) && $lastForecastDate && $lastForecastDate > $reportingDate->toDateString()) {
+                $rangeDays++;
+            }
             [$labels, $dateKeys] = $this->buildHistoryDateKeys($cageCode, $rangeDays, $startDate, $endDate, $reportingDate);
         } else {
             [$labels, $dateKeys] = $this->buildHistoryDateKeys($cageCode, $days, $startDate, $endDate, $reportingDate);
@@ -1348,6 +1367,7 @@ class DashboardController extends Controller
 
         $mortByDate = MortalityLog::query()
             ->whereIn('cage_id', $cageIds)
+            ->when(Schema::hasColumn('mortality_logs', 'source_key'), fn ($q) => $q->whereNull('mortality_logs.source_key'))
             ->where('log_date', '<=', $endDate)
             ->when($startDate, fn ($q) => $q->where('log_date', '>=', $startDate))
             ->selectRaw('log_date, SUM(count) as total')
@@ -1440,35 +1460,37 @@ class DashboardController extends Controller
         $cages = $this->cagesWithTodayStats($cageCode, $today);
         $cageIds = $cages->pluck('id');
 
+        $isHistoricalSnapshot = $today < ReportingDateService::reportingDateString();
+
         // Total active hens
         if ($cageCode) {
-            $totalHens = $cages->sum('hen_count');
-            // HDEP today = eggs collected today ÷ all hens in the selected cages, as a percentage
-            $todayHdep = $totalHens > 0 ? round($cages->sum('today_eggs') / $totalHens * 100, 1) : 0;
-
-            $yesterdayStats = ProductionLog::query()
-                ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
-                ->whereIn('cage_slots.cage_id', $cageIds)
-                ->where('production_logs.log_date', $yesterday)
-                ->where('production_logs.is_demo', false)
-                ->selectRaw('COUNT(*) as log_count, AVG(production_logs.hdep) as avg_hdep, SUM(production_logs.egg_count) as total_eggs')
-                ->first();
-            $yesterdayHdep = $yesterdayStats->log_count ? round((float) $yesterdayStats->avg_hdep, 1) : 0;
-            $eggsYesterday = (int) ($yesterdayStats->total_eggs ?? 0);
+            $todaySnapshot = $this->farmProductionForDay($today, $cageCode);
+            $yesterdaySnapshot = $this->farmProductionForDay($yesterday, $cageCode);
+            $historicalSnapshot = $isHistoricalSnapshot;
+            $totalHens = $historicalSnapshot ? $todaySnapshot['hens'] : $cages->sum('hen_count');
+            $eggsToday = $historicalSnapshot ? $todaySnapshot['eggs'] : $cages->sum('today_eggs');
+            $todayHdep = $historicalSnapshot
+                ? $todaySnapshot['hdep']
+                : ($totalHens > 0 ? round($eggsToday / $totalHens * 100, 1) : 0);
+            $yesterdayHdep = $yesterdaySnapshot['hdep'];
+            $eggsYesterday = $yesterdaySnapshot['eggs'];
 
             $hdepDelta = round($todayHdep - $yesterdayHdep, 1);
             // Same source as today_eggs above (today's per-cage sum) — no
             // longer two independently-computed values with one as a
             // fallback for the other, since both used to derive from the
             // same eager-loaded collection anyway.
-            $eggsToday = $cages->sum('today_eggs');
             $lifetimeEggs = ProductionLog::query()
                 ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
                 ->whereIn('cage_slots.cage_id', $cageIds)
                 ->where('production_logs.is_demo', false)
                 ->sum('production_logs.egg_count');
         } else {
-            $totalHens = \App\Models\Hen::where('is_active', 1)->count();
+            $historicalSnapshot = $isHistoricalSnapshot;
+            $todaySnapshot = $historicalSnapshot ? $this->farmProductionForDay($today) : null;
+            $totalHens = $historicalSnapshot
+                ? $todaySnapshot['hens']
+                : \App\Models\Hen::where('is_active', 1)->count();
             // Only logs still tied to a live cage_slot count toward global totals.
             // When a cage is deleted and its production history preserved, its
             // logs keep their data but their cage_slot_id is nulled, leaving
@@ -1476,14 +1498,26 @@ class DashboardController extends Controller
             // keeps the global overview consistent with the per-cage branch
             // above (which joins cage_slots and therefore already skips them),
             // preventing deleted-cage eggs from inflating eggsToday/HDEP.
-            $todayLogs = ProductionLog::where('log_date', $today)->real()->whereNotNull('cage_slot_id')->get();
+        $todayLogs = ProductionLog::query()
+            ->leftJoin('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
+            ->leftJoin('cages', 'cages.id', '=', 'cage_slots.cage_id')
+            ->where('production_logs.log_date', $today)
+            ->where('production_logs.is_demo', false)
+            ->where('cages.is_active', true)
+            ->when(Schema::hasColumn('production_logs', 'source_key'), fn ($q) => $q->whereNull('production_logs.source_key'))
+            ->select('production_logs.*')
+            ->get();
             // HDEP today = eggs collected today ÷ all hens in the cages, as a percentage
-            $todayHdep = $totalHens > 0 ? round($todayLogs->sum('egg_count') / $totalHens * 100, 1) : 0;
+            $todayEggCount = $historicalSnapshot ? $todaySnapshot['eggs'] : (int) $todayLogs->sum('egg_count');
+            $todayHdep = $historicalSnapshot
+                ? $todaySnapshot['hdep']
+                : ($totalHens > 0 ? round($todayEggCount / $totalHens * 100, 1) : 0);
             ['eggs' => $eggsYesterday, 'hdep' => $yesterdayHdep] = $this->farmProductionForDay($yesterday);
             $hdepDelta = round($todayHdep - $yesterdayHdep, 1);
-            $eggsToday = $todayLogs->sum('egg_count')
-                ?: $cages->sum(fn ($c) => $c->today_eggs);
-            $lifetimeEggs = ProductionLog::real()->whereNotNull('cage_slot_id')->sum('egg_count');
+            $eggsToday = $historicalSnapshot
+                ? $todayEggCount
+                : ($todayLogs->sum('egg_count') ?: $cages->sum(fn ($c) => $c->today_eggs));
+            $lifetimeEggs = ProductionLog::real()->sum('egg_count');
         }
 
         $eggsDelta = round($eggsToday - $eggsYesterday);
@@ -1493,10 +1527,11 @@ class DashboardController extends Controller
         // (whereDate('recorded_at', $today)), but as a range so the
         // recorded_at index is used and no rows are loaded into PHP. Loading
         // the day's readings meant ~43,000 rows per DHT22 sensor.
-        $todayEnv = EnvironmentalLog::whereIn('cage_id', $cages->pluck('id'))
+        $environmentQuery = EnvironmentalLog::whereIn('cage_id', $cages->pluck('id'))
             ->real()
             ->where('recorded_at', '>=', ReportingDateService::reportingDayWindow($today)[0])
-            ->where('recorded_at', '<', ReportingDateService::reportingDayWindow($today)[1])
+            ->where('recorded_at', '<', ReportingDateService::reportingDayWindow($today)[1]);
+        $todayEnv = $environmentQuery
             ->selectRaw('COUNT(*) as readings, AVG(temperature_c) as avg_temp, AVG(humidity_pct) as avg_hum')
             ->first();
         $avgTemp = $todayEnv->readings ? round((float) $todayEnv->avg_temp, 1) : null;
@@ -1538,6 +1573,7 @@ class DashboardController extends Controller
             ->sum('feed_consumed_kg');
 
         $feedTodayKg = FeedConsumptionLog::where('log_date', $feedRefDate)
+            ->when(Schema::hasColumn('feed_consumption_logs', 'source_key'), fn ($q) => $q->whereNull('source_key'))
             ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
             ->sum('feed_consumed_kg');
 

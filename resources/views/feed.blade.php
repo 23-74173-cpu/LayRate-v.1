@@ -42,11 +42,110 @@
         </button>
     @endpush
 
+    <form id="feed-global-filters" class="mb-4 rounded-xl border border-[#D9D9D9] bg-white p-3 sm:p-4" aria-label="Feed and FCR filters">
+        <div class="grid grid-cols-2 gap-2 md:grid-cols-6 md:items-end">
+            <label class="text-xs text-[#615d59]">Date preset
+                <select name="feed_preset" id="feed-preset" class="mt-1 w-full rounded-lg border border-[#D9D9D9] px-2.5 py-2 text-sm">
+                    @foreach(['' => 'Custom dates', 'today' => 'Today', '7d' => 'Last 7 Days', '30d' => 'Last 30 Days', 'latest' => 'Latest Available Historical Data'] as $value => $label)
+                    <option value="{{ $value }}" @selected(($feedFilters['preset'] ?? request('feed_preset', '')) === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <label class="text-xs text-[#615d59]">Start date
+                <input type="date" name="feed_from" value="{{ $feedFilters['from'] ?? request('feed_from') }}" class="mt-1 w-full rounded-lg border border-[#D9D9D9] px-2.5 py-2 text-sm">
+            </label>
+            <label class="text-xs text-[#615d59]">End date
+                <input type="date" name="feed_to" value="{{ $feedFilters['to'] ?? request('feed_to') }}" class="mt-1 w-full rounded-lg border border-[#D9D9D9] px-2.5 py-2 text-sm">
+            </label>
+            <label class="text-xs text-[#615d59]">Cage
+                <select name="feed_cage" class="mt-1 w-full rounded-lg border border-[#D9D9D9] px-2.5 py-2 text-sm">
+                    <option value="">All cages</option>
+                    @foreach(\App\Models\Cage::where('is_active', 1)->orderBy('cage_code')->get() as $filterCage)
+                    <option value="{{ $filterCage->id }}" @selected((int) ($feedFilters['cage_id'] ?? 0) === $filterCage->id)>{{ $filterCage->cage_code }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <button type="submit" class="rounded-lg bg-navy px-3 py-2 text-sm font-medium text-white">Apply filters</button>
+            <button type="button" id="feed-filter-reset" class="rounded-lg border border-[#D9D9D9] px-3 py-2 text-sm">Reset filters</button>
+        </div>
+        <p id="feed-selected-range" class="mt-2 text-xs text-[#615d59]" role="status"></p>
+    </form>
+
     {{-- Live Data (lazy): metrics, tabs, batches, consumption --}}
-    <turbo-frame id="feed-live-data" src="{{ route('feed.live-data', request()->only('cage_id', 'walkthrough4', 'wt4_batch', 'wt4_log', 'wt4_farm', 'tab', 'view', 'month')) }}" loading="lazy">
+    <turbo-frame id="feed-live-data" src="{{ route('feed.live-data', request()->only('cage_id', 'feed_preset', 'feed_from', 'feed_to', 'feed_cage', 'fcr_cage_id', 'fcr_group_by', 'walkthrough4', 'wt4_batch', 'wt4_log', 'wt4_farm', 'tab', 'view', 'month')) }}" loading="lazy">
         @include('feed._live-data-skeleton')
     </turbo-frame>
 </div>
+
+@push('scripts')
+<script>
+(() => {
+    const form = document.getElementById('feed-global-filters');
+    if (!form || form.dataset.bound) return;
+    form.dataset.bound = '1';
+    const frame = document.getElementById('feed-live-data');
+    const range = document.getElementById('feed-selected-range');
+    const updateRange = () => {
+        const data = new FormData(form);
+        const preset = data.get('feed_preset');
+        const from = data.get('feed_from'), to = data.get('feed_to');
+        const labels = {today: 'Today', '7d': 'Last 7 Days', '30d': 'Last 30 Days', latest: 'Latest Available Historical Data'};
+        range.textContent = labels[preset] || (from || to ? `Selected range: ${from || 'earliest'} – ${to || 'latest'}` : 'Selected range: all available data');
+    };
+    updateRange();
+    form.addEventListener('change', updateRange);
+    form.elements.feed_preset.addEventListener('change', () => {
+        if (form.elements.feed_preset.value) {
+            form.elements.feed_from.value = '';
+            form.elements.feed_to.value = '';
+        }
+        updateRange();
+    });
+    form.addEventListener('submit', event => {
+        event.preventDefault();
+        const current = new URL(window.location.href);
+        const params = new URLSearchParams(new FormData(form));
+        ['feed_preset','feed_from','feed_to','feed_cage'].forEach(key => current.searchParams.delete(key));
+        params.forEach((value, key) => { if (value) current.searchParams.set(key, value); });
+        const selectedPreset = params.get('feed_preset');
+        if (selectedPreset && selectedPreset !== '') {
+            params.delete('feed_from');
+            params.delete('feed_to');
+        }
+        params.set('tab', current.searchParams.get('tab') || 'batches');
+        ['fcr_cage_id', 'fcr_group_by'].forEach(key => {
+            if (current.searchParams.has(key)) params.set(key, current.searchParams.get(key));
+        });
+        ['view','month','cage_id','fcr_cage_id','fcr_group_by','walkthrough4','wt4_batch','wt4_log','wt4_farm'].forEach(key => {
+            if (current.searchParams.has(key)) params.set(key, current.searchParams.get(key));
+        });
+        const target = new URL(window.location.href);
+        ['feed_preset','feed_from','feed_to','feed_cage'].forEach(key => target.searchParams.delete(key));
+        params.forEach((value, key) => { if (value) target.searchParams.set(key, value); });
+        history.pushState({}, '', target);
+        const liveUrl = new URL('{{ route('feed.live-data') }}', window.location.origin);
+        liveUrl.search = target.search;
+        if (frame) frame.src = liveUrl.toString();
+    });
+    window.setFeedPreset = preset => {
+        form.elements.feed_preset.value = preset;
+        form.requestSubmit();
+    };
+    document.getElementById('feed-filter-reset')?.addEventListener('click', () => {
+        form.reset();
+        form.elements.feed_preset.value = '';
+        updateRange();
+        form.requestSubmit();
+    });
+    window.addEventListener('popstate', () => {
+        const url = new URL(window.location.href);
+        ['feed_preset','feed_from','feed_to','feed_cage'].forEach(key => { if (form.elements[key]) form.elements[key].value = url.searchParams.get(key) || ''; });
+        updateRange();
+        if (frame) frame.src = `{{ route('feed.live-data') }}?${url.searchParams.toString()}`;
+    });
+})();
+</script>
+@endpush
 
 {{-- Add Batch Modal --}}
 <div id="addBatchModal" data-modal data-focus-dialog data-close="closeAddBatchModal" class="hidden fixed inset-0 z-50 min-h-screen min-h-[100dvh] items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="addBatchTitle">

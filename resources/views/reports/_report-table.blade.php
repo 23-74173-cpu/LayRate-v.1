@@ -38,8 +38,12 @@ $cols = array_keys((array) $rows->first());
                     $rC = $key === 'reason' ? ($reasonColors[$val] ?? null) : null;
                     $style = $cC ? "color:{$cC};font-weight:600" : ($rC ? "color:{$rC}" : '');
                 @endphp
+                @if($key === 'record_type' && str_contains((string) $val, 'Historical'))
+                    <td class="px-5 py-3.5 text-sm font-medium text-amber-800 bg-amber-50">{{ $val }}</td>
+                @else
                 <td class="px-5 py-3.5 text-sm {{ in_array($key, ['date','datetime']) ? 'font-mono' : '' }}"
                     style="{{ $style }}">{{ $val }}</td>
+                @endif
                 @endforeach
             </tr>
             @endforeach

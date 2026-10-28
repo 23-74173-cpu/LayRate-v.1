@@ -75,15 +75,16 @@ class DashboardControllerTest extends TestCase
             $hen->save();
         }
 
+        $reportingToday = \App\Services\ReportingDateService::reportingDate();
         // Cage A: today=4 eggs/4 hens=100% hdep, yesterday=2/4=50%, 30 days ago=1/4=25% (lifetime-only).
-        ProductionLog::create(['cage_slot_id' => $slotA->id, 'log_date' => now()->toDateString(), 'egg_count' => 4, 'hen_count' => 4, 'hdep' => 100.00, 'logged_via' => 'manual']);
-        ProductionLog::create(['cage_slot_id' => $slotA->id, 'log_date' => now()->subDay()->toDateString(), 'egg_count' => 2, 'hen_count' => 4, 'hdep' => 50.00, 'logged_via' => 'manual']);
-        ProductionLog::create(['cage_slot_id' => $slotA->id, 'log_date' => now()->subDays(30)->toDateString(), 'egg_count' => 1, 'hen_count' => 4, 'hdep' => 25.00, 'logged_via' => 'manual']);
+        ProductionLog::create(['cage_slot_id' => $slotA->id, 'log_date' => $reportingToday->toDateString(), 'egg_count' => 4, 'hen_count' => 4, 'hdep' => 100.00, 'logged_via' => 'manual']);
+        ProductionLog::create(['cage_slot_id' => $slotA->id, 'log_date' => $reportingToday->copy()->subDay()->toDateString(), 'egg_count' => 2, 'hen_count' => 4, 'hdep' => 50.00, 'logged_via' => 'manual']);
+        ProductionLog::create(['cage_slot_id' => $slotA->id, 'log_date' => $reportingToday->copy()->subDays(30)->toDateString(), 'egg_count' => 1, 'hen_count' => 4, 'hdep' => 25.00, 'logged_via' => 'manual']);
 
         // Cage B: today=1/2=50% hdep, yesterday=1/2=50%, 30 days ago=2/2=100% (lifetime-only).
-        ProductionLog::create(['cage_slot_id' => $slotB->id, 'log_date' => now()->toDateString(), 'egg_count' => 1, 'hen_count' => 2, 'hdep' => 50.00, 'logged_via' => 'manual']);
-        ProductionLog::create(['cage_slot_id' => $slotB->id, 'log_date' => now()->subDay()->toDateString(), 'egg_count' => 1, 'hen_count' => 2, 'hdep' => 50.00, 'logged_via' => 'manual']);
-        ProductionLog::create(['cage_slot_id' => $slotB->id, 'log_date' => now()->subDays(30)->toDateString(), 'egg_count' => 2, 'hen_count' => 2, 'hdep' => 100.00, 'logged_via' => 'manual']);
+        ProductionLog::create(['cage_slot_id' => $slotB->id, 'log_date' => $reportingToday->toDateString(), 'egg_count' => 1, 'hen_count' => 2, 'hdep' => 50.00, 'logged_via' => 'manual']);
+        ProductionLog::create(['cage_slot_id' => $slotB->id, 'log_date' => $reportingToday->copy()->subDay()->toDateString(), 'egg_count' => 1, 'hen_count' => 2, 'hdep' => 50.00, 'logged_via' => 'manual']);
+        ProductionLog::create(['cage_slot_id' => $slotB->id, 'log_date' => $reportingToday->copy()->subDays(30)->toDateString(), 'egg_count' => 2, 'hen_count' => 2, 'hdep' => 100.00, 'logged_via' => 'manual']);
     }
 
     public function test_unscoped_dashboard_aggregates_across_both_cages(): void
@@ -224,7 +225,7 @@ class DashboardControllerTest extends TestCase
 
     public function test_cage_performance_is_a_selected_date_snapshot_with_exact_daily_totals_and_hdep(): void
     {
-        $selectedDate = now()->subDay()->toDateString();
+        $selectedDate = \App\Services\ReportingDateService::reportingDate()->subDay()->toDateString();
         $response = $this->actingAs($this->admin)->get(route('dashboard.cage-performance', ['to_date' => $selectedDate]));
         $response->assertOk();
 
@@ -237,13 +238,36 @@ class DashboardControllerTest extends TestCase
         $this->assertSame(1, $cageB->period_eggs);
         $this->assertSame(50.0, $cageB->period_hdep);
         $response->assertSee('Cage Performance Overview')
-            ->assertSee(now()->subDay()->format('M j, Y'))
-            ->assertSee('Ranked by eggs collected on '.now()->subDay()->format('m/d/Y').', then by HDEP.');
+            ->assertSee(\Carbon\Carbon::parse($selectedDate)->format('M j, Y'))
+            ->assertSee('Ranked by eggs collected on '.\Carbon\Carbon::parse($selectedDate)->format('m/d/Y').', then by HDEP.');
+    }
+
+    public function test_historical_dashboard_kpis_use_selected_date_logged_hen_snapshots_for_both_days(): void
+    {
+        $selected = '2026-08-27';
+        $previous = '2026-08-26';
+        foreach ([$this->cageA, $this->cageB] as $cage) {
+            $slot = $cage->cageSlots()->firstOrFail();
+            ProductionLog::where('cage_slot_id', $slot->id)->delete();
+        }
+        $slotA = $this->cageA->cageSlots()->firstOrFail();
+        $slotB = $this->cageB->cageSlots()->firstOrFail();
+        ProductionLog::create(['cage_slot_id' => $slotA->id, 'log_date' => $selected, 'egg_count' => 217, 'hen_count' => 240, 'hdep' => 90.42, 'logged_via' => 'unknown']);
+        ProductionLog::create(['cage_slot_id' => $slotB->id, 'log_date' => $selected, 'egg_count' => 255, 'hen_count' => 288, 'hdep' => 88.54, 'logged_via' => 'unknown']);
+        ProductionLog::create(['cage_slot_id' => $slotA->id, 'log_date' => $previous, 'egg_count' => 215, 'hen_count' => 240, 'hdep' => 89.58, 'logged_via' => 'unknown']);
+        ProductionLog::create(['cage_slot_id' => $slotB->id, 'log_date' => $previous, 'egg_count' => 254, 'hen_count' => 288, 'hdep' => 88.19, 'logged_via' => 'unknown']);
+
+        $response = $this->actingAs($this->admin)->get(route('dashboard.stats', ['from_date' => $selected, 'to_date' => $selected]));
+
+        $response->assertOk();
+        $this->assertSame(528, (int) $response->viewData('totalHens'));
+        $this->assertSame(89.4, (float) $response->viewData('todayHdep'));
+        $this->assertSame(0.6, (float) $response->viewData('hdepDelta'));
     }
 
     public function test_cage_performance_ranks_selected_date_eggs_then_hdep_and_isolates_selected_cage(): void
     {
-        $selectedDate = now()->subDay()->toDateString();
+        $selectedDate = \App\Services\ReportingDateService::reportingDate()->subDay()->toDateString();
         $response = $this->actingAs($this->admin)->get(route('dashboard.cage-performance', ['to_date' => $selectedDate]));
         $response->assertOk();
 
@@ -260,7 +284,7 @@ class DashboardControllerTest extends TestCase
 
     public function test_cage_performance_equal_egg_counts_use_hdep_as_tiebreaker(): void
     {
-        $selectedDate = now()->subDay()->toDateString();
+        $selectedDate = \App\Services\ReportingDateService::reportingDate()->subDay()->toDateString();
         $slotA = $this->cageA->cageSlots()->firstOrFail();
         $slotB = $this->cageB->cageSlots()->firstOrFail();
         ProductionLog::where('cage_slot_id', $slotA->id)->where('log_date', $selectedDate)->update(['egg_count' => 1, 'hen_count' => 4, 'hdep' => 25.00]);
@@ -317,16 +341,18 @@ class DashboardControllerTest extends TestCase
 
     public function test_cage_performance_date_change_updates_snapshot_and_future_date_is_clamped(): void
     {
-        $historical = now()->subDays(30)->toDateString();
+        $reportingToday = \App\Services\ReportingDateService::reportingDate();
+        $historical = $reportingToday->copy()->subDays(30)->toDateString();
         $response = $this->actingAs($this->admin)->get(route('dashboard.cage-performance', ['from_date' => $historical]));
-        $response->assertOk()->assertSee(now()->subDays(30)->format('M j, Y'));
+        $response->assertOk()->assertSee($reportingToday->copy()->subDays(30)->format('M j, Y'));
         $cageA = $response->viewData('cages')->firstWhere('cage_code', 'CAGE-DASH-A');
         $this->assertSame(1, $cageA->period_eggs);
         $this->assertSame(25.0, $cageA->period_hdep);
 
-        $future = now()->addDays(20)->toDateString();
+        $reportingToday = \App\Services\ReportingDateService::reportingDate();
+        $future = $reportingToday->copy()->addDays(20)->toDateString();
         $clamped = $this->actingAs($this->admin)->get(route('dashboard.cage-performance', ['to_date' => $future]));
-        $clamped->assertOk()->assertSee(now()->format('M j, Y'));
+        $clamped->assertOk()->assertSee($reportingToday->format('M j, Y'));
         $todayA = $clamped->viewData('cages')->firstWhere('cage_code', 'CAGE-DASH-A');
         $this->assertSame(4, $todayA->period_eggs);
         $this->assertSame(100.0, $todayA->period_hdep);
@@ -334,9 +360,9 @@ class DashboardControllerTest extends TestCase
 
     public function test_cage_performance_selected_date_without_logs_renders_zero_snapshot(): void
     {
-        $emptyDate = now()->subDays(10)->toDateString();
+        $emptyDate = \App\Services\ReportingDateService::reportingDate()->subDays(10)->toDateString();
         $response = $this->actingAs($this->admin)->get(route('dashboard.cage-performance', ['to_date' => $emptyDate]));
-        $response->assertOk()->assertSee('No production data recorded for '.now()->subDays(10)->format('m/d/Y').'.');
+        $response->assertOk()->assertSee('No production data recorded for '.\Carbon\Carbon::parse($emptyDate)->format('m/d/Y').'.');
 
         foreach ($response->viewData('cages') as $cage) {
             $this->assertSame(0, $cage->period_eggs);
@@ -449,38 +475,40 @@ class DashboardControllerTest extends TestCase
 
     public function test_forecast_overlay_includes_upcoming_saved_dates_and_keeps_missing_actual_null(): void
     {
-        $target = now()->addDays(3)->toDateString();
-        Forecast::create(['forecast_date' => now()->toDateString(), 'target_date' => $target, 'predicted_egg_count' => 25]);
+        $reportingDate = \App\Services\ReportingDateService::reportingDate();
+        $target = $reportingDate->copy()->addDays(3)->toDateString();
+        Forecast::create(['forecast_date' => $reportingDate->toDateString(), 'target_date' => $target, 'predicted_egg_count' => 25]);
         $response = $this->actingAs($this->admin)->getJson(route('dashboard.forecast-overlay', ['days' => 30]));
         $response->assertOk()->assertJsonPath('hasForecast', true);
         $data = $response->json();
         $index = array_search($target, $data['dateKeys']);
         $this->assertNotFalse($index);
-        $this->assertCount(33, $data['dateKeys']);
+        $this->assertCount(34, $data['dateKeys']);
         $this->assertSame(25, $data['forecast'][$index]);
         $this->assertNull($data['actual'][$index]);
         $this->assertSame('Awaiting completed production records for comparison.', $data['summary']);
-        $bounded = $this->actingAs($this->admin)->getJson(route('dashboard.forecast-overlay', ['days' => 30, 'to_date' => now()->toDateString()]));
+        $bounded = $this->actingAs($this->admin)->getJson(route('dashboard.forecast-overlay', ['days' => 30, 'to_date' => $reportingDate->toDateString()]));
         $bounded->assertOk()->assertJsonPath('hasForecast', false);
         $this->assertNotContains($target, $bounded->json('dateKeys'));
     }
 
     public function test_forecast_overlay_all_time_includes_dates_without_production_and_excludes_backtests(): void
     {
-        $target = now()->addDay()->toDateString();
-        Forecast::create(['forecast_date' => now()->toDateString(), 'target_date' => $target, 'predicted_egg_count' => 25]);
-        Forecast::create(['forecast_date' => now()->toDateString(), 'target_date' => now()->addDays(90)->toDateString(), 'predicted_egg_count' => 100, 'is_backtest' => true]);
+        $reportingDate = \App\Services\ReportingDateService::reportingDate();
+        $target = $reportingDate->copy()->addDay()->toDateString();
+        Forecast::create(['forecast_date' => $reportingDate->toDateString(), 'target_date' => $target, 'predicted_egg_count' => 25]);
+        Forecast::create(['forecast_date' => $reportingDate->toDateString(), 'target_date' => $reportingDate->copy()->addDays(90)->toDateString(), 'predicted_egg_count' => 100, 'is_backtest' => true]);
         $response = $this->actingAs($this->admin)->getJson(route('dashboard.forecast-overlay', ['days' => 0, 'cage' => 'all']));
         $response->assertOk()->assertJsonPath('hasForecast', true);
         $this->assertContains($target, $response->json('dateKeys'));
-        $this->assertNotContains(now()->addDays(90)->toDateString(), $response->json('dateKeys'));
+        $this->assertNotContains($reportingDate->copy()->addDays(90)->toDateString(), $response->json('dateKeys'));
         $cage = $this->actingAs($this->admin)->getJson(route('dashboard.forecast-overlay', ['days' => 7, 'cage' => $this->cageA->cage_code]));
         $cage->assertOk()->assertJsonPath('hasForecast', false);
     }
 
     public function test_forecast_overlay_with_partial_coverage_computes_variance(): void
     {
-        $yesterday = now()->subDay()->toDateString();
+        $yesterday = \App\Services\ReportingDateService::reportingDate()->subDay()->toDateString();
         $today = now()->toDateString();
 
         Forecast::create([
@@ -509,7 +537,7 @@ class DashboardControllerTest extends TestCase
 
     public function test_forecast_overlay_whole_farm_uses_farm_scope(): void
     {
-        $yesterday = now()->subDay()->toDateString();
+        $yesterday = \App\Services\ReportingDateService::reportingDate()->subDay()->toDateString();
         Forecast::create([
             'cage_id' => null,
             'breed' => null,
@@ -595,8 +623,8 @@ class DashboardControllerTest extends TestCase
 
     public function test_production_history_to_date_caps_range_at_to_date(): void
     {
-        $from = now()->subDays(30)->toDateString();
-        $to = now()->subDays(10)->toDateString();
+        $from = \App\Services\ReportingDateService::reportingDate()->subDays(30)->toDateString();
+        $to = \App\Services\ReportingDateService::reportingDate()->subDays(10)->toDateString();
 
         $response = $this->actingAs($this->admin)->get(route('dashboard.production-history', [
             'from_date' => $from, 'to_date' => $to,
@@ -615,24 +643,12 @@ class DashboardControllerTest extends TestCase
         $this->assertEquals(3, array_sum($chartData['datasets'][0]['data']));
     }
 
-    public function test_dashboard_kpi_snapshot_uses_to_date(): void
-    {
-        $to = now()->subDay()->toDateString();
-
-        $response = $this->actingAs($this->admin)->get(route('dashboard.stats', ['to_date' => $to]));
-        $response->assertOk();
-
-        // Yesterday's eggs: cage A 2 + cage B 1 = 3 (not today's 5).
-        $this->assertEquals(3, $response->viewData('eggsToday'));
-        $this->assertNotNull($response->viewData('kpiAsOf'));
-    }
-
     public function test_dashboard_environment_chart_includes_fractional_second_on_to_date(): void
     {
         $date = \App\Services\ReportingDateService::reportingDate()->subDay()->toDateString();
         \App\Models\EnvironmentalLog::create([
             'cage_id' => $this->cageA->id,
-            'recorded_at' => \Carbon\Carbon::parse(\App\Services\ReportingDateService::reportingDayWindow($date)[1], config('app.timezone', 'UTC'))->subMicrosecond()->toDateTimeString(),
+            'recorded_at' => \Carbon\Carbon::parse(\App\Services\ReportingDateService::reportingDayWindow($date)[1], config('app.timezone', 'UTC'))->subMicrosecond()->format('Y-m-d H:i:s.u'),
             'temperature_c' => 25.0,
             'humidity_pct' => 60,
             'is_override' => false,

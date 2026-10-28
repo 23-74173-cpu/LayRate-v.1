@@ -9,7 +9,7 @@ class EnvironmentalLog extends Model
 {
     public $timestamps = false;
 
-    protected $fillable = ['cage_id', 'recorded_at', 'temperature_c', 'humidity_pct', 'is_override', 'is_demo'];
+    protected $fillable = ['cage_id', 'recorded_at', 'temperature_c', 'humidity_pct', 'is_override', 'is_demo', 'source_key', 'provenance', 'humidity_corrected'];
 
     protected $casts = ['recorded_at' => 'datetime', 'created_at' => 'datetime', 'is_override' => 'boolean', 'is_demo' => 'boolean'];
 
@@ -45,7 +45,7 @@ class EnvironmentalLog extends Model
      *
      * @return \Illuminate\Support\Collection<int, static>
      */
-    public static function latestRealPerCage(iterable $cageIds): \Illuminate\Support\Collection
+    public static function latestRealPerCage(iterable $cageIds, bool $excludeHistoricalAggregates = false): \Illuminate\Support\Collection
     {
         return collect($cageIds)
             ->filter()
@@ -53,6 +53,7 @@ class EnvironmentalLog extends Model
             ->mapWithKeys(fn ($cageId) => [
                 $cageId => static::where('cage_id', $cageId)
                     ->real()
+                    ->when($excludeHistoricalAggregates && \Illuminate\Support\Facades\Schema::hasColumn('environmental_logs', 'source_key'), fn ($q) => $q->whereNull('source_key'))
                     ->orderByDesc('recorded_at')
                     ->first(),
             ])

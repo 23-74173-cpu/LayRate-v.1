@@ -54,6 +54,7 @@ class AnalyticsController extends Controller
                 ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
                 ->whereIn('cage_slots.cage_id', $cageIds)
                 ->where('production_logs.is_demo', false)
+                ->when(\Illuminate\Support\Facades\Schema::hasColumn('production_logs', 'source_key'), fn ($q) => $q->whereNull('production_logs.source_key'))
                 ->whereDate('production_logs.log_date', $dateStr)
                 ->selectRaw('cage_slots.cage_id as cage_id, SUM(production_logs.egg_count) as total_eggs, AVG(production_logs.hdep) as avg_hdep')
                 ->groupBy('cage_slots.cage_id')
@@ -86,11 +87,13 @@ class AnalyticsController extends Controller
                 $q->select('id')->from('cage_slots')->whereIn('cage_id', $cageIds);
             })
                 ->real()
+                ->when(\Illuminate\Support\Facades\Schema::hasColumn('production_logs', 'source_key'), fn ($q) => $q->whereNull('production_logs.source_key'))
                 ->when($rangeStart, fn($q) => $q->where('log_date', '>=', $rangeStart))
                 ->orderBy('log_date')
                 ->get();
 
             $feedLogs = FeedConsumptionLog::whereIn('cage_id', $cageIds)
+                ->when(\Illuminate\Support\Facades\Schema::hasColumn('feed_consumption_logs', 'source_key'), fn ($q) => $q->whereNull('source_key'))
                 ->when($rangeStart, fn($q) => $q->where('log_date', '>=', $rangeStart))
                 ->orderBy('log_date')
                 ->get();
@@ -105,11 +108,13 @@ class AnalyticsController extends Controller
 
             $logs = $cage->productionLogs()
                 ->real()
+                ->when(\Illuminate\Support\Facades\Schema::hasColumn('production_logs', 'source_key'), fn ($q) => $q->whereNull('source_key'))
                 ->when($rangeStart, fn($q) => $q->where('log_date', '>=', $rangeStart))
                 ->orderBy('log_date')
                 ->get();
 
             $feedLogs = FeedConsumptionLog::where('cage_id', $cage->id)
+                ->when(\Illuminate\Support\Facades\Schema::hasColumn('feed_consumption_logs', 'source_key'), fn ($q) => $q->whereNull('source_key'))
                 ->when($rangeStart, fn($q) => $q->where('log_date', '>=', $rangeStart))
                 ->orderBy('log_date')
                 ->get();

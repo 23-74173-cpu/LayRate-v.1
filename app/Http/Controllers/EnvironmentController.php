@@ -40,7 +40,7 @@ class EnvironmentController extends Controller
         // Latest REAL reading per cage (see EnvironmentalLog::latestRealPerCage
         // for why this is an explicit query, not a constrained latestOfMany).
         // Set as the loaded relation so every read below sees real-only data.
-        $latestReal = EnvironmentalLog::latestRealPerCage($cages->pluck('id'));
+        $latestReal = EnvironmentalLog::latestRealPerCage($cages->pluck('id'), excludeHistoricalAggregates: true);
         $cages->each(fn ($cage) => $cage->setRelation(
             'latestEnvironmentLog', $latestReal->get($cage->id)
         ));
@@ -60,6 +60,7 @@ class EnvironmentController extends Controller
         [$repStart, $repEnd] = ReportingDateService::reportingDayWindow(ReportingDateService::reportingDateString());
         $overrideByCage = EnvironmentalLog::where('is_override', 1)
             ->where('is_demo', false)
+            ->when(\Illuminate\Support\Facades\Schema::hasColumn('environmental_logs', 'source_key'), fn ($q) => $q->whereNull('source_key'))
             ->whereBetween('recorded_at', [$repStart, $repEnd])
             ->get()
             ->keyBy('cage_id');
@@ -116,6 +117,7 @@ class EnvironmentController extends Controller
                 DB::raw('ROUND(AVG(humidity_pct),1) as avg_hum')
             )
             ->where('is_demo', false)
+            ->when(\Illuminate\Support\Facades\Schema::hasColumn('environmental_logs', 'source_key'), fn ($q) => $q->whereNull('source_key'))
             ->where('recorded_at', '>=', $since)
             ->groupBy('period', 'cage_id')
             ->orderBy('period')
@@ -128,6 +130,7 @@ class EnvironmentController extends Controller
                 DB::raw('ROUND(AVG(humidity_pct),1) as avg_hum')
             )
             ->where('is_demo', false)
+            ->when(\Illuminate\Support\Facades\Schema::hasColumn('environmental_logs', 'source_key'), fn ($q) => $q->whereNull('source_key'))
             ->where('recorded_at', '>=', $since)
             ->groupBy('time_slot')
             ->orderByDesc('time_slot')
@@ -193,6 +196,7 @@ class EnvironmentController extends Controller
                 CASE WHEN MAX(is_override) = 1 THEN 1 ELSE COUNT(*) END as reading_count
             ")
             ->where('is_demo', false)
+            ->when(\Illuminate\Support\Facades\Schema::hasColumn('environmental_logs', 'source_key'), fn ($q) => $q->whereNull('source_key'))
             ->groupBy('cage_id', 'log_date')
             ->orderByDesc('log_date')
             ->orderBy('cage_id');
@@ -278,6 +282,7 @@ class EnvironmentController extends Controller
         // reporting day so the manual entry is the authoritative reading.
         EnvironmentalLog::whereIn('cage_id', $cageIds)
             ->where('is_override', 1)
+            ->when(\Illuminate\Support\Facades\Schema::hasColumn('environmental_logs', 'source_key'), fn ($q) => $q->whereNull('source_key'))
             ->whereBetween('recorded_at', [$repStart, $repEnd])
             ->delete();
 
@@ -332,6 +337,7 @@ class EnvironmentController extends Controller
             ->unique()
             ->map(fn ($cageId) => EnvironmentalLog::where('cage_id', $cageId)
                 ->real()
+                ->when(\Illuminate\Support\Facades\Schema::hasColumn('environmental_logs', 'source_key'), fn ($q) => $q->whereNull('source_key'))
                 ->where('is_override', false)
                 ->orderByDesc('recorded_at')
                 ->first())

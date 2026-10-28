@@ -10,7 +10,7 @@ class MortalityLog extends Model
 {
     public $timestamps = false;
 
-    protected $fillable = ['cage_id', 'log_date', 'count', 'reason', 'notes', 'recorded_by'];
+    protected $fillable = ['cage_id', 'log_date', 'count', 'reason', 'notes', 'recorded_by', 'source_key'];
 
     protected $casts = ['log_date' => 'date', 'created_at' => 'datetime'];
 

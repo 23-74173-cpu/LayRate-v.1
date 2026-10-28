@@ -10,7 +10,7 @@ class ProductionLog extends Model
 {
     public $timestamps = false;
 
-    protected $fillable = ['cage_slot_id', 'log_date', 'egg_count', 'hen_count', 'hdep', 'notes', 'logged_via', 'is_demo'];
+    protected $fillable = ['cage_slot_id', 'log_date', 'egg_count', 'hen_count', 'hdep', 'notes', 'logged_via', 'is_demo', 'source_key'];
 
     protected $casts = [
         'log_date' => 'date',
