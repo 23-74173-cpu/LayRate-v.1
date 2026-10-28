@@ -107,6 +107,23 @@ class AccountController extends Controller
         return view('profile', compact('staff', 'tab', 'team', 'activity', 'sessions', 'farmSettings', 'eggPrices', 'lastPriceChange'));
     }
 
+    /**
+     * The PDF user manual from the Profile → User Manual tab: shown in the
+     * browser, or saved with ?download=1. Behind login like the rest of the app.
+     */
+    public function userManual(Request $request)
+    {
+        $path = resource_path('docs/LayRate_User_Manual.pdf');
+        abort_unless(is_file($path), 404);
+
+        return $request->boolean('download')
+            ? response()->download($path, 'LayRate_User_Manual.pdf')
+            : response()->file($path, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="LayRate_User_Manual.pdf"',
+            ]);
+    }
+
     public function storeUser(Request $request)
     {
         $data = $request->validate([

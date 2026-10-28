@@ -204,4 +204,37 @@ class AccountControllerTest extends TestCase
         $response->assertOk();
         $response->assertSee('Staff Override PIN Status');
     }
+
+    public function test_user_manual_tab_links_to_the_pdf(): void
+    {
+        $response = $this->actingAs($this->seededUser('operator'))
+            ->get(route('profile', ['tab' => 'manual']));
+
+        $response->assertOk();
+        $response->assertSee(route('profile.user-manual'), false);
+        $response->assertSee('Download PDF');
+    }
+
+    public function test_user_manual_opens_in_the_browser(): void
+    {
+        $response = $this->actingAs($this->seededUser('operator'))
+            ->get(route('profile.user-manual'));
+
+        $response->assertOk();
+        $this->assertSame('application/pdf', $response->headers->get('Content-Type'));
+        $this->assertStringStartsWith('inline', (string) $response->headers->get('Content-Disposition'));
+    }
+
+    public function test_user_manual_downloads_as_a_file(): void
+    {
+        $this->actingAs($this->seededUser('operator'))
+            ->get(route('profile.user-manual', ['download' => 1]))
+            ->assertOk()
+            ->assertDownload('LayRate_User_Manual.pdf');
+    }
+
+    public function test_user_manual_requires_sign_in(): void
+    {
+        $this->get(route('profile.user-manual'))->assertRedirect(route('login'));
+    }
 }

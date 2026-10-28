@@ -473,6 +473,36 @@
         {{-- ============================================ --}}
         <div id="panelManual" class="{{ $tab !== 'manual' ? 'hidden' : '' }} space-y-5" role="tabpanel" tabindex="0" aria-labelledby="profile-tabs-manual" {{ $tab !== 'manual' ? 'hidden' : '' }}>
 
+        {{-- The full manual as a PDF --}}
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-8 h-8 rounded-full bg-navy text-white flex items-center justify-center shrink-0">
+                    <i data-lucide="book-open" class="w-4 h-4"></i>
+                </div>
+                <div>
+                    <h2 class="text-base font-medium text-[#333333]">LayRate User Manual (PDF)</h2>
+                    <p class="text-xs text-[#6B7280]">Every page and task explained, with screenshots.</p>
+                </div>
+            </div>
+
+            <p class="text-xs text-[#6B7280] mb-4">
+                Open it here to read in your browser, or download it to keep a copy on your phone or print it.
+                The guided walkthroughs below show the same tasks inside the app.
+            </p>
+
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('profile.user-manual') }}" target="_blank" rel="noopener" data-turbo="false"
+                   class="inline-flex items-center gap-2 text-sm font-medium text-white px-4 py-2.5 rounded-lg hover:brightness-95 transition-colors"
+                   style="background-color:var(--color-navy);">
+                    <i data-lucide="external-link" class="w-4 h-4"></i> Open Manual
+                </a>
+                <a href="{{ route('profile.user-manual', ['download' => 1]) }}" data-turbo="false"
+                   class="inline-flex items-center gap-2 text-sm font-medium text-[#333333] px-4 py-2.5 rounded-lg border border-[#D9D9D9] hover:bg-black/5 transition-colors">
+                    <i data-lucide="download" class="w-4 h-4"></i> Download PDF
+                </a>
+            </div>
+        </div>
+
         {{-- STEP 1: Create a cage and view its details --}}
         <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
             <div class="flex items-center gap-3 mb-4">

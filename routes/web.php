@@ -254,6 +254,7 @@ Route::middleware(['auth', 'system-time-set'])->group(function () {
     Route::get('/profile',                         [AccountController::class, 'profile'])->name('profile');
     Route::post('/profile',                        [AccountController::class, 'updateProfile'])->name('profile.update');
     Route::post('/profile/logout-other-devices',   [AccountController::class, 'logoutOtherDevices'])->name('profile.logout-other-devices');
+    Route::get('/profile/user-manual',             [AccountController::class, 'userManual'])->name('profile.user-manual');
     Route::post('/settings/users',                 [AccountController::class, 'storeUser'])->name('settings.users.store')->middleware('admin');
     Route::put('/settings/users/{targetUser}',      [AccountController::class, 'updateUser'])->name('settings.users.update')->middleware('admin');
     Route::post('/settings/users/{targetUser}/toggle-active', [AccountController::class, 'toggleUserActive'])->name('settings.users.toggle-active')->middleware('admin');
