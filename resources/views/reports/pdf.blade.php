@@ -101,10 +101,14 @@
         @endif
 
         @if($section['rows']->isNotEmpty())
+        @php
+            // Same rule as reports/_report-table: drop columns empty on every row.
+            $cols = array_values(array_filter(array_keys((array) $section['rows']->first()), fn ($col) => collect($section['rows'])->contains(fn ($row) => ! in_array(((array) $row)[$col] ?? null, [null, ''], true))));
+        @endphp
         <table class="data">
             <thead>
                 <tr>
-                    @foreach(array_keys((array) $section['rows']->first()) as $col)
+                    @foreach($cols as $col)
                     <th>{{ strtoupper(str_replace('_', ' ', $col)) }}</th>
                     @endforeach
                 </tr>
@@ -113,8 +117,9 @@
                 @foreach($section['rows'] as $row)
                 @php $arr = (array) $row; @endphp
                 <tr class="{{ $loop->even ? 'even' : '' }}">
-                    @foreach($arr as $key => $val)
+                    @foreach($cols as $key)
                     @php
+                        $val = $arr[$key] ?? null;
                         $cC = $key === 'cage' ? ($cageColorMap[$val] ?? null) : null;
                         $rC = $key === 'reason' ? ($reasonColors[$val] ?? null) : null;
                         $style = $cC ? "color:{$cC};font-weight:bold" : ($rC ? "color:{$rC}" : '');

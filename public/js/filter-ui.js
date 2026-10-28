@@ -109,14 +109,19 @@
 
     function makeLegacySheet(bar, title) {
         if (!bar || bar.querySelector('[data-filter-sheet]')) return;
+        // The sheet starts closed: without hidden it is display:block below
+        // the sm breakpoint and covers the page on load.
         var template = bar.querySelector('[data-filter-sheet-template]');
         if (template && template.content) {
             var fragment = template.content.cloneNode(true);
+            var templateSheet = fragment.querySelector('[data-filter-sheet]');
+            if (templateSheet) templateSheet.hidden = true;
             bar.appendChild(fragment);
             template.remove();
             return;
         }
         var sheetElement = document.createElement('div');
+        sheetElement.hidden = true;
         sheetElement.className = 'fixed inset-0 z-50 sm:hidden';
         sheetElement.setAttribute('data-filter-sheet', '');
         sheetElement.setAttribute('role', 'dialog');
@@ -138,6 +143,7 @@
         var active = Array.from(bar.querySelectorAll('input[name]:not([type="hidden"]), select[name], textarea[name]')).filter(function (control) {
             if (control.type === 'checkbox' || control.type === 'radio') return control.checked;
             if (control.name === 'feed_preset') return ['today', '7d', '30d', 'latest'].indexOf(control.value) >= 0;
+            if (control.dataset.filterDefault !== undefined && control.value === control.dataset.filterDefault) return false;
             return String(control.value || '').trim() !== '' && control.value !== 'all';
         });
         var count = active.length;
@@ -349,7 +355,11 @@
         bar.querySelectorAll('input[name]:not([type="hidden"]), select[name], textarea[name]').forEach(function (control) {
             if (control.type === 'checkbox' || control.type === 'radio') control.checked = false;
             else if (control.tagName === 'SELECT') {
-                var allOption = Array.from(control.options).find(function (option) { return option.value === '' || option.value === 'all'; });
+                // data-filter-default names the "no filter" option when it is
+                // neither '' nor 'all' (Reports' type select: production).
+                var allOption = Array.from(control.options).find(function (option) {
+                    return control.dataset.filterDefault !== undefined ? option.value === control.dataset.filterDefault : (option.value === '' || option.value === 'all');
+                });
                 control.value = allOption ? allOption.value : '';
             } else control.value = '';
         });

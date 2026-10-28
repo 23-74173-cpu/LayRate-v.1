@@ -2,48 +2,46 @@
 @section('title', 'Reports')
 
 @push('head')
+@php
+    $printTitle = 'LayRate Poultry Farm · '.($type === 'all' ? 'All Reports' : ucwords(str_replace('_', ' ', $type)).' Report').' · '
+        .($from && $to ? \App\Services\ReportingDateService::displayDate($from).' to '.\App\Services\ReportingDateService::displayDate($to) : 'All time');
+@endphp
 <style>
-/* Chrome (and most Chromium-based browsers) reserve page-margin space for
-   their own default print header/footer (date, page title/URL, page number)
-   — that text isn't part of this document and can't be targeted with a
-   selector to hide it. Zeroing the @page margin removes the space Chrome
-   renders it into, which suppresses it; #report-doc's own 20mm padding below
-   supplies the actual visual margin instead. If a browser still shows it
-   regardless, that's the "Headers and footers" checkbox under the print
-   dialog's "More settings" — a browser preference outside what CSS can force.
-
-   Page 1 keeps margin 0 (its spacing already comes from #report-doc's own
-   padding — adding page margin on top of that would double it up). Every
-   page after that has no equivalent padding of its own (the repeating
-   <thead> header just starts wherever the table happens to break), so it
-   needs its own top margin or the header sits flush against the physical
-   page edge. @page :first is real, standards-supported CSS — it's what lets
-   the two cases have different margins at all. */
-@page { margin: 15mm 0 0 0; }
-@page :first { margin: 0; }
+/* Printed pages use real page margins with page margin boxes: page 1 opens
+   with the full letterhead, every later page gets a one-line running header,
+   and every page a page number. Using margin boxes also turns off Chrome's own
+   print header/footer (date, URL). Browsers without margin-box support just
+   print the margins empty. The column-header row still repeats on each page
+   through the table's <thead>. */
+@page {
+    size: A4;
+    margin: 14mm 12mm 16mm;
+    @top-left { content: "{{ addslashes($printTitle) }}"; font: 8pt Georgia, serif; color: #6b7280; }
+    @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 8pt Georgia, serif; color: #6b7280; }
+}
+@page :first { @top-left { content: none; } }
 @media print {
-    aside, header, .no-print { display: none !important; }
+    aside, header, .no-print, #quickDock { display: none !important; }
     body { display: block !important; overflow: visible !important; }
     .overflow-y-auto, .overflow-x-auto { overflow: visible !important; }
     main { padding: 0 !important; }
     #report-doc {
         box-shadow: none !important;
+        border: 0 !important;
         border-radius: 0 !important;
         width: 100% !important;
+        max-width: none !important;
         margin: 0 !important;
-        padding: 20mm !important;
+        padding: 0 !important;
     }
+    /* Twelve production columns fit across A4 portrait at this size. */
+    #report-doc table th, #report-doc table td { padding: 3pt 4pt !important; font-size: 8pt !important; white-space: normal !important; }
+    #report-doc thead th { letter-spacing: .02em !important; }
     body { font-family: Georgia, 'Times New Roman', serif !important; background: white !important; }
     thead { display: table-header-group; }
     tbody tr { page-break-inside: avoid; }
     tfoot, .signature-block { page-break-inside: avoid; }
     .no-screen { display: block !important; }
-    /* A dedicated class rather than reusing .no-screen: that one forces
-       display:block for print, which is correct for ordinary elements but
-       would pull a <tr> out of table-row semantics entirely — and it's
-       exactly the row semantics that make a browser repeat a <thead> on
-       every printed page. This keeps it a real row. */
-    .print-repeat-header { display: table-row !important; }
     /* On screen, the printable doc is paginated client-side (see script block);
        printing must always show every row regardless of the current page. */
     #report-doc tbody tr { display: table-row !important; }
@@ -60,8 +58,21 @@
     .report-section-break { page-break-before: always; break-before: page; }
 }
 .no-screen { display: none; }
-.print-repeat-header { display: none; }
 .report-chart-img { display: none; }
+
+/* Filter bar: toggle and count on the left, actions on the right, fields
+   below. Order is set here because the fields sit between them in the DOM. */
+#reportForm { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; }
+#reportForm > [data-report-filter-toggle] { order: 1; }
+#reportForm > [data-report-filter-summary] { order: 2; flex: 1 1 auto; min-width: 0; }
+#reportForm > [data-report-filter-actions] { order: 3; margin-left: auto; }
+#reportForm > #reportFilterFields { order: 4; flex: 1 1 100%; margin-top: .25rem; padding-top: 1rem; border-top: 1px solid #ECECEC; }
+#reportFilterFields .report-filter-options { grid-column: 1 / -1; }
+
+/* Printable view on screen: tighter cells so a wide table fits the page. */
+#report-doc table th, #report-doc table td { padding: .55rem .65rem; }
+#report-doc table td { font-size: .8125rem; }
+#report-doc thead th { white-space: normal; letter-spacing: .04em; }
 </style>
 @endpush
 
@@ -77,101 +88,112 @@
     </div>
 
     {{-- ── Filters ── --}}
+    {{-- One bar: filter toggle and count on the left, report actions on the
+         right, filter fields opening underneath. filter-ui.js moves
+         #reportFilterFields into the phone sheet and leaves
+         [data-report-filter-actions] alone only while it stays a direct child
+         of the form (and without the filter-legacy-actions class). --}}
+    @php
+        $activeFilters = ($type !== 'production' ? 1 : 0) + (filled($from) || filled($to) ? 1 : 0)
+            + ($cageId !== 'all' ? 1 : 0) + ($reason !== 'all' ? 1 : 0)
+            + (($charts ?? false) ? 1 : 0) + (($withForecast ?? false) ? 1 : 0);
+    @endphp
     <div class="no-print">
-        <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
-            <form method="GET" action="{{ route('reports') }}" class="filter-legacy-form min-w-0" id="reportForm" data-turbo="false" aria-label="Report filters">
-        <button type="button" data-report-filter-toggle class="filter-control filter-icon-toggle inline-flex items-center justify-center rounded-lg border border-[#D9D9D9]" aria-label="Show filters" title="Show filters" aria-expanded="false" aria-controls="reportFilterFields"><i data-lucide="sliders-horizontal" class="h-4 w-4" aria-hidden="true"></i></button>
-                <span data-report-filter-summary class="ml-2 text-sm text-[#615d59]" aria-live="polite">{{ ($type !== 'production' ? 1 : 0) + (filled($from) ? 1 : 0) + (filled($to) ? 1 : 0) + ($cageId !== 'all' ? 1 : 0) + ($reason !== 'all' ? 1 : 0) ?: '' }} {{ ($type !== 'production' ? 1 : 0) + (filled($from) ? 1 : 0) + (filled($to) ? 1 : 0) + ($cageId !== 'all' ? 1 : 0) + ($reason !== 'all' ? 1 : 0) ? 'active filters' : '' }}</span>
+        <div class="bg-white rounded-lg border border-[#D9D9D9] p-4 sm:p-5">
+            <form method="GET" action="{{ route('reports') }}" class="filter-legacy-form report-filter-form min-w-0" id="reportForm" data-turbo="false" aria-label="Report filters">
+                <button type="button" data-report-filter-toggle class="filter-control filter-icon-toggle inline-flex items-center justify-center rounded-lg border border-[#D9D9D9]" aria-label="Show filters" title="Show filters" aria-expanded="false" aria-controls="reportFilterFields"><i data-lucide="sliders-horizontal" class="h-4 w-4" aria-hidden="true"></i></button>
+                <span data-report-filter-summary class="text-sm text-[#615d59]" aria-live="polite">{{ $activeFilters ? 'Active filters: '.$activeFilters : '' }}</span>
                 <span data-filter-fields-home="reportFilterFields" class="hidden"></span>
-                <div id="reportFilterFields" data-report-filter-fields hidden class="filter-legacy-fields mt-3 grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))]">
-                <div class="filter-field min-w-0">
-                    <label for="reportType" class="filter-label">Report type</label>
-                    <select name="type" id="reportType"
-                            class="filter-control w-full min-w-0 border border-[#D9D9D9] rounded-lg px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
-                        <option value="production" {{ $type === 'production' ? 'selected' : '' }}>Production Report</option>
-                        <option value="feed"        {{ $type === 'feed'       ? 'selected' : '' }}>Feed Report</option>
-                        <option value="environment" {{ $type === 'environment'? 'selected' : '' }}>Environment Report</option>
-                        <option value="mortality"   {{ $type === 'mortality'  ? 'selected' : '' }}>Mortality Report</option>
-                        <option value="egg_stock"   {{ $type === 'egg_stock'  ? 'selected' : '' }}>Egg Stock Report</option>
-                        <option value="all"         {{ $type === 'all'       ? 'selected' : '' }}>All Reports</option>
-                    </select>
-                </div>
-                <div class="filter-field min-w-0">
-                    <label for="reportFrom" class="filter-label">From</label>
-                    <input type="date" id="reportFrom" name="from" value="{{ $from }}"
-                           class="filter-control w-full min-w-0 border border-[#D9D9D9] rounded-lg px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
-                </div>
-                <div class="filter-field min-w-0">
-                    <label for="reportTo" class="filter-label">To</label>
-                    <input type="date" id="reportTo" name="to" value="{{ $to }}"
-                           class="filter-control w-full min-w-0 border border-[#D9D9D9] rounded-lg px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
-                </div>
-                <div class="filter-field min-w-0">
-                    <label for="reportCage" class="filter-label">Cage</label>
-                    <select id="reportCage" name="cage"
-                            class="filter-control w-full min-w-0 border border-[#D9D9D9] rounded-lg px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
-                        <option value="all" {{ $cageId === 'all' ? 'selected' : '' }}>All Cages</option>
-                        @foreach($allCages as $c)
-                        <option value="{{ $c->cage_code }}" {{ $cageId === $c->cage_code ? 'selected' : '' }}>{{ $c->cage_code }}</option>
-                        @endforeach
-                    </select>
-                </div>
 
-                {{-- Reason filter — only relevant when mortality data is shown (single mortality report, or the mortality section within "All Reports") --}}
-                <div id="reasonFilter" class="filter-field min-w-0 {{ in_array($type, ['mortality', 'all']) ? '' : 'hidden' }}">
-                    <label for="reportReason" class="filter-label">Reason</label>
-                    <select id="reportReason" name="reason"
-                            class="filter-control w-full min-w-0 border border-[#D9D9D9] rounded-lg px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
-                        <option value="all" {{ $reason === 'all' ? 'selected' : '' }}>All Reasons</option>
-                        @foreach(\App\Models\MortalityLog::REASONS as $r)
-                        <option value="{{ $r }}" {{ $reason === $r ? 'selected' : '' }}>{{ $r }}</option>
-                        @endforeach
-                    </select>
-                </div>
+                <div id="reportFilterFields" data-report-filter-fields hidden class="filter-legacy-fields grid min-w-0 grid-cols-1 gap-3">
+                    <div class="filter-field min-w-0">
+                        <label for="reportType" class="filter-label">Report type</label>
+                        <select name="type" id="reportType" data-filter-default="production"
+                                class="filter-control w-full min-w-0 border border-[#D9D9D9] rounded-lg px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+                            <option value="production" {{ $type === 'production' ? 'selected' : '' }}>Production Report</option>
+                            <option value="feed"        {{ $type === 'feed'       ? 'selected' : '' }}>Feed Report</option>
+                            <option value="environment" {{ $type === 'environment'? 'selected' : '' }}>Environment Report</option>
+                            <option value="mortality"   {{ $type === 'mortality'  ? 'selected' : '' }}>Mortality Report</option>
+                            <option value="egg_stock"   {{ $type === 'egg_stock'  ? 'selected' : '' }}>Egg Stock Report</option>
+                            <option value="all"         {{ $type === 'all'       ? 'selected' : '' }}>All Reports</option>
+                        </select>
+                    </div>
+                    <div class="filter-field min-w-0">
+                        <label for="reportFrom" class="filter-label">From</label>
+                        <input type="date" id="reportFrom" name="from" value="{{ $from }}"
+                               class="filter-control w-full min-w-0 border border-[#D9D9D9] rounded-lg px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+                    </div>
+                    <div class="filter-field min-w-0">
+                        <label for="reportTo" class="filter-label">To</label>
+                        <input type="date" id="reportTo" name="to" value="{{ $to }}"
+                               class="filter-control w-full min-w-0 border border-[#D9D9D9] rounded-lg px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+                    </div>
+                    <div class="filter-field min-w-0">
+                        <label for="reportCage" class="filter-label">Cage</label>
+                        <select id="reportCage" name="cage"
+                                class="filter-control w-full min-w-0 border border-[#D9D9D9] rounded-lg px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+                            <option value="all" {{ $cageId === 'all' ? 'selected' : '' }}>All Cages</option>
+                            @foreach($allCages as $c)
+                            <option value="{{ $c->cage_code }}" {{ $cageId === $c->cage_code ? 'selected' : '' }}>{{ $c->cage_code }}</option>
+                            @endforeach
+                        </select>
+                    </div>
 
-                <div data-filter-action="forecast" id="withForecastFilter" class="filter-field min-w-0 {{ $type === 'production' ? '' : 'hidden' }} col-span-2 sm:col-span-1 flex items-center gap-2 pb-2">
-                    <input type="checkbox" name="withForecast" id="reportWithForecast" value="1" {{ ($withForecast ?? false) ? 'checked' : '' }}
-                           class="rounded border-[#D9D9D9] text-navy focus:ring-navy/30">
-                    <label for="reportWithForecast" class="text-xs tracking-wider text-[#6B7280] select-none cursor-pointer">INCLUDE FORECAST COMPARISON</label>
-                </div>
+                    {{-- Reason filter — only relevant when mortality data is shown (single mortality report, or the mortality section within "All Reports") --}}
+                    <div id="reasonFilter" class="filter-field min-w-0 {{ in_array($type, ['mortality', 'all']) ? '' : 'hidden' }}">
+                        <label for="reportReason" class="filter-label">Reason</label>
+                        <select id="reportReason" name="reason"
+                                class="filter-control w-full min-w-0 border border-[#D9D9D9] rounded-lg px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+                            <option value="all" {{ $reason === 'all' ? 'selected' : '' }}>All Reasons</option>
+                            @foreach(\App\Models\MortalityLog::REASONS as $r)
+                            <option value="{{ $r }}" {{ $reason === $r ? 'selected' : '' }}>{{ $r }}</option>
+                            @endforeach
+                        </select>
+                    </div>
 
-                <div data-filter-action="charts" class="filter-field flex h-11 items-center gap-2">
-                    <input type="checkbox" name="charts" id="reportCharts" value="1" {{ ($charts ?? false) ? 'checked' : '' }}
-                           class="rounded border-[#D9D9D9] text-navy focus:ring-navy/30">
-                    <label for="reportCharts" class="text-xs tracking-wider text-[#6B7280] select-none cursor-pointer">INCLUDE GRAPHS</label>
-                </div>
-
-                {{-- Export dropdown — CSV / Excel / PDF, all respecting the current filters --}}
-                <div data-filter-action="export" class="filter-field relative col-span-2 sm:col-span-1" id="exportDropdownWrap">
-                    <x-button variant="secondary" type="button" id="exportDropdownBtn" aria-haspopup="true" aria-expanded="false" class="filter-control">
-                        <i data-lucide="download" class="w-4 h-4"></i> Export <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
-                    </x-button>
-                    <div id="exportDropdownMenu" class="hidden absolute left-0 top-full mt-2 w-36 rounded-lg border border-[#D9D9D9] bg-white shadow-lg py-1 z-50">
-                        <a href="{{ route('reports.csv', request()->query()) }}" id="exportCsvLink" class="flex items-center gap-2 px-3 py-2 text-sm text-[#333333] hover:bg-black/5 transition-colors">
-                            <i data-lucide="file-text" class="w-4 h-4"></i> CSV
-                        </a>
-                        <a href="{{ route('reports.excel', request()->query()) }}" id="exportExcelLink" class="flex items-center gap-2 px-3 py-2 text-sm text-[#333333] hover:bg-black/5 transition-colors">
-                            <i data-lucide="table" class="w-4 h-4"></i> Excel
-                        </a>
-                        <a href="{{ route('reports.pdf', request()->query()) }}" id="exportPdfLink" class="flex items-center gap-2 px-3 py-2 text-sm text-[#333333] hover:bg-black/5 transition-colors">
-                            <i data-lucide="file" class="w-4 h-4"></i> PDF
-                        </a>
+                    <div class="report-filter-options flex flex-wrap items-center gap-x-6 gap-y-2">
+                        <div data-filter-action="charts" class="flex items-center gap-2">
+                            <input type="checkbox" name="charts" id="reportCharts" value="1" {{ ($charts ?? false) ? 'checked' : '' }}
+                                   class="h-4 w-4 rounded border-[#D9D9D9] text-navy focus:ring-navy/30">
+                            <label for="reportCharts" class="text-sm text-[#333333] select-none cursor-pointer">Include graphs</label>
+                        </div>
+                        <div data-filter-action="forecast" id="withForecastFilter" class="flex items-center gap-2 {{ $type === 'production' ? '' : 'hidden' }}">
+                            <input type="checkbox" name="withForecast" id="reportWithForecast" value="1" {{ ($withForecast ?? false) ? 'checked' : '' }}
+                                   class="h-4 w-4 rounded border-[#D9D9D9] text-navy focus:ring-navy/30">
+                            <label for="reportWithForecast" class="text-sm text-[#333333] select-none cursor-pointer">Include forecast comparison</label>
+                        </div>
                     </div>
                 </div>
 
-                @if($full)
-                <div class="filter-field col-span-2 flex flex-wrap gap-2 sm:col-span-1">
-                <x-button variant="secondary" :href="route('reports', request()->except('full'))" data-turbo="false" class="col-span-2 sm:col-span-1">
-                    <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Preview
-                </x-button>
-                <x-button variant="secondary" type="button" onclick="printReport()" class="col-span-2 sm:col-span-1">
-                    <i data-lucide="printer" class="w-4 h-4"></i>
-                </x-button>
-                </div>
-                @endif
-                </div>
-                <div data-report-filter-actions class="filter-legacy-actions mt-3 flex justify-end">
-                    <button type="reset" class="filter-action filter-control inline-flex items-center justify-center rounded-lg border border-[#D9D9D9] text-sm">Reset</button>
+                <div data-report-filter-actions class="report-filter-actions flex flex-wrap items-center justify-end gap-2">
+                    <button type="button" data-report-reset class="filter-action filter-control inline-flex items-center justify-center rounded-lg border border-[#D9D9D9] bg-white px-4 text-sm font-medium text-[#333333] hover:bg-[#F5F6F8]">Reset</button>
+
+                    {{-- Export dropdown — CSV / Excel / PDF, all respecting the current filters --}}
+                    <div class="relative" id="exportDropdownWrap">
+                        <x-button variant="secondary" type="button" id="exportDropdownBtn" aria-haspopup="true" aria-expanded="false" class="filter-control">
+                            <i data-lucide="download" class="w-4 h-4"></i> Export <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                        </x-button>
+                        <div id="exportDropdownMenu" class="hidden absolute right-0 top-full mt-2 w-36 rounded-lg border border-[#D9D9D9] bg-white shadow-lg py-1 z-50">
+                            <a href="{{ route('reports.csv', request()->query()) }}" id="exportCsvLink" class="flex items-center gap-2 px-3 py-2 text-sm text-[#333333] hover:bg-black/5 transition-colors">
+                                <i data-lucide="file-text" class="w-4 h-4"></i> CSV
+                            </a>
+                            <a href="{{ route('reports.excel', request()->query()) }}" id="exportExcelLink" class="flex items-center gap-2 px-3 py-2 text-sm text-[#333333] hover:bg-black/5 transition-colors">
+                                <i data-lucide="table" class="w-4 h-4"></i> Excel
+                            </a>
+                            <a href="{{ route('reports.pdf', request()->query()) }}" id="exportPdfLink" class="flex items-center gap-2 px-3 py-2 text-sm text-[#333333] hover:bg-black/5 transition-colors">
+                                <i data-lucide="file" class="w-4 h-4"></i> PDF
+                            </a>
+                        </div>
+                    </div>
+
+                    @if($full)
+                    <x-button variant="secondary" :href="route('reports', request()->except('full'))" data-turbo="false" class="filter-control">
+                        <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Preview
+                    </x-button>
+                    <x-button type="button" onclick="printReport()" class="filter-control">
+                        <i data-lucide="printer" class="w-4 h-4"></i> Print
+                    </x-button>
+                    @endif
                 </div>
             </form>
         </div>
@@ -221,7 +243,7 @@
             @endif
 
             @if($section['rows']->isNotEmpty())
-            @include('reports._report-table', ['rows' => $section['rows'], 'cageColorMap' => $cageColorMap, 'tableKey' => $section['type'], 'printHeader' => ['type' => $type, 'from' => $from, 'to' => $to]])
+            @include('reports._report-table', ['rows' => $section['rows'], 'cageColorMap' => $cageColorMap, 'tableKey' => $section['type']])
             <div class="no-print flex items-center justify-center gap-3 mt-3 text-xs text-[#6B7280]" data-report-pager="{{ $section['type'] }}">
                 <button type="button" data-page-prev class="px-2.5 py-1 rounded border border-[#D9D9D9] hover:bg-black/5 disabled:opacity-40 disabled:cursor-not-allowed" disabled>‹ Prev</button>
                 <span data-page-label>Page 1 of 1</span>
@@ -245,7 +267,7 @@
         </div>
         @endif
 
-        @include('reports._report-table', ['rows' => $rows, 'cageColorMap' => $cageColorMap, 'tableKey' => $type, 'printHeader' => ['type' => $type, 'from' => $from, 'to' => $to]])
+        @include('reports._report-table', ['rows' => $rows, 'cageColorMap' => $cageColorMap, 'tableKey' => $type])
         <div class="no-print flex items-center justify-center gap-3 mt-3 text-xs text-[#6B7280]" data-report-pager="{{ $type }}">
             <button type="button" data-page-prev class="px-2.5 py-1 rounded border border-[#D9D9D9] hover:bg-black/5 disabled:opacity-40 disabled:cursor-not-allowed" disabled>‹ Prev</button>
             <span data-page-label>Page 1 of 1</span>
@@ -719,6 +741,13 @@ window._reportPopstate = false;
 
 // ── Fetch report data ──
 function reportFetch(pageParams) {
+    // The printable view has no preview container to redraw: load it again
+    // with the new filters instead.
+    if (document.getElementById('report-doc')) {
+        var fullQs = reportQuery(null);
+        window.location.assign('/reports?' + (fullQs ? fullQs + '&' : '') + 'full=1');
+        return;
+    }
     var container = document.getElementById('report-preview-container');
     if (container) container.classList.add('loading');
 
@@ -735,16 +764,6 @@ function reportFetch(pageParams) {
 }
 
 // ── Form submit handler (override full-page GET) ──
-var reportFilterToggle = document.querySelector('[data-report-filter-toggle]');
-function updateReportFilterSummary() {
-    var form = document.getElementById('reportForm');
-    var summary = document.querySelector('[data-report-filter-summary]');
-    if (!form || !summary) return;
-    var count = Array.from(form.querySelectorAll('select[name], input[type="date"][name]')).filter(function(el) { return el.value && el.value !== 'all'; }).length;
-    summary.textContent = count ? 'Active filters: ' + count : '';
-}
-updateReportFilterSummary();
-
 document.addEventListener('submit', function(e) {
     if (e.target.id !== 'reportForm') return;
     e.preventDefault();
@@ -752,17 +771,32 @@ document.addEventListener('submit', function(e) {
 });
 
 // ── Filter change handlers ──
+// filter-ui.js updates the "Active filters" count and calls reportFetch() on
+// change (or on Apply in the phone sheet), so only field visibility is here.
+function syncReportTypeFields(type) {
+    // Reason filter: a single mortality report or the mortality section
+    // inside "All Reports"; forecast comparison: production only.
+    document.getElementById('reasonFilter').classList.toggle('hidden', !['mortality', 'all'].includes(type));
+    var wf = document.getElementById('withForecastFilter');
+    if (wf) wf.classList.toggle('hidden', type !== 'production');
+}
 document.addEventListener('change', function(e) {
-    var form = e.target.closest('#reportForm');
-    if (!form) return;
-    updateReportFilterSummary();
-    // Reason filter visibility — relevant for a single mortality report or the
-    // mortality section inside "All Reports"
-    if (e.target.name === 'type') {
-        document.getElementById('reasonFilter').classList.toggle('hidden', !['mortality', 'all'].includes(e.target.value));
-        var wf = document.getElementById('withForecastFilter');
-        if (wf) wf.classList.toggle('hidden', e.target.value !== 'production');
-    }
+    if (e.target.closest('#reportForm') && e.target.name === 'type') syncReportTypeFields(e.target.value);
+});
+
+// ── Reset: back to the default report (Production, all time, all cages) ──
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('[data-report-reset]')) return;
+    var f = document.getElementById('reportForm');
+    if (!f) return;
+    f.elements['type'].value = 'production';
+    f.elements['from'].value = '';
+    f.elements['to'].value = '';
+    f.elements['cage'].value = 'all';
+    f.elements['reason'].value = 'all';
+    ['charts', 'withForecast'].forEach(function(k) { if (f.elements[k]) f.elements[k].checked = false; });
+    syncReportTypeFields('production');
+    f.dispatchEvent(new Event('input', { bubbles: true }));
     reportFetch();
 });
 

@@ -28,6 +28,10 @@ class ReportController extends Controller
 {
     private const ALL_TYPES = ['production', 'feed', 'environment', 'mortality', 'egg_stock'];
 
+    // The environment table lists only the newest readings (sensors log every
+    // few seconds); the summary says when more exist than are listed.
+    private const ENV_REPORT_LIMIT = 200;
+
     private ?bool $useEnvCoveringIndex = null;
 
     // Sensor readings for the per-cage / per-day report averages (production
@@ -114,12 +118,38 @@ class ReportController extends Controller
         // produce a real report instead of silently showing empty results.
         $from   = $request->get('from') ?: null;
         $to     = $request->get('to') ?: null;
+        // Every report query filters on a complete range, so one date alone
+        // is completed here: From only runs up to today, To only starts at the
+        // first record. Reversed dates are swapped.
+        if ($from && ! $to) {
+            $to = max($from, ReportingDateService::reportingDateString());
+        } elseif ($to && ! $from) {
+            $from = min($to, $this->earliestRecordDate() ?? $to);
+        }
+        if ($from && $to && $from > $to) {
+            [$from, $to] = [$to, $from];
+        }
         $cageId = $request->get('cage', 'all');
         $reason = $request->get('reason', 'all');
         $withForecast = $request->boolean('withForecast');
         $allCages = Cage::orderBy('cage_code')->get();
 
         return [$type, $from, $to, $cageId, $reason, $withForecast, $allCages];
+    }
+
+    /** Earliest day with any farm record, for a report given only a To date. */
+    private function earliestRecordDate(): ?string
+    {
+        $environment = EnvironmentalLog::real()->min('recorded_at');
+        $dates = array_filter([
+            ProductionLog::real()->min('log_date'),
+            FeedConsumptionLog::min('log_date'),
+            MortalityLog::min('log_date'),
+            EggStockBatch::min('harvested_date'),
+            $environment ? ReportingDateService::reportingDateFor($environment)->toDateString() : null,
+        ]);
+
+        return $dates ? min(array_map(fn ($date) => substr((string) $date, 0, 10), $dates)) : null;
     }
 
     private function paginateCollection($items, Request $request, ?int $perPage = null): LengthAwarePaginator
@@ -225,43 +255,40 @@ class ReportController extends Controller
 
         return match($type) {
             'production' => (function () use ($cageIds, $hasRange, $from, $to) {
-                $historicalRange = $hasRange && $to < ReportingDateService::reportingDateString();
-                $productionQuery = ProductionLog::whereIn('cage_slot_id', DB::table('cage_slots')->whereIn('cage_id', $cageIds)->select('id'))
-                    ->real()
-                    ->when(Schema::hasColumn('production_logs', 'source_key'), fn ($q) => $q->whereNull('production_logs.source_key'))
-                    ->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]));
-                $agg = (clone $productionQuery)
-                    ->selectRaw('SUM(egg_count) as total_eggs, SUM(hen_count) as total_hens, AVG(hdep) as avg_hdep, COUNT(DISTINCT log_date) as days')
+                // HDEP is eggs per hen per day: the period's eggs over the hens
+                // logged on each of its days (hen-days), never over today's
+                // flock. Slot logs and imported historical cage/day rows
+                // (source_key, matched to a cage by code, as on the Dashboard)
+                // are summed in one statement.
+                $hasSourceKey = Schema::hasColumn('production_logs', 'source_key');
+                $agg = ProductionLog::query()
+                    ->when($hasSourceKey, fn ($q) => $q->leftJoin('cages as imported_cages', 'imported_cages.cage_code', '=',
+                        DB::raw("SUBSTRING_INDEX(SUBSTRING_INDEX(production_logs.source_key, ':', 3), ':', -1)")))
+                    ->where('production_logs.is_demo', false)
+                    ->where(function ($q) use ($cageIds, $hasSourceKey) {
+                        $q->where(function ($slot) use ($cageIds, $hasSourceKey) {
+                            $slot->whereIn('production_logs.cage_slot_id', DB::table('cage_slots')->whereIn('cage_id', $cageIds)->select('id'));
+                            if ($hasSourceKey) $slot->whereNull('production_logs.source_key');
+                        });
+                        if ($hasSourceKey) {
+                            $q->orWhere(fn ($imported) => $imported
+                                ->where('production_logs.source_key', 'like', 'production_data_clean:%:production')
+                                ->whereIn('imported_cages.id', $cageIds));
+                        }
+                    })
+                    ->when($hasRange, fn ($q) => $q->whereBetween('production_logs.log_date', [$from, $to]))
+                    ->selectRaw('SUM(production_logs.egg_count) as total_eggs, SUM(production_logs.hen_count) as hen_days, COUNT(DISTINCT production_logs.log_date) as days')
                     ->first();
 
-                $isHistoricalRange = $historicalRange;
-                $historicalAggregatesExist = $isHistoricalRange && Schema::hasColumn('production_logs', 'source_key')
-                    && DB::table('production_logs')->where('source_key', 'like', 'production_data_clean:%:production')->exists();
-                if ($historicalAggregatesExist) {
-                    $historical = DB::table('production_logs as p')
-                        ->join('cages as c', function ($join) {
-                            $join->on('c.cage_code', '=', DB::raw("SUBSTRING_INDEX(SUBSTRING_INDEX(p.source_key, ':', 3), ':', -1)"));
-                        })
-                        ->where('p.source_key', 'like', 'production_data_clean:%:production')
-                        ->where('p.is_demo', false)->whereBetween('p.log_date', [$from, $to])->whereIn('c.id', $cageIds)
-                        ->selectRaw('SUM(p.egg_count) as eggs, SUM(p.hen_count) as hens, COUNT(DISTINCT p.log_date) as days')->first();
-                    $agg->total_eggs = (int) ($agg->total_eggs ?? 0) + (int) ($historical->eggs ?? 0);
-                    $agg->total_hens = (int) ($agg->total_hens ?? 0) + (int) ($historical->hens ?? 0);
-                    $agg->days = max((int) ($agg->days ?? 0), (int) ($historical->days ?? 0));
-                }
-                $currentHens = Hen::whereHas('cageSlot', fn($q) => $q->whereIn('cage_id', $cageIds))->where('is_active', 1)->count();
-                $totalHens = $isHistoricalRange
-                    ? (int) ($agg->total_hens ?? $currentHens)
-                    : $currentHens;
                 $totalEggs = (int) ($agg->total_eggs ?? 0);
+                $henDays = (int) ($agg->hen_days ?? 0);
                 $daysCovered = (int) ($agg->days ?? 0);
 
                 return [
-                    'Total Eggs'   => $this->countWithUnit($totalEggs, 'egg'),
-                    'Avg HDEP'     => $totalHens > 0 && ($isHistoricalRange || $currentHens > 0) ? number_format($totalEggs / $totalHens * 100, 1).'%'
-                        : ($agg->avg_hdep !== null ? number_format($agg->avg_hdep, 1).'%': '—'),
-                    'Total Hens'   => $this->countWithUnit($totalHens, 'hen'),
-                    'Days Covered' => $this->countWithUnit($daysCovered, 'day'),
+                    'Total Eggs'       => $this->countWithUnit($totalEggs, 'egg'),
+                    'Avg HDEP'         => $henDays > 0 ? number_format($totalEggs / $henDays * 100, 1).'%' : '—',
+                    'Avg Hens per Day' => $this->countWithUnit($daysCovered > 0 ? (int) round($henDays / $daysCovered) : 0, 'hen'),
+                    'Days Covered'     => $this->countWithUnit($daysCovered, 'day'),
                 ];
             })(),
             'feed' => (function () use ($cageIds, $hasRange, $from, $to) {
@@ -302,7 +329,9 @@ class ReportController extends Controller
                     'Avg Humidity'    => $agg->avg_hum !== null ? number_format($agg->avg_hum, 1) . '%' : '—',
                     'Total Readings'  => $this->countWithUnit($agg->readings ?? 0, 'reading'),
                     'Alert Readings'  => $this->countWithUnit($agg->alerts ?? 0, 'reading'),
-                ];
+                ] + (($agg->readings ?? 0) > self::ENV_REPORT_LIMIT ? [
+                    'Readings Listed' => 'Latest '.self::ENV_REPORT_LIMIT.' of '.number_format($agg->readings).'. Choose a shorter date range to list older readings.',
+                ] : []);
             })(),
             'egg_stock' => (function () use ($from, $to, $cageIds, $cageId) {
                 $agg = $this->eggStockQuery($from, $to, $cageIds, $cageId)
@@ -682,7 +711,7 @@ class ReportController extends Controller
             }))
             ->when($from && $to, fn($q) => $q->where('recorded_at', '>=', ReportingDateService::reportingDayWindow($from)[0])->where('recorded_at', '<', ReportingDateService::reportingDayWindow($to)[1]))
             ->orderByDesc('recorded_at')
-            ->limit(200)
+            ->limit(self::ENV_REPORT_LIMIT)
             ->get()
             ->sortByDesc('recorded_at')
             ->map(fn($l) => (object) [

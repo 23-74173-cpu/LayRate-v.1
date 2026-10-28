@@ -9,7 +9,7 @@
         </div>
     </div>
     <div class="text-right">
-        <div class="text-sm font-bold text-navy uppercase tracking-widest">{{ $type === 'all' ? 'All Reports' : ucfirst($type) . ' Report' }}</div>
+        <div class="text-sm font-bold text-navy uppercase tracking-widest">{{ $type === 'all' ? 'All Reports' : ucwords(str_replace('_', ' ', $type)) . ' Report' }}</div>
         <div class="text-xs text-[#6B7280] mt-0.5">{{ $from && $to ? \App\Services\ReportingDateService::displayDate($from) . ' — ' . \App\Services\ReportingDateService::displayDate($to) : 'All time' }}</div>
     </div>
 </div>
