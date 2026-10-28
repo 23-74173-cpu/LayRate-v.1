@@ -435,6 +435,7 @@
             })();
             </script>
         @endif
+        </div>
 
     {{-- FCR Panel --}}
     <div id="tab-fcr" class="tab-panel hidden" role="tabpanel" tabindex="0" aria-labelledby="feed-tabs-fcr" hidden

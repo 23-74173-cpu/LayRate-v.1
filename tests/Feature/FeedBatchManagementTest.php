@@ -234,6 +234,27 @@ class FeedBatchManagementTest extends TestCase
         $response->assertSee('No feed or production data for');
     }
 
+    public function test_feed_tab_panels_are_siblings_not_nested(): void
+    {
+        // A missing </div> once left the FCR panel inside the Daily
+        // Consumption panel, so choosing FCR hid it along with Consumption.
+        foreach (['tab=fcr', 'tab=consumption&view=records', 'tab=consumption&view=calendar'] as $query) {
+            $html = $this->actingAs($this->user)->get('/feed/live-data?'.$query)->assertOk()->getContent();
+
+            $dom = new \DOMDocument();
+            libxml_use_internal_errors(true);
+            $dom->loadHTML($html);
+            libxml_clear_errors();
+            $xpath = new \DOMXPath($dom);
+
+            $panels = array_map(fn ($id) => $xpath->query("//*[@id='{$id}']")->item(0), ['tab-batches', 'tab-consumption', 'tab-fcr']);
+            foreach ($panels as $panel) {
+                $this->assertNotNull($panel, $query);
+                $this->assertSame($panels[0]->parentNode, $panel->parentNode, "{$query}: #{$panel->getAttribute('id')} is nested inside another panel");
+            }
+        }
+    }
+
     public function test_feed_consumption_calendar_does_not_render_summary_kpi_cards(): void
     {
         $response = $this->actingAs($this->user)->get('/feed/live-data?tab=consumption&view=calendar');
