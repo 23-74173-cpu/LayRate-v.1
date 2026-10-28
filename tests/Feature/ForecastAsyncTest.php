@@ -12,6 +12,7 @@ use App\Models\ProductionLog;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Process as ProcessFacade;
 use Tests\TestCase;
 
 /**
@@ -102,6 +103,32 @@ class ForecastAsyncTest extends TestCase
         $response->assertSessionHas('error');
         Queue::assertNothingPushed();
         $this->assertDatabaseCount('forecast_runs', 0);
+    }
+
+    public function test_download_template_writes_generated_sheet_outside_read_only_code_directory(): void
+    {
+        $this->mock(\App\Services\ForecastGenerationService::class, function ($mock) {
+            $mock->shouldReceive('resolvePythonBinary')->once()->andReturn('/usr/bin/python3');
+            $mock->shouldReceive('processEnv')->once()->andReturn([]);
+        });
+
+        ProcessFacade::fake(function ($process) {
+            $command = $process->command;
+            $outputIndex = array_search('--output', $command, true);
+            $this->assertNotFalse($outputIndex);
+            $outputPath = $command[$outputIndex + 1];
+            file_put_contents($outputPath, 'test-xlsx');
+
+            return ProcessFacade::result();
+        });
+
+        $response = $this->actingAs($this->admin)->get(route('forecast.template', [
+            'start_date' => '2026-07-31',
+            'end_date' => '2026-10-28',
+        ]));
+
+        $response->assertOk();
+        $this->assertSame('test-xlsx', $response->streamedContent());
     }
 
     public function test_generate_with_sufficient_data_creates_run_and_dispatches_job(): void

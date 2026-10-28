@@ -19,10 +19,9 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Process as ProcessFacade;
 use Maatwebsite\Excel\Facades\Excel;
 use RuntimeException;
-use Symfony\Component\Process\Exception\ProcessFailedException;
-use Symfony\Component\Process\Process;
 
 class ForecastController extends Controller
 {
@@ -265,7 +264,12 @@ class ForecastController extends Controller
             $pythonBinary = $this->forecastService()->resolvePythonBinary();
             $scriptPath = base_path('forecast-api/generate_forecast_sheet.py');
             $outputName = 'forecast_input_'.now()->format('Ymd_His').'.xlsx';
-            $outputPath = base_path('forecast-api/'.$outputName);
+            $outputPath = tempnam(sys_get_temp_dir(), 'layrate-forecast-');
+            if ($outputPath === false) {
+                throw new RuntimeException('Unable to create a temporary forecast sheet path.');
+            }
+            unlink($outputPath);
+            $outputPath .= '.xlsx';
 
             if (! file_exists($scriptPath)) {
                 throw new RuntimeException('Forecast sheet generator not found at: '.$scriptPath);
@@ -277,7 +281,7 @@ class ForecastController extends Controller
             $command = [
                 $pythonBinary,
                 $scriptPath,
-                '--output', $outputName,
+                '--output', $outputPath,
             ];
 
             if ($startDate && $endDate) {
@@ -290,13 +294,17 @@ class ForecastController extends Controller
                 $command[] = '90';
             }
 
-            $process = new Process($command, base_path('forecast-api'));
-            $process->setTimeout(120);
-            $process->setEnv($this->forecastService()->processEnv());
-            $process->run();
+            $process = ProcessFacade::path(base_path('forecast-api'))
+                ->timeout(120)
+                ->env($this->forecastService()->processEnv())
+                ->run($command);
 
-            if (! $process->isSuccessful()) {
-                throw new ProcessFailedException($process);
+            if (! $process->successful()) {
+                throw new RuntimeException(sprintf(
+                    'Forecast sheet generator failed (exit %s): %s',
+                    $process->exitCode(),
+                    trim($process->errorOutput() ?: $process->output()),
+                ));
             }
 
             if (! file_exists($outputPath)) {
@@ -304,12 +312,9 @@ class ForecastController extends Controller
             }
 
             return response()->download($outputPath, $outputName)->deleteFileAfterSend(true);
-        } catch (ProcessFailedException $e) {
-            return redirect()->back()
-                ->with('error', 'Forecast sheet generation failed: '.$e->getMessage());
         } catch (RuntimeException $e) {
             return redirect()->back()
-                ->with('error', $e->getMessage());
+                ->with('error', 'Forecast sheet generation failed: '.$e->getMessage());
         }
     }
 
