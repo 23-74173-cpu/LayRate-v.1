@@ -134,7 +134,7 @@
     <div class="flex items-center justify-between mb-3">
         <label for="trendRange" class="text-sm font-semibold text-[#1f1f1f]">Trend Charts</label>
         <select id="trendRange" onchange="changeTrendRange(this.value)"
-                class="max-md:min-h-11 text-xs max-md:text-sm border border-[#D9D9D9] rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-navy/30">
+                class="filter-control text-sm border border-[#D9D9D9] rounded-lg px-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-navy/30">
             <option value="24h" {{ ($range ?? '24h') === '24h' ? 'selected' : '' }}>24 Hours</option>
             <option value="week" {{ ($range ?? '24h') === 'week' ? 'selected' : '' }}>Week</option>
             <option value="month" {{ ($range ?? '24h') === 'month' ? 'selected' : '' }}>Month</option>

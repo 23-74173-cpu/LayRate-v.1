@@ -153,6 +153,7 @@ class PrintableTagsTest extends TestCase
     public function test_print_options_are_on_both_pages(): void
     {
         $this->actingAs($this->user)->get(route('eggs.stocks'))->assertOk()
+            ->assertDontSee('label="Sold"')
             ->assertSee('id="eggLabelsModal"', false)
             ->assertSee('Print All QR Labels')
             ->assertSee(route('eggs.stocks.labels-pdf'), false);

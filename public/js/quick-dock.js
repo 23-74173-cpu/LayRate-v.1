@@ -94,11 +94,16 @@
     }
 
     // Hide the "+" unit when its menu is empty (pages without dock actions).
+    // Egg-management tabs provide actions from persistent <template> nodes,
+    // so inspect those too before hiding the global button on first render.
     function syncFabVisibility() {
         var m = fabMenu();
         if (!m) return;
         var fab = m.closest('.fab');
         var hasItems = !!m.querySelector('[data-dock-action-list] > button:not([data-dock-duplicate]), [data-dock-action-list] > a, [data-dock-action-list] > form button');
+        hasItems = hasItems || Array.prototype.some.call(document.querySelectorAll('template[id^="egg-fab-actions-"]'), function(template) {
+            return !!template.content.querySelector('button:not(.dock-settings-heading), a, form button');
+        });
         if (fab) fab.style.display = hasItems ? '' : 'none';
     }
 
@@ -147,6 +152,12 @@
         var fresh = e.detail && e.detail.newBody && e.detail.newBody.querySelector
             ? e.detail.newBody.querySelector('[data-quick-dock]') : null;
         patchFreshData(fresh, dock());
+    });
+
+    document.addEventListener('turbo:frame-load', function (e) {
+        if (e.target && e.target.id === 'egg-content') {
+            syncFabVisibility();
+        }
     });
 
     // Checklist button + panel close (delegated). Opening one surface

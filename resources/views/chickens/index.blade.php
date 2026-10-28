@@ -62,15 +62,20 @@
         {{-- Filter Bar (single row, wraps on mobile) --}}
         <div id="inventoryFilters" class="mb-5">
             <x-card padding="p-4">
-            <div class="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end sm:gap-x-4 sm:gap-y-3">
+            <form id="inventoryFiltersForm" class="filter-legacy-form flex flex-wrap items-center gap-2" onsubmit="return false" aria-label="Filter hens">
+                <button type="button" data-hen-filter-toggle class="filter-control filter-icon-toggle inline-flex items-center justify-center rounded-lg border border-[#D9D9D9] sm:mr-1" aria-label="Show filters" title="Show filters" aria-expanded="false" aria-controls="inventoryFilterFields"><i data-lucide="sliders-horizontal" class="h-4 w-4" aria-hidden="true"></i></button>
+                <span data-hen-filter-summary class="min-w-0 self-center text-sm text-[#615d59]" aria-live="polite">{{ ($isActive !== 'all' ? 1 : 0) + (filled($search) ? 1 : 0) + (filled($cageId) ? 1 : 0) + (filled($breed) ? 1 : 0) + (filled($sort) ? 1 : 0) ?: '' }} {{ ($isActive !== 'all' ? 1 : 0) + (filled($search) ? 1 : 0) + (filled($cageId) ? 1 : 0) + (filled($breed) ? 1 : 0) + (filled($sort) ? 1 : 0) ? 'active filters' : '' }}</span>
+                <span data-filter-actions-home class="hidden"></span>
+                <span data-filter-fields-home="inventoryFilterFields" class="hidden"></span>
+                <div id="inventoryFilterFields" data-hen-filter-fields hidden class="filter-legacy-fields col-span-2 grid min-w-0 grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end sm:gap-3">
 
                 {{-- Status --}}
-                <div class="col-span-2 sm:col-span-1">
-                    <label class="block text-xs font-medium text-[#9CA3AF] mb-1">Status</label>
-                    <div class="flex items-center">
+                <div class="filter-field col-span-2 sm:col-span-1">
+                    <label class="filter-label">Status</label>
+                    <div role="group" aria-label="Hen status" class="filter-control inline-flex min-w-0 w-full sm:w-auto items-stretch overflow-hidden rounded-lg border border-[#D9D9D9]">
                         @foreach(['all' => 'All', 'active' => 'Active', 'inactive' => 'Inactive'] as $val => $label)
-                        <label class="status-pill px-3 py-1.5 text-xs border border-[#D9D9D9] {{ $loop->first ? 'rounded-l' : ($loop->last ? 'rounded-r' : '') }} -ml-px {{ $loop->first ? 'ml-0' : '' }} cursor-pointer transition-colors {{ $isActive === $val ? 'bg-navy text-white z-10 border-navy' : 'bg-white text-[#6B7280] hover:bg-[#F5F6F8]' }}">
-                            <input type="radio" name="status" value="{{ $val }}" class="hidden" onchange="filterInventory()" {{ $isActive === $val ? 'checked' : '' }}>
+                        <label class="status-pill inline-flex h-full items-center px-3 text-xs {{ $loop->first ? '' : 'border-l border-[#D9D9D9]' }} cursor-pointer transition-colors {{ $isActive === $val ? 'bg-navy text-white z-10' : 'bg-white text-[#6B7280] hover:bg-[#F5F6F8]' }}">
+                            <input type="radio" name="status" value="{{ $val }}" class="sr-only" onchange="filterInventory()" {{ $isActive === $val ? 'checked' : '' }}>
                             {{ $label }}
                         </label>
                         @endforeach
@@ -78,18 +83,18 @@
                 </div>
 
                 {{-- Tag Code (live debounced search, capped width) --}}
-                <div>
-                    <label for="tagSearchInput" class="block text-xs font-medium text-[#9CA3AF] mb-1">Tag Code</label>
+                <div class="filter-field">
+                    <label for="tagSearchInput" class="filter-label">Tag Code</label>
                     <input type="text" name="search" value="{{ $search }}" placeholder="Search tag..."
-                           class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-full min-w-0 sm:w-40 focus:outline-none focus:ring-1 focus:ring-navy"
+                           class="filter-control border border-[#D9D9D9] rounded-lg px-2 py-1.5 text-sm w-full min-w-0 sm:w-40 focus:outline-none focus:ring-1 focus:ring-navy"
                            id="tagSearchInput"
                            oninput="debounceFilter()">
                 </div>
 
                 {{-- Cage --}}
-                <div>
-                    <label for="henCageFilter" class="block text-xs font-medium text-[#9CA3AF] mb-1">Cage</label>
-                    <select id="henCageFilter" name="cage_id" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-full min-w-0 sm:w-auto focus:outline-none focus:ring-1 focus:ring-navy" onchange="filterInventory()">
+                <div class="filter-field">
+                    <label for="henCageFilter" class="filter-label">Cage</label>
+                    <select id="henCageFilter" name="cage_id" class="filter-control border border-[#D9D9D9] rounded-lg px-2 py-1.5 text-sm w-full min-w-0 sm:w-auto focus:outline-none focus:ring-1 focus:ring-navy" onchange="filterInventory()">
                         <option value="">All Cages</option>
                         @foreach($cages as $c)
                         <option value="{{ $c->id }}" {{ $cageId == $c->id ? 'selected' : '' }}>{{ $c->cage_code }}</option>
@@ -98,9 +103,9 @@
                 </div>
 
                 {{-- Breed --}}
-                <div>
-                    <label for="henBreedFilter" class="block text-xs font-medium text-[#9CA3AF] mb-1">Breed</label>
-                    <select id="henBreedFilter" name="breed" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-full min-w-0 sm:w-auto focus:outline-none focus:ring-1 focus:ring-navy" onchange="filterInventory()">
+                <div class="filter-field">
+                    <label for="henBreedFilter" class="filter-label">Breed</label>
+                    <select id="henBreedFilter" name="breed" class="filter-control border border-[#D9D9D9] rounded-lg px-2 py-1.5 text-sm w-full min-w-0 sm:w-auto focus:outline-none focus:ring-1 focus:ring-navy" onchange="filterInventory()">
                         <option value="">All Breeds</option>
                         @foreach($breeds as $b)
                         <option value="{{ $b }}" {{ $breed == $b ? 'selected' : '' }}>{{ $b }}</option>
@@ -109,9 +114,9 @@
                 </div>
 
                 {{-- Sort --}}
-                <div>
-                    <label for="henSortFilter" class="block text-xs font-medium text-[#9CA3AF] mb-1">Sort</label>
-                    <select id="henSortFilter" name="sort" class="border border-[#D9D9D9] rounded px-2 py-1.5 text-xs w-full min-w-0 sm:w-auto focus:outline-none focus:ring-1 focus:ring-navy" onchange="filterInventory()">
+                <div class="filter-field">
+                    <label for="henSortFilter" class="filter-label">Sort</label>
+                    <select id="henSortFilter" name="sort" class="filter-control border border-[#D9D9D9] rounded-lg px-2 py-1.5 text-sm w-full min-w-0 sm:w-auto focus:outline-none focus:ring-1 focus:ring-navy" onchange="filterInventory()">
                         <option value="" {{ $sort === '' ? 'selected' : '' }}>Hen ID (A-Z)</option>
                         <option value="chicken_id_desc" {{ $sort === 'chicken_id_desc' ? 'selected' : '' }}>Hen ID (Z-A)</option>
                         <option value="age_asc" {{ $sort === 'age_asc' ? 'selected' : '' }}>Age (Youngest)</option>
@@ -124,9 +129,11 @@
                 </div>
 
                 {{-- Clear filters --}}
-                <x-button variant="secondary" size="sm" onclick="clearFilters()" class="mb-px w-full sm:w-auto col-span-2">Clear filters</x-button>
-
-            </div>
+                <div data-filter-action="hen-clear" class="filter-legacy-actions col-span-2 flex justify-end">
+                    <button type="button" class="filter-action filter-control rounded-lg border border-[#D9D9D9] text-sm" onclick="clearFilters()">Clear</button>
+                </div>
+                </div>
+            </form>
             </x-card>
         </div>
 
@@ -385,6 +392,7 @@ function updateStatusPills() {
 }
 
 var _lastInventoryFilter = '';
+
 function filterInventory() {
     const status = document.querySelector('input[name="status"]:checked')?.value || 'all';
     const cageId = document.querySelector('select[name="cage_id"]')?.value || '';
@@ -438,6 +446,8 @@ function clearFilters() {
     _lastInventoryFilter = '';
 
     window.history.replaceState({}, '', '{{ route("chickens.index") }}');
+    var summary = document.querySelector('[data-hen-filter-summary]');
+    if (summary) summary.textContent = '';
 }
 
 var _debounceTimer = null;

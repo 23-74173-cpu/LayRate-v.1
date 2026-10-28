@@ -12,6 +12,52 @@
 
     <turbo-frame id="egg-content">
 
+        <form id="recentLogsForm" onsubmit="return false" class="filter-legacy-form mb-4 rounded-lg border border-hairline bg-surface p-4" aria-label="Filter recent egg logs">
+            <button type="button" data-recent-filter-toggle class="filter-control filter-icon-toggle inline-flex items-center justify-center rounded-lg border border-[#D9D9D9]" aria-label="Show filters" title="Show filters" aria-expanded="false" aria-controls="recentFilterFields"><i data-lucide="sliders-horizontal" class="h-4 w-4" aria-hidden="true"></i></button>
+            @php $initialRecentFilterCount = collect($filters)->except('logged_via')->filter(fn ($value) => filled($value))->count() + count((array) ($filters['logged_via'] ?? [])); @endphp
+            <span data-recent-filter-summary class="ml-2 text-sm text-[#615d59]" aria-live="polite">{{ $initialRecentFilterCount ? 'Active filters: ' . $initialRecentFilterCount : '' }}</span>
+            <span data-filter-fields-home="recentFilterFields" class="hidden"></span>
+            <span data-filter-actions-home class="hidden"></span>
+            <div id="recentFilterFields" data-recent-filter-fields hidden class="filter-legacy-fields recent-filters mt-3 grid min-w-0 grid-cols-2 gap-3 md:grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))] md:items-end">
+                @if($viewMode === 'calendar')
+                    <input type="hidden" name="view" value="calendar">
+                    <input type="hidden" name="month" value="{{ $month }}">
+                @endif
+                <div class="recent-filter-cage filter-field min-w-0 max-md:col-span-1 md:min-w-36">
+                    <label for="recentLogsCage" class="filter-label">Cage</label>
+                    <select id="recentLogsCage" name="cage_id" aria-label="Cage" onchange="recentLogsFilter()" class="filter-control w-full min-w-0 md:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1" style="border-color: #e6e6e6; color: #1f1f1f;">
+                        <option value="">All Cages</option>
+                        @foreach($cages as $c)<option value="{{ $c->id }}" {{ $filters['cage_id'] == $c->id ? 'selected' : '' }}>{{ $c->cage_code }}</option>@endforeach
+                    </select>
+                </div>
+                <div class="recent-filter-slot filter-field min-w-0 max-md:col-span-1 md:min-w-44">
+                    <label for="recentLogsSlot" class="filter-label">Slot</label>
+                    <select id="recentLogsSlot" name="cage_slot_id" aria-label="Slot" onchange="recentLogsFilter()" class="filter-control w-full min-w-0 md:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1" style="border-color: #e6e6e6; color: #1f1f1f;">
+                        <option value="">All Slots</option>
+                        @foreach($cageSlots as $slot)<option value="{{ $slot->id }}" {{ $filters['cage_slot_id'] == $slot->id ? 'selected' : '' }}>{{ $slot->cage->cage_code }} · R{{ $slot->row_number }}-C{{ $slot->column_number }}</option>@endforeach
+                    </select>
+                </div>
+                <div class="recent-filter-breed filter-field min-w-0 max-md:col-span-2 md:min-w-40">
+                    <label for="recentLogsBreed" class="filter-label">Breed</label>
+                    <select id="recentLogsBreed" name="breed" aria-label="Breed" onchange="recentLogsFilter()" class="filter-control w-full min-w-0 md:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1" style="border-color: #e6e6e6; color: #1f1f1f;">
+                        <option value="">All Breeds</option>
+                        @foreach($breeds as $b)<option value="{{ $b }}" {{ $filters['breed'] == $b ? 'selected' : '' }}>{{ $b }}</option>@endforeach
+                    </select>
+                </div>
+                <div class="recent-filter-via filter-field min-w-0 max-md:col-span-2 md:min-w-60">
+                    <fieldset class="m-0 border-0 p-0"><legend class="filter-label">Logged Via</legend>
+                    <div role="group" aria-label="Logged via" class="filter-control flex items-center gap-2 overflow-x-auto">
+                        @foreach(['manual' => 'Manual', 'sensor' => 'Sensor', 'unknown' => 'Unknown'] as $value => $label)
+                        <label class="recent-via-chip inline-flex h-full shrink-0 items-center gap-1.5 text-sm cursor-pointer" style="color: #31302e;"><input type="checkbox" name="logged_via[]" value="{{ $value }}" onchange="recentLogsFilter()" {{ in_array($value, (array) $filters['logged_via']) ? 'checked' : '' }} class="recent-via-input rounded border-gray-300 text-navy focus:ring-navy">{{ $label }}</label>
+                        @endforeach
+                    </div></fieldset>
+                </div>
+                <div data-filter-action="recent-clear" class="filter-legacy-actions mt-3 col-span-2 flex justify-end">
+                    <button type="button" data-recent-filter-clear class="filter-action filter-control rounded-lg border border-[#D9D9D9] text-sm">Clear</button>
+                </div>
+            </div>
+        </form>
+
         <x-card>
         <x-slot:header>
             <div class="recent-logs-card-header -mx-5 -my-3 flex min-w-0 items-center justify-between gap-3 border-b border-hairline px-5 py-3">
@@ -25,75 +71,6 @@
                     <a href="{{ route('eggs.recent-logs', request()->only(['cage_id', 'cage_slot_id', 'breed']) + ($filters['logged_via'] ? ['logged_via[]' => (array) $filters['logged_via']] : []) + ['view' => 'list', 'month' => $month]) }}" @if($viewMode === 'list') aria-current="page" @endif class="inline-flex h-full min-w-0 items-center justify-center rounded-full px-3 text-[13px] font-medium leading-none transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy {{ $viewMode === 'list' ? 'bg-white text-[#1f1f1f] shadow-sm' : 'text-[#615d59] hover:bg-white/70' }}">List</a>
             </div>
         </x-slot:header>
-
-        <form id="recentLogsForm" onsubmit="return false" class="mb-4">
-            <div class="recent-filters grid grid-cols-2 gap-3 max-md:grid-cols-12 max-md:items-end md:flex md:flex-nowrap md:items-center md:gap-x-4 md:gap-y-3">
-                @if($viewMode === 'calendar')
-                    <input type="hidden" name="view" value="calendar">
-                    <input type="hidden" name="month" value="{{ $month }}">
-                @endif
-                {{-- Cage filter --}}
-                <div class="recent-filter-cage max-md:col-span-6 max-md:col-start-1 max-md:row-start-2">
-                    <label for="recentLogsCage" class="block text-sm mb-1" style="color: #615d59;">Cage</label>
-                    <select id="recentLogsCage" name="cage_id" onchange="recentLogsFilter()"
-                            class="w-full min-w-0 max-md:min-h-11 md:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
-                            style="border-color: #e6e6e6; color: #1f1f1f;">
-                        <option value="">All Cages</option>
-                        @foreach($cages as $c)
-                        <option value="{{ $c->id }}" {{ $filters['cage_id'] == $c->id ? 'selected' : '' }}>
-                            {{ $c->cage_code }}
-                        </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- Slot filter --}}
-                <div class="recent-filter-slot max-md:col-span-6 max-md:col-start-7 max-md:row-start-2">
-                    <label for="recentLogsSlot" class="block text-sm mb-1" style="color: #615d59;">Slot</label>
-                    <select id="recentLogsSlot" name="cage_slot_id" onchange="recentLogsFilter()"
-                            class="w-full min-w-0 max-md:min-h-11 md:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
-                            style="border-color: #e6e6e6; color: #1f1f1f;">
-                        <option value="">All Slots</option>
-                        @foreach($cageSlots as $slot)
-                        <option value="{{ $slot->id }}" {{ $filters['cage_slot_id'] == $slot->id ? 'selected' : '' }}>
-                            {{ $slot->cage->cage_code }} · R{{ $slot->row_number }}-C{{ $slot->column_number }}
-                        </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- Breed filter --}}
-                <div class="recent-filter-breed max-md:col-span-9 max-md:col-start-1 max-md:row-start-3">
-                    <label for="recentLogsBreed" class="block text-sm mb-1" style="color: #615d59;">Breed</label>
-                    <select id="recentLogsBreed" name="breed" onchange="recentLogsFilter()"
-                            class="w-full min-w-0 max-md:min-h-11 md:w-auto border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-1"
-                            style="border-color: #e6e6e6; color: #1f1f1f;">
-                        <option value="">All Breeds</option>
-                        @foreach($breeds as $b)
-                        <option value="{{ $b }}" {{ $filters['breed'] == $b ? 'selected' : '' }}>
-                            {{ $b }}
-                        </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- Manual vs Sensor filter (checkbox chips) --}}
-                <div class="recent-filter-via max-md:col-span-12 max-md:col-start-1 max-md:row-start-4 md:col-span-1">
-                    <fieldset class="m-0 border-0 p-0"><legend class="block text-sm mb-1" style="color: #615d59;">Logged Via</legend>
-                    <div class="flex items-center gap-2 md:min-h-10">
-                        @foreach(['manual' => 'Manual', 'sensor' => 'Sensor', 'unknown' => 'Unknown'] as $value => $label)
-                        <label class="recent-via-chip inline-flex max-md:min-h-11 items-center gap-1.5 text-sm cursor-pointer" style="color: #31302e;">
-                            <input type="checkbox" name="logged_via[]" value="{{ $value }}" onchange="recentLogsFilter()"
-                                   {{ in_array($value, (array) $filters['logged_via']) ? 'checked' : '' }}
-                                   class="recent-via-input rounded border-gray-300 text-navy focus:ring-navy">
-                            {{ $label }}
-                        </label>
-                        @endforeach
-                    </div></fieldset>
-                </div>
-
-            </div>
-        </form>
 
         @if($viewMode === 'calendar')
             @include('egg-logging._recent-calendar', ['month' => $month, 'calendarDays' => $calendarDays, 'today' => $today, 'dayUrl' => url('/eggs/recent-logs/day'), 'maxMonth' => substr($today, 0, 7)])
@@ -166,6 +143,9 @@ function recentLogsFilter() {
     var form = document.getElementById('recentLogsForm');
     if (!form) return;
     var params = new URLSearchParams(new FormData(form));
+    var activeCount = Array.from(form.querySelectorAll('select[name]')).filter(function (el) { return el.value !== ''; }).length + form.querySelectorAll('input[name="logged_via[]"]:checked').length;
+    var searchSummary = document.querySelector('[data-recent-filter-summary]');
+    if (searchSummary) searchSummary.textContent = activeCount ? 'Active filters: ' + activeCount : '';
     var currentUrl = new URL(window.location.href);
     var viewMode = currentUrl.searchParams.get('view') || 'list';
     var month = currentUrl.searchParams.get('month') || '{{ substr($today, 0, 7) }}';

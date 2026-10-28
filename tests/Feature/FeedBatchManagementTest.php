@@ -295,8 +295,23 @@ class FeedBatchManagementTest extends TestCase
         $response = $this->actingAs($this->user)->get(route('feed.live-data', ['feed_from' => '2026-08-27', 'feed_to' => '2026-08-27', 'tab' => 'fcr']));
 
         $response->assertOk()->assertSee('No FCR data for this period')
-            ->assertSee('data-fcr-latest-action', false)
-            ->assertSee('View Latest Available Data');
+            ->assertDontSee('data-fcr-latest-action', false)
+            ->assertDontSee('View Latest Available Data');
+    }
+
+    public function test_feed_filters_render_after_kpis_without_apply_or_latest_status_copy(): void
+    {
+        $html = $this->actingAs($this->user)->get('/feed/live-data')->assertOk()->getContent();
+        $kpiPosition = strpos($html, 'Avg CP% This Week');
+        $filterPosition = strpos($html, 'id="feed-global-filters"');
+
+        $this->assertNotFalse($kpiPosition);
+        $this->assertNotFalse($filterPosition);
+        $this->assertGreaterThan($kpiPosition, $filterPosition);
+        $this->assertStringNotContainsString('Apply filters', $html);
+        $this->assertStringNotContainsString('feed-selected-range', $html);
+        $this->assertStringNotContainsString('Showing latest available feed history', $html);
+        $this->assertStringNotContainsString('View Latest Available Data', $html);
     }
 
     public function test_feed_tab_panels_are_siblings_not_nested(): void

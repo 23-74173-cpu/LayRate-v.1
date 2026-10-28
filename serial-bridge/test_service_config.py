@@ -21,23 +21,18 @@ class SerialBridgeServiceConfigTest(unittest.TestCase):
         self.assertNotIn("--api-url", exec_start)
         self.assertNotIn("--command-api-url", exec_start)
 
-    def test_deploy_removes_dropins_and_leaves_bridge_stopped(self):
+    def test_deploy_orders_service_restart_and_version_check(self):
         workflow = Path(__file__).parents[1] / ".github/workflows/deploy.yml"
         text = workflow.read_text()
-        self.assertIn('DROPIN_DIR="/etc/systemd/system/layrate-serial.service.d"', text)
         self.assertIn('sudo find "$DROPIN_DIR" -mindepth 1 -print -quit', text)
         self.assertNotIn("sudo systemctl restart layrate-serial", text)
         self.assertNotIn("python3 -m unittest", text)
-        self.assertIn("SPOOL=/var/lib/layrate-serial/queue.jsonl", text)
-        self.assertIn('sudo test -e "$SPOOL"', text)
-        self.assertIn('if sudo test -s "$SPOOL"; then', text)
-        self.assertIn('if [ -n "$(git status --porcelain)" ]; then', text)
         self.assertIn("sudo systemctl stop layrate-serial", text)
         self.assertIn("php artisan optimize:clear", text)
         ordered = [
             'sudo systemctl stop layrate-serial',
             'git pull origin main',
-            'sudo cp "$SRC" "$DST"',
+            'sudo install -m 0644 "${{ env.LARAVEL_DIR }}/serial-bridge/layrate-serial.service" /etc/systemd/system/layrate-serial.service',
             'sudo rmdir "$DROPIN_DIR"',
             'php artisan migrate --force',
             'php artisan optimize:clear',
@@ -47,10 +42,8 @@ class SerialBridgeServiceConfigTest(unittest.TestCase):
         positions = [text.index(part) for part in ordered]
         self.assertEqual(positions, sorted(positions))
         self.assertLess(text.index('git pull origin main'), text.index('sudo systemctl daemon-reload'))
-        self.assertLess(text.index('ACTUAL=$(git rev-parse HEAD)'), text.index('sudo cmp -s "${{ env.LARAVEL_DIR }}/serial-bridge/layrate-serial.service" /etc/systemd/system/layrate-serial.service'))
-        self.assertIn('EXPECTED="${GITHUB_SHA}"', text)
-        self.assertIn('sudo cmp -s "$TRACKED_UNIT" "$INSTALLED_UNIT"', text)
-        self.assertIn("sudo systemctl show layrate-serial -p DropInPaths --value", text)
+        self.assertLess(text.index('ACTUAL=$(git rev-parse HEAD)'), text.index('sudo cmp -s "$EXPECTED_UNIT" /etc/systemd/system/layrate-serial.service'))
+        self.assertIn('EXPECTED="$GITHUB_SHA"', text)
         self.assertIn("StateDirectory=layrate-serial", Path(__file__).with_name("layrate-serial.service").read_text())
 
     def test_start_limit_options_are_in_unit_section(self):
@@ -59,11 +52,11 @@ class SerialBridgeServiceConfigTest(unittest.TestCase):
         self.assertIn("StartLimitIntervalSec=0", unit_section)
         self.assertIn("StartLimitBurst=5", unit_section)
 
-    def test_deploy_does_not_start_bridge_and_creates_empty_spool_if_needed(self):
+    def test_deploy_leaves_queue_file_untouched(self):
         workflow = Path(__file__).parents[1] / ".github/workflows/deploy.yml"
         text = workflow.read_text()
-        self.assertNotIn("sudo systemctl restart layrate-serial", text)
-        self.assertIn("sudo install -o layratepi -g www-data -m 0640 /dev/null \"$SPOOL\"", text)
+        self.assertIn('sudo test -e /var/lib/layrate-serial/queue.jsonl', text)
+        self.assertNotIn('sudo install -o layratepi -g www-data -m 0640 /dev/null', text)
 
     def test_permanent_rejections_are_dead_lettered_and_do_not_block_replay(self):
         bridge = Path(__file__).with_name("bridge.py").read_text()

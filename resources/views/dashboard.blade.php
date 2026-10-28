@@ -40,14 +40,15 @@
 
     {{-- Global Filters: Cage + Date Range --}}
     <div class="dash-rise" style="animation-delay: 0ms;">
-        <div class="bg-white rounded-2xl border border-[#e6e6e6] p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center flex-wrap gap-3 sm:gap-x-5 sm:gap-y-3">
-            <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 sm:flex-auto">
-                <label for="dashboardCageSelect" class="flex items-center gap-1.5 shrink-0 text-xs font-bold uppercase tracking-[0.125px] text-[#6B7280]">
-                    <i data-lucide="warehouse" class="w-4 h-4"></i>
-                    <span>Cage</span>
-                </label>
+        <form id="dashboardGlobalFilters" class="filter-legacy-form bg-white rounded-2xl border border-[#e6e6e6] p-3.5 sm:p-4" aria-label="Dashboard filters" onsubmit="return false">
+            <button type="button" data-dashboard-filter-toggle class="filter-control filter-icon-toggle inline-flex items-center justify-center rounded-lg border border-[#D9D9D9]" aria-label="Show filters" title="Show filters" aria-expanded="false" aria-controls="dashboardFilterFields"><i data-lucide="sliders-horizontal" class="h-4 w-4" aria-hidden="true"></i></button>
+            <span data-dashboard-filter-summary class="ml-2 text-sm text-[#615d59]" aria-live="polite">{{ (request('cage', 'all') !== 'all' ? 1 : 0) + (filled(request('from_date')) ? 1 : 0) + (filled(request('to_date')) ? 1 : 0) ?: '' }} {{ (request('cage', 'all') !== 'all' ? 1 : 0) + (filled(request('from_date')) ? 1 : 0) + (filled(request('to_date')) ? 1 : 0) ? 'active filters' : '' }}</span>
+            <span data-filter-fields-home="dashboardFilterFields" class="hidden"></span>
+            <div id="dashboardFilterFields" data-dashboard-filter-fields hidden class="filter-legacy-fields mt-3 grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,13rem),1fr))]">
+            <div class="filter-field min-w-0">
+                <label for="dashboardCageSelect" class="filter-label">Cage</label>
                 <select id="dashboardCageSelect" onchange="filterDashboard(this.value)"
-                        class="w-full sm:w-44 shrink-0 border border-[#D9D9D9] rounded-lg px-3 py-2.5 sm:py-2 sm:max-md:min-h-11 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy">
+                        class="filter-control w-full sm:w-44 shrink-0 border border-[#D9D9D9] rounded-lg px-3 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy">
                     <option value="all" {{ request('cage', 'all') === 'all' ? 'selected' : '' }}>All Cages ({{ $cages->count() }})</option>
                     @foreach($cages as $cage)
                         <option value="{{ $cage->cage_code }}" {{ request('cage') === $cage->cage_code ? 'selected' : '' }}>{{ $cage->cage_code }}</option>
@@ -55,34 +56,25 @@
                 </select>
             </div>
 
-            <div class="hidden sm:block w-px self-stretch" style="background-color: #E5E7EB;"></div>
-
-            <div class="grid grid-cols-2 min-w-0 gap-3 sm:flex sm:items-center sm:gap-5 sm:shrink-0">
-            <div class="min-w-0 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 sm:shrink-0">
-                <label for="dashboardFromDate" class="flex items-center gap-1.5 shrink-0 text-xs font-bold uppercase tracking-[0.125px] text-[#6B7280]">
-                    <i data-lucide="calendar-days" class="w-4 h-4"></i>
-                    <span>From</span>
-                </label>
+            <div class="filter-field min-w-0">
+                <label for="dashboardFromDate" class="filter-label">From</label>
                 <input type="date" id="dashboardFromDate" value="{{ request('from_date', '') }}"
                        max="{{ now()->toDateString() }}"
                        onchange="setDashboardFromDate(this.value)"
                        title="Show analytics from this date"
-                       class="w-full min-w-0 sm:w-44 sm:shrink-0 border border-[#D9D9D9] rounded-lg px-2.5 py-2.5 sm:py-2 sm:max-md:min-h-11 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy">
+                        class="filter-control w-full min-w-0 sm:w-44 sm:shrink-0 border border-[#D9D9D9] rounded-lg px-2.5 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy">
             </div>
 
-            <div class="min-w-0 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 sm:shrink-0">
-                <label for="dashboardToDate" class="flex items-center gap-1.5 shrink-0 text-xs font-bold uppercase tracking-[0.125px] text-[#6B7280]">
-                    <i data-lucide="calendar-days" class="w-4 h-4"></i>
-                    <span>To</span>
-                </label>
+            <div class="filter-field min-w-0">
+                <label for="dashboardToDate" class="filter-label">To</label>
                 <input type="date" id="dashboardToDate" value="{{ request('to_date', '') }}"
                        max="{{ now()->toDateString() }}"
                        onchange="setDashboardToDate(this.value)"
                        title="Show analytics up to this date"
-                       class="w-full min-w-0 sm:w-44 sm:shrink-0 border border-[#D9D9D9] rounded-lg px-2.5 py-2.5 sm:py-2 sm:max-md:min-h-11 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy">
+                        class="filter-control w-full min-w-0 sm:w-44 sm:shrink-0 border border-[#D9D9D9] rounded-lg px-2.5 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy">
             </div>
             </div>
-        </div>
+        </form>
     </div>
 
     <div class="dashboard-page-content space-y-6 max-md:pb-28">

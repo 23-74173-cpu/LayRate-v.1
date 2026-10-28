@@ -2,9 +2,6 @@
 <turbo-frame id="feed-live-data">
     <span hidden data-feed-batch-count="{{ $allBatches->count() }}"></span>
     {{-- ── Metric Cards — dashboard gradient KPI design (cardGradient) ── --}}
-    @if(($feedAsOf ?? null) || ($fcrAsOf ?? null))
-    <p class="text-xs font-medium mb-3" style="color:#615d59;">Showing latest available feed history · as of {{ $fcrAsOf ?? $feedAsOf }}</p>
-    @endif
     <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
         <x-kpi-card
             label="Avg CP% This Week" infoKey="feed.avg-cp"
@@ -35,6 +32,53 @@
             :value="$totalFeedCostMonth !== null && $totalFeedCostMonth > 0 ? '₱' . number_format($totalFeedCostMonth, 2) : null"
         />
     </div>
+
+    <form id="feed-global-filters" data-feed-filter-form class="mb-6 rounded-xl border border-[#D9D9D9] bg-white p-3 sm:p-4" aria-label="Feed and FCR filters">
+        <div class="flex flex-wrap items-center gap-2">
+            <button type="button" class="filter-control filter-icon-toggle inline-flex items-center justify-center rounded-lg border border-[#D9D9D9]" data-feed-filter-toggle aria-label="Show filters" title="Show filters" aria-expanded="false" aria-controls="feed-filter-fields"><i data-lucide="sliders-horizontal" class="h-4 w-4" aria-hidden="true"></i></button>
+            <span data-feed-filter-summary class="text-sm text-[#615d59]" aria-live="polite">{{ (filled(request('feed_from')) ? 1 : 0) + (filled(request('feed_to')) ? 1 : 0) + (filled(request('feed_cage')) ? 1 : 0) + (in_array(request('feed_preset'), ['today', '7d', '30d', 'latest'], true) ? 1 : 0) ?: '' }} {{ (filled(request('feed_from')) ? 1 : 0) + (filled(request('feed_to')) ? 1 : 0) + (filled(request('feed_cage')) ? 1 : 0) + (in_array(request('feed_preset'), ['today', '7d', '30d', 'latest'], true) ? 1 : 0) ? 'active filters' : '' }}</span>
+            <span data-filter-fields-home="feed-filter-fields" class="hidden"></span>
+        </div>
+        <div id="feed-filter-fields" data-feed-filter-fields hidden class="filter-legacy-fields mt-3 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-[repeat(4,minmax(0,1fr))] sm:gap-2">
+            <label class="filter-field min-w-0"><span class="filter-label">Date preset</span>
+                <select name="feed_preset" id="feed-preset" class="filter-control mt-1 w-full min-w-0 rounded-lg border border-[#D9D9D9] px-2 text-[13px]">
+                    @foreach(['' => 'Custom dates', 'today' => 'Today', '7d' => 'Last 7 Days', '30d' => 'Last 30 Days', 'latest' => 'Latest available'] as $value => $label)
+                    <option value="{{ $value }}" @selected(($feedFilters['preset'] ?? request('feed_preset', '')) === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <label class="filter-field min-w-0"><span class="filter-label">Start date</span>
+                <input type="date" name="feed_from" value="{{ $feedFilters['from'] ?? request('feed_from') }}" class="filter-control mt-1 w-full min-w-0 rounded-lg border border-[#D9D9D9] px-1.5 text-xs">
+            </label>
+            <label class="filter-field min-w-0"><span class="filter-label">End date</span>
+                <input type="date" name="feed_to" value="{{ $feedFilters['to'] ?? request('feed_to') }}" class="filter-control mt-1 w-full min-w-0 rounded-lg border border-[#D9D9D9] px-1.5 text-xs">
+            </label>
+            <label class="filter-field min-w-0"><span class="filter-label">Cage</span>
+                <select name="feed_cage" class="filter-control mt-1 w-full rounded-lg border border-[#D9D9D9] px-2 text-[13px]">
+                    <option value="">All cages</option>
+                    @foreach(\App\Models\Cage::where('is_active', 1)->orderBy('cage_code')->get() as $filterCage)
+                    <option value="{{ $filterCage->id }}" @selected((int) ($feedFilters['cage_id'] ?? 0) === $filterCage->id)>{{ $filterCage->cage_code }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <div data-filter-action="feed-reset" class="filter-legacy-actions mt-3 flex justify-end sm:col-span-4 sm:mt-0">
+                <button type="button" data-feed-filter-reset class="filter-action filter-control inline-flex items-center justify-center rounded-lg border border-[#D9D9D9] text-sm">Reset</button>
+            </div>
+        </div>
+    </form>
+
+    <template data-filter-sheet-template>
+        <div class="fixed inset-0 z-50 sm:hidden" data-filter-sheet role="dialog" aria-modal="true" aria-labelledby="feed-filter-dialog-title">
+            <div data-filter-sheet-backdrop class="absolute inset-0" style="background:rgba(0,0,0,.4)"></div>
+            <section data-filter-sheet-content class="absolute inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-t-2xl bg-white p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
+                <header class="mb-1 flex items-center justify-between"><h2 id="feed-filter-dialog-title" class="text-base font-semibold">Feed and FCR filters</h2><button type="button" data-filter-sheet-close aria-label="Close filters" class="filter-control inline-flex w-11 shrink-0 items-center justify-center rounded-full">×</button></header>
+                <p class="mb-4 text-xs text-[#6B7280]">Changes are pending until you apply them. Cancel discards changes.</p>
+                <div data-filter-sheet-fields class="mt-4"></div>
+                <p data-filter-error class="hidden mt-3 text-xs text-red-700" role="alert"></p>
+                <div data-filter-actions class="filter-actions-row mt-4 flex flex-wrap justify-end gap-2"><button type="button" data-filter-clear class="filter-action filter-control inline-flex items-center justify-center rounded-lg border border-[#D9D9D9] text-sm">Clear</button><button type="button" data-filter-cancel class="filter-action filter-control inline-flex items-center justify-center rounded-lg border border-[#D9D9D9] text-sm">Cancel</button><button type="button" data-filter-apply class="filter-action filter-control inline-flex items-center justify-center rounded-lg bg-navy text-sm text-white">Apply</button></div>
+            </section>
+        </div>
+    </template>
 
     {{-- ── Tabs ── --}}
     <div id="feed-tabs-nav" class="mb-5">
@@ -227,6 +271,7 @@
 
         document.addEventListener('turbo:frame-load', function(event) {
             if (event.target && event.target.id === 'feed-live-data') {
+                document.dispatchEvent(new CustomEvent('filter:refresh'));
                 const activeTab = new URL(window.location.href).searchParams.get('tab') || 'batches';
                 window.__feedActiveTab = null;
                 if (document.getElementById('tab-' + activeTab)) feedSwitchTab(activeTab);
@@ -242,7 +287,8 @@
     {{-- Feed Batches Panel --}}
         <div id="tab-batches" class="tab-panel" role="tabpanel" tabindex="0" aria-labelledby="feed-tabs-batches">
         <turbo-frame id="tab-batches-frame">
-        <div class="flex items-center gap-4 text-xs mb-3" style="color: #615d59;">
+        <div data-feed-batches-card class="rounded-xl border overflow-hidden" style="background-color: #ffffff; border-color: #e6e6e6;">
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-[#D9D9D9] px-4 py-3 text-xs sm:px-5" style="color: #615d59;">
             <span class="flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full" style="background:#1f6b3a"></span> Optimal (16–18%)
             </span>
@@ -254,7 +300,7 @@
             </span>
         </div>
         <p class="px-4 py-2 text-xs text-ink-muted md:hidden" aria-hidden="true">Swipe horizontally to view all feed batches and actions.</p>
-        <div class="rounded-xl border overflow-x-auto" tabindex="0" role="region" aria-label="Feed batches table. Scroll horizontally to view all columns" style="background-color: #ffffff; border-color: #e6e6e6;">
+        <div class="overflow-x-auto" tabindex="0" role="region" aria-label="Feed batches table. Scroll horizontally to view all columns">
             <table class="w-full">
                 <thead>
                     <tr class="border-b border-[#D9D9D9] bg-[#F9F9F7]">
@@ -324,6 +370,7 @@
                 </tbody>
             </table>
             <x-paginator :paginator="$batches" />
+        </div>
         </div>
     </turbo-frame>
     </div>

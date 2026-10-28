@@ -1,7 +1,7 @@
 <turbo-frame id="eggs-stocks-live-data">
     {{-- Active filters + result line (server-rendered: always matches rows). --}}
     <div class="mb-3">
-        <x-filter-chips :chips="$filterChips ?? []" :first="$batches->firstItem()" :last="$batches->lastItem()" :filtered="$batches->total()" :total="$totalBatches ?? null" note="Summary cards and available pools above show all batches, not just the filtered rows." />
+        <x-filter-chips :chips="$filterChips ?? []" :first="$batches->firstItem()" :last="$batches->lastItem()" :filtered="$batches->total()" :total="$totalBatches ?? null" hide-result />
     </div>
     {{-- Batch Table --}}
     <div class="bg-white rounded-lg border border-[#D9D9D9] overflow-hidden">
@@ -90,5 +90,8 @@
         </table>
         </div>
         <x-paginator :paginator="$batches" />
+    </div>
+    <div class="mt-2 flex justify-end">
+        <x-filter-chips :chips="[]" :first="$batches->firstItem()" :last="$batches->lastItem()" :filtered="$batches->total()" :total="$totalBatches ?? null" />
     </div>
 </turbo-frame>

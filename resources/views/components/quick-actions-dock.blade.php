@@ -42,10 +42,15 @@
     $progressPct = $totalSum > 0 ? (int) round($loggedSum / $totalSum * 100) : ($anyIncomplete ? 0 : 100);
 @endphp
 
-@if($totalActiveCages > 0)
 <div id="quickDock" data-quick-dock data-turbo-permanent
      class="fixed z-40 flex items-center gap-2.5"
      style="right: max(16px, env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom)); pointer-events: none;">
+    @if($totalActiveCages === 0)
+    <span class="sr-only" data-dock-checklist-unavailable>No cage checklist is available yet.</span>
+    @endif
+    @if($totalActiveCages > 0)
+    {{-- Checklist is only useful when cages exist; keep page actions available
+         on a newly initialized/empty farm as well. --}}
     {{-- Checklist panel: popover above the dock; bottom sheet on mobile --}}
     <div id="dataChecklistPanel" class="hidden absolute bottom-full right-0 mb-3 w-[350px] max-w-[calc(100vw-3rem)] max-h-[70vh] overflow-y-auto rounded-2xl border border-hairline bg-surface text-ink" style="box-shadow: 0 8px 32px rgba(10, 22, 46, 0.18); pointer-events: auto;" role="dialog" aria-labelledby="dockChecklistTitle" tabindex="-1" aria-hidden="true">
         <div class="flex items-center gap-3 px-4 pt-4 pb-3 border-b border-hairline">
@@ -103,6 +108,7 @@
         </span>
         @endif
     </button>
+    @endif
 
     {{-- "+" page actions (same .fab contract as the old x-fab) --}}
     <div class="fab relative" style="pointer-events: none;">
@@ -120,4 +126,3 @@
     </div>
 </div>
 <div id="dockFabBackdrop" class="dock-fab-backdrop hidden md:hidden" data-dock-fab-backdrop aria-hidden="true"></div>
-@endif

@@ -48,21 +48,26 @@
 
     {{-- ── Filters ── --}}
     <x-card padding="p-4">
-        <form id="preOrdersForm" onsubmit="return false" class="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-end sm:gap-x-4 sm:gap-y-3 gap-3">
-                <div>
-                    <label for="preOrderFilterStatus" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">STATUS</label>
-                    <select id="preOrderFilterStatus" name="status" onchange="preOrdersFilter()"
-                            class="w-full min-w-0 max-md:min-h-11 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+        <form id="preOrdersForm" onsubmit="return false" class="filter-legacy-form min-w-0" aria-label="Filter egg pre-orders">
+                <button type="button" data-preorder-filter-toggle class="filter-control filter-icon-toggle inline-flex items-center justify-center rounded-lg border border-[#D9D9D9]" aria-label="Show filters" title="Show filters" aria-expanded="false" aria-controls="preOrderFilterFields"><i data-lucide="sliders-horizontal" class="h-4 w-4" aria-hidden="true"></i></button>
+                <span data-preorder-filter-summary class="ml-2 text-sm text-[#615d59]" aria-live="polite">{{ collect($filters)->filter(fn ($value, $key) => in_array($key, ['from', 'to']) ? filled($value) : !in_array($value, ['', 'all', null], true))->count() ? 'Active filters: ' . collect($filters)->filter(fn ($value, $key) => in_array($key, ['from', 'to']) ? filled($value) : !in_array($value, ['', 'all', null], true))->count() : '' }}</span>
+                <span data-filter-fields-home="preOrderFilterFields" class="hidden"></span>
+                <span data-filter-actions-home class="hidden"></span>
+                <div id="preOrderFilterFields" data-preorder-filter-fields hidden class="filter-legacy-fields mt-3 grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))]">
+                <div class="filter-field min-w-0">
+                    <label for="preOrderFilterStatus" class="filter-label">Status</label>
+                    <select id="preOrderFilterStatus" name="status" aria-label="Status" onchange="preOrdersFilter()"
+                            class="filter-control w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         <option value="all" {{ $filters['status'] === 'all' ? 'selected' : '' }}>All Statuses</option>
                         <option value="pending" {{ $filters['status'] === 'pending' ? 'selected' : '' }}>Pending</option>
                         <option value="fulfilled" {{ $filters['status'] === 'fulfilled' ? 'selected' : '' }}>Fulfilled</option>
                         <option value="cancelled" {{ $filters['status'] === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
                     </select>
                 </div>
-                <div>
-                    <label for="preOrderFilterSize" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">EGG SIZE</label>
-                    <select id="preOrderFilterSize" name="egg_size" onchange="preOrdersFilter()"
-                            class="w-full min-w-0 max-md:min-h-11 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+                <div class="filter-field min-w-0">
+                    <label for="preOrderFilterSize" class="filter-label">Egg size</label>
+                    <select id="preOrderFilterSize" name="egg_size" aria-label="Egg size" onchange="preOrdersFilter()"
+                            class="filter-control w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                         <option value="all" {{ $filters['egg_size'] === 'all' ? 'selected' : '' }}>All Sizes</option>
                         <option value="small" {{ $filters['egg_size'] === 'small' ? 'selected' : '' }}>Small</option>
                         <option value="medium" {{ $filters['egg_size'] === 'medium' ? 'selected' : '' }}>Medium</option>
@@ -71,15 +76,19 @@
                         <option value="jumbo" {{ $filters['egg_size'] === 'jumbo' ? 'selected' : '' }}>Jumbo</option>
                     </select>
                 </div>
-                <div>
-                    <label for="preOrderFilterFrom" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">FROM</label>
+                <div class="filter-field min-w-0">
+                    <label for="preOrderFilterFrom" class="filter-label">From</label>
                     <input type="date" id="preOrderFilterFrom" name="from" value="{{ $filters['from'] }}" onchange="preOrdersFilter()"
-                           class="w-full min-w-0 max-md:min-h-11 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+                            class="filter-control w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                 </div>
-                <div>
-                    <label for="preOrderFilterTo" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TO</label>
+                <div class="filter-field min-w-0">
+                    <label for="preOrderFilterTo" class="filter-label">To</label>
                     <input type="date" id="preOrderFilterTo" name="to" value="{{ $filters['to'] }}" onchange="preOrdersFilter()"
-                           class="w-full min-w-0 max-md:min-h-11 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+                            class="filter-control w-full min-w-0 sm:w-auto border border-[#D9D9D9] rounded-lg px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+                </div>
+                <div data-filter-action="preorder-clear" class="filter-legacy-actions mt-3 col-span-2 flex justify-end">
+                    <button type="button" data-preorder-filter-clear class="filter-action filter-control rounded-lg border border-[#D9D9D9] text-sm">Clear</button>
+                </div>
                 </div>
             </form>
         </x-card>
@@ -303,6 +312,9 @@ function preOrdersFilter() {
     var form = document.getElementById('preOrdersForm');
     if (!form) return;
     var params = new URLSearchParams(new FormData(form));
+    var active = Array.from(form.querySelectorAll('select[name], input[name]')).filter(function (el) { return el.value && el.value !== 'all'; });
+    var summary = form.querySelector('[data-preorder-filter-summary]');
+    if (summary) summary.textContent = active.length ? 'Active filters: ' + active.length : '';
     params.delete('page');
     var frame = document.querySelector('turbo-frame#eggs-preorders-table');
     if (frame) {

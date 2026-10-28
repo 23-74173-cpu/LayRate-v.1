@@ -1,466 +1,731 @@
-/**
- * filter-ui.js — one consistent filter system for every record table.
- *
- * Delegated + Turbo-safe (binds once): drives every [data-filter-bar]
- * (x-filter-bar) — auto-apply on change for selects/dates/presets on sm+
- * screens, 300 ms debounced text, Apply-only inside the phone bottom sheet.
- * Results render in the bar's Turbo frame (in-flight frame loads abort when
- * src changes, so no custom cancellation is needed); page resets to 1 on
- * every change; the overflow-redirect middleware still applies server-side.
- *
- * Phone sheet: the same field nodes are reparented into the sheet on
- * <sm screens (single set of controls, state can never diverge). Opening
- * snapshots the form so dismissing without Apply restores it. Focus is
- * trapped, Esc/backdrop close, background scroll locks, safe-area insets
- * come from the sheet markup, and the sheet (z-50) sits above the
- * floating dock (z-40).
- */
+/** Shared, Turbo-safe read-only filter behavior. */
 (function () {
     'use strict';
 
     if (window.__filterUiBound) return;
     window.__filterUiBound = true;
 
-    var phoneMQ = window.matchMedia ? window.matchMedia('(max-width: 639.98px)') : null;
-    function isPhone() { return !!(phoneMQ && phoneMQ.matches); }
+    var mobile = window.matchMedia ? window.matchMedia('(max-width: 639.98px)') : { matches: false };
+    var debounceTimer;
+    var controlsSelector = 'input[name]:not([type="hidden"]), select[name], textarea[name]';
 
-    function bars() {
-        return Array.prototype.slice.call(document.querySelectorAll('[data-filter-bar]'));
-    }
+    function bars() { return Array.from(document.querySelectorAll('[data-filter-bar]')); }
+    var legacySelector = '[data-hen-filter-toggle], [data-recent-filter-toggle], [data-preorder-filter-toggle], [data-report-filter-toggle], [data-dashboard-filter-toggle], [data-env-filter-toggle], [data-feed-filter-toggle]';
+    function panel(bar) { return bar.querySelector('[data-filter-panel]'); }
+    function sheet(bar) { return bar.querySelector('[data-filter-sheet]'); }
+    function isOpen(bar) { return !!(sheet(bar) && !sheet(bar).hidden); }
+    function fields(bar) { return Array.from(bar.querySelectorAll(controlsSelector)); }
 
-    function frameFor(bar) {
-        var id = bar && bar.getAttribute('data-frame');
-        return id ? document.getElementById(id) : null;
-    }
-
-    /* ── Phone placement: one set of fields, moved in/out of the sheet ── */
-
-    function placeBar(bar) {
-        var fields = bar.querySelector('[data-filter-fields]');
-        var body = bar.querySelector('[data-filter-sheet-body]');
-        if (!fields || !body) return;
-        if (fields.__homeParent === undefined) {
-            fields.__homeParent = fields.parentNode;
-            fields.__homeNext = fields.nextSibling;
-        }
-        if (isPhone()) {
-            if (fields.parentNode !== body) body.appendChild(fields);
-        } else {
-            if (fields.parentNode !== fields.__homeParent) {
-                fields.__homeParent.insertBefore(fields, fields.__homeNext);
-            }
-            closeSheet(bar, false);
-        }
-    }
-
-    function placeAll() { bars().forEach(placeBar); }
-
-    /* ── State helpers ── */
-
-    function controls(bar) {
-        return Array.prototype.slice.call(
-            bar.querySelectorAll('select[name], input[name][type="date"], input[name][type="search"], input[name][type="text"], input[name][type="checkbox"]')
-        );
-    }
-
-    function isActiveControl(el) {
-        if (el.type === 'checkbox') return el.checked;
-        return (el.value || '') !== '';
-    }
-
-    function activeCount(bar) {
-        var n = 0;
-        controls(bar).forEach(function (el) { if (isActiveControl(el)) n++; });
-        return n;
-    }
-
-    function updateCount(bar) {
-        var badge = bar.querySelector('[data-filter-count]');
-        if (!badge) return;
-        var n = activeCount(bar);
-        badge.textContent = String(n);
-        badge.style.display = n > 0 ? 'inline-flex' : 'none';
-        var openBtn = bar.querySelector('[data-filter-open]');
-        if (openBtn) openBtn.setAttribute('aria-label', n > 0 ? 'Filters, ' + n + ' active' : 'Filters');
-    }
-
-    function updateAllCounts() { bars().forEach(updateCount); }
-
-    function snapshot(bar) {
-        var fd = new FormData(bar);
-        var out = [];
-        fd.forEach(function (v, k) { out.push([k, v]); });
-        return out;
-    }
-
-    function restore(bar, snap) {
-        controls(bar).forEach(function (el) {
-            if (el.type === 'checkbox') { el.checked = false; return; }
-            el.value = '';
+    function activeControls(bar) {
+        return fields(bar).filter(function (control) {
+            if (control.type === 'checkbox' || control.type === 'radio') return control.checked;
+            return String(control.value || '').trim() !== '';
         });
-        (snap || []).forEach(function (pair) {
-            var list = bar.querySelectorAll('[name="' + pair[0] + '"]');
-            list.forEach(function (el) {
-                if (el.type === 'checkbox') { if (el.value === pair[1]) el.checked = true; }
-                else el.value = pair[1];
+    }
+
+    function updateSummary(bar) {
+        var active = activeControls(bar);
+        var badge = bar.querySelector('[data-filter-count]');
+        var summary = bar.querySelector('[data-filter-summary-display]');
+        var button = bar.querySelector('[data-filter-toggle]');
+        var legacySummary = bar.querySelector('[data-hen-filter-summary], [data-recent-filter-summary], [data-preorder-filter-summary], [data-report-filter-summary], [data-dashboard-filter-summary], [data-env-filter-summary], [data-feed-filter-summary]');
+        var count = active.filter(function (control) { return control.type !== 'date'; }).length;
+        var dates = bar.querySelectorAll('input[type="date"][name]');
+        if (dates.length && Array.from(dates).some(function (date) { return date.value !== ''; })) count += 1;
+        if (badge) {
+            badge.textContent = String(count);
+            badge.classList.toggle('hidden', count === 0);
+        }
+        if (summary) {
+            var names = active.map(function (control) {
+                var label = control.id && bar.querySelector('label[for="' + CSS.escape(control.id) + '"]');
+                var wrappingLabel = control.closest('label');
+                return label ? label.textContent.trim() : (wrappingLabel ? wrappingLabel.textContent.trim() : control.name);
+            });
+            var explicit = active.length ? bar.getAttribute('data-active-summary') : '';
+            summary.textContent = explicit || (names.length ? 'Active: ' + names.join(', ') : '');
+        }
+        if (legacySummary) legacySummary.textContent = count ? 'Active filters: ' + count : '';
+        if (button) {
+            var label = button.getAttribute('aria-expanded') === 'true' ? 'Hide filters' : 'Show filters';
+            button.setAttribute('aria-label', count ? label + ', ' + count + ' active' : label);
+            button.setAttribute('title', label);
+            button.setAttribute('aria-expanded', button.getAttribute('aria-expanded') || 'false');
+            var icon = button.querySelector('[data-lucide]');
+            if (icon) {
+                icon.setAttribute('data-lucide', button.getAttribute('aria-expanded') === 'true' ? 'chevron-up' : 'sliders-horizontal');
+                if (window.lucide) window.lucide.createIcons({ els: [icon] });
+            }
+        }
+    }
+
+    function legacyBar(trigger) {
+        return trigger && trigger.closest('form');
+    }
+
+    function legacyActions(bar) {
+        return bar && bar.querySelector('[data-hen-filter-actions], [data-recent-filter-actions], [data-preorder-filter-actions], [data-report-filter-actions], [data-dashboard-filter-actions], [data-env-filter-actions], [data-feed-filter-actions]');
+    }
+
+    function moveLegacyActionsToPanel(bar, fieldsContainer) {
+        var panelElement = bar.querySelector('[data-filter-panel]') || bar;
+        var actions = legacyActions(bar);
+        var items = [];
+        if (actions && actions !== fieldsContainer && actions.parentNode !== fieldsContainer) items.push(actions);
+        fieldsContainer.querySelectorAll('[data-filter-action]:not([data-filter-action="export"]):not([data-filter-action="charts"]):not([data-filter-action="forecast"])').forEach(function (action) { items.push(action); });
+        items.forEach(function (item) {
+            if (!item.__filterHomeParent) {
+                item.__filterHomeParent = fieldsContainer;
+                item.__filterHomeNext = null;
+            }
+            if (item.parentNode !== panelElement) {
+                item.classList.add('filter-legacy-actions');
+                panelElement.appendChild(item);
+            }
+        });
+    }
+
+    function restoreLegacyHome(bar, fieldsContainer) {
+        var homeMarker = fieldsContainer && fieldsContainer.id
+            ? bar.querySelector('[data-filter-fields-home="' + CSS.escape(fieldsContainer.id) + '"]')
+            : null;
+        if (fieldsContainer && !homeMarker) homeMarker = bar.querySelector('[data-env-fields-home]');
+        var fieldsParent = homeMarker ? homeMarker.parentNode : bar;
+        if (fieldsContainer && fieldsContainer.parentNode !== fieldsParent) fieldsParent.insertBefore(fieldsContainer, homeMarker || null);
+        if (fieldsContainer) {
+            var actionMarker = bar.querySelector('[data-filter-action-home]');
+            if (actionMarker && actionMarker.parentNode === fieldsContainer.parentNode && fieldsContainer.nextSibling !== actionMarker) fieldsContainer.parentNode.insertBefore(fieldsContainer, actionMarker);
+        }
+        var actions = Array.from(bar.querySelectorAll('.filter-legacy-actions'));
+        actions.forEach(function (action) {
+            var homeParent = action.__filterHomeParent;
+            var homeNext = action.__filterHomeNext;
+            if (homeParent && homeParent.isConnected && action.parentNode !== homeParent) {
+                homeParent.insertBefore(action, homeNext && homeNext.parentNode === homeParent ? homeNext : null);
+            }
+            action.classList.remove('filter-legacy-actions');
+        });
+    }
+
+    function makeLegacySheet(bar, title) {
+        if (!bar || bar.querySelector('[data-filter-sheet]')) return;
+        var template = bar.querySelector('[data-filter-sheet-template]');
+        if (template && template.content) {
+            var fragment = template.content.cloneNode(true);
+            bar.appendChild(fragment);
+            template.remove();
+            return;
+        }
+        var sheetElement = document.createElement('div');
+        sheetElement.className = 'fixed inset-0 z-50 sm:hidden';
+        sheetElement.setAttribute('data-filter-sheet', '');
+        sheetElement.setAttribute('role', 'dialog');
+        sheetElement.setAttribute('aria-modal', 'true');
+        var sheetId = 'filter-dialog-' + (bar.id || Math.random().toString(36).slice(2));
+        sheetElement.setAttribute('aria-labelledby', sheetId);
+        sheetElement.innerHTML = '<div data-filter-sheet-backdrop class="absolute inset-0" style="background:rgba(0,0,0,.4)"></div><section data-filter-sheet-content class="absolute inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-t-2xl bg-white p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]"><header class="mb-1 flex items-center justify-between"><h2 id="' + sheetId + '" class="text-base font-semibold">' + title + '</h2><button type="button" data-filter-sheet-close aria-label="Close filters" class="filter-control inline-flex w-11 shrink-0 items-center justify-center rounded-full">×</button></header><p class="mb-4 text-xs text-[#6B7280]">Changes are pending until you apply them. Cancel discards changes.</p><div data-filter-sheet-fields class="mt-4"></div><div data-filter-actions class="filter-actions-row mt-4 flex flex-wrap justify-end gap-2"><button type="button" data-filter-clear class="filter-action filter-control inline-flex items-center justify-center rounded-lg border border-[#D9D9D9] text-sm">Clear</button><button type="button" data-filter-cancel class="filter-action filter-control inline-flex items-center justify-center rounded-lg border border-[#D9D9D9] text-sm">Cancel</button><button type="button" data-filter-apply class="filter-action filter-control inline-flex items-center justify-center rounded-lg bg-navy text-sm text-white">Apply</button></div><p data-filter-error class="hidden mt-3 text-xs text-red-700" role="alert"></p></section>';
+        bar.appendChild(sheetElement);
+    }
+
+    function legacyFields(bar) {
+        return bar && bar.querySelector('[data-hen-filter-fields], [data-recent-filter-fields], [data-preorder-filter-fields], [data-report-filter-fields], [data-dashboard-filter-fields], [data-env-filter-fields], [data-feed-filter-fields]');
+    }
+
+    function legacyIsOpen(bar) { return !!(bar && bar.querySelector('[data-filter-sheet]:not([hidden])')); }
+
+    function legacyUpdateSummary(bar) {
+        if (!bar) return;
+        var active = Array.from(bar.querySelectorAll('input[name]:not([type="hidden"]), select[name], textarea[name]')).filter(function (control) {
+            if (control.type === 'checkbox' || control.type === 'radio') return control.checked;
+            if (control.name === 'feed_preset') return ['today', '7d', '30d', 'latest'].indexOf(control.value) >= 0;
+            return String(control.value || '').trim() !== '' && control.value !== 'all';
+        });
+        var count = active.length;
+        var dates = active.filter(function (control) { return control.type === 'date'; });
+        if (dates.length > 1) count -= dates.length - 1;
+        var summary = bar.querySelector('[data-hen-filter-summary], [data-recent-filter-summary], [data-preorder-filter-summary], [data-report-filter-summary], [data-dashboard-filter-summary], [data-env-filter-summary], [data-feed-filter-summary]');
+        if (summary) summary.textContent = count ? 'Active filters: ' + count : '';
+        var toggle = bar.querySelector(legacySelector);
+        if (toggle) {
+            var label = toggle.getAttribute('aria-expanded') === 'true' ? 'Hide filters' : 'Show filters';
+            toggle.setAttribute('aria-label', count ? label + ', ' + count + ' active' : label);
+            toggle.setAttribute('title', label);
+        }
+    }
+
+    function bindLegacyFilterForm(bar) {
+        if (!bar) return;
+        var title = bar.getAttribute('aria-label') || 'Filter records';
+        makeLegacySheet(bar, title);
+        if (bar.dataset.sharedFilterFormBound) return;
+        bar.dataset.sharedFilterFormBound = 'true';
+        bar.querySelectorAll('[data-filter-action], [data-hen-filter-actions], [data-recent-filter-actions], [data-preorder-filter-actions], [data-report-filter-actions], [data-dashboard-filter-actions], [data-env-filter-actions], [data-feed-filter-actions]').forEach(function (action) {
+            if (!action.__filterHomeParent) {
+                action.__filterHomeParent = action.parentNode;
+                action.__filterHomeNext = null;
+            }
+        });
+        bar.querySelectorAll(legacySelector).forEach(function (trigger) {
+            compactLegacyToggle(trigger);
+            if (trigger.dataset.sharedDisclosureClick) return;
+            trigger.dataset.sharedDisclosureClick = 'true';
+            trigger.addEventListener('click', function () {
+                var fieldsContainer = legacyFields(bar) || (bar.matches('form[data-turbo-frame="environment-logs"]') && bar.querySelector('[data-env-filter-fields]'));
+                if (!fieldsContainer) return;
+                if (mobile.matches) {
+                    openLegacyDrawer(bar, trigger, fieldsContainer);
+                    setLegacyToggle(trigger, true);
+                }
+                else {
+                    var expanded = trigger.getAttribute('aria-expanded') !== 'true';
+                    setLegacyToggle(trigger, expanded);
+                    fieldsContainer.hidden = !expanded;
+                    if (expanded) {
+                        moveLegacyActionsToPanel(bar, fieldsContainer);
+                    }
+                    if (!expanded) {
+                        restoreLegacyHome(bar, fieldsContainer);
+                        trigger.focus();
+                    }
+                }
             });
         });
-        updateCount(bar);
-        updatePresetUI(bar);
-    }
-
-    function dateError(bar, show) {
-        var err = bar.querySelector('[data-filter-date-error]');
-        if (err) err.classList.toggle('hidden', !show);
-        var range = bar.querySelector('[data-filter-date-range]');
-        if (range) range.setAttribute('aria-invalid', show ? 'true' : 'false');
-    }
-
-    function datesValid(bar) {
-        var range = bar.querySelector('[data-filter-date-range]');
-        if (!range) { dateError(bar, false); return true; }
-        var from = range.querySelector('input[name]');
-        var to = range.querySelectorAll('input[name]')[1];
-        var ok = !(from && to && from.value && to.value && from.value > to.value);
-        dateError(bar, !ok);
-        return ok;
-    }
-
-    /* ── Presets (anchored on the server-rendered reporting today: no tz drift) ── */
-
-    function addDays(ymd, delta) {
-        var parts = String(ymd).split('-');
-        var d = new Date(Date.UTC(+parts[0], +parts[1] - 1, +parts[2]));
-        d.setUTCDate(d.getUTCDate() + delta);
-        function p(n) { return (n < 10 ? '0' : '') + n; }
-        return d.getUTCFullYear() + '-' + p(d.getUTCMonth() + 1) + '-' + p(d.getUTCDate());
-    }
-
-    function firstOfMonth(ymd) { return String(ymd).slice(0, 7) + '-01'; }
-
-    function applyPreset(bar, preset) {
-        var range = bar.querySelector('[data-filter-date-range]');
-        if (!range) return;
-        var today = range.getAttribute('data-today') || '';
-        if (!today) return;
-        var inputs = range.querySelectorAll('input[name]');
-        if (inputs.length < 2 || !inputs[0].name || !inputs[1].name) return;
-        var map = {
-            today: [today, today],
-            '7days': [addDays(today, -6), today],
-            '30days': [addDays(today, -29), today],
-            month: [firstOfMonth(today), today]
-        };
-        var pair = map[preset];
-        if (!pair) return;
-        inputs[0].value = pair[0];
-        inputs[1].value = pair[1];
-        // date-mdy.js overrides the native value setter, so the visible
-        // mm/dd/yyyy box syncs itself from this ISO assignment. No event is
-        // fired here on purpose: a synthetic 'change' would double-apply.
-        updatePresetUI(bar);
-        updateCount(bar);
-        if (sheetOpen(bar)) return; // phone sheet waits for Apply
-        applyBar(bar);
-    }
-
-    function updatePresetUI(bar) {
-        var range = bar.querySelector('[data-filter-date-range]');
-        if (!range) return;
-        var today = range.getAttribute('data-today') || '';
-        var inputs = range.querySelectorAll('input[name]');
-        var cur = inputs.length >= 2 ? (inputs[0].value || '') + '|' + (inputs[1].value || '') : '|';
-        var expect = {
-            today: today + '|' + today,
-            '7days': addDays(today, -6) + '|' + today,
-            '30days': addDays(today, -29) + '|' + today,
-            month: firstOfMonth(today) + '|' + today
-        };
-        range.querySelectorAll('[data-preset]').forEach(function (btn) {
-            var on = today !== '' && expect[btn.getAttribute('data-preset')] === cur;
-            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-            btn.style.backgroundColor = on ? 'var(--color-navy)' : '';
-            btn.style.color = on ? '#ffffff' : '';
-            btn.style.borderColor = on ? 'var(--color-navy)' : '';
+        if (bar.id === 'dashboardGlobalFilters') {
+            var dashboardToggle = bar.querySelector('[data-dashboard-filter-toggle]');
+            if (dashboardToggle && !dashboardToggle.dataset.sharedDisclosureClick) {
+                compactLegacyToggle(dashboardToggle);
+                dashboardToggle.dataset.sharedDisclosureClick = 'true';
+                dashboardToggle.addEventListener('click', function () {
+                    var dashboardFields = legacyFields(bar);
+                    if (!dashboardFields) return;
+                    if (mobile.matches) {
+                        openLegacyDrawer(bar, dashboardToggle, dashboardFields);
+                        setLegacyToggle(dashboardToggle, true);
+                    }
+                    else {
+                        var expanded = dashboardToggle.getAttribute('aria-expanded') !== 'true';
+                        dashboardFields.hidden = !expanded;
+                        setLegacyToggle(dashboardToggle, expanded);
+                        if (expanded) {
+                            moveLegacyActionsToPanel(bar, dashboardFields);
+                        }
+                        else restoreLegacyHome(bar, dashboardFields);
+                    }
+                });
+            }
+        }
+        if (bar.matches('form[data-turbo-frame="environment-logs"]')) {
+            var environmentToggle = bar.querySelector('[data-env-filter-toggle]');
+            if (environmentToggle && !environmentToggle.dataset.sharedDisclosureClick) {
+                compactLegacyToggle(environmentToggle);
+                environmentToggle.dataset.sharedDisclosureClick = 'true';
+                environmentToggle.addEventListener('click', function () {
+                    var environmentFields = bar.querySelector('[data-env-filter-fields]');
+                    if (!environmentFields) return;
+                    if (mobile.matches) {
+                        openLegacyDrawer(bar, environmentToggle, environmentFields);
+                        setLegacyToggle(environmentToggle, true);
+                    }
+                    else {
+                        var expanded = environmentToggle.getAttribute('aria-expanded') !== 'true';
+                        environmentFields.hidden = !expanded;
+                        setLegacyToggle(environmentToggle, expanded);
+                        if (expanded) {
+                            moveLegacyActionsToPanel(bar, environmentFields);
+                        }
+                        else restoreLegacyHome(bar, environmentFields);
+                    }
+                });
+            }
+        }
+        bar.addEventListener('click', function (event) {
+            var clearButton = event.target.closest('[data-recent-filter-clear], [data-preorder-filter-clear], [data-feed-filter-reset]');
+            if (!clearButton) return;
+            event.preventDefault();
+            clearLegacy(bar);
+            if (legacyIsOpen(bar)) closeLegacyDrawer(bar, false, true);
+            else applyLegacy(bar);
         });
+        bar.addEventListener('input', function () { legacyUpdateSummary(bar); });
+        bar.addEventListener('change', function () { legacyUpdateSummary(bar); });
+        legacyUpdateSummary(bar);
     }
 
-    function updateAllPresetUI() { bars().forEach(updatePresetUI); }
+    function setLegacyToggle(trigger, expanded) {
+        trigger.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        var label = expanded ? 'Hide filters' : 'Show filters';
+        trigger.setAttribute('aria-label', label);
+        trigger.setAttribute('title', label);
+        trigger.innerHTML = '<i data-lucide="' + (expanded ? 'chevron-up' : 'sliders-horizontal') + '" class="h-4 w-4" aria-hidden="true"></i>';
+        if (window.lucide) window.lucide.createIcons({ els: [trigger.querySelector('[data-lucide]')] });
+    }
 
-    /* ── Apply / reset ── */
+    function compactLegacyToggle(trigger) {
+        if (!trigger || trigger.dataset.compactToggle === 'true') return;
+        trigger.dataset.compactToggle = 'true';
+        trigger.classList.add('filter-icon-toggle');
+        trigger.setAttribute('aria-label', 'Show filters');
+        trigger.setAttribute('title', 'Show filters');
+        trigger.innerHTML = '<i data-lucide="sliders-horizontal" class="h-4 w-4" aria-hidden="true"></i>';
+        if (window.lucide) window.lucide.createIcons({ els: [trigger.querySelector('[data-lucide]')] });
+    }
 
-    function collectParams(bar) {
-        var params = new URLSearchParams(new FormData(bar));
-        // Drop empties and any stale page: every filter change resets to 1.
-        Array.prototype.slice.call(params.keys()).forEach(function (k) {
-            if (k === 'page') params.delete(k);
-            else if (params.get(k) === '') params.delete(k);
+    function openLegacyDrawer(bar, trigger, fieldsContainer) {
+        var drawer = bar.querySelector('[data-filter-sheet]');
+        if (!drawer) return;
+        bar.__filterTrigger = trigger;
+        bar.__filterSnapshot = snapshot(bar);
+        bar.querySelectorAll('[data-filter-action], [data-hen-filter-actions], [data-recent-filter-actions], [data-preorder-filter-actions], [data-report-filter-actions], [data-dashboard-filter-actions], [data-env-filter-actions], [data-feed-filter-actions]').forEach(function (action) {
+            if (!action.__filterHomeParent) {
+                action.__filterHomeParent = fieldsContainer;
+                action.__filterHomeNext = null;
+            }
         });
-        return params;
-    }
-
-    function applyBar(bar) {
-        if (!datesValid(bar)) return;
-        var frame = frameFor(bar);
-        if (!frame) return;
-        var action = bar.getAttribute('data-action') || window.location.pathname;
-        var qs = collectParams(bar).toString();
-        frame.setAttribute('aria-busy', 'true');
-        frame.classList.add('is-loading');
-        frame.setAttribute('src', action + (qs ? '?' + qs : ''));
-        syncPageUrl(bar, qs);
-        document.dispatchEvent(new CustomEvent('filter:applied', {
-            detail: { formId: bar.id, frameId: frame.id, params: qs }
-        }));
-    }
-
-    // Opt-in per bar (data-sync-url): mirror canonical filter params into the
-    // page URL with replaceState — never pushState, so Back never steps
-    // through filter states. No listeners involved, so nothing can stack
-    // across Turbo navigations.
-    function syncPageUrl(bar, qs) {
-        if (!bar.hasAttribute('data-sync-url')) return;
-        try {
-            var url = new URL(window.location.href);
-            url.search = qs || '';
-            window.history.replaceState({}, '', url);
-        } catch (err) { /* non-HTTP context: page URL simply stays put */ }
-    }
-
-    function resetBar(bar, andApply) {
-        bar.reset();
-        updatePresetUI(bar);
-        updateCount(bar);
-        dateError(bar, false);
-        if (andApply !== false) applyBar(bar);
-    }
-
-    /* ── Sheet ── */
-
-    function sheet(bar) { return bar.querySelector('[data-filter-sheet]'); }
-    function sheetOpen(bar) {
-        var s = sheet(bar);
-        return !!(s && !s.hasAttribute('hidden'));
-    }
-    function anySheetOpen() { return bars().some(sheetOpen); }
-
-    function openSheet(bar) {
-        if (!isPhone()) return;
-        placeBar(bar);
-        bar.__snapshot = snapshot(bar);
-        var s = sheet(bar);
-        if (!s) return;
-        s.removeAttribute('hidden');
+        var sheetFields = drawer.querySelector('[data-filter-sheet-fields]');
+        fieldsContainer.hidden = false;
+        if (sheetFields && fieldsContainer.parentNode !== sheetFields) sheetFields.appendChild(fieldsContainer);
+        var sheetContent = drawer.querySelector('[data-filter-sheet-content]');
+        fieldsContainer.querySelectorAll('[data-filter-action]:not([data-filter-action="export"]):not([data-filter-action="charts"]):not([data-filter-action="forecast"])').forEach(function (action) {
+            if (!action.__filterHomeParent) {
+                action.__filterHomeParent = fieldsContainer;
+                action.__filterHomeNext = null;
+            }
+            if (sheetContent && action.parentNode !== sheetContent) {
+                action.classList.add('filter-legacy-actions');
+                sheetContent.appendChild(action);
+            }
+        });
+        var desktopActions = bar.querySelector('[data-filter-desktop-actions]');
+        if (desktopActions && sheetContent && desktopActions.parentNode !== sheetContent) sheetContent.appendChild(desktopActions);
+        drawer.hidden = false;
         document.documentElement.style.overflow = 'hidden';
-        // Skip date-mdy's hidden native inputs (tabindex -1, 1px): focus the
-        // visible control instead.
-        var first = s.querySelector('select:not(.mdy-native), input:not(.mdy-native), button[data-filter-apply]');
-        if (first) first.focus();
+        var closeButton = drawer.querySelector('[data-filter-sheet-close]');
+        if (closeButton) closeButton.focus();
     }
 
-    function closeSheet(bar, restoreSnap) {
-        var s = sheet(bar);
-        if (!s || s.hasAttribute('hidden')) return;
-        if (restoreSnap !== false && bar.__snapshot) restore(bar, bar.__snapshot);
-        s.setAttribute('hidden', '');
-        if (!anySheetOpen()) document.documentElement.style.overflow = '';
-        var openBtn = bar.querySelector('[data-filter-open]');
-        if (openBtn && restoreSnap !== false) openBtn.focus();
+    function dismissLegacyDrawer(bar, restore, applyChanges) {
+        var result = closeLegacyDrawer(bar, restore, applyChanges);
+        if (!result) return false;
+        var trigger = bar.__filterTrigger;
+        if (trigger) setLegacyToggle(trigger, false);
+        return true;
     }
 
-    document.addEventListener('keydown', function (e) {
-        if ((e.key === 'Enter' || e.key === ' ') && e.target && e.target.closest) {
-            var link = e.target.closest('[data-filter-link]');
-            if (link) {
-                e.preventDefault();
-                link.click();
-                return;
+    function closeLegacyDrawer(bar, restore, shouldApply) {
+        var drawer = bar && bar.querySelector('[data-filter-sheet]');
+        if (!drawer || drawer.hidden) return true;
+        if (shouldApply && !applyLegacy(bar)) return false;
+        if (!shouldApply && restore) restoreFields(bar, bar.__filterSnapshot || []);
+        var fieldsContainer = legacyFields(bar) || (bar.matches('form[data-turbo-frame="environment-logs"]') && bar.querySelector('[data-env-filter-fields]'));
+        restoreLegacyHome(bar, fieldsContainer);
+        if (fieldsContainer) fieldsContainer.hidden = true;
+        var desktopActions = bar.querySelector('[data-filter-desktop-actions]');
+        var desktopHome = bar.querySelector('[data-filter-desktop-home]');
+        if (desktopActions && desktopHome && desktopActions.parentNode !== desktopHome.parentNode) desktopHome.parentNode.insertBefore(desktopActions, desktopHome);
+        var error = drawer.querySelector('[data-filter-error]');
+        if (error) error.classList.add('hidden');
+        drawer.hidden = true;
+        if (bar.__filterTrigger) setLegacyToggle(bar.__filterTrigger, false);
+        if (!Array.from(document.querySelectorAll('[data-filter-sheet]')).some(function (item) { return !item.hidden; })) document.documentElement.style.overflow = '';
+        if (bar.__filterTrigger && bar.__filterTrigger.isConnected) bar.__filterTrigger.focus();
+        legacyUpdateSummary(bar);
+        return true;
+    }
+
+    function restoreFields(bar, values) {
+        Array.from(bar.querySelectorAll(controlsSelector)).forEach(function (control) {
+            var saved = values.find(function (entry) { return entry.name === control.name && entry.value === control.value; });
+            if (control.type === 'checkbox' || control.type === 'radio') control.checked = !!(saved && saved.checked);
+            else if (control.tagName === 'SELECT' && saved && saved.selected) Array.from(control.options).forEach(function (option, index) { option.selected = !!saved.selected[index]; });
+            else {
+                var first = values.find(function (entry) { return entry.name === control.name; });
+                control.value = first ? first.value : '';
             }
-        }
-        if (e.key === 'Escape') {
-            var open = bars().filter(sheetOpen);
-            if (open.length) { e.preventDefault(); open.forEach(function (b) { closeSheet(b, true); }); }
-            return;
-        }
-        // Focus trap while a sheet is open.
-        if (e.key !== 'Tab') return;
-        var openBar = bars().filter(sheetOpen)[0];
-        if (!openBar || !isPhone()) return;
-        var s = sheet(openBar);
-        var focusables = Array.prototype.slice.call(
-            s.querySelectorAll('button, select, input:not(.mdy-native), [tabindex]')
-        ).filter(function (el) { return !el.disabled && el.offsetParent !== null; });
-        if (!focusables.length) return;
-        var first = focusables[0];
-        var last = focusables[focusables.length - 1];
-        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-    });
-
-    /* ── Wiring (all delegated, bound once) ── */
-
-    var debounceTimer = null;
-
-    document.addEventListener('change', function (e) {
-        var bar = e.target && e.target.closest ? e.target.closest('[data-filter-bar]') : null;
-        if (!bar) return;
-        if (e.target.matches('select[name], input[name][type="date"], input[name][type="checkbox"]')) {
-            updateCount(bar);
-            updatePresetUI(bar);
-            if (sheetOpen(bar)) return; // phone sheet waits for Apply
-            applyBar(bar);
-        }
-        if (e.target.matches('[data-preset]')) return; // buttons, not inputs
-    });
-
-    document.addEventListener('input', function (e) {
-        var bar = e.target && e.target.closest ? e.target.closest('[data-filter-bar]') : null;
-        if (!bar || !e.target.matches('[data-filter-debounce]')) return;
-        updateCount(bar);
-        if (sheetOpen(bar)) return;
-        if (debounceTimer) clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(function () { applyBar(bar); }, 300);
-    });
-
-    document.addEventListener('click', function (e) {
-        var t = e.target && e.target.closest ? e.target : null;
-
-        var presetBtn = t && t.closest ? t.closest('[data-preset]') : null;
-        if (presetBtn) {
-            var bar = presetBtn.closest('[data-filter-bar]');
-            if (bar) { e.preventDefault(); applyPreset(bar, presetBtn.getAttribute('data-preset')); }
-            return;
-        }
-
-        var openBtn = t && t.closest ? t.closest('[data-filter-open]') : null;
-        if (openBtn) {
-            var ob = openBtn.closest('[data-filter-bar]');
-            if (ob) openSheet(ob);
-            return;
-        }
-
-        if (t && t.closest && t.closest('[data-filter-sheet-backdrop]')) {
-            var bb = t.closest('[data-filter-bar]');
-            if (bb) closeSheet(bb, true);
-            return;
-        }
-
-        var closeBtn = t && t.closest ? t.closest('[data-filter-sheet-close]') : null;
-        if (closeBtn) {
-            var cb = closeBtn.closest('[data-filter-bar]');
-            if (cb) closeSheet(cb, true);
-            return;
-        }
-
-        var applyBtn = t && t.closest ? t.closest('[data-filter-apply]') : null;
-        if (applyBtn) {
-            var ab = applyBtn.closest('[data-filter-bar]');
-            if (ab && datesValid(ab)) { applyBar(ab); closeSheet(ab, false); }
-            return;
-        }
-
-        var clearBtn = t && t.closest ? t.closest('[data-filter-clear]') : null;
-        if (clearBtn) {
-            var clb = clearBtn.closest('[data-filter-bar]');
-            if (clb) { resetBar(clb, true); closeSheet(clb, false); }
-            return;
-        }
-
-        var resetBtn = t && t.closest ? t.closest('[data-filter-reset]') : null;
-        if (resetBtn) {
-            var rb = resetBtn.closest('[data-filter-bar]');
-            if (rb) resetBar(rb, true);
-            return;
-        }
-
-        var clearAll = t && t.closest ? t.closest('[data-filter-clear-all]') : null;
-        if (clearAll) {
-            var frame = t.closest('turbo-frame');
-            var ab2 = frame ? document.querySelector('[data-filter-bar][data-frame="' + frame.id + '"]') : bars()[0];
-            if (ab2) resetBar(ab2, true);
-            return;
-        }
-
-        var chip = t && t.closest ? t.closest('[data-chip-clear]') : null;
-        if (chip) {
-            var frame2 = chip.closest('turbo-frame');
-            var bar2 = frame2 ? document.querySelector('[data-filter-bar][data-frame="' + frame2.id + '"]') : bars()[0];
-            if (!bar2) return;
-            clearParam(bar2, chip.getAttribute('data-chip-clear'));
-            applyBar(bar2);
-            return;
-        }
-
-        var link = t && t.closest ? t.closest('[data-filter-link]') : null;
-        if (link) {
-            e.preventDefault();
-            var frame3 = link.closest('turbo-frame');
-            var bar3 = frame3 ? document.querySelector('[data-filter-bar][data-frame="' + frame3.id + '"]') : bars()[0];
-            if (!bar3) return;
-            if (setParam(bar3, link.getAttribute('data-param'), link.getAttribute('data-value'))) {
-                updateCount(bar3);
-                updatePresetUI(bar3);
-                applyBar(bar3);
-            }
-        }
-    });
-
-    function clearParam(bar, param) {
-        if (!param) return;
-        bar.querySelectorAll('[name="' + param + '"], [name="' + param + '[]"]').forEach(function (el) {
-            if (el.type === 'checkbox') el.checked = false;
-            else el.value = '';
         });
-        updateCount(bar);
-        updatePresetUI(bar);
     }
 
-    function setParam(bar, param, value) {
-        if (!param) return false;
-        var sel = bar.querySelector('select[name="' + param + '"]');
-        if (sel) {
-            var has = Array.prototype.some.call(sel.options, function (o) { return o.value === value; });
-            if (!has) return false;
-            sel.value = value;
-            return true;
-        }
-        var input = bar.querySelector('input[name="' + param + '"]');
-        if (input && (input.type === 'text' || input.type === 'search' || input.type === 'date')) {
-            input.value = value || '';
-            return true;
-        }
-        return false;
-    }
-
-    document.addEventListener('submit', function (e) {
-        var bar = e.target && e.target.closest ? e.target.closest('[data-filter-bar]') : null;
+    function clearLegacy(bar) {
         if (!bar) return;
-        e.preventDefault(); // Enter key applies; never a full navigation
-        if (sheetOpen(bar)) return;
-        applyBar(bar);
-    });
-
-    // Frame swaps: drop the loading state, refresh counts/badges, and let
-    // page glue (selection counts, QR "matching" totals) re-sync.
-    document.addEventListener('turbo:frame-load', function (e) {
-        var frame = e.target;
-        if (!frame || !frame.id) return;
-        frame.removeAttribute('aria-busy');
-        frame.classList.remove('is-loading');
-        updateAllCounts();
-        updateAllPresetUI();
-        document.dispatchEvent(new CustomEvent('filter:frame-loaded', { detail: { frameId: frame.id } }));
-    });
-
-    if (phoneMQ && phoneMQ.addEventListener) phoneMQ.addEventListener('change', placeAll);
-    else if (phoneMQ && phoneMQ.addListener) phoneMQ.addListener(placeAll);
-
-    document.addEventListener('turbo:load', function () { placeAll(); updateAllCounts(); updateAllPresetUI(); });
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function () { placeAll(); updateAllCounts(); updateAllPresetUI(); });
-    } else {
-        placeAll();
-        updateAllCounts();
-        updateAllPresetUI();
+        bar.querySelectorAll('input[name]:not([type="hidden"]), select[name], textarea[name]').forEach(function (control) {
+            if (control.type === 'checkbox' || control.type === 'radio') control.checked = false;
+            else if (control.tagName === 'SELECT') {
+                var allOption = Array.from(control.options).find(function (option) { return option.value === '' || option.value === 'all'; });
+                control.value = allOption ? allOption.value : '';
+            } else control.value = '';
+        });
+        if (bar.id === 'inventoryFiltersForm') {
+            var allStatus = bar.querySelector('input[name="status"][value="all"]');
+            if (allStatus) allStatus.checked = true;
+        }
+        if (bar.id === 'feed-global-filters') {
+            var preset = bar.elements.feed_preset;
+            if (preset) preset.value = '';
+        }
+        legacyUpdateSummary(bar);
     }
+
+    function trapFocus(event, drawer) {
+        if (!drawer) return;
+        var focusables = Array.from(drawer.querySelectorAll('button, input:not([type="hidden"]), select, textarea, a[href], [tabindex]:not([tabindex="-1"])')).filter(function (el) { return !el.disabled && el.offsetParent !== null; });
+        if (!focusables.length) return;
+        if (event.shiftKey && document.activeElement === focusables[0]) { event.preventDefault(); focusables[focusables.length - 1].focus(); }
+        else if (!event.shiftKey && document.activeElement === focusables[focusables.length - 1]) { event.preventDefault(); focusables[0].focus(); }
+    }
+
+    function applyLegacy(bar) {
+        var feed = bar.matches('[data-feed-filter-form]') ? bar : bar.querySelector('[data-feed-filter-form]');
+        if (feed) {
+            var preset = feed.elements.feed_preset;
+            if (preset && preset.value) { feed.elements.feed_from.value = ''; feed.elements.feed_to.value = ''; }
+            legacyUpdateSummary(feed);
+            if (window.feedReloadLiveData) window.feedReloadLiveData();
+            return true;
+        }
+        var dashboard = bar.querySelector('[data-dashboard-filter-fields]');
+        if (dashboard) {
+            var dashboardCage = dashboard.querySelector('#dashboardCageSelect');
+            var dashboardFrom = dashboard.querySelector('#dashboardFromDate');
+            var dashboardTo = dashboard.querySelector('#dashboardToDate');
+            if (dashboardCage && typeof window.filterDashboard === 'function') window.filterDashboard(dashboardCage.value);
+            if (dashboardFrom && typeof window.setDashboardFromDate === 'function') window.setDashboardFromDate(dashboardFrom.value);
+            if (dashboardTo && typeof window.setDashboardToDate === 'function') window.setDashboardToDate(dashboardTo.value);
+            legacyUpdateSummary(bar);
+            return true;
+        }
+        var drawer = bar.querySelector('[data-filter-sheet]');
+        if (drawer) {
+        var fields = legacyFields(bar);
+        var from = fields && fields.querySelector('[name="date_from"], [name="from"], [name="feed_from"]');
+        var to = fields && fields.querySelector('[name="date_to"], [name="to"], [name="feed_to"]');
+            if (from && to && from.value && to.value && from.value > to.value) {
+                var error = bar.querySelector('[data-filter-error]');
+                if (error) { error.textContent = 'Start date must be on or before end date.'; error.classList.remove('hidden'); }
+                from.focus();
+                return false;
+            }
+        }
+        var event = new CustomEvent('filter:apply-legacy', { bubbles: true, detail: { form: bar } });
+        bar.dispatchEvent(event);
+        if (bar.matches('form[data-turbo-frame="environment-logs"]')) {
+            var envUrl = new URL(bar.action, window.location.origin);
+            envUrl.search = new URLSearchParams(new FormData(bar)).toString();
+            if (window.Turbo) window.Turbo.visit(envUrl.toString(), { frame: 'environment-logs' });
+            else if (bar.requestSubmit) bar.requestSubmit();
+        } else if (typeof window.recentLogsFilter === 'function' && bar.id === 'recentLogsForm') window.recentLogsFilter();
+        else if (typeof window.preOrdersFilter === 'function' && bar.id === 'preOrdersForm') window.preOrdersFilter();
+        else if (bar.id === 'inventoryFiltersForm' && typeof window.filterInventory === 'function') window.filterInventory();
+        else if (bar.id === 'reportForm') {
+            if (typeof window.reportFetch === 'function') window.reportFetch();
+            else if (bar.requestSubmit) bar.requestSubmit();
+        }
+        legacyUpdateSummary(bar);
+        return true;
+    }
+
+    function setExpanded(bar, expanded) {
+        var trigger = bar.querySelector('[data-filter-toggle]');
+        var target = panel(bar);
+        if (!trigger || !target) return;
+        setSharedToggle(trigger, expanded);
+        target.hidden = !expanded;
+        if (!expanded) trigger.focus();
+        updateSummary(bar);
+    }
+
+    function setSharedToggle(trigger, expanded) {
+        trigger.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        var label = expanded ? 'Hide filters' : 'Show filters';
+        trigger.setAttribute('aria-label', label);
+        trigger.setAttribute('title', label);
+        var icon = trigger.querySelector('[data-lucide]');
+        if (icon) {
+            icon.setAttribute('data-lucide', expanded ? 'chevron-up' : 'sliders-horizontal');
+            if (window.lucide) window.lucide.createIcons({ els: [icon] });
+        }
+    }
+
+    function snapshot(bar) {
+        return Array.from(bar.querySelectorAll(controlsSelector)).map(function (control) {
+            return { name: control.name, type: control.type, value: control.value, checked: control.checked, selected: control.tagName === 'SELECT' ? Array.from(control.options).map(function (option) { return option.selected; }) : null };
+        });
+    }
+
+    function restore(bar, values) {
+        Array.from(bar.querySelectorAll(controlsSelector)).forEach(function (control) {
+            var saved = values.find(function (entry) { return entry.name === control.name && entry.value === control.value; });
+            if (control.type === 'checkbox' || control.type === 'radio') control.checked = !!(saved && saved.checked);
+            else if (control.tagName === 'SELECT' && saved && saved.selected) Array.from(control.options).forEach(function (option, index) { option.selected = !!saved.selected[index]; });
+            else {
+                var first = values.find(function (entry) { return entry.name === control.name; });
+                control.value = first ? first.value : '';
+            }
+        });
+        updateSummary(bar);
+    }
+
+    function queryFor(bar) {
+        var params = new URLSearchParams(new FormData(bar));
+        params.delete('page');
+        Array.from(params.keys()).forEach(function (key) {
+            if (params.get(key) === '') params.delete(key);
+        });
+        return params.toString();
+    }
+
+    function syncUrl(bar, query) {
+        if (!bar.hasAttribute('data-sync-url')) return;
+        var url = new URL(window.location.href);
+        url.search = query;
+        window.history.replaceState({}, '', url);
+    }
+
+    function apply(bar) {
+        var form = bar;
+        var dateError = bar.querySelector('[data-filter-date-error]');
+        if (dateError) dateError.classList.add('hidden');
+        var dateRange = bar.querySelector('[data-filter-date-range]');
+        if (dateRange) {
+            var dates = dateRange.querySelectorAll('input[type="date"]');
+            if (dates.length > 1 && dates[0].value && dates[1].value && dates[0].value > dates[1].value) {
+                var error = bar.querySelector('[data-filter-error]') || dateRange.querySelector('[data-filter-date-error]');
+                if (error) { error.textContent = 'Start date must be on or before end date.'; error.classList.remove('hidden'); }
+                dates[0].focus();
+                return false;
+            }
+        }
+        var query = queryFor(form);
+        var frame = document.getElementById(form.dataset.frame);
+        if (frame && form.dataset.action) {
+            frame.setAttribute('aria-busy', 'true');
+            frame.classList.add('is-loading');
+            frame.setAttribute('src', form.dataset.action + (query ? '?' + query : ''));
+        }
+        syncUrl(form, query);
+        document.dispatchEvent(new CustomEvent('filter:applied', { detail: { formId: form.id, frameId: form.dataset.frame, params: query } }));
+        updateSummary(form);
+        return true;
+    }
+
+    function clear(bar, shouldApply) {
+        bar.querySelectorAll(controlsSelector).forEach(function (control) {
+            if (control.type === 'checkbox' || control.type === 'radio') control.checked = false;
+            else control.value = '';
+        });
+        var error = bar.querySelector('[data-filter-error], [data-filter-date-error]');
+        if (error) error.classList.add('hidden');
+        updateSummary(bar);
+        if (shouldApply) return apply(bar);
+        return true;
+    }
+
+    function openDrawer(bar, trigger) {
+        var drawer = sheet(bar);
+        if (!drawer) return;
+        setSharedToggle(trigger, true);
+        bar.__filterTrigger = trigger;
+        bar.__filterSnapshot = snapshot(bar);
+        var fieldsContainer = bar.querySelector('[data-filter-fields]');
+        var drawerFields = drawer.querySelector('[data-filter-sheet-fields]');
+        if (fieldsContainer) fieldsContainer.hidden = false;
+        if (fieldsContainer && drawerFields && fieldsContainer.parentNode !== drawerFields) drawerFields.appendChild(fieldsContainer);
+        var desktopActions = bar.querySelector('[data-filter-desktop-actions]');
+        var sheetContent = drawer.querySelector('[data-filter-sheet-content]');
+        if (desktopActions && !desktopActions.__filterHomeParent) {
+            desktopActions.__filterHomeParent = desktopActions.parentNode;
+            desktopActions.__filterHomeNext = desktopActions.nextSibling;
+        }
+        if (desktopActions && sheetContent && desktopActions.parentNode !== sheetContent) sheetContent.appendChild(desktopActions);
+        drawer.hidden = false;
+        document.documentElement.style.overflow = 'hidden';
+        var closeButton = drawer.querySelector('[data-filter-sheet-close]');
+        if (closeButton) closeButton.focus();
+    }
+
+    function closeDrawer(bar, shouldRestore, shouldApply) {
+        var drawer = sheet(bar);
+        if (!drawer || drawer.hidden) return true;
+        if (shouldApply && !apply(bar)) return false;
+        else if (shouldRestore !== false) restore(bar, bar.__filterSnapshot || []);
+        var fieldsContainer = bar.querySelector('[data-filter-fields]');
+        var target = panel(bar);
+        if (fieldsContainer && target && fieldsContainer.parentNode !== target) target.insertBefore(fieldsContainer, target.firstChild);
+        var desktopActions = bar.querySelector('[data-filter-desktop-actions]');
+        if (desktopActions && desktopActions.__filterHomeParent && desktopActions.parentNode !== desktopActions.__filterHomeParent) {
+            var actionHome = desktopActions.__filterHomeParent;
+            actionHome.insertBefore(desktopActions, desktopActions.__filterHomeNext && desktopActions.__filterHomeNext.parentNode === actionHome ? desktopActions.__filterHomeNext : null);
+        }
+        if (fieldsContainer) fieldsContainer.hidden = true;
+        var content = drawer.querySelector('[data-filter-sheet-content]');
+        var error = drawer.querySelector('[data-filter-error]');
+        if (error && content && error.parentNode !== content) content.appendChild(error);
+        drawer.hidden = true;
+        if (bar.__filterTrigger) setSharedToggle(bar.__filterTrigger, false);
+        if (!bars().some(isOpen) && !Array.from(document.querySelectorAll('[data-filter-sheet]')).some(function (item) { return !item.hidden; })) document.documentElement.style.overflow = '';
+        if (bar.__filterTrigger && bar.__filterTrigger.isConnected) bar.__filterTrigger.focus();
+        return true;
+    }
+
+    function bindDisclosureButtons() {
+        document.querySelectorAll(legacySelector).forEach(function (trigger) { compactLegacyToggle(trigger); bindLegacyFilterForm(legacyBar(trigger)); });
+        var dashboardForm = document.getElementById('dashboardGlobalFilters');
+        if (dashboardForm) bindLegacyFilterForm(dashboardForm);
+        document.querySelectorAll('form[data-turbo-frame="environment-logs"]').forEach(function (form) { bindEnvironmentForm(form); });
+    }
+
+    function bindEnvironmentForm(form) {
+        if (!form || form.dataset.sharedFilterBound) return;
+        form.dataset.sharedFilterBound = 'true';
+        form.id = form.id || 'environmentLogFilters';
+        bindLegacyFilterForm(form);
+        var from = form.querySelector('[name="date_from"]');
+        var to = form.querySelector('[name="date_to"]');
+        form.addEventListener('submit', function (event) {
+            if (from && to && from.value && to.value && from.value > to.value) {
+                event.preventDefault();
+                to.setCustomValidity('End date must be on or after start date.');
+                to.reportValidity();
+                to.addEventListener('change', function clearDateValidity() { to.setCustomValidity(''); }, { once: true });
+            }
+        });
+    }
+
+    document.addEventListener('click', function (event) {
+        var trigger = event.target.closest('[data-filter-toggle]');
+        if (trigger) {
+            var bar = trigger.closest('[data-filter-bar]');
+            if (mobile.matches) openDrawer(bar, trigger);
+            else setExpanded(bar, trigger.getAttribute('aria-expanded') !== 'true');
+            return;
+        }
+        var close = event.target.closest('[data-filter-sheet-close], [data-filter-cancel]');
+        if (close) {
+            var closeBar = close.closest('[data-filter-bar]') || close.closest('form');
+            if (closeBar && closeBar.matches('[data-filter-bar]')) closeDrawer(closeBar, true, false);
+            else dismissLegacyDrawer(closeBar, true, false);
+            return;
+        }
+        var backdrop = event.target.closest('[data-filter-sheet-backdrop]');
+        if (backdrop) {
+            var backdropBar = backdrop.closest('[data-filter-bar]') || backdrop.closest('form');
+            if (backdropBar && backdropBar.matches('[data-filter-bar]')) closeDrawer(backdropBar, true, false);
+            else dismissLegacyDrawer(backdropBar, true, false);
+            return;
+        }
+        var applyButton = event.target.closest('[data-filter-apply]');
+        if (applyButton) {
+            var applyBar = applyButton.closest('[data-filter-bar]') || applyButton.closest('form');
+            if (applyBar && applyBar.matches('[data-filter-bar]')) closeDrawer(applyBar, true, true);
+            else dismissLegacyDrawer(applyBar, true, true);
+            return;
+        }
+        var clearButton = event.target.closest('[data-filter-clear]');
+        if (clearButton) {
+            var clearBar = clearButton.closest('[data-filter-bar]') || clearButton.closest('form');
+            if (clearBar && clearBar.matches('[data-filter-bar]')) {
+                clear(clearBar, false);
+                closeDrawer(clearBar, true, true);
+            } else {
+                clearLegacy(clearBar);
+                dismissLegacyDrawer(clearBar, true, true);
+            }
+            return;
+        }
+        var resetButton = event.target.closest('[data-filter-reset]');
+        if (resetButton) { clear(resetButton.closest('[data-filter-bar]'), !isOpen(resetButton.closest('[data-filter-bar]'))); return; }
+        var legacyReset = event.target.closest('[data-feed-filter-reset], [data-recent-filter-clear], [data-preorder-filter-clear]');
+        if (legacyReset) {
+            var resetBar = legacyReset.closest('form');
+            clearLegacy(resetBar);
+            if (legacyIsOpen(resetBar)) closeLegacyDrawer(resetBar, false, true);
+            else applyLegacy(resetBar);
+            return;
+        }
+    });
+
+    document.addEventListener('keydown', function (event) {
+        var openBar = bars().find(isOpen);
+        var legacyOpenSheet = Array.from(document.querySelectorAll('[data-filter-sheet]:not([hidden])')).find(function (item) { return !item.closest('[data-filter-bar]'); });
+        if (!openBar && legacyOpenSheet) {
+            var legacyOpenBar = legacyOpenSheet.closest('form');
+            if (event.key === 'Escape') { event.preventDefault(); dismissLegacyDrawer(legacyOpenBar, true, false); return; }
+            if (event.key === 'Tab') trapFocus(event, legacyOpenSheet);
+            return;
+        }
+        if (!openBar) return;
+        if (event.key === 'Escape') { event.preventDefault(); closeDrawer(openBar, true, false); return; }
+        if (event.key !== 'Tab') return;
+        trapFocus(event, sheet(openBar));
+    });
+
+    document.addEventListener('change', function (event) {
+        var bar = event.target.closest('[data-filter-bar]');
+        if (bar) {
+            updateSummary(bar);
+            if (!isOpen(bar)) apply(bar);
+            return;
+        }
+        var legacy = event.target.closest('form');
+        if (!legacy || !legacyFields(legacy)) return;
+        legacyUpdateSummary(legacy);
+        if (legacyIsOpen(legacy)) return;
+        if (legacy.id === 'dashboardGlobalFilters') applyLegacy(legacy);
+        else if (legacy.id === 'feed-global-filters') {
+            if (event.target.name === 'feed_preset' && event.target.value) { legacy.elements.feed_from.value = ''; legacy.elements.feed_to.value = ''; }
+            else if (event.target.name === 'feed_from' || event.target.name === 'feed_to') legacy.elements.feed_preset.value = '';
+            if (window.feedReloadLiveData) window.feedReloadLiveData();
+        } else if (legacy.id === 'recentLogsForm' && typeof window.recentLogsFilter === 'function') window.recentLogsFilter();
+        else if (legacy.id === 'preOrdersForm' && typeof window.preOrdersFilter === 'function') window.preOrdersFilter();
+        else if (legacy.id === 'inventoryFiltersForm' && typeof window.filterInventory === 'function') window.filterInventory();
+        else if (legacy.id === 'reportForm' && typeof window.reportFetch === 'function') window.reportFetch();
+        else if (legacy.matches('form[data-turbo-frame="environment-logs"]')) {
+            if (event.target.name !== 'cage_id' && legacy.requestSubmit) legacy.requestSubmit();
+        }
+    });
+
+    document.addEventListener('input', function (event) {
+        var bar = event.target.closest('[data-filter-bar]');
+        if (bar) {
+            updateSummary(bar);
+            if (isOpen(bar)) return;
+        } else {
+            var legacy = event.target.closest('form');
+            if (!legacy || !legacyFields(legacy)) return;
+            legacyUpdateSummary(legacy);
+            if (legacyIsOpen(legacy)) return;
+            return;
+        }
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function () { apply(bar); }, 300);
+    });
+
+    document.addEventListener('submit', function (event) {
+        var bar = event.target.closest('[data-filter-bar]');
+        if (bar) {
+            event.preventDefault();
+            if (!isOpen(bar)) apply(bar);
+            return;
+        }
+        if (event.target.matches('form[data-turbo-frame="environment-logs"]') && legacyIsOpen(event.target)) {
+            event.preventDefault();
+            closeLegacyDrawer(event.target, false, true);
+        }
+    });
+
+    document.addEventListener('turbo:frame-load', function (event) {
+        event.target.removeAttribute('aria-busy');
+        event.target.classList.remove('is-loading');
+        bars().forEach(updateSummary);
+        var environmentForm = event.target.querySelector('form[data-turbo-frame="environment-logs"]');
+        if (environmentForm) bindEnvironmentForm(environmentForm);
+        bindDisclosureButtons();
+    });
+
+    if (mobile.addEventListener) mobile.addEventListener('change', function () {
+        if (!mobile.matches) bars().forEach(function (bar) { if (isOpen(bar)) closeDrawer(bar, true, false); });
+    });
+
+    document.addEventListener('turbo:load', function () { bars().forEach(updateSummary); bindDisclosureButtons(); bindEnvironmentForm(document.querySelector('form[data-turbo-frame="environment-logs"]')); });
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bars().forEach(updateSummary); bindDisclosureButtons(); bindEnvironmentForm(document.querySelector('form[data-turbo-frame="environment-logs"]')); });
+    else { bars().forEach(updateSummary); bindDisclosureButtons(); bindEnvironmentForm(document.querySelector('form[data-turbo-frame="environment-logs"]')); }
+    document.addEventListener('filter:refresh', function () { bindDisclosureButtons(); bindEnvironmentForm(document.querySelector('form[data-turbo-frame="environment-logs"]')); });
 })();

@@ -47,11 +47,8 @@
     <i data-lucide="chart-no-axes-column-increasing" class="mx-auto mb-3 h-8 w-8 text-[#615d59]" aria-hidden="true"></i>
     @if($fcrTimeline->isEmpty())
         <h3 class="text-base font-semibold text-[#333333]">No FCR data for this period</h3>
-        <p class="mt-2 text-sm text-[#615d59]">There are no matching feed and egg production records for the selected dates. Try another date range or view the latest available historical data.</p>
+        <p class="mt-2 text-sm text-[#615d59]">There are no matching feed and egg production records for the selected dates. Try another date range.</p>
         <span class="sr-only">No feed or production history is available for {{ $cageDisplay }}.</span>
-        <button type="button" onclick="window.setFeedPreset ? window.setFeedPreset('latest') : window.location.assign('{{ route('feed', ['feed_preset' => 'latest', 'tab' => 'fcr']) }}')" data-fcr-latest-action class="mt-4 inline-flex items-center gap-2 rounded-lg bg-navy px-4 py-2 text-sm font-medium text-white">
-            <i data-lucide="history" class="h-4 w-4" aria-hidden="true"></i> View Latest Available Data
-        </button>
     @else
         <h3 class="text-base font-semibold text-[#333333]">Incomplete feed or production data</h3>
         <p class="mt-2 text-sm text-[#615d59]">Feed or egg production records exist for {{ $cageDisplay }}, but both are needed in the same period to calculate FCR.</p>
