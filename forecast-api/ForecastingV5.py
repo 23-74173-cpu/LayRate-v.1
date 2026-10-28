@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 DATE_COLUMN = "Date"
 CAGE_COLUMN = "Cage_ID"
 TARGET_COLUMN = "Total_Eggs"
+RECORDED_COLUMN = "Has_Recorded_Production"
 
 XGB_SEEDS = [42, 123, 999]
 DEFAULT_SARIMA_ORDER = (1, 1, 1)
@@ -107,7 +108,8 @@ SELECT
       WHERE fcl.cage_id = c.id AND fcl.log_date = pl.log_date
       ORDER BY fcl.id DESC LIMIT 1) AS `Total_Feed_Consumed_kg`,
     (SELECT COALESCE(SUM(ml.count), 0) FROM mortality_logs ml
-      WHERE ml.cage_id = c.id AND ml.log_date = pl.log_date) AS `Daily_Mortality`
+      WHERE ml.cage_id = c.id AND ml.log_date = pl.log_date) AS `Daily_Mortality`,
+    SUM(CASE WHEN pl.logged_via = 'sensor' THEN 0 ELSE 1 END) AS `Non_Sensor_Logs`
 FROM production_logs pl
 JOIN cage_slots cs ON pl.cage_slot_id = cs.id
 JOIN cages c ON cs.cage_id = c.id
@@ -237,6 +239,16 @@ def build_modeling_frame(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df[DATE_COLUMN] = pd.to_datetime(df[DATE_COLUMN], errors="coerce")
     df = df.dropna(subset=[DATE_COLUMN])
+
+    # A cage-day made only of sensor rows with no egg counted means nothing
+    # was recorded, not that no eggs were laid: SensorIngestionController
+    # writes a 0-egg row as soon as a breakbeam reports. Kept as 0 eggs, a few
+    # such days at the end of the history drive every forecast after them to
+    # 0. A 0 logged by a person (or imported) is kept as a real zero. Marked
+    # here and left out by drop_unrecorded_days().
+    if "Non_Sensor_Logs" in df.columns:
+        df[RECORDED_COLUMN] = ~((df[TARGET_COLUMN].fillna(0) == 0) & (df["Non_Sensor_Logs"].fillna(0) == 0))
+        df = df.drop(columns=["Non_Sensor_Logs"])
 
     df = compute_daily_mortality(df)
     df = compute_monthly_mortality(df)
@@ -449,6 +461,23 @@ def build_deployment_feature_frame(last_row, forecast_dates, temp, humidity, fee
     return frame
 
 
+def drop_unrecorded_days(df: pd.DataFrame) -> pd.DataFrame:
+    """Leave out days with no production recorded (see build_modeling_frame).
+
+    For one cage, only its unrecorded days go. For several cages a whole date
+    goes when any cage on it is unrecorded, so the farm total is never a sum
+    over just the cages that happened to be logged.
+    """
+    if RECORDED_COLUMN not in df.columns:
+        return df
+    unrecorded = ~df[RECORDED_COLUMN].astype(bool)
+    if unrecorded.any():
+        if CAGE_COLUMN in df.columns and df[CAGE_COLUMN].nunique() > 1:
+            unrecorded = df[DATE_COLUMN].isin(df.loc[unrecorded, DATE_COLUMN])
+        logger.info("Leaving out %d cage-day row(s) with no production recorded.", int(unrecorded.sum()))
+    return df.loc[~unrecorded].drop(columns=[RECORDED_COLUMN])
+
+
 def aggregate_all_cages(df: pd.DataFrame) -> pd.DataFrame:
     """Aggregate a multi-cage daily frame into a single farm-level series.
 
@@ -457,6 +486,7 @@ def aggregate_all_cages(df: pd.DataFrame) -> pd.DataFrame:
     Heat stress is flagged if any cage experienced it that day. Breed is taken
     as the most common value.
     """
+    df = drop_unrecorded_days(df)
     if CAGE_COLUMN not in df.columns or df[CAGE_COLUMN].nunique() <= 1:
         return df.copy().sort_values(DATE_COLUMN).reset_index(drop=True)
 

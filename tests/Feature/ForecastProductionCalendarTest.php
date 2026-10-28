@@ -300,6 +300,41 @@ class ForecastProductionCalendarTest extends TestCase
     }
 
     /**
+     * A saved prediction of 0 eggs is a real model output (an emptied cage)
+     * and is shown as 0; a day with no saved forecast gets no badge, never a
+     * 0 standing in for the missing value.
+     */
+    public function test_saved_zero_forecast_shows_zero_and_missing_forecast_shows_no_badge(): void
+    {
+        $zeroDate = $this->completedDate(3);
+        $cage = $this->seedSingleLogCage('CAGE-ZERO', $zeroDate, 0, 0);
+
+        Forecast::create([
+            'cage_id' => $cage->id,
+            'breed' => null,
+            'forecast_date' => ReportingDateService::reportingDateString(),
+            'target_date' => $zeroDate,
+            'predicted_egg_count' => 0,
+            'is_backtest' => true,
+        ]);
+
+        [$month, $year] = $this->monthYearFor($zeroDate);
+
+        $response = $this->actingAs($this->admin)->get(route('forecast', [
+            'forecast_view' => 'backtest',
+            'scope' => 'cage',
+            'cage' => $cage->cage_code,
+            'month' => $month,
+            'year' => $year,
+        ]), ['Turbo-Frame' => 'production-calendar']);
+
+        $response->assertOk();
+        $response->assertSee('Historical Test: 0 eggs');
+        $this->assertSame(1, substr_count($response->getContent(), 'forecast-badge inline-flex'),
+            'Only the date with a saved forecast gets a badge.');
+    }
+
+    /**
      * A forward forecast keeps its green badge and carries no "BT" label, so
      * the black treatment cannot leak onto ordinary predictions.
      */
