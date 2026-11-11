@@ -139,10 +139,7 @@
             },
             scales: {
                 x: {
-                    grid: { display: false },
-                    border: { display: false },
                     ticks: {
-                        color: '#9CA3AF',
                         font: { size: 9, weight: '500' },
                         maxRotation: 0,
                         autoSkip: true,
@@ -151,10 +148,7 @@
                 },
                 y: {
                     beginAtZero: true,
-                    grid: { display: false },
-                    border: { display: false },
                     ticks: {
-                        color: '#9CA3AF',
                         font: { size: 10, weight: '500' },
                         padding: 8,
                         stepSize: maxVal > 0 ? Math.max(1, Math.ceil(maxVal / 5)) : 1

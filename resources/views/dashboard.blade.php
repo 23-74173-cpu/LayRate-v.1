@@ -39,7 +39,7 @@
     @endif
 
     {{-- Global Filters: Cage + Date Range --}}
-    <div class="dash-rise" style="animation-delay: 0ms;">
+    <div class="dash-rise" style="animation-delay: 0ms;" data-navbar-filter-shell>
         <form id="dashboardGlobalFilters" class="filter-legacy-form bg-white rounded-2xl border border-[#e6e6e6] p-3.5 sm:p-4" aria-label="Dashboard filters" onsubmit="return false">
             <button type="button" data-dashboard-filter-toggle class="filter-control filter-icon-toggle inline-flex items-center justify-center rounded-lg border border-[#D9D9D9]" aria-label="Show filters" title="Show filters" aria-expanded="false" aria-controls="dashboardFilterFields"><i data-lucide="sliders-horizontal" class="h-4 w-4" aria-hidden="true"></i></button>
             <span data-dashboard-filter-summary class="ml-2 text-sm text-[#615d59]" aria-live="polite">{{ (request('cage', 'all') !== 'all' ? 1 : 0) + (filled(request('from_date')) ? 1 : 0) + (filled(request('to_date')) ? 1 : 0) ?: '' }} {{ (request('cage', 'all') !== 'all' ? 1 : 0) + (filled(request('from_date')) ? 1 : 0) + (filled(request('to_date')) ? 1 : 0) ? 'active filters' : '' }}</span>
@@ -47,7 +47,7 @@
             <div id="dashboardFilterFields" data-dashboard-filter-fields hidden class="filter-legacy-fields mt-3 grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,13rem),1fr))]">
             <div class="filter-field min-w-0">
                 <label for="dashboardCageSelect" class="filter-label">Cage</label>
-                <select id="dashboardCageSelect" onchange="filterDashboard(this.value)"
+                <select id="dashboardCageSelect" name="cage"
                         class="filter-control w-full sm:w-44 shrink-0 border border-[#D9D9D9] rounded-lg px-3 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy">
                     <option value="all" {{ request('cage', 'all') === 'all' ? 'selected' : '' }}>All Cages ({{ $cages->count() }})</option>
                     @foreach($cages as $cage)
@@ -58,18 +58,16 @@
 
             <div class="filter-field min-w-0">
                 <label for="dashboardFromDate" class="filter-label">From</label>
-                <input type="date" id="dashboardFromDate" value="{{ request('from_date', '') }}"
+                <input type="date" id="dashboardFromDate" name="from_date" value="{{ request('from_date', '') }}"
                        max="{{ now()->toDateString() }}"
-                       onchange="setDashboardFromDate(this.value)"
                        title="Show analytics from this date"
                         class="filter-control w-full min-w-0 sm:w-44 sm:shrink-0 border border-[#D9D9D9] rounded-lg px-2.5 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy">
             </div>
 
             <div class="filter-field min-w-0">
                 <label for="dashboardToDate" class="filter-label">To</label>
-                <input type="date" id="dashboardToDate" value="{{ request('to_date', '') }}"
+                <input type="date" id="dashboardToDate" name="to_date" value="{{ request('to_date', '') }}"
                        max="{{ now()->toDateString() }}"
-                       onchange="setDashboardToDate(this.value)"
                        title="Show analytics up to this date"
                         class="filter-control w-full min-w-0 sm:w-44 sm:shrink-0 border border-[#D9D9D9] rounded-lg px-2.5 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-navy focus:border-navy">
             </div>
@@ -882,6 +880,9 @@
         }
 
         var p = { compare: nextCompare ? 1 : null };
+        if (window.__dashboardCage && window.__dashboardCage !== 'all') {
+            p.cage = window.__dashboardCage;
+        }
         if (window.__dashboardFromDate) {
             p.from_date = window.__dashboardFromDate;
         }

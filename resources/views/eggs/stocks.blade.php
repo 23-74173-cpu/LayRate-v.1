@@ -48,7 +48,7 @@
     </div>
 
     {{-- ── Stock Table Filters ── --}}
-    <x-card padding="p-4">
+    <x-card padding="p-4" data-navbar-filter-shell>
         <x-filter-bar formId="stocksFilterForm" frameId="eggs-stocks-live-data"
                       action="{{ route('eggs.stocks.live-data') }}" title="Filter stock batches" data-sync-url>
             <x-filter-search name="q" label="Search" placeholder="Batch code or cage…"

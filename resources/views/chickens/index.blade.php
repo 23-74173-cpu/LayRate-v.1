@@ -60,7 +60,7 @@
     <div id="panelInventory" class="{{ $tab !== 'inventory' ? 'hidden' : '' }}" role="tabpanel" tabindex="0" aria-labelledby="chickens-tabs-inventory" {{ $tab !== 'inventory' ? 'hidden' : '' }}>
 
         {{-- Filter Bar (single row, wraps on mobile) --}}
-        <div id="inventoryFilters" class="mb-5">
+        <div id="inventoryFilters" class="mb-5" data-navbar-filter-shell>
             <x-card padding="p-4">
             <form id="inventoryFiltersForm" class="filter-legacy-form flex flex-wrap items-center gap-2" onsubmit="return false" aria-label="Filter hens">
                 <button type="button" data-hen-filter-toggle class="filter-control filter-icon-toggle inline-flex items-center justify-center rounded-lg border border-[#D9D9D9] sm:mr-1" aria-label="Show filters" title="Show filters" aria-expanded="false" aria-controls="inventoryFilterFields"><i data-lucide="sliders-horizontal" class="h-4 w-4" aria-hidden="true"></i></button>

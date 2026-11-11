@@ -310,9 +310,13 @@ class EnvironmentController extends Controller
             'temp_max' => 'required|numeric|min:0|max:50|gte:temp_min',
             'hum_min'  => 'required|numeric|min:0|max:100',
             'hum_max'  => 'required|numeric|min:0|max:100|gte:hum_min',
+            'desired_hdep' => 'nullable|numeric|min:0|max:100',
         ]);
 
         foreach ($data as $key => $value) {
+            if ($value === null) {
+                continue;
+            }
             Setting::set($key, $value);
         }
 

@@ -353,9 +353,9 @@ class DashboardController extends Controller
         return view('dashboard._cage-performance', $data);
     }
 
-    private function normalizeDays(int $days): int
+    private function normalizeDays(int $days, int $default = 7): int
     {
-        return in_array($days, [0, 7, 30, 90], true) ? $days : 7;
+        return in_array($days, [0, 7, 30, 90], true) ? $days : $default;
     }
 
     private function validRangeDate(?string $date): ?string
@@ -363,7 +363,7 @@ class DashboardController extends Controller
         return ($date && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) ? $date : null;
     }
 
-    private function resolveHistoryBounds(int $days, ?string $fromDate = null, ?string $toDate = null): array
+    private function resolveHistoryBounds(int $days, ?string $fromDate = null, ?string $toDate = null, ?string $cageCode = null): array
     {
         $reportingDate = ReportingDateService::reportingDate();
         $endDate = $reportingDate->toDateString();
@@ -374,6 +374,16 @@ class DashboardController extends Controller
                 $toCarbon = $reportingDate->copy();
             }
             $endDate = $toCarbon->toDateString();
+        } else {
+            // Without a To date the window ends on the last production record,
+            // not today, so days with no records (Pi offline, data not entered
+            // yet) don't push the history off the chart. A From date after that
+            // record keeps today as the end, so the empty range shows as asked.
+            $lastRecord = $this->lastProductionDate($cageCode, $endDate);
+            $from = $this->validRangeDate($fromDate);
+            if ($lastRecord && (! $from || $from <= $lastRecord)) {
+                $endDate = $lastRecord;
+            }
         }
 
         if ($from = $this->validRangeDate($fromDate)) {
@@ -389,6 +399,17 @@ class DashboardController extends Controller
         }
 
         return [$reportingDate, $endDate, $startDate];
+    }
+
+    private function lastProductionDate(?string $cageCode, string $onOrBefore): ?string
+    {
+        $last = ProductionLog::query()
+            ->real()
+            ->where('log_date', '<=', $onOrBefore)
+            ->when($cageCode, fn ($q) => $q->whereHas('cageSlot.cage', fn ($c) => $c->where('cage_code', $cageCode)))
+            ->max('log_date');
+
+        return $last ? Carbon::parse($last)->toDateString() : null;
     }
 
     /**
@@ -470,84 +491,110 @@ class DashboardController extends Controller
     public function productionHistory()
     {
         $cageCode = request('cage');
-        $days = $this->normalizeDays((int) request('days', 7));
+        $days = $this->normalizeDays((int) request('days', 30), 30);
         $compare = request('compare', false);
 
         $fromDate = request('from_date');
         $toDate = request('to_date');
-        [$reportingDate, $endDate, $startDate] = $this->resolveHistoryBounds($days, $fromDate, $toDate);
+        [$reportingDate, $endDate, $startDate] = $this->resolveHistoryBounds($days, $fromDate, $toDate, $cageCode);
         if ($this->validRangeDate($fromDate) || $this->validRangeDate($toDate)) {
             $days = max(1, (int) abs(Carbon::parse($endDate)->copy()->startOfDay()->diffInDays(Carbon::parse($startDate)->copy()->startOfDay())) + 1);
         }
 
         [$labels, $dateKeys] = $this->buildHistoryDateKeys($cageCode, $days, $startDate, $endDate, $reportingDate);
+        $desiredHdep = Setting::thresholds()['desired_hdep'];
+
+        // Eggs and hens per cage per day. HDEP is eggs / hens over these sums,
+        // and a day with no record stays a gap (null) instead of a 0.
+        $daily = ProductionLog::query()
+            ->real()
+            ->join('cage_slots', 'cage_slots.id', '=', 'production_logs.cage_slot_id')
+            ->join('cages', 'cages.id', '=', 'cage_slots.cage_id')
+            ->whereBetween('production_logs.log_date', [$startDate, $endDate])
+            ->when($cageCode, fn ($q) => $q->where('cages.cage_code', $cageCode))
+            ->groupBy('cages.cage_code', 'production_logs.log_date')
+            ->selectRaw('cages.cage_code as scope_cage_code, production_logs.log_date as day, SUM(production_logs.egg_count) as eggs, SUM(production_logs.hen_count) as hens')
+            ->get()
+            ->map(fn ($row) => [
+                'cage' => $row->scope_cage_code,
+                'day' => Carbon::parse($row->day)->toDateString(),
+                'eggs' => (int) $row->eggs,
+                'hens' => (int) $row->hens,
+            ]);
+
+        $series = function ($rows) use ($dateKeys) {
+            $byDay = $rows->groupBy('day');
+            $hdep = [];
+            $eggs = [];
+            foreach ($dateKeys as $date) {
+                $day = $byDay->get($date);
+                $hens = $day ? $day->sum('hens') : 0;
+                $eggs[] = $day ? $day->sum('eggs') : null;
+                $hdep[] = $hens > 0 ? round($day->sum('eggs') / $hens * 100, 1) : null;
+            }
+
+            return [$hdep, $eggs];
+        };
 
         if ($compare) {
-            // Multi-line comparison: one dataset per active cage.
+            // Multi-line comparison: one dataset per active cage, each with its
+            // own tips (never pooled, so one cage is not judged against another).
             $cages = Cage::query()
                 ->when($cageCode, fn ($q) => $q->where('cage_code', $cageCode))
                 ->where('is_active', 1)
                 ->orderBy('cage_code')
                 ->get();
 
-            $logs = ProductionLog::query()
-                ->with('cageSlot.cage')
-                ->real()
-                ->where('log_date', '<=', $endDate)
-                ->when($startDate, fn ($q) => $q->where('log_date', '>=', $startDate))
-                ->when($cageCode, fn ($q) => $q->whereHas('cageSlot.cage', fn ($c) => $c->where('cage_code', $cageCode)))
-                ->get()
-                ->groupBy(fn ($l) => $l->cageSlot?->cage?->cage_code ?? 'Unknown')
-                ->map(fn ($group) => $group->groupBy(fn ($l) => $l->log_date->format('Y-m-d'))->map(fn ($g) => (int) $g->sum('egg_count')));
-
-            $datasets = $cages->map(function ($cage) use ($dateKeys, $logs) {
-                $cageLogs = $logs->get($cage->cage_code, collect());
-                $color = $cage->color;
-                $softColor = $cage->colorSoft;
-                return [
+            $datasets = [];
+            $tips = [];
+            $averages = [];
+            foreach ($cages as $cage) {
+                [$hdep, $eggs] = $series($daily->where('cage', $cage->cage_code));
+                $datasets[] = [
                     'label' => $cage->cage_code,
-                    'data' => $dateKeys->map(fn ($date) => $cageLogs->get($date, 0))->values()->toArray(),
-                    'borderColor' => $color,
-                    'backgroundColor' => $softColor,
-                    'pointBorderColor' => $color,
+                    'data' => $hdep,
+                    'eggs' => $eggs,
+                    'borderColor' => $cage->color,
+                    'backgroundColor' => $cage->colorSoft,
+                    'pointBorderColor' => $cage->color,
                     'pointBorderWidth' => 2,
                     'tension' => 0.4,
                     'borderWidth' => 1.5,
-                    'pointRadius' => 0,
                     'pointHoverRadius' => 5,
                     'fill' => false,
                 ];
-            })->values()->toArray();
+                $tips[] = ['title' => $cage->cage_code, 'lines' => $this->historyTips($cage->cage_code, $hdep, $dateKeys, $days > 0, $desiredHdep, false)];
+                $recorded = array_filter($hdep, fn ($v) => $v !== null);
+                if ($recorded) {
+                    $averages[$cage->cage_code] = array_sum($recorded) / count($recorded);
+                }
+            }
 
-            $title = $cageCode ? $cageCode . ' Production Comparison' : 'Cage Production Comparison';
+            if (count($averages) > 1) {
+                arsort($averages);
+                $best = array_key_first($averages);
+                $worst = array_key_last($averages);
+                array_unshift($tips, ['title' => null, 'lines' => [
+                    "Highest average HDEP: {$best} (".number_format($averages[$best], 1)."%). Lowest: {$worst} (".number_format($averages[$worst], 1).'%).',
+                ]]);
+            }
+
+            $title = $cageCode ? $cageCode . ' HDEP Comparison' : 'Cage HDEP Comparison';
         } else {
-            // Same query pattern as the egg-management calendar (proven reliable).
-            $scope = fn ($q) => $q->when($cageCode, fn ($cq) => $cq->whereHas('cageSlot.cage', fn ($c) => $c->where('cage_code', $cageCode)));
-
-            $logs = ProductionLog::query()
-                ->where('log_date', '<=', $endDate)
-                ->when($startDate, fn ($q) => $q->where('log_date', '>=', $startDate))
-                ->where($scope)
-                ->real()
-                ->get()
-                ->groupBy(fn ($l) => $l->log_date->format('Y-m-d'))
-                ->map(fn ($g) => (int) $g->sum('egg_count'));
-
-            $dataPoints = $dateKeys->map(fn ($date) => $logs->get($date, 0))->values()->toArray();
-
-            $title = $cageCode ? $cageCode . ' Production' : 'Total Production';
+            [$hdep, $eggs] = $series($daily);
+            $title = $cageCode ? $cageCode . ' HDEP' : 'All Cages HDEP';
 
             $datasets = [[
                 'label' => $title,
-                'data' => $dataPoints,
-                'borderColor' => '#002d5e',
-                'backgroundColor' => 'rgba(16, 42, 76, 0.1)',
+                'data' => $hdep,
+                'eggs' => $eggs,
+                'borderColor' => '#009e73',
                 'tension' => 0.3,
                 'borderWidth' => 2,
-                'pointRadius' => 0,
                 'pointHoverRadius' => 5,
-                'fill' => true,
+                'fill' => false,
             ]];
+            $tips = [['title' => null, 'lines' => $this->historyTips($cageCode ?: 'All cages', $hdep, $dateKeys, $days > 0, $desiredHdep, ! $cageCode)]];
         }
 
         $chartData = [
@@ -556,45 +603,112 @@ class DashboardController extends Controller
             'datasets' => $datasets,
         ];
 
-        $insight = 'No production data available for analysis.';
-        if (! empty($datasets)) {
-            $allPoints = [];
-            foreach ($datasets as $ds) {
-                foreach ($ds['data'] as $v) {
-                    if ($v > 0) $allPoints[] = $v;
-                }
-            }
-            if (count($allPoints) >= 2) {
-                $total = array_sum($allPoints);
-                $peak = max($allPoints);
-                $avg = round($total / count($allPoints));
-                $min = min($allPoints);
-                $firstHalf = array_slice($allPoints, 0, intdiv(count($allPoints), 2));
-                $secondHalf = array_slice($allPoints, intdiv(count($allPoints), 2));
-                $firstAvg = count($firstHalf) > 0 ? round(array_sum($firstHalf) / count($firstHalf)) : 0;
-                $secondAvg = count($secondHalf) > 0 ? round(array_sum($secondHalf) / count($secondHalf)) : 0;
+        $rangeStart = $dateKeys->first() ?? $startDate;
+        $rangeEnd = $dateKeys->last() ?? $endDate;
+        $rangeLabel = $this->historyRangeLabel($rangeStart, $rangeEnd);
 
-                $periodText = $days > 0 ? "Over the last {$days} days" : 'Since day 1';
-                $insight = "{$periodText}, daily egg production averaged {$avg} eggs (peak: {$peak}).";
-                if ($secondAvg > $firstAvg * 1.1 && $firstAvg > 0) {
-                    $insight .= " Production is trending upward — a positive signal.";
-                } elseif ($firstAvg > $secondAvg * 1.1 && $secondAvg > 0) {
-                    $insight .= " Production is declining in the recent period — investigate possible causes.";
-                } else {
-                    $insight .= " Production levels have been relatively stable.";
-                }
-                if ($peak > 0 && $min > 0) {
-                    $range = round(($peak - $min) / $peak * 100);
-                    if ($range > 30) {
-                        $insight .= " Day-to-day variation is high ({$range}% range), suggesting inconsistent collection or production.";
-                    }
-                }
-            } elseif (count($allPoints) === 1) {
-                $insight = "Only one day of data recorded ({$allPoints[0]} eggs).";
+        $hasRecords = $daily->isNotEmpty();
+        $emptyMessage = null;
+        if (! $hasRecords) {
+            $lastRecord = $this->lastProductionDate($cageCode, $reportingDate->toDateString());
+            $emptyMessage = $lastRecord
+                ? "No production records from {$rangeLabel}. Last record: ".Carbon::parse($lastRecord)->format('M j, Y').'.'
+                : 'No production records yet.';
+        }
+
+        $cageOptions = Cage::where('is_active', 1)->orderBy('cage_code')->pluck('cage_code');
+
+        return view('dashboard._production-history', compact(
+            'chartData', 'days', 'cageCode', 'title', 'compare', 'tips', 'desiredHdep',
+            'rangeLabel', 'hasRecords', 'emptyMessage', 'cageOptions'
+        ));
+    }
+
+    private function historyRangeLabel(string $start, string $end): string
+    {
+        $from = Carbon::parse($start);
+        $to = Carbon::parse($end);
+        if ($from->isSameDay($to)) {
+            return $to->format('M j, Y');
+        }
+
+        return ($from->year === $to->year ? $from->format('M j') : $from->format('M j, Y')).' to '.$to->format('M j, Y');
+    }
+
+    /**
+     * Rule-based tips for one daily HDEP series (nulls are days without
+     * records). Every number comes from the series or the Desired HDEP
+     * setting; the yardstick for a real trend is the series' own standard
+     * deviation, not a fixed cut-off.
+     */
+    private function historyTips(string $name, array $hdep, $dateKeys, bool $contiguous, float $target, bool $flock): array
+    {
+        $points = [];
+        foreach ($hdep as $i => $value) {
+            if ($value !== null) {
+                $points[] = ['date' => Carbon::parse($dateKeys[$i])->format('M j'), 'hdep' => $value];
             }
         }
 
-        return view('dashboard._production-history', compact('chartData', 'days', 'cageCode', 'title', 'compare', 'insight'));
+        $count = count($points);
+        $pct = fn ($v) => number_format($v, 1).'%';
+        $targetLabel = rtrim(rtrim(number_format($target, 1, '.', ''), '0'), '.').'%';
+
+        if ($count === 0) {
+            return ["No production records for {$name} in this range."];
+        }
+        if ($count === 1) {
+            return ["Only one day is recorded for {$name}: {$pct($points[0]['hdep'])} HDEP on {$points[0]['date']}."];
+        }
+
+        $values = array_column($points, 'hdep');
+        $avg = array_sum($values) / $count;
+        $low = $points[array_search(min($values), $values)];
+        $high = $points[array_search(max($values), $values)];
+        $sd = sqrt(array_sum(array_map(fn ($v) => ($v - $avg) ** 2, $values)) / ($count - 1));
+
+        $tips = ["{$name} averaged {$pct($avg)} HDEP over {$count} recorded days, from {$pct($low['hdep'])} on {$low['date']} to {$pct($high['hdep'])} on {$high['date']}."];
+
+        $metDays = count(array_filter($values, fn ($v) => $v >= $target));
+        if ($avg >= $target) {
+            $tips[] = "It met the Desired HDEP of {$targetLabel} on {$metDays} of {$count} days. The average is ".number_format($avg - $target, 1).' points above target.';
+        } else {
+            $tips[] = "It met the Desired HDEP of {$targetLabel} on {$metDays} of {$count} days. The average is ".number_format($target - $avg, 1).' points below target. Check feed intake, water, lighting and heat stress '.($flock ? 'across the cages.' : 'in this cage.');
+        }
+
+        $half = intdiv($count, 2);
+        $firstAvg = array_sum(array_slice($values, 0, $half)) / $half;
+        $secondAvg = array_sum(array_slice($values, $half)) / ($count - $half);
+        $change = $secondAvg - $firstAvg;
+        if (abs($change) > $sd) {
+            $tips[] = $change > 0
+                ? "HDEP is trending up, from {$pct($firstAvg)} in the first half of the range to {$pct($secondAvg)} in the second half."
+                : "HDEP is trending down, from {$pct($firstAvg)} in the first half of the range to {$pct($secondAvg)} in the second half. Look at recent changes in feed, temperature or flock health.";
+        } else {
+            $tips[] = 'HDEP is steady: the two halves of the range differ by '.number_format(abs($change), 1).' points, within the usual day-to-day spread of '.number_format($sd, 1).' points.';
+        }
+
+        $drop = null;
+        for ($i = 1; $i < $count; $i++) {
+            $fall = $points[$i - 1]['hdep'] - $points[$i]['hdep'];
+            if ($fall > 0 && ($drop === null || $fall > $drop['fall'])) {
+                $drop = ['fall' => $fall, 'from' => $points[$i - 1], 'to' => $points[$i]];
+            }
+        }
+        if ($drop) {
+            $line = 'The biggest drop was '.number_format($drop['fall'], 1)." points, from {$pct($drop['from']['hdep'])} on {$drop['from']['date']} to {$pct($drop['to']['hdep'])} on {$drop['to']['date']}.";
+            if ($drop['from']['hdep'] >= $target && $drop['to']['hdep'] < $target) {
+                $line .= " That took it below the Desired HDEP; check that day's records and conditions.";
+            }
+            $tips[] = $line;
+        }
+
+        $totalDays = count($dateKeys);
+        if ($contiguous && $count < $totalDays) {
+            $tips[] = ($totalDays - $count)." of {$totalDays} days in this range have no records and show as gaps.";
+        }
+
+        return $tips;
     }
 
     public function forecastOverlay(Request $request)
@@ -605,7 +719,7 @@ class DashboardController extends Controller
 
         $fromDate = request('from_date');
         $toDate = request('to_date');
-        [$reportingDate, $endDate, $startDate] = $this->resolveHistoryBounds($days, $fromDate, $toDate);
+        [$reportingDate, $endDate, $startDate] = $this->resolveHistoryBounds($days, $fromDate, $toDate, $cageCode);
         if ($this->validRangeDate($fromDate) || $this->validRangeDate($toDate)) {
             $days = max(1, (int) abs(Carbon::parse($endDate)->copy()->startOfDay()->diffInDays(Carbon::parse($startDate)->copy()->startOfDay())) + 1);
         }

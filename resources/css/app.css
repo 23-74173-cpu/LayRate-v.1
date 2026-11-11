@@ -87,6 +87,39 @@ turbo-frame.is-loading { opacity: 0.55; transition: opacity 150ms ease; }
 .filter-legacy-actions .filter-action { min-width: 5.25rem; }
 .filter-legacy-form [data-filter-fields-home],
 .filter-legacy-form [data-filter-actions-home] { display: none; }
+
+/* ── Filters in the top bar ──────────────────────────────────────────────
+   The navbar Filters button (filter-ui.js) opens the page's filter sheet, so
+   the in-page toggle rows are hidden and a card that only held them
+   collapses (display: contents keeps the form and its sheet working). On
+   wider screens the sheet opens as a dropdown under the button. */
+[data-navbar-filters] :is([data-filter-toggle], [data-hen-filter-toggle], [data-recent-filter-toggle], [data-preorder-filter-toggle], [data-report-filter-toggle], [data-dashboard-filter-toggle], [data-env-filter-toggle], [data-feed-filter-toggle],
+  [data-filter-summary-display], [data-hen-filter-summary], [data-recent-filter-summary], [data-preorder-filter-summary], [data-report-filter-summary], [data-dashboard-filter-summary], [data-env-filter-summary], [data-feed-filter-summary]) { display: none !important; }
+.filter-navbar-collapsed { display: contents !important; }
+/* A page's own Clear/Reset follows its fields into the sheet, which already
+   has Clear, so the copy is hidden there. */
+[data-filter-sheet-content] > :is(.filter-legacy-actions, [data-filter-desktop-actions]) { display: none !important; }
+.filter-quick-range { margin-top: 1rem; padding-top: .875rem; border-top: 1px solid #e6e6e6; }
+.filter-quick-range-options { display: flex; flex-wrap: wrap; gap: .25rem .75rem; margin-top: .375rem; }
+.filter-quick-range-options button { min-height: 36px; padding: .25rem .375rem; border-radius: .5rem; font-size: .875rem; color: var(--color-navy); text-decoration: underline; text-underline-offset: 3px; }
+.filter-quick-range-options button:hover { background: rgba(0, 0, 0, .05); }
+.filter-quick-range-options button:focus-visible { outline: 2px solid var(--color-navy); outline-offset: 2px; }
+@media (min-width: 640px) {
+  [data-filter-sheet].filter-sheet-popover:not([hidden]) { display: block !important; }
+  .filter-sheet-popover [data-filter-sheet-backdrop] { background: transparent !important; }
+  .filter-sheet-popover [data-filter-sheet-content] {
+    top: 3.5rem; right: 1rem; bottom: auto; left: auto;
+    width: min(24rem, calc(100vw - 2rem));
+    max-height: calc(100dvh - 4.5rem);
+    padding: 1.25rem !important;
+    border: 1px solid #e6e6e6;
+    border-radius: 1rem;
+    box-shadow: rgba(0, 0, 0, .04) 0 4px 18px, rgba(0, 0, 0, .05) 0 23px 52px;
+  }
+  .filter-sheet-popover [data-filter-sheet-fields] > :is([data-filter-fields], .filter-legacy-fields) { display: grid !important; grid-template-columns: minmax(0, 1fr) !important; gap: .75rem !important; }
+  .filter-sheet-popover [data-filter-sheet-fields] > :is([data-filter-fields], .filter-legacy-fields) > * { grid-column: 1 / -1 !important; }
+  .filter-sheet-popover [data-filter-sheet-fields] .filter-control:not(.filter-action):not([type="checkbox"]):not([type="radio"]) { width: 100% !important; }
+}
 @media (max-width: 639.98px) {
   .filter-panel { padding: .75rem; }
   .filter-fields-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .625rem; }

@@ -473,6 +473,13 @@
                 @hasSection('header-clock')
                 <span class="text-xs text-ink-muted whitespace-nowrap hidden sm:inline">@yield('header-clock')</span>
                 @endif
+                {{-- Opens the current page's filters and sorting (filter-ui.js shows it only on pages that have them). --}}
+                <button id="navbar-filters-btn" type="button" hidden
+                        class="relative max-md:min-w-11 max-md:min-h-11 inline-flex items-center justify-center rounded-full p-1.5 text-ink hover:bg-black/5 transition-colors"
+                        aria-label="Filters" title="Filters" aria-haspopup="dialog" aria-expanded="false">
+                    <i data-lucide="sliders-horizontal" class="w-5 h-5 block"></i>
+                    <span data-navbar-filter-count hidden class="absolute -top-0.5 -right-0.5 min-w-3.5 h-3.5 px-0.5 bg-navy text-white text-[10px] leading-3.5 rounded-full flex items-center justify-center font-bold"></span>
+                </button>
                 <a href="{{ route('notifications.index') }}" class="relative max-md:min-w-11 max-md:min-h-11 inline-flex items-center justify-center rounded-full p-1.5 text-ink hover:bg-black/5 transition-colors" aria-label="Notifications">
                     <i data-lucide="bell" class="w-5 h-5 block"></i>
                     @if($globalAlertCount > 0)

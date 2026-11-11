@@ -23,15 +23,20 @@
         });
     }
 
+    function sharedActiveCount(bar) {
+        var count = activeControls(bar).filter(function (control) { return control.type !== 'date'; }).length;
+        var dates = bar.querySelectorAll('input[type="date"][name]');
+        if (dates.length && Array.from(dates).some(function (date) { return date.value !== ''; })) count += 1;
+        return count;
+    }
+
     function updateSummary(bar) {
         var active = activeControls(bar);
         var badge = bar.querySelector('[data-filter-count]');
         var summary = bar.querySelector('[data-filter-summary-display]');
         var button = bar.querySelector('[data-filter-toggle]');
         var legacySummary = bar.querySelector('[data-hen-filter-summary], [data-recent-filter-summary], [data-preorder-filter-summary], [data-report-filter-summary], [data-dashboard-filter-summary], [data-env-filter-summary], [data-feed-filter-summary]');
-        var count = active.filter(function (control) { return control.type !== 'date'; }).length;
-        var dates = bar.querySelectorAll('input[type="date"][name]');
-        if (dates.length && Array.from(dates).some(function (date) { return date.value !== ''; })) count += 1;
+        var count = sharedActiveCount(bar);
         if (badge) {
             badge.textContent = String(count);
             badge.classList.toggle('hidden', count === 0);
@@ -57,6 +62,7 @@
                 if (window.lucide) window.lucide.createIcons({ els: [icon] });
             }
         }
+        syncNavbarButton();
     }
 
     function legacyBar(trigger) {
@@ -138,10 +144,11 @@
 
     function legacyIsOpen(bar) { return !!(bar && bar.querySelector('[data-filter-sheet]:not([hidden])')); }
 
-    function legacyUpdateSummary(bar) {
-        if (!bar) return;
+    function legacyActiveCount(bar) {
         var active = Array.from(bar.querySelectorAll('input[name]:not([type="hidden"]), select[name], textarea[name]')).filter(function (control) {
-            if (control.type === 'checkbox' || control.type === 'radio') return control.checked;
+            if (control.type === 'checkbox') return control.checked;
+            // A radio group set to "All" is not a filter (Chickens' Status).
+            if (control.type === 'radio') return control.checked && control.value !== 'all' && control.value !== '';
             if (control.name === 'feed_preset') return ['today', '7d', '30d', 'latest'].indexOf(control.value) >= 0;
             if (control.dataset.filterDefault !== undefined && control.value === control.dataset.filterDefault) return false;
             return String(control.value || '').trim() !== '' && control.value !== 'all';
@@ -149,6 +156,12 @@
         var count = active.length;
         var dates = active.filter(function (control) { return control.type === 'date'; });
         if (dates.length > 1) count -= dates.length - 1;
+        return count;
+    }
+
+    function legacyUpdateSummary(bar) {
+        if (!bar) return;
+        var count = legacyActiveCount(bar);
         var summary = bar.querySelector('[data-hen-filter-summary], [data-recent-filter-summary], [data-preorder-filter-summary], [data-report-filter-summary], [data-dashboard-filter-summary], [data-env-filter-summary], [data-feed-filter-summary]');
         if (summary) summary.textContent = count ? 'Active filters: ' + count : '';
         var toggle = bar.querySelector(legacySelector);
@@ -157,6 +170,7 @@
             toggle.setAttribute('aria-label', count ? label + ', ' + count + ' active' : label);
             toggle.setAttribute('title', label);
         }
+        syncNavbarButton();
     }
 
     function bindLegacyFilterForm(bar) {
@@ -259,6 +273,7 @@
 
     function setLegacyToggle(trigger, expanded) {
         trigger.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        if (isNavbarTrigger(trigger)) return;
         var label = expanded ? 'Hide filters' : 'Show filters';
         trigger.setAttribute('aria-label', label);
         trigger.setAttribute('title', label);
@@ -396,9 +411,17 @@
             var dashboardCage = dashboard.querySelector('#dashboardCageSelect');
             var dashboardFrom = dashboard.querySelector('#dashboardFromDate');
             var dashboardTo = dashboard.querySelector('#dashboardToDate');
-            if (dashboardCage && typeof window.filterDashboard === 'function') window.filterDashboard(dashboardCage.value);
-            if (dashboardFrom && typeof window.setDashboardFromDate === 'function') window.setDashboardFromDate(dashboardFrom.value);
-            if (dashboardTo && typeof window.setDashboardToDate === 'function') window.setDashboardToDate(dashboardTo.value);
+            // Set both dates, then let filterDashboard() reload every chart
+            // once (each date setter would reload them all again).
+            window.__dashboardFromDate = dashboardFrom ? dashboardFrom.value : '';
+            window.__dashboardToDate = dashboardTo ? dashboardTo.value : '';
+            var dashboardUrl = new URL(window.location.href);
+            [['from_date', window.__dashboardFromDate], ['to_date', window.__dashboardToDate]].forEach(function (pair) {
+                if (pair[1]) dashboardUrl.searchParams.set(pair[0], pair[1]);
+                else dashboardUrl.searchParams.delete(pair[0]);
+            });
+            window.history.replaceState({}, '', dashboardUrl);
+            if (typeof window.filterDashboard === 'function') window.filterDashboard(dashboardCage ? dashboardCage.value : (window.__dashboardCage || 'all'));
             legacyUpdateSummary(bar);
             return true;
         }
@@ -444,6 +467,7 @@
 
     function setSharedToggle(trigger, expanded) {
         trigger.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        if (isNavbarTrigger(trigger)) return;
         var label = expanded ? 'Hide filters' : 'Show filters';
         trigger.setAttribute('aria-label', label);
         trigger.setAttribute('title', label);
@@ -575,6 +599,110 @@
         return true;
     }
 
+    // ── Filters button in the top bar ──
+    // The header is Turbo-permanent, so one button serves every page: it
+    // opens the current page's filter form in that form's sheet (a dropdown
+    // under the button on wider screens, the bottom sheet on phones). Forms
+    // it serves get data-navbar-filters, which hides their in-page toggle row;
+    // an ancestor marked data-navbar-filter-shell collapses with it.
+    function navbarButton() { return document.getElementById('navbar-filters-btn'); }
+    function isNavbarTrigger(trigger) { return !!trigger && trigger.id === 'navbar-filters-btn'; }
+
+    function pageFilterForms() {
+        var forms = bars();
+        document.querySelectorAll('form').forEach(function (form) {
+            if (forms.indexOf(form) === -1 && legacyFields(form)) forms.push(form);
+        });
+        return forms;
+    }
+
+    // Visible unless an ancestor is hidden (a closed tab panel, say).
+    function isShown(element) {
+        for (var node = element.parentElement; node && node !== document.body; node = node.parentElement) {
+            if (node.hidden || getComputedStyle(node).display === 'none') return false;
+        }
+        return true;
+    }
+
+    function navbarBar() { return pageFilterForms().find(isShown) || null; }
+
+    function markNavbarForms() {
+        pageFilterForms().forEach(function (bar) {
+            if (bar.hasAttribute('data-navbar-filters')) return;
+            bar.setAttribute('data-navbar-filters', '');
+            var shell = bar.closest('[data-navbar-filter-shell]');
+            for (var node = bar; shell && node; node = node.parentElement) {
+                node.classList.add('filter-navbar-collapsed');
+                if (node === shell) break;
+            }
+        });
+    }
+
+    function syncNavbarButton() {
+        var button = navbarButton();
+        if (!button) return;
+        markNavbarForms();
+        var bar = navbarBar();
+        button.hidden = !bar;
+        var count = bar ? (bar.matches('[data-filter-bar]') ? sharedActiveCount(bar) : legacyActiveCount(bar)) : 0;
+        var badge = button.querySelector('[data-navbar-filter-count]');
+        if (badge) {
+            badge.textContent = String(count);
+            badge.hidden = count === 0;
+        }
+        var label = bar ? (bar.getAttribute('aria-label') || 'Filters') : 'Filters';
+        button.setAttribute('aria-label', count ? label + ', ' + count + ' active' : label);
+        button.setAttribute('title', label);
+        if (!document.querySelector('[data-filter-sheet]:not([hidden])')) button.setAttribute('aria-expanded', 'false');
+    }
+
+    function openNavbarFilters() {
+        var bar = navbarBar();
+        var button = navbarButton();
+        var drawer = bar && bar.querySelector('[data-filter-sheet]');
+        if (!drawer) return;
+        drawer.classList.add('filter-sheet-popover');
+        if (bar.matches('[data-filter-bar]')) openDrawer(bar, button);
+        else {
+            var fieldsContainer = legacyFields(bar);
+            if (!fieldsContainer) return;
+            openLegacyDrawer(bar, button, fieldsContainer);
+            setLegacyToggle(button, true);
+        }
+        addQuickRange(drawer);
+    }
+
+    // "Last 7 / 30 / 90 days" for a From/To pair (not where the form has
+    // its own presets, like Feed). Sets the dates; Apply still applies them.
+    function addQuickRange(drawer) {
+        var holder = drawer.querySelector('[data-filter-sheet-fields]');
+        if (!holder || holder.querySelector('[data-filter-quick-range]')) return;
+        if (holder.querySelectorAll('input[type="date"]').length !== 2 || holder.querySelector('select[name*="preset"]')) return;
+        var range = document.createElement('div');
+        range.className = 'filter-quick-range';
+        range.setAttribute('data-filter-quick-range', '');
+        range.innerHTML = '<p class="filter-label">Quick range</p><div class="filter-quick-range-options">'
+            + [7, 30, 90].map(function (days) { return '<button type="button" data-quick-range-days="' + days + '">Last ' + days + ' days</button>'; }).join('')
+            + '</div>';
+        holder.appendChild(range);
+    }
+
+    function isoDate(date) {
+        return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+    }
+
+    function applyQuickRange(option) {
+        var holder = option.closest('[data-filter-sheet-fields]');
+        var dates = holder ? Array.from(holder.querySelectorAll('input[type="date"]')) : [];
+        if (dates.length !== 2) return;
+        var end = new Date();
+        var start = new Date();
+        start.setDate(end.getDate() - (parseInt(option.getAttribute('data-quick-range-days'), 10) - 1));
+        dates[0].value = isoDate(start);
+        dates[1].value = isoDate(end);
+        dates.forEach(function (input) { input.dispatchEvent(new Event('input', { bubbles: true })); });
+    }
+
     function bindDisclosureButtons() {
         document.querySelectorAll(legacySelector).forEach(function (trigger) { compactLegacyToggle(trigger); bindLegacyFilterForm(legacyBar(trigger)); });
         var dashboardForm = document.getElementById('dashboardGlobalFilters');
@@ -600,6 +728,11 @@
     }
 
     document.addEventListener('click', function (event) {
+        if (event.target.closest('#navbar-filters-btn')) { openNavbarFilters(); return; }
+        var quickRange = event.target.closest('[data-quick-range-days]');
+        if (quickRange) { applyQuickRange(quickRange); return; }
+        // A tab switch can show or hide the page's filter form.
+        if (event.target.closest('[role="tab"]')) setTimeout(syncNavbarButton, 0);
         var trigger = event.target.closest('[data-filter-toggle]');
         if (trigger) {
             var bar = trigger.closest('[data-filter-bar]');
@@ -728,14 +861,22 @@
         var environmentForm = event.target.querySelector('form[data-turbo-frame="environment-logs"]');
         if (environmentForm) bindEnvironmentForm(environmentForm);
         bindDisclosureButtons();
+        syncNavbarButton();
+    });
+
+    // Leaving a page with its filter sheet open: close it (discarding pending
+    // changes) so the cached snapshot and the page scroll lock are clean.
+    document.addEventListener('turbo:before-cache', function () {
+        bars().forEach(function (bar) { if (isOpen(bar)) closeDrawer(bar, true, false); });
+        pageFilterForms().forEach(function (bar) { if (!bar.matches('[data-filter-bar]') && legacyIsOpen(bar)) closeLegacyDrawer(bar, true, false); });
     });
 
     if (mobile.addEventListener) mobile.addEventListener('change', function () {
         if (!mobile.matches) bars().forEach(function (bar) { if (isOpen(bar)) closeDrawer(bar, true, false); });
     });
 
-    document.addEventListener('turbo:load', function () { bars().forEach(updateSummary); bindDisclosureButtons(); bindEnvironmentForm(document.querySelector('form[data-turbo-frame="environment-logs"]')); });
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bars().forEach(updateSummary); bindDisclosureButtons(); bindEnvironmentForm(document.querySelector('form[data-turbo-frame="environment-logs"]')); });
-    else { bars().forEach(updateSummary); bindDisclosureButtons(); bindEnvironmentForm(document.querySelector('form[data-turbo-frame="environment-logs"]')); }
-    document.addEventListener('filter:refresh', function () { bindDisclosureButtons(); bindEnvironmentForm(document.querySelector('form[data-turbo-frame="environment-logs"]')); });
+    document.addEventListener('turbo:load', function () { bars().forEach(updateSummary); bindDisclosureButtons(); bindEnvironmentForm(document.querySelector('form[data-turbo-frame="environment-logs"]')); syncNavbarButton(); });
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bars().forEach(updateSummary); bindDisclosureButtons(); bindEnvironmentForm(document.querySelector('form[data-turbo-frame="environment-logs"]')); syncNavbarButton(); });
+    else { bars().forEach(updateSummary); bindDisclosureButtons(); bindEnvironmentForm(document.querySelector('form[data-turbo-frame="environment-logs"]')); syncNavbarButton(); }
+    document.addEventListener('filter:refresh', function () { bindDisclosureButtons(); bindEnvironmentForm(document.querySelector('form[data-turbo-frame="environment-logs"]')); syncNavbarButton(); });
 })();

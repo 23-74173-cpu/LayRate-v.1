@@ -41,8 +41,8 @@
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false }, tooltip: { backgroundColor: LayRateChartColors.tooltip, titleFont: { size: 11, weight: '600' }, bodyFont: { size: 11 }, padding: { top: 8, bottom: 8, left: 12, right: 12 }, cornerRadius: 8, callbacks: { label: function(c) { return c.raw.x + ' kg feed — ' + c.raw.y + ' eggs'; } } } },
                 scales: {
-                    x: { title: { display: true, text: 'Feed Consumed (kg)', color: '#9CA3AF', font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, color: '#9CA3AF' } },
-                    y: { title: { display: true, text: 'Eggs Produced', color: '#9CA3AF', font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, color: '#9CA3AF' } }
+                    x: { title: { display: true, text: 'Feed Consumed (kg)', font: { size: 10 } }, ticks: { font: { size: 10 } } },
+                    y: { title: { display: true, text: 'Eggs Produced', font: { size: 10 } }, ticks: { font: { size: 10 } } }
                 }
             }
         };

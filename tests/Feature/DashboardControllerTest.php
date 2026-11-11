@@ -326,17 +326,83 @@ class DashboardControllerTest extends TestCase
         $response->assertSee("type: 'pie'", false);
     }
 
-    public function test_production_history_renders_line_chart_defaulting_to_7_days(): void
+    public function test_production_history_renders_hdep_line_chart_defaulting_to_30_days(): void
     {
         $response = $this->actingAs($this->admin)->get(route('dashboard.production-history'));
         $response->assertOk();
 
         $response->assertSee('Production History');
         $response->assertSee('dashProductionHistoryChart');
-        $response->assertSee('Total Production');
+        $response->assertSee('All Cages HDEP');
 
-        // Default days filter is 7.
-        $response->assertViewHas('days', 7);
+        // Default days filter is 30, and the Desired HDEP line has its value.
+        $response->assertViewHas('days', 30);
+        $response->assertViewHas('desiredHdep', 85.0);
+        $this->assertCount(30, $response->viewData('chartData')['labels']);
+    }
+
+    public function test_production_history_plots_hdep_with_gaps_and_ends_on_the_last_record(): void
+    {
+        $today = \App\Services\ReportingDateService::reportingDate();
+        $cage = Cage::create([
+            'cage_code' => 'CAGE-DASH-C', 'location' => 'Test', 'rows' => 1,
+            'slots_per_row' => 1, 'max_chickens_per_slot' => 10, 'total_capacity' => 10, 'is_active' => 1,
+        ]);
+        $slot = CageSlot::create(['cage_id' => $cage->id, 'slot_number' => 1, 'row_number' => 1, 'column_number' => 1, 'current_occupancy' => 0]);
+        ProductionLog::create(['cage_slot_id' => $slot->id, 'log_date' => $today->copy()->subDays(10)->toDateString(), 'egg_count' => 5, 'hen_count' => 10, 'hdep' => 50, 'logged_via' => 'manual']);
+        ProductionLog::create(['cage_slot_id' => $slot->id, 'log_date' => $today->copy()->subDays(3)->toDateString(), 'egg_count' => 8, 'hen_count' => 10, 'hdep' => 80, 'logged_via' => 'manual']);
+
+        $response = $this->actingAs($this->admin)->get(route('dashboard.production-history', ['cage' => 'CAGE-DASH-C']));
+        $response->assertOk();
+
+        $chartData = $response->viewData('chartData');
+        $this->assertCount(30, $chartData['labels']);
+        $this->assertSame($today->copy()->subDays(3)->format('M j'), end($chartData['labels']));
+        $hdep = $chartData['datasets'][0]['data'];
+        $this->assertSame(80.0, end($hdep));
+        $this->assertSame(50.0, $hdep[22]);
+        $this->assertNull($hdep[23]);
+        $this->assertSame([5, 8], array_values(array_filter($chartData['datasets'][0]['eggs'], fn ($v) => $v !== null)));
+        $response->assertSee('28 of 30 days in this range have no records and show as gaps.');
+
+        // A From date after the last record keeps today as the end and says so.
+        $empty = $this->actingAs($this->admin)->get(route('dashboard.production-history', [
+            'cage' => 'CAGE-DASH-C', 'from_date' => $today->copy()->subDay()->toDateString(),
+        ]));
+        $empty->assertOk()->assertSee('Last record: '.$today->copy()->subDays(3)->format('M j, Y').'.');
+        $this->assertFalse($empty->viewData('hasRecords'));
+    }
+
+    public function test_production_history_tips_come_from_the_selected_cage(): void
+    {
+        $tipsFor = fn (string $cage) => collect($this->actingAs($this->admin)
+            ->get(route('dashboard.production-history', ['cage' => $cage]))
+            ->viewData('tips'))->pluck('lines')->flatten()->all();
+
+        // Cage A: yesterday 50%, today 100%. Cage B: 50% both days.
+        $tipsA = $tipsFor('CAGE-DASH-A');
+        $tipsB = $tipsFor('CAGE-DASH-B');
+        $this->assertNotEquals($tipsA, $tipsB);
+        $this->assertContains('CAGE-DASH-A averaged 75.0% HDEP over 2 recorded days, from 50.0% on '.\App\Services\ReportingDateService::reportingDate()->subDay()->format('M j').' to 100.0% on '.\App\Services\ReportingDateService::reportingDate()->format('M j').'.', $tipsA);
+        $this->assertStringContainsString('It met the Desired HDEP of 85% on 1 of 2 days.', implode(' ', $tipsA));
+        $this->assertStringContainsString('HDEP is trending up', implode(' ', $tipsA));
+        $this->assertStringContainsString('It met the Desired HDEP of 85% on 0 of 2 days. The average is 35.0 points below target.', implode(' ', $tipsB));
+        $this->assertStringContainsString('HDEP is steady', implode(' ', $tipsB));
+    }
+
+    public function test_production_history_compare_analyzes_each_cage_separately_and_keeps_the_cage_filter(): void
+    {
+        $tips = $this->actingAs($this->admin)->get(route('dashboard.production-history', ['compare' => 1]))->viewData('tips');
+        $titles = collect($tips)->pluck('title')->filter()->values()->all();
+        $this->assertContains('CAGE-DASH-A', $titles);
+        $this->assertContains('CAGE-DASH-B', $titles);
+        $this->assertContains('Highest average HDEP: CAGE-DASH-A (75.0%). Lowest: CAGE-DASH-B (50.0%).', $tips[0]['lines']);
+
+        $scoped = $this->actingAs($this->admin)->get(route('dashboard.production-history', ['compare' => 1, 'cage' => 'CAGE-DASH-A']));
+        $this->assertSame(['CAGE-DASH-A'], collect($scoped->viewData('chartData')['datasets'])->pluck('label')->all());
+
+        $dashboard = file_get_contents(resource_path('views/dashboard.blade.php'));
+        $this->assertMatchesRegularExpression('/toggleProductionHistoryCompare[\s\S]*?p\.cage = window\.__dashboardCage;[\s\S]*?reloadFramePreservingScroll\(\'dashboard-production-history\'/', $dashboard);
     }
 
     public function test_cage_performance_date_change_updates_snapshot_and_future_date_is_clamped(): void
@@ -375,7 +441,7 @@ class DashboardControllerTest extends TestCase
         $response = $this->actingAs($this->admin)->get(route('dashboard.production-history', ['cage' => 'CAGE-DASH-A']));
         $response->assertOk();
 
-        $response->assertSee('CAGE-DASH-A Production');
+        $response->assertSee('CAGE-DASH-A HDEP');
         $response->assertSee('dashProductionHistoryChart');
     }
 
@@ -386,11 +452,11 @@ class DashboardControllerTest extends TestCase
         $response->assertViewHas('days', 30);
     }
 
-    public function test_production_history_invalid_days_filter_defaults_to_7(): void
+    public function test_production_history_invalid_days_filter_defaults_to_30(): void
     {
         $response = $this->actingAs($this->admin)->get(route('dashboard.production-history', ['days' => 99]));
         $response->assertOk();
-        $response->assertViewHas('days', 7);
+        $response->assertViewHas('days', 30);
     }
 
     public function test_production_history_full_days_includes_oldest_log(): void
@@ -402,7 +468,7 @@ class DashboardControllerTest extends TestCase
         // Full (day 1) must include the 30-days-ago row that a 7-day window
         // excludes. Cage A: 4 (today) + 2 (yesterday) + 1 (30d ago) = 7.
         $chartData = $response->viewData('chartData');
-        $this->assertEquals(7, array_sum($chartData['datasets'][0]['data']));
+        $this->assertEquals(7, array_sum($chartData['datasets'][0]['eggs']));
         // The endpoint still accepts a historical window for existing callers.
     }
 
@@ -640,7 +706,7 @@ class DashboardControllerTest extends TestCase
         );
         // Only the 30-days-ago rows fall inside [from .. to]:
         // cage A 1 egg + cage B 2 eggs = 3; today/yesterday are excluded.
-        $this->assertEquals(3, array_sum($chartData['datasets'][0]['data']));
+        $this->assertEquals(3, array_sum($chartData['datasets'][0]['eggs']));
     }
 
     public function test_dashboard_environment_chart_includes_fractional_second_on_to_date(): void

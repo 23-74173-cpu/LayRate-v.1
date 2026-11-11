@@ -154,17 +154,13 @@
             },
             scales: {
                 x: {
-                    grid: { display: false },
-                    border: { display: false },
-                    title: { display: true, text: 'Hen Age (weeks)', color: '#9CA3AF', font: { size: 10, weight: '500' } },
-                    ticks: { color: '#9CA3AF', font: { size: 9, weight: '500' }, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 }
+                    title: { display: true, text: 'Hen Age (weeks)', font: { size: 10, weight: '500' } },
+                    ticks: { font: { size: 9, weight: '500' }, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 }
                 },
                 y: {
                     beginAtZero: true,
-                    grid: { display: false },
-                    border: { display: false },
-                    title: { display: true, text: 'HDEP %', color: '#9CA3AF', font: { size: 10, weight: '500' } },
-                    ticks: { color: '#9CA3AF', font: { size: 10, weight: '500' }, padding: 8 }
+                    title: { display: true, text: 'HDEP %', font: { size: 10, weight: '500' } },
+                    ticks: { font: { size: 10, weight: '500' }, padding: 8 }
                 }
             }
         },

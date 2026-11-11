@@ -370,6 +370,10 @@ class EggLoggingController extends Controller
             ];
         }
 
+        foreach ($slots->pluck('cage_id')->unique() as $cageId) {
+            $this->checkHdepTarget((int) $cageId, $data['log_date']);
+        }
+
         // Only notes the user typed ($data['notes'] stays null when the box is
         // empty; 'Manual entry' above is the log's own placeholder).
         $noteCageIds = $slots->pluck('cage_id')->unique()->values();
@@ -506,6 +510,10 @@ class EggLoggingController extends Controller
             \Illuminate\Support\Facades\Cache::add('egg_logs_sse_version', 0, now()->addYears(10));
             \Illuminate\Support\Facades\Cache::increment('egg_logs_sse_version');
         });
+
+        if ($cageId = $productionLog->cageSlot?->cage_id) {
+            $this->checkHdepTarget((int) $cageId, $data['log_date']);
+        }
 
         // Only a changed note is copied to the Notes list (the edit box comes
         // pre-filled with the log's current notes).

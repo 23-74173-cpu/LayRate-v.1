@@ -5,7 +5,7 @@
         </div>
 
         {{-- Filters --}}
-        <form id="environmentLogFilters" method="GET" action="{{ route('environment.logs') }}" data-turbo-frame="environment-logs" class="filter-legacy-form px-5 py-3 border-b border-[#D9D9D9]" aria-label="Filter environment log history">
+        <form id="environmentLogFilters" data-navbar-filter-shell method="GET" action="{{ route('environment.logs') }}" data-turbo-frame="environment-logs" class="filter-legacy-form px-5 py-3 border-b border-[#D9D9D9]" aria-label="Filter environment log history">
             <button type="button" data-env-filter-toggle class="filter-control filter-icon-toggle inline-flex items-center justify-center rounded-lg border border-[#D9D9D9]" aria-label="Show filters" title="Show filters" aria-expanded="false" aria-controls="environmentLogFilterFields"><i data-lucide="sliders-horizontal" class="h-4 w-4" aria-hidden="true"></i></button>
             <span data-env-filter-summary class="ml-2 text-sm text-[#615d59]" aria-live="polite">{{ (filled(request('date_from')) ? 1 : 0) + (filled(request('date_to')) ? 1 : 0) + (filled(request('cage_id')) ? 1 : 0) ?: '' }} {{ (filled(request('date_from')) ? 1 : 0) + (filled(request('date_to')) ? 1 : 0) + (filled(request('cage_id')) ? 1 : 0) ? 'active filters' : '' }}</span>
             <span data-env-fields-home class="hidden"></span>

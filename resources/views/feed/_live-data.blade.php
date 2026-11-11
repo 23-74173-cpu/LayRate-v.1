@@ -33,7 +33,7 @@
         />
     </div>
 
-    <form id="feed-global-filters" data-feed-filter-form class="mb-6 rounded-xl border border-[#D9D9D9] bg-white p-3 sm:p-4" aria-label="Feed and FCR filters">
+    <form id="feed-global-filters" data-feed-filter-form data-navbar-filter-shell class="mb-6 rounded-xl border border-[#D9D9D9] bg-white p-3 sm:p-4" aria-label="Feed and FCR filters">
         <div class="flex flex-wrap items-center gap-2">
             <button type="button" class="filter-control filter-icon-toggle inline-flex items-center justify-center rounded-lg border border-[#D9D9D9]" data-feed-filter-toggle aria-label="Show filters" title="Show filters" aria-expanded="false" aria-controls="feed-filter-fields"><i data-lucide="sliders-horizontal" class="h-4 w-4" aria-hidden="true"></i></button>
             <span data-feed-filter-summary class="text-sm text-[#615d59]" aria-live="polite">{{ (filled(request('feed_from')) ? 1 : 0) + (filled(request('feed_to')) ? 1 : 0) + (filled(request('feed_cage')) ? 1 : 0) + (in_array(request('feed_preset'), ['today', '7d', '30d', 'latest'], true) ? 1 : 0) ?: '' }} {{ (filled(request('feed_from')) ? 1 : 0) + (filled(request('feed_to')) ? 1 : 0) + (filled(request('feed_cage')) ? 1 : 0) + (in_array(request('feed_preset'), ['today', '7d', '30d', 'latest'], true) ? 1 : 0) ? 'active filters' : '' }}</span>

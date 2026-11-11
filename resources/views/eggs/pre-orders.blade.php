@@ -47,7 +47,7 @@
     </div>
 
     {{-- ── Filters ── --}}
-    <x-card padding="p-4">
+    <x-card padding="p-4" data-navbar-filter-shell>
         <form id="preOrdersForm" onsubmit="return false" class="filter-legacy-form min-w-0" aria-label="Filter egg pre-orders">
                 <button type="button" data-preorder-filter-toggle class="filter-control filter-icon-toggle inline-flex items-center justify-center rounded-lg border border-[#D9D9D9]" aria-label="Show filters" title="Show filters" aria-expanded="false" aria-controls="preOrderFilterFields"><i data-lucide="sliders-horizontal" class="h-4 w-4" aria-hidden="true"></i></button>
                 <span data-preorder-filter-summary class="ml-2 text-sm text-[#615d59]" aria-live="polite">{{ collect($filters)->filter(fn ($value, $key) => in_array($key, ['from', 'to']) ? filled($value) : !in_array($value, ['', 'all', null], true))->count() ? 'Active filters: ' . collect($filters)->filter(fn ($value, $key) => in_array($key, ['from', 'to']) ? filled($value) : !in_array($value, ['', 'all', null], true))->count() : '' }}</span>

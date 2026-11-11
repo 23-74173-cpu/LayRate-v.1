@@ -116,6 +116,13 @@
                            class="w-full max-md:min-h-11 border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                     <p class="text-xs mt-1 truncate" data-optimal-hint aria-live="polite"></p>
                 </div>
+                <div>
+                    <label for="thresholdDesiredHdep" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">DESIRED HDEP (%)</label>
+                    <input type="number" id="thresholdDesiredHdep" name="desired_hdep" required min="0" max="100" step="0.5"
+                           value="{{ $thresholds['desired_hdep'] }}"
+                           class="w-full max-md:min-h-11 border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
+                    <p class="text-xs mt-1 text-[#6B7280]">You get an alert when a cage or the whole flock reaches this lay rate.</p>
+                </div>
             </div>
 
             <div class="flex gap-3 mt-5">

@@ -12,7 +12,7 @@
 
     <turbo-frame id="egg-content">
 
-        <form id="recentLogsForm" onsubmit="return false" class="filter-legacy-form mb-4 rounded-lg border border-hairline bg-surface p-4" aria-label="Filter recent egg logs">
+        <form id="recentLogsForm" data-navbar-filter-shell onsubmit="return false" class="filter-legacy-form mb-4 rounded-lg border border-hairline bg-surface p-4" aria-label="Filter recent egg logs">
             <button type="button" data-recent-filter-toggle class="filter-control filter-icon-toggle inline-flex items-center justify-center rounded-lg border border-[#D9D9D9]" aria-label="Show filters" title="Show filters" aria-expanded="false" aria-controls="recentFilterFields"><i data-lucide="sliders-horizontal" class="h-4 w-4" aria-hidden="true"></i></button>
             @php $initialRecentFilterCount = collect($filters)->except('logged_via')->filter(fn ($value) => filled($value))->count() + count((array) ($filters['logged_via'] ?? [])); @endphp
             <span data-recent-filter-summary class="ml-2 text-sm text-[#615d59]" aria-live="polite">{{ $initialRecentFilterCount ? 'Active filters: ' . $initialRecentFilterCount : '' }}</span>

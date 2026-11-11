@@ -58,8 +58,8 @@
                 indexAxis: 'y',
                 plugins: { legend: { display: false }, tooltip: { backgroundColor: LayRateChartColors.tooltip, titleFont: { size: 11, weight: '600' }, bodyFont: { size: 11 }, padding: { top: 8, bottom: 8, left: 12, right: 12 }, cornerRadius: 8, callbacks: { label: function(c) { return c.raw + ' deaths'; } } } },
                 scales: {
-                    x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, color: '#9CA3AF', stepSize: 1 } },
-                    y: { grid: { display: false }, ticks: { font: { size: 10, weight: '500' }, color: '#333' } }
+                    x: { beginAtZero: true, ticks: { font: { size: 10 }, stepSize: 1 } },
+                    y: { ticks: { font: { size: 10, weight: '500' } } }
                 }
             }
         };
