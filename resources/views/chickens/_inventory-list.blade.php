@@ -4,26 +4,54 @@
         $totalVisible = $placedCount + $unplacedCount;
     @endphp
 
-    <div class="space-y-6">
+    @php
+        // Summary from the same per-cage values the cards show (active hens /
+        // total_capacity), so header and cards always agree.
+        $summaryActive = 0;
+        $summaryCapacity = 0;
+        foreach ($cageGroups as $hensGroup) {
+            $summaryActive += $hensGroup->where('is_active', 1)->count();
+            $summaryCapacity += $hensGroup->first()->cage->total_capacity ?? 0;
+        }
+        $summaryPct = $summaryCapacity > 0 ? round(($summaryActive / $summaryCapacity) * 100) : 0;
+        $cageCount = $cageGroups->count();
+    @endphp
 
-        {{-- ── Cage Overview (full-width row) ── --}}
-        <x-card>
-            <x-slot:headerSlot>
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <div>
-                        <h2 class="text-lg font-semibold" style="color: #1f1f1f;">Hen Overview</h2>
-                        <p class="text-sm" style="color: #6B7280;">Overview of all cages</p>
-                    </div>
-                    <span class="text-sm font-medium whitespace-nowrap" style="color: #31302e;">
-                        Total: <strong style="color: #1f1f1f;">{{ $totalVisible }}</strong> hen(s)
+    <section class="rounded-2xl border border-[#E6E6E6] bg-white p-4 sm:p-5" aria-labelledby="henInventoryHeading"
+             style="box-shadow: 0 3px 12px -6px rgba(20, 30, 60, 0.14);">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between mb-4">
+            <div class="min-w-0">
+                <h2 id="henInventoryHeading" class="text-lg font-semibold text-[#1f1f1f]">Hen Inventory</h2>
+                <p class="text-sm text-[#6B7280]">View active hen populations and cage occupancy</p>
+            </div>
+            <dl class="flex flex-wrap items-end gap-x-6 gap-y-2">
+                <div>
+                    <dt class="text-[11px] font-semibold uppercase tracking-wide text-[#6B7280]">Total hens</dt>
+                    <dd class="text-xl font-bold leading-tight text-[#1f1f1f]">
+                        {{ number_format($totalVisible) }}
                         @if($unplacedCount > 0)
-                        ({{ $unplacedCount }} unplaced)
+                            <span class="text-xs font-medium text-[#6B7280]">({{ $unplacedCount }} unplaced)</span>
                         @endif
-                    </span>
+                    </dd>
                 </div>
-            </x-slot:headerSlot>
+                @if($cageCount > 0)
+                <div>
+                    <dt class="text-[11px] font-semibold uppercase tracking-wide text-[#6B7280]">Cages</dt>
+                    <dd class="text-xl font-bold leading-tight text-[#1f1f1f]">{{ $cageCount }}</dd>
+                </div>
+                <div>
+                    <dt class="text-[11px] font-semibold uppercase tracking-wide text-[#6B7280]">Occupancy</dt>
+                    <dd class="text-xl font-bold leading-tight text-[#1f1f1f]">
+                        {{ $summaryPct }}%
+                        <span class="text-xs font-medium text-[#6B7280]">{{ number_format($summaryActive) }} / {{ number_format($summaryCapacity) }}</span>
+                    </dd>
+                </div>
+                @endif
+            </dl>
+        </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="@container">
+            <div class="grid grid-cols-1 @min-[34rem]:grid-cols-2 @min-[56rem]:grid-cols-3 gap-3">
                 @forelse($cageGroups as $hensGroup)
                     @php
                         $cage = $hensGroup->first()->cage;
@@ -32,47 +60,73 @@
                         $inactiveCount = $hensGroup->where('is_active', 0)->count();
                         $totalCapacity = $cage->total_capacity ?? 0;
                         $occupancyPct = $totalCapacity > 0 ? round(($activeCount / $totalCapacity) * 100) : 0;
+                        // Status is shown as icon + text, never by colour alone.
+                        [$statusLabel, $statusIcon, $statusBg, $statusFg] = match (true) {
+                            $occupancyPct > 100 => ['Over capacity', 'alert-triangle', '#fbe4e6', '#9b1c24'],
+                            $occupancyPct >= 100 => ['Full', 'circle-check', '#e8f0fb', '#1d3a6e'],
+                            $occupancyPct >= 90 => ['Near full', 'circle-dot', '#fdf3e0', '#8a5a00'],
+                            $activeCount === 0 => ['Empty', 'circle', '#f1f1ef', '#615d59'],
+                            default => ['Space available', 'circle-plus', '#e8f5ec', '#1f6b3a'],
+                        };
                     @endphp
-                    <div class="rounded-xl border p-4 flex flex-col gap-2 min-h-[7rem] cage-overview-card transition-all hover:shadow-md"
-                         data-cage-id="{{ $cage->id }}"
-                         data-cage-code="{{ $cage->cage_code }}"
-                         data-cage-location="{{ $cage->formatted_location }}"
-                         data-cage-slots="{{ $slotCount }}"
-                         data-cage-color="{{ $cage->color }}"
-                         data-cage-soft="{{ $cage->colorSoft }}"
-                         onclick="switchChickenCage('{{ $cage->id }}')"
-                         role="button" tabindex="0"
-                         onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); switchChickenCage('{{ $cage->id }}'); }"
-                         style="background-color: #ffffff; border-color: #e6e6e6;">
-                        <div class="flex items-center justify-between gap-2">
-                            <x-cage-color :cage="$cage" />
-                            <span class="text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shrink-0"
-                                  style="background-color: {{ $cage->colorSoft }}; color: {{ $cage->color }};">
-                                {{ $slotCount }} slot{{ $slotCount !== 1 ? 's' : '' }}
+                    <button type="button"
+                            class="cage-overview-card group relative flex w-full flex-col gap-3 rounded-2xl border border-[#E6E6E6] bg-white p-4 text-left cursor-pointer transition-[border-color,box-shadow] hover:border-[#c2c2c2] hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy [&.is-selected]:border-navy [&.is-selected]:bg-[#f0f7ff]"
+                            data-cage-id="{{ $cage->id }}"
+                            data-cage-code="{{ $cage->cage_code }}"
+                            data-cage-location="{{ $cage->formatted_location }}"
+                            data-cage-slots="{{ $slotCount }}"
+                            data-cage-color="{{ $cage->color }}"
+                            data-cage-soft="{{ $cage->colorSoft }}"
+                            aria-haspopup="dialog" aria-controls="cageSlotsModal"
+                            aria-label="{{ $cage->cage_code }}: {{ $activeCount }} of {{ $totalCapacity }} hens, {{ $occupancyPct }}% occupied, {{ $statusLabel }}. View cage layout"
+                            onclick="switchChickenCage('{{ $cage->id }}')">
+                        <span class="flex items-start justify-between gap-2">
+                            <span class="min-w-0">
+                                <span class="flex items-center gap-2">
+                                    <span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background-color: {{ $cage->color }};" aria-hidden="true"></span>
+                                    <span class="truncate text-base font-semibold text-[#1f1f1f]">{{ $cage->cage_code }}</span>
+                                </span>
+                                <span class="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-[#6B7280]">
+                                    <span class="inline-flex items-center gap-1"><i data-lucide="map-pin" class="h-3.5 w-3.5" aria-hidden="true"></i>{{ $cage->formatted_location }}</span>
+                                    <span aria-hidden="true">·</span>
+                                    <span>{{ $slotCount }} slot{{ $slotCount !== 1 ? 's' : '' }}</span>
+                                </span>
                             </span>
-                        </div>
-                        <span class="text-xs truncate" style="color: #615d59;">{{ $cage->formatted_location }}</span>
-                        <div class="flex items-center gap-2 text-xs mt-auto" style="color: #a39e98;">
-                            <span>Hens:</span>
-                            <span class="font-semibold whitespace-nowrap" style="color: {{ $occupancyPct > 100 ? '#9b1c24' : '#1f1f1f' }};">
-                                {{ $activeCount }}/{{ $totalCapacity ?: '?' }}
+                            <span class="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                                  style="background-color: {{ $statusBg }}; color: {{ $statusFg }};">
+                                <i data-lucide="{{ $statusIcon }}" class="h-3 w-3" aria-hidden="true"></i>{{ $statusLabel }}
                             </span>
-                            <span class="ml-auto font-semibold whitespace-nowrap" style="color: #1f1f1f;">
-                                {{ $occupancyPct }}%
+                        </span>
+
+                        <span class="flex items-end justify-between gap-3">
+                            <span class="whitespace-nowrap">
+                                <span class="text-2xl font-bold leading-none tracking-[-0.5px]" style="color: {{ $occupancyPct > 100 ? '#9b1c24' : '#1f1f1f' }};">{{ number_format($activeCount) }}</span>
+                                <span class="text-sm font-medium text-[#6B7280]">/ {{ $totalCapacity ? number_format($totalCapacity) : '?' }} hens</span>
                             </span>
-                        </div>
-                    </div>
+                            <span class="whitespace-nowrap text-sm font-semibold text-[#1f1f1f]">{{ $occupancyPct }}%</span>
+                        </span>
+                        <span class="block h-1.5 w-full overflow-hidden rounded-full bg-[#efeeec]" aria-hidden="true">
+                            <span class="block h-full rounded-full" style="width: {{ min($occupancyPct, 100) }}%; background-color: {{ $cage->color }};"></span>
+                        </span>
+
+                        <span class="flex items-center justify-between gap-2 border-t border-[#F0F0F0] pt-2.5 text-xs">
+                            <span class="text-[#6B7280]">@if($inactiveCount > 0){{ $inactiveCount }} inactive @endif</span>
+                            <span class="inline-flex items-center gap-1 font-medium text-navy">
+                                View cage layout
+                                <i data-lucide="chevron-right" class="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true"></i>
+                            </span>
+                        </span>
+                    </button>
                 @empty
                     @if($unplacedHens->isEmpty())
-                    <div class="w-full rounded-xl border p-10 text-center text-sm col-span-full"
-                         style="background-color: #ffffff; border-color: #e6e6e6; color: #a39e98;">
+                    <div class="col-span-full rounded-xl border border-[#e6e6e6] bg-white p-10 text-center text-sm text-[#a39e98]">
                         No hens found matching your filters.
                     </div>
                     @endif
                 @endforelse
             </div>
-        </x-card>
-    </div>
+        </div>
+    </section>
 
     {{-- Unplaced Hens --}}
     @if($unplacedHens->isNotEmpty())

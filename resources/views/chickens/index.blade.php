@@ -167,33 +167,35 @@
     <div id="panelMortality" class="{{ $tab !== 'mortality' ? 'hidden' : '' }}" role="tabpanel" tabindex="0" aria-labelledby="chickens-tabs-mortality" {{ $tab !== 'mortality' ? 'hidden' : '' }}>
 
         {{-- Summary Cards — 3-card layout: Deaths Today / Livability / Total --}}
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5 kpi-rhythm" id="mortality-summary">
-            <x-kpi-card
-                label="Deaths Today" infoKey="hens-page.deaths-today"
-                icon="skull"
-                cardGradient="linear-gradient(135deg,#ec4899,#9d174d)"
-                delay="0ms"
-                :value="$todayTotal"
-                data-mortality-total
-            />
-            <x-kpi-card
-                label="Livability Rate" infoKey="hens-page.livability-rate"
-                icon="heart"
-                cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)"
-                delay="60ms"
-                :value="number_format($livabilityRate, 1) . '%'"
-                data-mortality-livability
-                data-live-hens="{{ $liveHens }}"
-                data-starting-hens="{{ $startingHens }}"
-            />
-            <x-kpi-card
-                label="Total Mortality" infoKey="hens-page.total-mortality"
-                icon="skull"
-                cardGradient="linear-gradient(135deg,#ec4899,#9d174d)"
-                delay="120ms"
-                :value="$totalMortality"
-                data-mortality-cumulative
-            />
+        <div class="@container">
+            <div class="grid grid-cols-1 sm:grid-cols-2 @min-[60rem]:grid-cols-3 gap-3 mb-5 kpi-rhythm" id="mortality-summary">
+                <x-kpi-card
+                    label="Deaths Today" infoKey="hens-page.deaths-today"
+                    icon="skull"
+                    cardGradient="linear-gradient(135deg,#ec4899,#9d174d)"
+                    delay="0ms"
+                    :value="$todayTotal"
+                    data-mortality-total
+                />
+                <x-kpi-card
+                    label="Livability Rate" infoKey="hens-page.livability-rate"
+                    icon="heart"
+                    cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)"
+                    delay="60ms"
+                    :value="number_format($livabilityRate, 1) . '%'"
+                    data-mortality-livability
+                    data-live-hens="{{ $liveHens }}"
+                    data-starting-hens="{{ $startingHens }}"
+                />
+                <x-kpi-card
+                    label="Total Mortality" infoKey="hens-page.total-mortality"
+                    icon="skull"
+                    cardGradient="linear-gradient(135deg,#ec4899,#9d174d)"
+                    delay="120ms"
+                    :value="$totalMortality"
+                    data-mortality-cumulative
+                />
+            </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -498,16 +500,7 @@ function switchTab(tab) {
 
 function switchChickenCage(cageId) {
     document.querySelectorAll('.cage-overview-card').forEach(function(card) {
-        var isSelected = card.dataset.cageId == cageId;
-        if (isSelected) {
-            card.style.borderColor = 'var(--color-navy)';
-            card.style.borderWidth = '2px';
-            card.style.backgroundColor = '#f0f7ff';
-        } else {
-            card.style.borderColor = '#e6e6e6';
-            card.style.borderWidth = '1px';
-            card.style.backgroundColor = '#ffffff';
-        }
+        card.classList.toggle('is-selected', card.dataset.cageId == cageId);
     });
 
     document.querySelectorAll('.cage-grid').forEach(g => g.classList.add('hidden'));
