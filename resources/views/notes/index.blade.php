@@ -28,23 +28,25 @@
         $topSection = $categoryCounts->sortDesc()->keys()->first();
         $topSectionCount = $topSection ? (int) $categoryCounts[$topSection] : 0;
     @endphp
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 kpi-rhythm">
-        <x-kpi-card label="Total Notes" infoKey="notes.total" icon="notebook-pen" delay="0ms"
-                    :value="number_format($totalNotes)">
-            <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">across {{ $categoryCounts->filter()->count() }} {{ Str::plural('section', $categoryCounts->filter()->count()) }}</div>
-        </x-kpi-card>
-        <x-kpi-card label="This Week" infoKey="notes.this-week" icon="calendar-plus" delay="60ms"
-                    :value="number_format($noteStats['this_week'])">
-            <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">added in the last 7 days</div>
-        </x-kpi-card>
-        <x-kpi-card label="Top Section" infoKey="notes.top-section" icon="tags" delay="120ms"
-                    :value="$topSection ? e($topSection) : null">
-            <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">{{ $topSection ? number_format($topSectionCount) . ' ' . Str::plural('note', $topSectionCount) : 'No notes yet' }}</div>
-        </x-kpi-card>
-        <x-kpi-card label="Linked to a Cage" infoKey="notes.cage-linked" icon="warehouse" delay="180ms"
-                    :value="number_format($noteStats['cage_linked'])">
-            <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">of {{ number_format($totalNotes) }} notes</div>
-        </x-kpi-card>
+    <div class="@container">
+        <div class="grid grid-cols-2 @min-[68rem]:grid-cols-4 gap-3 kpi-rhythm">
+            <x-kpi-card label="Total Notes" infoKey="notes.total" icon="notebook-pen" delay="0ms"
+                        :value="number_format($totalNotes)">
+                <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">across {{ $categoryCounts->filter()->count() }} {{ Str::plural('section', $categoryCounts->filter()->count()) }}</div>
+            </x-kpi-card>
+            <x-kpi-card label="This Week" infoKey="notes.this-week" icon="calendar-plus" delay="60ms"
+                        :value="number_format($noteStats['this_week'])">
+                <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">added in the last 7 days</div>
+            </x-kpi-card>
+            <x-kpi-card label="Top Section" infoKey="notes.top-section" icon="tags" delay="120ms"
+                        :value="$topSection ? e($topSection) : null">
+                <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">{{ $topSection ? number_format($topSectionCount) . ' ' . Str::plural('note', $topSectionCount) : 'No notes yet' }}</div>
+            </x-kpi-card>
+            <x-kpi-card label="Linked to a Cage" infoKey="notes.cage-linked" icon="warehouse" delay="180ms"
+                        :value="number_format($noteStats['cage_linked'])">
+                <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">of {{ number_format($totalNotes) }} notes</div>
+            </x-kpi-card>
+        </div>
     </div>
 
     {{-- ── Add Note ── --}}

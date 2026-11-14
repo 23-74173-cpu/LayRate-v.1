@@ -5,27 +5,29 @@
     @php
         $sensorPct = $logStats['records'] > 0 ? round($logStats['sensor'] / $logStats['records'] * 100) : 0;
     @endphp
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4 kpi-rhythm">
-        <x-kpi-card label="Records" infoKey="recent-logs.records" icon="clipboard-list" delay="0ms"
-                    :value="number_format($logStats['records'])"
-                    :info-detail="number_format($logStats['records']) . ' matching the filters'">
-            <div class="mobile-kpi-secondary kpi-secondary-detail hidden md:block text-xs mt-1.5 font-medium" style="color: #615d59;">matching the filters</div>
-        </x-kpi-card>
-        <x-kpi-card label="Eggs Logged" infoKey="recent-logs.eggs" icon="egg" delay="60ms"
-                    :value="number_format($logStats['eggs'])"
-                    :info-detail="number_format($logStats['eggs']) . ' eggs across these records'">
-            <div class="mobile-kpi-secondary kpi-secondary-detail hidden md:block text-xs mt-1.5 font-medium" style="color: #615d59;">across these records</div>
-        </x-kpi-card>
-        <x-kpi-card label="Logged by IR" infoKey="recent-logs.sensor-share" icon="radio" delay="120ms"
-                    :value="$sensorPct . '%'"
-                    :info-detail="number_format($logStats['sensor']) . ' sensor · ' . number_format($logStats['records'] - $logStats['sensor']) . ' other'">
-            <div class="mobile-kpi-secondary kpi-secondary-detail mobile-kpi-wrap hidden md:block text-xs mt-1.5 font-medium" style="color: #615d59;">{{ number_format($logStats['sensor']) }} sensor · {{ number_format($logStats['records'] - $logStats['sensor']) }} other</div>
-        </x-kpi-card>
-        <x-kpi-card label="Overridden" infoKey="recent-logs.overridden" icon="shield-check" delay="180ms"
-                    :value="number_format($logStats['overridden'])"
-                    :info-detail="number_format($logStats['overridden']) . ' sensor counts corrected'">
-            <div class="mobile-kpi-secondary kpi-secondary-detail hidden md:block text-xs mt-1.5 font-medium" style="color: #615d59;">sensor counts corrected</div>
-        </x-kpi-card>
+    <div class="@container">
+        <div class="grid grid-cols-2 @min-[68rem]:grid-cols-4 gap-3 mb-4 kpi-rhythm">
+            <x-kpi-card label="Records" infoKey="recent-logs.records" icon="clipboard-list" delay="0ms"
+                        :value="number_format($logStats['records'])"
+                        :info-detail="number_format($logStats['records']) . ' matching the filters'">
+                <div class="mobile-kpi-secondary kpi-secondary-detail hidden md:block text-xs mt-1.5 font-medium" style="color: #615d59;">matching the filters</div>
+            </x-kpi-card>
+            <x-kpi-card label="Eggs Logged" infoKey="recent-logs.eggs" icon="egg" delay="60ms"
+                        :value="number_format($logStats['eggs'])"
+                        :info-detail="number_format($logStats['eggs']) . ' eggs across these records'">
+                <div class="mobile-kpi-secondary kpi-secondary-detail hidden md:block text-xs mt-1.5 font-medium" style="color: #615d59;">across these records</div>
+            </x-kpi-card>
+            <x-kpi-card label="Logged by IR" infoKey="recent-logs.sensor-share" icon="radio" delay="120ms"
+                        :value="$sensorPct . '%'"
+                        :info-detail="number_format($logStats['sensor']) . ' sensor · ' . number_format($logStats['records'] - $logStats['sensor']) . ' other'">
+                <div class="mobile-kpi-secondary kpi-secondary-detail mobile-kpi-wrap hidden md:block text-xs mt-1.5 font-medium" style="color: #615d59;">{{ number_format($logStats['sensor']) }} sensor · {{ number_format($logStats['records'] - $logStats['sensor']) }} other</div>
+            </x-kpi-card>
+            <x-kpi-card label="Overridden" infoKey="recent-logs.overridden" icon="shield-check" delay="180ms"
+                        :value="number_format($logStats['overridden'])"
+                        :info-detail="number_format($logStats['overridden']) . ' sensor counts corrected'">
+                <div class="mobile-kpi-secondary kpi-secondary-detail hidden md:block text-xs mt-1.5 font-medium" style="color: #615d59;">sensor counts corrected</div>
+            </x-kpi-card>
+        </div>
     </div>
     @endisset
     <div class="overflow-x-auto mobile-log-list">

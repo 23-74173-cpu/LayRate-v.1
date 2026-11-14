@@ -3,35 +3,37 @@
     @include('environment._reference-card')
 
     {{-- ── Top Metric Cards — dashboard gradient KPI design ── --}}
-    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-8">
-        <x-kpi-card
-            label="Coop Avg Temp" infoKey="environment.avg-temp"
-            icon="thermometer"
-            cardGradient="linear-gradient(135deg,#f59e0b,#C2703E)"
-            delay="0ms"
-            :value="($avgTemp ? number_format($avgTemp,1) : '—') . '°C'"
-        >
-            <div class="kpi-secondary-detail mobile-body-text text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">Spread {{ $tempValues->count() > 1 ? number_format(max(0, $tempValues->max() - $tempValues->min()), 1) . '°C across cages' : 'across cages' }}</div>
-        </x-kpi-card>
-        <x-kpi-card
-            label="Coop Avg Humidity" infoKey="environment.avg-humidity"
-            icon="droplets"
-            cardGradient="linear-gradient(135deg,#0d9488,#2C7C91)"
-            delay="60ms"
-            :value="($avgHum ? number_format($avgHum,1) : '—') . '%'"
-        >
-            <div class="kpi-secondary-detail mobile-body-text text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">Spread {{ $humValues->count() > 1 ? number_format(max(0, $humValues->max() - $humValues->min()), 1) . '% across cages' : 'across cages' }}</div>
-        </x-kpi-card>
-        <x-kpi-card
-            class="col-span-2 md:col-span-1"
-            label="Active Sensors" infoKey="environment.active-sensors"
-            icon="radio"
-            cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))"
-            delay="120ms"
-            :value="$activeSensors . ' sensors'"
-        >
-            <div class="kpi-secondary-detail mobile-body-text text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">{{ $activeSensors > 0 ? 'One node mapped per cage' : 'All entries are manual logs' }}</div>
-        </x-kpi-card>
+    <div class="@container">
+        <div class="grid grid-cols-2 @min-[60rem]:grid-cols-3 gap-3 mb-8">
+            <x-kpi-card
+                label="Coop Avg Temp" infoKey="environment.avg-temp"
+                icon="thermometer"
+                cardGradient="linear-gradient(135deg,#f59e0b,#C2703E)"
+                delay="0ms"
+                :value="($avgTemp ? number_format($avgTemp,1) : '—') . '°C'"
+            >
+                <div class="kpi-secondary-detail mobile-body-text text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">Spread {{ $tempValues->count() > 1 ? number_format(max(0, $tempValues->max() - $tempValues->min()), 1) . '°C across cages' : 'across cages' }}</div>
+            </x-kpi-card>
+            <x-kpi-card
+                label="Coop Avg Humidity" infoKey="environment.avg-humidity"
+                icon="droplets"
+                cardGradient="linear-gradient(135deg,#0d9488,#2C7C91)"
+                delay="60ms"
+                :value="($avgHum ? number_format($avgHum,1) : '—') . '%'"
+            >
+                <div class="kpi-secondary-detail mobile-body-text text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">Spread {{ $humValues->count() > 1 ? number_format(max(0, $humValues->max() - $humValues->min()), 1) . '% across cages' : 'across cages' }}</div>
+            </x-kpi-card>
+            <x-kpi-card
+                class="col-span-2 md:col-span-1"
+                label="Active Sensors" infoKey="environment.active-sensors"
+                icon="radio"
+                cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))"
+                delay="120ms"
+                :value="$activeSensors . ' sensors'"
+            >
+                <div class="kpi-secondary-detail mobile-body-text text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">{{ $activeSensors > 0 ? 'One node mapped per cage' : 'All entries are manual logs' }}</div>
+            </x-kpi-card>
+        </div>
     </div>
 
     {{-- ── Per-cage Sensor Cards (sensor-assigned cages with readings only) ── --}}

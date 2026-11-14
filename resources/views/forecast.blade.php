@@ -20,11 +20,13 @@
     @endphp
 
     {{-- ── Forecast KPI Cards — dashboard gradient KPI design ── --}}
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 kpi-rhythm">
-        <x-kpi-card label="Weeks in month" infoKey="forecast.weeks-in-month" icon="calendar-range" cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))" delay="0ms" :value="$weeksInMonth" />
-        <x-kpi-card label="Days in month" infoKey="forecast.days-in-month" icon="calendar-days" cardGradient="linear-gradient(135deg,#8B5CF6,#6B4C8A)" delay="60ms" :value="$daysInMonth" />
-        <x-kpi-card label="Forecast days" infoKey="forecast.forecast-days" icon="trending-up" cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)" delay="120ms" :value="count($forecastMap)" />
-        <x-kpi-card label="Current week" infoKey="forecast.current-week" icon="calendar-check" cardGradient="linear-gradient(135deg,#d97706,#C2703E)" delay="180ms" :value="$calendarToday->weekOfMonth" />
+    <div class="@container">
+        <div class="grid grid-cols-2 @min-[68rem]:grid-cols-4 gap-3 kpi-rhythm">
+            <x-kpi-card label="Weeks in month" infoKey="forecast.weeks-in-month" icon="calendar-range" cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))" delay="0ms" :value="$weeksInMonth" />
+            <x-kpi-card label="Days in month" infoKey="forecast.days-in-month" icon="calendar-days" cardGradient="linear-gradient(135deg,#8B5CF6,#6B4C8A)" delay="60ms" :value="$daysInMonth" />
+            <x-kpi-card label="Forecast days" infoKey="forecast.forecast-days" icon="trending-up" cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)" delay="120ms" :value="count($forecastMap)" />
+            <x-kpi-card label="Current week" infoKey="forecast.current-week" icon="calendar-check" cardGradient="linear-gradient(135deg,#d97706,#C2703E)" delay="180ms" :value="$calendarToday->weekOfMonth" />
+        </div>
     </div>
 
     @php

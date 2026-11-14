@@ -15,35 +15,37 @@
 
     {{-- ── Supply Summary — dashboard gradient KPI design ── --}}
     <h2 class="sr-only">Pre-Orders Overview</h2>
-    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 kpi-rhythm">
-        @foreach($summary as $size => $data)
-        @php
-            $label = \App\Enums\EggSize::labelFor($size);
-            $gradients = [
-                'small'  => 'linear-gradient(135deg,#16a34a,#2D7D46)',
-                'medium' => 'linear-gradient(135deg,var(--color-navy),var(--color-info))',
-                'large'  => 'linear-gradient(135deg,#d97706,#C2703E)',
-                'xl'     => 'linear-gradient(135deg,var(--color-teal-500),var(--color-teal-700))',
-                'jumbo'  => 'linear-gradient(135deg,#8B5CF6,#6B4C8A)',
-            ];
-            $cardGradient = $gradients[$size] ?? 'linear-gradient(135deg,#6B7280,#4B5563)';
-            $isDeficit = $data['deficit'] > 0;
-        @endphp
-        <x-kpi-card
-            label="{{ $label }}" infoKey="preorders.size-availability"
-            icon="egg"
-            cardGradient="{{ $cardGradient }}"
-            delay="{{ $loop->index * 60 }}ms"
-            :value="number_format($data['available'])"
-        >
-            <div class="mobile-kpi-secondary kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">{{ number_format($data['logged']) }} produced · {{ number_format($data['committed']) }} committed</div>
-            @if($isDeficit)
-            <div class="mobile-kpi-secondary kpi-secondary-detail text-xs mt-1 font-semibold max-md:hidden" style="color: #9b1c24;">Shortfall: {{ number_format($data['deficit']) }} eggs</div>
-            @else
-            <div class="mobile-kpi-secondary kpi-secondary-detail text-xs mt-1 font-medium max-md:hidden" style="color: #615d59;">+{{ number_format($data['forecasted']) }} forecasted</div>
-            @endif
-        </x-kpi-card>
-        @endforeach
+    <div class="@container">
+        <div class="grid grid-cols-2 @min-[60rem]:grid-cols-3 @min-[86rem]:grid-cols-5 gap-3 kpi-rhythm">
+            @foreach($summary as $size => $data)
+            @php
+                $label = \App\Enums\EggSize::labelFor($size);
+                $gradients = [
+                    'small'  => 'linear-gradient(135deg,#16a34a,#2D7D46)',
+                    'medium' => 'linear-gradient(135deg,var(--color-navy),var(--color-info))',
+                    'large'  => 'linear-gradient(135deg,#d97706,#C2703E)',
+                    'xl'     => 'linear-gradient(135deg,var(--color-teal-500),var(--color-teal-700))',
+                    'jumbo'  => 'linear-gradient(135deg,#8B5CF6,#6B4C8A)',
+                ];
+                $cardGradient = $gradients[$size] ?? 'linear-gradient(135deg,#6B7280,#4B5563)';
+                $isDeficit = $data['deficit'] > 0;
+            @endphp
+            <x-kpi-card
+                label="{{ $label }}" infoKey="preorders.size-availability"
+                icon="egg"
+                cardGradient="{{ $cardGradient }}"
+                delay="{{ $loop->index * 60 }}ms"
+                :value="number_format($data['available'])"
+            >
+                <div class="mobile-kpi-secondary kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">{{ number_format($data['logged']) }} produced · {{ number_format($data['committed']) }} committed</div>
+                @if($isDeficit)
+                <div class="mobile-kpi-secondary kpi-secondary-detail text-xs mt-1 font-semibold max-md:hidden" style="color: #9b1c24;">Shortfall: {{ number_format($data['deficit']) }} eggs</div>
+                @else
+                <div class="mobile-kpi-secondary kpi-secondary-detail text-xs mt-1 font-medium max-md:hidden" style="color: #615d59;">+{{ number_format($data['forecasted']) }} forecasted</div>
+                @endif
+            </x-kpi-card>
+            @endforeach
+        </div>
     </div>
 
     {{-- ── Filters ── --}}

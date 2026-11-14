@@ -12,35 +12,37 @@
     $warningThreshold = (float) config('fcr.warning_threshold', 4.0);
     $hasValidFcr = $fcrTimeline->contains(fn ($row) => $row['fcr'] !== null);
 @endphp
-<div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-5">
-    <x-kpi-card
-        label="FCR (This {{ $periodLabel }})" infoKey="feed.fcr-current"
-        icon="scale"
-        cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
-        delay="0ms"
-        :value="$fcrCurrent !== null ? number_format($fcrCurrent, 2) : 'N/A'"
-    >
-        <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">lower is better · {{ $summaryLabel }}</div>
-    </x-kpi-card>
-    <x-kpi-card
-        label="Feed Consumed" infoKey="feed.fcr-consumed"
-        icon="package"
-        cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
-        delay="60ms"
-        :value="number_format($fcrTotalFeedKg, 1) . ' kg'"
-    >
-        <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">shown periods</div>
-    </x-kpi-card>
-    <x-kpi-card
-        class="col-span-2 md:col-span-1"
-        label="Est. Egg Mass" infoKey="feed.fcr-egg-mass"
-        icon="egg"
-        cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
-        delay="120ms"
-        :value="number_format($fcrTotalEggMassKg, 2) . ' kg'"
-    >
-        <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">egg counts + weights</div>
-    </x-kpi-card>
+<div class="@container">
+    <div class="grid grid-cols-2 @min-[60rem]:grid-cols-3 gap-3 mb-5">
+        <x-kpi-card
+            label="FCR (This {{ $periodLabel }})" infoKey="feed.fcr-current"
+            icon="scale"
+            cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
+            delay="0ms"
+            :value="$fcrCurrent !== null ? number_format($fcrCurrent, 2) : 'N/A'"
+        >
+            <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">lower is better · {{ $summaryLabel }}</div>
+        </x-kpi-card>
+        <x-kpi-card
+            label="Feed Consumed" infoKey="feed.fcr-consumed"
+            icon="package"
+            cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
+            delay="60ms"
+            :value="number_format($fcrTotalFeedKg, 1) . ' kg'"
+        >
+            <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">shown periods</div>
+        </x-kpi-card>
+        <x-kpi-card
+            class="col-span-2 md:col-span-1"
+            label="Est. Egg Mass" infoKey="feed.fcr-egg-mass"
+            icon="egg"
+            cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
+            delay="120ms"
+            :value="number_format($fcrTotalEggMassKg, 2) . ' kg'"
+        >
+            <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">egg counts + weights</div>
+        </x-kpi-card>
+    </div>
 </div>
 @if(! $hasValidFcr)
 <div class="mx-auto max-w-xl rounded-xl border border-[#D9D9D9] bg-[#F8FAFC] px-5 py-8 text-center" role="status" aria-live="polite">

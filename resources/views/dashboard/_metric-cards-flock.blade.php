@@ -4,46 +4,48 @@
             <x-section-label title="Flock & Mortality" icon="users">
                 @if($kpiAsOf ?? null)<x-slot:meta>· as of {{ $kpiAsOf }}</x-slot:meta> @endif
             </x-section-label>
-            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 kpi-rhythm">
-                @php
-                    $livabilityDenom = $totalHens + $mortalityTodayTotal;
-                    $livabilityToday = $livabilityDenom > 0 ? round(100 * $totalHens / $livabilityDenom, 1) : 100.0;
-                @endphp
+            <div class="@container">
+                <div class="grid grid-cols-2 @min-[60rem]:grid-cols-3 gap-3 kpi-rhythm">
+                    @php
+                        $livabilityDenom = $totalHens + $mortalityTodayTotal;
+                        $livabilityToday = $livabilityDenom > 0 ? round(100 * $totalHens / $livabilityDenom, 1) : 100.0;
+                    @endphp
 
-                <x-kpi-card
-                    class="col-span-2 sm:col-span-1"
-                    label="Mortality Today" infoKey="flock.mortality-today"
-                    icon="heart-crack"
-                    cardGradient="linear-gradient(135deg,#ec4899,#9d174d)"
-                    delay="0ms"
-                    :href="route('chickens.index', ['tab' => 'mortality'])"
-                    kpi="mortality"
-                    ariaLabel="Go to Mortality"
-                    infoLabel="Mortality per cage breakdown"
-                    :value="number_format($mortalityTodayTotal)"
-                />
+                    <x-kpi-card
+                        class="col-span-2 sm:col-span-1"
+                        label="Mortality Today" infoKey="flock.mortality-today"
+                        icon="heart-crack"
+                        cardGradient="linear-gradient(135deg,#ec4899,#9d174d)"
+                        delay="0ms"
+                        :href="route('chickens.index', ['tab' => 'mortality'])"
+                        kpi="mortality"
+                        ariaLabel="Go to Mortality"
+                        infoLabel="Mortality per cage breakdown"
+                        :value="number_format($mortalityTodayTotal)"
+                    />
 
-                <x-kpi-card
-                    label="Livability" infoKey="flock.livability"
-                    icon="shield-check"
-                    cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)"
-                    delay="60ms"
-                    :href="route('chickens.index', ['tab' => 'mortality'])"
-                    ariaLabel="Go to Mortality"
-                    infoLabel="Mortality per cage breakdown"
-                    :target="$livabilityToday"
-                    :decimals="1"
-                    suffix="%"
-                />
+                    <x-kpi-card
+                        label="Livability" infoKey="flock.livability"
+                        icon="shield-check"
+                        cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)"
+                        delay="60ms"
+                        :href="route('chickens.index', ['tab' => 'mortality'])"
+                        ariaLabel="Go to Mortality"
+                        infoLabel="Mortality per cage breakdown"
+                        :target="$livabilityToday"
+                        :decimals="1"
+                        suffix="%"
+                    />
 
-                <x-kpi-card
-                    label="Total Mortality" info="Total recorded hen deaths across all dates for the selected cage, or the whole farm when no cage is selected."
-                    icon="calendar-x"
-                    cardGradient="linear-gradient(135deg,#d97706,#C2703E)"
-                    delay="120ms"
-                    :href="route('chickens.index', ['tab' => 'mortality'])"
-                    :value="number_format($totalMortality)"
-                />
+                    <x-kpi-card
+                        label="Total Mortality" info="Total recorded hen deaths across all dates for the selected cage, or the whole farm when no cage is selected."
+                        icon="calendar-x"
+                        cardGradient="linear-gradient(135deg,#d97706,#C2703E)"
+                        delay="120ms"
+                        :href="route('chickens.index', ['tab' => 'mortality'])"
+                        :value="number_format($totalMortality)"
+                    />
+                </div>
             </div>
         </div>
     </div>

@@ -14,37 +14,39 @@
     <div class="space-y-5">
 
     {{-- ── Summary Cards — dashboard gradient KPI design ── --}}
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 kpi-rhythm" id="summaryCards">
-        @foreach($sizes as $size)
-        @php
-            $total = $totals[$size] ?? 0;
-            $trays = $trayTotals[$size] ?? 0;
-            $label = \App\Enums\EggSize::labelFor($size);
-            $pool = $availablePools[$size] ?? 0;
-            $threshold = $eggStockThresholds[$size] ?? 0;
-            $isLowStock = $threshold > 0 && $pool <= $threshold;
-            $gradients = [
-                'small'    => 'linear-gradient(135deg,#16a34a,#2D7D46)',
-                'medium'   => 'linear-gradient(135deg,var(--color-navy),var(--color-info))',
-                'large'    => 'linear-gradient(135deg,#d97706,#C2703E)',
-                'xl'       => 'linear-gradient(135deg,var(--color-teal-500),var(--color-teal-700))',
-                'jumbo'    => 'linear-gradient(135deg,#8B5CF6,#6B4C8A)',
-                'unsorted' => 'linear-gradient(135deg,#6B7280,#4B5563)',
-            ];
-            $cardGradient = $gradients[$size];
-            $icons = ['small' => 'egg', 'medium' => 'egg', 'large' => 'egg', 'xl' => 'egg', 'jumbo' => 'egg', 'unsorted' => 'layers'];
-        @endphp
-        <x-kpi-card
-            label="{{ $label }}" infoKey="stocks.size-stock"
-            icon="{{ $icons[$size] }}"
-            cardGradient="{{ $cardGradient }}"
-            delay="{{ $loop->index * 60 }}ms"
-            :value="number_format($total)"
-            data-size="{{ $size }}"
-        >
-            <div class="mobile-kpi-secondary kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">{{ $trays }} {{ $trays === 1 ? 'tray' : 'trays' }} · {{ number_format($pool) }} available</div>
-        </x-kpi-card>
-        @endforeach
+    <div class="@container">
+        <div class="grid grid-cols-2 @min-[60rem]:grid-cols-3 @min-[100rem]:grid-cols-6 gap-3 kpi-rhythm" id="summaryCards">
+            @foreach($sizes as $size)
+            @php
+                $total = $totals[$size] ?? 0;
+                $trays = $trayTotals[$size] ?? 0;
+                $label = \App\Enums\EggSize::labelFor($size);
+                $pool = $availablePools[$size] ?? 0;
+                $threshold = $eggStockThresholds[$size] ?? 0;
+                $isLowStock = $threshold > 0 && $pool <= $threshold;
+                $gradients = [
+                    'small'    => 'linear-gradient(135deg,#16a34a,#2D7D46)',
+                    'medium'   => 'linear-gradient(135deg,var(--color-navy),var(--color-info))',
+                    'large'    => 'linear-gradient(135deg,#d97706,#C2703E)',
+                    'xl'       => 'linear-gradient(135deg,var(--color-teal-500),var(--color-teal-700))',
+                    'jumbo'    => 'linear-gradient(135deg,#8B5CF6,#6B4C8A)',
+                    'unsorted' => 'linear-gradient(135deg,#6B7280,#4B5563)',
+                ];
+                $cardGradient = $gradients[$size];
+                $icons = ['small' => 'egg', 'medium' => 'egg', 'large' => 'egg', 'xl' => 'egg', 'jumbo' => 'egg', 'unsorted' => 'layers'];
+            @endphp
+            <x-kpi-card
+                label="{{ $label }}" infoKey="stocks.size-stock"
+                icon="{{ $icons[$size] }}"
+                cardGradient="{{ $cardGradient }}"
+                delay="{{ $loop->index * 60 }}ms"
+                :value="number_format($total)"
+                data-size="{{ $size }}"
+            >
+                <div class="mobile-kpi-secondary kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">{{ $trays }} {{ $trays === 1 ? 'tray' : 'trays' }} · {{ number_format($pool) }} available</div>
+            </x-kpi-card>
+            @endforeach
+        </div>
     </div>
 
     {{-- ── Stock Table Filters ── --}}

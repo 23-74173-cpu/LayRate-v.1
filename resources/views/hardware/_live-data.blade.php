@@ -1,34 +1,36 @@
 <turbo-frame id="hardware-live-data">
     {{-- Summary Cards — dashboard gradient KPI design (cardGradient) ── --}}
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8 kpi-rhythm">
-        <x-kpi-card
-            label="All Active" infoKey="hardware.active"
-            icon="cpu"
-            cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)"
-            delay="0ms"
-            :value="$activeCount"
-        />
-        <x-kpi-card
-            label="IR Breakbeams" infoKey="hardware.breakbeam"
-            icon="scan"
-            cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)"
-            delay="60ms"
-            :value="$breakbeamCount"
-        />
-        <x-kpi-card
-            label="DHT22" infoKey="hardware.dht22"
-            icon="thermometer"
-            cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))"
-            delay="120ms"
-            :value="$dht22Count"
-        />
-        <x-kpi-card
-            label="Health Faulty" infoKey="hardware.faulty"
-            icon="alert-triangle"
-            cardGradient="linear-gradient(135deg,#dc2626,#9b1c24)"
-            delay="180ms"
-            :value="$faultyCount"
-        />
+    <div class="@container">
+        <div class="grid grid-cols-2 @min-[68rem]:grid-cols-4 gap-3 mb-8 kpi-rhythm">
+            <x-kpi-card
+                label="All Active" infoKey="hardware.active"
+                icon="cpu"
+                cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)"
+                delay="0ms"
+                :value="$activeCount"
+            />
+            <x-kpi-card
+                label="IR Breakbeams" infoKey="hardware.breakbeam"
+                icon="scan"
+                cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)"
+                delay="60ms"
+                :value="$breakbeamCount"
+            />
+            <x-kpi-card
+                label="DHT22" infoKey="hardware.dht22"
+                icon="thermometer"
+                cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))"
+                delay="120ms"
+                :value="$dht22Count"
+            />
+            <x-kpi-card
+                label="Health Faulty" infoKey="hardware.faulty"
+                icon="alert-triangle"
+                cardGradient="linear-gradient(135deg,#dc2626,#9b1c24)"
+                delay="180ms"
+                :value="$faultyCount"
+            />
+        </div>
     </div>
 
     {{-- Device Table --}}

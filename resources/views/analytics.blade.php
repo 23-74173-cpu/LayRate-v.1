@@ -40,13 +40,15 @@
     {{-- ── Summary KPI Cards (dashboard gradient KPI design; inner span IDs preserved for AJAX updates) ── --}}
     @if(!$isPerformance)
     @php $kpiColor = $isAll ? '#333333' : $cage->color; @endphp
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 kpi-rhythm">
-        <x-kpi-card label="Cage" infoKey="analytics.scope-cage" icon="warehouse" cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))" delay="0ms" :value="'<span id=\'kpi-cage\'>' . ($isAll ? 'All Cages' : $cageCode) . '</span>'" />
-        <x-kpi-card label="Breed" infoKey="analytics.scope-breed" icon="bird" cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)" delay="60ms" :value="'<span id=\'kpi-breed\'>' . ($isAll ? 'Mixed' : ($cage->hens->first()?->breed ?? '—')) . '</span>'" />
-        <x-kpi-card label="Avg HDEP" infoKey="analytics.avg-hdep" icon="gauge" cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))" delay="120ms" :value="'<span id=\'kpi-avg-hdep\'>' . ($avgHdep === '-' ? '-' : $avgHdep . '%') . '</span>'" />
-        <x-kpi-card label="Best Day" infoKey="analytics.best-day" icon="trending-up" cardGradient="linear-gradient(135deg,#8B5CF6,#6B4C8A)" delay="180ms" :value="'<span id=\'kpi-best-day\'>' . ($bestDay === '-' ? '-' : $bestDay . '%') . '</span>'" />
-        <x-kpi-card label="Worst Day" infoKey="analytics.worst-day" icon="trending-down" cardGradient="linear-gradient(135deg,#d97706,#C2703E)" delay="240ms" :value="'<span id=\'kpi-worst-day\'>' . ($worstDay === '-' ? '-' : $worstDay . '%') . '</span>'" />
-        <x-kpi-card label="Flock Age" infoKey="analytics.flock-age" icon="clock" cardGradient="linear-gradient(135deg,#0d9488,#2C7C91)" delay="300ms" :value="'<span id=\'kpi-flock-age\'>' . ($isAll ? '—' : ($cage->hens->first() ? $cage->hens->first()->current_age_weeks . ' wks' : '—')) . '</span>'" />
+    <div class="@container">
+        <div class="grid grid-cols-2 @min-[60rem]:grid-cols-3 @min-[100rem]:grid-cols-6 gap-3 kpi-rhythm">
+            <x-kpi-card label="Cage" infoKey="analytics.scope-cage" icon="warehouse" cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))" delay="0ms" :value="'<span id=\'kpi-cage\'>' . ($isAll ? 'All Cages' : $cageCode) . '</span>'" />
+            <x-kpi-card label="Breed" infoKey="analytics.scope-breed" icon="bird" cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)" delay="60ms" :value="'<span id=\'kpi-breed\'>' . ($isAll ? 'Mixed' : ($cage->hens->first()?->breed ?? '—')) . '</span>'" />
+            <x-kpi-card label="Avg HDEP" infoKey="analytics.avg-hdep" icon="gauge" cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))" delay="120ms" :value="'<span id=\'kpi-avg-hdep\'>' . ($avgHdep === '-' ? '-' : $avgHdep . '%') . '</span>'" />
+            <x-kpi-card label="Best Day" infoKey="analytics.best-day" icon="trending-up" cardGradient="linear-gradient(135deg,#8B5CF6,#6B4C8A)" delay="180ms" :value="'<span id=\'kpi-best-day\'>' . ($bestDay === '-' ? '-' : $bestDay . '%') . '</span>'" />
+            <x-kpi-card label="Worst Day" infoKey="analytics.worst-day" icon="trending-down" cardGradient="linear-gradient(135deg,#d97706,#C2703E)" delay="240ms" :value="'<span id=\'kpi-worst-day\'>' . ($worstDay === '-' ? '-' : $worstDay . '%') . '</span>'" />
+            <x-kpi-card label="Flock Age" infoKey="analytics.flock-age" icon="clock" cardGradient="linear-gradient(135deg,#0d9488,#2C7C91)" delay="300ms" :value="'<span id=\'kpi-flock-age\'>' . ($isAll ? '—' : ($cage->hens->first() ? $cage->hens->first()->current_age_weeks . ' wks' : '—')) . '</span>'" />
+        </div>
     </div>
     @endif
 

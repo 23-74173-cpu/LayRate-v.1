@@ -4,62 +4,64 @@
             <x-section-label title="Feeds Management" icon="wheat">
                 @if($kpiAsOf ?? null)<x-slot:meta>· as of {{ $kpiAsOf }}</x-slot:meta> @elseif($feedAsOf ?? null)<x-slot:meta>· last logged {{ $feedAsOf }}</x-slot:meta> @endif
             </x-section-label>
-            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 kpi-rhythm">
-                <x-kpi-card
-                    label="Avg CP% This Week" infoKey="feed.avg-cp"
-                    icon="flask-conical"
-                    cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
-                    delay="240ms"
-                    :href="route('feed')"
-                    kpi="feed-avg-cp"
-                    ariaLabel="Go to Feed"
-                    infoLabel="Avg CP% breakdown"
-                    :value="number_format($avgCp, 1) . '%'"
-                />
+            <div class="@container">
+                <div class="grid grid-cols-2 @min-[68rem]:grid-cols-4 gap-3 kpi-rhythm">
+                    <x-kpi-card
+                        label="Avg CP% This Week" infoKey="feed.avg-cp"
+                        icon="flask-conical"
+                        cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
+                        delay="240ms"
+                        :href="route('feed')"
+                        kpi="feed-avg-cp"
+                        ariaLabel="Go to Feed"
+                        infoLabel="Avg CP% breakdown"
+                        :value="number_format($avgCp, 1) . '%'"
+                    />
 
-                <x-kpi-card
-                    label="Avg Feed/Cage/Day" infoKey="feed.avg-per-cage-day"
-                    icon="scale"
-                    cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
-                    delay="280ms"
-                    :href="route('feed')"
-                    kpi="feed-avg-cage-day"
-                    ariaLabel="Go to Feed"
-                    infoLabel="Avg feed per cage breakdown"
-                    :target="$avgFeedPerCage"
-                    :decimals="1"
-                />
+                    <x-kpi-card
+                        label="Avg Feed/Cage/Day" infoKey="feed.avg-per-cage-day"
+                        icon="scale"
+                        cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
+                        delay="280ms"
+                        :href="route('feed')"
+                        kpi="feed-avg-cage-day"
+                        ariaLabel="Go to Feed"
+                        infoLabel="Avg feed per cage breakdown"
+                        :target="$avgFeedPerCage"
+                        :decimals="1"
+                    />
 
-                <x-kpi-card
-                    label="Total Feed Used" infoKey="feed.total-week"
-                    icon="package"
-                    cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
-                    delay="320ms"
-                    :href="route('feed')"
-                    kpi="feed-total-week"
-                    ariaLabel="Go to Feed"
-                    infoLabel="Total feed used per cage breakdown"
-                    :target="round($totalFeedWeek, 1)"
-                    :decimals="1"
-                    :todayCount="$feedTodayKg"
-                    :todayDecimals="1"
-                    todaySuffix=" kg"
-                />
+                    <x-kpi-card
+                        label="Total Feed Used" infoKey="feed.total-week"
+                        icon="package"
+                        cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
+                        delay="320ms"
+                        :href="route('feed')"
+                        kpi="feed-total-week"
+                        ariaLabel="Go to Feed"
+                        infoLabel="Total feed used per cage breakdown"
+                        :target="round($totalFeedWeek, 1)"
+                        :decimals="1"
+                        :todayCount="$feedTodayKg"
+                        :todayDecimals="1"
+                        todaySuffix=" kg"
+                    />
 
-                <x-kpi-card
-                    label="Feed Cost This Month" infoKey="feed.cost-month"
-                    icon="banknote"
-                    cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
-                    delay="360ms"
-                    :href="route('feed')"
-                    kpi="feed-cost-month"
-                    ariaLabel="Go to Feed"
-                    infoLabel="Feed cost per cage breakdown"
-                    :value="$totalFeedCostMonth !== null && $totalFeedCostMonth > 0 ? '₱' . number_format($totalFeedCostMonth, 2) : null"
-                    :todayCount="$feedCostToday"
-                    :todayDecimals="2"
-                    todayPrefix="₱"
-                />
+                    <x-kpi-card
+                        label="Feed Cost This Month" infoKey="feed.cost-month"
+                        icon="banknote"
+                        cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
+                        delay="360ms"
+                        :href="route('feed')"
+                        kpi="feed-cost-month"
+                        ariaLabel="Go to Feed"
+                        infoLabel="Feed cost per cage breakdown"
+                        :value="$totalFeedCostMonth !== null && $totalFeedCostMonth > 0 ? '₱' . number_format($totalFeedCostMonth, 2) : null"
+                        :todayCount="$feedCostToday"
+                        :todayDecimals="2"
+                        todayPrefix="₱"
+                    />
+                </div>
             </div>
         </div>
     </div>

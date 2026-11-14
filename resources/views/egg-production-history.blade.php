@@ -14,22 +14,24 @@
     <div class="space-y-5">
 
     {{-- Summary cards — dashboard gradient KPI design --}}
-    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 kpi-rhythm">
-        <x-kpi-card label="Lifetime Total" infoKey="eggs.lifetime-total" icon="egg" cardGradient="linear-gradient(135deg,#d97706,#C2703E)" delay="0ms" :value="number_format($lifetimeEggs)">
-            <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">eggs logged since day 1</div>
-        </x-kpi-card>
+    <div class="@container">
+        <div class="grid grid-cols-2 @min-[68rem]:grid-cols-4 gap-3 kpi-rhythm">
+            <x-kpi-card label="Lifetime Total" infoKey="eggs.lifetime-total" icon="egg" cardGradient="linear-gradient(135deg,#d97706,#C2703E)" delay="0ms" :value="number_format($lifetimeEggs)">
+                <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">eggs logged since day 1</div>
+            </x-kpi-card>
 
-        <x-kpi-card label="Timeline Records" infoKey="eggs.timeline-records" icon="layers" cardGradient="linear-gradient(135deg,#8B5CF6,#6B4C8A)" delay="60ms" :value="number_format($timelineRecordsTotal)">
-            <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">{{ ucfirst($groupBy) }} aggregates</div>
-        </x-kpi-card>
+            <x-kpi-card label="Timeline Records" infoKey="eggs.timeline-records" icon="layers" cardGradient="linear-gradient(135deg,#8B5CF6,#6B4C8A)" delay="60ms" :value="number_format($timelineRecordsTotal)">
+                <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">{{ ucfirst($groupBy) }} aggregates</div>
+            </x-kpi-card>
 
-        <x-kpi-card label="Active Cages" infoKey="eggs.active-cages" icon="warehouse" cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))" delay="120ms" :value="$byCage->count()">
-            <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">with production records</div>
-        </x-kpi-card>
+            <x-kpi-card label="Active Cages" infoKey="eggs.active-cages" icon="warehouse" cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))" delay="120ms" :value="$byCage->count()">
+                <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">with production records</div>
+            </x-kpi-card>
 
-        <x-kpi-card label="Size Records" infoKey="eggs.size-records" icon="package" cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)" delay="180ms" :value="number_format($bySize->sum('total'))">
-            <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">eggs with size breakdown</div>
-        </x-kpi-card>
+            <x-kpi-card label="Size Records" infoKey="eggs.size-records" icon="package" cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)" delay="180ms" :value="number_format($bySize->sum('total'))">
+                <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">eggs with size breakdown</div>
+            </x-kpi-card>
+        </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">

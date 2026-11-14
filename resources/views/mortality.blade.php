@@ -84,21 +84,23 @@
             {{-- Today's totals per cage — dashboard gradient KPI design --}}
             <div class="bg-white rounded-lg border border-[#D9D9D9] p-5">
                 <x-card-header title="Today's Summary" icon="clipboard-list" />
-                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 kpi-rhythm">
-                    @foreach($cages as $cage)
-                    @php
-                        $count = $todayByCage[$cage->cage_code] ?? 0;
-                    @endphp
-                    <x-kpi-card
-                        label="{{ $cage->cage_code }}" infoKey="mortality.cage-today"
-                        icon="heart-crack"
-                        cardGradient="linear-gradient(135deg,#ec4899,#9d174d)"
-                        delay="{{ $loop->index * 60 }}ms"
-                        :value="$count"
-                    >
-                        <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">{{ $count === 1 ? 'hen' : 'hens' }}</div>
-                    </x-kpi-card>
-                    @endforeach
+                <div class="@container">
+                    <div class="grid grid-cols-2 @min-[68rem]:grid-cols-4 gap-3 kpi-rhythm">
+                        @foreach($cages as $cage)
+                        @php
+                            $count = $todayByCage[$cage->cage_code] ?? 0;
+                        @endphp
+                        <x-kpi-card
+                            label="{{ $cage->cage_code }}" infoKey="mortality.cage-today"
+                            icon="heart-crack"
+                            cardGradient="linear-gradient(135deg,#ec4899,#9d174d)"
+                            delay="{{ $loop->index * 60 }}ms"
+                            :value="$count"
+                        >
+                            <div class="kpi-secondary-detail text-xs mt-1.5 font-medium max-md:hidden" style="color: #615d59;">{{ $count === 1 ? 'hen' : 'hens' }}</div>
+                        </x-kpi-card>
+                        @endforeach
+                    </div>
                 </div>
             </div>
 

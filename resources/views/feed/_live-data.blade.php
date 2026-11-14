@@ -2,35 +2,37 @@
 <turbo-frame id="feed-live-data">
     <span hidden data-feed-batch-count="{{ $allBatches->count() }}"></span>
     {{-- ── Metric Cards — dashboard gradient KPI design (cardGradient) ── --}}
-    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-        <x-kpi-card
-            label="Avg CP% This Week" infoKey="feed.avg-cp"
-            icon="flask-conical"
-            cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
-            delay="0ms"
-            :value="number_format($avgCp, 1) . '%'"
-        />
-        <x-kpi-card
-            label="Avg Feed/Cage/Day" infoKey="feed.avg-per-cage-day"
-            icon="scale"
-            cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
-            delay="60ms"
-            :value="$avgFeedPerCage . ' kg'"
-        />
-        <x-kpi-card
-            label="Total Feed Used" infoKey="feed.total-week"
-            icon="package"
-            cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
-            delay="120ms"
-            :value="number_format($totalFeedWeek, 1) . ' kg'"
-        />
-        <x-kpi-card
-            label="Feed Cost This Month" infoKey="feed.cost-month"
-            icon="banknote"
-            cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
-            delay="180ms"
-            :value="$totalFeedCostMonth !== null && $totalFeedCostMonth > 0 ? '₱' . number_format($totalFeedCostMonth, 2) : null"
-        />
+    <div class="@container">
+        <div class="grid grid-cols-2 @min-[68rem]:grid-cols-4 gap-3 mb-8">
+            <x-kpi-card
+                label="Avg CP% This Week" infoKey="feed.avg-cp"
+                icon="flask-conical"
+                cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
+                delay="0ms"
+                :value="number_format($avgCp, 1) . '%'"
+            />
+            <x-kpi-card
+                label="Avg Feed/Cage/Day" infoKey="feed.avg-per-cage-day"
+                icon="scale"
+                cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
+                delay="60ms"
+                :value="$avgFeedPerCage . ' kg'"
+            />
+            <x-kpi-card
+                label="Total Feed Used" infoKey="feed.total-week"
+                icon="package"
+                cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
+                delay="120ms"
+                :value="number_format($totalFeedWeek, 1) . ' kg'"
+            />
+            <x-kpi-card
+                label="Feed Cost This Month" infoKey="feed.cost-month"
+                icon="banknote"
+                cardGradient="linear-gradient(135deg,#16a34a,#15803d)"
+                delay="180ms"
+                :value="$totalFeedCostMonth !== null && $totalFeedCostMonth > 0 ? '₱' . number_format($totalFeedCostMonth, 2) : null"
+            />
+        </div>
     </div>
 
     <form id="feed-global-filters" data-feed-filter-form data-navbar-filter-shell class="mb-6 rounded-xl border border-[#D9D9D9] bg-white p-3 sm:p-4" aria-label="Feed and FCR filters">
