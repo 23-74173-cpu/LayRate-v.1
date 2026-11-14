@@ -525,7 +525,7 @@ class CageController extends Controller
         $data = $request->validate([
             'slots'             => 'required|array|min:1',
             'slots.*.id'        => 'required|integer|distinct|exists:cage_slots,id',
-            'slots.*.slot_number' => 'required|integer|min:1|max:255',
+            'slots.*.slot_number' => 'required|integer|min:1|max:1000',
         ]);
 
         $slotIds = array_column($data['slots'], 'id');
