@@ -258,6 +258,19 @@ jobs:
           sudo systemctl start layrate-serial
           sudo systemctl is-active --quiet layrate-serial
 
+      # The bridge is stopped at the start of every deployment to keep the
+      # serial device stable while files/services are updated. A failed step
+      # before the normal start must not leave egg detection offline.
+      - name: Ensure serial bridge is running after deployment
+        if: ${{ always() }}
+        run: |
+          sudo systemctl start layrate-serial
+          sudo systemctl is-active --quiet layrate-serial || {
+            sudo systemctl status layrate-serial --no-pager || true
+            sudo journalctl -u layrate-serial --no-pager -n 40 || true
+            exit 1
+          }
+
       - name: Verify deployed commit and API services
         run: |
           cd "${{ env.LARAVEL_DIR }}"
