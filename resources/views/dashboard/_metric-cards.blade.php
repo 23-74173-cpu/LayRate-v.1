@@ -5,64 +5,66 @@
             <x-section-label title="Production" icon="factory">
                 @if($kpiAsOf ?? null)<x-slot:meta>· as of {{ $kpiAsOf }}</x-slot:meta> @endif
             </x-section-label>
-            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 kpi-rhythm">
-                <x-kpi-card
-                    label="Total Hens" infoKey="hens.total"
-                    icon="bird"
-                    cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)"
-                    delay="0ms"
-                    :href="route('chickens.index')"
-                    kpi="hens"
-                    ariaLabel="Go to Hens"
-                    infoLabel="Hens per cage breakdown"
-                    :target="$totalHens"
-                />
+            <div class="@container">
+                <div class="grid grid-cols-2 @min-[68rem]:grid-cols-4 gap-3 kpi-rhythm">
+                    <x-kpi-card
+                        label="Total Hens" infoKey="hens.total"
+                        icon="bird"
+                        cardGradient="linear-gradient(135deg,#16a34a,#2D7D46)"
+                        delay="0ms"
+                        :href="route('chickens.index')"
+                        kpi="hens"
+                        ariaLabel="Go to Hens"
+                        infoLabel="Hens per cage breakdown"
+                        :target="$totalHens"
+                    />
 
-                <x-kpi-card
-                    label="Today's HDEP" infoKey="production.hdep-today"
-                    icon="gauge"
-                    cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))"
-                    delay="60ms"
-                    :href="route('eggs.logging')"
-                    kpi="hdep"
-                    ariaLabel="Go to Egg Logging"
-                    infoLabel="HDEP per cage breakdown"
-                    :target="$todayHdep"
-                    :decimals="1"
-                    suffix="%"
-                    :trend="$hdepDelta"
-                    :trendDecimals="1"
-                    trendSuffix="%"
-                    trendCompare="vs yesterday"
-                />
+                    <x-kpi-card
+                        label="Today's HDEP" infoKey="production.hdep-today"
+                        icon="gauge"
+                        cardGradient="linear-gradient(135deg,var(--color-navy),var(--color-info))"
+                        delay="60ms"
+                        :href="route('eggs.logging')"
+                        kpi="hdep"
+                        ariaLabel="Go to Egg Logging"
+                        infoLabel="HDEP per cage breakdown"
+                        :target="$todayHdep"
+                        :decimals="1"
+                        suffix="%"
+                        :trend="$hdepDelta"
+                        :trendDecimals="1"
+                        trendSuffix="%"
+                        trendCompare="vs yesterday"
+                    />
 
-                <x-kpi-card
-                    label="Eggs Today" infoKey="production.eggs-today"
-                    icon="egg"
-                    cardGradient="linear-gradient(135deg,#d97706,#C2703E)"
-                    delay="120ms"
-                    :href="route('eggs.logging')"
-                    kpi="eggs"
-                    ariaLabel="Go to Egg Logging"
-                    infoLabel="Eggs per cage breakdown"
-                    :target="$eggsToday"
-                    :trend="$eggsDelta"
-                    :trendDecimals="0"
-                    trendCompare="vs yesterday"
-                />
+                    <x-kpi-card
+                        label="Eggs Today" infoKey="production.eggs-today"
+                        icon="egg"
+                        cardGradient="linear-gradient(135deg,#d97706,#C2703E)"
+                        delay="120ms"
+                        :href="route('eggs.logging')"
+                        kpi="eggs"
+                        ariaLabel="Go to Egg Logging"
+                        infoLabel="Eggs per cage breakdown"
+                        :target="$eggsToday"
+                        :trend="$eggsDelta"
+                        :trendDecimals="0"
+                        trendCompare="vs yesterday"
+                    />
 
-                <x-kpi-card
-                    label="Lifetime Eggs" infoKey="production.lifetime-eggs"
-                    icon="layers"
-                    cardGradient="linear-gradient(135deg,#8B5CF6,#6B4C8A)"
-                    delay="180ms"
-                    :href="route('egg-production-history')"
-                    kpi="lifetime-eggs"
-                    ariaLabel="Go to Egg Production History"
-                    infoLabel="Lifetime eggs per cage breakdown"
-                    :target="$lifetimeEggs"
-                    :todayCount="$eggsToday"
-                />
+                    <x-kpi-card
+                        label="Lifetime Eggs" infoKey="production.lifetime-eggs"
+                        icon="layers"
+                        cardGradient="linear-gradient(135deg,#8B5CF6,#6B4C8A)"
+                        delay="180ms"
+                        :href="route('egg-production-history')"
+                        kpi="lifetime-eggs"
+                        ariaLabel="Go to Egg Production History"
+                        infoLabel="Lifetime eggs per cage breakdown"
+                        :target="$lifetimeEggs"
+                        :todayCount="$eggsToday"
+                    />
+                </div>
             </div>
         </div>
 
@@ -102,7 +104,7 @@
 
         {{-- Feed --}}
         <div>
-            <x-section-label title="Feed & Nutrition" icon="wheat" />
+            <x-section-label title="Feeds Management" icon="wheat" />
             <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 kpi-rhythm">
                 <x-kpi-card
                     label="Avg CP% This Week" infoKey="feed.avg-cp"

@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Feed & Nutrition')
+@section('title', 'Feeds Management')
 
 @push('head')
 <style>
@@ -13,7 +13,7 @@
      bottom-right, so trailing space keeps it off the last table row/paginator. --}}
 <div class="space-y-5 pb-24 max-md:pb-28 md:pb-16">
 
-    <x-page-header title="Feed & Nutrition" subtitle="Track feed batches, crude protein, and daily consumption" />
+    <x-page-header title="Feeds Management" subtitle="Track feed batches, crude protein, and daily consumption" />
 
     @push('dock-actions')
         <button type="button" data-dock-action-item

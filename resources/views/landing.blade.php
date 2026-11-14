@@ -330,7 +330,7 @@
             ['icon' => 'egg', 'tile' => 'bg-[#dcebfa] text-navy border-[#cfe3f8]', 'title' => 'Production Tracking', 'desc' => 'Automatic and manual egg logging per cage and slot, with hen-day egg percentage (HDEP) calculated instantly.'],
             ['icon' => 'cpu', 'tile' => 'bg-[#dcebfa] text-navy border-[#cfe3f8]', 'title' => 'IoT Hardware Integration', 'desc' => 'IR break-beam sensors auto-count eggs and DHT22 sensors stream live temperature and humidity — no manual entry required.'],
             ['icon' => 'thermometer', 'tile' => 'bg-[#dcebfa] text-navy border-[#cfe3f8]', 'title' => 'Environmental Monitoring', 'desc' => 'Live temperature and humidity tracking per cage, with configurable thresholds and instant alerts when conditions drift.'],
-            ['icon' => 'leaf', 'tile' => 'bg-[#dcebfa] text-navy border-[#cfe3f8]', 'title' => 'Feed & Nutrition', 'desc' => 'Track feed batches, crude protein content, and consumption — with automatic feed conversion ratio (FCR) calculations.'],
+            ['icon' => 'leaf', 'tile' => 'bg-[#dcebfa] text-navy border-[#cfe3f8]', 'title' => 'Feeds Management', 'desc' => 'Track feed batches, crude protein content, and consumption — with automatic feed conversion ratio (FCR) calculations.'],
             ['icon' => 'bird', 'tile' => 'bg-[#dcebfa] text-navy border-[#cfe3f8]', 'title' => 'Flock & Health Records', 'desc' => 'Full hen lifecycle from placement to removal — health events, weight checks, mortality logs, and culling records.'],
             ['icon' => 'trending-up', 'tile' => 'bg-[#dcebfa] text-navy border-[#cfe3f8]', 'title' => 'ML-Powered Forecasting', 'desc' => 'Predict future egg production using historical trends, environmental data, and machine-learning models.'],
         ];

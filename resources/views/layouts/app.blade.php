@@ -384,7 +384,7 @@
                     ['icon'=>'feather',       'label'=>'Cages',              'route'=>'cages.index'],
                     ['icon'=>'bird',          'label'=>'Hens',               'route'=>'chickens.index'],
                     ['icon'=>'egg',           'label'=>'Egg Management',     'route'=>'eggs.logging'],
-                    ['icon'=>'leaf',          'label'=>'Feed & Nutrition',   'route'=>'feed'],
+                    ['icon'=>'leaf',          'label'=>'Feeds Management',   'route'=>'feed'],
                 ],
                 'Monitoring' => [
                     ['icon'=>'thermometer',   'label'=>'Environment',        'route'=>'environment'],
@@ -1147,7 +1147,7 @@
             'dashboard': 'Dashboard',   'cages': 'Cages',            'chickens': 'Hens',
             'eggs': 'Egg Management',   'egg-production-history': 'Egg History',
             'environment': 'Environment','hardware': 'Hardware',
-            'feed': 'Feed & Nutrition', 'analytics': 'Analytics',    'forecast': 'Forecast',
+            'feed': 'Feeds Management', 'analytics': 'Analytics',    'forecast': 'Forecast',
             'reports': 'Reports',       'notes': 'Notes',            'mortality': 'Mortality',
             'notifications': 'Notifications', 'profile': 'Profile',
         };
