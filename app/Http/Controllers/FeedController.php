@@ -303,9 +303,9 @@ class FeedController extends Controller
         $hasImportedHistory = Schema::hasColumn('feed_consumption_logs', 'source_key')
             && FeedConsumptionLog::where('source_key', 'like', 'production_data_clean:%')->exists();
         $latestFeedDate = FeedConsumptionLog::query()
-            ->when($hasImportedHistory && ! $dateStart && ! $dateEnd, fn ($q) => $q->where('source_key', 'like', 'production_data_clean:%:feed'))
+            ->when($hasImportedHistory && ! $dateStart && ! $dateEnd, fn ($q) => $q->where(fn ($k) => \App\Services\HistoricalSource::match($k, 'source_key', 'feed')))
             ->when($hasImportedHistory && ($dateStart || $dateEnd), fn ($q) => $q->where(function ($sources) {
-                $sources->whereNull('feed_consumption_logs.source_key')->orWhere('feed_consumption_logs.source_key', 'like', 'production_data_clean:%:feed');
+                $sources->whereNull('feed_consumption_logs.source_key')->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'feed_consumption_logs.source_key', 'feed'));
             }))
             ->when($cageId !== 'all' && $cageId !== null, fn ($q) => $q->where('cage_id', (int) $cageId))
             ->when($cageId === 'all' || $cageId === null, fn ($q) => $q->whereHas('cage', fn ($c) => $c->where('is_active', 1)))
@@ -313,7 +313,7 @@ class FeedController extends Controller
             ->when($dateStart, fn ($q) => $q->where('log_date', '>=', $dateStart))
             ->max('log_date');
         $hasImportedFcrHistory = Schema::hasColumn('feed_consumption_logs', 'source_key')
-            && FeedConsumptionLog::where('source_key', 'like', 'production_data_clean:%:feed')->exists();
+            && FeedConsumptionLog::where(fn ($k) => \App\Services\HistoricalSource::match($k, 'source_key', 'feed'))->exists();
         $fcrData['fcrAsOf'] = $fcrData['fcrTimeline']->isNotEmpty() && $latestFeedDate
             ? 'Historical FCR through '.Carbon::parse($latestFeedDate)->format('m/d/Y')
             : null;
@@ -332,7 +332,7 @@ class FeedController extends Controller
             ->when($endDate, fn ($q) => $q->where('log_date', '<=', $endDate))
             ->when(Schema::hasColumn('feed_consumption_logs', 'source_key'), fn ($q) => $q->where(function ($sources) {
                 $sources->whereNull('feed_consumption_logs.source_key')
-                    ->orWhere('feed_consumption_logs.source_key', 'like', 'production_data_clean:%:feed');
+                    ->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'feed_consumption_logs.source_key', 'feed'));
             }))->max('log_date');
         if ($latest && $latest < $now->copy()->subDays(7)->toDateString()) {
             return \Carbon\Carbon::parse($latest);
@@ -369,10 +369,10 @@ class FeedController extends Controller
             ? DB::table('production_logs')->whereNull('source_key')->exists()
             : DB::table('production_logs')->exists();
         $latestFeed = FeedConsumptionLog::query()
-            ->when($hasImportedHistory && ! $from && ! $to, fn ($q) => $q->where('source_key', 'like', 'production_data_clean:%:feed'))
+            ->when($hasImportedHistory && ! $from && ! $to, fn ($q) => $q->where(fn ($k) => \App\Services\HistoricalSource::match($k, 'source_key', 'feed')))
             ->when((! $hasImportedHistory || $from || $to) && Schema::hasColumn('feed_consumption_logs', 'source_key'), fn ($q) => $q->where(function ($sources) {
                 $sources->whereNull('feed_consumption_logs.source_key')
-                    ->orWhere('feed_consumption_logs.source_key', 'like', 'production_data_clean:%:feed');
+                    ->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'feed_consumption_logs.source_key', 'feed'));
             }))
             ->when($cageForRange, fn ($q) => $q->where('cage_id', $cageForRange->id))
             ->when(! $cageForRange, fn ($q) => $q->whereHas('cage', fn ($c) => $c->where('is_active', 1)))
@@ -388,7 +388,7 @@ class FeedController extends Controller
             ->when($cageForRange, fn ($q) => $q->where(function ($scope) use ($cageForRange) {
                 $scope->where('cs.cage_id', $cageForRange->id)
                     ->orWhere(function ($imported) use ($cageForRange) {
-                        $imported->where('pl.source_key', 'like', 'production_data_clean:%:production')
+                        $imported->where(fn ($k) => \App\Services\HistoricalSource::match($k, 'pl.source_key', 'production'))
                             ->where('imported_cage.id', $cageForRange->id);
                     });
             }))
@@ -397,7 +397,7 @@ class FeedController extends Controller
                     $active->selectRaw('1')->from('cages as slot_cage')
                         ->whereColumn('slot_cage.id', 'cs.cage_id')->where('slot_cage.is_active', 1);
                 })->orWhere(function ($imported) {
-                    $imported->where('pl.source_key', 'like', 'production_data_clean:%:production')
+                    $imported->where(fn ($k) => \App\Services\HistoricalSource::match($k, 'pl.source_key', 'production'))
                         ->where('imported_cage.is_active', 1);
                 });
             }))
@@ -405,10 +405,10 @@ class FeedController extends Controller
             ->when($from, fn ($q) => $q->where('pl.log_date', '>=', $from));
         if ($from || $to) {
             $latestProductionQuery->when(Schema::hasColumn('production_logs', 'source_key'), fn ($q) => $q->where(function ($sources) {
-                $sources->whereNull('pl.source_key')->orWhere('pl.source_key', 'like', 'production_data_clean:%:production');
+                $sources->whereNull('pl.source_key')->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'pl.source_key', 'production'));
             }));
         } elseif ($hasImportedHistory) {
-            $latestProductionQuery->where('pl.source_key', 'like', 'production_data_clean:%:production');
+            $latestProductionQuery->where(fn ($k) => \App\Services\HistoricalSource::match($k, 'pl.source_key', 'production'));
         } else {
             $latestProductionQuery->when(Schema::hasColumn('production_logs', 'source_key'), fn ($q) => $q->whereNull('pl.source_key'));
         }
@@ -501,7 +501,7 @@ class FeedController extends Controller
             ->when($cageId !== 'all', fn ($q) => $q->where('cage_id', $cage?->id))
                     ->when($cageId === 'all', fn ($q) => $q->whereHas('cage', fn ($c) => $c->where('is_active', 1)))
                     ->when(Schema::hasColumn('feed_consumption_logs', 'source_key'), fn ($q) => $q->where(function ($s) {
-                        $s->whereNull('source_key')->orWhere('source_key', 'like', 'production_data_clean:%:feed');
+                        $s->whereNull('source_key')->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'source_key', 'feed'));
                     }))
                     ->when($from, fn ($q) => $q->where('log_date', '>=', $from))
                     ->when($to, fn ($q) => $q->where('log_date', '<=', $to));

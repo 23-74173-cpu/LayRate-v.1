@@ -110,4 +110,63 @@ class HistoricalCsvImportTest extends TestCase
             ->get(route('feed.live-data', ['tab' => 'fcr', 'fcr_cage_id' => $cageA->id]));
         $feed->assertOk()->assertSee('2.13');
     }
+
+    public function test_simulated_extension_import_keeps_provenance_defers_future_rows_and_stays_out_of_forecasts(): void
+    {
+        $this->assertSame('layrate_qa_20261027', DB::connection()->getDatabaseName());
+        Carbon::setTestNow(Carbon::parse('2026-11-14 12:00:00', 'Asia/Manila'));
+
+        $this->artisan('db:seed', ['--class' => \Database\Seeders\DatabaseSeeder::class])->assertSuccessful();
+        $admin = \App\Models\User::factory()->create(['role' => 'admin']);
+        $options = [
+            '--source' => base_path('LayRate_Production_With_Hen_Counts.csv'),
+            '--feed-batches' => base_path('feed_batches_through_Nov29_SIMULATED.csv'),
+        ];
+        $this->artisan('farm:import-historical-csv', $options + ['--dry-run' => true])->assertSuccessful();
+        $this->assertSame(0, ProductionLog::count());
+
+        $this->artisan('farm:import-historical-csv', $options)->assertSuccessful();
+
+        $simulated = fn ($kind) => 'simulated_extension:%:'.$kind;
+        $this->assertSame(474, ProductionLog::where('source_key', 'like', 'production_data_clean:%:production')->count());
+        $this->assertSame(74990, (int) ProductionLog::where('source_key', 'like', 'production_data_clean:%:production')->sum('egg_count'));
+        $this->assertSame(237, ProductionLog::where('source_key', 'like', $simulated('production'))->count());
+        $this->assertSame(35998, (int) ProductionLog::where('source_key', 'like', $simulated('production'))->sum('egg_count'));
+        $this->assertSame(4786.36, round((float) FeedConsumptionLog::where('source_key', 'like', $simulated('feed'))->sum('feed_consumed_kg'), 2));
+        $this->assertSame(237, EnvironmentalLog::where('source_key', 'like', $simulated('environment'))->where('provenance', 'simulated_csv_extension')->count());
+        $this->assertSame(6, (int) MortalityLog::where('source_key', 'like', $simulated('mortality'))->sum('count'));
+        $this->assertSame('2026-11-14', ProductionLog::where('source_key', 'like', $simulated('production'))->max('log_date'));
+        $this->assertSame(0, DB::table('hens')->count());
+
+        $this->assertSame(17, \App\Models\FeedBatch::where('batch_code', 'like', 'SIM-FB-%')->count());
+        $this->assertNull(\App\Models\FeedBatch::where('batch_code', 'SIM-FB-2026-18')->first());
+        $batch = \App\Models\FeedBatch::where('batch_code', 'SIM-FB-2026-12')->firstOrFail();
+        $this->assertNull($batch->total_quantity_kg);
+        $this->assertNull($batch->unit_cost);
+        $this->assertStringStartsWith('SIMULATED', $batch->notes);
+        $this->assertSame($batch->id, (int) FeedConsumptionLog::where('source_key', 'simulated_extension:2026-09-01:CAGE-A:feed')->value('feed_batch_id'));
+        $this->assertSame(0, FeedConsumptionLog::where('source_key', 'like', 'production_data_clean:%')->whereNotNull('feed_batch_id')->count());
+        $this->assertSame(0, FeedConsumptionLog::where('source_key', 'like', $simulated('feed'))->whereNull('feed_batch_id')->count());
+
+        $this->artisan('farm:import-historical-csv', $options)->assertSuccessful();
+        $this->assertSame(711, ProductionLog::count());
+        $this->assertSame(711, FeedConsumptionLog::count());
+        $this->assertSame(17, \App\Models\FeedBatch::count());
+
+        $dashboard = $this->actingAs($admin)->get(route('dashboard.stats', ['from_date' => '2026-09-01', 'to_date' => '2026-09-01']));
+        $dashboard->assertOk();
+        $this->assertSame(468, (int) $dashboard->viewData('eggsToday'));
+        $this->assertSame(527, (int) $dashboard->viewData('totalHens'));
+        $this->assertSame(88.8, (float) $dashboard->viewData('todayHdep'));
+        $this->assertSame(2.17, FcrCalculator::forAllCages(Carbon::parse('2026-09-01'), Carbon::parse('2026-09-01')));
+
+        $report = $this->actingAs($admin)->get(route('reports.data', ['type' => 'production', 'from' => '2026-09-01', 'to' => '2026-09-01']));
+        $report->assertOk();
+        $this->assertStringContainsString('SIMULATED cage/day estimate', $report->json('html'));
+
+        $forecast = app(\App\Services\ForecastGenerationService::class);
+        $this->assertSame('2026-08-27', substr((string) $forecast->datasetRows()->max('date'), 0, 10));
+        $this->assertTrue($forecast->productionForRange('farm', '2026-09-01', '2026-09-30')->isEmpty());
+        $this->assertSame(158, $forecast->productionForRange('farm', '2026-03-01', '2026-11-30')->count());
+    }
 }

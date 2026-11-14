@@ -22,6 +22,19 @@ use Symfony\Component\Process\Process;
 class ForecastGenerationService
 {
     /**
+     * Simulated extension rows are display-only: they must never become
+     * model training data or the actuals a forecast is scored against.
+     */
+    private function excludeSimulated($query, string $column)
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('production_logs', 'source_key')) {
+            return $query;
+        }
+
+        return $query->whereNull($column)->orWhere($column, 'not like', HistoricalSource::SIMULATED.':%');
+    }
+
+    /**
      * Distinct cages that currently have model-eligible records (completed
      * days with production + environmental data).
      */
@@ -33,6 +46,7 @@ class ForecastGenerationService
             ->whereNotNull('c.cage_code')
             ->whereRaw("TRIM(c.cage_code) != ''")
             ->where('pl.is_demo', false)
+            ->where(fn ($q) => $this->excludeSimulated($q, 'pl.source_key'))
             ->where('pl.log_date', '<', ReportingDateService::reportingDateString())
             ->whereExists(function ($q) {
                 $q->selectRaw('1')
@@ -133,6 +147,7 @@ class ForecastGenerationService
             ->whereNotNull('c.cage_code')
             ->whereRaw("TRIM(c.cage_code) != ''")
             ->where('pl.is_demo', false)
+            ->where(fn ($q) => $this->excludeSimulated($q, 'pl.source_key'))
             ->where('pl.log_date', '<', ReportingDateService::reportingDateString())
             ->groupBy('pl.log_date');
     }
@@ -190,6 +205,7 @@ class ForecastGenerationService
     {
         $min = DB::table('production_logs')
             ->where('is_demo', false)
+            ->where(fn ($q) => $this->excludeSimulated($q, 'source_key'))
             ->whereNotNull('log_date')
             ->min('log_date');
 
@@ -245,6 +261,7 @@ class ForecastGenerationService
             ->whereNotNull('c.cage_code')
             ->whereRaw("TRIM(c.cage_code) != ''")
             ->where('pl.is_demo', false)
+            ->where(fn ($q) => $this->excludeSimulated($q, 'pl.source_key'))
             ->where('pl.log_date', '<', ReportingDateService::reportingDateString())
             ->whereExists(function ($q) {
                 $q->selectRaw('1')
@@ -326,6 +343,7 @@ class ForecastGenerationService
             ->whereNotNull('c.cage_code')
             ->whereRaw("TRIM(c.cage_code) != ''")
             ->where('pl.is_demo', false)
+            ->where(fn ($q) => $this->excludeSimulated($q, 'pl.source_key'))
             ->where('pl.log_date', '<', ReportingDateService::reportingDateString())
             ->whereExists(function ($q) {
                 $q->selectRaw('1')

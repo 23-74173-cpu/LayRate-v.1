@@ -150,19 +150,19 @@ class DashboardController extends Controller
             ->where('production_logs.is_demo', false)
             ->when(Schema::hasColumn('production_logs', 'source_key'), fn ($q) => $q->where(function ($sources) {
                 $sources->whereNull('production_logs.source_key')
-                    ->orWhere('production_logs.source_key', 'like', 'production_data_clean:%:production');
+                    ->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'production_logs.source_key', 'production'));
             }))
             ->where(function ($q) {
                 $q->where('slot_cages.is_active', 1)
                     ->orWhere(function ($imported) {
-                        $imported->where('production_logs.source_key', 'like', 'production_data_clean:%:production')
+                        $imported->where(fn ($k) => \App\Services\HistoricalSource::match($k, 'production_logs.source_key', 'production'))
                             ->where('imported_cages.is_active', 1);
                     });
             })
             ->when($cageCode, fn ($q) => $q->where(function ($scope) use ($cageCode) {
                 $scope->where('slot_cages.cage_code', $cageCode)
                     ->orWhere(function ($imported) use ($cageCode) {
-                        $imported->where('production_logs.source_key', 'like', 'production_data_clean:%:production')
+                        $imported->where(fn ($k) => \App\Services\HistoricalSource::match($k, 'production_logs.source_key', 'production'))
                             ->where('imported_cages.cage_code', $cageCode);
                     });
             }))
@@ -1670,7 +1670,7 @@ class DashboardController extends Controller
         // Total feed consumed (lifetime)
         $totalFeedConsumed = FeedConsumptionLog::sum('feed_consumed_kg');
 
-        // Feed & Nutrition summary cards — Avg CP% This Week must be date-bound + cage-scoped like its siblings
+        // Feeds Management summary cards — Avg CP% This Week must be date-bound + cage-scoped like its siblings
         $scopedBatchIds = FeedConsumptionLog::where('log_date', '>=', $feedWeekStart)
             ->when($cageCode, fn ($q) => $q->whereHas('cage', fn ($cq) => $cq->where('cage_code', $cageCode)))
             ->distinct()

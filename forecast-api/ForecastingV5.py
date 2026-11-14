@@ -117,6 +117,8 @@ WHERE pl.log_date IS NOT NULL
   AND c.cage_code IS NOT NULL
   AND TRIM(c.cage_code) != ''
   AND pl.is_demo = 0
+  -- simulated extension rows are display-only, never training/evaluation data
+  AND (pl.source_key IS NULL OR LEFT(pl.source_key, 20) <> 'simulated_extension:')
   AND pl.log_date < '{today}'
 GROUP BY pl.log_date, c.id, c.cage_code
 HAVING `Temperature_C` IS NOT NULL AND `Humidity_Percent` IS NOT NULL

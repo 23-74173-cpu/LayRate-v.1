@@ -409,7 +409,8 @@
                                     @php
                                         $cColor = $log->cage?->color ?? '#6B7280';
                                         $isDistributed = $log->source === 'distributed';
-                                        $isHistoricalImport = str_starts_with((string) $log->source_key, 'production_data_clean:');
+                                        $isSimulatedImport = \App\Services\HistoricalSource::isSimulated($log->source_key);
+                                        $isHistoricalImport = $isSimulatedImport || str_starts_with((string) $log->source_key, 'production_data_clean:');
                                     @endphp
                                     <tr data-feed-log-id="{{ $log->id }}" data-feed-farm-id="{{ $log->farm_feed_entry_id }}" class="border-b border-[#D9D9D9] hover:bg-[#F5F6F8]">
                                         <td class="px-5 py-3.5 text-sm font-mono text-[#333333]">{{ $log->log_date->format('m/d/Y') }}</td>
@@ -419,7 +420,11 @@
                                         <td class="px-5 py-3.5 text-sm text-[#333333]">{{ number_format($log->feed_consumed_kg, 2) }} kg</td>
                                         <td class="px-5 py-3.5">
                                             @if($isHistoricalImport)
-                                                <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-info-bg text-info border border-info-border">Historical CSV</span>
+                                                @if($isSimulatedImport)
+                                                    <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-warning-bg text-warning border border-warning-border" title="Simulated cage/day estimate; not a farm measurement">Simulated</span>
+                                                @else
+                                                    <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-info-bg text-info border border-info-border">Historical CSV</span>
+                                                @endif
                                                 @if($log->crude_protein_pct !== null)<span class="ml-1 text-xs text-[#615d59]">{{ number_format($log->crude_protein_pct, 1) }}% CP</span>@endif
                                             @elseif($isDistributed)
                                                 <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-warning-bg text-warning border border-warning-border" title="Estimated from whole-farm entry"><i data-lucide="git-branch" class="w-3 h-3"></i> Estimated</span>

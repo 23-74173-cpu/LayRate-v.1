@@ -272,7 +272,7 @@ class ReportController extends Controller
                         });
                         if ($hasSourceKey) {
                             $q->orWhere(fn ($imported) => $imported
-                                ->where('production_logs.source_key', 'like', 'production_data_clean:%:production')
+                                ->where(fn ($k) => \App\Services\HistoricalSource::match($k, 'production_logs.source_key', 'production'))
                                 ->whereIn('imported_cages.id', $cageIds));
                         }
                     })
@@ -295,7 +295,7 @@ class ReportController extends Controller
                 $agg = FeedConsumptionLog::whereIn('cage_id', $cageIds)
                     ->when(\Illuminate\Support\Facades\Schema::hasColumn('feed_consumption_logs', 'source_key'), fn ($q) => $q->where(function ($sources) {
                         $sources->whereNull('feed_consumption_logs.source_key')
-                            ->orWhere('feed_consumption_logs.source_key', 'like', 'production_data_clean:%:feed');
+                            ->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'feed_consumption_logs.source_key', 'feed'));
                     }))
                     ->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))
                     ->selectRaw('SUM(feed_consumed_kg) as total_kg, COUNT(DISTINCT CASE WHEN feed_batch_id IS NOT NULL THEN feed_batch_id END) as batches, COUNT(DISTINCT log_date) as days')
@@ -318,7 +318,7 @@ class ReportController extends Controller
                     ->real()
                     ->when(\Illuminate\Support\Facades\Schema::hasColumn('environmental_logs', 'source_key'), fn ($q) => $q->where(function ($sources) {
                         $sources->whereNull('environmental_logs.source_key')
-                            ->orWhere('environmental_logs.source_key', 'like', 'production_data_clean:%:environment');
+                            ->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'environmental_logs.source_key', 'environment'));
                     }))
                     ->when($hasRange, fn($q) => $q->where('recorded_at', '>=', ReportingDateService::reportingDayWindow($from)[0])->where('recorded_at', '<', ReportingDateService::reportingDayWindow($to)[1]))
                     ->selectRaw('AVG(temperature_c) as avg_temp, AVG(humidity_pct) as avg_hum, COUNT(*) as readings, SUM(CASE WHEN temperature_c > 30 OR humidity_pct > 70 THEN 1 ELSE 0 END) as alerts')
@@ -356,7 +356,7 @@ class ReportController extends Controller
                 $filtered = fn () => MortalityLog::whereIn('cage_id', $cageIds)
                     ->when(\Illuminate\Support\Facades\Schema::hasColumn('mortality_logs', 'source_key'), fn ($q) => $q->where(function ($sources) {
                         $sources->whereNull('mortality_logs.source_key')
-                            ->orWhere('mortality_logs.source_key', 'like', 'production_data_clean:%:mortality');
+                            ->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'mortality_logs.source_key', 'mortality'));
                     }))
                     ->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))
                     ->when($reason !== 'all', fn($q) => $q->where('reason', $reason));
@@ -473,14 +473,14 @@ class ReportController extends Controller
         $isHistoricalRange = $hasRange && $to < ReportingDateService::reportingDateString();
         $hasHistoricalAggregates = $isHistoricalRange
             && Schema::hasColumn('production_logs', 'source_key')
-            && DB::table('production_logs')->where('source_key', 'like', 'production_data_clean:%:production')->exists();
+            && DB::table('production_logs')->where(fn ($k) => \App\Services\HistoricalSource::match($k, 'source_key', 'production'))->exists();
         $slotGroups = DB::table('production_logs as pl')
             ->join('cage_slots as cs', 'cs.id', '=', 'pl.cage_slot_id')
             ->whereIn('cs.cage_id', $cageIds)
             ->where('pl.is_demo', false)
             ->when(Schema::hasColumn('production_logs', 'source_key'), fn ($q) => $q->where(function ($source) use ($isHistoricalRange) {
                 $source->whereNull('pl.source_key');
-                if (! $isHistoricalRange) $source->orWhere('pl.source_key', 'like', 'production_data_clean:%:production');
+                if (! $isHistoricalRange) $source->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'pl.source_key', 'production'));
             }))
             ->when($hasRange, fn ($q) => $q->whereBetween('pl.log_date', [$from, $to]))
             ->selectRaw('pl.log_date, cs.cage_id, SUM(pl.egg_count) AS eggs, SUM(pl.hen_count) AS hens, MIN(pl.id) AS first_id, NULL AS source_key')
@@ -499,7 +499,7 @@ class ReportController extends Controller
                     $scope->where(function ($slots) use ($cageIds) {
                         $slots->whereNull('p.source_key')->whereIn('s.cage_id', $cageIds);
                     })->orWhere(function ($imports) use ($cageIds) {
-                        $imports->where('p.source_key', 'like', 'production_data_clean:%:production')->whereIn('imported_cage.id', $cageIds);
+                        $imports->where(fn ($k) => \App\Services\HistoricalSource::match($k, 'p.source_key', 'production'))->whereIn('imported_cage.id', $cageIds);
                     });
                 })
                 ->selectRaw('p.log_date, COALESCE(imported_cage.id, s.cage_id) as cage_id, SUM(p.egg_count) as eggs, SUM(p.hen_count) as hens, MIN(p.id) as first_id, MAX(p.source_key) as source_key')
@@ -542,7 +542,7 @@ class ReportController extends Controller
             ->whereIn('cage_id', $cageIds)
             ->when(Schema::hasColumn('feed_consumption_logs', 'source_key'), fn ($q) => $q->where(function ($sources) use ($isHistoricalRange) {
                 $sources->whereNull('feed_consumption_logs.source_key');
-                if (! $isHistoricalRange) $sources->orWhere('feed_consumption_logs.source_key', 'like', 'production_data_clean:%:feed');
+                if (! $isHistoricalRange) $sources->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'feed_consumption_logs.source_key', 'feed'));
             }))
             ->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))
             ->orderByDesc('log_date')
@@ -553,7 +553,7 @@ class ReportController extends Controller
             ->real()
             ->when(Schema::hasColumn('environmental_logs', 'source_key'), fn ($q) => $q->where(function ($sources) use ($isHistoricalRange) {
                 $sources->whereNull('environmental_logs.source_key');
-                if (! $isHistoricalRange) $sources->orWhere('environmental_logs.source_key', 'like', 'production_data_clean:%:environment');
+                if (! $isHistoricalRange) $sources->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'environmental_logs.source_key', 'environment'));
             }))
             ->when($hasRange, fn($q) => $q->where('recorded_at', '>=', ReportingDateService::reportingDayWindow($from)[0])->where('recorded_at', '<', ReportingDateService::reportingDayWindow($to)[1]))
             ->selectRaw('cage_id, DATE(recorded_at) as log_date, AVG(temperature_c) as avg_temp, AVG(humidity_pct) as avg_hum')
@@ -565,14 +565,14 @@ class ReportController extends Controller
             $importedFeed = FeedConsumptionLog::whereIn('cage_id', $cageIds)
                 ->where(function ($source) use ($hasHistoricalAggregates) {
                     $source->whereNull('source_key');
-                    if ($hasHistoricalAggregates) $source->orWhere('source_key', 'like', 'production_data_clean:%:feed');
+                    if ($hasHistoricalAggregates) $source->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'source_key', 'feed'));
                 })
                 ->whereBetween('log_date', [$from, $to])->get();
             foreach ($importedFeed as $feedRow) $feedLogs->put($feedRow->log_date->format('Y-m-d').'-'.$feedRow->cage_id, $feedRow);
             $importedEnvironment = EnvironmentalLog::whereIn('cage_id', $cageIds)
                 ->where(function ($source) use ($hasHistoricalAggregates) {
                     $source->whereNull('source_key');
-                    if ($hasHistoricalAggregates) $source->orWhere('source_key', 'like', 'production_data_clean:%:environment');
+                    if ($hasHistoricalAggregates) $source->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'source_key', 'environment'));
                 })
                 ->where('recorded_at', '>=', ReportingDateService::reportingDayWindow($from)[0])
                 ->where('recorded_at', '<', ReportingDateService::reportingDayWindow($to)[1])
@@ -616,14 +616,15 @@ class ReportController extends Controller
 
                 $isImportedAggregate = $hasHistoricalAggregates && ! empty($group->source_key);
                 $farmHenSnapshot = $isImportedAggregate
-                    ? (int) DB::table('production_logs')->where('source_key', 'like', 'production_data_clean:'.$date->format('Y-m-d').':%:production')->sum('hen_count')
+                    ? (int) DB::table('production_logs')->where(fn ($k) => $k->where('source_key', 'like', \App\Services\HistoricalSource::ORIGINAL.':'.$date->format('Y-m-d').':%:production')
+                        ->orWhere('source_key', 'like', \App\Services\HistoricalSource::SIMULATED.':'.$date->format('Y-m-d').':%:production'))->sum('hen_count')
                     : null;
 
                 $row = [
                     'date'     => $date->format('m/d/Y'),
                     'cage'     => $cageCodes[$group->cage_id] ?? '—',
                     'breed'    => $breed !== '—' ? $breed : Cage::find($group->cage_id)?->breed_snapshot ?? '—',
-                    'record_type' => $isImportedAggregate ? 'Historical cage/day aggregate (not individual hen inventory)' : 'Production log',
+                    'record_type' => $isImportedAggregate ? (\App\Services\HistoricalSource::isSimulated($group->source_key) ? 'SIMULATED cage/day estimate (not a farm measurement)' : 'Historical cage/day aggregate (not individual hen inventory)') : 'Production log',
                     'eggs'     => $totalEggs,
                     'hens'     => $totalHens,
                     'farm_hens' => $farmHenSnapshot,
@@ -650,7 +651,7 @@ class ReportController extends Controller
             ->whereIn('cage_id', $cageIds)
             ->when(\Illuminate\Support\Facades\Schema::hasColumn('feed_consumption_logs', 'source_key'), fn ($q) => $q->where(function ($sources) {
                 $sources->whereNull('feed_consumption_logs.source_key')
-                    ->orWhere('feed_consumption_logs.source_key', 'like', 'production_data_clean:%:feed');
+                    ->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'feed_consumption_logs.source_key', 'feed'));
             }))
             ->when($from && $to, fn($q) => $q->whereBetween('log_date', [$from, $to]))
             ->orderByDesc('log_date')
@@ -659,7 +660,7 @@ class ReportController extends Controller
                 'date'     => $l->log_date->format('m/d/Y'),
                 'cage'     => $l->cage?->cage_code ?? '—',
                 'batch'    => $l->feedBatch?->batch_code ?? 'Unbatched historical import',
-                'record_type' => $l->source_key ? 'Historical cage/day aggregate — no purchase record' : 'Feed consumption',
+                'record_type' => $l->source_key ? (\App\Services\HistoricalSource::isSimulated($l->source_key) ? 'SIMULATED cage/day estimate — no purchase record' : 'Historical cage/day aggregate — no purchase record') : 'Feed consumption',
                 'consumed' => number_format($l->feed_consumed_kg, 2) . ' kg',
                 'cp_pct'   => $l->feedBatch?->crude_protein !== null
                     ? number_format($l->feedBatch->crude_protein, 1).'%'
@@ -673,13 +674,13 @@ class ReportController extends Controller
         if (! $from || ! $to || $to >= ReportingDateService::reportingDateString()) return $currentHens;
 
         $historicalAggregateExists = Schema::hasColumn('production_logs', 'source_key')
-            && DB::table('production_logs')->where('source_key', 'like', 'production_data_clean:%:production')->exists();
+            && DB::table('production_logs')->where(fn ($k) => \App\Services\HistoricalSource::match($k, 'source_key', 'production'))->exists();
         if ($historicalAggregateExists) {
             return (int) DB::table('production_logs as p')
                 ->join('cages as c', function ($join) {
                     $join->on('c.cage_code', '=', DB::raw("SUBSTRING_INDEX(SUBSTRING_INDEX(p.source_key, ':', 3), ':', -1)"));
                 })
-                ->where('p.is_demo', false)->where('p.source_key', 'like', 'production_data_clean:%:production')
+                ->where('p.is_demo', false)->where(fn ($k) => \App\Services\HistoricalSource::match($k, 'p.source_key', 'production'))
                 ->whereBetween('p.log_date', [$from, $to])->whereIn('c.id', $cageIds)
                 ->sum('p.hen_count');
         }
@@ -694,7 +695,7 @@ class ReportController extends Controller
                 $join->on('imported_cages.cage_code', '=', DB::raw("SUBSTRING_INDEX(SUBSTRING_INDEX(p.source_key, ':', 3), ':', -1)"));
             })
             ->where('p.is_demo', false)
-            ->where('p.source_key', 'like', 'production_data_clean:%:production')
+            ->where(fn ($k) => \App\Services\HistoricalSource::match($k, 'p.source_key', 'production'))
             ->whereBetween('p.log_date', [$from, $to])
             ->whereIn('imported_cages.id', $cageIds)->sum('p.hen_count');
         return (int) $slotHens + (int) $importedHens;
@@ -707,7 +708,7 @@ class ReportController extends Controller
             ->whereIn('cage_id', $cageIds)
             ->when(\Illuminate\Support\Facades\Schema::hasColumn('environmental_logs', 'source_key'), fn ($q) => $q->where(function ($sources) {
                 $sources->whereNull('environmental_logs.source_key')
-                    ->orWhere('environmental_logs.source_key', 'like', 'production_data_clean:%:environment');
+                    ->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'environmental_logs.source_key', 'environment'));
             }))
             ->when($from && $to, fn($q) => $q->where('recorded_at', '>=', ReportingDateService::reportingDayWindow($from)[0])->where('recorded_at', '<', ReportingDateService::reportingDayWindow($to)[1]))
             ->orderByDesc('recorded_at')
@@ -716,7 +717,7 @@ class ReportController extends Controller
             ->sortByDesc('recorded_at')
             ->map(fn($l) => (object) [
                 'datetime' => $l->recorded_at->format('m/d/Y g:i A'),
-                'record_type' => $l->source_key ? 'Historical cage/day aggregate — nominal noon, not sensor telemetry' : 'Environmental reading',
+                'record_type' => $l->source_key ? (\App\Services\HistoricalSource::isSimulated($l->source_key) ? 'SIMULATED cage/day estimate — nominal noon, not sensor telemetry' : 'Historical cage/day aggregate — nominal noon, not sensor telemetry') : 'Environmental reading',
                 'cage'     => $l->cage?->cage_code ?? '—',
                 'temp'     => $l->temperature_c . '°C',
                 'humidity' => $l->humidity_pct . '%',
@@ -731,7 +732,7 @@ class ReportController extends Controller
             ->whereIn('cage_id', $cageIds)
             ->when(\Illuminate\Support\Facades\Schema::hasColumn('mortality_logs', 'source_key'), fn ($q) => $q->where(function ($sources) {
                 $sources->whereNull('mortality_logs.source_key')
-                    ->orWhere('mortality_logs.source_key', 'like', 'production_data_clean:%:mortality');
+                    ->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'mortality_logs.source_key', 'mortality'));
             }))
             ->when($from && $to, fn($q) => $q->whereBetween('log_date', [$from, $to]))
             ->orderByDesc('log_date');
@@ -742,7 +743,7 @@ class ReportController extends Controller
 
         return $query->get()->map(fn($l) => (object) [
             'date'   => $l->log_date->format('m/d/Y'),
-            'record_type' => $l->source_key ? 'Historical aggregate — not an individual mortality event' : 'Mortality log',
+            'record_type' => $l->source_key ? (\App\Services\HistoricalSource::isSimulated($l->source_key) ? 'SIMULATED aggregate — not an individual mortality event' : 'Historical aggregate — not an individual mortality event') : 'Mortality log',
             'cage'   => $l->cage?->cage_code ?? '—',
             'count'  => $l->count,
             'reason' => $l->reason,
@@ -797,12 +798,12 @@ class ReportController extends Controller
         $isHistoricalRange = $hasRange && $to < ReportingDateService::reportingDateString();
         $hasHistoricalAggregates = $isHistoricalRange
             && Schema::hasColumn('production_logs', 'source_key')
-            && DB::table('production_logs')->where('source_key', 'like', 'production_data_clean:%:production')->exists();
+            && DB::table('production_logs')->where(fn ($k) => \App\Services\HistoricalSource::match($k, 'source_key', 'production'))->exists();
         $rows = ProductionLog::whereIn('cage_slot_id', DB::table('cage_slots')->whereIn('cage_id', $cageIds)->select('id'))
             ->real()
             ->when(Schema::hasColumn('production_logs', 'source_key'), fn ($q) => $q->where(function ($source) use ($isHistoricalRange) {
                 $source->whereNull('production_logs.source_key');
-                if (! $isHistoricalRange) $source->orWhere('production_logs.source_key', 'like', 'production_data_clean:%:production');
+                if (! $isHistoricalRange) $source->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'production_logs.source_key', 'production'));
             }))
             ->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))
             ->selectRaw('log_date, SUM(egg_count) as eggs, AVG(hdep) as hdep, SUM(hen_count) as hens')
@@ -820,7 +821,7 @@ class ReportController extends Controller
                         $slot->whereNull('p.source_key')->whereIn('s.cage_id', $cageIds);
                     });
                     if ($hasHistoricalAggregates) $scope->orWhere(function ($imported) use ($cageIds) {
-                        $imported->where('p.source_key', 'like', 'production_data_clean:%:production')->whereIn('c.id', $cageIds);
+                        $imported->where(fn ($k) => \App\Services\HistoricalSource::match($k, 'p.source_key', 'production'))->whereIn('c.id', $cageIds);
                     });
                 })
                 ->whereBetween('p.log_date', [$from, $to])
@@ -829,7 +830,7 @@ class ReportController extends Controller
             if ($hasHistoricalAggregates) {
                 $historicalImports = DB::table('production_logs as p')->join('cages as c', function ($join) {
                     $join->on('c.cage_code', '=', DB::raw("SUBSTRING_INDEX(SUBSTRING_INDEX(p.source_key, ':', 3), ':', -1)"));
-                })->where('p.source_key', 'like', 'production_data_clean:%:production')->where('p.is_demo', false)
+                })->where(fn ($k) => \App\Services\HistoricalSource::match($k, 'p.source_key', 'production'))->where('p.is_demo', false)
                     ->whereBetween('p.log_date', [$from, $to])->whereIn('c.id', $cageIds)
                     ->selectRaw('p.log_date, SUM(p.egg_count) as eggs, SUM(p.hen_count) as hens, SUM(p.egg_count) / NULLIF(SUM(p.hen_count), 0) * 100 as hdep')
                     ->groupBy('p.log_date')->get()->keyBy(fn ($row) => Carbon::parse($row->log_date)->toDateString());
@@ -861,7 +862,7 @@ class ReportController extends Controller
         $rows = FeedConsumptionLog::whereIn('cage_id', $cageIds)
             ->when(\Illuminate\Support\Facades\Schema::hasColumn('feed_consumption_logs', 'source_key'), fn ($q) => $q->where(function ($sources) {
                 $sources->whereNull('feed_consumption_logs.source_key')
-                    ->orWhere('feed_consumption_logs.source_key', 'like', 'production_data_clean:%:feed');
+                    ->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'feed_consumption_logs.source_key', 'feed'));
             }))
             ->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]))
             ->selectRaw('log_date, SUM(feed_consumed_kg) as kg')
@@ -883,7 +884,7 @@ class ReportController extends Controller
             ->real()
             ->when(Schema::hasColumn('environmental_logs', 'source_key'), fn ($q) => $q->where(function ($sources) {
                 $sources->whereNull('environmental_logs.source_key')
-                    ->orWhere('environmental_logs.source_key', 'like', 'production_data_clean:%:environment');
+                    ->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'environmental_logs.source_key', 'environment'));
             }))
             ->when($hasRange, fn($q) => $q->where('recorded_at', '>=', ReportingDateService::reportingDayWindow($from)[0])->where('recorded_at', '<', ReportingDateService::reportingDayWindow($to)[1]))
             ->selectRaw('DATE(recorded_at) as log_date, AVG(temperature_c) as avg_temp, AVG(humidity_pct) as avg_hum')
@@ -905,7 +906,7 @@ class ReportController extends Controller
         $query = MortalityLog::whereIn('cage_id', $cageIds)
             ->when(\Illuminate\Support\Facades\Schema::hasColumn('mortality_logs', 'source_key'), fn ($q) => $q->where(function ($sources) {
                 $sources->whereNull('mortality_logs.source_key')
-                    ->orWhere('mortality_logs.source_key', 'like', 'production_data_clean:%:mortality');
+                    ->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'mortality_logs.source_key', 'mortality'));
             }))
             ->when($hasRange, fn($q) => $q->whereBetween('log_date', [$from, $to]));
 

@@ -50,7 +50,7 @@ class FcrCalculator
         $feedKg = FeedConsumptionLog::where('cage_id', $cage->id)
             ->whereHas('cage', fn ($q) => $q->where('is_active', true))
             ->when(Schema::hasColumn('feed_consumption_logs', 'source_key'), fn ($q) => $q->where(function ($source) {
-                $source->whereNull('feed_consumption_logs.source_key')->orWhere('feed_consumption_logs.source_key', 'like', 'production_data_clean:%:feed');
+                $source->whereNull('feed_consumption_logs.source_key')->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'feed_consumption_logs.source_key', 'feed'));
             }))
             ->whereBetween('log_date', [$start->toDateString(), $end->toDateString()])
             ->sum('feed_consumed_kg');
@@ -84,7 +84,7 @@ class FcrCalculator
         $perLog = DB::table('production_logs as pl')
             ->where('pl.is_demo', false)
             ->when(Schema::hasColumn('production_logs', 'source_key'), fn ($q) => $q->where(function ($source) {
-                $source->whereNull('pl.source_key')->orWhere('pl.source_key', 'like', 'production_data_clean:%:production');
+                $source->whereNull('pl.source_key')->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'pl.source_key', 'production'));
             }))
             ->selectRaw(
                 'pl.id, pl.log_date, pl.egg_count, COUNT(esl.id) AS size_rows, ' .
@@ -104,7 +104,7 @@ class FcrCalculator
             })
             ->when($cage, fn ($q) => $q->where(function ($scope) use ($cage) {
                 $scope->where('cs.cage_id', $cage->id)->orWhere(function ($imported) use ($cage) {
-                    $imported->where('pl.source_key', 'like', 'production_data_clean:%:production')
+                    $imported->where(fn ($k) => \App\Services\HistoricalSource::match($k, 'pl.source_key', 'production'))
                         ->where('imported_cage.id', $cage->id);
                 });
             }))
@@ -115,7 +115,7 @@ class FcrCalculator
                             ->whereColumn('slot_cage.id', 'cs.cage_id')->where('slot_cage.is_active', 1);
                     });
                 })->orWhere(function ($imported) {
-                    $imported->where('pl.source_key', 'like', 'production_data_clean:%:production')
+                    $imported->where(fn ($k) => \App\Services\HistoricalSource::match($k, 'pl.source_key', 'production'))
                         ->where('imported_cage.is_active', 1);
                 });
             }))
@@ -164,7 +164,7 @@ class FcrCalculator
         $feedKg = FeedConsumptionLog::whereBetween('log_date', [$start->toDateString(), $end->toDateString()])
             ->whereHas('cage', fn ($q) => $q->where('is_active', 1))
             ->when(Schema::hasColumn('feed_consumption_logs', 'source_key'), fn ($q) => $q->where(function ($source) {
-                $source->whereNull('feed_consumption_logs.source_key')->orWhere('feed_consumption_logs.source_key', 'like', 'production_data_clean:%:feed');
+                $source->whereNull('feed_consumption_logs.source_key')->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'feed_consumption_logs.source_key', 'feed'));
             }))
             ->sum('feed_consumed_kg');
 
@@ -197,12 +197,12 @@ class FcrCalculator
             $feedQuery->where('cage_id', $cage->id)
                 ->whereHas('cage', fn ($q) => $q->where('is_active', true))
                 ->when($hasSourceKey, fn ($q) => $q->where(function ($source) {
-                    $source->whereNull('feed_consumption_logs.source_key')->orWhere('feed_consumption_logs.source_key', 'like', 'production_data_clean:%:feed');
+                    $source->whereNull('feed_consumption_logs.source_key')->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'feed_consumption_logs.source_key', 'feed'));
                 }));
         } else {
             $feedQuery->whereHas('cage', fn ($q) => $q->where('is_active', 1))
                 ->when($hasSourceKey, fn ($q) => $q->where(function ($source) {
-                    $source->whereNull('feed_consumption_logs.source_key')->orWhere('feed_consumption_logs.source_key', 'like', 'production_data_clean:%:feed');
+                    $source->whereNull('feed_consumption_logs.source_key')->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'feed_consumption_logs.source_key', 'feed'));
                 }));
         }
         $feedKg = (float) $feedQuery->sum('feed_consumed_kg');
@@ -218,7 +218,7 @@ class FcrCalculator
         $perLog = DB::table('production_logs as pl')
             ->where('pl.is_demo', false)
             ->when(Schema::hasColumn('production_logs', 'source_key'), fn ($q) => $q->where(function ($source) {
-                $source->whereNull('pl.source_key')->orWhere('pl.source_key', 'like', 'production_data_clean:%:production');
+                $source->whereNull('pl.source_key')->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'pl.source_key', 'production'));
             }))
             ->selectRaw(
                 'pl.id, pl.egg_count, COUNT(esl.id) AS size_rows, ' .
@@ -236,7 +236,7 @@ class FcrCalculator
                 })
                 ->where(function ($scope) use ($cage) {
                     $scope->where('cs.cage_id', $cage->id)->orWhere(function ($imported) use ($cage) {
-                        $imported->where('pl.source_key', 'like', 'production_data_clean:%:production')
+                        $imported->where(fn ($k) => \App\Services\HistoricalSource::match($k, 'pl.source_key', 'production'))
                             ->where('imported_cage.id', $cage->id);
                     });
                 });
@@ -248,7 +248,7 @@ class FcrCalculator
                 })
                 ->where(function ($scope) {
                     $scope->where('slot_cage.is_active', 1)->orWhere(function ($imported) {
-                        $imported->where('pl.source_key', 'like', 'production_data_clean:%:production')
+                        $imported->where(fn ($k) => \App\Services\HistoricalSource::match($k, 'pl.source_key', 'production'))
                             ->where('imported_cage.is_active', 1);
                     });
                 });
@@ -283,7 +283,7 @@ class FcrCalculator
 
         $feedLogs = FeedConsumptionLog::whereHas('cage', fn ($q) => $q->where('is_active', 1))
             ->when(Schema::hasColumn('feed_consumption_logs', 'source_key'), fn ($q) => $q->where(function ($source) {
-                $source->whereNull('feed_consumption_logs.source_key')->orWhere('feed_consumption_logs.source_key', 'like', 'production_data_clean:%:feed');
+                $source->whereNull('feed_consumption_logs.source_key')->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'feed_consumption_logs.source_key', 'feed'));
             }))
             ->when($since, fn ($q) => $q->where('log_date', '>=', $since->toDateString()))
             ->when($to, fn ($q) => $q->where('log_date', '<=', $to))
@@ -333,7 +333,7 @@ class FcrCalculator
         $feedLogs = FeedConsumptionLog::where('cage_id', $cage->id)
             ->whereHas('cage', fn ($q) => $q->where('is_active', true))
             ->when(Schema::hasColumn('feed_consumption_logs', 'source_key'), fn ($q) => $q->where(function ($source) {
-                $source->whereNull('feed_consumption_logs.source_key')->orWhere('feed_consumption_logs.source_key', 'like', 'production_data_clean:%:feed');
+                $source->whereNull('feed_consumption_logs.source_key')->orWhere(fn ($k) => \App\Services\HistoricalSource::match($k, 'feed_consumption_logs.source_key', 'feed'));
             }))
             ->when($since, fn ($q) => $q->where('log_date', '>=', $since->toDateString()))
             ->when($to, fn ($q) => $q->where('log_date', '<=', $to))
