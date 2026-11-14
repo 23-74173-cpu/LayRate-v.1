@@ -76,8 +76,9 @@ class AccountController extends Controller
             'Environment thresholds' => [
                 'route' => route('environment'),
                 'values' => [
-                    'Temperature' => Setting::get('temp_min', 18) . '°C — ' . Setting::get('temp_max', 30) . '°C',
-                    'Humidity'    => Setting::get('hum_min', 40) . '% — ' . Setting::get('hum_max', 70) . '%',
+                    'Max temperature' => Setting::get('temp_max', 30) . '°C',
+                    'Max humidity'    => Setting::get('hum_max', 70) . '%',
+                    'Desired HDEP'    => Setting::get('desired_hdep', 85) . '%',
                 ],
             ],
             'Egg weights (FCR)' => [

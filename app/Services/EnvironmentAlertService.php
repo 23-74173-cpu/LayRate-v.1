@@ -7,11 +7,12 @@ use App\Models\EnvironmentalLog;
 use App\Models\Setting;
 
 /**
- * Create persistent alerts when environmental readings cross configured thresholds.
+ * Create persistent alerts when environmental readings rise above the
+ * configured maximum thresholds. There are no minimum thresholds; existing
+ * temperature_low/humidity_low alerts stay in history but are no longer raised.
  *
- * Boundary convention matches EnvironmentStatusService:
- *   - Alert: value is strictly outside the safe range (< min or > max)
- *   - Watch: value is exactly at a boundary (== min or == max)
+ * Boundary convention matches EnvironmentStatusService: alert only when the
+ * value is strictly above the maximum.
  *
  * A single unread alert of each type is created per cage per day to avoid noise.
  */
@@ -25,21 +26,11 @@ class EnvironmentAlertService
         $temp = $log->temperature_c;
         $hum = $log->humidity_pct;
 
-        $tempMin = $thresholds['temp_min'] ?? null;
         $tempMax = $thresholds['temp_max'] ?? null;
-        $humMin = $thresholds['hum_min'] ?? null;
         $humMax = $thresholds['hum_max'] ?? null;
-
-        if ($tempMin !== null && $temp < $tempMin) {
-            self::createAlert($cageId, 'temperature_low', "Temperature {$temp}°C is below minimum threshold ({$tempMin}°C)");
-        }
 
         if ($tempMax !== null && $temp > $tempMax) {
             self::createAlert($cageId, 'temperature_high', "Temperature {$temp}°C is above maximum threshold ({$tempMax}°C)");
-        }
-
-        if ($humMin !== null && $hum < $humMin) {
-            self::createAlert($cageId, 'humidity_low', "Humidity {$hum}% is below minimum threshold ({$humMin}%)");
         }
 
         if ($humMax !== null && $hum > $humMax) {

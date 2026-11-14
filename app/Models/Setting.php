@@ -58,12 +58,12 @@ class Setting extends Model
     public static function thresholds(): array
     {
         return Cache::remember('settings:thresholds', self::CACHE_TTL, function () {
-            $rows = static::whereIn('key', ['temp_min', 'temp_max', 'hum_min', 'hum_max', 'desired_hdep'])->pluck('value', 'key');
+            $rows = static::whereIn('key', ['temp_max', 'hum_max', 'desired_hdep'])->pluck('value', 'key');
 
+            // Alerts are upper limits only; any temp_min/hum_min rows left in
+            // settings are no longer read.
             return [
-                'temp_min' => (float) ($rows['temp_min'] ?? 18),
                 'temp_max' => (float) ($rows['temp_max'] ?? 30),
-                'hum_min'  => (float) ($rows['hum_min']  ?? 40),
                 'hum_max'  => (float) ($rows['hum_max']  ?? 70),
                 // Farm-wide lay-rate goal: the hdep_target_reached alert and
                 // the reference line on Egg Production History.

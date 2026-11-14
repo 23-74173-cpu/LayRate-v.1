@@ -143,30 +143,63 @@ class EnvironmentReferenceCardTest extends TestCase
 
     public function test_threshold_inputs_get_hints_from_the_same_range_and_stay_manual(): void
     {
-        foreach (['temp_min' => 18, 'temp_max' => 30, 'hum_min' => 40, 'hum_max' => 70] as $key => $value) {
+        foreach (['temp_max' => 30, 'hum_max' => 70] as $key => $value) {
             Setting::firstOrCreate(['key' => $key], ['value' => $value, 'label' => $key]);
         }
 
         $html = $this->actingAs($this->user)->get(route('environment'))->assertOk()->getContent();
 
-        // One hint line per threshold input, fed by the same optimal range.
-        $this->assertSame(4, substr_count($html, '<p class="text-xs mt-1 truncate" data-optimal-hint'));
+        // One hint line per threshold input (max temperature, max humidity),
+        // fed by the same optimal range. There are no minimum inputs.
+        $this->assertSame(2, substr_count($html, '<p class="text-xs mt-1 truncate" data-optimal-hint'));
         $this->assertStringContainsString('data-optimal-kind="temp"', $html);
         $this->assertStringContainsString('data-optimal-kind="hum"', $html);
         $this->assertStringContainsString('var optimal = {"temp_min":18,"temp_max":24,"hum_min":50,"hum_max":70};', $html);
 
         // The inputs keep their saved values and are not locked.
-        $this->assertMatchesRegularExpression('/name="temp_max" data-optimal-kind="temp" step="0\.5"\s+value="30"/', $html);
-        $this->assertDoesNotMatchRegularExpression('/name="(temp|hum)_(min|max)"[^>]*(readonly|disabled)/', $html);
+        $this->assertMatchesRegularExpression('/name="temp_max"[^>]*data-optimal-kind="temp" step="0\.5"\s+value="30"/', $html);
+        $this->assertDoesNotMatchRegularExpression('/name="(temp|hum)_max"[^>]*(readonly|disabled)/', $html);
+        $this->assertStringNotContainsString('name="temp_min"', $html);
+        $this->assertStringNotContainsString('name="hum_min"', $html);
+        $this->assertStringContainsString('name="desired_hdep"', $html);
     }
 
     public function test_saving_a_value_outside_the_optimal_range_is_still_allowed(): void
     {
         $this->actingAs($this->user)
-            ->postJson(route('environment.thresholds'), ['temp_min' => 10, 'temp_max' => 35, 'hum_min' => 20, 'hum_max' => 95])
+            ->postJson(route('environment.thresholds'), ['temp_max' => 35, 'hum_max' => 95, 'desired_hdep' => 80])
             ->assertOk();
 
         $this->assertEquals(35, Setting::thresholds()['temp_max']);
-        $this->assertEquals(20, Setting::thresholds()['hum_min']);
+        $this->assertEquals(95, Setting::thresholds()['hum_max']);
+        $this->assertEquals(80, Setting::thresholds()['desired_hdep']);
+    }
+
+    public function test_thresholds_no_longer_require_or_store_minimums(): void
+    {
+        $this->actingAs($this->user)
+            ->postJson(route('environment.thresholds'), ['temp_max' => 31, 'hum_max' => 72, 'temp_min' => 5, 'hum_min' => 5])
+            ->assertOk();
+
+        $this->assertArrayNotHasKey('temp_min', Setting::thresholds());
+        $this->assertArrayNotHasKey('hum_min', Setting::thresholds());
+        // Posted minimums are ignored; the legacy rows keep their old values.
+        $this->assertNotEquals(5, Setting::get('temp_min'));
+        $this->assertNotEquals(5, Setting::get('hum_min'));
+
+        $this->actingAs($this->user)
+            ->postJson(route('environment.thresholds'), ['hum_max' => 72])
+            ->assertStatus(422)->assertJsonValidationErrors('temp_max');
+    }
+
+    public function test_card_shows_max_only_alert_thresholds(): void
+    {
+        $this->dht22($this->cage);
+        $this->reading($this->cage, 22.0, 60.0);
+
+        $this->actingAs($this->user)->get(route('environment.live-data'))
+            ->assertOk()
+            ->assertSee('alert threshold: above 30 °C')
+            ->assertSee('above 70 %');
     }
 }

@@ -76,9 +76,7 @@ class SettingCacheTest extends TestCase
 
     public function test_thresholds_reflects_updates_after_cache_was_warmed(): void
     {
-        Setting::set('temp_min', 18);
         Setting::set('temp_max', 30);
-        Setting::set('hum_min', 40);
         Setting::set('hum_max', 70);
 
         $warm = Setting::thresholds();
@@ -103,7 +101,6 @@ class SettingCacheTest extends TestCase
 
     public function test_thresholds_query_count_drops_to_zero_on_cached_call(): void
     {
-        Setting::set('temp_min', 18);
         Setting::set('temp_max', 30);
 
         Setting::thresholds(); // warm the cache

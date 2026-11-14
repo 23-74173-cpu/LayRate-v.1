@@ -337,9 +337,7 @@ class RelayControlTest extends TestCase
         // live, so the next command poll picks the change up automatically.
         $this->actingAs($this->admin)
             ->postJson('/environment/thresholds', [
-                'temp_min' => 24,
                 'temp_max' => 33,
-                'hum_min' => 40,
                 'hum_max' => 70,
             ])
             ->assertOk();

@@ -87,31 +87,18 @@
 
         <form action="{{ route('environment.thresholds') }}" method="POST" id="threshold-form">
             @csrf
+            <p class="text-sm text-[#615d59] -mt-2 mb-4">You get an alert when a reading goes above these limits.</p>
             <div class="space-y-4">
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TEMP MIN (°C)</label>
-                    <input type="number" name="temp_min" required min="0" max="50" data-optimal-kind="temp" step="0.5"
-                           value="{{ $thresholds['temp_min'] }}"
-                           class="w-full max-md:min-h-11 border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
-                    <p class="text-xs mt-1 truncate" data-optimal-hint aria-live="polite"></p>
-                </div>
-                <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">TEMP MAX (°C)</label>
-                    <input type="number" name="temp_max" required min="0" max="50" data-optimal-kind="temp" step="0.5"
+                    <label for="thresholdTempMax" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">MAXIMUM TEMPERATURE (°C)</label>
+                    <input type="number" id="thresholdTempMax" name="temp_max" required min="0" max="50" data-optimal-kind="temp" step="0.5"
                            value="{{ $thresholds['temp_max'] }}"
                            class="w-full max-md:min-h-11 border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                     <p class="text-xs mt-1 truncate" data-optimal-hint aria-live="polite"></p>
                 </div>
                 <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">HUMIDITY MIN (%)</label>
-                    <input type="number" name="hum_min" required min="0" max="100" data-optimal-kind="hum" step="1"
-                           value="{{ $thresholds['hum_min'] }}"
-                           class="w-full max-md:min-h-11 border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
-                    <p class="text-xs mt-1 truncate" data-optimal-hint aria-live="polite"></p>
-                </div>
-                <div>
-                    <label class="block text-xs tracking-wider text-[#6B7280] mb-1.5">HUMIDITY MAX (%)</label>
-                    <input type="number" name="hum_max" required min="0" max="100" data-optimal-kind="hum" step="1"
+                    <label for="thresholdHumMax" class="block text-xs tracking-wider text-[#6B7280] mb-1.5">MAXIMUM HUMIDITY (%)</label>
+                    <input type="number" id="thresholdHumMax" name="hum_max" required min="0" max="100" data-optimal-kind="hum" step="1"
                            value="{{ $thresholds['hum_max'] }}"
                            class="w-full max-md:min-h-11 border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy">
                     <p class="text-xs mt-1 truncate" data-optimal-hint aria-live="polite"></p>

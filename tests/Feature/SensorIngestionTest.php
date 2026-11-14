@@ -196,9 +196,7 @@ class SensorIngestionTest extends TestCase
     public function test_temperature_threshold_crossing_creates_alert(): void
     {
         Setting::set('temp_max', 30);
-        Setting::set('temp_min', 18);
         Setting::set('hum_max', 70);
-        Setting::set('hum_min', 40);
 
         $this->dht22Item();
         $key = $this->deviceKey();

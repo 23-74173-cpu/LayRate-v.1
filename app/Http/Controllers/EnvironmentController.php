@@ -306,10 +306,8 @@ class EnvironmentController extends Controller
     public function saveThresholds(Request $request)
     {
         $data = $request->validate([
-            'temp_min' => 'required|numeric|min:0|max:50',
-            'temp_max' => 'required|numeric|min:0|max:50|gte:temp_min',
-            'hum_min'  => 'required|numeric|min:0|max:100',
-            'hum_max'  => 'required|numeric|min:0|max:100|gte:hum_min',
+            'temp_max' => 'required|numeric|min:0|max:50',
+            'hum_max'  => 'required|numeric|min:0|max:100',
             'desired_hdep' => 'nullable|numeric|min:0|max:100',
         ]);
 

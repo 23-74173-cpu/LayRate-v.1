@@ -9,22 +9,15 @@ use PHPUnit\Framework\TestCase;
 class EnvironmentStatusServiceTest extends TestCase
 {
     private array $thresholds = [
-        'temp_min' => 18.0,
         'temp_max' => 30.0,
-        'hum_min' => 40.0,
         'hum_max' => 70.0,
     ];
 
     #[Test]
-    public function temperature_below_min_is_alert()
+    public function low_temperature_is_ok_because_there_is_no_minimum()
     {
-        $this->assertSame('Alert', EnvironmentStatusService::tempStatus(17.9, $this->thresholds));
-    }
-
-    #[Test]
-    public function temperature_at_min_is_watch()
-    {
-        $this->assertSame('Watch', EnvironmentStatusService::tempStatus(18.0, $this->thresholds));
+        $this->assertSame('OK', EnvironmentStatusService::tempStatus(5.0, $this->thresholds));
+        $this->assertSame('OK', EnvironmentStatusService::tempStatus(18.0, $this->thresholds));
     }
 
     #[Test]
@@ -46,15 +39,10 @@ class EnvironmentStatusServiceTest extends TestCase
     }
 
     #[Test]
-    public function humidity_below_min_is_alert()
+    public function low_humidity_is_ok_because_there_is_no_minimum()
     {
-        $this->assertSame('Alert', EnvironmentStatusService::humStatus(39.9, $this->thresholds));
-    }
-
-    #[Test]
-    public function humidity_at_min_is_watch()
-    {
-        $this->assertSame('Watch', EnvironmentStatusService::humStatus(40.0, $this->thresholds));
+        $this->assertSame('OK', EnvironmentStatusService::humStatus(20.0, $this->thresholds));
+        $this->assertSame('OK', EnvironmentStatusService::humStatus(40.0, $this->thresholds));
     }
 
     #[Test]
@@ -78,14 +66,14 @@ class EnvironmentStatusServiceTest extends TestCase
     #[Test]
     public function summary_returns_alert_when_either_metric_is_alert()
     {
-        $this->assertSame('Alert', EnvironmentStatusService::summary(15.0, 55.0, $this->thresholds));
-        $this->assertSame('Alert', EnvironmentStatusService::summary(24.0, 35.0, $this->thresholds));
+        $this->assertSame('Alert', EnvironmentStatusService::summary(31.0, 55.0, $this->thresholds));
+        $this->assertSame('Alert', EnvironmentStatusService::summary(24.0, 75.0, $this->thresholds));
     }
 
     #[Test]
     public function summary_returns_watch_when_no_alert_but_any_watch()
     {
-        $this->assertSame('Watch', EnvironmentStatusService::summary(18.0, 55.0, $this->thresholds));
+        $this->assertSame('Watch', EnvironmentStatusService::summary(30.0, 55.0, $this->thresholds));
         $this->assertSame('Watch', EnvironmentStatusService::summary(24.0, 70.0, $this->thresholds));
     }
 
@@ -93,5 +81,6 @@ class EnvironmentStatusServiceTest extends TestCase
     public function summary_returns_normal_when_both_metrics_are_ok()
     {
         $this->assertSame('Normal', EnvironmentStatusService::summary(24.0, 55.0, $this->thresholds));
+        $this->assertSame('Normal', EnvironmentStatusService::summary(10.0, 20.0, $this->thresholds));
     }
 }

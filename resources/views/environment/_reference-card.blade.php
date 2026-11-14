@@ -10,6 +10,7 @@
         'none'   => ['#f1f1ef', '#615d59', 'circle-help'],
         default  => ['#fdf3e0', '#8a5a00', 'circle-alert'],
     };
+    $maxText = fn ($max, $unit) => 'above ' . rtrim(rtrim(number_format($max, 1), '0'), '.') . ' ' . $unit;
     $rangeText = fn ($min, $max, $unit) => rtrim(rtrim(number_format($min, 1), '0'), '.') . '–' . rtrim(rtrim(number_format($max, 1), '0'), '.') . ' ' . $unit;
     $metrics = [
         [
@@ -17,7 +18,7 @@
             'icon'    => 'thermometer',
             'current' => $reference['temp_value'] !== null ? number_format($reference['temp_value'], 1) . ' °C' : '—',
             'optimal' => $rangeText($optimal['temp_min'], $optimal['temp_max'], '°C'),
-            'alerts'  => $rangeText($thresholds['temp_min'], $thresholds['temp_max'], '°C'),
+            'alerts'  => $maxText($thresholds['temp_max'], '°C'),
             'result'  => $reference['temp'],
             'unit'    => '°C',
         ],
@@ -26,7 +27,7 @@
             'icon'    => 'droplets',
             'current' => $reference['hum_value'] !== null ? number_format($reference['hum_value'], 1) . ' %' : '—',
             'optimal' => $rangeText($optimal['hum_min'], $optimal['hum_max'], '%'),
-            'alerts'  => $rangeText($thresholds['hum_min'], $thresholds['hum_max'], '%'),
+            'alerts'  => $maxText($thresholds['hum_max'], '%'),
             'result'  => $reference['hum'],
             'unit'    => '%',
         ],
@@ -91,7 +92,7 @@
             </div>
             {{-- Lowercase "alert" on purpose: the status words Alert / Watch / OK
                  on this page belong to the per-cage badges. --}}
-            <div class="text-[11px] text-[#9CA3AF] mt-2">This farm's alert thresholds: {{ $m['alerts'] }}</div>
+            <div class="text-[11px] text-[#9CA3AF] mt-2">This farm's alert threshold: {{ $m['alerts'] }}</div>
         </div>
         @endforeach
     </div>

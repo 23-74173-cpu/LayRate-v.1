@@ -4,25 +4,24 @@ namespace App\Services;
 
 /**
  * Determine environmental status badges for temperature and humidity
- * using configurable min/max thresholds.
+ * using the configurable maximum thresholds (there is no minimum).
  *
  * Boundary convention (applied identically to temperature and humidity):
- *   - Alert: value is strictly outside the safe range (< min or > max)
- *   - Watch: value is exactly at a boundary (== min or == max)
- *   - OK:    value is strictly inside the safe range (min < value < max)
+ *   - Alert: value is above the maximum (> max)
+ *   - Watch: value is exactly at the maximum (== max)
+ *   - OK:    value is below the maximum (< max)
  */
 class EnvironmentStatusService
 {
     public static function tempStatus(float $temp, array $thresholds): string
     {
-        $min = $thresholds['temp_min'];
         $max = $thresholds['temp_max'];
 
-        if ($temp < $min || $temp > $max) {
+        if ($temp > $max) {
             return 'Alert';
         }
 
-        if ($temp <= $min || $temp >= $max) {
+        if ($temp == $max) {
             return 'Watch';
         }
 
@@ -31,14 +30,13 @@ class EnvironmentStatusService
 
     public static function humStatus(float $hum, array $thresholds): string
     {
-        $min = $thresholds['hum_min'];
         $max = $thresholds['hum_max'];
 
-        if ($hum < $min || $hum > $max) {
+        if ($hum > $max) {
             return 'Alert';
         }
 
-        if ($hum <= $min || $hum >= $max) {
+        if ($hum == $max) {
             return 'Watch';
         }
 
