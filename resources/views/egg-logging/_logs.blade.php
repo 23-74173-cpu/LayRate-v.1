@@ -88,7 +88,7 @@
                             @php
                                 $sizes = $log->eggSizeLogs->keyBy('egg_size');
                             @endphp
-                            <button onclick="openEditLog({id: {{ $log->id }}, date: '{{ $log->log_date->format('Y-m-d') }}', eggCount: {{ $log->egg_count }}, henCount: {{ $log->hen_count }}, notes: '{{ addslashes($log->notes ?? '') }}', cageSlotId: {{ $log->cage_slot_id }}, sizes: {small: {{ $sizes->get('small')?->count ?? 0 }}, medium: {{ $sizes->get('medium')?->count ?? 0 }}, large: {{ $sizes->get('large')?->count ?? 0 }}, xl: {{ $sizes->get('xl')?->count ?? 0 }}, jumbo: {{ $sizes->get('jumbo')?->count ?? 0 }}})"
+                            <button onclick="openEditLog({id: {{ $log->id }}, date: '{{ $log->log_date->format('Y-m-d') }}', eggCount: {{ $log->egg_count }}, henCount: {{ $log->hen_count }}, notes: @js($log->notes ?? ''), cageSlotId: {{ $log->cage_slot_id }}, sizes: {small: {{ $sizes->get('small')?->count ?? 0 }}, medium: {{ $sizes->get('medium')?->count ?? 0 }}, large: {{ $sizes->get('large')?->count ?? 0 }}, xl: {{ $sizes->get('xl')?->count ?? 0 }}, jumbo: {{ $sizes->get('jumbo')?->count ?? 0 }} }})"
                                      class="p-1.5 max-md:min-w-11 max-md:min-h-11 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors" style="color: #a39e98;" aria-label="Edit log">
                                 <i data-lucide="pencil" class="w-3.5 h-3.5 max-md:w-4 max-md:h-4"></i>
                             </button>

@@ -1117,7 +1117,11 @@ function checkEditResizeCollision() {
     var newSlots = parseInt(document.getElementById('editSlotsPerRow').value) || 1;
     var cageId = _editCollisionCageId;
 
-    var pos = pendingMoves[cageId] || savedPositions[cageId] || {};
+    // savedPositions only fills after a layout save; fall back to where the
+    // cage is placed now, or every comparison runs on NaN and "overlaps".
+    var placed = placedCages[cageId];
+    var pos = pendingMoves[cageId] || savedPositions[cageId]
+        || (placed ? { location_row: placed.origin_row, location_column: placed.origin_col } : {});
     var originRow = pos.location_row;
     var originCol = pos.location_column;
 
@@ -1126,7 +1130,7 @@ function checkEditResizeCollision() {
 
     clearResizeCollisionHighlight();
 
-    if (originRow === null || originCol === null) {
+    if (originRow == null || originCol == null) {
         warningEl.classList.add('hidden');
         return;
     }

@@ -879,9 +879,13 @@ class DashboardController extends Controller
         $reportingDate = ReportingDateService::reportingDate();
         [$startDate, $endDate, $days] = $this->dateRange($days, request('from_date'), $reportingDate, request('to_date'));
 
-        // Group egg counts by hour of day using created_at timestamp
+        // Group egg counts by hour of day using created_at timestamp. Only a log
+        // entered on its own production day has a meaningful collection time;
+        // back-filled and imported rows carry their entry/import time instead
+        // (which would pile every egg into one hour), so they are left out.
         $hourly = ProductionLog::where('log_date', '<=', $endDate)
             ->real()
+            ->whereRaw('DATE(created_at) = log_date')
             ->when($startDate, fn ($q) => $q->where('log_date', '>=', $startDate))
             ->selectRaw('HOUR(created_at) as hour, SUM(egg_count) as total_eggs')
             ->groupBy('hour')
@@ -1621,16 +1625,19 @@ class DashboardController extends Controller
             ->when(Schema::hasColumn('production_logs', 'source_key'), fn ($q) => $q->whereNull('production_logs.source_key'))
             ->select('production_logs.*')
             ->get();
-            // HDEP today = eggs collected today ÷ all hens in the cages, as a percentage
-            $todayEggCount = $historicalSnapshot ? $todaySnapshot['eggs'] : (int) $todayLogs->sum('egg_count');
+            // HDEP today = eggs collected today ÷ all hens in the cages, as a
+            // percentage, from the same egg count the Eggs Today card shows
+            // (it falls back to the per-cage totals, which include imported
+            // cage/day rows; HDEP read 0% while the card showed their eggs).
+            $todayEggCount = $historicalSnapshot
+                ? $todaySnapshot['eggs']
+                : ((int) $todayLogs->sum('egg_count') ?: (int) $cages->sum(fn ($c) => $c->today_eggs));
             $todayHdep = $historicalSnapshot
                 ? $todaySnapshot['hdep']
                 : ($totalHens > 0 ? round($todayEggCount / $totalHens * 100, 1) : 0);
             ['eggs' => $eggsYesterday, 'hdep' => $yesterdayHdep] = $this->farmProductionForDay($yesterday);
             $hdepDelta = round($todayHdep - $yesterdayHdep, 1);
-            $eggsToday = $historicalSnapshot
-                ? $todayEggCount
-                : ($todayLogs->sum('egg_count') ?: $cages->sum(fn ($c) => $c->today_eggs));
+            $eggsToday = $todayEggCount;
             $lifetimeEggs = ProductionLog::real()->sum('egg_count');
         }
 

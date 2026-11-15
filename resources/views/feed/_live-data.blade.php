@@ -532,6 +532,12 @@
             <x-card-header title="Feed Conversion Ratio" subtitle="kg feed ÷ kg egg mass (lower is better)" icon="scale">
                 <x-slot:actions>
                     <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
+                    <button type="button" onclick="openFcrGuideModal()"
+                            class="inline-flex items-center justify-center gap-1.5 border border-[#D9D9D9] rounded-lg px-3 py-1.5 text-sm text-[#6B7280] hover:text-[#1f1f1f] hover:border-[#6B7280] transition-colors max-md:min-h-11"
+                            aria-haspopup="dialog" aria-controls="fcr-guide-modal">
+                        <i data-lucide="info" class="w-4 h-4" aria-hidden="true"></i>
+                        What is FCR?
+                    </button>
                     <select id="fcr-cage-select" onchange="fcrLoad()"
                             class="w-full sm:w-auto min-w-0 border border-[#D9D9D9] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-navy">
                         <option value="all" {{ $fcrSelectedId === 'all' ? 'selected' : '' }}>All Cages</option>

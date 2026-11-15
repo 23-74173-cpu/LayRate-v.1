@@ -1,6 +1,8 @@
 @extends('layouts.app')
 @section('title', 'Dashboard')
-@section('header-clock', now()->format('l, m/d/Y') . ' — ' . now()->format('g:i A'))
+@section('header-clock')
+    <span id="dashboardClock">{{ \App\Services\ReportingDateService::now()->format('l, m/d/Y — g:i A') }}</span>
+@endsection
 
 @section('content')
 <div class="space-y-5">
@@ -400,7 +402,7 @@
             <div class="flex items-center justify-between mb-4">
                 <div>
                     <h3 id="yesterdaySummaryTitle" class="text-[18px] font-semibold leading-[1.4] tracking-[-0.125px]" style="color: #1f1f1f;">Yesterday's Production Record</h3>
-                    <p class="text-xs mt-0.5" style="color: #a39e98;">{{ \Carbon\Carbon::yesterday()->format('l, m/d/Y') }}</p>
+                    <p class="text-xs mt-0.5" style="color: #a39e98;">{{ \App\Services\ReportingDateService::reportingDate()->subDay()->format('l, m/d/Y') }}</p>
                 </div>
                 <button onclick="closeYesterdaySummary()" class="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label="Close">
                     <i data-lucide="x" class="w-5 h-5" style="color: #615d59;"></i>
@@ -575,16 +577,21 @@
         });
     }
 
-    // ── Live clock (item 6): local timezone, ticks every second ──
+    // ── Live clock (item 6): farm time (Asia/Manila, as ReportingDateService),
+    //    whatever the browser's own timezone, ticks every second ──
     (function() {
+        var fmt = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'Asia/Manila', weekday: 'long', year: 'numeric', month: '2-digit',
+            day: '2-digit', hour: 'numeric', minute: '2-digit',
+        });
         function tick() {
             var el = document.getElementById('dashboardClock');
             if (!el) return;
-            var now = new Date();
+            var p = {};
+            fmt.formatToParts(new Date()).forEach(function(part) { p[part.type] = part.value; });
             // Weekday + mm/dd/yyyy, the app's date format, whatever the browser language.
-            var mdy = String(now.getMonth() + 1).padStart(2, '0') + '/' + String(now.getDate()).padStart(2, '0') + '/' + now.getFullYear();
-            el.textContent = now.toLocaleDateString('en-US', { weekday: 'long' }) + ', ' + mdy
-                + ' — ' + now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            el.textContent = p.weekday + ', ' + p.month + '/' + p.day + '/' + p.year
+                + ' — ' + p.hour + ':' + p.minute + ' ' + p.dayPeriod;
         }
         tick();
         if (window.__dashboardClockTimer) clearInterval(window.__dashboardClockTimer);
