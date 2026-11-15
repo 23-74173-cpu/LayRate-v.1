@@ -37,6 +37,10 @@ return [
 
     'forecast' => [
         'python_binary' => env('FORECAST_PYTHON_BINARY', 'python'),
+        // Train on (and show as actuals) the labelled SIMULATED extension of the
+        // production history. Set false to forecast from original data only,
+        // e.g. for the real-data model evaluation.
+        'include_simulated_history' => (bool) env('FORECAST_INCLUDE_SIMULATED', true),
     ],
 
 ];

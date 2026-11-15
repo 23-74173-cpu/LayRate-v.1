@@ -22,12 +22,14 @@ use Symfony\Component\Process\Process;
 class ForecastGenerationService
 {
     /**
-     * Simulated extension rows are display-only: they must never become
-     * model training data or the actuals a forecast is scored against.
+     * Leave out the SIMULATED extension unless services.forecast
+     * .include_simulated_history is on (it then counts as model history and
+     * as calendar actuals; it is still labelled SIMULATED everywhere else).
      */
     private function excludeSimulated($query, string $column)
     {
-        if (! \Illuminate\Support\Facades\Schema::hasColumn('production_logs', 'source_key')) {
+        if (config('services.forecast.include_simulated_history')
+            || ! \Illuminate\Support\Facades\Schema::hasColumn('production_logs', 'source_key')) {
             return $query;
         }
 
@@ -569,6 +571,7 @@ class ForecastGenerationService
             'DB_DATABASE' => config('database.connections.mysql.database', 'layrate'),
             'DB_USERNAME' => config('database.connections.mysql.username', 'root'),
             'DB_PASSWORD' => config('database.connections.mysql.password', ''),
+            'FORECAST_INCLUDE_SIMULATED' => config('services.forecast.include_simulated_history') ? '1' : '0',
         ];
 
         // Windows requires these to initialize Winsock / asyncio.

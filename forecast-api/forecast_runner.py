@@ -13,6 +13,12 @@ from pathlib import Path
 
 warnings.filterwarnings("ignore")
 
+# One thread per math library (set before numpy/xgboost load): the data is a
+# few hundred rows, so thread pools only add start-up and spin cost, which
+# made forecasts slow on the Pi's four cores.
+for _var in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
+    os.environ.setdefault(_var, "1")
+
 # Ensure ForecastingV5.py is importable regardless of cwd
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 

@@ -81,6 +81,10 @@ def forecast_dataset_query() -> str:
     previously materialized.
     """
     today = date.today().isoformat()
+    # Laravel passes FORECAST_INCLUDE_SIMULATED (services.forecast.include_simulated_history).
+    # When off, the labelled SIMULATED extension is left out of training data.
+    simulated_filter = "" if os.environ.get("FORECAST_INCLUDE_SIMULATED", "1") == "1" else \
+        "AND (pl.source_key IS NULL OR LEFT(pl.source_key, 20) <> 'simulated_extension:')"
 
     return f"""
 SELECT
@@ -117,8 +121,7 @@ WHERE pl.log_date IS NOT NULL
   AND c.cage_code IS NOT NULL
   AND TRIM(c.cage_code) != ''
   AND pl.is_demo = 0
-  -- simulated extension rows are display-only, never training/evaluation data
-  AND (pl.source_key IS NULL OR LEFT(pl.source_key, 20) <> 'simulated_extension:')
+  {simulated_filter}
   AND pl.log_date < '{today}'
 GROUP BY pl.log_date, c.id, c.cage_code
 HAVING `Temperature_C` IS NOT NULL AND `Humidity_Percent` IS NOT NULL
@@ -326,6 +329,9 @@ def fit_xgb_model(train_df, seed):
         colsample_bytree=0.9,
         random_state=seed,
         objective="reg:squarederror",
+        # The recursive forecast makes ~170 single-row predictions; with all
+        # cores each one pays thread start-up (≈50× the CPU for the same result).
+        n_jobs=1,
     )
     pipeline = Pipeline([("preprocessor", preprocessor), ("model", model)])
     pipeline.fit(train_features[XGB_FEATURES], train_features[TARGET_COLUMN])
