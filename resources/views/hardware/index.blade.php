@@ -319,6 +319,17 @@
 
 @push('scripts')
 <script>
+// A hidden select still submits its value, and the per-type rules reject it
+// (e.g. a cage on an IR breakbeam), so fields in hidden groups are disabled.
+function syncHiddenFields(prefix) {
+    ['CageSlotGroup', 'ExtraSlotsGroup', 'CageGroup'].forEach(function(name) {
+        var group = document.getElementById(prefix + name);
+        if (!group) return;
+        var hidden = group.classList.contains('hidden');
+        group.querySelectorAll('input, select, textarea').forEach(function(el) { el.disabled = hidden; });
+    });
+}
+
 function updateAddAssignment() {
     var type = document.getElementById('addDeviceType').value;
     var slotGroup = document.getElementById('addCageSlotGroup');
@@ -330,12 +341,14 @@ function updateAddAssignment() {
         slotGroup.classList.add('hidden');
         if (extraGroup) extraGroup.classList.add('hidden');
         cageGroup.classList.add('hidden');
+        syncHiddenFields('add');
         return;
     }
     var isIR = type === 'IR_breakbeam';
     slotGroup.classList.toggle('hidden', !isIR);
     if (extraGroup) extraGroup.classList.toggle('hidden', !isIR);
     cageGroup.classList.toggle('hidden', type !== 'DHT22' && type !== 'relay');
+    syncHiddenFields('add');
 }
 
 function onAddStatusChange() {
@@ -348,6 +361,7 @@ function onAddStatusChange() {
         slotGroup.classList.add('hidden');
         if (extraGroup) extraGroup.classList.add('hidden');
         cageGroup.classList.add('hidden');
+        syncHiddenFields('add');
     } else {
         updateAddAssignment();
     }
@@ -363,6 +377,7 @@ function updateEditAssignment() {
     slotGroup.classList.toggle('hidden', !isIR);
     if (extraGroup) extraGroup.classList.toggle('hidden', !isIR);
     cageGroup.classList.toggle('hidden', type !== 'DHT22' && type !== 'relay');
+    syncHiddenFields('edit');
 }
 
 function onEditStatusChange() {
@@ -372,6 +387,7 @@ function onEditStatusChange() {
         var extraGroup = document.getElementById('editExtraSlotsGroup');
         if (extraGroup) extraGroup.classList.add('hidden');
         document.getElementById('editCageGroup').classList.add('hidden');
+        syncHiddenFields('edit');
     } else {
         updateEditAssignment();
     }
@@ -385,12 +401,10 @@ function openEditModal(id, deviceType, serial, cageId, cageSlotId, installDate, 
     document.getElementById('editStatus').value = status;
     document.getElementById('editCalDate').value = calDate;
 
-    if (cageId) {
-        document.getElementById('editCage').value = cageId;
-    }
-    if (cageSlotId) {
-        document.getElementById('editCageSlot').value = cageSlotId;
-    }
+    // Always set (blank when unassigned) so the previous device's cage or
+    // slot never carries over into this one.
+    document.getElementById('editCage').value = cageId || '';
+    document.getElementById('editCageSlot').value = cageSlotId || '';
 
     // Preselect the cage filter from the sensor's current slot so the slot
     // dropdown opens already narrowed to the right cage.

@@ -49,6 +49,12 @@ class HardwareItemController extends Controller
         ]);
 
         $validator->after(function ($validator) use ($request, $existing) {
+            // validated() throws once a base rule has failed (e.g. a duplicate
+            // serial), which skipped the controller's reopen-the-modal redirect
+            // and left the error inside a closed modal.
+            if ($validator->errors()->isNotEmpty()) {
+                return;
+            }
             $data = $validator->validated();
             $deviceType = $data['device_type'] ?? null;
             $cageId = $data['cage_id'] ?? null;
