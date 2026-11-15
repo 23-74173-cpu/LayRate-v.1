@@ -273,7 +273,7 @@ class ImportHistoricalProductionCsv extends Command
             }
 
             $feedKey = $this->sourceKey($row, 'feed', $prefix);
-            $feedBatchId = $simulated ? $batchIds[$row['Feed_Batch_ID']] : null;
+            $feedBatchId = isset($row['Feed_Batch_ID']) ? ($batchIds[$row['Feed_Batch_ID']] ?? null) : null;
             $feedExisting = FeedConsumptionLog::where('source_key', $feedKey)->first();
             if (! $feedExisting && FeedConsumptionLog::where('source_key', $feedKey)->exists()) {
                 throw new RuntimeException("Feed source key state is inconsistent for {$feedKey}.");
@@ -389,7 +389,7 @@ class ImportHistoricalProductionCsv extends Command
             $existing = fn (string $table, string $prefix) => DB::table($table)->where('source_key', 'like', $prefix.':%')->count();
             $this->table(['Table', 'Existing original keys', 'Existing simulated keys'], collect(['production_logs', 'feed_consumption_logs', 'environmental_logs', 'mortality_logs'])
                 ->map(fn ($table) => [$table, $existing($table, HistoricalSource::ORIGINAL), $existing($table, HistoricalSource::SIMULATED)])->all());
-            $this->line('Existing SIMULATED feed batches: '.FeedBatch::whereIn('batch_code', array_keys($batches))->count());
+            $this->line('Existing feed batches: '.FeedBatch::whereIn('batch_code', array_map([$this, 'batchCode'], array_keys($batches)))->count());
             $this->line('Dry run; no writes performed.');
             return self::SUCCESS;
         }
@@ -401,30 +401,32 @@ class ImportHistoricalProductionCsv extends Command
         }
 
         [$originalCounts, $simulatedCounts, $batchesInserted, $batchesSkipped] = DB::transaction(function () use ($original, $importable, $importableBatches, $adminId) {
-            $originalCounts = $this->importRows($original, $adminId, HistoricalSource::ORIGINAL);
+            // Batches first: original and simulated rows both link to the
+            // batch the CSV assigns them. Brand, quantity and cost are the
+            // farm's purchase details, entered on the Feed page, so an
+            // existing batch only has to match its period start and CP.
             $batchIds = [];
             $batchesInserted = $batchesSkipped = 0;
-            foreach ($importableBatches as $code => $batch) {
-                $notes = 'SIMULATED batch segmentation; not an actual supplier or lot record. Nominal segment '
-                    .$batch['Start_Date'].' to '.$batch['End_Date'].'; estimated consumption '.$batch['Estimated_Consumption_kg']
-                    .' kg = sum of cage-day consumption, NOT a purchased/delivered quantity. Feed type: '.$batch['Feed_Type'].'.';
+            foreach ($importableBatches as $csvId => $batch) {
+                $code = $this->batchCode($csvId);
                 $existing = FeedBatch::where('batch_code', $code)->first();
                 if (! $existing) {
                     $existing = FeedBatch::create([
                         'batch_code' => $code, 'brand' => null, 'crude_protein' => $batch['Crude_Protein_Percent'],
                         'total_quantity_kg' => null, 'unit_cost' => null, 'low_stock_threshold' => null,
-                        'date_received' => $batch['Start_Date'], 'notes' => $notes,
+                        'date_received' => $batch['Start_Date'],
+                        'notes' => 'Feed period '.$batch['Start_Date'].' to '.$batch['End_Date'].'; add the delivered quantity and cost.',
                     ]);
                     $batchesInserted++;
-                } elseif ($existing->notes !== $notes || (float) $existing->crude_protein !== (float) $batch['Crude_Protein_Percent']
-                    || $existing->date_received->toDateString() !== $batch['Start_Date'] || $existing->brand !== null
-                    || $existing->total_quantity_kg !== null || $existing->unit_cost !== null) {
-                    throw new RuntimeException("Existing feed batch {$code} is not the unchanged SIMULATED batch; refusing overwrite.");
+                } elseif ((float) $existing->crude_protein !== (float) $batch['Crude_Protein_Percent']
+                    || $existing->date_received->toDateString() !== $batch['Start_Date']) {
+                    throw new RuntimeException("Existing feed batch {$code} does not match the CSV period or crude protein; refusing overwrite.");
                 } else {
                     $batchesSkipped++;
                 }
-                $batchIds[$code] = $existing->id;
+                $batchIds[$csvId] = $existing->id;
             }
+            $originalCounts = $this->importRows($original, $adminId, HistoricalSource::ORIGINAL, $batchIds);
             $simulatedCounts = $this->importRows($importable, $adminId, HistoricalSource::SIMULATED, $batchIds);
 
             return [$originalCounts, $simulatedCounts, $batchesInserted, $batchesSkipped];
@@ -441,6 +443,12 @@ class ImportHistoricalProductionCsv extends Command
         $this->line("Deferred future-dated simulated rows: {$deferred}. Rejected rows: 0 (any invalid row aborts the whole import).");
 
         return self::SUCCESS;
+    }
+
+    /** CSV batch id (SIM-FB-2026-07) to the app's batch code format (F-2026-007). */
+    private function batchCode(string $csvId): string
+    {
+        return 'F-'.substr($csvId, 7, 4).'-'.str_pad(substr($csvId, -2), 3, '0', STR_PAD_LEFT);
     }
 
     private const ORIGINAL_ORIGIN = 'Original supplied CSV row';

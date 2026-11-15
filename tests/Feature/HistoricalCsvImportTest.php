@@ -138,14 +138,14 @@ class HistoricalCsvImportTest extends TestCase
         $this->assertSame('2026-11-14', ProductionLog::where('source_key', 'like', $simulated('production'))->max('log_date'));
         $this->assertSame(0, DB::table('hens')->count());
 
-        $this->assertSame(17, \App\Models\FeedBatch::where('batch_code', 'like', 'SIM-FB-%')->count());
-        $this->assertNull(\App\Models\FeedBatch::where('batch_code', 'SIM-FB-2026-18')->first());
-        $batch = \App\Models\FeedBatch::where('batch_code', 'SIM-FB-2026-12')->firstOrFail();
-        $this->assertNull($batch->total_quantity_kg);
-        $this->assertNull($batch->unit_cost);
-        $this->assertStringStartsWith('SIMULATED', $batch->notes);
+        $this->assertSame(17, \App\Models\FeedBatch::where('batch_code', 'like', 'F-2026-%')->count());
+        $this->assertNull(\App\Models\FeedBatch::where('batch_code', 'F-2026-018')->first());
+        $batch = \App\Models\FeedBatch::where('batch_code', 'F-2026-012')->firstOrFail();
+        $this->assertSame('2026-08-24', $batch->date_received->toDateString());
         $this->assertSame($batch->id, (int) FeedConsumptionLog::where('source_key', 'simulated_extension:2026-09-01:CAGE-A:feed')->value('feed_batch_id'));
-        $this->assertSame(0, FeedConsumptionLog::where('source_key', 'like', 'production_data_clean:%')->whereNotNull('feed_batch_id')->count());
+        // Original rows link to the batch the CSV assigns them too.
+        $this->assertSame($batch->id, (int) FeedConsumptionLog::where('source_key', 'production_data_clean:2026-08-27:CAGE-A:feed')->value('feed_batch_id'));
+        $this->assertSame(0, FeedConsumptionLog::where('source_key', 'like', 'production_data_clean:%')->whereNull('feed_batch_id')->count());
         $this->assertSame(0, FeedConsumptionLog::where('source_key', 'like', $simulated('feed'))->whereNull('feed_batch_id')->count());
 
         $this->artisan('farm:import-historical-csv', $options)->assertSuccessful();
@@ -164,7 +164,13 @@ class HistoricalCsvImportTest extends TestCase
         $report->assertOk();
         $this->assertStringContainsString('SIMULATED cage/day estimate', $report->json('html'));
 
+        // Default: the labelled simulated extension is forecast history too.
         $forecast = app(\App\Services\ForecastGenerationService::class);
+        $this->assertSame('2026-11-13', substr((string) $forecast->datasetRows()->max('date'), 0, 10));
+        $this->assertSame(30, $forecast->productionForRange('farm', '2026-09-01', '2026-09-30')->count());
+
+        // Switched off (original-data-only evaluation): simulated rows are excluded.
+        config(['services.forecast.include_simulated_history' => false]);
         $this->assertSame('2026-08-27', substr((string) $forecast->datasetRows()->max('date'), 0, 10));
         $this->assertTrue($forecast->productionForRange('farm', '2026-09-01', '2026-09-30')->isEmpty());
         $this->assertSame(158, $forecast->productionForRange('farm', '2026-03-01', '2026-11-30')->count());

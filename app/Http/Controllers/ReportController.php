@@ -660,7 +660,10 @@ class ReportController extends Controller
                 'date'     => $l->log_date->format('m/d/Y'),
                 'cage'     => $l->cage?->cage_code ?? '—',
                 'batch'    => $l->feedBatch?->batch_code ?? 'Unbatched historical import',
-                'record_type' => $l->source_key ? (\App\Services\HistoricalSource::isSimulated($l->source_key) ? 'SIMULATED cage/day estimate — no purchase record' : 'Historical cage/day aggregate — no purchase record') : 'Feed consumption',
+                'record_type' => $l->source_key
+                    ? (\App\Services\HistoricalSource::isSimulated($l->source_key) ? 'SIMULATED cage/day estimate' : 'Historical cage/day aggregate')
+                        . ($l->feedBatch ? '' : ' — no purchase record')
+                    : 'Feed consumption',
                 'consumed' => number_format($l->feed_consumed_kg, 2) . ' kg',
                 'cp_pct'   => $l->feedBatch?->crude_protein !== null
                     ? number_format($l->feedBatch->crude_protein, 1).'%'
