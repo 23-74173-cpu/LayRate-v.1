@@ -1,0 +1,525 @@
+{
+  "login": {
+    "file": "00-login/01-login--sign-in-page.png",
+    "status": "ok"
+  },
+  "dash-alerts": {
+    "file": "01-dashboard/00a-dashboard--unacknowledged-alerts-modal.png",
+    "status": "skipped",
+    "reason": "#alerts-modal not shown in this session"
+  },
+  "dash-yesterday": {
+    "file": "01-dashboard/00b-dashboard--yesterdays-production-record-modal.png",
+    "status": "ok"
+  },
+  "dash-overview": {
+    "file": "01-dashboard/01-dashboard--production-performance.png",
+    "status": "ok",
+    "url": "/dashboard",
+    "jsErrors": []
+  },
+  "dash-overview-full": {
+    "file": "01-dashboard/02-dashboard--production-performance-full-page.png",
+    "status": "ok",
+    "url": "/dashboard",
+    "jsErrors": []
+  },
+  "dash-env": {
+    "file": "01-dashboard/03-dashboard--environmental-analytics-tab.png",
+    "status": "ok",
+    "url": "/dashboard",
+    "jsErrors": []
+  },
+  "dash-feed": {
+    "file": "01-dashboard/04-dashboard--feed-analytics-tab.png",
+    "status": "ok",
+    "url": "/dashboard",
+    "jsErrors": []
+  },
+  "dash-flock": {
+    "file": "01-dashboard/05-dashboard--flock-analytics-tab.png",
+    "status": "ok",
+    "url": "/dashboard",
+    "jsErrors": []
+  },
+  "dash-kpi-info": {
+    "file": "01-dashboard/06-dashboard--kpi-information-popover.png",
+    "status": "ok",
+    "url": "/dashboard",
+    "jsErrors": []
+  },
+  "dash-kpi-breakdown": {
+    "file": "01-dashboard/07-dashboard--kpi-per-cage-breakdown-modal.png",
+    "status": "ok",
+    "url": "/dashboard",
+    "jsErrors": []
+  },
+  "dash-checklist": {
+    "file": "01-dashboard/08-dashboard--todays-checklist-panel.png",
+    "status": "ok",
+    "url": "/dashboard",
+    "jsErrors": []
+  },
+  "dash-account-menu": {
+    "file": "01-dashboard/09-dashboard--account-menu.png",
+    "status": "ok",
+    "url": "/dashboard",
+    "jsErrors": []
+  },
+  "cages-main": {
+    "file": "02-cages/01-cages--farm-layout-and-cage-list.png",
+    "status": "ok",
+    "url": "/cages",
+    "jsErrors": []
+  },
+  "cages-full": {
+    "file": "02-cages/02-cages--full-page.png",
+    "status": "ok",
+    "url": "/cages",
+    "jsErrors": []
+  },
+  "cages-add": {
+    "file": "02-cages/03-cages--add-cage-modal.png",
+    "status": "ok",
+    "url": "/cages",
+    "jsErrors": []
+  },
+  "cages-edit": {
+    "file": "02-cages/04-cages--edit-cage-modal.png",
+    "status": "ok",
+    "url": "/cages",
+    "jsErrors": []
+  },
+  "cages-quick-actions": {
+    "file": "02-cages/07-cages--quick-actions-menu.png",
+    "status": "ok",
+    "url": "/cages",
+    "jsErrors": []
+  },
+  "cages-grid": {
+    "file": "02-cages/05-cages--farm-grid-settings-modal.png",
+    "status": "ok",
+    "url": "/cages",
+    "jsErrors": []
+  },
+  "cages-info": {
+    "file": "02-cages/06-cages--cage-information-popup.png",
+    "status": "ok",
+    "url": "/cages",
+    "jsErrors": []
+  },
+  "hens-inventory": {
+    "file": "03-hens/01-hens--inventory-tab.png",
+    "status": "ok",
+    "url": "/chickens",
+    "jsErrors": []
+  },
+  "hens-cage-modal": {
+    "file": "03-hens/02-hens--cage-details-modal.png",
+    "status": "ok",
+    "url": "/chickens",
+    "jsErrors": []
+  },
+  "hens-slot-hens": {
+    "file": "03-hens/03-hens--cage-details-slot-hens-panel.png",
+    "status": "ok",
+    "url": "/chickens",
+    "jsErrors": []
+  },
+  "hens-register": {
+    "file": "03-hens/04-hens--register-hens-modal.png",
+    "status": "ok",
+    "url": "/chickens",
+    "jsErrors": []
+  },
+  "hens-foot-tags": {
+    "file": "03-hens/05-hens--print-foot-tags-modal.png",
+    "status": "ok",
+    "url": "/chickens",
+    "jsErrors": []
+  },
+  "hens-mortality": {
+    "file": "03-hens/06-hens--mortality-tab.png",
+    "status": "ok",
+    "url": "/chickens",
+    "jsErrors": []
+  },
+  "hens-culled": {
+    "file": "03-hens/07-hens--culled-tab.png",
+    "status": "ok",
+    "url": "/chickens",
+    "jsErrors": []
+  },
+  "hens-removed": {
+    "file": "03-hens/08-hens--removed-tab.png",
+    "status": "ok",
+    "url": "/chickens",
+    "jsErrors": []
+  },
+  "hens-health-event": {
+    "file": "03-hens/09-hens--health-event-modal.png",
+    "status": "ok",
+    "url": "/chickens",
+    "jsErrors": []
+  },
+  "hens-weight-check": {
+    "file": "03-hens/10-hens--weight-check-modal.png",
+    "status": "ok",
+    "url": "/chickens",
+    "jsErrors": []
+  },
+  "hens-cull-hen": {
+    "file": "03-hens/11-hens--cull-hen-modal.png",
+    "status": "ok",
+    "url": "/chickens",
+    "jsErrors": []
+  },
+  "hens-remove-hen": {
+    "file": "03-hens/12-hens--remove-hen-modal.png",
+    "status": "ok",
+    "url": "/chickens",
+    "jsErrors": []
+  },
+  "egg-history": {
+    "file": "04-egg-management/01-egg-management--production-history-tab.png",
+    "status": "ok",
+    "url": "/eggs/production-history",
+    "jsErrors": []
+  },
+  "egg-logging": {
+    "file": "04-egg-management/02-egg-management--egg-logging-tab.png",
+    "status": "ok",
+    "url": "/eggs/logging",
+    "jsErrors": []
+  },
+  "egg-recent": {
+    "file": "04-egg-management/03-egg-management--recent-logs-tab.png",
+    "status": "ok",
+    "url": "/eggs/recent-logs",
+    "jsErrors": []
+  },
+  "egg-stocks": {
+    "file": "04-egg-management/04-egg-management--egg-stocks-tab.png",
+    "status": "ok",
+    "url": "/eggs/stocks",
+    "jsErrors": []
+  },
+  "egg-preorders": {
+    "file": "04-egg-management/05-egg-management--pre-orders-tab.png",
+    "status": "ok",
+    "url": "/eggs/pre-orders",
+    "jsErrors": []
+  },
+  "egg-hdep-history": {
+    "file": "04-egg-management/06-egg-management--history-tab.png",
+    "status": "ok",
+    "url": "/egg-production-history",
+    "jsErrors": []
+  },
+  "egg-quick-actions": {
+    "file": "04-egg-management/07-egg-management--stocks-quick-actions-menu.png",
+    "status": "ok",
+    "url": "/eggs/stocks",
+    "jsErrors": []
+  },
+  "egg-prices": {
+    "file": "04-egg-management/08-egg-management--egg-prices-modal.png",
+    "status": "ok",
+    "url": "/eggs/stocks",
+    "jsErrors": []
+  },
+  "egg-add-stock": {
+    "file": "04-egg-management/09-egg-management--add-stock-modal.png",
+    "status": "ok",
+    "url": "/eggs/stocks",
+    "jsErrors": []
+  },
+  "egg-thresholds": {
+    "file": "04-egg-management/10-egg-management--stock-thresholds-modal.png",
+    "status": "ok",
+    "url": "/eggs/stocks",
+    "jsErrors": []
+  },
+  "egg-weights": {
+    "file": "04-egg-management/11-egg-management--egg-weights-modal.png",
+    "status": "ok",
+    "url": "/eggs/stocks",
+    "jsErrors": []
+  },
+  "egg-labels": {
+    "file": "04-egg-management/12-egg-management--print-qr-labels-modal.png",
+    "status": "ok",
+    "url": "/eggs/stocks",
+    "jsErrors": []
+  },
+  "egg-add-order": {
+    "file": "04-egg-management/13-egg-management--add-pre-order-modal.png",
+    "status": "ok",
+    "url": "/eggs/pre-orders",
+    "jsErrors": []
+  },
+  "egg-edit-log": {
+    "file": "04-egg-management/14-egg-management--edit-production-log-modal.png",
+    "status": "ok",
+    "url": "/eggs/recent-logs",
+    "jsErrors": []
+  },
+  "feed-batches": {
+    "file": "05-feeds-management/01-feeds-management--feed-batches-tab.png",
+    "status": "ok",
+    "url": "/feed",
+    "jsErrors": []
+  },
+  "feed-consumption": {
+    "file": "05-feeds-management/02-feeds-management--daily-consumption-tab.png",
+    "status": "ok",
+    "url": "/feed",
+    "jsErrors": []
+  },
+  "feed-fcr": {
+    "file": "05-feeds-management/03-feeds-management--fcr-tab.png",
+    "status": "ok",
+    "url": "/feed",
+    "jsErrors": []
+  },
+  "feed-add-batch": {
+    "file": "05-feeds-management/04-feeds-management--add-feed-batch-modal.png",
+    "status": "ok",
+    "url": "/feed",
+    "jsErrors": []
+  },
+  "feed-edit-batch": {
+    "file": "05-feeds-management/05-feeds-management--edit-feed-batch-modal.png",
+    "status": "ok",
+    "url": "/feed",
+    "jsErrors": []
+  },
+  "feed-log-consumption": {
+    "file": "05-feeds-management/06-feeds-management--log-consumption-modal.png",
+    "status": "ok",
+    "url": "/feed",
+    "jsErrors": []
+  },
+  "feed-fcr-guide": {
+    "file": "05-feeds-management/08-feeds-management--fcr-guide-modal.png",
+    "status": "ok",
+    "url": "/feed",
+    "jsErrors": []
+  },
+  "feed-farm-entry": {
+    "file": "05-feeds-management/07-feeds-management--whole-farm-entry-modal.png",
+    "status": "ok",
+    "url": "/feed",
+    "jsErrors": []
+  },
+  "env-live": {
+    "file": "06-environment/01-environment--live-data-tab.png",
+    "status": "ok",
+    "url": "/environment",
+    "jsErrors": []
+  },
+  "env-logs": {
+    "file": "06-environment/02-environment--log-history-tab.png",
+    "status": "ok",
+    "url": "/environment",
+    "jsErrors": []
+  },
+  "env-thresholds": {
+    "file": "06-environment/03-environment--alert-thresholds-modal.png",
+    "status": "ok",
+    "url": "/environment",
+    "jsErrors": []
+  },
+  "env-fan": {
+    "file": "06-environment/04-environment--fan-control-modal.png",
+    "status": "ok",
+    "url": "/environment",
+    "jsErrors": []
+  },
+  "env-manual": {
+    "file": "06-environment/05-environment--manual-reading-modal.png",
+    "status": "ok",
+    "url": "/environment",
+    "jsErrors": []
+  },
+  "env-override": {
+    "file": "06-environment/06-environment--override-log-modal.png",
+    "status": "ok",
+    "url": "/environment",
+    "jsErrors": []
+  },
+  "hw-main": {
+    "file": "07-hardware/01-hardware--device-overview.png",
+    "status": "ok",
+    "url": "/hardware",
+    "jsErrors": []
+  },
+  "hw-add": {
+    "file": "07-hardware/02-hardware--add-device-modal.png",
+    "status": "ok",
+    "url": "/hardware",
+    "jsErrors": []
+  },
+  "hw-edit": {
+    "file": "07-hardware/03-hardware--edit-device-modal.png",
+    "status": "ok",
+    "url": "/hardware",
+    "jsErrors": []
+  },
+  "fc-main": {
+    "file": "08-forecast/01-forecast--7-day-forecast-results.png",
+    "status": "ok",
+    "url": "/forecast?scope=cage&cage=CAGE-A&horizon=7&forecast_view=saved",
+    "jsErrors": []
+  },
+  "fc-main-full": {
+    "file": "08-forecast/01b-forecast--7-day-forecast-full-page.png",
+    "status": "ok",
+    "url": "/forecast?scope=cage&cage=CAGE-A&horizon=7&forecast_view=saved",
+    "jsErrors": []
+  },
+  "fc-day": {
+    "file": "08-forecast/02-forecast--day-forecast-modal.png",
+    "status": "ok",
+    "url": "/forecast",
+    "jsErrors": []
+  },
+  "fc-input-records-status": {
+    "file": "08-forecast/03-forecast--input-records-status.png",
+    "status": "ok",
+    "url": "/forecast",
+    "jsErrors": []
+  },
+  "fc-import-production-data": {
+    "file": "08-forecast/04-forecast--import-production-data.png",
+    "status": "ok",
+    "url": "/forecast",
+    "jsErrors": []
+  },
+  "fc-export-forecast-report": {
+    "file": "08-forecast/05-forecast--export-forecast-report.png",
+    "status": "ok",
+    "url": "/forecast",
+    "jsErrors": []
+  },
+  "rep-production": {
+    "file": "09-reports/01-reports--production-report.png",
+    "status": "ok",
+    "url": "/reports?type=production",
+    "jsErrors": []
+  },
+  "rep-feed": {
+    "file": "09-reports/02-reports--feed-report.png",
+    "status": "ok",
+    "url": "/reports?type=feed",
+    "jsErrors": []
+  },
+  "rep-environment": {
+    "file": "09-reports/03-reports--environment-report.png",
+    "status": "ok",
+    "url": "/reports?type=environment",
+    "jsErrors": []
+  },
+  "rep-mortality": {
+    "file": "09-reports/04-reports--mortality-report.png",
+    "status": "ok",
+    "url": "/reports?type=mortality",
+    "jsErrors": []
+  },
+  "rep-all": {
+    "file": "09-reports/05-reports--all-reports.png",
+    "status": "ok",
+    "url": "/reports?type=all",
+    "jsErrors": []
+  },
+  "rep-filters": {
+    "file": "09-reports/06-reports--filter-panel.png",
+    "status": "ok",
+    "url": "/reports",
+    "jsErrors": []
+  },
+  "notes-main": {
+    "file": "10-notes/01-notes--notes-list.png",
+    "status": "ok",
+    "url": "/notes",
+    "jsErrors": []
+  },
+  "notes-edit": {
+    "file": "10-notes/02-notes--edit-note-modal.png",
+    "status": "ok",
+    "url": "/notes",
+    "jsErrors": []
+  },
+  "notif-main": {
+    "file": "11-notifications/01-notifications--alerts-list.png",
+    "status": "ok",
+    "url": "/notifications",
+    "jsErrors": []
+  },
+  "prof-profile": {
+    "file": "12-profile-and-settings/01-profile--profile-tab.png",
+    "status": "ok",
+    "url": "/profile",
+    "jsErrors": []
+  },
+  "prof-settings": {
+    "file": "12-profile-and-settings/02-profile--profile-settings-tab.png",
+    "status": "ok",
+    "url": "/profile",
+    "jsErrors": []
+  },
+  "prof-system": {
+    "file": "12-profile-and-settings/03-profile--system-settings-tab.png",
+    "status": "ok",
+    "url": "/profile",
+    "jsErrors": []
+  },
+  "prof-manual": {
+    "file": "12-profile-and-settings/04-profile--user-manual-tab.png",
+    "status": "ok",
+    "url": "/profile",
+    "jsErrors": []
+  },
+  "prof-add-user": {
+    "file": "12-profile-and-settings/05-profile--add-user-modal.png",
+    "status": "ok",
+    "url": "/profile",
+    "jsErrors": []
+  },
+  "prof-edit-user": {
+    "file": "12-profile-and-settings/06-profile--edit-user-modal.png",
+    "status": "ok",
+    "url": "/profile",
+    "jsErrors": []
+  },
+  "prof-system-time": {
+    "file": "12-profile-and-settings/07-settings--system-time.png",
+    "status": "ok",
+    "url": "/settings/system-time",
+    "jsErrors": []
+  },
+  "fin-main": {
+    "file": "13-unlinked-admin-pages/01-finance--expenses.png",
+    "status": "ok",
+    "url": "/finance",
+    "jsErrors": []
+  },
+  "mort-main": {
+    "file": "13-unlinked-admin-pages/02-mortality--records.png",
+    "status": "ok",
+    "url": "/mortality",
+    "jsErrors": []
+  },
+  "mort-edit": {
+    "file": "13-unlinked-admin-pages/03-mortality--edit-record-modal.png",
+    "status": "ok",
+    "url": "/mortality",
+    "jsErrors": []
+  },
+  "fc-compare": {
+    "file": "08-forecast/01c-forecast--compare-production-full-page.png",
+    "status": "ok",
+    "url": "/forecast?scope=cage&cage=CAGE-A&horizon=7&forecast_view=saved&compare_production=1",
+    "jsErrors": []
+  }
+}
